@@ -1,0 +1,80 @@
+{
+  "content_version": "0.2.0-predev",
+  "spec_id": "TERENA_ELECTORAL_COUNTING_V1",
+  "status": "locked_for_runtime_and_2026_archive",
+  "arithmetic": {
+    "requirement": "exact_reduced_bigint_rationals",
+    "serialization": "num/den_string",
+    "forbid_ordinary_ieee_float_for_outcomes": true,
+    "must_reproduce_across": ["browser", "worker", "node"]
+  },
+  "assembly_stv": {
+    "quota": "droop",
+    "quota_formula": "floor(total_valid / (seats + 1)) + 1",
+    "quota_timing": "computed_once_from_total_valid_first_preferences_at_count_start",
+    "quota_recompute_after_exhaustion": false,
+    "surplus_transfer": "weighted_inclusive_gregory",
+    "surplus_definition": "candidate_total - quota",
+    "transferable_total_definition": "exact_sum_of_weights_of_ballots_credited_to_elected_candidate_with_next_continuing_preference",
+    "transfer_factor_rules": {
+      "if_transferable_total_gt_surplus": "surplus / transferable_total",
+      "if_transferable_total_le_surplus": "1",
+      "non_transferable_above_quota": "archive_explicitly_do_not_inflate_others"
+    },
+    "surplus_from": "all_transferable_ballots_currently_credited_to_elected_candidate",
+    "eliminations": "one_candidate_at_a_time",
+    "multiple_over_quota_order": "one_at_a_time_highest_current_total_first_then_tie_hierarchy",
+    "exhausted_ballots": {
+      "archived": true,
+      "count_as_continuing_votes": false
+    },
+    "tie_break": [
+      "previous_count_totals_walking_backward",
+      "original_first_preference_totals",
+      "deterministic_lot_elections_rng_stream_rejection_sampling"
+    ],
+    "archive_lot_resolutions": true
+  },
+  "presidential_rcv": {
+    "method": "irv",
+    "elimination": "one_lowest_candidate_each_round",
+    "majority": "strictly_greater_than_half_of_continuing_valid_ballots",
+    "exhausted_ballots": {
+      "leave_continuing_denominator": true,
+      "archived": true
+    },
+    "preserve_every_round_and_transfer": true,
+    "tie_break": [
+      "previous_round_totals_walking_backward",
+      "original_first_preference_totals",
+      "deterministic_lot_elections_rng_stream_rejection_sampling"
+    ],
+    "archive_lot_resolutions": true
+  },
+  "legal_lot": {
+    "forbid_simple_modulo_bias": true,
+    "procedure": [
+      "sort_tied_candidate_ids_lexicographically",
+      "draw_uint32_from_elections_stream",
+      "reject_draws_outside_largest_multiple_of_N_range",
+      "index = acceptedDraw % N",
+      "archive_every_draw_used_and_selected_index"
+    ]
+  },
+  "package_contract": {
+    "implementation": "packages/election-math",
+    "institution_agnostic": true,
+    "consumers": [
+      "assembly_elections",
+      "presidential_elections",
+      "party_nominations",
+      "historical_2026_archive"
+    ],
+    "forbid_duplicate_rcv_implementations": true,
+    "phase": "0.5_implements_counting_before_0b_archive"
+  },
+  "notes": [
+    "Weighted Inclusive Gregory is adopted for surplus fidelity and reproducible fractional transfers.",
+    "Phase 0.5 implements algorithms; Phase 0b 2026 archive must be generated/validated with the same package."
+  ]
+}

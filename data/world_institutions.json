@@ -1,0 +1,35 @@
+{
+  "institutions": [
+    {
+      "id": "INT_WA",
+      "name": "World Assembly",
+      "type": "universal diplomatic organization",
+      "founded": 1950
+    },
+    {
+      "id": "INT_LTO",
+      "name": "Lorsain Trade Organization",
+      "type": "trade organization",
+      "founded": 1995
+    },
+    {
+      "id": "INT_DC",
+      "name": "Democratic Concord",
+      "type": "collective security and political alliance",
+      "founded": 1951
+    },
+    {
+      "id": "INT_CSC",
+      "name": "Continental Sovereignty Compact",
+      "type": "security/economic alignment",
+      "founded": 1998
+    },
+    {
+      "id": "INT_NAF",
+      "name": "Non-Aligned Forum",
+      "type": "diplomatic caucus",
+      "founded": 1961
+    }
+  ],
+  "content_version": "0.2.0-predev"
+}

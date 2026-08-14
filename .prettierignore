@@ -1,0 +1,12 @@
+# Prettier scopes to tooling/code we own in Phase 0; do not churn canonical prose/geojson yet.
+data/
+maps/
+docs/
+source/
+.cursor/
+PROJECT_MASTER_BIBLE.md
+package-lock.json
+pnpm-lock.yaml
+*.svg
+*.png
+*.map

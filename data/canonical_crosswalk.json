@@ -1,0 +1,334 @@
+{
+  "source_map": {
+    "seed": "655895070",
+    "name": "Lorsain"
+  },
+  "states": {
+    "1": {
+      "canonical": "Republic of Khuld",
+      "azgaar": "Khuld Theocracy"
+    },
+    "2": {
+      "canonical": "Republic of Mazgara",
+      "azgaar": "Mazgaran Theocracy"
+    },
+    "3": {
+      "canonical": "United Kingdom of Paignia",
+      "azgaar": "United Kingdom of Paignia"
+    },
+    "4": {
+      "canonical": "Republic of Chalka",
+      "azgaar": "Chalkan Theocracy"
+    },
+    "5": {
+      "canonical": "Republic of Bharesh",
+      "azgaar": "Principality of Bhakh"
+    },
+    "6": {
+      "canonical": "Kudren Federation",
+      "azgaar": "Kingdom of Kud"
+    },
+    "7": {
+      "canonical": "United Provinces of Kraker",
+      "azgaar": "United Provinces of Kra'ker"
+    },
+    "8": {
+      "canonical": "Kingdom of Dohil",
+      "azgaar": "Duchy of Dohil"
+    },
+    "9": {
+      "canonical": "Capreshan Commonwealth",
+      "azgaar": "Capreshoslan Theocracy"
+    },
+    "10": {
+      "canonical": "Free State of Chaz",
+      "azgaar": "Duchy of Chaz"
+    },
+    "11": {
+      "canonical": "Grand Duchy of Dunshil",
+      "azgaar": "Grand Duchy of Dunshil"
+    },
+    "12": {
+      "canonical": "Kingdom of Krigh",
+      "azgaar": "Kingdom of Krigh"
+    },
+    "13": {
+      "canonical": "Graeven Republic",
+      "azgaar": "Grand Duchy of Graj'ar't"
+    },
+    "14": {
+      "canonical": "Burgan Islands",
+      "azgaar": "Duchy of Bug"
+    },
+    "15": {
+      "canonical": "Republic of Ris",
+      "azgaar": "Duchy of Ris"
+    },
+    "16": {
+      "canonical": "Sythrian Republic",
+      "azgaar": "Kingdom of Szith"
+    },
+    "17": {
+      "canonical": "Principality of Crafland",
+      "azgaar": "Principality of Crafland"
+    },
+    "18": {
+      "canonical": "Krapjezan Republic",
+      "azgaar": "Krapjezan Theocracy"
+    },
+    "19": {
+      "canonical": "Dieric Federation",
+      "azgaar": "Dier Theocracy"
+    },
+    "20": {
+      "canonical": "Kingdom of Boignes",
+      "azgaar": "Grand Duchy of Boignes"
+    },
+    "21": {
+      "canonical": "Gneaban Republic",
+      "azgaar": "Gneaban Theocracy"
+    },
+    "22": {
+      "canonical": "Thultan Union",
+      "azgaar": "Thultan Theocracy"
+    },
+    "23": {
+      "canonical": "Kingdom of Nash",
+      "azgaar": "Kingdom of Nash"
+    },
+    "24": {
+      "canonical": "Elzesh Union",
+      "azgaar": "Elzesh Empire"
+    },
+    "25": {
+      "canonical": "Butiarm Islands",
+      "azgaar": "Duchy of Butiarm"
+    },
+    "26": {
+      "canonical": "Risan Commonwealth",
+      "azgaar": "Protectorate of Ris"
+    },
+    "27": {
+      "canonical": "Republic of Ugol",
+      "azgaar": "Republic of Ugul"
+    },
+    "28": {
+      "canonical": "Siramel Commonwealth",
+      "azgaar": "Sireramelese Empire"
+    },
+    "29": {
+      "canonical": "Redcham Republic",
+      "azgaar": "Redcham Theocracy"
+    },
+    "30": {
+      "canonical": "Kingdom of Srus",
+      "azgaar": "Kingdom of Srus"
+    },
+    "31": {
+      "canonical": "Kopjaj Republic",
+      "azgaar": "Grand Duchy of Kopjaj"
+    },
+    "32": {
+      "canonical": "Grand Duchy of Thres",
+      "azgaar": "Grand Duchy of Thres"
+    },
+    "33": {
+      "canonical": "Irdraco Republic",
+      "azgaar": "Irdracoalese Marches"
+    },
+    "34": {
+      "canonical": "Arurd Republic",
+      "azgaar": "Protectorate of Arurd"
+    },
+    "35": {
+      "canonical": "Zarhar Republic",
+      "azgaar": "Zarharmerdian Theocracy"
+    },
+    "36": {
+      "canonical": "Kingdom of Soland",
+      "azgaar": "Kingdom of Solidland"
+    },
+    "37": {
+      "canonical": "Soburish Federation",
+      "azgaar": "Soburish Empire"
+    },
+    "38": {
+      "canonical": "Kingdom of Montria",
+      "azgaar": "Kingdom of Montria"
+    },
+    "39": {
+      "canonical": "Sholed Republic",
+      "azgaar": "Republic of Sholed"
+    },
+    "40": {
+      "canonical": "Vaskaran Federation",
+      "azgaar": "Bamunzdum Empire"
+    },
+    "41": {
+      "canonical": "Republic of Terena",
+      "azgaar": "Nazirukt Theocracy"
+    },
+    "42": {
+      "canonical": "Duchy of Glam",
+      "azgaar": "Duchy of Glam"
+    },
+    "43": {
+      "canonical": "Skuzha Republic",
+      "azgaar": "Duchy of Skuzush"
+    },
+    "44": {
+      "canonical": "Shurushan Republic",
+      "azgaar": "Republic of Shurusha"
+    },
+    "45": {
+      "canonical": "Grand Duchy of Borough",
+      "azgaar": "Grand Duchy of Borough"
+    },
+    "46": {
+      "canonical": "Sidburan Republic",
+      "azgaar": "Sidburan Theocracy"
+    },
+    "47": {
+      "canonical": "Kingdom of Joim",
+      "azgaar": "Kingdom of Joim"
+    },
+    "48": {
+      "canonical": "Kingdom of Nigis",
+      "azgaar": "Kingdom of Nigis"
+    }
+  },
+  "terena": {
+    "source_state_id": 41,
+    "province_crosswalk": {
+      "417": {
+        "id": "FDV",
+        "name": "Federal District of Valen",
+        "azgaar": "Nulbuzan Parish"
+      },
+      "418": {
+        "id": "P01",
+        "name": "Solenne",
+        "azgaar": "Gathun Parish"
+      },
+      "419": {
+        "id": "P02",
+        "name": "Norval",
+        "azgaar": "Akhur Parish"
+      },
+      "420": {
+        "id": "P03",
+        "name": "Varelia",
+        "azgaar": "Zaragz Parish"
+      },
+      "421": {
+        "id": "P04",
+        "name": "Galar",
+        "azgaar": "Galararam Parish"
+      },
+      "422": {
+        "id": "P05",
+        "name": "Southmark",
+        "azgaar": "Bunulgath Parish"
+      },
+      "423": {
+        "id": "P06",
+        "name": "Veyra",
+        "azgaar": "Zilukkzar Parish"
+      },
+      "424": {
+        "id": "P07",
+        "name": "Rethvale",
+        "azgaar": "Kindinarg Parish"
+      },
+      "425": {
+        "id": "P08",
+        "name": "Eastbay",
+        "azgaar": "Biled Parish"
+      },
+      "426": {
+        "id": "P09",
+        "name": "Aurel",
+        "azgaar": "Nulundala Parish"
+      },
+      "427": {
+        "id": "P10",
+        "name": "Eastridge",
+        "azgaar": "Nurazdushur Parish"
+      },
+      "428": {
+        "id": "P11",
+        "name": "Shorren",
+        "azgaar": "Shundaharb Parish"
+      },
+      "429": {
+        "id": "P12",
+        "name": "Darsen",
+        "azgaar": "Gabad Parish"
+      },
+      "430": {
+        "id": "P13",
+        "name": "Karsen",
+        "azgaar": "Kiraz Parish"
+      },
+      "431": {
+        "id": "P14",
+        "name": "Arven",
+        "azgaar": "Numun Parish"
+      },
+      "432": {
+        "id": "P15",
+        "name": "Lyrden",
+        "azgaar": "Unbarakzah Parish"
+      },
+      "576": {
+        "id": "P16",
+        "name": "Miren",
+        "azgaar": "Gathiz Tribe"
+      },
+      "577": {
+        "id": "P17",
+        "name": "Caldria",
+        "azgaar": "Khathuzun Dependency"
+      },
+      "578": {
+        "id": "P18",
+        "name": "Northmarch",
+        "azgaar": "Undab Region"
+      },
+      "579": {
+        "id": "P19",
+        "name": "Kintal",
+        "azgaar": "Kin Territory"
+      },
+      "580": {
+        "id": "P20",
+        "name": "Shuma",
+        "azgaar": "Shumunz Territory"
+      }
+    },
+    "city_crosswalk": {
+      "41": "Valen",
+      "740": "Solenne",
+      "829": "Riva",
+      "900": "Rethen",
+      "69": "Kedra",
+      "377": "Norval",
+      "314": "Varen",
+      "801": "Caldra",
+      "1731": "Shoren",
+      "747": "Karsen",
+      "799": "Aurel",
+      "120": "Arven",
+      "1103": "Veyra",
+      "1236": "Bellen",
+      "233": "Northhaven",
+      "1251": "Luren",
+      "918": "Gavren",
+      "1353": "Lyrden"
+    },
+    "world_country_id": "W41",
+    "domestic_country_id": "TER",
+    "domestic_svg_country_id": "TERENA"
+  },
+  "content_version": "0.2.0-predev"
+}

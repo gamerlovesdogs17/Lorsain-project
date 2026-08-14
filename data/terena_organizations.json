@@ -1,0 +1,154 @@
+{
+  "organizations": [
+    {
+      "id": "ORG_TCL",
+      "name": "Terenan Confederation of Labor",
+      "type": "union federation",
+      "lean": "Labour",
+      "strength": 0.92,
+      "issues": [
+        "ISS_LABOR",
+        "ISS_WELFARE",
+        "ISS_TRADE"
+      ],
+      "lean_party_ids": [
+        "PARTY_LAB"
+      ]
+    },
+    {
+      "id": "ORG_MAN",
+      "name": "Federation of Manufacturers",
+      "type": "business",
+      "lean": "National Union / Civic Reform",
+      "strength": 0.84,
+      "issues": [
+        "ISS_TRADE",
+        "ISS_WELFARE",
+        "ISS_CLIMATE"
+      ],
+      "lean_party_ids": [
+        "PARTY_NU",
+        "PARTY_CR"
+      ]
+    },
+    {
+      "id": "ORG_FARM",
+      "name": "National Farmers Cooperative",
+      "type": "agriculture",
+      "lean": "Regional League / National Union",
+      "strength": 0.68,
+      "issues": [
+        "ISS_TRADE",
+        "ISS_DECENT",
+        "ISS_CLIMATE"
+      ],
+      "lean_party_ids": [
+        "PARTY_RL",
+        "PARTY_NU"
+      ]
+    },
+    {
+      "id": "ORG_SMB",
+      "name": "Small Business League",
+      "type": "business",
+      "lean": "Civic Reform / National Union",
+      "strength": 0.61,
+      "issues": [
+        "ISS_WELFARE",
+        "ISS_TRADE",
+        "ISS_HOUSING"
+      ],
+      "lean_party_ids": [
+        "PARTY_CR",
+        "PARTY_NU"
+      ]
+    },
+    {
+      "id": "ORG_CLF",
+      "name": "Civil Liberties Forum",
+      "type": "advocacy",
+      "lean": "Civic Reform / Green",
+      "strength": 0.55,
+      "issues": [
+        "ISS_LIBERTY",
+        "ISS_EXEC",
+        "ISS_REFORM"
+      ],
+      "lean_party_ids": [
+        "PARTY_CR",
+        "PARTY_GRN"
+      ]
+    },
+    {
+      "id": "ORG_CAN",
+      "name": "Climate Action Network",
+      "type": "advocacy",
+      "lean": "Green / Labour",
+      "strength": 0.58,
+      "issues": [
+        "ISS_CLIMATE",
+        "ISS_HOUSING"
+      ],
+      "lean_party_ids": [
+        "PARTY_GRN",
+        "PARTY_LAB"
+      ]
+    },
+    {
+      "id": "ORG_VET",
+      "name": "Veterans Federation",
+      "type": "civic",
+      "lean": "National Union",
+      "strength": 0.52,
+      "issues": [
+        "ISS_DEFENSE",
+        "ISS_VASKARA"
+      ],
+      "lean_party_ids": [
+        "PARTY_NU"
+      ]
+    },
+    {
+      "id": "ORG_MUNI",
+      "name": "Association of Municipalities",
+      "type": "local government",
+      "lean": "nonpartisan",
+      "strength": 0.49,
+      "issues": [
+        "ISS_DECENT",
+        "ISS_HOUSING"
+      ],
+      "lean_party_ids": []
+    },
+    {
+      "id": "ORG_PORT",
+      "name": "Maritime Commerce Council",
+      "type": "industry",
+      "lean": "Civic Reform / National Union",
+      "strength": 0.57,
+      "issues": [
+        "ISS_TRADE",
+        "ISS_CONCORD"
+      ],
+      "lean_party_ids": [
+        "PARTY_CR",
+        "PARTY_NU"
+      ]
+    },
+    {
+      "id": "ORG_PUB",
+      "name": "Public Service Employees Union",
+      "type": "union",
+      "lean": "Labour",
+      "strength": 0.63,
+      "issues": [
+        "ISS_LABOR",
+        "ISS_WELFARE"
+      ],
+      "lean_party_ids": [
+        "PARTY_LAB"
+      ]
+    }
+  ],
+  "content_version": "0.2.0-predev"
+}

@@ -1,0 +1,32 @@
+{
+  "name": "lorsain",
+  "private": true,
+  "version": "0.2.0-predev",
+  "description": "Lorsain / Terena political simulator monorepo",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r --filter @lorsain/content-schema --filter @lorsain/election-math --filter @lorsain/sim --filter @lorsain/content-loader --filter @lorsain/map --filter @lorsain/testing --filter @lorsain/game run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "validate:content": "pnpm --filter @lorsain/content-loader validate",
+    "validate:python": "python scripts/validate_content.py"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/node": "^22.13.10",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.1",
+    "vitest": "^3.0.8"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.15.9"
+}

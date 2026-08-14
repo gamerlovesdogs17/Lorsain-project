@@ -1,0 +1,160 @@
+{
+  "timeline": [
+    {
+      "year": 1228,
+      "title": "League of Valen formed",
+      "importance": 0.65
+    },
+    {
+      "year": 1452,
+      "title": "Crown of Terena established",
+      "importance": 0.75
+    },
+    {
+      "year": 1711,
+      "title": "Act of Union centralizes national treasury and southern provinces",
+      "importance": 0.8
+    },
+    {
+      "year": 1784,
+      "title": "Charter Revolt begins",
+      "importance": 0.8
+    },
+    {
+      "year": 1787,
+      "title": "Charter of Valen creates elected lower chamber",
+      "importance": 0.85
+    },
+    {
+      "year": 1839,
+      "title": "Working-class mutual-aid societies legalized",
+      "importance": 0.45
+    },
+    {
+      "year": 1857,
+      "title": "Trade unions legalized",
+      "importance": 0.6
+    },
+    {
+      "year": 1868,
+      "title": "Responsible-government constitutional settlement",
+      "importance": 0.85
+    },
+    {
+      "year": 1896,
+      "title": "Mass suffrage reform",
+      "importance": 0.7
+    },
+    {
+      "year": 1911,
+      "title": "Terena enters First Continental War",
+      "importance": 0.8
+    },
+    {
+      "year": 1917,
+      "title": "Monarchy abdicates; First Republic established",
+      "importance": 1.0
+    },
+    {
+      "year": 1919,
+      "title": "Equal national suffrage enacted",
+      "importance": 0.75
+    },
+    {
+      "year": 1929,
+      "title": "Credit Panic causes banking and industrial collapse",
+      "importance": 0.85
+    },
+    {
+      "year": 1933,
+      "title": "President Adrian Varek expands emergency rule",
+      "importance": 0.95
+    },
+    {
+      "year": 1934,
+      "title": "National Directorate established",
+      "importance": 1.0
+    },
+    {
+      "year": 1942,
+      "title": "Constitutional resistance forces Varek from office",
+      "importance": 1.0
+    },
+    {
+      "year": 1943,
+      "title": "Terena joins anti-Vaskaran coalition",
+      "importance": 0.85
+    },
+    {
+      "year": 1946,
+      "title": "Second Republic founded",
+      "importance": 0.9
+    },
+    {
+      "year": 1969,
+      "title": "October Crisis and national strike",
+      "importance": 1.0
+    },
+    {
+      "year": 1970,
+      "title": "President Karel Dravic resigns",
+      "importance": 0.9
+    },
+    {
+      "year": 1971,
+      "title": "Dual-Mandate Constitution ratified",
+      "importance": 1.0
+    },
+    {
+      "year": 1974,
+      "title": "First full elections under new constitution; joins Democratic Concord",
+      "importance": 0.9
+    },
+    {
+      "year": 1978,
+      "title": "Labor Compact era begins",
+      "importance": 0.65
+    },
+    {
+      "year": 1989,
+      "title": "Market-reform era begins",
+      "importance": 0.65
+    },
+    {
+      "year": 2008,
+      "title": "Financial crisis fractures old party alignments",
+      "importance": 0.85
+    },
+    {
+      "year": 2014,
+      "title": "Vaskaran pressure drives security and energy reforms",
+      "importance": 0.7
+    },
+    {
+      "year": 2018,
+      "title": "Mara Velic elected president",
+      "importance": 0.7
+    },
+    {
+      "year": 2020,
+      "title": "Pandemic emergency becomes major test of 1971 constitution",
+      "importance": 0.75
+    },
+    {
+      "year": 2023,
+      "title": "Mara Velic reelected by RCV transfers",
+      "importance": 0.65
+    },
+    {
+      "year": 2026,
+      "title": "Fragmented Assembly elected; Labour becomes largest party",
+      "importance": 0.75
+    },
+    {
+      "year": 2028,
+      "title": "Open presidential succession begins",
+      "importance": 0.8
+    }
+  ],
+  "content_version": "0.2.0-predev"
+}

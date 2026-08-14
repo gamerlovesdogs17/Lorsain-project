@@ -1,0 +1,1674 @@
+{
+  "country": {
+    "id": "TER",
+    "name": "Republic of Terena",
+    "population": 72000000,
+    "source_state_id": 41,
+    "capital": "Valen",
+    "assembly_seats": 420,
+    "constituencies": 48,
+    "provinces": 20,
+    "capital_districts": 1,
+    "world_country_id": "W41",
+    "svg_country_id": "TERENA"
+  },
+  "provinces": [
+    {
+      "id": "FDV",
+      "source_province_id": 417,
+      "name": "Federal District of Valen",
+      "population": 1072532,
+      "population_share": 0.014896277777777777,
+      "source_area_index": 218,
+      "country_id": "TER",
+      "svg_path_id": "FDV"
+    },
+    {
+      "id": "P01",
+      "source_province_id": 418,
+      "name": "Solenne",
+      "population": 3594086,
+      "population_share": 0.049917861111111114,
+      "source_area_index": 1559,
+      "country_id": "TER",
+      "svg_path_id": "P01"
+    },
+    {
+      "id": "P02",
+      "source_province_id": 419,
+      "name": "Norval",
+      "population": 4575411,
+      "population_share": 0.063547375,
+      "source_area_index": 1505,
+      "country_id": "TER",
+      "svg_path_id": "P02"
+    },
+    {
+      "id": "P03",
+      "source_province_id": 420,
+      "name": "Varelia",
+      "population": 6394176,
+      "population_share": 0.088808,
+      "source_area_index": 2570,
+      "country_id": "TER",
+      "svg_path_id": "P03"
+    },
+    {
+      "id": "P04",
+      "source_province_id": 421,
+      "name": "Galar",
+      "population": 5880075,
+      "population_share": 0.08166770833333334,
+      "source_area_index": 1856,
+      "country_id": "TER",
+      "svg_path_id": "P04"
+    },
+    {
+      "id": "P05",
+      "source_province_id": 422,
+      "name": "Southmark",
+      "population": 9537810,
+      "population_share": 0.13246958333333334,
+      "source_area_index": 4244,
+      "country_id": "TER",
+      "svg_path_id": "P05"
+    },
+    {
+      "id": "P06",
+      "source_province_id": 423,
+      "name": "Veyra",
+      "population": 892614,
+      "population_share": 0.012397416666666666,
+      "source_area_index": 273,
+      "country_id": "TER",
+      "svg_path_id": "P06"
+    },
+    {
+      "id": "P07",
+      "source_province_id": 424,
+      "name": "Rethvale",
+      "population": 2122971,
+      "population_share": 0.029485708333333333,
+      "source_area_index": 716,
+      "country_id": "TER",
+      "svg_path_id": "P07"
+    },
+    {
+      "id": "P08",
+      "source_province_id": 425,
+      "name": "Eastbay",
+      "population": 1574838,
+      "population_share": 0.02187275,
+      "source_area_index": 455,
+      "country_id": "TER",
+      "svg_path_id": "P08"
+    },
+    {
+      "id": "P09",
+      "source_province_id": 426,
+      "name": "Aurel",
+      "population": 11888592,
+      "population_share": 0.16511933333333334,
+      "source_area_index": 4487,
+      "country_id": "TER",
+      "svg_path_id": "P09"
+    },
+    {
+      "id": "P10",
+      "source_province_id": 427,
+      "name": "Eastridge",
+      "population": 3240802,
+      "population_share": 0.04501113888888889,
+      "source_area_index": 886,
+      "country_id": "TER",
+      "svg_path_id": "P10"
+    },
+    {
+      "id": "P11",
+      "source_province_id": 428,
+      "name": "Shorren",
+      "population": 2346502,
+      "population_share": 0.03259030555555555,
+      "source_area_index": 676,
+      "country_id": "TER",
+      "svg_path_id": "P11"
+    },
+    {
+      "id": "P12",
+      "source_province_id": 429,
+      "name": "Darsen",
+      "population": 7462371,
+      "population_share": 0.10364404166666667,
+      "source_area_index": 2130,
+      "country_id": "TER",
+      "svg_path_id": "P12"
+    },
+    {
+      "id": "P13",
+      "source_province_id": 430,
+      "name": "Karsen",
+      "population": 1349641,
+      "population_share": 0.018745013888888887,
+      "source_area_index": 382,
+      "country_id": "TER",
+      "svg_path_id": "P13"
+    },
+    {
+      "id": "P14",
+      "source_province_id": 431,
+      "name": "Arven",
+      "population": 674227,
+      "population_share": 0.009364263888888889,
+      "source_area_index": 219,
+      "country_id": "TER",
+      "svg_path_id": "P14"
+    },
+    {
+      "id": "P15",
+      "source_province_id": 432,
+      "name": "Lyrden",
+      "population": 1624402,
+      "population_share": 0.022561138888888888,
+      "source_area_index": 527,
+      "country_id": "TER",
+      "svg_path_id": "P15"
+    },
+    {
+      "id": "P16",
+      "source_province_id": 576,
+      "name": "Miren",
+      "population": 3063209,
+      "population_share": 0.042544569444444444,
+      "source_area_index": 984,
+      "country_id": "TER",
+      "svg_path_id": "P16"
+    },
+    {
+      "id": "P17",
+      "source_province_id": 577,
+      "name": "Caldria",
+      "population": 3577080,
+      "population_share": 0.049681666666666666,
+      "source_area_index": 1129,
+      "country_id": "TER",
+      "svg_path_id": "P17"
+    },
+    {
+      "id": "P18",
+      "source_province_id": 578,
+      "name": "Northmarch",
+      "population": 724675,
+      "population_share": 0.010064930555555556,
+      "source_area_index": 171,
+      "country_id": "TER",
+      "svg_path_id": "P18"
+    },
+    {
+      "id": "P19",
+      "source_province_id": 579,
+      "name": "Kintal",
+      "population": 278843,
+      "population_share": 0.0038728194444444444,
+      "source_area_index": 121,
+      "country_id": "TER",
+      "svg_path_id": "P19"
+    },
+    {
+      "id": "P20",
+      "source_province_id": 580,
+      "name": "Shuma",
+      "population": 125143,
+      "population_share": 0.0017380972222222223,
+      "source_area_index": 116,
+      "country_id": "TER",
+      "svg_path_id": "P20"
+    }
+  ],
+  "constituencies": [
+    {
+      "id": "C001",
+      "district_number": 1,
+      "population": 1509066,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P12",
+      "plurality_province_name": "Darsen",
+      "province_population_shares": [
+        {
+          "province_id": "P12",
+          "share": 0.519786
+        },
+        {
+          "province_id": "P18",
+          "share": 0.480214
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C001"
+    },
+    {
+      "id": "C002",
+      "district_number": 2,
+      "population": 1549341,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P12",
+      "plurality_province_name": "Darsen",
+      "province_population_shares": [
+        {
+          "province_id": "P12",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C002"
+    },
+    {
+      "id": "C003",
+      "district_number": 3,
+      "population": 1501708,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P12",
+      "plurality_province_name": "Darsen",
+      "province_population_shares": [
+        {
+          "province_id": "P12",
+          "share": 0.893512
+        },
+        {
+          "province_id": "P03",
+          "share": 0.106488
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C003"
+    },
+    {
+      "id": "C004",
+      "district_number": 4,
+      "population": 1477450,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P12",
+      "plurality_province_name": "Darsen",
+      "province_population_shares": [
+        {
+          "province_id": "P12",
+          "share": 0.870696
+        },
+        {
+          "province_id": "P03",
+          "share": 0.129304
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C004"
+    },
+    {
+      "id": "C005",
+      "district_number": 5,
+      "population": 1499292,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P12",
+      "plurality_province_name": "Darsen",
+      "province_population_shares": [
+        {
+          "province_id": "P12",
+          "share": 0.956189
+        },
+        {
+          "province_id": "P02",
+          "share": 0.02577
+        },
+        {
+          "province_id": "P03",
+          "share": 0.018041
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C005"
+    },
+    {
+      "id": "C006",
+      "district_number": 6,
+      "population": 1511356,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P09",
+      "plurality_province_name": "Aurel",
+      "province_population_shares": [
+        {
+          "province_id": "P09",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C006"
+    },
+    {
+      "id": "C007",
+      "district_number": 7,
+      "population": 1484096,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P09",
+      "plurality_province_name": "Aurel",
+      "province_population_shares": [
+        {
+          "province_id": "P09",
+          "share": 0.660117
+        },
+        {
+          "province_id": "P03",
+          "share": 0.339883
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C007"
+    },
+    {
+      "id": "C008",
+      "district_number": 8,
+      "population": 1508797,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P03",
+      "plurality_province_name": "Varelia",
+      "province_population_shares": [
+        {
+          "province_id": "P03",
+          "share": 0.870963
+        },
+        {
+          "province_id": "P09",
+          "share": 0.129037
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C008"
+    },
+    {
+      "id": "C009",
+      "district_number": 9,
+      "population": 1508331,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P03",
+      "plurality_province_name": "Varelia",
+      "province_population_shares": [
+        {
+          "province_id": "P03",
+          "share": 0.874906
+        },
+        {
+          "province_id": "P02",
+          "share": 0.125094
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C009"
+    },
+    {
+      "id": "C010",
+      "district_number": 10,
+      "population": 1487324,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P03",
+      "plurality_province_name": "Varelia",
+      "province_population_shares": [
+        {
+          "province_id": "P03",
+          "share": 0.967671
+        },
+        {
+          "province_id": "P04",
+          "share": 0.032329
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C010"
+    },
+    {
+      "id": "C011",
+      "district_number": 11,
+      "population": 1483405,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P03",
+      "plurality_province_name": "Varelia",
+      "province_population_shares": [
+        {
+          "province_id": "P03",
+          "share": 0.866731
+        },
+        {
+          "province_id": "P04",
+          "share": 0.071049
+        },
+        {
+          "province_id": "P07",
+          "share": 0.06222
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C011"
+    },
+    {
+      "id": "C012",
+      "district_number": 12,
+      "population": 1527474,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P12",
+      "plurality_province_name": "Darsen",
+      "province_population_shares": [
+        {
+          "province_id": "P12",
+          "share": 0.698428
+        },
+        {
+          "province_id": "P02",
+          "share": 0.29595
+        },
+        {
+          "province_id": "P13",
+          "share": 0.005622
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C012"
+    },
+    {
+      "id": "C013",
+      "district_number": 13,
+      "population": 1494643,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P02",
+      "plurality_province_name": "Norval",
+      "province_population_shares": [
+        {
+          "province_id": "P02",
+          "share": 0.836423
+        },
+        {
+          "province_id": "P13",
+          "share": 0.163577
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C013"
+    },
+    {
+      "id": "C014",
+      "district_number": 14,
+      "population": 1502202,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P02",
+      "plurality_province_name": "Norval",
+      "province_population_shares": [
+        {
+          "province_id": "P02",
+          "share": 0.883399
+        },
+        {
+          "province_id": "P10",
+          "share": 0.116601
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C014"
+    },
+    {
+      "id": "C015",
+      "district_number": 15,
+      "population": 1500863,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P02",
+      "plurality_province_name": "Norval",
+      "province_population_shares": [
+        {
+          "province_id": "P02",
+          "share": 0.755432
+        },
+        {
+          "province_id": "P14",
+          "share": 0.11442
+        },
+        {
+          "province_id": "P15",
+          "share": 0.047625
+        },
+        {
+          "province_id": "P10",
+          "share": 0.043478
+        },
+        {
+          "province_id": "P03",
+          "share": 0.039046
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C015"
+    },
+    {
+      "id": "C016",
+      "district_number": 16,
+      "population": 1499278,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P15",
+      "plurality_province_name": "Lyrden",
+      "province_population_shares": [
+        {
+          "province_id": "P15",
+          "share": 0.668703
+        },
+        {
+          "province_id": "P07",
+          "share": 0.144886
+        },
+        {
+          "province_id": "P02",
+          "share": 0.123418
+        },
+        {
+          "province_id": "P03",
+          "share": 0.062993
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C016"
+    },
+    {
+      "id": "C017",
+      "district_number": 17,
+      "population": 1522960,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P07",
+      "plurality_province_name": "Rethvale",
+      "province_population_shares": [
+        {
+          "province_id": "P07",
+          "share": 0.716843
+        },
+        {
+          "province_id": "P06",
+          "share": 0.178577
+        },
+        {
+          "province_id": "P04",
+          "share": 0.0778
+        },
+        {
+          "province_id": "P15",
+          "share": 0.02678
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C017"
+    },
+    {
+      "id": "C018",
+      "district_number": 18,
+      "population": 1503432,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P13",
+      "plurality_province_name": "Karsen",
+      "province_population_shares": [
+        {
+          "province_id": "P13",
+          "share": 0.500149
+        },
+        {
+          "province_id": "P10",
+          "share": 0.499851
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C018"
+    },
+    {
+      "id": "C019",
+      "district_number": 19,
+      "population": 1462408,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P10",
+      "plurality_province_name": "Eastridge",
+      "province_population_shares": [
+        {
+          "province_id": "P10",
+          "share": 0.466451
+        },
+        {
+          "province_id": "P14",
+          "share": 0.34361
+        },
+        {
+          "province_id": "P11",
+          "share": 0.15471
+        },
+        {
+          "province_id": "P15",
+          "share": 0.035228
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C019"
+    },
+    {
+      "id": "C020",
+      "district_number": 20,
+      "population": 1492977,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P06",
+      "plurality_province_name": "Veyra",
+      "province_population_shares": [
+        {
+          "province_id": "P06",
+          "share": 0.396733
+        },
+        {
+          "province_id": "P15",
+          "share": 0.306803
+        },
+        {
+          "province_id": "P11",
+          "share": 0.203729
+        },
+        {
+          "province_id": "FDV",
+          "share": 0.092735
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C020"
+    },
+    {
+      "id": "C021",
+      "district_number": 21,
+      "population": 1654769,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P11",
+      "plurality_province_name": "Shorren",
+      "province_population_shares": [
+        {
+          "province_id": "P11",
+          "share": 0.42178
+        },
+        {
+          "province_id": "P10",
+          "share": 0.248801
+        },
+        {
+          "province_id": "P13",
+          "share": 0.181282
+        },
+        {
+          "province_id": "P08",
+          "share": 0.148137
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C021"
+    },
+    {
+      "id": "C022",
+      "district_number": 22,
+      "population": 1386439,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P10",
+      "plurality_province_name": "Eastridge",
+      "province_population_shares": [
+        {
+          "province_id": "P10",
+          "share": 0.833103
+        },
+        {
+          "province_id": "P11",
+          "share": 0.117354
+        },
+        {
+          "province_id": "P13",
+          "share": 0.032202
+        },
+        {
+          "province_id": "P16",
+          "share": 0.017341
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C022"
+    },
+    {
+      "id": "C023",
+      "district_number": 23,
+      "population": 1449570,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P11",
+      "plurality_province_name": "Shorren",
+      "province_population_shares": [
+        {
+          "province_id": "P11",
+          "share": 0.659118
+        },
+        {
+          "province_id": "P08",
+          "share": 0.340882
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C023"
+    },
+    {
+      "id": "C024",
+      "district_number": 24,
+      "population": 1491497,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P09",
+      "plurality_province_name": "Aurel",
+      "province_population_shares": [
+        {
+          "province_id": "P09",
+          "share": 0.877958
+        },
+        {
+          "province_id": "P04",
+          "share": 0.122042
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C024"
+    },
+    {
+      "id": "C025",
+      "district_number": 25,
+      "population": 1513359,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P09",
+      "plurality_province_name": "Aurel",
+      "province_population_shares": [
+        {
+          "province_id": "P09",
+          "share": 0.943267
+        },
+        {
+          "province_id": "P04",
+          "share": 0.056733
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C025"
+    },
+    {
+      "id": "C026",
+      "district_number": 26,
+      "population": 1359405,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P04",
+      "plurality_province_name": "Galar",
+      "province_population_shares": [
+        {
+          "province_id": "P04",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C026"
+    },
+    {
+      "id": "C027",
+      "district_number": 27,
+      "population": 1515448,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P07",
+      "plurality_province_name": "Rethvale",
+      "province_population_shares": [
+        {
+          "province_id": "P07",
+          "share": 0.476246
+        },
+        {
+          "province_id": "P04",
+          "share": 0.402364
+        },
+        {
+          "province_id": "FDV",
+          "share": 0.102693
+        },
+        {
+          "province_id": "P06",
+          "share": 0.018698
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C027"
+    },
+    {
+      "id": "C028",
+      "district_number": 28,
+      "population": 1640860,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P08",
+      "plurality_province_name": "Eastbay",
+      "province_population_shares": [
+        {
+          "province_id": "P08",
+          "share": 0.509229
+        },
+        {
+          "province_id": "FDV",
+          "share": 0.474419
+        },
+        {
+          "province_id": "P16",
+          "share": 0.016353
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C028"
+    },
+    {
+      "id": "C029",
+      "district_number": 29,
+      "population": 1516245,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P09",
+      "plurality_province_name": "Aurel",
+      "province_population_shares": [
+        {
+          "province_id": "P09",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C029"
+    },
+    {
+      "id": "C030",
+      "district_number": 30,
+      "population": 1485619,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P09",
+      "plurality_province_name": "Aurel",
+      "province_population_shares": [
+        {
+          "province_id": "P09",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C030"
+    },
+    {
+      "id": "C031",
+      "district_number": 31,
+      "population": 1506011,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P09",
+      "plurality_province_name": "Aurel",
+      "province_population_shares": [
+        {
+          "province_id": "P09",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C031"
+    },
+    {
+      "id": "C032",
+      "district_number": 32,
+      "population": 1512475,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P04",
+      "plurality_province_name": "Galar",
+      "province_population_shares": [
+        {
+          "province_id": "P04",
+          "share": 0.756319
+        },
+        {
+          "province_id": "P09",
+          "share": 0.243681
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C032"
+    },
+    {
+      "id": "C033",
+      "district_number": 33,
+      "population": 1483198,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P09",
+      "plurality_province_name": "Aurel",
+      "province_population_shares": [
+        {
+          "province_id": "P09",
+          "share": 0.513587
+        },
+        {
+          "province_id": "P04",
+          "share": 0.455153
+        },
+        {
+          "province_id": "P16",
+          "share": 0.03126
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C033"
+    },
+    {
+      "id": "C034",
+      "district_number": 34,
+      "population": 1552064,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P04",
+      "plurality_province_name": "Galar",
+      "province_population_shares": [
+        {
+          "province_id": "P04",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C034"
+    },
+    {
+      "id": "C035",
+      "district_number": 35,
+      "population": 1472844,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P05",
+      "plurality_province_name": "Southmark",
+      "province_population_shares": [
+        {
+          "province_id": "P05",
+          "share": 0.938788
+        },
+        {
+          "province_id": "P17",
+          "share": 0.061212
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C035"
+    },
+    {
+      "id": "C036",
+      "district_number": 36,
+      "population": 1473574,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P17",
+      "plurality_province_name": "Caldria",
+      "province_population_shares": [
+        {
+          "province_id": "P17",
+          "share": 0.516283
+        },
+        {
+          "province_id": "P05",
+          "share": 0.483717
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C036"
+    },
+    {
+      "id": "C037",
+      "district_number": 37,
+      "population": 1494408,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P05",
+      "plurality_province_name": "Southmark",
+      "province_population_shares": [
+        {
+          "province_id": "P05",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C037"
+    },
+    {
+      "id": "C038",
+      "district_number": 38,
+      "population": 1192416,
+      "seats": 7,
+      "country_id": "TER",
+      "plurality_province_id": "P17",
+      "plurality_province_name": "Caldria",
+      "province_population_shares": [
+        {
+          "province_id": "P17",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C038"
+    },
+    {
+      "id": "C039",
+      "district_number": 39,
+      "population": 1174180,
+      "seats": 7,
+      "country_id": "TER",
+      "plurality_province_id": "P17",
+      "plurality_province_name": "Caldria",
+      "province_population_shares": [
+        {
+          "province_id": "P17",
+          "share": 0.915905
+        },
+        {
+          "province_id": "P09",
+          "share": 0.084095
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C039"
+    },
+    {
+      "id": "C040",
+      "district_number": 40,
+      "population": 1187253,
+      "seats": 7,
+      "country_id": "TER",
+      "plurality_province_id": "P09",
+      "plurality_province_name": "Aurel",
+      "province_population_shares": [
+        {
+          "province_id": "P09",
+          "share": 0.613992
+        },
+        {
+          "province_id": "P17",
+          "share": 0.386008
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C040"
+    },
+    {
+      "id": "C041",
+      "district_number": 41,
+      "population": 1659384,
+      "seats": 10,
+      "country_id": "TER",
+      "plurality_province_id": "P05",
+      "plurality_province_name": "Southmark",
+      "province_population_shares": [
+        {
+          "province_id": "P05",
+          "share": 0.83196
+        },
+        {
+          "province_id": "P19",
+          "share": 0.16804
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C041"
+    },
+    {
+      "id": "C042",
+      "district_number": 42,
+      "population": 1659173,
+      "seats": 10,
+      "country_id": "TER",
+      "plurality_province_id": "P05",
+      "plurality_province_name": "Southmark",
+      "province_population_shares": [
+        {
+          "province_id": "P05",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C042"
+    },
+    {
+      "id": "C043",
+      "district_number": 43,
+      "population": 1660306,
+      "seats": 10,
+      "country_id": "TER",
+      "plurality_province_id": "P05",
+      "plurality_province_name": "Southmark",
+      "province_population_shares": [
+        {
+          "province_id": "P05",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C043"
+    },
+    {
+      "id": "C044",
+      "district_number": 44,
+      "population": 1666478,
+      "seats": 10,
+      "country_id": "TER",
+      "plurality_province_id": "P05",
+      "plurality_province_name": "Southmark",
+      "province_population_shares": [
+        {
+          "province_id": "P05",
+          "share": 0.740454
+        },
+        {
+          "province_id": "P01",
+          "share": 0.184452
+        },
+        {
+          "province_id": "P20",
+          "share": 0.075094
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C044"
+    },
+    {
+      "id": "C045",
+      "district_number": 45,
+      "population": 1661680,
+      "seats": 10,
+      "country_id": "TER",
+      "plurality_province_id": "P01",
+      "plurality_province_name": "Solenne",
+      "province_population_shares": [
+        {
+          "province_id": "P01",
+          "share": 0.991604
+        },
+        {
+          "province_id": "P05",
+          "share": 0.008396
+        }
+      ],
+      "crosses_province_boundaries": true,
+      "svg_path_id": "C045"
+    },
+    {
+      "id": "C046",
+      "district_number": 46,
+      "population": 1638973,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P01",
+      "plurality_province_name": "Solenne",
+      "province_population_shares": [
+        {
+          "province_id": "P01",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C046"
+    },
+    {
+      "id": "C047",
+      "district_number": 47,
+      "population": 1476566,
+      "seats": 8,
+      "country_id": "TER",
+      "plurality_province_id": "P16",
+      "plurality_province_name": "Miren",
+      "province_population_shares": [
+        {
+          "province_id": "P16",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C047"
+    },
+    {
+      "id": "C048",
+      "district_number": 48,
+      "population": 1489403,
+      "seats": 9,
+      "country_id": "TER",
+      "plurality_province_id": "P16",
+      "plurality_province_name": "Miren",
+      "province_population_shares": [
+        {
+          "province_id": "P16",
+          "share": 1.0
+        }
+      ],
+      "crosses_province_boundaries": false,
+      "svg_path_id": "C048"
+    }
+  ],
+  "cities": [
+    {
+      "id": "CITY18",
+      "source_burg_id": 41,
+      "name": "Valen",
+      "x": 831.78,
+      "y": 512.32,
+      "province_id": "FDV",
+      "capital": true,
+      "port": true,
+      "source_population_weight": 7.444,
+      "map_marker_id": "CITY18"
+    },
+    {
+      "id": "CITY01",
+      "source_burg_id": 740,
+      "name": "Solenne",
+      "x": 692.72,
+      "y": 609.43,
+      "province_id": "P01",
+      "capital": false,
+      "port": true,
+      "source_population_weight": 28.524,
+      "map_marker_id": "CITY01"
+    },
+    {
+      "id": "CITY02",
+      "source_burg_id": 829,
+      "name": "Riva",
+      "x": 853.64,
+      "y": 513.36,
+      "province_id": "P08",
+      "capital": false,
+      "port": true,
+      "source_population_weight": 18.665,
+      "map_marker_id": "CITY02"
+    },
+    {
+      "id": "CITY03",
+      "source_burg_id": 900,
+      "name": "Rethen",
+      "x": 794.65,
+      "y": 530.82,
+      "province_id": "P04",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 15.319,
+      "map_marker_id": "CITY03"
+    },
+    {
+      "id": "CITY04",
+      "source_burg_id": 69,
+      "name": "Kedra",
+      "x": 811.48,
+      "y": 513.82,
+      "province_id": "P07",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 14.986,
+      "map_marker_id": "CITY04"
+    },
+    {
+      "id": "CITY05",
+      "source_burg_id": 377,
+      "name": "Norval",
+      "x": 807.54,
+      "y": 459.86,
+      "province_id": "P02",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 14.228,
+      "map_marker_id": "CITY05"
+    },
+    {
+      "id": "CITY06",
+      "source_burg_id": 314,
+      "name": "Varen",
+      "x": 770.34,
+      "y": 467.18,
+      "province_id": "P03",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 13.575,
+      "map_marker_id": "CITY06"
+    },
+    {
+      "id": "CITY07",
+      "source_burg_id": 801,
+      "name": "Caldra",
+      "x": 659.62,
+      "y": 609.51,
+      "province_id": "P05",
+      "capital": false,
+      "port": true,
+      "source_population_weight": 12.15,
+      "map_marker_id": "CITY07"
+    },
+    {
+      "id": "CITY08",
+      "source_burg_id": 1731,
+      "name": "Shoren",
+      "x": 844.35,
+      "y": 478.5,
+      "province_id": "P11",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 11.955,
+      "map_marker_id": "CITY08"
+    },
+    {
+      "id": "CITY09",
+      "source_burg_id": 747,
+      "name": "Karsen",
+      "x": 842.6,
+      "y": 437.8,
+      "province_id": "P13",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 11.331,
+      "map_marker_id": "CITY09"
+    },
+    {
+      "id": "CITY10",
+      "source_burg_id": 799,
+      "name": "Aurel",
+      "x": 731.64,
+      "y": 525.11,
+      "province_id": "P09",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 11.23,
+      "map_marker_id": "CITY10"
+    },
+    {
+      "id": "CITY11",
+      "source_burg_id": 120,
+      "name": "Arven",
+      "x": 829.67,
+      "y": 469.46,
+      "province_id": "P14",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 11.037,
+      "map_marker_id": "CITY11"
+    },
+    {
+      "id": "CITY12",
+      "source_burg_id": 1103,
+      "name": "Veyra",
+      "x": 825.33,
+      "y": 504.41,
+      "province_id": "P06",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 10.565,
+      "map_marker_id": "CITY12"
+    },
+    {
+      "id": "CITY13",
+      "source_burg_id": 1236,
+      "name": "Bellen",
+      "x": 856.4,
+      "y": 507.3,
+      "province_id": "P08",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 10.41,
+      "map_marker_id": "CITY13"
+    },
+    {
+      "id": "CITY14",
+      "source_burg_id": 233,
+      "name": "Northhaven",
+      "x": 836.99,
+      "y": 458.44,
+      "province_id": "P10",
+      "capital": false,
+      "port": true,
+      "source_population_weight": 10.364,
+      "map_marker_id": "CITY14"
+    },
+    {
+      "id": "CITY15",
+      "source_burg_id": 1251,
+      "name": "Luren",
+      "x": 756.96,
+      "y": 406.15,
+      "province_id": "P12",
+      "capital": false,
+      "port": true,
+      "source_population_weight": 10.338,
+      "map_marker_id": "CITY15"
+    },
+    {
+      "id": "CITY16",
+      "source_burg_id": 918,
+      "name": "Gavren",
+      "x": 778.89,
+      "y": 412.75,
+      "province_id": "P12",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 9.775,
+      "map_marker_id": "CITY16"
+    },
+    {
+      "id": "CITY17",
+      "source_burg_id": 1353,
+      "name": "Lyrden",
+      "x": 824.88,
+      "y": 479.47,
+      "province_id": "P15",
+      "capital": false,
+      "port": false,
+      "source_population_weight": 9.147,
+      "map_marker_id": "CITY17"
+    }
+  ],
+  "rivers": [
+    {
+      "id": "R01",
+      "source_river_id": 66,
+      "name": "Valen River",
+      "discharge": 593
+    },
+    {
+      "id": "R02",
+      "source_river_id": 13,
+      "name": "Darsa River",
+      "discharge": 579
+    },
+    {
+      "id": "R03",
+      "source_river_id": 48,
+      "name": "Solen River",
+      "discharge": 391
+    },
+    {
+      "id": "R04",
+      "source_river_id": 50,
+      "name": "Reth River",
+      "discharge": 254
+    },
+    {
+      "id": "R05",
+      "source_river_id": 313,
+      "name": "Aurel River",
+      "discharge": 239
+    },
+    {
+      "id": "R06",
+      "source_river_id": 277,
+      "name": "Miren River",
+      "discharge": 215
+    },
+    {
+      "id": "R07",
+      "source_river_id": 29,
+      "name": "Nor River",
+      "discharge": 213
+    },
+    {
+      "id": "R08",
+      "source_river_id": 58,
+      "name": "Calder River",
+      "discharge": 212
+    }
+  ],
+  "routes": [
+    {
+      "id": "RT01",
+      "source_route_id": 8,
+      "name": "National Route 1",
+      "group": "roads"
+    },
+    {
+      "id": "RT02",
+      "source_route_id": 183,
+      "name": "National Route 2",
+      "group": "trails"
+    },
+    {
+      "id": "RT03",
+      "source_route_id": 118,
+      "name": "National Route 3",
+      "group": "trails"
+    },
+    {
+      "id": "RT04",
+      "source_route_id": 5,
+      "name": "National Route 4",
+      "group": "roads"
+    },
+    {
+      "id": "RT05",
+      "source_route_id": 318,
+      "name": "National Route 5",
+      "group": "trails"
+    },
+    {
+      "id": "RT06",
+      "source_route_id": 84,
+      "name": "National Route 6",
+      "group": "trails"
+    },
+    {
+      "id": "RT07",
+      "source_route_id": 9,
+      "name": "National Route 7",
+      "group": "roads"
+    },
+    {
+      "id": "RT08",
+      "source_route_id": 1484,
+      "name": "National Route 8",
+      "group": "searoutes"
+    },
+    {
+      "id": "RT09",
+      "source_route_id": 10,
+      "name": "National Route 9",
+      "group": "roads"
+    },
+    {
+      "id": "RT10",
+      "source_route_id": 73,
+      "name": "National Route 10",
+      "group": "trails"
+    },
+    {
+      "id": "RT11",
+      "source_route_id": 155,
+      "name": "National Route 11",
+      "group": "trails"
+    },
+    {
+      "id": "RT12",
+      "source_route_id": 77,
+      "name": "National Route 12",
+      "group": "trails"
+    },
+    {
+      "id": "RT13",
+      "source_route_id": 82,
+      "name": "National Route 13",
+      "group": "trails"
+    },
+    {
+      "id": "RT14",
+      "source_route_id": 274,
+      "name": "National Route 14",
+      "group": "trails"
+    },
+    {
+      "id": "RT15",
+      "source_route_id": 156,
+      "name": "National Route 15",
+      "group": "trails"
+    },
+    {
+      "id": "RT16",
+      "source_route_id": 105,
+      "name": "National Route 16",
+      "group": "trails"
+    },
+    {
+      "id": "RT17",
+      "source_route_id": 97,
+      "name": "National Route 17",
+      "group": "trails"
+    },
+    {
+      "id": "RT18",
+      "source_route_id": 72,
+      "name": "National Route 18",
+      "group": "trails"
+    }
+  ],
+  "source": {
+    "azgaar_seed": "655895070",
+    "map_name": "Lorsain",
+    "width": 1912,
+    "height": 948,
+    "distance_scale_km": 20
+  },
+  "content_version": "0.2.0-predev",
+  "derived_summary": true,
+  "authoritative_files": {
+    "provinces": "data/terena_provinces.geojson",
+    "constituencies": "data/terena_constituencies.geojson",
+    "cities": "data/terena_cities.json",
+    "world_map": "maps/world_political.svg",
+    "country_map": "maps/terena_game_map.svg"
+  },
+  "electoral_geography": {
+    "boundary_authority": "National Electoral Commission",
+    "province_boundaries_binding": false,
+    "districts_may_cross_provinces": true,
+    "rationale": "Equal-population multi-member STV regions are drawn independently of historically unequal province boundaries.",
+    "review_cycle_years": 10
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "content_version": "0.2.0-predev",
+  "rules": [
+    {
+      "id": "labour_member_union_rcv",
+      "party_id": "PARTY_LAB",
+      "method": "weighted_ranked_choice",
+      "member_weight": 0.8,
+      "affiliate_union_delegate_weight": 0.2,
+      "entry_requirements": {
+        "member_nominations": true
+      },
+      "notes": "Ranked party-member ballot with a minority affiliated-union delegate share."
+    },
+    {
+      "id": "national_union_closed_rcv",
+      "party_id": "PARTY_NU",
+      "method": "closed_member_rcv",
+      "entry_requirements": {
+        "assembly_caucus_endorsement_fraction": 0.15
+      },
+      "notes": "Candidates first clear a parliamentary-caucus endorsement threshold, then compete in a closed member RCV."
+    },
+    {
+      "id": "civic_open_supporter_rcv",
+      "party_id": "PARTY_CR",
+      "method": "registered_supporter_rcv",
+      "entry_requirements": {
+        "supporter_registration_required": true
+      },
+      "notes": "Open to registered party supporters using ranked-choice voting."
+    },
+    {
+      "id": "green_transferable_convention",
+      "party_id": "PARTY_GRN",
+      "method": "transferable_convention",
+      "entry_requirements": {
+        "member_nomination_threshold": true
+      },
+      "notes": "Convention delegates cast transferable ballots."
+    },
+    {
+      "id": "regional_weighted_delegates",
+      "party_id": "PARTY_RL",
+      "method": "weighted_provincial_delegates",
+      "entry_requirements": {
+        "provincial_nomination_support": true
+      },
+      "notes": "Provincial delegations are weighted by party membership and provincial vote strength, with a floor protecting small provinces."
+    },
+    {
+      "id": "people_direct_member_ballot",
+      "party_id": "PARTY_PM",
+      "method": "direct_member_rcv",
+      "entry_requirements": {
+        "provincial_organization_endorsements_min": 4
+      },
+      "notes": "Direct member ranked ballot; candidates need support from multiple provincial organizations."
+    },
+    {
+      "id": "independent",
+      "party_id": "PARTY_IND",
+      "method": "none",
+      "entry_requirements": {},
+      "notes": "Independent candidates qualify under public election law rather than party nomination rules."
+    }
+  ]
+}

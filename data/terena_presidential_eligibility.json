@@ -1,0 +1,46 @@
+{
+  "content_version": "0.2.0-predev",
+  "status": "draft_defaults_pending_content_approval",
+  "country_id": "TER",
+  "office": "OFFICE_PRESIDENT",
+  "manifest_role": "derived_or_reference.presidential_eligibility_pending",
+  "not_final_gameplay_law": true,
+  "rules": {
+    "minimum_age": 35,
+    "citizenship": "terenan_citizen",
+    "residency": "resident_of_terena_for_at_least_10_years_cumulative_before_election_day",
+    "term_limit_elected": 2,
+    "incompatible_offices_while_serving_as_president": [
+      "national_assembly_member",
+      "provincial_governor",
+      "cabinet_minister",
+      "constitutional_court_judge",
+      "active_military_commission"
+    ],
+    "may_campaign_while_holding": {
+      "national_assembly_member": true,
+      "cabinet_minister": true,
+      "provincial_governor": true,
+      "constitutional_court_judge": false,
+      "active_military_commission": false
+    },
+    "vacate_incompatible_office": "at_assumption_of_presidential_office_not_at_candidacy_filing",
+    "disqualifications_to_run": [
+      "final_conviction_for_treason_or_corruption_with_unrestored_civil_rights",
+      "currently_serving_disqualifying_prison_sentence"
+    ],
+    "party_nomination": "must_satisfy_applicable_party_nomination_rule_or_qualify_as_independent_under_election_law"
+  },
+  "derived_from_constitution": {
+    "term_years": 5,
+    "term_limit_elected": 2,
+    "election": "national_rcv"
+  },
+  "notes": [
+    "Listed under derived_or_reference until status becomes approved, then promote to authoritative.",
+    "Sitting Assembly members MAY seek the presidency without resigning first; seat vacation occurs at inauguration/assumption if elected.",
+    "Cabinet ministers and governors MAY run while serving under the same assume-then-vacate rule (recommended).",
+    "Constitutional Court judges and active-duty military may NOT run while holding those roles (recommended); they must resign/retire before filing.",
+    "Simulation systems must not treat this draft as final law."
+  ]
+}

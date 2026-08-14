@@ -1,0 +1,61 @@
+{
+  "outlets": [
+    {
+      "id": "MED_TPS",
+      "name": "Terenan Public Service",
+      "type": "public broadcaster",
+      "ideology": 0.0,
+      "factual_reputation": 0.93,
+      "audience": "national"
+    },
+    {
+      "id": "MED_REC",
+      "name": "Valen Record",
+      "type": "newspaper/digital",
+      "ideology": 0.05,
+      "factual_reputation": 0.88,
+      "audience": "national"
+    },
+    {
+      "id": "MED_WRK",
+      "name": "Workers’ Daily",
+      "type": "newspaper/digital",
+      "ideology": -0.55,
+      "factual_reputation": 0.78,
+      "audience": "labor/urban"
+    },
+    {
+      "id": "MED_LED",
+      "name": "National Ledger",
+      "type": "newspaper/digital",
+      "ideology": 0.48,
+      "factual_reputation": 0.81,
+      "audience": "conservative/national"
+    },
+    {
+      "id": "MED_EXC",
+      "name": "Exchange",
+      "type": "business press",
+      "ideology": 0.25,
+      "factual_reputation": 0.9,
+      "audience": "business/professional"
+    },
+    {
+      "id": "MED_CST",
+      "name": "Coast & City",
+      "type": "digital magazine",
+      "ideology": -0.35,
+      "factual_reputation": 0.8,
+      "audience": "young metropolitan"
+    },
+    {
+      "id": "MED_DIR",
+      "name": "Direct Terena",
+      "type": "digital/video network",
+      "ideology": 0.62,
+      "factual_reputation": 0.58,
+      "audience": "populist/anti-establishment"
+    }
+  ],
+  "content_version": "0.2.0-predev"
+}

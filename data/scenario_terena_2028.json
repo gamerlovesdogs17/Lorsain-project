@@ -1,0 +1,55 @@
+{
+  "id": "TERENA_2028",
+  "date": "2028-01-01",
+  "canonical_seed": "TERENA-2028-SIM-01",
+  "president_id": "NPC001",
+  "speaker_id": "NPC002",
+  "assembly": {
+    "elected": 2026,
+    "next_election": 2030,
+    "party_seats": {
+      "PARTY_LAB": 128,
+      "PARTY_NU": 110,
+      "PARTY_CR": 69,
+      "PARTY_GRN": 41,
+      "PARTY_RL": 35,
+      "PARTY_PM": 29,
+      "PARTY_IND": 8
+    }
+  },
+  "presidential_election": {
+    "date": "2028-10-14",
+    "incumbent_eligible": false,
+    "status": "pre-nomination"
+  },
+  "starting_pressures": [
+    {
+      "id": "PRESS_BUDGET",
+      "name": "2028 budget negotiations",
+      "salience": 0.82
+    },
+    {
+      "id": "PRESS_RAIL",
+      "name": "National Rail Modernization Bill stalled",
+      "salience": 0.61
+    },
+    {
+      "id": "PRESS_VASKARA",
+      "name": "Vaskaran border exercise and energy bargaining",
+      "salience": 0.78
+    },
+    {
+      "id": "PRESS_HOUSING",
+      "name": "Housing affordability in Valen/eastern coast",
+      "salience": 0.74
+    },
+    {
+      "id": "PRESS_COURT",
+      "name": "Two Constitutional Court terms expire during next presidential term",
+      "salience": 0.49
+    }
+  ],
+  "content_version": "0.2.0-predev",
+  "country_id": "TER",
+  "world_country_id": "W41"
+}

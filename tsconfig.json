@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/content-schema" },
+    { "path": "packages/election-math" },
+    { "path": "packages/sim" },
+    { "path": "packages/content-loader" },
+    { "path": "packages/map" },
+    { "path": "packages/testing" },
+    { "path": "apps/game" }
+  ]
+}

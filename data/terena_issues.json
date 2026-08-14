@@ -1,0 +1,110 @@
+{
+  "issues": [
+    {
+      "id": "ISS_LABOR",
+      "name": "Labor power and collective bargaining",
+      "dimension": "economic",
+      "low": "employer flexibility",
+      "high": "strong sectoral bargaining"
+    },
+    {
+      "id": "ISS_WELFARE",
+      "name": "Taxes and social provision",
+      "dimension": "economic",
+      "low": "lower-tax smaller welfare state",
+      "high": "higher-tax universal services"
+    },
+    {
+      "id": "ISS_OWNERSHIP",
+      "name": "Public ownership",
+      "dimension": "economic",
+      "low": "private ownership",
+      "high": "strategic public ownership"
+    },
+    {
+      "id": "ISS_TRADE",
+      "name": "Trade and industrial policy",
+      "dimension": "economic",
+      "low": "open trade / competition",
+      "high": "protection / strategic industry"
+    },
+    {
+      "id": "ISS_HOUSING",
+      "name": "Housing and land use",
+      "dimension": "economic-social",
+      "low": "local restriction / property protection",
+      "high": "national supply / zoning reform"
+    },
+    {
+      "id": "ISS_CLIMATE",
+      "name": "Climate and energy",
+      "dimension": "economic-social",
+      "low": "slow transition / fossil flexibility",
+      "high": "rapid decarbonization / public investment"
+    },
+    {
+      "id": "ISS_LIBERTY",
+      "name": "Civil liberties",
+      "dimension": "social",
+      "low": "order / state discretion",
+      "high": "strong individual-rights protections"
+    },
+    {
+      "id": "ISS_IMMIGRATION",
+      "name": "Immigration and integration",
+      "dimension": "social",
+      "low": "restriction / enforcement",
+      "high": "openness / integration"
+    },
+    {
+      "id": "ISS_POLICING",
+      "name": "Crime and policing",
+      "dimension": "social",
+      "low": "rehabilitation / oversight",
+      "high": "punitive / police discretion"
+    },
+    {
+      "id": "ISS_DECENT",
+      "name": "Provincial autonomy",
+      "dimension": "institutional",
+      "low": "centralization",
+      "high": "decentralization"
+    },
+    {
+      "id": "ISS_EXEC",
+      "name": "Executive power",
+      "dimension": "institutional",
+      "low": "strong legislative checks",
+      "high": "strong presidential discretion"
+    },
+    {
+      "id": "ISS_REFORM",
+      "name": "Electoral and ethics reform",
+      "dimension": "institutional",
+      "low": "status quo",
+      "high": "expanded transparency / reform"
+    },
+    {
+      "id": "ISS_CONCORD",
+      "name": "Democratic Concord alignment",
+      "dimension": "foreign",
+      "low": "strategic autonomy",
+      "high": "deep Concord integration"
+    },
+    {
+      "id": "ISS_VASKARA",
+      "name": "Policy toward Vaskara",
+      "dimension": "foreign",
+      "low": "accommodation / détente",
+      "high": "deterrence / sanctions"
+    },
+    {
+      "id": "ISS_DEFENSE",
+      "name": "Defense spending",
+      "dimension": "foreign",
+      "low": "lower military burden",
+      "high": "higher readiness and modernization"
+    }
+  ],
+  "content_version": "0.2.0-predev"
+}

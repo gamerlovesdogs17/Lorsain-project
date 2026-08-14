@@ -1,0 +1,173 @@
+{
+  "timeline": [
+    {
+      "year": -500,
+      "title": "Classical Meridian trade system consolidates",
+      "scope": "world",
+      "importance": 0.55
+    },
+    {
+      "year": 200,
+      "title": "Maritime commercial-law leagues reach peak influence",
+      "scope": "world",
+      "importance": 0.5
+    },
+    {
+      "year": 620,
+      "title": "Fragmentation of classical leagues accelerates",
+      "scope": "world",
+      "importance": 0.45
+    },
+    {
+      "year": 1350,
+      "title": "Long-distance maritime commerce revives",
+      "scope": "world",
+      "importance": 0.5
+    },
+    {
+      "year": 1490,
+      "title": "Gunpowder monarchies establish permanent oceanic fleets",
+      "scope": "world",
+      "importance": 0.55
+    },
+    {
+      "year": 1650,
+      "title": "Mechanized production begins in North Arden",
+      "scope": "world",
+      "importance": 0.7
+    },
+    {
+      "year": 1780,
+      "title": "Constitutional-revolutionary era begins",
+      "scope": "world",
+      "importance": 0.7
+    },
+    {
+      "year": 1864,
+      "title": "Seven Nations War begins",
+      "scope": "world",
+      "importance": 0.85
+    },
+    {
+      "year": 1871,
+      "title": "Seven Nations War settlement creates formal alliance diplomacy",
+      "scope": "world",
+      "importance": 0.75
+    },
+    {
+      "year": 1909,
+      "title": "First Continental War begins",
+      "scope": "world",
+      "importance": 1.0
+    },
+    {
+      "year": 1916,
+      "title": "First Continental War ends in negotiated settlement",
+      "scope": "world",
+      "importance": 1.0
+    },
+    {
+      "year": 1917,
+      "title": "Council of Nations founded",
+      "scope": "world",
+      "importance": 0.7
+    },
+    {
+      "year": 1929,
+      "title": "Credit Panic becomes global depression",
+      "scope": "world",
+      "importance": 0.95
+    },
+    {
+      "year": 1938,
+      "title": "Second Continental War begins",
+      "scope": "world",
+      "importance": 1.0
+    },
+    {
+      "year": 1946,
+      "title": "Second Continental War ends",
+      "scope": "world",
+      "importance": 1.0
+    },
+    {
+      "year": 1947,
+      "title": "Long Deterrence begins between Soburish-led democracies and Elzesh system",
+      "scope": "world",
+      "importance": 0.95
+    },
+    {
+      "year": 1950,
+      "title": "World Assembly founded",
+      "scope": "world",
+      "importance": 0.85
+    },
+    {
+      "year": 1951,
+      "title": "Democratic Concord founded",
+      "scope": "world",
+      "importance": 0.9
+    },
+    {
+      "year": 1961,
+      "title": "Non-Aligned Forum established",
+      "scope": "world",
+      "importance": 0.65
+    },
+    {
+      "year": 1974,
+      "title": "Terena enters Democratic Concord",
+      "scope": "world",
+      "importance": 0.55
+    },
+    {
+      "year": 1991,
+      "title": "Long Deterrence ends after Elzesh reforms",
+      "scope": "world",
+      "importance": 0.95
+    },
+    {
+      "year": 1995,
+      "title": "Lorsain Trade Organization founded",
+      "scope": "world",
+      "importance": 0.75
+    },
+    {
+      "year": 1998,
+      "title": "Continental Sovereignty Compact formalized",
+      "scope": "world",
+      "importance": 0.65
+    },
+    {
+      "year": 2008,
+      "title": "Global financial crisis",
+      "scope": "world",
+      "importance": 0.9
+    },
+    {
+      "year": 2014,
+      "title": "Vaskaran strategic reassertion becomes explicit",
+      "scope": "world",
+      "importance": 0.7
+    },
+    {
+      "year": 2019,
+      "title": "Straits Security Crisis begins",
+      "scope": "world",
+      "importance": 0.7
+    },
+    {
+      "year": 2024,
+      "title": "Energy and shipping shock intensifies bloc competition",
+      "scope": "world",
+      "importance": 0.8
+    },
+    {
+      "year": 2028,
+      "title": "Multipolar competition defines default scenario",
+      "scope": "world",
+      "importance": 0.7
+    }
+  ],
+  "content_version": "0.2.0-predev"
+}

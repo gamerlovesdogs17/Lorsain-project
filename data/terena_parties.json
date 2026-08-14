@@ -1,0 +1,186 @@
+{
+  "parties": [
+    {
+      "id": "PARTY_LAB",
+      "name": "Labour Party",
+      "short": "LAB",
+      "color": "#c94b4b",
+      "assembly_seats": 128,
+      "position": "center-left labor/social democratic",
+      "factions": [
+        {
+          "id": "FAC_LAB_SD",
+          "name": "Social Democratic Caucus",
+          "share": 0.38,
+          "description": "Mainstream regulated-market social democrats.",
+          "party_id": "PARTY_LAB"
+        },
+        {
+          "id": "FAC_LAB_LEFT",
+          "name": "Workers’ Left",
+          "share": 0.19,
+          "description": "Democratic-socialist public-ownership and redistribution wing.",
+          "party_id": "PARTY_LAB"
+        },
+        {
+          "id": "FAC_LAB_WORK",
+          "name": "Workers’ Bloc",
+          "share": 0.25,
+          "description": "Union-heavy, economically left, culturally moderate wing.",
+          "party_id": "PARTY_LAB"
+        },
+        {
+          "id": "FAC_LAB_REFORM",
+          "name": "Reform Labour",
+          "share": 0.18,
+          "description": "Younger metropolitan pro-housing, pro-competition and pro-Concord wing.",
+          "party_id": "PARTY_LAB"
+        }
+      ],
+      "nomination_rule_id": "labour_member_union_rcv"
+    },
+    {
+      "id": "PARTY_NU",
+      "name": "National Union",
+      "short": "NU",
+      "color": "#496f9d",
+      "assembly_seats": 110,
+      "position": "center-right conservative",
+      "factions": [
+        {
+          "id": "FAC_NU_ONE",
+          "name": "One Nation Caucus",
+          "share": 0.43,
+          "description": "Institutionalist communitarian center-right.",
+          "party_id": "PARTY_NU"
+        },
+        {
+          "id": "FAC_NU_MARKET",
+          "name": "Market Conservatives",
+          "share": 0.32,
+          "description": "Lower-tax, deregulatory and business-oriented wing.",
+          "party_id": "PARTY_NU"
+        },
+        {
+          "id": "FAC_NU_NAT",
+          "name": "National Conservatives",
+          "share": 0.25,
+          "description": "Harder line on migration, policing and national security.",
+          "party_id": "PARTY_NU"
+        }
+      ],
+      "nomination_rule_id": "national_union_closed_rcv"
+    },
+    {
+      "id": "PARTY_CR",
+      "name": "Civic Reform Party",
+      "short": "CR",
+      "color": "#d2a845",
+      "assembly_seats": 69,
+      "position": "liberal-centrist institutional reform",
+      "factions": [
+        {
+          "id": "FAC_CR_LIB",
+          "name": "Liberal Reform Caucus",
+          "share": 0.52,
+          "description": "Civil-libertarian, electoral-reform and internationalist wing.",
+          "party_id": "PARTY_CR"
+        },
+        {
+          "id": "FAC_CR_MOD",
+          "name": "Civic Moderates",
+          "share": 0.48,
+          "description": "Technocratic, fiscally moderate cross-party wing.",
+          "party_id": "PARTY_CR"
+        }
+      ],
+      "nomination_rule_id": "civic_open_supporter_rcv"
+    },
+    {
+      "id": "PARTY_GRN",
+      "name": "Green Alliance",
+      "short": "GRN",
+      "color": "#5e9c68",
+      "assembly_seats": 41,
+      "position": "green progressive",
+      "factions": [
+        {
+          "id": "FAC_GRN_MAIN",
+          "name": "Green Mainstream",
+          "share": 0.63,
+          "description": "Climate, transit and institutional reform.",
+          "party_id": "PARTY_GRN"
+        },
+        {
+          "id": "FAC_GRN_ECO",
+          "name": "Eco-Social Wing",
+          "share": 0.37,
+          "description": "More redistributive and skeptical of market climate policy.",
+          "party_id": "PARTY_GRN"
+        }
+      ],
+      "nomination_rule_id": "green_transferable_convention"
+    },
+    {
+      "id": "PARTY_RL",
+      "name": "Regional League",
+      "short": "RL",
+      "color": "#8b7655",
+      "assembly_seats": 35,
+      "position": "agrarian decentralist regionalist",
+      "factions": [
+        {
+          "id": "FAC_RL_AUTO",
+          "name": "Provincial Autonomists",
+          "share": 0.55,
+          "description": "Fiscal and administrative decentralization.",
+          "party_id": "PARTY_RL"
+        },
+        {
+          "id": "FAC_RL_COOP",
+          "name": "Agrarian Cooperative Wing",
+          "share": 0.45,
+          "description": "Farm cooperatives, rural public services and local development.",
+          "party_id": "PARTY_RL"
+        }
+      ],
+      "nomination_rule_id": "regional_weighted_delegates"
+    },
+    {
+      "id": "PARTY_PM",
+      "name": "People’s Movement",
+      "short": "PM",
+      "color": "#86639a",
+      "assembly_seats": 29,
+      "position": "national-populist economic nationalist",
+      "factions": [
+        {
+          "id": "FAC_PM_NAT",
+          "name": "National Populists",
+          "share": 0.58,
+          "description": "Migration, sovereignty and anti-establishment politics.",
+          "party_id": "PARTY_PM"
+        },
+        {
+          "id": "FAC_PM_ECON",
+          "name": "Economic Nationalists",
+          "share": 0.42,
+          "description": "Protectionism, industrial policy and anti-corporate concentration.",
+          "party_id": "PARTY_PM"
+        }
+      ],
+      "nomination_rule_id": "people_direct_member_ballot"
+    },
+    {
+      "id": "PARTY_IND",
+      "name": "Independents",
+      "short": "IND",
+      "color": "#777777",
+      "assembly_seats": 8,
+      "position": "mixed",
+      "factions": [],
+      "nomination_rule_id": "independent"
+    }
+  ],
+  "content_version": "0.2.0-predev"
+}

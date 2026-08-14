@@ -1,0 +1,26 @@
+{
+  "name": "@lorsain/game",
+  "version": "0.2.0-predev",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "echo Phase 0 game host scaffold only — Vite UI arrives in Phase 8"
+  },
+  "dependencies": {
+    "@lorsain/content-loader": "workspace:*",
+    "@lorsain/sim": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

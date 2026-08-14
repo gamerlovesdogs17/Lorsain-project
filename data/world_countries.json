@@ -1,0 +1,1572 @@
+{
+  "world": "Lorsain",
+  "start_year": 2028,
+  "countries": [
+    {
+      "id": "W01",
+      "state_id": 1,
+      "name": "Republic of Khuld",
+      "azgaar_name": "Khuld Theocracy",
+      "region": "West Arden",
+      "government": "parliamentary republic",
+      "population_millions": 17.6,
+      "area_index": 3907,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W06",
+        "W05"
+      ],
+      "map_pole": [
+        429,
+        571
+      ],
+      "map_path_id": "W01",
+      "neighbor_ids": [
+        "W06",
+        "W05"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 17600000
+    },
+    {
+      "id": "W02",
+      "state_id": 2,
+      "name": "Republic of Mazgara",
+      "azgaar_name": "Mazgaran Theocracy",
+      "region": "West Arden",
+      "government": "presidential republic",
+      "population_millions": 128.5,
+      "area_index": 35853,
+      "power_tier": "middle power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W06",
+        "W27",
+        "W05",
+        "W12"
+      ],
+      "map_pole": [
+        439,
+        873
+      ],
+      "map_path_id": "W02",
+      "neighbor_ids": [
+        "W06",
+        "W27",
+        "W05",
+        "W12"
+      ],
+      "alignment_ids": [],
+      "population": 128500000
+    },
+    {
+      "id": "W03",
+      "state_id": 3,
+      "name": "United Kingdom of Paignia",
+      "azgaar_name": "United Kingdom of Paignia",
+      "region": "North Arden",
+      "government": "constitutional monarchy",
+      "population_millions": 16.3,
+      "area_index": 1672,
+      "power_tier": "small power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W45",
+        "W37",
+        "W11"
+      ],
+      "map_pole": [
+        180,
+        118
+      ],
+      "map_path_id": "W03",
+      "neighbor_ids": [
+        "W45",
+        "W37",
+        "W11"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 16300000
+    },
+    {
+      "id": "W04",
+      "state_id": 4,
+      "name": "Republic of Chalka",
+      "azgaar_name": "Chalkan Theocracy",
+      "region": "East Vespera",
+      "government": "presidential republic",
+      "population_millions": 43.9,
+      "area_index": 7038,
+      "power_tier": "middle power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W47"
+      ],
+      "map_pole": [
+        1771,
+        533
+      ],
+      "map_path_id": "W04",
+      "neighbor_ids": [
+        "W47"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 43900000
+    },
+    {
+      "id": "W05",
+      "state_id": 5,
+      "name": "Republic of Bharesh",
+      "azgaar_name": "Principality of Bhakh",
+      "region": "Meridian Basin",
+      "government": "parliamentary republic",
+      "population_millions": 49.4,
+      "area_index": 14103,
+      "power_tier": "middle power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 30,
+      "neighbors": [
+        "W40",
+        "W01",
+        "W41",
+        "W06",
+        "W12",
+        "W02"
+      ],
+      "map_pole": [
+        449,
+        626
+      ],
+      "map_path_id": "W05",
+      "neighbor_ids": [
+        "W40",
+        "W01",
+        "W41",
+        "W06",
+        "W12",
+        "W02"
+      ],
+      "alignment_ids": [],
+      "population": 49400000
+    },
+    {
+      "id": "W06",
+      "state_id": 6,
+      "name": "Kudren Federation",
+      "azgaar_name": "Kingdom of Kud",
+      "region": "West Arden",
+      "government": "federal republic",
+      "population_millions": 96.6,
+      "area_index": 43200,
+      "power_tier": "major power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 15,
+      "neighbors": [
+        "W46",
+        "W40",
+        "W37",
+        "W01",
+        "W02",
+        "W27",
+        "W05"
+      ],
+      "map_pole": [
+        347,
+        498
+      ],
+      "map_path_id": "W06",
+      "neighbor_ids": [
+        "W46",
+        "W40",
+        "W37",
+        "W01",
+        "W02",
+        "W27",
+        "W05"
+      ],
+      "alignment_ids": [],
+      "population": 96600000
+    },
+    {
+      "id": "W07",
+      "state_id": 7,
+      "name": "United Provinces of Kraker",
+      "azgaar_name": "United Provinces of Kra'ker",
+      "region": "Central Sea",
+      "government": "confederal parliamentary republic",
+      "population_millions": 60.2,
+      "area_index": 12916,
+      "power_tier": "middle power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 50,
+      "neighbors": [
+        "W30",
+        "W31",
+        "W13"
+      ],
+      "map_pole": [
+        948,
+        596
+      ],
+      "map_path_id": "W07",
+      "neighbor_ids": [
+        "W30",
+        "W31",
+        "W13"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 60200000
+    },
+    {
+      "id": "W08",
+      "state_id": 8,
+      "name": "Kingdom of Dohil",
+      "azgaar_name": "Duchy of Dohil",
+      "region": "Central Sea",
+      "government": "constitutional monarchy",
+      "population_millions": 25.8,
+      "area_index": 4371,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W28"
+      ],
+      "map_pole": [
+        997,
+        379
+      ],
+      "map_path_id": "W08",
+      "neighbor_ids": [
+        "W28"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 25800000
+    },
+    {
+      "id": "W09",
+      "state_id": 9,
+      "name": "Capreshan Commonwealth",
+      "azgaar_name": "Capreshoslan Theocracy",
+      "region": "South Vespera",
+      "government": "parliamentary commonwealth",
+      "population_millions": 127.8,
+      "area_index": 39457,
+      "power_tier": "middle power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W24",
+        "W19",
+        "W32",
+        "W33",
+        "W35"
+      ],
+      "map_pole": [
+        1501,
+        852
+      ],
+      "map_path_id": "W09",
+      "neighbor_ids": [
+        "W24",
+        "W19",
+        "W32",
+        "W33",
+        "W35"
+      ],
+      "alignment_ids": [],
+      "population": 127800000
+    },
+    {
+      "id": "W10",
+      "state_id": 10,
+      "name": "Free State of Chaz",
+      "azgaar_name": "Duchy of Chaz",
+      "region": "West Arden",
+      "government": "city-state republic",
+      "population_millions": 2.8,
+      "area_index": 206,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W27"
+      ],
+      "map_pole": [
+        298,
+        929
+      ],
+      "map_path_id": "W10",
+      "neighbor_ids": [
+        "W27"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 2800000
+    },
+    {
+      "id": "W11",
+      "state_id": 11,
+      "name": "Grand Duchy of Dunshil",
+      "azgaar_name": "Grand Duchy of Dunshil",
+      "region": "North Arden",
+      "government": "constitutional grand duchy",
+      "population_millions": 58.8,
+      "area_index": 8946,
+      "power_tier": "middle power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W45",
+        "W03",
+        "W37",
+        "W17"
+      ],
+      "map_pole": [
+        142,
+        186
+      ],
+      "map_path_id": "W11",
+      "neighbor_ids": [
+        "W45",
+        "W03",
+        "W37",
+        "W17"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 58800000
+    },
+    {
+      "id": "W12",
+      "state_id": 12,
+      "name": "Kingdom of Krigh",
+      "azgaar_name": "Kingdom of Krigh",
+      "region": "Meridian Basin",
+      "government": "constitutional monarchy",
+      "population_millions": 79.8,
+      "area_index": 24599,
+      "power_tier": "middle power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 20,
+      "neighbors": [
+        "W05",
+        "W41",
+        "W02",
+        "W48",
+        "W26"
+      ],
+      "map_pole": [
+        568,
+        684
+      ],
+      "map_path_id": "W12",
+      "neighbor_ids": [
+        "W05",
+        "W41",
+        "W02",
+        "W48",
+        "W26"
+      ],
+      "alignment_ids": [],
+      "population": 79800000
+    },
+    {
+      "id": "W13",
+      "state_id": 13,
+      "name": "Graeven Republic",
+      "azgaar_name": "Grand Duchy of Graj'ar't",
+      "region": "Meridian Basin",
+      "government": "parliamentary republic",
+      "population_millions": 45.9,
+      "area_index": 8878,
+      "power_tier": "middle power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 75,
+      "neighbors": [
+        "W41",
+        "W48",
+        "W07",
+        "W26"
+      ],
+      "map_pole": [
+        845,
+        612
+      ],
+      "map_path_id": "W13",
+      "neighbor_ids": [
+        "W41",
+        "W48",
+        "W07",
+        "W26"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 45900000
+    },
+    {
+      "id": "W14",
+      "state_id": 14,
+      "name": "Burgan Islands",
+      "azgaar_name": "Duchy of Bug",
+      "region": "East Vespera",
+      "government": "constitutional island principality",
+      "population_millions": 5.7,
+      "area_index": 555,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W32"
+      ],
+      "map_pole": [
+        1764,
+        738
+      ],
+      "map_path_id": "W14",
+      "neighbor_ids": [
+        "W32"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 5700000
+    },
+    {
+      "id": "W15",
+      "state_id": 15,
+      "name": "Republic of Ris",
+      "azgaar_name": "Duchy of Ris",
+      "region": "Meridian Basin",
+      "government": "parliamentary republic",
+      "population_millions": 15.6,
+      "area_index": 1885,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W26"
+      ],
+      "map_pole": [
+        886,
+        793
+      ],
+      "map_path_id": "W15",
+      "neighbor_ids": [
+        "W26"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 15600000
+    },
+    {
+      "id": "W16",
+      "state_id": 16,
+      "name": "Sythrian Republic",
+      "azgaar_name": "Kingdom of Szith",
+      "region": "North Arden",
+      "government": "semi-presidential republic",
+      "population_millions": 60.4,
+      "area_index": 34138,
+      "power_tier": "middle power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W36",
+        "W37",
+        "W38",
+        "W46",
+        "W20",
+        "W40"
+      ],
+      "map_pole": [
+        468,
+        268
+      ],
+      "map_path_id": "W16",
+      "neighbor_ids": [
+        "W36",
+        "W37",
+        "W38",
+        "W46",
+        "W20",
+        "W40"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 60400000
+    },
+    {
+      "id": "W17",
+      "state_id": 17,
+      "name": "Principality of Crafland",
+      "azgaar_name": "Principality of Crafland",
+      "region": "West Arden",
+      "government": "constitutional principality",
+      "population_millions": 60.8,
+      "area_index": 11315,
+      "power_tier": "middle power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W11",
+        "W37"
+      ],
+      "map_pole": [
+        63,
+        283
+      ],
+      "map_path_id": "W17",
+      "neighbor_ids": [
+        "W11",
+        "W37"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 60800000
+    },
+    {
+      "id": "W18",
+      "state_id": 18,
+      "name": "Krapjezan Republic",
+      "azgaar_name": "Krapjezan Theocracy",
+      "region": "Central Sea",
+      "government": "parliamentary republic",
+      "population_millions": 8.5,
+      "area_index": 1006,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W43"
+      ],
+      "map_pole": [
+        1080,
+        713
+      ],
+      "map_path_id": "W18",
+      "neighbor_ids": [
+        "W43"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 8500000
+    },
+    {
+      "id": "W19",
+      "state_id": 19,
+      "name": "Dieric Federation",
+      "azgaar_name": "Dier Theocracy",
+      "region": "East Vespera",
+      "government": "federal parliamentary republic",
+      "population_millions": 83.2,
+      "area_index": 29990,
+      "power_tier": "major power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 30,
+      "neighbors": [
+        "W47",
+        "W42",
+        "W24",
+        "W32",
+        "W09"
+      ],
+      "map_pole": [
+        1581,
+        717
+      ],
+      "map_path_id": "W19",
+      "neighbor_ids": [
+        "W47",
+        "W42",
+        "W24",
+        "W32",
+        "W09"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 83200000
+    },
+    {
+      "id": "W20",
+      "state_id": 20,
+      "name": "Kingdom of Boignes",
+      "azgaar_name": "Grand Duchy of Boignes",
+      "region": "North Arden",
+      "government": "constitutional monarchy",
+      "population_millions": 35.9,
+      "area_index": 7069,
+      "power_tier": "middle power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W38",
+        "W16",
+        "W39",
+        "W40"
+      ],
+      "map_pole": [
+        665,
+        273
+      ],
+      "map_path_id": "W20",
+      "neighbor_ids": [
+        "W38",
+        "W16",
+        "W39",
+        "W40"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 35900000
+    },
+    {
+      "id": "W21",
+      "state_id": 21,
+      "name": "Gneaban Republic",
+      "azgaar_name": "Gneaban Theocracy",
+      "region": "North Vespera",
+      "government": "presidential republic",
+      "population_millions": 64.1,
+      "area_index": 14852,
+      "power_tier": "middle power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W29",
+        "W22"
+      ],
+      "map_pole": [
+        1533,
+        336
+      ],
+      "map_path_id": "W21",
+      "neighbor_ids": [
+        "W29",
+        "W22"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 64100000
+    },
+    {
+      "id": "W22",
+      "state_id": 22,
+      "name": "Thultan Union",
+      "azgaar_name": "Thultan Theocracy",
+      "region": "North Vespera",
+      "government": "dominant-party republic",
+      "population_millions": 94.6,
+      "area_index": 25929,
+      "power_tier": "middle power",
+      "alignment": "Continental Sovereignty Compact",
+      "relation_with_terena": -15,
+      "neighbors": [
+        "W21",
+        "W29",
+        "W23",
+        "W47",
+        "W24"
+      ],
+      "map_pole": [
+        1570,
+        445
+      ],
+      "map_path_id": "W22",
+      "neighbor_ids": [
+        "W21",
+        "W29",
+        "W23",
+        "W47",
+        "W24"
+      ],
+      "alignment_ids": [
+        "INT_CSC"
+      ],
+      "population": 94600000
+    },
+    {
+      "id": "W23",
+      "state_id": 23,
+      "name": "Kingdom of Nash",
+      "azgaar_name": "Kingdom of Nash",
+      "region": "North Vespera",
+      "government": "constitutional monarchy",
+      "population_millions": 85.7,
+      "area_index": 27762,
+      "power_tier": "major power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 25,
+      "neighbors": [
+        "W28",
+        "W29",
+        "W30",
+        "W22",
+        "W24",
+        "W31"
+      ],
+      "map_pole": [
+        1299,
+        417
+      ],
+      "map_path_id": "W23",
+      "neighbor_ids": [
+        "W28",
+        "W29",
+        "W30",
+        "W22",
+        "W24",
+        "W31"
+      ],
+      "alignment_ids": [],
+      "population": 85700000
+    },
+    {
+      "id": "W24",
+      "state_id": 24,
+      "name": "Elzesh Union",
+      "azgaar_name": "Elzesh Empire",
+      "region": "South Vespera",
+      "government": "centralized one-party republic",
+      "population_millions": 137.9,
+      "area_index": 61916,
+      "power_tier": "great power",
+      "alignment": "Continental Sovereignty Compact",
+      "relation_with_terena": -25,
+      "neighbors": [
+        "W23",
+        "W22",
+        "W47",
+        "W19",
+        "W44",
+        "W09"
+      ],
+      "map_pole": [
+        1363,
+        649
+      ],
+      "map_path_id": "W24",
+      "neighbor_ids": [
+        "W23",
+        "W22",
+        "W47",
+        "W19",
+        "W44",
+        "W09"
+      ],
+      "alignment_ids": [
+        "INT_CSC"
+      ],
+      "population": 137900000
+    },
+    {
+      "id": "W25",
+      "state_id": 25,
+      "name": "Butiarm Islands",
+      "azgaar_name": "Duchy of Butiarm",
+      "region": "East Vespera",
+      "government": "parliamentary island republic",
+      "population_millions": 9.6,
+      "area_index": 1062,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W32"
+      ],
+      "map_pole": [
+        1846,
+        776
+      ],
+      "map_path_id": "W25",
+      "neighbor_ids": [
+        "W32"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 9600000
+    },
+    {
+      "id": "W26",
+      "state_id": 26,
+      "name": "Risan Commonwealth",
+      "azgaar_name": "Protectorate of Ris",
+      "region": "Meridian Basin",
+      "government": "parliamentary commonwealth",
+      "population_millions": 49.1,
+      "area_index": 9879,
+      "power_tier": "middle power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W12",
+        "W48",
+        "W13",
+        "W15"
+      ],
+      "map_pole": [
+        734,
+        740
+      ],
+      "map_path_id": "W26",
+      "neighbor_ids": [
+        "W12",
+        "W48",
+        "W13",
+        "W15"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 49100000
+    },
+    {
+      "id": "W27",
+      "state_id": 27,
+      "name": "Republic of Ugol",
+      "azgaar_name": "Republic of Ugul",
+      "region": "West Arden",
+      "government": "presidential republic",
+      "population_millions": 115.0,
+      "area_index": 32630,
+      "power_tier": "major power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 20,
+      "neighbors": [
+        "W06",
+        "W02",
+        "W34",
+        "W10"
+      ],
+      "map_pole": [
+        266,
+        777
+      ],
+      "map_path_id": "W27",
+      "neighbor_ids": [
+        "W06",
+        "W02",
+        "W34",
+        "W10"
+      ],
+      "alignment_ids": [],
+      "population": 115000000
+    },
+    {
+      "id": "W28",
+      "state_id": 28,
+      "name": "Siramel Commonwealth",
+      "azgaar_name": "Sireramelese Empire",
+      "region": "Central Sea",
+      "government": "federal parliamentary commonwealth",
+      "population_millions": 317.3,
+      "area_index": 57677,
+      "power_tier": "superpower",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 45,
+      "neighbors": [
+        "W29",
+        "W30",
+        "W23",
+        "W08"
+      ],
+      "map_pole": [
+        963,
+        211
+      ],
+      "map_path_id": "W28",
+      "neighbor_ids": [
+        "W29",
+        "W30",
+        "W23",
+        "W08"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 317300000
+    },
+    {
+      "id": "W29",
+      "state_id": 29,
+      "name": "Redcham Republic",
+      "azgaar_name": "Redcham Theocracy",
+      "region": "North Vespera",
+      "government": "semi-presidential republic",
+      "population_millions": 118.0,
+      "area_index": 27802,
+      "power_tier": "major power",
+      "alignment": "Continental Sovereignty Compact",
+      "relation_with_terena": -5,
+      "neighbors": [
+        "W28",
+        "W21",
+        "W23",
+        "W22"
+      ],
+      "map_pole": [
+        1554,
+        249
+      ],
+      "map_path_id": "W29",
+      "neighbor_ids": [
+        "W28",
+        "W21",
+        "W23",
+        "W22"
+      ],
+      "alignment_ids": [
+        "INT_CSC"
+      ],
+      "population": 118000000
+    },
+    {
+      "id": "W30",
+      "state_id": 30,
+      "name": "Kingdom of Srus",
+      "azgaar_name": "Kingdom of Srus",
+      "region": "Central Sea",
+      "government": "constitutional monarchy",
+      "population_millions": 100.5,
+      "area_index": 27641,
+      "power_tier": "middle power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W28",
+        "W23",
+        "W07",
+        "W31"
+      ],
+      "map_pole": [
+        1096,
+        517
+      ],
+      "map_path_id": "W30",
+      "neighbor_ids": [
+        "W28",
+        "W23",
+        "W07",
+        "W31"
+      ],
+      "alignment_ids": [],
+      "population": 100500000
+    },
+    {
+      "id": "W31",
+      "state_id": 31,
+      "name": "Kopjaj Republic",
+      "azgaar_name": "Grand Duchy of Kopjaj",
+      "region": "Central Sea",
+      "government": "parliamentary republic",
+      "population_millions": 27.7,
+      "area_index": 5461,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W30",
+        "W07",
+        "W23",
+        "W43"
+      ],
+      "map_pole": [
+        1022,
+        564
+      ],
+      "map_path_id": "W31",
+      "neighbor_ids": [
+        "W30",
+        "W07",
+        "W23",
+        "W43"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 27700000
+    },
+    {
+      "id": "W32",
+      "state_id": 32,
+      "name": "Grand Duchy of Thres",
+      "azgaar_name": "Grand Duchy of Thres",
+      "region": "East Vespera",
+      "government": "constitutional grand duchy",
+      "population_millions": 37.9,
+      "area_index": 5956,
+      "power_tier": "middle power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W14",
+        "W19",
+        "W25",
+        "W09",
+        "W33"
+      ],
+      "map_pole": [
+        1684,
+        803
+      ],
+      "map_path_id": "W32",
+      "neighbor_ids": [
+        "W14",
+        "W19",
+        "W25",
+        "W09",
+        "W33"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 37900000
+    },
+    {
+      "id": "W33",
+      "state_id": 33,
+      "name": "Irdraco Republic",
+      "azgaar_name": "Irdracoalese Marches",
+      "region": "East Vespera",
+      "government": "parliamentary republic",
+      "population_millions": 12.6,
+      "area_index": 1577,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W09",
+        "W32"
+      ],
+      "map_pole": [
+        1709,
+        875
+      ],
+      "map_path_id": "W33",
+      "neighbor_ids": [
+        "W09",
+        "W32"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 12600000
+    },
+    {
+      "id": "W34",
+      "state_id": 34,
+      "name": "Arurd Republic",
+      "azgaar_name": "Protectorate of Arurd",
+      "region": "West Arden",
+      "government": "parliamentary republic",
+      "population_millions": 8.4,
+      "area_index": 1169,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W27"
+      ],
+      "map_pole": [
+        257,
+        934
+      ],
+      "map_path_id": "W34",
+      "neighbor_ids": [
+        "W27"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 8400000
+    },
+    {
+      "id": "W35",
+      "state_id": 35,
+      "name": "Zarhar Republic",
+      "azgaar_name": "Zarharmerdian Theocracy",
+      "region": "East Vespera",
+      "government": "presidential republic",
+      "population_millions": 14.0,
+      "area_index": 1874,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W09"
+      ],
+      "map_pole": [
+        1643,
+        934
+      ],
+      "map_path_id": "W35",
+      "neighbor_ids": [
+        "W09"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 14000000
+    },
+    {
+      "id": "W36",
+      "state_id": 36,
+      "name": "Kingdom of Soland",
+      "azgaar_name": "Kingdom of Solidland",
+      "region": "North Arden",
+      "government": "constitutional monarchy",
+      "population_millions": 111.5,
+      "area_index": 23337,
+      "power_tier": "major power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W37",
+        "W38",
+        "W16"
+      ],
+      "map_pole": [
+        432,
+        93
+      ],
+      "map_path_id": "W36",
+      "neighbor_ids": [
+        "W37",
+        "W38",
+        "W16"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 111500000
+    },
+    {
+      "id": "W37",
+      "state_id": 37,
+      "name": "Soburish Federation",
+      "azgaar_name": "Soburish Empire",
+      "region": "West Arden",
+      "government": "federal presidential republic",
+      "population_millions": 202.8,
+      "area_index": 56358,
+      "power_tier": "superpower",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 65,
+      "neighbors": [
+        "W36",
+        "W03",
+        "W16",
+        "W46",
+        "W11",
+        "W17",
+        "W06"
+      ],
+      "map_pole": [
+        92,
+        397
+      ],
+      "map_path_id": "W37",
+      "neighbor_ids": [
+        "W36",
+        "W03",
+        "W16",
+        "W46",
+        "W11",
+        "W17",
+        "W06"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 202800000
+    },
+    {
+      "id": "W38",
+      "state_id": 38,
+      "name": "Kingdom of Montria",
+      "azgaar_name": "Kingdom of Montria",
+      "region": "North Arden",
+      "government": "constitutional monarchy",
+      "population_millions": 154.0,
+      "area_index": 31074,
+      "power_tier": "major power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 35,
+      "neighbors": [
+        "W36",
+        "W16",
+        "W39",
+        "W20"
+      ],
+      "map_pole": [
+        592,
+        188
+      ],
+      "map_path_id": "W38",
+      "neighbor_ids": [
+        "W36",
+        "W16",
+        "W39",
+        "W20"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 154000000
+    },
+    {
+      "id": "W39",
+      "state_id": 39,
+      "name": "Sholed Republic",
+      "azgaar_name": "Republic of Sholed",
+      "region": "North Arden",
+      "government": "parliamentary republic",
+      "population_millions": 80.0,
+      "area_index": 16388,
+      "power_tier": "middle power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 55,
+      "neighbors": [
+        "W38",
+        "W20",
+        "W40"
+      ],
+      "map_pole": [
+        819,
+        315
+      ],
+      "map_path_id": "W39",
+      "neighbor_ids": [
+        "W38",
+        "W20",
+        "W40"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 80000000
+    },
+    {
+      "id": "W40",
+      "state_id": 40,
+      "name": "Vaskaran Federation",
+      "azgaar_name": "Bamunzdum Empire",
+      "region": "Meridian Basin",
+      "government": "managed federal presidential republic",
+      "population_millions": 159.3,
+      "area_index": 50433,
+      "power_tier": "great power",
+      "alignment": "Continental Sovereignty Compact",
+      "relation_with_terena": -40,
+      "neighbors": [
+        "W16",
+        "W20",
+        "W39",
+        "W46",
+        "W06",
+        "W41",
+        "W05"
+      ],
+      "map_pole": [
+        617,
+        424
+      ],
+      "map_path_id": "W40",
+      "neighbor_ids": [
+        "W16",
+        "W20",
+        "W39",
+        "W46",
+        "W06",
+        "W41",
+        "W05"
+      ],
+      "alignment_ids": [
+        "INT_CSC"
+      ],
+      "population": 159300000
+    },
+    {
+      "id": "W41",
+      "state_id": 41,
+      "name": "Republic of Terena",
+      "azgaar_name": "Nazirukt Theocracy",
+      "region": "Meridian Basin",
+      "government": "dual-mandate presidential republic",
+      "population_millions": 72,
+      "area_index": 25224,
+      "power_tier": "major power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W40",
+        "W13",
+        "W05",
+        "W48",
+        "W12"
+      ],
+      "map_pole": [
+        810,
+        467
+      ],
+      "map_path_id": "W41",
+      "neighbor_ids": [
+        "W40",
+        "W13",
+        "W05",
+        "W48",
+        "W12"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 72000000,
+      "domestic_country_id": "TER"
+    },
+    {
+      "id": "W42",
+      "state_id": 42,
+      "name": "Duchy of Glam",
+      "azgaar_name": "Duchy of Glam",
+      "region": "East Vespera",
+      "government": "constitutional duchy",
+      "population_millions": 24.1,
+      "area_index": 4644,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W47",
+        "W19"
+      ],
+      "map_pole": [
+        1685,
+        672
+      ],
+      "map_path_id": "W42",
+      "neighbor_ids": [
+        "W47",
+        "W19"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 24100000
+    },
+    {
+      "id": "W43",
+      "state_id": 43,
+      "name": "Skuzha Republic",
+      "azgaar_name": "Duchy of Skuzush",
+      "region": "Central Sea",
+      "government": "parliamentary republic",
+      "population_millions": 22.7,
+      "area_index": 3040,
+      "power_tier": "small power",
+      "alignment": "Non-Aligned Forum",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W31",
+        "W18"
+      ],
+      "map_pole": [
+        1058,
+        659
+      ],
+      "map_path_id": "W43",
+      "neighbor_ids": [
+        "W31",
+        "W18"
+      ],
+      "alignment_ids": [
+        "INT_NAF"
+      ],
+      "population": 22700000
+    },
+    {
+      "id": "W44",
+      "state_id": 44,
+      "name": "Shurushan Republic",
+      "azgaar_name": "Republic of Shurusha",
+      "region": "Central Sea",
+      "government": "parliamentary republic",
+      "population_millions": 10.9,
+      "area_index": 1485,
+      "power_tier": "small power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W24"
+      ],
+      "map_pole": [
+        1137,
+        723
+      ],
+      "map_path_id": "W44",
+      "neighbor_ids": [
+        "W24"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 10900000
+    },
+    {
+      "id": "W45",
+      "state_id": 45,
+      "name": "Grand Duchy of Borough",
+      "azgaar_name": "Grand Duchy of Borough",
+      "region": "North Arden",
+      "government": "constitutional grand duchy",
+      "population_millions": 54.8,
+      "area_index": 9022,
+      "power_tier": "middle power",
+      "alignment": "Democratic Concord",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W03",
+        "W11"
+      ],
+      "map_pole": [
+        147,
+        93
+      ],
+      "map_path_id": "W45",
+      "neighbor_ids": [
+        "W03",
+        "W11"
+      ],
+      "alignment_ids": [
+        "INT_DC"
+      ],
+      "population": 54800000
+    },
+    {
+      "id": "W46",
+      "state_id": 46,
+      "name": "Sidburan Republic",
+      "azgaar_name": "Sidburan Theocracy",
+      "region": "West Arden",
+      "government": "military-influenced presidential republic",
+      "population_millions": 83.3,
+      "area_index": 37863,
+      "power_tier": "middle power",
+      "alignment": "Continental Sovereignty Compact",
+      "relation_with_terena": -20,
+      "neighbors": [
+        "W37",
+        "W16",
+        "W40",
+        "W06"
+      ],
+      "map_pole": [
+        293,
+        355
+      ],
+      "map_path_id": "W46",
+      "neighbor_ids": [
+        "W37",
+        "W16",
+        "W40",
+        "W06"
+      ],
+      "alignment_ids": [
+        "INT_CSC"
+      ],
+      "population": 83300000
+    },
+    {
+      "id": "W47",
+      "state_id": 47,
+      "name": "Kingdom of Joim",
+      "azgaar_name": "Kingdom of Joim",
+      "region": "East Vespera",
+      "government": "constitutional monarchy",
+      "population_millions": 119.3,
+      "area_index": 34409,
+      "power_tier": "major power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 0,
+      "neighbors": [
+        "W22",
+        "W24",
+        "W04",
+        "W42",
+        "W19"
+      ],
+      "map_pole": [
+        1511,
+        577
+      ],
+      "map_path_id": "W47",
+      "neighbor_ids": [
+        "W22",
+        "W24",
+        "W04",
+        "W42",
+        "W19"
+      ],
+      "alignment_ids": [],
+      "population": 119300000
+    },
+    {
+      "id": "W48",
+      "state_id": 48,
+      "name": "Kingdom of Nigis",
+      "azgaar_name": "Kingdom of Nigis",
+      "region": "Meridian Basin",
+      "government": "constitutional monarchy",
+      "population_millions": 57.5,
+      "area_index": 15694,
+      "power_tier": "middle power",
+      "alignment": "Independent / multi-aligned",
+      "relation_with_terena": 55,
+      "neighbors": [
+        "W41",
+        "W13",
+        "W12",
+        "W26"
+      ],
+      "map_pole": [
+        782,
+        662
+      ],
+      "map_path_id": "W48",
+      "neighbor_ids": [
+        "W41",
+        "W13",
+        "W12",
+        "W26"
+      ],
+      "alignment_ids": [],
+      "population": 57500000
+    }
+  ],
+  "content_version": "0.2.0-predev"
+}

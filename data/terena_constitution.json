@@ -1,0 +1,69 @@
+{
+  "country_id": "TER",
+  "effective_date": "1971-07-01",
+  "system_name": "Dual-Mandate Republic",
+  "president": {
+    "term_years": 5,
+    "term_limit": 2,
+    "election": "national_rcv",
+    "head_of_state": true,
+    "chief_executive": true,
+    "can_dissolve_assembly": false,
+    "ordinary_veto": "suspensive_once",
+    "priority_bills_per_year": 3
+  },
+  "assembly": {
+    "seats": 420,
+    "term_years": 4,
+    "election": "stv",
+    "constituencies": 48,
+    "elects_executive": false,
+    "absolute_majority": 211,
+    "constituency_boundaries": {
+      "authority": "National Electoral Commission",
+      "must_follow_province_boundaries": false,
+      "may_cross_province_boundaries": true,
+      "review_cycle_years": 10,
+      "equal_population_priority": true
+    }
+  },
+  "ministerial_censure": {
+    "threshold_fraction": 0.55,
+    "effect": "remove_individual_minister"
+  },
+  "budget": {
+    "executive_proposes": true,
+    "assembly_controls": true,
+    "continuing_appropriation_if_late": true
+  },
+  "regulation_review": {
+    "review_days": 60,
+    "assembly_can_annul": true
+  },
+  "war_powers": {
+    "unilateral_days": 30,
+    "continued_offensive_action_requires_assembly": true
+  },
+  "emergency": {
+    "initial_days": 14,
+    "extension_days": 30,
+    "assembly_may_terminate": true,
+    "expedited_court_review": true
+  },
+  "recall": {
+    "assembly_referral_fraction": 0.6,
+    "national_vote_required": true
+  },
+  "impeachment": {
+    "assembly_fraction": 0.6666667,
+    "constitutional_court_judgment": true
+  },
+  "constitutional_court": {
+    "judges": 9,
+    "term_years": 12,
+    "renewable": false,
+    "confirmation_fraction": 0.6,
+    "staggered": true
+  },
+  "content_version": "0.2.0-predev"
+}
