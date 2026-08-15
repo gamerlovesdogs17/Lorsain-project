@@ -6,7 +6,7 @@
  * Inject Uint32Source for deterministic legal lots (simulation adapts its elections stream).
  */
 
-export const ELECTION_MATH_PACKAGE_VERSION = "0.2.0-predev" as const;
+export const ELECTION_MATH_PACKAGE_VERSION = "0.3.0-predev" as const;
 export const ELECTION_MATH_PHASE = "0.5_complete" as const;
 
 export {

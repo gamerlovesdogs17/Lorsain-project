@@ -61,6 +61,7 @@ export const PartySchema = z
     assembly_seats: z.number().int(),
     nomination_rule_id: z.string(),
     factions: z.array(PartyFactionSchema).default([]),
+    organization_type: z.enum(["membership_party", "independent_aggregate"]).optional(),
   })
   .passthrough();
 
@@ -325,10 +326,100 @@ export const PresidentialEligibilitySchema = z
         incompatible_offices_while_serving_as_president: z.array(z.string()),
         may_campaign_while_holding: z.record(z.boolean()).optional(),
         vacate_incompatible_office: z.string().optional(),
+        must_resign_before_candidacy_filing: z.array(z.string()).optional(),
         disqualifications_to_run: z.array(z.string()),
         party_nomination: z.string().optional(),
+        age_measured_on: z.string().optional(),
       })
       .passthrough(),
+  })
+  .passthrough();
+
+export const AssemblyElection2026Schema = z
+  .object({
+    content_version: z.string().optional(),
+    election_id: z.string(),
+    election_date: z.string(),
+    method: z.literal("stv"),
+    constituencies: z.array(z.record(z.unknown())),
+  })
+  .passthrough();
+
+export const VoterBlocsFileSchema = z
+  .object({
+    content_version: z.string().optional(),
+    scenario_id: z.string().optional(),
+    constituencies: z.array(
+      z
+        .object({
+          constituency_id: z.string(),
+          blocs: z.array(
+            z
+              .object({
+                id: z.string(),
+                weight: z.number().finite().nonnegative(),
+              })
+              .passthrough(),
+          ),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough();
+
+export const PollstersFileSchema = z
+  .object({
+    content_version: z.string().optional(),
+    pollsters: z.array(
+      z
+        .object({
+          id: z.string(),
+          name: z.string(),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough();
+
+export const HistoricalCandidates2026Schema = z
+  .object({
+    content_version: z.string().optional(),
+    candidates: z.array(
+      z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          constituency_id: z.string(),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough();
+
+export const PresidentialAdministrationSchema = z
+  .object({
+    id: z.string(),
+    president_name: z.string(),
+    party_id: z.string(),
+    term_start: z.string(),
+    term_end: z.string(),
+  })
+  .passthrough();
+
+export const PresidentialAdministrationsFileSchema = z
+  .object({
+    content_version: z.string().optional(),
+    administrations: z.array(PresidentialAdministrationSchema),
+    historical_persons: z
+      .array(
+        z
+          .object({
+            id: z.string(),
+            name: z.string(),
+          })
+          .passthrough(),
+      )
+      .optional(),
   })
   .passthrough();
 
@@ -347,4 +438,9 @@ export type CitiesFile = z.infer<typeof CitiesFileSchema>;
 export type CrosswalkFile = z.infer<typeof CrosswalkFileSchema>;
 export type ElectoralCountingFile = z.infer<typeof ElectoralCountingSchema>;
 export type PresidentialEligibilityFile = z.infer<typeof PresidentialEligibilitySchema>;
+export type AssemblyElection2026File = z.infer<typeof AssemblyElection2026Schema>;
+export type VoterBlocsFile = z.infer<typeof VoterBlocsFileSchema>;
+export type PollstersFile = z.infer<typeof PollstersFileSchema>;
+export type HistoricalCandidates2026File = z.infer<typeof HistoricalCandidates2026Schema>;
+export type PresidentialAdministrationsFile = z.infer<typeof PresidentialAdministrationsFileSchema>;
 export type GeoJsonFeatureCollection = z.infer<typeof GeoJsonFeatureCollectionSchema>;

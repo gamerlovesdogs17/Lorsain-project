@@ -1,6 +1,6 @@
 # Validation Report
 
-Content version: 0.2.0-predev  
+Content version: 0.3.0-predev  
 Phase: **0.5 complete** (election-math IRV/STV; Phase 0 hardened; Phase 0b next)
 
 Validated 48 countries, 21 admin units, 48 constituencies, 30 top-level figures  

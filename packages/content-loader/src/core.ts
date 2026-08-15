@@ -1,21 +1,26 @@
 import {
+  AssemblyElection2026Schema,
   CitiesFileSchema,
   ConstitutionFileSchema,
   ConstituenciesGeoJsonSchema,
   ConstituencyPropertiesSchema,
   CrosswalkFileSchema,
   ElectoralCountingSchema,
+  HistoricalCandidates2026Schema,
   IssuesFileSchema,
   ManifestSchema,
   MediaFileSchema,
   NominationRulesFileSchema,
   OrganizationsFileSchema,
   PartiesFileSchema,
+  PollstersFileSchema,
+  PresidentialAdministrationsFileSchema,
   PresidentialEligibilitySchema,
   ProvincePropertiesSchema,
   ProvincesGeoJsonSchema,
   ScenarioFileSchema,
   StartingFiguresFileSchema,
+  VoterBlocsFileSchema,
   WorldCountriesFileSchema,
   WorldInstitutionsFileSchema,
   type CitiesFile,
@@ -89,11 +94,8 @@ export type ContentBundle = {
   manifest: Manifest;
   content: ParsedAuthoritativeContent;
   index: ContentIndex;
-  /**
-   * Pending eligibility draft (reference only). Not final gameplay law until status=approved
-   * and promoted to authoritative content.
-   */
-  pendingPresidentialEligibility?: PresidentialEligibilityFile;
+  /** Canonical presidential eligibility (Phase 0b authoritative). */
+  presidentialEligibility: PresidentialEligibilityFile;
 };
 
 export type ContentFileReader = {
@@ -235,6 +237,11 @@ export function validateAndLoadContent(
     "scenario",
     "canonical_crosswalk",
     "terena_electoral_counting",
+    "presidential_eligibility",
+    "terena_election_assembly_2026",
+    "terena_historical_candidates_2026",
+    "terena_voter_blocs_2028",
+    "terena_pollsters",
     "world_svg",
     "terena_svg",
   ] as const;
@@ -246,15 +253,15 @@ export function validateAndLoadContent(
     "world_history_timeline",
     "terena_history_timeline",
     "terena_geography",
-    "presidential_eligibility_pending",
+    "terena_presidential_administrations",
   ]) {
     if (!(key in manifest.derived_or_reference)) {
       error(`manifest.derived_or_reference missing key: ${key}`);
     }
   }
-  if ("presidential_eligibility" in manifest.authoritative) {
+  if ("presidential_eligibility_pending" in manifest.derived_or_reference) {
     error(
-      "presidential_eligibility must not be authoritative while draft; use derived_or_reference.presidential_eligibility_pending",
+      "presidential_eligibility_pending must be removed after Phase 0b; use authoritative.presidential_eligibility",
     );
   }
 
@@ -297,7 +304,11 @@ export function validateAndLoadContent(
   let counting: ElectoralCountingFile;
   let worldSvg: string;
   let terenaSvg: string;
-  let pendingEligibility: PresidentialEligibilityFile | undefined;
+  let eligibility: PresidentialEligibilityFile;
+  let election2026: ReturnType<typeof AssemblyElection2026Schema.parse>;
+  let historicalCandidates: ReturnType<typeof HistoricalCandidates2026Schema.parse>;
+  let voterBlocs: ReturnType<typeof VoterBlocsFileSchema.parse>;
+  let pollsters: ReturnType<typeof PollstersFileSchema.parse>;
 
   try {
     world = WorldCountriesFileSchema.parse(readAuthJson("world_countries"));
@@ -315,6 +326,36 @@ export function validateAndLoadContent(
     scenario = ScenarioFileSchema.parse(readAuthJson("scenario"));
     crosswalk = CrosswalkFileSchema.parse(readAuthJson("canonical_crosswalk"));
     counting = ElectoralCountingSchema.parse(readAuthJson("terena_electoral_counting"));
+    eligibility = PresidentialEligibilitySchema.parse(
+      parseJson(
+        reader.readText(manifest.authoritative.presidential_eligibility!),
+        manifest.authoritative.presidential_eligibility!,
+      ),
+    );
+    election2026 = AssemblyElection2026Schema.parse(
+      parseJson(
+        reader.readText(manifest.authoritative.terena_election_assembly_2026!),
+        manifest.authoritative.terena_election_assembly_2026!,
+      ),
+    );
+    historicalCandidates = HistoricalCandidates2026Schema.parse(
+      parseJson(
+        reader.readText(manifest.authoritative.terena_historical_candidates_2026!),
+        manifest.authoritative.terena_historical_candidates_2026!,
+      ),
+    );
+    voterBlocs = VoterBlocsFileSchema.parse(
+      parseJson(
+        reader.readText(manifest.authoritative.terena_voter_blocs_2028!),
+        manifest.authoritative.terena_voter_blocs_2028!,
+      ),
+    );
+    pollsters = PollstersFileSchema.parse(
+      parseJson(
+        reader.readText(manifest.authoritative.terena_pollsters!),
+        manifest.authoritative.terena_pollsters!,
+      ),
+    );
     worldSvg = reader.readText(manifest.authoritative.world_svg!);
     terenaSvg = reader.readText(manifest.authoritative.terena_svg!);
 
@@ -331,22 +372,22 @@ export function validateAndLoadContent(
     checkVersion("scenario", scenario.content_version);
     checkVersion("canonical_crosswalk", crosswalk.content_version);
     checkVersion("terena_electoral_counting", counting.content_version);
+    checkVersion("presidential_eligibility", eligibility.content_version);
+    checkVersion("terena_election_assembly_2026", election2026.content_version);
+    checkVersion("terena_historical_candidates_2026", historicalCandidates.content_version);
+    checkVersion("terena_voter_blocs_2028", voterBlocs.content_version);
+    checkVersion("terena_pollsters", pollsters.content_version);
     checkVersion("terena_provinces", (provinces as { content_version?: string }).content_version);
     checkVersion(
       "terena_constituencies",
       (constituencies as { content_version?: string }).content_version,
     );
 
-    const pendingRel = manifest.derived_or_reference.presidential_eligibility_pending;
-    if (pendingRel && reader.exists(pendingRel)) {
-      pendingEligibility = PresidentialEligibilitySchema.parse(
-        parseJson(reader.readText(pendingRel), pendingRel),
-      );
-      if (pendingEligibility.status === "approved") {
-        warn(
-          "presidential eligibility is approved but still listed as pending/reference — promote to authoritative after content approval workflow",
-        );
-      }
+    if (eligibility.status !== "approved") {
+      error("presidential_eligibility.status must be approved for Phase 0b");
+    }
+    if (eligibility.rules.minimum_age !== 35) {
+      error("presidential minimum_age must be 35");
     }
   } catch (e) {
     error(`schema/parse failure: ${e instanceof Error ? e.message : String(e)}`);
@@ -669,6 +710,505 @@ export function validateAndLoadContent(
     if (!terenaSvgIds.has(id)) error(`Terena SVG missing ${id}`);
   }
 
+  // Phase 0b roster / office / electorate invariants
+  {
+    const mps = figures.figures.filter((f) =>
+      (f.roles ?? []).some((r) => r.type === "assembly_member"),
+    );
+    if (mps.length !== 420) error(`expected 420 Assembly members, got ${mps.length}`);
+    const mpPartyCounts: Record<string, number> = {};
+    const mpByConst: Record<string, number> = {};
+    const mpIds = new Set<string>();
+    for (const f of mps) {
+      mpIds.add(f.id);
+      const pid = f.party_id ?? "PARTY_IND";
+      mpPartyCounts[pid] = (mpPartyCounts[pid] ?? 0) + 1;
+      const mpRole = f.roles.find((r) => r.type === "assembly_member") as
+        { constituency_id?: string } | undefined;
+      const cid = mpRole?.constituency_id ?? "";
+      if (!cid) error(`${f.id}: MP missing constituency_id`);
+      else {
+        mpByConst[cid] = (mpByConst[cid] ?? 0) + 1;
+        if (!consProps.some((c) => c.id === cid)) error(`${f.id}: unknown constituency ${cid}`);
+      }
+    }
+    const expectedSeats: Record<string, number> = {
+      PARTY_LAB: 128,
+      PARTY_NU: 110,
+      PARTY_CR: 69,
+      PARTY_GRN: 41,
+      PARTY_RL: 35,
+      PARTY_PM: 29,
+      PARTY_IND: 8,
+    };
+    for (const [pid, n] of Object.entries(expectedSeats)) {
+      if ((mpPartyCounts[pid] ?? 0) !== n) {
+        error(`MP party total ${pid}=${mpPartyCounts[pid] ?? 0} != ${n}`);
+      }
+    }
+    for (const c of consProps) {
+      if ((mpByConst[c.id] ?? 0) !== c.seats) {
+        error(`${c.id}: MP count ${mpByConst[c.id] ?? 0} != seats ${c.seats}`);
+      }
+    }
+    const governors = figures.figures.filter((f) =>
+      (f.roles ?? []).some((r) => r.type === "governor"),
+    );
+    if (governors.length !== 21) error(`expected 21 governors, got ${governors.length}`);
+    for (const g of governors) {
+      if ((g.roles ?? []).some((r) => r.type === "assembly_member")) {
+        error(`${g.id}: governor cannot also be Assembly member`);
+      }
+    }
+    const judges = figures.figures.filter((f) =>
+      (f.roles ?? []).some(
+        (r) => r.type === "constitutional_court_judge" || r.type === "chief_justice",
+      ),
+    );
+    if (judges.length !== 9) error(`expected 9 court judges, got ${judges.length}`);
+    const chiefs = figures.figures.filter((f) =>
+      (f.roles ?? []).some((r) => r.type === "chief_justice"),
+    );
+    if (chiefs.length !== 1 || chiefs[0]?.id !== "NPC020") {
+      error("Chief Justice must be exactly NPC020");
+    }
+    for (const j of judges) {
+      if (j.party_id != null) {
+        error(`${j.id}: sitting Constitutional Court judge must not have active party_id`);
+      }
+      if ((j.roles ?? []).some((r) => r.type === "assembly_member")) {
+        error(`${j.id}: judge cannot also be Assembly member`);
+      }
+      const court = (j as { court?: { appointed?: string; term_ends?: string } }).court;
+      if (!court?.appointed || !court.term_ends) {
+        error(`${j.id}: missing court appointment/term_ends`);
+      } else {
+        const [ay, am, ad] = court.appointed.split("-").map(Number);
+        const [ey, em, ed] = court.term_ends.split("-").map(Number);
+        if (ey! - ay! !== 12 || am !== em || ad !== ed) {
+          error(
+            `${j.id}: court term must be exactly 12 years same month/day (${court.appointed} → ${court.term_ends})`,
+          );
+        }
+      }
+    }
+
+    // Age must not be an authoritative competing field
+    for (const f of figures.figures) {
+      if ("age" in f && (f as { age?: unknown }).age !== undefined) {
+        error(`${f.id}: remove authoritative age; derive from birth_date`);
+      }
+      const birth = f.birth_date;
+      if (birth) {
+        const [by, bm, bd] = birth.split("-").map(Number);
+        let age = 2028 - by!;
+        if (1 < bm! || (1 === bm && 1 < bd!)) age -= 1;
+        if (age < 18 || age > 95) warn(`${f.id}: unusual age ${age} on 2028-01-01`);
+        const first = (f as { first_elected_year?: number }).first_elected_year;
+        if (first !== undefined && first < by! + 21) {
+          error(`${f.id}: first_elected_year ${first} before age 21 (born ${birth})`);
+        }
+      }
+    }
+
+    const mara = figures.figures.find((f) => f.id === "NPC001");
+    if (mara) {
+      const ps = (mara as { presidential_status?: string }).presidential_status;
+      if (ps && ps !== "term_limited_incumbent" && ps !== "ineligible") {
+        error(`NPC001 presidential_status must be term-limited/ineligible, got ${ps}`);
+      }
+      if ((mara as { campaign_status?: string }).campaign_status) {
+        error("NPC001 must not have campaign_status while term-limited");
+      }
+    }
+
+    // Cross-province MP homes should not be ~100% plurality province
+    {
+      let cross = 0;
+      let outsidePlural = 0;
+      for (const f of mps) {
+        const mpRole = f.roles.find((r) => r.type === "assembly_member") as
+          { constituency_id?: string } | undefined;
+        const cid = mpRole?.constituency_id;
+        const cons = consProps.find((c) => c.id === cid);
+        if (!cons || cons.province_population_shares.length <= 1) continue;
+        cross += 1;
+        if (f.home_province_id !== cons.plurality_province_id) outsidePlural += 1;
+        const allowed = new Set(cons.province_population_shares.map((s) => s.province_id));
+        if (!allowed.has(f.home_province_id)) {
+          error(`${f.id}: home ${f.home_province_id} not in ${cid} province shares`);
+        }
+      }
+      if (cross > 50 && outsidePlural / cross < 0.05) {
+        error(
+          `cross-province MP homes almost entirely plurality province (${outsidePlural}/${cross})`,
+        );
+      }
+    }
+
+    // STV archive must not be trivially engineered
+    {
+      let elim = 0;
+      let firstCount = 0;
+      for (const row of election2026.constituencies ?? []) {
+        const result = (
+          row as {
+            result?: {
+              eliminated?: string[];
+              elected?: string[];
+              quota?: string;
+              firstPreferences?: Record<string, string>;
+              steps?: { action: string }[];
+            };
+          }
+        ).result;
+        if (!result) continue;
+        elim += result.eliminated?.length ?? 0;
+        const quotaSer = result.quota ?? "0/1";
+        const [qn, qd] = quotaSer.split("/").map(Number);
+        const quota = (qn ?? 0) / (qd || 1);
+        for (const id of result.elected ?? []) {
+          const fpSer = result.firstPreferences?.[id] ?? "0/1";
+          const [fn, fd] = fpSer.split("/").map(Number);
+          const fp = (fn ?? 0) / (fd || 1);
+          if (fp + 1e-9 >= quota) firstCount += 1;
+        }
+      }
+      if (elim < 30) error(`2026 archive too few eliminations nationally: ${elim}`);
+      if (firstCount >= 420) error("2026 archive: all winners elected on first prefs (engineered)");
+      if (firstCount === 0) warn("2026 archive: zero first-count elected (unusual)");
+    }
+
+    if (figures.figures.length < 500 || figures.figures.length > 550) {
+      warn(`roster size ${figures.figures.length} outside 500–550 target band`);
+    }
+
+    const electionCons = election2026.constituencies ?? [];
+    if (electionCons.length !== 48) {
+      error(`2026 election must have 48 constituencies, got ${electionCons.length}`);
+    }
+    const nationalSeats = (election2026 as { national_party_seats?: Record<string, number> })
+      .national_party_seats;
+    if (nationalSeats) {
+      for (const [pid, n] of Object.entries(expectedSeats)) {
+        if ((nationalSeats[pid] ?? 0) !== n) {
+          error(`2026 national_party_seats ${pid}=${nationalSeats[pid] ?? 0} != ${n}`);
+        }
+      }
+    } else {
+      error("2026 election missing national_party_seats");
+    }
+    const electedIds = new Set<string>();
+    for (const row of electionCons) {
+      const cid = String((row as { constituency_id?: string }).constituency_id ?? "");
+      const seats = Number((row as { seats?: number }).seats ?? 0);
+      const elected = ((row as { result?: { elected?: string[] } }).result?.elected ??
+        []) as string[];
+      const consMeta = consProps.find((c) => c.id === cid);
+      if (!consMeta) error(`2026 archive unknown constituency ${cid}`);
+      else if (seats !== consMeta.seats) {
+        error(`2026 ${cid}: seats ${seats} != geo ${consMeta.seats}`);
+      }
+      if (elected.length !== seats) {
+        error(`2026 ${cid}: elected ${elected.length} != seats ${seats}`);
+      }
+      for (const id of elected) {
+        if (electedIds.has(id)) error(`2026 duplicate elected ID ${id}`);
+        electedIds.add(id);
+        if (!mpIds.has(id)) error(`2026 winner ${id} is not a 2028 Assembly member`);
+      }
+    }
+    if (electedIds.size !== 420) {
+      error(`2026 elected unique winners ${electedIds.size} != 420`);
+    }
+    for (const id of mpIds) {
+      if (!electedIds.has(id)) error(`2028 MP ${id} missing from 2026 winners`);
+    }
+
+    // Every election candidate resolves to exactly one persistent identity
+    {
+      const histById = new Map(historicalCandidates.candidates.map((c) => [c.id, c] as const));
+      const figById = new Map(figures.figures.map((f) => [f.id, f] as const));
+      const seenCand = new Set<string>();
+      for (const row of electionCons) {
+        for (const cand of (row as { candidates?: Array<Record<string, unknown>> }).candidates ??
+          []) {
+          const id = String(cand.id ?? "");
+          const kind = String(cand.kind ?? "");
+          const name = String(cand.name ?? "");
+          if (!id) {
+            error("2026 candidate missing id");
+            continue;
+          }
+          if (seenCand.has(id)) error(`2026 duplicate candidate id ${id}`);
+          seenCand.add(id);
+          if (/\d/.test(name)) error(`2026 candidate name contains digit: ${name}`);
+          if (kind === "politician") {
+            const fig = figById.get(id);
+            if (!fig) error(`2026 politician candidate ${id} missing from starting_figures`);
+            else {
+              if (fig.name !== name) error(`${id}: election name != figure name`);
+              const ep = (cand.party_id as string | null) ?? null;
+              const fp = fig.party_id ?? null;
+              if (ep !== fp && !(ep === "PARTY_IND" && fp === null)) {
+                error(`${id}: election party ${ep} != figure party ${fp}`);
+              }
+            }
+            if (histById.has(id)) error(`${id}: cannot be both politician and historical`);
+          } else if (kind === "historical") {
+            const hc = histById.get(id);
+            if (!hc) error(`2026 historical candidate ${id} missing from historical file`);
+            else {
+              if (hc.name !== name) error(`${id}: election name != historical name`);
+              if (electedIds.has(id)) error(`historical ${id} is elected (must be politician)`);
+            }
+            if (figById.has(id)) error(`${id}: historical id also in starting_figures`);
+          } else {
+            error(`2026 candidate ${id} has invalid kind ${kind}`);
+          }
+        }
+      }
+      for (const hc of historicalCandidates.candidates) {
+        if (!seenCand.has(hc.id)) {
+          error(`historical candidate ${hc.id} not present in 2026 election`);
+        }
+        if (/\d/.test(hc.name)) error(`historical name contains digit: ${hc.name}`);
+      }
+    }
+
+    // Text / name sanity across figures
+    for (const f of figures.figures) {
+      if (/\d/.test(f.name)) error(`${f.id}: name contains digit`);
+      const blob = `${f.name}|${f.office}|${f.notes}|${f.party ?? ""}|${f.faction ?? ""}|${f.display_summary}`;
+      if (blob.includes("???") || blob.includes("\uFFFD")) {
+        error(`${f.id}: text corruption (??? or replacement char)`);
+      }
+    }
+
+    // Court philosophy + appointing authority + legal career
+    const adminRel = manifest.derived_or_reference.terena_presidential_administrations;
+    const administrations = PresidentialAdministrationsFileSchema.parse(
+      parseJson(reader.readText(adminRel!), adminRel!),
+    );
+    checkVersion("terena_presidential_administrations", administrations.content_version, false);
+    const adminIds = new Set(administrations.administrations.map((a) => a.id));
+    const figureIdSet = new Set(figures.figures.map((f) => f.id));
+    const CREDIBLE_LEGAL_PATHS = new Set([
+      "appellate_judge",
+      "lower_court_judge",
+      "constitutional_lawyer",
+      "public_law_attorney",
+      "justice_ministry_official",
+      "legal_academic",
+      "prosecutor_then_judge",
+      "public_defender_then_judge",
+      "private_counsel_then_judge",
+    ]);
+    for (const j of judges) {
+      if (j.faction_id != null) {
+        error(`${j.id}: sitting Constitutional Court judge must not have faction_id`);
+      }
+      const court = j as {
+        background?: string;
+        traits?: { partyLoyalty?: number; factionLoyalty?: number; institutionalism?: number };
+        court?: {
+          legal_philosophy?: string;
+          appointing_president?: string;
+          appointing_administration?: string;
+          legal_career?: {
+            prior_path?: string;
+            prior_offices?: string[];
+            path_summary?: string;
+          };
+        };
+      };
+      const c = court.court;
+      if (!c?.legal_philosophy) error(`${j.id}: missing legal_philosophy`);
+      if (!c?.appointing_president && !c?.appointing_administration) {
+        error(`${j.id}: missing appointing authority`);
+      }
+      if (c?.appointing_president && !figureIdSet.has(c.appointing_president)) {
+        error(`${j.id}: appointing_president ${c.appointing_president} unresolved`);
+      }
+      if (c?.appointing_administration && !adminIds.has(c.appointing_administration)) {
+        error(`${j.id}: appointing_administration ${c.appointing_administration} unresolved`);
+      }
+      const career = c?.legal_career;
+      if (!career?.prior_path || !CREDIBLE_LEGAL_PATHS.has(career.prior_path)) {
+        error(`${j.id}: missing credible legal_career.prior_path`);
+      }
+      if (!career?.prior_offices?.length || !career.path_summary) {
+        error(`${j.id}: legal_career needs prior_offices and path_summary`);
+      }
+      if (court.background && court.background !== "law") {
+        error(`${j.id}: court justice background should be law (got ${court.background})`);
+      }
+      const pl = court.traits?.partyLoyalty ?? 1;
+      const fl = court.traits?.factionLoyalty ?? 1;
+      const inst = court.traits?.institutionalism ?? 0;
+      if (pl > 0.2) error(`${j.id}: court partyLoyalty ${pl} too high for nonpartisan justice`);
+      if (fl > 0.15) error(`${j.id}: court factionLoyalty ${fl} too high for nonpartisan justice`);
+      if (inst < 0.65) error(`${j.id}: court institutionalism ${inst} too low`);
+    }
+
+    // PARTY_IND is an electoral aggregate, never individual membership
+    for (const f of figures.figures) {
+      if (f.party_id === "PARTY_IND") {
+        error(`${f.id}: individual figures must not use PARTY_IND membership (use party_id null)`);
+      }
+      const traits = (f as { traits?: { partyLoyalty?: number; factionLoyalty?: number } }).traits;
+      if (!traits) continue;
+      const authored = /^NPC0(0[1-9]|1[0-9]|2[0-9]|30)$/.test(f.id) || f.id === "NPC020";
+      if (authored) continue;
+      if (f.party_id == null) {
+        if ((traits.partyLoyalty ?? 1) > 0.2 || (traits.factionLoyalty ?? 1) > 0.15) {
+          error(
+            `${f.id}: unaffiliated figure loyalty too high (party=${traits.partyLoyalty}, faction=${traits.factionLoyalty})`,
+          );
+        }
+      } else if (f.faction_id == null && (traits.factionLoyalty ?? 1) > 0.15) {
+        error(`${f.id}: factionLoyalty too high without faction_id`);
+      }
+    }
+    for (const p of parties.parties) {
+      const ot = (p as { organization_type?: string }).organization_type;
+      if (p.id === "PARTY_IND") {
+        if (ot !== "independent_aggregate") {
+          error("PARTY_IND must have organization_type independent_aggregate");
+        }
+      } else if (ot !== "membership_party") {
+        error(`${p.id}: membership parties must use organization_type membership_party`);
+      }
+    }
+
+    // Every recognized faction has exactly one current faction_chair
+    {
+      const allFactions = parties.parties.flatMap((p) =>
+        p.factions.map((f) => ({ ...f, party_id: p.id })),
+      );
+      const chairByFaction = new Map<string, string>();
+      for (const f of figures.figures) {
+        for (const role of f.roles ?? []) {
+          if (role.type !== "faction_chair") continue;
+          const fid = (role as { faction_id?: string }).faction_id ?? f.faction_id ?? "";
+          if (!fid) {
+            error(`${f.id}: faction_chair missing faction_id`);
+            continue;
+          }
+          if (chairByFaction.has(fid)) {
+            error(`faction ${fid} has multiple chairs (${chairByFaction.get(fid)}, ${f.id})`);
+          }
+          chairByFaction.set(fid, f.id);
+          const facMeta = allFactions.find((x) => x.id === fid);
+          if (!facMeta) error(`${f.id}: faction_chair for unknown faction ${fid}`);
+          else {
+            if (f.party_id !== facMeta.party_id) {
+              error(`${f.id}: faction chair party ${f.party_id} != ${facMeta.party_id}`);
+            }
+            if (f.faction_id !== fid) {
+              error(`${f.id}: faction chair must belong to ${fid}`);
+            }
+            if (!(f.roles ?? []).some((r) => r.type === "assembly_member")) {
+              warn(`${f.id}: faction chair ${fid} is not an Assembly member`);
+            }
+          }
+        }
+      }
+      for (const fac of allFactions) {
+        if (!chairByFaction.has(fac.id)) {
+          error(`faction ${fac.id} has no faction_chair`);
+        }
+      }
+    }
+
+    // Pollster house effects must be centered vote-share-point offsets
+    for (const p of pollsters.pollsters) {
+      const he = (p as { house_effects?: Record<string, unknown> }).house_effects;
+      if (!he) continue;
+      const byParty = (he.by_party ?? he) as Record<string, number>;
+      if (he.unit && he.unit !== "vote_share_points") {
+        warn(`pollster ${p.id}: unexpected house_effects.unit ${String(he.unit)}`);
+      }
+      const vals = Object.values(byParty).filter((v) => typeof v === "number") as number[];
+      const sum = vals.reduce((a, b) => a + b, 0);
+      if (Math.abs(sum) > 0.02) {
+        error(`pollster ${p.id}: house_effects not centered (sum=${sum})`);
+      }
+    }
+
+    // Turnout consistency when present
+    for (const row of electionCons) {
+      const t = (
+        row as {
+          turnout?: {
+            ballots_cast?: number;
+            invalid_or_blank?: number;
+            valid_vote_value?: string | number;
+          };
+          total_valid?: string;
+        }
+      ).turnout;
+      if (!t) continue;
+      const validNum =
+        typeof t.valid_vote_value === "string"
+          ? Number(t.valid_vote_value.split("/")[0])
+          : Number(t.valid_vote_value);
+      if (
+        t.ballots_cast !== undefined &&
+        t.invalid_or_blank !== undefined &&
+        t.ballots_cast !== validNum + t.invalid_or_blank
+      ) {
+        error(
+          `${(row as { constituency_id?: string }).constituency_id}: ballots_cast != valid+invalid`,
+        );
+      }
+    }
+
+    const blocCons = voterBlocs.constituencies ?? [];
+    if (blocCons.length !== 48) {
+      error(`voter blocs must cover 48 constituencies, got ${blocCons.length}`);
+    }
+    const issueIdSet = new Set(issuesFile.issues.map((i) => i.id));
+    const partyIdSet = new Set(parties.parties.map((p) => p.id));
+    for (const row of blocCons) {
+      const cid = row.constituency_id;
+      if (!consProps.some((c) => c.id === cid)) error(`voter bloc unknown constituency ${cid}`);
+      const sum = row.blocs.reduce((a, b) => a + b.weight, 0);
+      if (Math.abs(sum - 1) > 1e-6) error(`${cid}: bloc weights sum to ${sum}`);
+      for (const b of row.blocs) {
+        const habit = (b as { party_habit?: Record<string, number> }).party_habit;
+        if (habit) {
+          for (const pid of Object.keys(habit)) {
+            if (pid !== "PARTY_IND" && !partyIdSet.has(pid)) {
+              error(`${cid}/${b.id}: unknown party_habit ${pid}`);
+            }
+          }
+        }
+        const salience = (b as { issue_salience?: Record<string, number> }).issue_salience;
+        if (salience) {
+          for (const iid of Object.keys(salience)) {
+            if (!issueIdSet.has(iid)) error(`${cid}/${b.id}: unknown issue ${iid}`);
+          }
+        }
+      }
+    }
+
+    uniqueIds(
+      pollsters.pollsters.map((p) => p.id),
+      "pollster",
+      error,
+    );
+    if (pollsters.pollsters.length < 8 || pollsters.pollsters.length > 16) {
+      warn(`pollster count ${pollsters.pollsters.length} outside expected 8–12 (+regional) band`);
+    }
+
+    uniqueIds(
+      historicalCandidates.candidates.map((c) => c.id),
+      "historical candidate",
+      error,
+    );
+  }
+
   const index = createIndex({
     world: world.countries.map((c) => c.id),
     provinces: provinceProps.map((p) => p.id),
@@ -717,9 +1257,7 @@ export function validateAndLoadContent(
     manifest: deepFreeze(manifest),
     content,
     index,
-    ...(pendingEligibility
-      ? { pendingPresidentialEligibility: deepFreeze(pendingEligibility) }
-      : {}),
+    presidentialEligibility: deepFreeze(eligibility),
   });
 
   return { report, bundle };

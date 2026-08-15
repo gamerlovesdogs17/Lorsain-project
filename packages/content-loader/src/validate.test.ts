@@ -25,8 +25,8 @@ describe("canonical content validation", () => {
     expect((bundle.index as { worldCountryIds: unknown }).worldCountryIds).toBeTypeOf("function");
     const ids = bundle.index.partyIds();
     expect(Object.isFrozen(ids)).toBe(true);
-    expect(bundle.pendingPresidentialEligibility?.status).toBe(
-      "draft_defaults_pending_content_approval",
-    );
+    expect(bundle.presidentialEligibility.status).toBe("approved");
+    expect(bundle.presidentialEligibility.rules.minimum_age).toBe(35);
+    expect(bundle.content.starting_figures.figures.length).toBeGreaterThanOrEqual(500);
   });
 });

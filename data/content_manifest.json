@@ -1,5 +1,5 @@
 {
-  "content_version": "0.2.0-predev",
+  "content_version": "0.3.0-predev",
   "scenario_id": "TERENA_2028",
   "authoritative": {
     "world_countries": "data/world_countries.json",
@@ -17,6 +17,11 @@
     "scenario": "data/scenario_terena_2028.json",
     "canonical_crosswalk": "data/canonical_crosswalk.json",
     "terena_electoral_counting": "data/terena_electoral_counting.json",
+    "presidential_eligibility": "data/terena_presidential_eligibility.json",
+    "terena_election_assembly_2026": "data/terena_election_assembly_2026.json",
+    "terena_historical_candidates_2026": "data/terena_historical_candidates_2026.json",
+    "terena_voter_blocs_2028": "data/terena_voter_blocs_2028.json",
+    "terena_pollsters": "data/terena_pollsters.json",
     "world_svg": "maps/world_political.svg",
     "terena_svg": "maps/terena_game_map.svg"
   },
@@ -24,11 +29,13 @@
     "terena_geography": "data/terena_geography.json",
     "world_history_timeline": "data/world_history_timeline.json",
     "terena_history_timeline": "data/terena_history_timeline.json",
-    "presidential_eligibility_pending": "data/terena_presidential_eligibility.json",
+    "terena_presidential_administrations": "data/terena_presidential_administrations.json",
+    "phase0b_review_summary": "data/phase0b_review_summary.json",
     "master_bible": "PROJECT_MASTER_BIBLE.md",
     "detailed_terena_svg": "maps/terena_detailed.svg",
     "world_reference_svg": "maps/world_reference.svg",
-    "azgaar_source": "source/azgaar/"
+    "azgaar_source": "source/azgaar/",
+    "seed_figures_30": "data/_seed_figures_30.json"
   },
   "stable_id_contracts": {
     "world_country_paths": "W01-W48",

@@ -257,7 +257,7 @@
       "province_population_shares": [
         {
           "province_id": "P12",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -341,7 +341,7 @@
       "province_population_shares": [
         {
           "province_id": "P09",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -825,7 +825,7 @@
       "province_population_shares": [
         {
           "province_id": "P04",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -896,7 +896,7 @@
       "province_population_shares": [
         {
           "province_id": "P09",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -913,7 +913,7 @@
       "province_population_shares": [
         {
           "province_id": "P09",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -930,7 +930,7 @@
       "province_population_shares": [
         {
           "province_id": "P09",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -993,7 +993,7 @@
       "province_population_shares": [
         {
           "province_id": "P04",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -1052,7 +1052,7 @@
       "province_population_shares": [
         {
           "province_id": "P05",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -1069,7 +1069,7 @@
       "province_population_shares": [
         {
           "province_id": "P17",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -1149,7 +1149,7 @@
       "province_population_shares": [
         {
           "province_id": "P05",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -1166,7 +1166,7 @@
       "province_population_shares": [
         {
           "province_id": "P05",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -1229,7 +1229,7 @@
       "province_population_shares": [
         {
           "province_id": "P01",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -1246,7 +1246,7 @@
       "province_population_shares": [
         {
           "province_id": "P16",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -1263,7 +1263,7 @@
       "province_population_shares": [
         {
           "province_id": "P16",
-          "share": 1.0
+          "share": 1
         }
       ],
       "crosses_province_boundaries": false,
@@ -1655,7 +1655,7 @@
     "height": 948,
     "distance_scale_km": 20
   },
-  "content_version": "0.2.0-predev",
+  "content_version": "0.3.0-predev",
   "derived_summary": true,
   "authoritative_files": {
     "provinces": "data/terena_provinces.geojson",

@@ -149,6 +149,21 @@ describe("prepareBallots unique IDs", () => {
     expect(prepared.exclusionStats.excludedByReason.invalid_weight?.groups).toBe(1);
     expect(prepared.exclusionStats.excludedByReason.non_positive_weight?.knownWeight).toBe("0/1");
   });
+
+  it("never lets negative excluded weights reduce excludedKnownWeight", () => {
+    const prepared = prepareBallots(
+      ["A"],
+      [
+        { rankings: [], weight: "5" },
+        { rankings: ["A"], weight: "-10" },
+      ],
+    );
+    expect(prepared.exclusionStats.excludedBallotGroupCount).toBe(2);
+    expect(prepared.exclusionStats.excludedKnownWeight).toBe("5/1");
+    expect(prepared.exclusionStats.excludedByReason.blank_ranking?.knownWeight).toBe("5/1");
+    expect(prepared.exclusionStats.excludedByReason.non_positive_weight?.groups).toBe(1);
+    expect(prepared.exclusionStats.excludedByReason.non_positive_weight?.knownWeight).toBe("0/1");
+  });
 });
 
 describe("STV elect_remaining archive", () => {

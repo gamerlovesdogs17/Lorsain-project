@@ -1,12 +1,16 @@
 {
-  "content_version": "0.2.0-predev",
+  "content_version": "0.3.0-predev",
   "spec_id": "TERENA_ELECTORAL_COUNTING_V1",
   "status": "locked_for_runtime_and_2026_archive",
   "arithmetic": {
     "requirement": "exact_reduced_bigint_rationals",
     "serialization": "num/den_string",
     "forbid_ordinary_ieee_float_for_outcomes": true,
-    "must_reproduce_across": ["browser", "worker", "node"]
+    "must_reproduce_across": [
+      "browser",
+      "worker",
+      "node"
+    ]
   },
   "assembly_stv": {
     "quota": "droop",

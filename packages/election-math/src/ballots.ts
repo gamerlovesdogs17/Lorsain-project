@@ -2,6 +2,7 @@ import {
   add,
   gt,
   isPositive,
+  lt,
   lte,
   parseRational,
   serializeRational,
@@ -18,7 +19,7 @@ export type ExcludedReasonStats = {
 export type ExcludedBallotStats = {
   /** Number of excluded ballot *groups* (not individual voters). */
   excludedBallotGroupCount: number;
-  /** Exact sum of parseable positive/zero weights on excluded groups. */
+  /** Exact sum of parseable non-negative weights on excluded groups (never negative). */
   excludedKnownWeight: string;
   /** Excluded groups whose weight string could not be parsed. */
   unknownWeightGroups: number;
@@ -55,11 +56,12 @@ function buildExclusionStats(excluded: BallotValidationResult["excluded"]): Excl
   for (const e of excluded) {
     const cur = byReason.get(e.reason) ?? { groups: 0, knownWeight: ZERO };
     cur.groups += 1;
-    if (e.knownWeight !== null) {
+    if (e.knownWeight === null) {
+      unknownWeightGroups += 1;
+    } else if (!lt(e.knownWeight, ZERO)) {
+      // Positive or zero parseable weights contribute; negatives never subtract.
       cur.knownWeight = add(cur.knownWeight, e.knownWeight);
       known = add(known, e.knownWeight);
-    } else {
-      unknownWeightGroups += 1;
     }
     byReason.set(e.reason, cur);
   }

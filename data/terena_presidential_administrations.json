@@ -1,0 +1,24 @@
+{
+  "content_version": "0.3.0-predev",
+  "administrations": [
+    {
+      "id": "HIST_ADMIN_PRE_VELIC",
+      "president_person_id": "HIST_PRES_IVO_MARENKOV",
+      "president_name": "Ivo Marenkov",
+      "party_id": "PARTY_NU",
+      "term_start": "2013-01-20",
+      "term_end": "2018-01-20",
+      "succeeded_by_president_id": "NPC001",
+      "notes": "Immediate predecessor administration to Mara Velic. Marenkov completed one five-year presidential term and left office after Velic won the 2018 election. First-pass Phase 0b identity for resolving the 2017 Constitutional Court appointment."
+    }
+  ],
+  "historical_persons": [
+    {
+      "id": "HIST_PRES_IVO_MARENKOV",
+      "name": "Ivo Marenkov",
+      "party_id": "PARTY_NU",
+      "offices": ["president"],
+      "notes": "President of Terena 2013–2018; National Union."
+    }
+  ]
+}

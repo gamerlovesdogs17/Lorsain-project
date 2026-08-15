@@ -1,6 +1,6 @@
 # Terena Electoral Counting Specification
 
-**Content version:** `0.2.0-predev`  
+**Content version:** `0.3.0-predev`  
 **Machine-readable twin:** [`data/terena_electoral_counting.json`](../data/terena_electoral_counting.json)  
 **Status:** Locked. Implemented in Phase 0.5 `packages/election-math`. Used by Phase 0b for 2026 archive generation.
 

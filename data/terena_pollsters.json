@@ -1,0 +1,305 @@
+{
+  "content_version": "0.3.0-predev",
+  "pollsters": [
+    {
+      "id": "POLL_NAT_OMNI",
+      "name": "OmniMetrics Terena",
+      "scope": "national",
+      "method": "mixed_mode_likely_voter",
+      "sample_size_range": [
+        900,
+        1400
+      ],
+      "quality": 0.78,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": 0.022,
+          "PARTY_NU": -0.019,
+          "PARTY_CR": -0.017,
+          "PARTY_GRN": 0.004,
+          "PARTY_RL": 0.016,
+          "PARTY_PM": 0.013,
+          "PARTY_IND": -0.019
+        }
+      },
+      "cadence": "weekly_national"
+    },
+    {
+      "id": "POLL_NAT_CLEAR",
+      "name": "ClearPath Research",
+      "scope": "national",
+      "method": "online_panel",
+      "sample_size_range": [
+        1000,
+        1600
+      ],
+      "quality": 0.72,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": -0.014,
+          "PARTY_NU": 0.013,
+          "PARTY_CR": -0.007,
+          "PARTY_GRN": 0.006,
+          "PARTY_RL": 0.011,
+          "PARTY_PM": -0.025,
+          "PARTY_IND": 0.016
+        }
+      },
+      "cadence": "twice_weekly"
+    },
+    {
+      "id": "POLL_NAT_ANCHOR",
+      "name": "Anchor Polling Group",
+      "scope": "national",
+      "method": "live_phone_likely_voter",
+      "sample_size_range": [
+        800,
+        1200
+      ],
+      "quality": 0.8,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": 0.012,
+          "PARTY_NU": 0.01,
+          "PARTY_CR": -0.015,
+          "PARTY_GRN": 0.003,
+          "PARTY_RL": -0.029,
+          "PARTY_PM": 0.011,
+          "PARTY_IND": 0.008
+        }
+      },
+      "cadence": "weekly"
+    },
+    {
+      "id": "POLL_NAT_RIVER",
+      "name": "Riverbend Surveys",
+      "scope": "national",
+      "method": "IVR_plus_online",
+      "sample_size_range": [
+        1100,
+        1800
+      ],
+      "quality": 0.68,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": 0.015,
+          "PARTY_NU": -0.018,
+          "PARTY_CR": -0.007,
+          "PARTY_GRN": 0.02,
+          "PARTY_RL": -0.007,
+          "PARTY_PM": -0.021,
+          "PARTY_IND": 0.018
+        }
+      },
+      "cadence": "rolling_three_day"
+    },
+    {
+      "id": "POLL_NAT_CIVIC",
+      "name": "Civic Pulse Institute",
+      "scope": "national",
+      "method": "probability_online",
+      "sample_size_range": [
+        950,
+        1300
+      ],
+      "quality": 0.76,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": 0.013,
+          "PARTY_NU": -0.003,
+          "PARTY_CR": 0.002,
+          "PARTY_GRN": -0.016,
+          "PARTY_RL": 0.03,
+          "PARTY_PM": -0.013,
+          "PARTY_IND": -0.013
+        }
+      },
+      "cadence": "biweekly"
+    },
+    {
+      "id": "POLL_NAT_NORTH",
+      "name": "Northgate Opinion",
+      "scope": "national",
+      "method": "mixed_mode",
+      "sample_size_range": [
+        850,
+        1250
+      ],
+      "quality": 0.7,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": -0.016,
+          "PARTY_NU": 0.024,
+          "PARTY_CR": 0.011,
+          "PARTY_GRN": -0.021,
+          "PARTY_RL": 0,
+          "PARTY_PM": 0.009,
+          "PARTY_IND": -0.007
+        }
+      },
+      "cadence": "weekly"
+    },
+    {
+      "id": "POLL_NAT_HELIX",
+      "name": "Helix Public Data",
+      "scope": "national",
+      "method": "online_likely_voter",
+      "sample_size_range": [
+        1200,
+        2000
+      ],
+      "quality": 0.74,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": 0.009,
+          "PARTY_NU": 0.009,
+          "PARTY_CR": -0.01,
+          "PARTY_GRN": -0.009,
+          "PARTY_RL": -0.026,
+          "PARTY_PM": 0.021,
+          "PARTY_IND": 0.006
+        }
+      },
+      "cadence": "daily_tracking"
+    },
+    {
+      "id": "POLL_NAT_FORUM",
+      "name": "National Forum Poll",
+      "scope": "national",
+      "method": "live_phone",
+      "sample_size_range": [
+        700,
+        1100
+      ],
+      "quality": 0.69,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": 0.01,
+          "PARTY_NU": -0.002,
+          "PARTY_CR": 0.023,
+          "PARTY_GRN": 0.007,
+          "PARTY_RL": 0.014,
+          "PARTY_PM": -0.033,
+          "PARTY_IND": -0.019
+        }
+      },
+      "cadence": "monthly_deep"
+    },
+    {
+      "id": "POLL_REG_EAST",
+      "name": "East Coast Insights",
+      "scope": "regional_east",
+      "method": "online_panel",
+      "sample_size_range": [
+        500,
+        800
+      ],
+      "quality": 0.66,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": -0.009,
+          "PARTY_NU": 0.008,
+          "PARTY_CR": -0.01,
+          "PARTY_GRN": 0.008,
+          "PARTY_RL": -0.005,
+          "PARTY_PM": 0.002,
+          "PARTY_IND": 0.006
+        }
+      },
+      "cadence": "biweekly_regional"
+    },
+    {
+      "id": "POLL_REG_SOUTH",
+      "name": "Southmark Field Research",
+      "scope": "regional_south",
+      "method": "face_to_face_plus_phone",
+      "sample_size_range": [
+        450,
+        750
+      ],
+      "quality": 0.67,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": -0.006,
+          "PARTY_NU": 0.006,
+          "PARTY_CR": -0.023,
+          "PARTY_GRN": -0.027,
+          "PARTY_RL": 0.031,
+          "PARTY_PM": -0.011,
+          "PARTY_IND": 0.03
+        }
+      },
+      "cadence": "monthly_regional"
+    },
+    {
+      "id": "POLL_SPEC_UNION",
+      "name": "Labour Market Opinion Desk",
+      "scope": "specialist_labor",
+      "method": "member_panel",
+      "sample_size_range": [
+        400,
+        700
+      ],
+      "quality": 0.63,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": 0.004,
+          "PARTY_NU": -0.027,
+          "PARTY_CR": 0.022,
+          "PARTY_GRN": 0.011,
+          "PARTY_RL": -0.007,
+          "PARTY_PM": -0.023,
+          "PARTY_IND": 0.02
+        }
+      },
+      "cadence": "irregular"
+    },
+    {
+      "id": "POLL_SPEC_UNI",
+      "name": "Solenne University Survey Lab",
+      "scope": "specialist_academic",
+      "method": "probability_mixed",
+      "sample_size_range": [
+        600,
+        1000
+      ],
+      "quality": 0.77,
+      "house_effects": {
+        "unit": "vote_share_points",
+        "centered": true,
+        "by_party": {
+          "PARTY_LAB": -0.015,
+          "PARTY_NU": 0.033,
+          "PARTY_CR": -0.016,
+          "PARTY_GRN": -0.019,
+          "PARTY_RL": -0.021,
+          "PARTY_PM": 0.013,
+          "PARTY_IND": 0.025
+        }
+      },
+      "cadence": "quarterly"
+    }
+  ]
+}

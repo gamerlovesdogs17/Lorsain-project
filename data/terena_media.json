@@ -4,7 +4,7 @@
       "id": "MED_TPS",
       "name": "Terenan Public Service",
       "type": "public broadcaster",
-      "ideology": 0.0,
+      "ideology": 0,
       "factual_reputation": 0.93,
       "audience": "national"
     },
@@ -57,5 +57,5 @@
       "audience": "populist/anti-establishment"
     }
   ],
-  "content_version": "0.2.0-predev"
+  "content_version": "0.3.0-predev"
 }

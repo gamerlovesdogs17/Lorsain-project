@@ -1,0 +1,612 @@
+{
+  "figures": [
+    {
+      "id": "NPC001",
+      "name": "Mara Velic",
+      "age": 59,
+      "party": "Civic Reform Party",
+      "faction": "Civic Moderates",
+      "office": "President of Terena",
+      "home": "Federal District of Valen",
+      "notes": "Second-term president, elected 2018 and 2023; constitutionally term-limited in 2028. Institutionalist, socially liberal, fiscally moderate.",
+      "party_id": "PARTY_CR",
+      "faction_id": "FAC_CR_MOD",
+      "home_province_id": "FDV",
+      "birth_date": "1968-11-11",
+      "roles": [
+        {
+          "type": "president",
+          "jurisdiction_id": "TER"
+        }
+      ]
+    },
+    {
+      "id": "NPC002",
+      "name": "Daria Soren",
+      "age": 52,
+      "party": "Labour Party",
+      "faction": "Social Democratic Caucus",
+      "office": "Speaker of the National Assembly",
+      "home": "Aurel",
+      "notes": "Broker of the 2026 Labour-Civic-Green speakership agreement. Strong proceduralist.",
+      "party_id": "PARTY_LAB",
+      "faction_id": "FAC_LAB_SD",
+      "home_province_id": "P09",
+      "birth_date": "1975-02-20",
+      "roles": [
+        {
+          "type": "assembly_speaker",
+          "jurisdiction_id": "TER"
+        }
+      ]
+    },
+    {
+      "id": "NPC003",
+      "name": "Ana Mirev",
+      "age": 47,
+      "party": "Labour Party",
+      "faction": "Social Democratic Caucus",
+      "office": "Governor of Darsen; Labour presidential frontrunner",
+      "home": "Darsen",
+      "notes": "Union-backed economic progressive with a pragmatic governing record.",
+      "party_id": "PARTY_LAB",
+      "faction_id": "FAC_LAB_SD",
+      "home_province_id": "P12",
+      "birth_date": "1980-04-07",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P12"
+        }
+      ],
+      "campaign_status": "presidential_frontrunner_2028"
+    },
+    {
+      "id": "NPC004",
+      "name": "Tomas Kalen",
+      "age": 54,
+      "party": "National Union",
+      "faction": "One Nation Caucus",
+      "office": "Leader of the National Union",
+      "home": "Southmark",
+      "notes": "Center-right institutional conservative trying to contain the party populist wing.",
+      "party_id": "PARTY_NU",
+      "faction_id": "FAC_NU_ONE",
+      "home_province_id": "P05",
+      "birth_date": "1973-03-14",
+      "roles": [
+        {
+          "type": "party_leader",
+          "party_id": "PARTY_NU"
+        }
+      ]
+    },
+    {
+      "id": "NPC005",
+      "name": "Leon Veyr",
+      "age": 45,
+      "party": "Civic Reform Party",
+      "faction": "Liberal Reform Caucus",
+      "office": "Foreign Minister; Civic Reform presidential frontrunner",
+      "home": "Eastbay",
+      "notes": "Internationalist reform liberal and the incumbent president's most visible successor.",
+      "party_id": "PARTY_CR",
+      "faction_id": "FAC_CR_LIB",
+      "home_province_id": "P08",
+      "birth_date": "1982-05-23",
+      "roles": [
+        {
+          "type": "minister",
+          "portfolio": "foreign",
+          "jurisdiction_id": "TER"
+        }
+      ],
+      "campaign_status": "presidential_frontrunner_2028"
+    },
+    {
+      "id": "NPC006",
+      "name": "Mila Orsen",
+      "age": 39,
+      "party": "Green Alliance",
+      "faction": "Green Mainstream",
+      "office": "Leader of the Green Alliance",
+      "home": "Solenne",
+      "notes": "Climate-focused social progressive; unusually strong second-choice appeal in RCV polling.",
+      "party_id": "PARTY_GRN",
+      "faction_id": "FAC_GRN_MAIN",
+      "home_province_id": "P01",
+      "birth_date": "1988-03-27",
+      "roles": [
+        {
+          "type": "party_leader",
+          "party_id": "PARTY_GRN"
+        }
+      ]
+    },
+    {
+      "id": "NPC007",
+      "name": "Sera Talin",
+      "age": 50,
+      "party": "Regional League",
+      "faction": "Provincial Autonomists",
+      "office": "Leader of the Regional League",
+      "home": "Miren",
+      "notes": "Decentralist, agrarian and pro-local-government; not separatist.",
+      "party_id": "PARTY_RL",
+      "faction_id": "FAC_RL_AUTO",
+      "home_province_id": "P16",
+      "birth_date": "1977-06-24",
+      "roles": [
+        {
+          "type": "party_leader",
+          "party_id": "PARTY_RL"
+        }
+      ]
+    },
+    {
+      "id": "NPC008",
+      "name": "Viktor Drazen",
+      "age": 48,
+      "party": "People's Movement",
+      "faction": "National Populists",
+      "office": "Leader of the People's Movement",
+      "home": "Caldria",
+      "notes": "Economic nationalist, anti-establishment and skeptical of the Democratic Concord.",
+      "party_id": "PARTY_PM",
+      "faction_id": "FAC_PM_NAT",
+      "home_province_id": "P17",
+      "birth_date": "1979-06-11",
+      "roles": [
+        {
+          "type": "party_leader",
+          "party_id": "PARTY_PM"
+        }
+      ]
+    },
+    {
+      "id": "NPC009",
+      "name": "Irena Sol",
+      "age": 57,
+      "party": "Civic Reform Party",
+      "faction": "Civic Moderates",
+      "office": "Finance Minister",
+      "home": "Rethvale",
+      "notes": "Fiscal institutionalist associated with the post-2024 stabilization package.",
+      "party_id": "PARTY_CR",
+      "faction_id": "FAC_CR_MOD",
+      "home_province_id": "P07",
+      "birth_date": "1970-04-13",
+      "roles": [
+        {
+          "type": "minister",
+          "portfolio": "finance",
+          "jurisdiction_id": "TER"
+        }
+      ]
+    },
+    {
+      "id": "NPC010",
+      "name": "Pavel Drin",
+      "age": 61,
+      "party": "Independent",
+      "faction": null,
+      "office": "Defense Minister",
+      "home": "Northmarch",
+      "notes": "Former career civil servant and security specialist; respected across parties.",
+      "party_id": null,
+      "faction_id": null,
+      "home_province_id": "P18",
+      "birth_date": "1966-12-08",
+      "roles": [
+        {
+          "type": "minister",
+          "portfolio": "defense",
+          "jurisdiction_id": "TER"
+        }
+      ]
+    },
+    {
+      "id": "NPC011",
+      "name": "Marta Eren",
+      "age": 46,
+      "party": "Civic Reform Party",
+      "faction": "Liberal Reform Caucus",
+      "office": "Justice Minister",
+      "home": "Norval",
+      "notes": "Civil-liberties lawyer and leading advocate of court modernization.",
+      "party_id": "PARTY_CR",
+      "faction_id": "FAC_CR_LIB",
+      "home_province_id": "P02",
+      "birth_date": "1981-11-27",
+      "roles": [
+        {
+          "type": "minister",
+          "portfolio": "justice",
+          "jurisdiction_id": "TER"
+        }
+      ]
+    },
+    {
+      "id": "NPC012",
+      "name": "Jonah Ravel",
+      "age": 44,
+      "party": "Labour Party",
+      "faction": "Workers' Left",
+      "office": "Workers' Left caucus chair",
+      "home": "Aurel",
+      "notes": "Most prominent democratic-socialist voice inside Labour; coalition skeptic.",
+      "party_id": "PARTY_LAB",
+      "faction_id": "FAC_LAB_LEFT",
+      "home_province_id": "P09",
+      "birth_date": "1983-11-15",
+      "roles": [
+        {
+          "type": "faction_chair",
+          "faction_id": "FAC_LAB_LEFT"
+        }
+      ]
+    },
+    {
+      "id": "NPC013",
+      "name": "Kira Melen",
+      "age": 51,
+      "party": "Labour Party",
+      "faction": "Workers' Bloc",
+      "office": "Workers' Bloc caucus chair",
+      "home": "Darsen",
+      "notes": "Union traditionalist, economically left and culturally moderate.",
+      "party_id": "PARTY_LAB",
+      "faction_id": "FAC_LAB_WORK",
+      "home_province_id": "P12",
+      "birth_date": "1976-12-27",
+      "roles": [
+        {
+          "type": "faction_chair",
+          "faction_id": "FAC_LAB_WORK"
+        }
+      ]
+    },
+    {
+      "id": "NPC014",
+      "name": "Emel Varic",
+      "age": 41,
+      "party": "Labour Party",
+      "faction": "Reform Labour",
+      "office": "Reform Labour caucus chair",
+      "home": "Valen",
+      "notes": "Younger metropolitan wing; pro-housing, pro-market competition and strongly pro-Concord.",
+      "party_id": "PARTY_LAB",
+      "faction_id": "FAC_LAB_REFORM",
+      "home_province_id": "FDV",
+      "birth_date": "1986-09-10",
+      "roles": [
+        {
+          "type": "faction_chair",
+          "faction_id": "FAC_LAB_REFORM"
+        }
+      ]
+    },
+    {
+      "id": "NPC015",
+      "name": "Adrian Kest",
+      "age": 56,
+      "party": "National Union",
+      "faction": "Market Conservatives",
+      "office": "Market Conservative caucus chair",
+      "home": "Norval",
+      "notes": "Business-oriented conservative with strong donor networks.",
+      "party_id": "PARTY_NU",
+      "faction_id": "FAC_NU_MARKET",
+      "home_province_id": "P02",
+      "birth_date": "1971-06-22",
+      "roles": [
+        {
+          "type": "faction_chair",
+          "faction_id": "FAC_NU_MARKET"
+        }
+      ]
+    },
+    {
+      "id": "NPC016",
+      "name": "Mara Dovik",
+      "age": 49,
+      "party": "National Union",
+      "faction": "One Nation Caucus",
+      "office": "One Nation caucus chair",
+      "home": "Galar",
+      "notes": "Moderate communitarian conservative and frequent bipartisan negotiator.",
+      "party_id": "PARTY_NU",
+      "faction_id": "FAC_NU_ONE",
+      "home_province_id": "P04",
+      "birth_date": "1978-06-22",
+      "roles": [
+        {
+          "type": "faction_chair",
+          "faction_id": "FAC_NU_ONE"
+        }
+      ]
+    },
+    {
+      "id": "NPC017",
+      "name": "Danek Rusk",
+      "age": 43,
+      "party": "National Union",
+      "faction": "National Conservatives",
+      "office": "National Conservative caucus chair",
+      "home": "Southmark",
+      "notes": "Harder-line migration and security politician; competes with the People's Movement for voters.",
+      "party_id": "PARTY_NU",
+      "faction_id": "FAC_NU_NAT",
+      "home_province_id": "P05",
+      "birth_date": "1984-09-06",
+      "roles": [
+        {
+          "type": "faction_chair",
+          "faction_id": "FAC_NU_NAT"
+        }
+      ]
+    },
+    {
+      "id": "NPC018",
+      "name": "Risa Vale",
+      "age": 38,
+      "party": "Civic Reform Party",
+      "faction": "Liberal Reform Caucus",
+      "office": "Liberal Reform caucus chair",
+      "home": "Eastbay",
+      "notes": "Electoral reformer and civil libertarian.",
+      "party_id": "PARTY_CR",
+      "faction_id": "FAC_CR_LIB",
+      "home_province_id": "P08",
+      "birth_date": "1989-12-27",
+      "roles": [
+        {
+          "type": "faction_chair",
+          "faction_id": "FAC_CR_LIB"
+        }
+      ]
+    },
+    {
+      "id": "NPC019",
+      "name": "Corin Hal",
+      "age": 55,
+      "party": "Civic Reform Party",
+      "faction": "Civic Moderates",
+      "office": "Civic Moderate caucus chair",
+      "home": "Varelia",
+      "notes": "Centrist broker with unusually good relationships across the Assembly.",
+      "party_id": "PARTY_CR",
+      "faction_id": "FAC_CR_MOD",
+      "home_province_id": "P03",
+      "birth_date": "1972-03-16",
+      "roles": [
+        {
+          "type": "faction_chair",
+          "faction_id": "FAC_CR_MOD"
+        }
+      ]
+    },
+    {
+      "id": "NPC020",
+      "name": "Elian Mora",
+      "age": 63,
+      "party": "Nonpartisan",
+      "faction": null,
+      "office": "Chief Justice of the Constitutional Court",
+      "home": "Valen",
+      "notes": "Institutionalist jurist appointed in 2019; swing vote in separation-of-powers cases.",
+      "party_id": null,
+      "faction_id": null,
+      "home_province_id": "FDV",
+      "birth_date": "1964-02-26",
+      "roles": [
+        {
+          "type": "chief_justice",
+          "jurisdiction_id": "TER"
+        }
+      ]
+    },
+    {
+      "id": "NPC021",
+      "name": "Nora Sarin",
+      "age": 48,
+      "party": "Labour Party",
+      "faction": "Workers' Bloc",
+      "office": "Governor of Aurel",
+      "home": "Aurel",
+      "notes": "Popular industrial-policy governor; possible future Labour leader.",
+      "party_id": "PARTY_LAB",
+      "faction_id": "FAC_LAB_WORK",
+      "home_province_id": "P09",
+      "birth_date": "1979-11-12",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P09"
+        }
+      ]
+    },
+    {
+      "id": "NPC022",
+      "name": "Ivan Rel",
+      "age": 58,
+      "party": "National Union",
+      "faction": "One Nation Caucus",
+      "office": "Governor of Southmark",
+      "home": "Southmark",
+      "notes": "Agricultural conservative with strong approval among rural independents.",
+      "party_id": "PARTY_NU",
+      "faction_id": "FAC_NU_ONE",
+      "home_province_id": "P05",
+      "birth_date": "1969-12-22",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P05"
+        }
+      ]
+    },
+    {
+      "id": "NPC023",
+      "name": "Dalen Orr",
+      "age": 42,
+      "party": "Civic Reform Party",
+      "faction": "Civic Moderates",
+      "office": "Governor of Varelia",
+      "home": "Varelia",
+      "notes": "Technocratic infrastructure-focused governor.",
+      "party_id": "PARTY_CR",
+      "faction_id": "FAC_CR_MOD",
+      "home_province_id": "P03",
+      "birth_date": "1985-08-03",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P03"
+        }
+      ]
+    },
+    {
+      "id": "NPC024",
+      "name": "Petra Kovan",
+      "age": 53,
+      "party": "Regional League",
+      "faction": "Agrarian Cooperative Wing",
+      "office": "Governor of Galar",
+      "home": "Galar",
+      "notes": "Farm-cooperative politician who often works with Labour on economics.",
+      "party_id": "PARTY_RL",
+      "faction_id": "FAC_RL_COOP",
+      "home_province_id": "P04",
+      "birth_date": "1974-04-16",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P04"
+        }
+      ]
+    },
+    {
+      "id": "NPC025",
+      "name": "Leo Arven",
+      "age": 60,
+      "party": "National Union",
+      "faction": "Market Conservatives",
+      "office": "Governor of Norval",
+      "home": "Norval",
+      "notes": "Fiscal conservative with a strong university and technology policy record.",
+      "party_id": "PARTY_NU",
+      "faction_id": "FAC_NU_MARKET",
+      "home_province_id": "P02",
+      "birth_date": "1967-09-07",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P02"
+        }
+      ]
+    },
+    {
+      "id": "NPC026",
+      "name": "Mira Voss",
+      "age": 40,
+      "party": "Green Alliance",
+      "faction": "Eco-Social Wing",
+      "office": "Governor of Solenne",
+      "home": "Solenne",
+      "notes": "Transit and coastal-resilience advocate.",
+      "party_id": "PARTY_GRN",
+      "faction_id": "FAC_GRN_ECO",
+      "home_province_id": "P01",
+      "birth_date": "1987-03-11",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P01"
+        }
+      ]
+    },
+    {
+      "id": "NPC027",
+      "name": "Anton Dres",
+      "age": 46,
+      "party": "People's Movement",
+      "faction": "Economic Nationalists",
+      "office": "Governor of Caldria",
+      "home": "Caldria",
+      "notes": "Former mayor who built a populist coalition around mine closures and regional decline.",
+      "party_id": "PARTY_PM",
+      "faction_id": "FAC_PM_ECON",
+      "home_province_id": "P17",
+      "birth_date": "1981-02-20",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P17"
+        }
+      ]
+    },
+    {
+      "id": "NPC028",
+      "name": "Helena Sorr",
+      "age": 51,
+      "party": "Civic Reform Party",
+      "faction": "Liberal Reform Caucus",
+      "office": "Governor of Eastridge",
+      "home": "Eastridge",
+      "notes": "Pro-trade governor with a security-hawk reputation.",
+      "party_id": "PARTY_CR",
+      "faction_id": "FAC_CR_LIB",
+      "home_province_id": "P10",
+      "birth_date": "1976-05-11",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P10"
+        }
+      ]
+    },
+    {
+      "id": "NPC029",
+      "name": "Selka Marin",
+      "age": 45,
+      "party": "Regional League",
+      "faction": "Provincial Autonomists",
+      "office": "Governor of Miren",
+      "home": "Miren",
+      "notes": "Maritime regionalist and fisheries-policy specialist.",
+      "party_id": "PARTY_RL",
+      "faction_id": "FAC_RL_AUTO",
+      "home_province_id": "P16",
+      "birth_date": "1982-06-21",
+      "roles": [
+        {
+          "type": "governor",
+          "jurisdiction_id": "P16"
+        }
+      ]
+    },
+    {
+      "id": "NPC030",
+      "name": "Oren Vask",
+      "age": 67,
+      "party": "Labour Party",
+      "faction": "Social Democratic Caucus",
+      "office": "Chair of the Assembly Labour and Social Affairs Committee",
+      "home": "Darsen",
+      "notes": "Long-serving legislator whose endorsements matter heavily in Labour leadership contests.",
+      "party_id": "PARTY_LAB",
+      "faction_id": "FAC_LAB_SD",
+      "home_province_id": "P12",
+      "birth_date": "1960-04-01",
+      "roles": [
+        {
+          "type": "committee_chair",
+          "jurisdiction_id": "TER",
+          "display_title": "Chair of the Assembly Labour and Social Affairs Committee"
+        }
+      ]
+    }
+  ],
+  "content_version": "0.2.0-predev"
+}

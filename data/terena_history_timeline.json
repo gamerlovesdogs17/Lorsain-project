@@ -53,7 +53,7 @@
     {
       "year": 1917,
       "title": "Monarchy abdicates; First Republic established",
-      "importance": 1.0
+      "importance": 1
     },
     {
       "year": 1919,
@@ -73,12 +73,12 @@
     {
       "year": 1934,
       "title": "National Directorate established",
-      "importance": 1.0
+      "importance": 1
     },
     {
       "year": 1942,
       "title": "Constitutional resistance forces Varek from office",
-      "importance": 1.0
+      "importance": 1
     },
     {
       "year": 1943,
@@ -93,7 +93,7 @@
     {
       "year": 1969,
       "title": "October Crisis and national strike",
-      "importance": 1.0
+      "importance": 1
     },
     {
       "year": 1970,
@@ -103,7 +103,7 @@
     {
       "year": 1971,
       "title": "Dual-Mandate Constitution ratified",
-      "importance": 1.0
+      "importance": 1
     },
     {
       "year": 1974,
@@ -126,13 +126,18 @@
       "importance": 0.85
     },
     {
+      "year": 2013,
+      "title": "Ivo Marenkov (National Union) elected president",
+      "importance": 0.6
+    },
+    {
       "year": 2014,
       "title": "Vaskaran pressure drives security and energy reforms",
       "importance": 0.7
     },
     {
       "year": 2018,
-      "title": "Mara Velic elected president",
+      "title": "Mara Velic elected president; succeeds Marenkov administration",
       "importance": 0.7
     },
     {
@@ -156,5 +161,5 @@
       "importance": 0.8
     }
   ],
-  "content_version": "0.2.0-predev"
+  "content_version": "0.3.0-predev"
 }

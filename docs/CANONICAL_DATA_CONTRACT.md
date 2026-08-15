@@ -1,6 +1,6 @@
 # Canonical Data Contract
 
-**Content version:** `0.2.0-predev`
+**Content version:** `0.3.0-predev`
 
 ## 1. Identity layers
 

@@ -1,6 +1,6 @@
 {
   "name": "@lorsain/game",
-  "version": "0.2.0-predev",
+  "version": "0.3.0-predev",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",

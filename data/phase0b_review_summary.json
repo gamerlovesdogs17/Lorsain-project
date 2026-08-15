@@ -1,0 +1,259 @@
+{
+  "content_version": "0.3.0-predev",
+  "canonical_seed": "TERENA-2028-CANON-01",
+  "roster_size": 530,
+  "rich_tier_count": 316,
+  "mp_count": 420,
+  "governor_count": 21,
+  "judge_count": 9,
+  "minister_count": 12,
+  "party_seats": {
+    "PARTY_LAB": 128,
+    "PARTY_NU": 110,
+    "PARTY_CR": 69,
+    "PARTY_GRN": 41,
+    "PARTY_RL": 35,
+    "PARTY_PM": 29,
+    "PARTY_IND": 8
+  },
+  "seat_targets": {
+    "PARTY_LAB": 128,
+    "PARTY_NU": 110,
+    "PARTY_CR": 69,
+    "PARTY_GRN": 41,
+    "PARTY_RL": 35,
+    "PARTY_PM": 29,
+    "PARTY_IND": 8
+  },
+  "seat_totals_ok": true,
+  "national_first_preference_shares": {
+    "PARTY_LAB": 0.2905724396155567,
+    "PARTY_NU": 0.23982352806834153,
+    "PARTY_CR": 0.14872850225571746,
+    "PARTY_GRN": 0.1096892561715329,
+    "PARTY_RL": 0.10232822442362467,
+    "PARTY_PM": 0.09105556233414625,
+    "PARTY_IND": 0.017802487131080475
+  },
+  "calibration_iterations": 7,
+  "stv_realism": {
+    "total_eliminations": 578,
+    "total_first_count_elected": 24,
+    "total_elected_after_transfer": 396,
+    "total_surplus_steps": 413,
+    "total_same_party_transfer_events": 3375,
+    "districts_with_eliminations": 48,
+    "districts_with_transfer_wins": 48,
+    "exhausted_share": 0.021794248338618444,
+    "legal_lots": 0
+  },
+  "national_turnout": {
+    "total_population": 72000000,
+    "registered_electorate": 53802942,
+    "ballots_cast": 35223330,
+    "invalid_or_blank": 457008,
+    "valid_votes": "34766322",
+    "average_turnout_rate": 0.655
+  },
+  "faction_ideology_review": {
+    "PARTY_CR/FAC_CR_MOD": {
+      "n": 49,
+      "economic": 0.002,
+      "social": 0.371,
+      "authority": -0.217,
+      "green": 0.236,
+      "nationalism": -0.176,
+      "globalism": 0.438
+    },
+    "PARTY_LAB/FAC_LAB_SD": {
+      "n": 60,
+      "economic": 0.446,
+      "social": 0.378,
+      "authority": -0.076,
+      "green": 0.284,
+      "nationalism": -0.145,
+      "globalism": 0.194
+    },
+    "PARTY_NU/FAC_NU_ONE": {
+      "n": 56,
+      "economic": -0.28,
+      "social": -0.227,
+      "authority": 0.165,
+      "green": -0.19,
+      "nationalism": 0.246,
+      "globalism": -0.097
+    },
+    "PARTY_CR/FAC_CR_LIB": {
+      "n": 44,
+      "economic": -0.044,
+      "social": 0.55,
+      "authority": -0.355,
+      "green": 0.252,
+      "nationalism": -0.199,
+      "globalism": 0.575
+    },
+    "PARTY_GRN/FAC_GRN_MAIN": {
+      "n": 34,
+      "economic": 0.356,
+      "social": 0.574,
+      "authority": -0.171,
+      "green": 0.753,
+      "nationalism": -0.261,
+      "globalism": 0.34
+    },
+    "PARTY_RL/FAC_RL_AUTO": {
+      "n": 26,
+      "economic": 0.083,
+      "social": 0.078,
+      "authority": -0.067,
+      "green": 0.167,
+      "nationalism": 0.246,
+      "globalism": -0.348
+    },
+    "PARTY_PM/FAC_PM_NAT": {
+      "n": 29,
+      "economic": 0.206,
+      "social": -0.274,
+      "authority": 0.454,
+      "green": -0.141,
+      "nationalism": 0.642,
+      "globalism": -0.458
+    },
+    "PARTY_LAB/FAC_LAB_LEFT": {
+      "n": 23,
+      "economic": 0.673,
+      "social": 0.448,
+      "authority": -0.091,
+      "green": 0.289,
+      "nationalism": -0.178,
+      "globalism": 0.132
+    },
+    "PARTY_LAB/FAC_LAB_WORK": {
+      "n": 35,
+      "economic": 0.552,
+      "social": 0.258,
+      "authority": -0.065,
+      "green": 0.216,
+      "nationalism": -0.01,
+      "globalism": 0.062
+    },
+    "PARTY_LAB/FAC_LAB_REFORM": {
+      "n": 25,
+      "economic": 0.327,
+      "social": 0.491,
+      "authority": -0.171,
+      "green": 0.243,
+      "nationalism": -0.135,
+      "globalism": 0.25
+    },
+    "PARTY_NU/FAC_NU_MARKET": {
+      "n": 34,
+      "economic": -0.501,
+      "social": -0.158,
+      "authority": 0.243,
+      "green": -0.235,
+      "nationalism": 0.239,
+      "globalism": 0.019
+    },
+    "PARTY_NU/FAC_NU_NAT": {
+      "n": 30,
+      "economic": -0.374,
+      "social": -0.429,
+      "authority": 0.463,
+      "green": -0.21,
+      "nationalism": 0.466,
+      "globalism": -0.266
+    },
+    "PARTY_RL/FAC_RL_COOP": {
+      "n": 24,
+      "economic": 0.193,
+      "social": 0.047,
+      "authority": -0.077,
+      "green": 0.229,
+      "nationalism": 0.219,
+      "globalism": -0.203
+    },
+    "PARTY_GRN/FAC_GRN_ECO": {
+      "n": 20,
+      "economic": 0.515,
+      "social": 0.553,
+      "authority": -0.209,
+      "green": 0.819,
+      "nationalism": -0.231,
+      "globalism": 0.326
+    },
+    "PARTY_PM/FAC_PM_ECON": {
+      "n": 22,
+      "economic": 0.358,
+      "social": -0.193,
+      "authority": 0.348,
+      "green": -0.119,
+      "nationalism": 0.545,
+      "globalism": -0.563
+    },
+    "PARTY_IND": {
+      "n": 1,
+      "economic": 0.063,
+      "social": -0.065,
+      "authority": -0.032,
+      "green": 0.078,
+      "nationalism": 0.161,
+      "globalism": 0.186
+    }
+  },
+  "notable_loser_count": 55,
+  "historical_candidates": 535,
+  "pollsters": 12,
+  "voter_bloc_constituencies": 48,
+  "mara_velic_age_2028": 59,
+  "chronology_violations": 0,
+  "archetype_habit_warnings": 0,
+  "mandatory_checks": {
+    "ana_mirev_not_mp": true,
+    "daria_soren_is_mp": true,
+    "oren_vask_is_mp": true,
+    "elian_mora_not_mp": true,
+    "elian_mora_chief": true,
+    "mara_term_limited": true,
+    "governors_not_mps": true,
+    "ministers_who_are_mps": [],
+    "court_terms_expire_2029_2031": true
+  },
+  "leadership_canon": {
+    "lab_leader": "NPC012",
+    "cr_leader": "NPC018",
+    "lab_whip": "NPC013",
+    "nu_floor": "NPC015",
+    "cr_floor": "NPC019"
+  },
+  "presidential_field": {
+    "NPC001": "term_limited_incumbent",
+    "NPC003": "frontrunner",
+    "NPC004": "likely",
+    "NPC005": "frontrunner",
+    "NPC006": "likely",
+    "NPC007": "possible",
+    "NPC008": "likely",
+    "NPC009": "possible",
+    "NPC011": "exploring",
+    "NPC012": "possible",
+    "NPC014": "possible",
+    "NPC015": "possible",
+    "NPC018": "possible",
+    "NPC021": "exploring",
+    "NPC022": "exploring",
+    "NPC026": "possible",
+    "NPC027": "possible",
+    "NPC029": "exploring"
+  },
+  "outputs": [
+    "data/terena_starting_figures.json",
+    "data/terena_election_assembly_2026.json",
+    "data/terena_historical_candidates_2026.json",
+    "data/terena_voter_blocs_2028.json",
+    "data/terena_pollsters.json",
+    "data/phase0b_review_summary.json",
+    "docs/PHASE_0B_REPORT.md",
+    "data/scenario_terena_2028.json"
+  ]
+}

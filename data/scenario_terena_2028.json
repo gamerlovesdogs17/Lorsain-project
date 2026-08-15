@@ -45,11 +45,11 @@
     },
     {
       "id": "PRESS_COURT",
-      "name": "Two Constitutional Court terms expire during next presidential term",
+      "name": "Two Constitutional Court terms expire during the next presidential term (2029 and 2031).",
       "salience": 0.49
     }
   ],
-  "content_version": "0.2.0-predev",
+  "content_version": "0.3.0-predev",
   "country_id": "TER",
   "world_country_id": "W41"
 }

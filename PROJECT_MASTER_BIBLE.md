@@ -800,7 +800,7 @@ Deliverable: `packages/election-math` with exact BigInt rationals, IRV, Assembly
 
 ## 9.6. Phase 0b — canonical starting world content
 
-**NOT STARTED** (next after Phase 0.5 review). Roster, voter blocs, pollsters, 2026 Assembly STV archive generated/validated via election-math.
+**COMPLETE** (`0.3.0-predev`). Roster (~520), 420 MPs with exact party seats, full governors/cabinet/court, 2026 STV archive validated via `@lorsain/election-math`, voter blocs, pollsters, approved presidential eligibility. Generators are development-only; outputs are committed canonical JSON.
 
 ## 10. Phase 1 — world kernel and clock
 

@@ -1,15 +1,17 @@
 {
-  "content_version": "0.2.0-predev",
-  "status": "draft_defaults_pending_content_approval",
+  "content_version": "0.3.0-predev",
+  "status": "approved",
   "country_id": "TER",
   "office": "OFFICE_PRESIDENT",
-  "manifest_role": "derived_or_reference.presidential_eligibility_pending",
-  "not_final_gameplay_law": true,
+  "manifest_role": "authoritative.presidential_eligibility",
+  "not_final_gameplay_law": false,
   "rules": {
     "minimum_age": 35,
+    "age_measured_on": "presidential_election_day",
     "citizenship": "terenan_citizen",
-    "residency": "resident_of_terena_for_at_least_10_years_cumulative_before_election_day",
+    "residency": "at_least_10_cumulative_years_residency_in_terena_before_election_day",
     "term_limit_elected": 2,
+    "party_nomination": "must_satisfy_applicable_party_nomination_rule_or_qualify_as_independent_under_election_law",
     "incompatible_offices_while_serving_as_president": [
       "national_assembly_member",
       "provincial_governor",
@@ -25,11 +27,16 @@
       "active_military_commission": false
     },
     "vacate_incompatible_office": "at_assumption_of_presidential_office_not_at_candidacy_filing",
-    "disqualifications_to_run": [
-      "final_conviction_for_treason_or_corruption_with_unrestored_civil_rights",
-      "currently_serving_disqualifying_prison_sentence"
+    "must_resign_before_candidacy_filing": [
+      "constitutional_court_judge",
+      "active_military_commission"
     ],
-    "party_nomination": "must_satisfy_applicable_party_nomination_rule_or_qualify_as_independent_under_election_law"
+    "disqualifications_to_run": [
+      "final_legal_judgment_for_treason_or_serious_public_corruption_where_judgment_or_statute_explicitly_includes_disqualification_from_national_office",
+      "active_legal_disqualification_from_holding_national_office",
+      "uncompleted_disqualifying_criminal_sentence_where_canonical_law_specifies_ineligibility"
+    ],
+    "notes_on_disqualification": "Do not treat ordinary criminal conviction as automatic presidential ban unless the judgment or statute explicitly creates national-office disqualification."
   },
   "derived_from_constitution": {
     "term_years": 5,
@@ -37,10 +44,9 @@
     "election": "national_rcv"
   },
   "notes": [
-    "Listed under derived_or_reference until status becomes approved, then promote to authoritative.",
-    "Sitting Assembly members MAY seek the presidency without resigning first; seat vacation occurs at inauguration/assumption if elected.",
-    "Cabinet ministers and governors MAY run while serving under the same assume-then-vacate rule (recommended).",
-    "Constitutional Court judges and active-duty military may NOT run while holding those roles (recommended); they must resign/retire before filing.",
-    "Simulation systems must not treat this draft as final law."
+    "Canonical gameplay law for TERENA_2028 (Phase 0b).",
+    "Sitting Assembly members, provincial governors, and cabinet ministers MAY seek the presidency without resigning; incompatible offices vacate only upon assumption of the presidency.",
+    "Constitutional Court judges and active-duty commissioned military officers may NOT run while serving; they must resign or retire before formal candidacy filing.",
+    "Runtime systems must evaluate eligibility from this data rather than hardcoded presidential assumptions."
   ]
 }

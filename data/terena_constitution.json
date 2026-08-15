@@ -65,5 +65,6 @@
     "confirmation_fraction": 0.6,
     "staggered": true
   },
-  "content_version": "0.2.0-predev"
+  "presidential_eligibility_ref": "data/terena_presidential_eligibility.json",
+  "content_version": "0.3.0-predev"
 }

@@ -58,13 +58,13 @@
       "year": 1909,
       "title": "First Continental War begins",
       "scope": "world",
-      "importance": 1.0
+      "importance": 1
     },
     {
       "year": 1916,
       "title": "First Continental War ends in negotiated settlement",
       "scope": "world",
-      "importance": 1.0
+      "importance": 1
     },
     {
       "year": 1917,
@@ -82,13 +82,13 @@
       "year": 1938,
       "title": "Second Continental War begins",
       "scope": "world",
-      "importance": 1.0
+      "importance": 1
     },
     {
       "year": 1946,
       "title": "Second Continental War ends",
       "scope": "world",
-      "importance": 1.0
+      "importance": 1
     },
     {
       "year": 1947,
@@ -169,5 +169,5 @@
       "importance": 0.7
     }
   ],
-  "content_version": "0.2.0-predev"
+  "content_version": "0.3.0-predev"
 }

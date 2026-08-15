@@ -98,8 +98,8 @@ Do not store a full duplicate world snapshot every month.
 **COMPLETE (hardened).** Next dependency order:
 
 - **Phase 0.5** — **COMPLETE** — `packages/election-math` (exact rationals, IRV, STV Droop+WIG, lots, fixtures)
-- **Phase 0b** — next — generate/validate 2026 archive + roster + blocs using that package
-- Then kernel / NPC / domain phases
+- **Phase 0b** — **COMPLETE** — canonical 2028 roster, 2026 STV archive, voter blocs, pollsters, eligibility law
+- Then kernel / NPC / domain phases (Phase 1 next)
 
 Deliverables:
 
@@ -119,7 +119,7 @@ Acceptance criteria: CI can load every content file, validate every ID reference
 
 ## 9.6. Phase 0b — canonical starting world content
 
-**NOT STARTED.** Await separate approval after Phase 0.5 review.
+**COMPLETE.** Content version `0.3.0-predev`. Fixed TERENA_2028 political world: ~520 roster (420 MPs), 2026 Assembly STV archive (election-math), voter blocs, pollsters, approved presidential eligibility. Dev generators under `scripts/phase0b/`. Do not start Phase 1 until review.
 
 ## 10. Phase 1 — world kernel and clock
 

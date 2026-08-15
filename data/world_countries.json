@@ -853,7 +853,7 @@
       "azgaar_name": "Republic of Ugul",
       "region": "West Arden",
       "government": "presidential republic",
-      "population_millions": 115.0,
+      "population_millions": 115,
       "area_index": 32630,
       "power_tier": "major power",
       "alignment": "Independent / multi-aligned",
@@ -919,7 +919,7 @@
       "azgaar_name": "Redcham Theocracy",
       "region": "North Vespera",
       "government": "semi-presidential republic",
-      "population_millions": 118.0,
+      "population_millions": 118,
       "area_index": 27802,
       "power_tier": "major power",
       "alignment": "Continental Sovereignty Compact",
@@ -1113,7 +1113,7 @@
       "azgaar_name": "Zarharmerdian Theocracy",
       "region": "East Vespera",
       "government": "presidential republic",
-      "population_millions": 14.0,
+      "population_millions": 14,
       "area_index": 1874,
       "power_tier": "small power",
       "alignment": "Non-Aligned Forum",
@@ -1213,7 +1213,7 @@
       "azgaar_name": "Kingdom of Montria",
       "region": "North Arden",
       "government": "constitutional monarchy",
-      "population_millions": 154.0,
+      "population_millions": 154,
       "area_index": 31074,
       "power_tier": "major power",
       "alignment": "Democratic Concord",
@@ -1247,7 +1247,7 @@
       "azgaar_name": "Republic of Sholed",
       "region": "North Arden",
       "government": "parliamentary republic",
-      "population_millions": 80.0,
+      "population_millions": 80,
       "area_index": 16388,
       "power_tier": "middle power",
       "alignment": "Democratic Concord",
@@ -1568,5 +1568,5 @@
       "population": 57500000
     }
   ],
-  "content_version": "0.2.0-predev"
+  "content_version": "0.3.0-predev"
 }

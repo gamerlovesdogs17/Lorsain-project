@@ -5,6 +5,7 @@
       "name": "Labour Party",
       "short": "LAB",
       "color": "#c94b4b",
+      "organization_type": "membership_party",
       "assembly_seats": 128,
       "position": "center-left labor/social democratic",
       "factions": [
@@ -44,6 +45,7 @@
       "name": "National Union",
       "short": "NU",
       "color": "#496f9d",
+      "organization_type": "membership_party",
       "assembly_seats": 110,
       "position": "center-right conservative",
       "factions": [
@@ -76,6 +78,7 @@
       "name": "Civic Reform Party",
       "short": "CR",
       "color": "#d2a845",
+      "organization_type": "membership_party",
       "assembly_seats": 69,
       "position": "liberal-centrist institutional reform",
       "factions": [
@@ -101,6 +104,7 @@
       "name": "Green Alliance",
       "short": "GRN",
       "color": "#5e9c68",
+      "organization_type": "membership_party",
       "assembly_seats": 41,
       "position": "green progressive",
       "factions": [
@@ -126,6 +130,7 @@
       "name": "Regional League",
       "short": "RL",
       "color": "#8b7655",
+      "organization_type": "membership_party",
       "assembly_seats": 35,
       "position": "agrarian decentralist regionalist",
       "factions": [
@@ -151,6 +156,7 @@
       "name": "People’s Movement",
       "short": "PM",
       "color": "#86639a",
+      "organization_type": "membership_party",
       "assembly_seats": 29,
       "position": "national-populist economic nationalist",
       "factions": [
@@ -176,11 +182,13 @@
       "name": "Independents",
       "short": "IND",
       "color": "#777777",
+      "organization_type": "independent_aggregate",
       "assembly_seats": 8,
       "position": "mixed",
+      "notes": "Electoral/statistical aggregate for independent candidates and seats. Not a membership political party; individual independents use party_id null.",
       "factions": [],
       "nomination_rule_id": "independent"
     }
   ],
-  "content_version": "0.2.0-predev"
+  "content_version": "0.3.0-predev"
 }
