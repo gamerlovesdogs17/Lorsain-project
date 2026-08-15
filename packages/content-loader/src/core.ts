@@ -11,6 +11,7 @@ import {
   ManifestSchema,
   MediaFileSchema,
   NominationRulesFileSchema,
+  OfficesFileSchema,
   OrganizationsFileSchema,
   PartiesFileSchema,
   PollstersFileSchema,
@@ -32,8 +33,10 @@ import {
   type Manifest,
   type MediaFile,
   type NominationRulesFile,
+  type OfficesFile,
   type OrganizationsFile,
   type PartiesFile,
+  type PresidentialAdministrationsFile,
   type PresidentialEligibilityFile,
   type ScenarioFile,
   type StartingFiguresFile,
@@ -85,6 +88,8 @@ export type ParsedAuthoritativeContent = {
   scenario: ScenarioFile;
   canonical_crosswalk: CrosswalkFile;
   terena_electoral_counting: ElectoralCountingFile;
+  terena_offices: OfficesFile;
+  terena_presidential_administrations: PresidentialAdministrationsFile;
   world_svg: string;
   terena_svg: string;
 };
@@ -238,6 +243,8 @@ export function validateAndLoadContent(
     "canonical_crosswalk",
     "terena_electoral_counting",
     "presidential_eligibility",
+    "terena_presidential_administrations",
+    "terena_offices",
     "terena_election_assembly_2026",
     "terena_historical_candidates_2026",
     "terena_voter_blocs_2028",
@@ -249,12 +256,7 @@ export function validateAndLoadContent(
   for (const key of requiredAuth) {
     if (!(key in manifest.authoritative)) error(`manifest.authoritative missing key: ${key}`);
   }
-  for (const key of [
-    "world_history_timeline",
-    "terena_history_timeline",
-    "terena_geography",
-    "terena_presidential_administrations",
-  ]) {
+  for (const key of ["world_history_timeline", "terena_history_timeline", "terena_geography"]) {
     if (!(key in manifest.derived_or_reference)) {
       error(`manifest.derived_or_reference missing key: ${key}`);
     }
@@ -309,6 +311,8 @@ export function validateAndLoadContent(
   let historicalCandidates: ReturnType<typeof HistoricalCandidates2026Schema.parse>;
   let voterBlocs: ReturnType<typeof VoterBlocsFileSchema.parse>;
   let pollsters: ReturnType<typeof PollstersFileSchema.parse>;
+  let administrations: PresidentialAdministrationsFile;
+  let officesFile: OfficesFile;
 
   try {
     world = WorldCountriesFileSchema.parse(readAuthJson("world_countries"));
@@ -356,6 +360,10 @@ export function validateAndLoadContent(
         manifest.authoritative.terena_pollsters!,
       ),
     );
+    administrations = PresidentialAdministrationsFileSchema.parse(
+      readAuthJson("terena_presidential_administrations"),
+    );
+    officesFile = OfficesFileSchema.parse(readAuthJson("terena_offices"));
     worldSvg = reader.readText(manifest.authoritative.world_svg!);
     terenaSvg = reader.readText(manifest.authoritative.terena_svg!);
 
@@ -377,6 +385,8 @@ export function validateAndLoadContent(
     checkVersion("terena_historical_candidates_2026", historicalCandidates.content_version);
     checkVersion("terena_voter_blocs_2028", voterBlocs.content_version);
     checkVersion("terena_pollsters", pollsters.content_version);
+    checkVersion("terena_presidential_administrations", administrations.content_version);
+    checkVersion("terena_offices", officesFile.content_version);
     checkVersion("terena_provinces", (provinces as { content_version?: string }).content_version);
     checkVersion(
       "terena_constituencies",
@@ -986,11 +996,6 @@ export function validateAndLoadContent(
     }
 
     // Court philosophy + appointing authority + legal career
-    const adminRel = manifest.derived_or_reference.terena_presidential_administrations;
-    const administrations = PresidentialAdministrationsFileSchema.parse(
-      parseJson(reader.readText(adminRel!), adminRel!),
-    );
-    checkVersion("terena_presidential_administrations", administrations.content_version, false);
     const adminIds = new Set(administrations.administrations.map((a) => a.id));
     const figureIdSet = new Set(figures.figures.map((f) => f.id));
     const CREDIBLE_LEGAL_PATHS = new Set([
@@ -1121,6 +1126,63 @@ export function validateAndLoadContent(
       }
     }
 
+    {
+      uniqueIds(
+        officesFile.offices.map((o) => o.id),
+        "office",
+        error,
+      );
+      const byKind = new Map<string, number>();
+      const officeIds = new Set(officesFile.offices.map((o) => o.id));
+      for (const o of officesFile.offices) {
+        byKind.set(o.kind, (byKind.get(o.kind) ?? 0) + 1);
+        const constituencyId = (o as { constituency_id?: string }).constituency_id;
+        if (
+          o.kind === "assembly_member" &&
+          constituencyId &&
+          !consProps.some((c) => c.id === constituencyId)
+        ) {
+          error(`${o.id}: unknown constituency`);
+        }
+      }
+      const expectKind: Record<string, number> = {
+        president: 1,
+        assembly_member: 48,
+        speaker: 1,
+        governor: 21,
+        constitutional_court_justice: 9,
+        minister: 12,
+        mayor: 18,
+      };
+      for (const [k, n] of Object.entries(expectKind)) {
+        if ((byKind.get(k) ?? 0) !== n) error(`office kind ${k}=${byKind.get(k) ?? 0} != ${n}`);
+      }
+      const vacancy = (
+        constitution as {
+          presidential_vacancy?: { acting_succession_office_ids?: string[] };
+        }
+      ).presidential_vacancy;
+      for (const oid of vacancy?.acting_succession_office_ids ?? []) {
+        if (!officeIds.has(oid)) error(`succession office ${oid} missing from terena_offices`);
+      }
+      const marenkov = administrations.administrations.find((a) => a.id === "HIST_ADMIN_PRE_VELIC");
+      if (!marenkov) error("HIST_ADMIN_PRE_VELIC administration missing");
+      else if (marenkov.term_start !== "2014-01-20" || marenkov.term_end !== "2019-01-20") {
+        error("HIST_ADMIN_PRE_VELIC term must be 2014-01-20 → 2019-01-20");
+      }
+      const velic2 = administrations.administrations.find((a) => a.id === "ADMIN_VELIC_2");
+      if (!velic2) error("ADMIN_VELIC_2 administration missing");
+      else if (velic2.term_start !== "2024-01-20" || velic2.term_end !== "2029-01-20") {
+        error("ADMIN_VELIC_2 term must be 2024-01-20 → 2029-01-20");
+      }
+      const asm = scenario.assembly as { next_election?: unknown };
+      if (asm.next_election !== "2030-05-12") {
+        error(
+          `scenario assembly.next_election must be 2030-05-12, got ${String(asm.next_election)}`,
+        );
+      }
+    }
+
     // Pollster house effects must be centered vote-share-point offsets
     for (const p of pollsters.pollsters) {
       const he = (p as { house_effects?: Record<string, unknown> }).house_effects;
@@ -1248,6 +1310,8 @@ export function validateAndLoadContent(
     scenario,
     canonical_crosswalk: crosswalk,
     terena_electoral_counting: counting,
+    terena_offices: officesFile,
+    terena_presidential_administrations: administrations,
     world_svg: worldSvg,
     terena_svg: terenaSvg,
   });

@@ -6,7 +6,10 @@
   "speaker_id": "NPC002",
   "assembly": {
     "elected": 2026,
-    "next_election": 2030,
+    "election_date": "2026-05-10",
+    "term_start": "2026-06-01",
+    "term_end": "2030-06-01",
+    "next_election": "2030-05-12",
     "party_seats": {
       "PARTY_LAB": 128,
       "PARTY_NU": 110,
@@ -19,6 +22,7 @@
   },
   "presidential_election": {
     "date": "2028-10-14",
+    "regular_term_begins": "2029-01-20",
     "incumbent_eligible": false,
     "status": "pre-nomination"
   },
@@ -49,7 +53,7 @@
       "salience": 0.49
     }
   ],
-  "content_version": "0.3.0-predev",
+  "content_version": "0.3.1-predev",
   "country_id": "TER",
   "world_country_id": "W41"
 }

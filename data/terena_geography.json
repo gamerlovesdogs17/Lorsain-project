@@ -1655,7 +1655,7 @@
     "height": 948,
     "distance_scale_km": 20
   },
-  "content_version": "0.3.0-predev",
+  "content_version": "0.3.1-predev",
   "derived_summary": true,
   "authoritative_files": {
     "provinces": "data/terena_provinces.geojson",

@@ -131,8 +131,13 @@ for key in phase0b_auth:
     check(key in auth,f"manifest.authoritative missing {key}")
     if key in auth: load(auth[key])
 ref=manifest.get("derived_or_reference",{})
-for key in ("world_history_timeline","terena_history_timeline","terena_presidential_administrations"):
+for key in ("world_history_timeline","terena_history_timeline"):
     check(key in ref,f"manifest.derived_or_reference missing {key}")
+check("terena_presidential_administrations" not in ref,
+      "terena_presidential_administrations must be authoritative, not derived_or_reference")
+for key in ("terena_presidential_administrations","terena_offices"):
+    check(key in auth,f"manifest.authoritative missing {key}")
+    if key in auth: load(auth[key])
 check("presidential_eligibility_pending" not in ref,
       "presidential_eligibility_pending must be removed after Phase 0b")
 
@@ -234,7 +239,7 @@ for j in judges:
     check((traits.get("factionLoyalty") or 1) <= 0.15, f"{j['id']}: court factionLoyalty too high")
     check((traits.get("institutionalism") or 0) >= 0.65, f"{j['id']}: court institutionalism too low")
 
-admins=load(ref.get("terena_presidential_administrations","data/terena_presidential_administrations.json"))
+admins=load(auth.get("terena_presidential_administrations","data/terena_presidential_administrations.json"))
 admin_ids={a.get("id") for a in admins.get("administrations",[])}
 fig_ids={f.get("id") for f in figs.get("figures",[])}
 for j in judges:

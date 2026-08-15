@@ -1,17 +1,18 @@
-# Lorsain Political Simulator — Phase 0b Complete
+# Lorsain Political Simulator — Phase 1 Kernel
 
-This repository holds the **canonical content foundation** and TypeScript monorepo for a single-player political simulation set in Lorsain / Terena.
+This repository holds the **canonical content foundation** and TypeScript simulation kernel for a single-player political simulation set in Lorsain / Terena.
 
 ## Status
 
-**Phase 0b complete; Phase 1 next.** Phase 1 (simulation kernel) — not started.
+**Phase 0, 0.5, and 0b are complete/canonical. Phase 1 kernel implemented (uncommitted pending review). Phase 2 not started.**
 
 ## Canonical lock
 
-- Content version: **0.3.0-predev**
+- Content version: **0.3.1-predev** (Phase 0b political world canonized at `7e94984` as `0.3.0-predev`; this patch adds calendars, offices, and succession)
+- Save schema version: **1** (independent of contentVersion and npm package versions)
 - Scenario: **TERENA_2028** (1 January 2028)
 - Country: **Republic of Terena** (`TER` / world `W41` / SVG `TERENA`)
-- RNG: **xoshiro128**** with cyrb128 stream seeding (no `Math.random()` in sim)
+- RNG: **xoshiro128**** with cyrb128 stream seeding (no host PRNG in sim)
 - Counting: **`@lorsain/election-math`** (exact rationals, IRV, STV Droop+WIG)
 - Starting roster: **530** politicians including **420** Assembly MPs
 - Historical Assembly: **2026 STV archive** (48 constituencies)
@@ -46,4 +47,4 @@ pnpm generate:phase0b  # development-only; outputs are committed canonical JSON
 
 ## Phase order (locked)
 
-0 → 0.5 election-math → **0b content (complete)** → **1 kernel (next)** → 2 NPCs → …
+0 → 0.5 election-math → **0b content (canonical)** → **1 kernel (implemented)** → 2 NPCs → …

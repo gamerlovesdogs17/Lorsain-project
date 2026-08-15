@@ -10,7 +10,9 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 ## 2. Static content versus save state
 
-**Static content** defines geography, constitutional rules, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
+**Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
+
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 1 saves use `schemaVersion: 1` and `contentVersion: 0.3.1-predev`.
 
 ## 3. Core static schemas
 
@@ -147,18 +149,53 @@ interface PoliticianKnowledge {
 
 ## 7. Office and terms
 
-Separate an office definition from a term/officeholder record. This lets the same office persist across centuries.
+Static office definitions live in `data/terena_offices.json`. Dynamic `OfficeTerm` records live in save state.
+
+Party leaders, faction chairs, and whips are **not** state offices.
+
+A multi-member Assembly constituency is one office with `capacity` equal to that constituency's seat magnitude (not invented seat-1/seat-2 identities).
 
 ```ts
 interface OfficeTerm {
   id: string;
   officeId: string;
   holderId: string;
-  startDate: ISODate;
-  endDate?: ISODate;
+  startDate: ISODate | null; // null = preexisting at scenario start; start unknown
+  startKnown: boolean;
+  endDate?: ISODate | null;
   accessionReason: string;
+  status: 'active' | 'ended' | 'suspended';
+  holdingKind: 'substantive' | 'acting';
 }
 ```
+
+Do not write `startDate: 2028-01-01` merely because the scenario starts then.
+
+Known starting terms:
+
+- President Mara Velic: 2024-01-20 → 2029-01-20
+- Assembly MPs: 2026-06-01 → 2030-06-01
+- Speaker Daria Soren: speakership start 2026-06-01
+- Court: exact appointment/end dates from figure `court` metadata
+- Ministers/governors/mayors: preexisting / unknown start
+
+## 7.1 Calendars and succession
+
+Presidential regular election: 2nd Saturday in October every 5 years (anchor 2018). Assume office 20 January following. Outgoing president remains until then.
+
+Assembly regular election: 2nd Sunday in May every 4 years (anchor 2026). Assume office 1 June following.
+
+Presidential vacancy: Speaker → Justice Minister → Finance Minister → Foreign Minister become Acting President. Acting service is not an elected term. Special RCV election if more than 180 days remain before the next regular presidential election, within 90 days of vacancy; winner serves the remainder of the regular term. ≤180 days: acting president serves until regular assumption. Special remainder counts as an elected term only if longer than half of five years. President-elect before 20 January becomes acting within 7 days; that acting window is not a separate term.
+
+## 7.2 Turns
+
+Normal turn = one calendar month. Target date is `scenarioStartDate + (completedTurns + 1) months`, not “currentDate plus one month”. Mid-month blocking events pause at the exact date; resume continues to the original month target (e.g. pause 2028-10-14, resume to 2028-11-01).
+
+Unimplemented domain events (2028 presidential election, 2030 Assembly election) produce a typed `BLOCKING_DOMAIN` interrupt with `requiresResolution: true`. `RESUME_TURN` / `ACKNOWLEDGE_INTERRUPT` cannot bypass them (`DOMAIN_RESOLUTION_REQUIRED`). Presentation pauses (`requiresResolution: false`) must be acknowledged, then resumed to the original month target (e.g. pause 2028-10-14, resume to 2028-11-01).
+
+Court terms with `expirationPolicy: auto_vacate` end automatically. Presidential and Assembly terms require the relevant election/succession domain; an unresolved regular-election interrupt therefore cannot silently carry expired elected holders forward.
+
+Special presidential vacancy: Phase 1 records `SPECIAL_PRESIDENTIAL_ELECTION_REQUIRED` and schedules `SPECIAL_PRESIDENTIAL_ELECTION_DEADLINE` (vacancyDate + 90 days). That is a constitutional deadline, not a chosen election date.
 
 ## 8. Elections
 
@@ -258,32 +295,22 @@ News and history pages consume events; they do not invent a separate reality.
 
 ## 14. Save root
 
+Phase 1 save envelope (`schemaVersion: 1`):
+
 ```ts
-interface SaveGame {
-  schemaVersion: number;
+interface SaveFile {
+  schemaVersion: 1;
   contentVersion: string;
-  scenarioId: 'TERENA_2028';
-  date: ISODate;
-  turn: number;
-  rng: SerializedRngState;
-  playerPoliticianId: string;
-  politicians: Record<string, PoliticianState>;
-  relationships: Record<string, RelationshipEdge>;
-  memories: Record<string, PoliticalMemory>;
-  parties: Record<string, PartyState>;
-  offices: Record<string, OfficeTerm>;
-  elections: Record<string, ElectionState>;
-  campaigns: Record<string, CampaignState>;
-  legislature: LegislatureState;
-  executive: ExecutiveState;
-  courts: CourtState;
-  economy: EconomyState;
-  countries: Record<string, ForeignCountryState>;
-  organizations: Record<string, OrganizationState>;
-  eventQueue: ScheduledEvent[];
-  history: HistoryIndex;
+  scenarioId: string;
+  simulation: SimState; // includes authoritative rng, calendar, officeTerms, scheduler, history, counters, interrupt
 }
 ```
+
+Authoritative RNG lives only in `simulation.rng`. A leftover root `rng` field, if present, must equal `simulation.rng` or the save is rejected.
+
+Loaded saves are untrusted `unknown` and are fully structurally validated. Content-version mismatches apply registered migrations or return `INCOMPATIBLE_CONTENT`; a migration object that does not actually update the save is not accepted.
+
+Later domain fields (relationships, bills, economy, etc.) are not present in Phase 1. Schema migrations are registered from v1 even though only v1 exists (`migrateSaveV1ToV2` is the named placeholder).
 
 ## 15. Map contract
 

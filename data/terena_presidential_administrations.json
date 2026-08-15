@@ -1,15 +1,45 @@
 {
-  "content_version": "0.3.0-predev",
+  "content_version": "0.3.1-predev",
+  "calendars_ref": {
+    "presidential": "CALENDAR_PRESIDENTIAL_REGULAR",
+    "assumption": "January 20 following the election"
+  },
   "administrations": [
     {
       "id": "HIST_ADMIN_PRE_VELIC",
       "president_person_id": "HIST_PRES_IVO_MARENKOV",
       "president_name": "Ivo Marenkov",
       "party_id": "PARTY_NU",
-      "term_start": "2013-01-20",
-      "term_end": "2018-01-20",
+      "elected": "2013-10-12",
+      "term_start": "2014-01-20",
+      "term_end": "2019-01-20",
+      "succeeded_by_administration_id": "ADMIN_VELIC_1",
       "succeeded_by_president_id": "NPC001",
-      "notes": "Immediate predecessor administration to Mara Velic. Marenkov completed one five-year presidential term and left office after Velic won the 2018 election. First-pass Phase 0b identity for resolving the 2017 Constitutional Court appointment."
+      "notes": "Immediate predecessor administration to Mara Velic. Marenkov won the 2013 regular presidential election (second Saturday in October) and assumed office 2014-01-20. Velic won the 2018 election; Marenkov remained president until Velic assumed office on 2019-01-20. Resolves the 2017 Constitutional Court appointment."
+    },
+    {
+      "id": "ADMIN_VELIC_1",
+      "president_person_id": "NPC001",
+      "president_name": "Mara Velic",
+      "party_id": "PARTY_CR",
+      "elected": "2018-10-13",
+      "term_start": "2019-01-20",
+      "term_end": "2024-01-20",
+      "preceded_by_administration_id": "HIST_ADMIN_PRE_VELIC",
+      "succeeded_by_administration_id": "ADMIN_VELIC_2",
+      "notes": "First elected presidential term. Regular election 2018-10-13; assumed office 2019-01-20."
+    },
+    {
+      "id": "ADMIN_VELIC_2",
+      "president_person_id": "NPC001",
+      "president_name": "Mara Velic",
+      "party_id": "PARTY_CR",
+      "elected": "2023-10-14",
+      "term_start": "2024-01-20",
+      "term_end": "2029-01-20",
+      "preceded_by_administration_id": "ADMIN_VELIC_1",
+      "status": "incumbent_at_scenario_start",
+      "notes": "Second elected presidential term. Regular election 2023-10-14; assumed office 2024-01-20. Term-limited; not eligible in 2028. Next regular election 2028-10-14; successor assumes office 2029-01-20."
     }
   ],
   "historical_persons": [
@@ -18,7 +48,7 @@
       "name": "Ivo Marenkov",
       "party_id": "PARTY_NU",
       "offices": ["president"],
-      "notes": "President of Terena 2013–2018; National Union."
+      "notes": "President of Terena 2014-01-20 to 2019-01-20; elected 2013; National Union."
     }
   ]
 }

@@ -98,8 +98,9 @@ Do not store a full duplicate world snapshot every month.
 **COMPLETE (hardened).** Next dependency order:
 
 - **Phase 0.5** — **COMPLETE** — `packages/election-math` (exact rationals, IRV, STV Droop+WIG, lots, fixtures)
-- **Phase 0b** — **COMPLETE** — canonical 2028 roster, 2026 STV archive, voter blocs, pollsters, eligibility law
-- Then kernel / NPC / domain phases (Phase 1 next)
+- **Phase 0b** — **COMPLETE / CANONICAL** (`7e94984`) — 530 roster, 420 MPs, 2026 STV archive, voter blocs, pollsters, eligibility
+- **Phase 1** — **COMPLETE** — deterministic world kernel (calendar, offices/terms, scheduler, commands, save/load, worker protocol types)
+- Phase 2 (politicians/relationships/goals) is next and must not start until Phase 1 is reviewed
 
 Deliverables:
 
@@ -119,13 +120,21 @@ Acceptance criteria: CI can load every content file, validate every ID reference
 
 ## 9.6. Phase 0b — canonical starting world content
 
-**COMPLETE.** Content version `0.3.0-predev`. Fixed TERENA_2028 political world: ~520 roster (420 MPs), 2026 Assembly STV archive (election-math), voter blocs, pollsters, approved presidential eligibility. Dev generators under `scripts/phase0b/`. Do not start Phase 1 until review.
+**COMPLETE / CANONICAL** at commit `7e94984`. Content version at canonization `0.3.0-predev`; calendar/office/succession patch `0.3.1-predev`. Fixed TERENA_2028 political world: **530** roster (420 MPs), 2026 Assembly STV archive (election-math), voter blocs, pollsters, approved presidential eligibility. Dev generators under `scripts/phase0b/`. Do not regenerate accepted political content.
 
 ## 10. Phase 1 — world kernel and clock
 
-Implement calendar, entity store, offices, office terms, appointments, event queue, scheduled elections, death/retirement dates, player identity and history log.
+**COMPLETE (uncommitted pending review).** `@lorsain/sim` provides a deterministic monthly-turn kernel.
 
-Acceptance criteria: simulate 20 years of empty calendar with deterministic scheduled events, save at year 10, reload, and reach the identical year-20 hash.
+- Date-only Gregorian calendar (no host timezone / wall clock)
+- Regular presidential election: second Saturday in October every 5 years, assume office 20 January following
+- Regular Assembly election: second Sunday in May every 4 years, assume office 1 June following
+- Normalized `SimState`, office definitions vs office terms, scheduler, commands, SimEvents, history
+- Save schemaVersion **1**, separate from contentVersion and package version
+- Domain interrupts: unresolved political domain events (`requiresResolution`) cannot be skipped with `RESUME_TURN`
+- Worker protocol **types** only (no Worker runtime dependency)
+
+Acceptance criteria: synthetic 20-year save/reload hash match; TERENA_2028 advances until `PRESIDENTIAL_ELECTION_DUE` on 2028-10-14.
 
 ## 11. Phase 2 — politicians, relationships and goals
 

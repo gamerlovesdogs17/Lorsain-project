@@ -10,7 +10,10 @@
     "chief_executive": true,
     "can_dissolve_assembly": false,
     "ordinary_veto": "suspensive_once",
-    "priority_bills_per_year": 3
+    "priority_bills_per_year": 3,
+    "office_id": "OFFICE_PRESIDENT",
+    "calendar_id": "CALENDAR_PRESIDENTIAL_REGULAR",
+    "vacancy_rule_id": "RULE_PRESIDENTIAL_VACANCY"
   },
   "assembly": {
     "seats": 420,
@@ -19,12 +22,88 @@
     "constituencies": 48,
     "elects_executive": false,
     "absolute_majority": 211,
+    "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+    "assumption_month_day": "06-01",
     "constituency_boundaries": {
       "authority": "National Electoral Commission",
       "must_follow_province_boundaries": false,
       "may_cross_province_boundaries": true,
       "review_cycle_years": 10,
       "equal_population_priority": true
+    }
+  },
+  "calendars": {
+    "CALENDAR_PRESIDENTIAL_REGULAR": {
+      "id": "CALENDAR_PRESIDENTIAL_REGULAR",
+      "kind": "regular_election",
+      "office_kind": "president",
+      "interval_years": 5,
+      "month": 10,
+      "nth_weekday": 2,
+      "weekday": "saturday",
+      "anchor_year": 2018,
+      "notes": "Second Saturday in October every five years. Anchored to the 2018 / 2023 / 2028 cycle.",
+      "assumption_of_office": {
+        "month": 1,
+        "day": 20,
+        "year_offset_from_election": 1,
+        "notes": "A regularly elected president assumes office on January 20 following the election. The outgoing president remains in office until then."
+      }
+    },
+    "CALENDAR_ASSEMBLY_REGULAR": {
+      "id": "CALENDAR_ASSEMBLY_REGULAR",
+      "kind": "regular_election",
+      "office_kind": "assembly_member",
+      "interval_years": 4,
+      "month": 5,
+      "nth_weekday": 2,
+      "weekday": "sunday",
+      "anchor_year": 2026,
+      "notes": "Second Sunday in May every four years. Anchored to 2026-05-10.",
+      "assumption_of_office": {
+        "month": 6,
+        "day": 1,
+        "year_offset_from_election": 0,
+        "notes": "Newly elected Assembly members assume office on June 1 following the election. The outgoing Assembly remains in office until then."
+      }
+    }
+  },
+  "presidential_vacancy": {
+    "id": "RULE_PRESIDENTIAL_VACANCY",
+    "causes": [
+      "death",
+      "resignation",
+      "impeachment_removal",
+      "national_recall",
+      "other_permanent"
+    ],
+    "acting_succession_office_ids": [
+      "OFFICE_SPEAKER",
+      "OFFICE_MINISTER_JUSTICE",
+      "OFFICE_MINISTER_FINANCE",
+      "OFFICE_MINISTER_FOREIGN"
+    ],
+    "acting_notes": "The first available current holder in this order becomes Acting President immediately. An Acting President is not an elected president, does not consume an elected term, exercises ordinary presidential authority for continuity, suspends incompatible office duties while acting, remains the same persistent politician, and may later contest a presidential election if otherwise eligible. If the Speaker becomes Acting President, the Assembly seat is retained but Speaker duties are suspended. Assembly procedure for choosing a replacement Speaker is deferred to the legislature phase.",
+    "special_election": {
+      "required_if_more_than_days_before_regular_election": 180,
+      "must_occur_within_days_of_vacancy": 90,
+      "method": "national_rcv",
+      "winner_serves": "remainder_of_regular_term",
+      "calendar_does_not_reset": true,
+      "notes": "If 180 days or fewer remain before the next regular presidential election, no separate special election is required and the Acting President serves until the regularly elected successor assumes office."
+    },
+    "term_limit_treatment": {
+      "normal_elected_term_years": 5,
+      "special_remainder_counts_as_elected_term_if_more_than_half_normal": true,
+      "acting_service_never_counts": true,
+      "notes": "A special-election remainder counts as one elected presidential term only if the winner serves more than half of a normal five-year term. Half or less does not count against the two-elected-term limit. Acting service without winning a presidential election never counts."
+    },
+    "president_elect_before_assumption": {
+      "applies_after_certified_election_before_assumption": true,
+      "president_elect_becomes_acting_within_days": 7,
+      "regular_term_still_begins_on_assumption_date": true,
+      "pre_assumption_acting_does_not_count_as_separate_term": true,
+      "notes": "If a permanent vacancy occurs after a new president has been elected and certified but before January 20, the certified president-elect becomes Acting President within 7 days. Their regular elected five-year term still begins January 20. The short pre-January-20 acting service does not count as a separate term."
     }
   },
   "ministerial_censure": {
@@ -63,8 +142,10 @@
     "term_years": 12,
     "renewable": false,
     "confirmation_fraction": 0.6,
-    "staggered": true
+    "staggered": true,
+    "nomination": "president",
+    "no_party_membership_while_serving": true
   },
   "presidential_eligibility_ref": "data/terena_presidential_eligibility.json",
-  "content_version": "0.3.0-predev"
+  "content_version": "0.3.1-predev"
 }

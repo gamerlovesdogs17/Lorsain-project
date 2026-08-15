@@ -800,13 +800,13 @@ Deliverable: `packages/election-math` with exact BigInt rationals, IRV, Assembly
 
 ## 9.6. Phase 0b — canonical starting world content
 
-**COMPLETE** (`0.3.0-predev`). Roster (~520), 420 MPs with exact party seats, full governors/cabinet/court, 2026 STV archive validated via `@lorsain/election-math`, voter blocs, pollsters, approved presidential eligibility. Generators are development-only; outputs are committed canonical JSON.
+**COMPLETE / CANONICAL** (`7e94984`, then content patch `0.3.1-predev` for calendars/offices/succession). Roster (**530**), 420 MPs with exact party seats, full governors/cabinet/court, 2026 STV archive validated via `@lorsain/election-math`, voter blocs, pollsters, approved presidential eligibility. Generators are development-only; outputs are committed canonical JSON. Do not regenerate accepted political content.
 
 ## 10. Phase 1 — world kernel and clock
 
-Implement calendar, entity store, offices, office terms, appointments, event queue, scheduled elections, death/retirement dates, player identity and history log.
+**COMPLETE (pending review commit).** Deterministic calendar, monthly turns with mid-month pause/resume, offices/terms, scheduler, commands/events, save schema v1, worker protocol types. See `docs/DATA_SCHEMA.md` and `@lorsain/sim`.
 
-Acceptance criteria: simulate 20 years of empty calendar with deterministic scheduled events, save at year 10, reload, and reach the identical year-20 hash.
+Acceptance criteria: 20-year synthetic save/reload hash match; Terena play stops at the 2028-10-14 presidential-election domain interrupt without inventing a winner.
 
 ## 11. Phase 2 — politicians, relationships and goals
 

@@ -1,0 +1,2771 @@
+{
+  "content_version": "0.3.1-predev",
+  "country_id": "TER",
+  "notes": "State offices only. Party leaders, faction chairs, and floor/whip roles are not state offices.",
+  "offices": [
+    {
+      "id": "OFFICE_PRESIDENT",
+      "kind": "president",
+      "title": "President of Terena",
+      "jurisdiction_id": "TER",
+      "capacity": 1,
+      "selection": {
+        "method": "direct_election",
+        "counting": "national_rcv",
+        "calendar_id": "CALENDAR_PRESIDENTIAL_REGULAR"
+      },
+      "term": {
+        "years": 5,
+        "renewable": true,
+        "max_elected_terms": 2,
+        "calendar_id": "CALENDAR_PRESIDENTIAL_REGULAR",
+        "assumption_rule": "january_20_following_election"
+      },
+      "vacancy_rule_id": "RULE_PRESIDENTIAL_VACANCY",
+      "incompatible_with_kinds": [
+        "assembly_member",
+        "governor",
+        "minister",
+        "constitutional_court_justice",
+        "mayor"
+      ],
+      "tags": [
+        "national_executive",
+        "head_of_state",
+        "chief_executive"
+      ],
+      "acting_allowed": true
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C001",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C001",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C002",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C002",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C003",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C003",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C004",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C004",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C005",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C005",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C006",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C006",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C007",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C007",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C008",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C008",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C009",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C009",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C010",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C010",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C011",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C011",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C012",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C012",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C013",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C013",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C014",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C014",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C015",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C015",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C016",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C016",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C017",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C017",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C018",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C018",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C019",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C019",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C020",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C020",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C021",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C021",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C022",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C022",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C023",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C023",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C024",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C024",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C025",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C025",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C026",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C026",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C027",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C027",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C028",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C028",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C029",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C029",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C030",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C030",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C031",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C031",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C032",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C032",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C033",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C033",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C034",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C034",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C035",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C035",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C036",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C036",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C037",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C037",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C038",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C038",
+      "capacity": 7,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C039",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C039",
+      "capacity": 7,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C040",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C040",
+      "capacity": 7,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C041",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C041",
+      "capacity": 10,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C042",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C042",
+      "capacity": 10,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C043",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C043",
+      "capacity": 10,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C044",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C044",
+      "capacity": 10,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C045",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C045",
+      "capacity": 10,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C046",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C046",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C047",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C047",
+      "capacity": 8,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_ASSEMBLY_C048",
+      "kind": "assembly_member",
+      "title": "Member of the National Assembly",
+      "jurisdiction_id": "TER",
+      "constituency_id": "C048",
+      "capacity": 9,
+      "selection": {
+        "method": "direct_election",
+        "counting": "stv",
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR"
+      },
+      "term": {
+        "years": 4,
+        "renewable": true,
+        "calendar_id": "CALENDAR_ASSEMBLY_REGULAR",
+        "assumption_rule": "june_1_following_election"
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature"
+      ]
+    },
+    {
+      "id": "OFFICE_SPEAKER",
+      "kind": "speaker",
+      "title": "Speaker of the National Assembly",
+      "jurisdiction_id": "TER",
+      "capacity": 1,
+      "selection": {
+        "method": "assembly_election",
+        "must_be_assembly_member": true
+      },
+      "term": {
+        "notes": "No independent constitutional term; selected by the sitting Assembly. Current speakership treated as starting with the 2026 Assembly term."
+      },
+      "requires_holder_kinds": [
+        "assembly_member"
+      ],
+      "may_coexist_with_kinds": [
+        "assembly_member"
+      ],
+      "suspend_when_acting_president": true,
+      "incompatible_with_kinds": [
+        "president",
+        "governor",
+        "minister",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "legislature",
+        "presiding_officer"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_FDV",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "FDV",
+      "province_id": "FDV",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P01",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P01",
+      "province_id": "P01",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P02",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P02",
+      "province_id": "P02",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P03",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P03",
+      "province_id": "P03",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P04",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P04",
+      "province_id": "P04",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P05",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P05",
+      "province_id": "P05",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P06",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P06",
+      "province_id": "P06",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P07",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P07",
+      "province_id": "P07",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P08",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P08",
+      "province_id": "P08",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P09",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P09",
+      "province_id": "P09",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P10",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P10",
+      "province_id": "P10",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P11",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P11",
+      "province_id": "P11",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P12",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P12",
+      "province_id": "P12",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P13",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P13",
+      "province_id": "P13",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P14",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P14",
+      "province_id": "P14",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P15",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P15",
+      "province_id": "P15",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P16",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P16",
+      "province_id": "P16",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P17",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P17",
+      "province_id": "P17",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P18",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P18",
+      "province_id": "P18",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P19",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P19",
+      "province_id": "P19",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_GOVERNOR_P20",
+      "kind": "governor",
+      "title": "Provincial Governor",
+      "jurisdiction_id": "P20",
+      "province_id": "P20",
+      "capacity": 1,
+      "selection": {
+        "method": "provincial_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Exact future provincial election mechanics deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "provincial_executive"
+      ]
+    },
+    {
+      "id": "OFFICE_COURT_SEAT_0",
+      "kind": "constitutional_court_justice",
+      "title": "Chief Justice of the Constitutional Court",
+      "jurisdiction_id": "TER",
+      "seat_index": 0,
+      "chief": true,
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_nomination",
+        "confirmation": "assembly_three_fifths"
+      },
+      "term": {
+        "years": 12,
+        "renewable": false
+      },
+      "no_party_membership_while_serving": true,
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "speaker",
+        "governor",
+        "minister",
+        "mayor"
+      ],
+      "tags": [
+        "judiciary"
+      ]
+    },
+    {
+      "id": "OFFICE_COURT_SEAT_1",
+      "kind": "constitutional_court_justice",
+      "title": "Justice of the Constitutional Court",
+      "jurisdiction_id": "TER",
+      "seat_index": 1,
+      "chief": false,
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_nomination",
+        "confirmation": "assembly_three_fifths"
+      },
+      "term": {
+        "years": 12,
+        "renewable": false
+      },
+      "no_party_membership_while_serving": true,
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "speaker",
+        "governor",
+        "minister",
+        "mayor"
+      ],
+      "tags": [
+        "judiciary"
+      ]
+    },
+    {
+      "id": "OFFICE_COURT_SEAT_2",
+      "kind": "constitutional_court_justice",
+      "title": "Justice of the Constitutional Court",
+      "jurisdiction_id": "TER",
+      "seat_index": 2,
+      "chief": false,
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_nomination",
+        "confirmation": "assembly_three_fifths"
+      },
+      "term": {
+        "years": 12,
+        "renewable": false
+      },
+      "no_party_membership_while_serving": true,
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "speaker",
+        "governor",
+        "minister",
+        "mayor"
+      ],
+      "tags": [
+        "judiciary"
+      ]
+    },
+    {
+      "id": "OFFICE_COURT_SEAT_3",
+      "kind": "constitutional_court_justice",
+      "title": "Justice of the Constitutional Court",
+      "jurisdiction_id": "TER",
+      "seat_index": 3,
+      "chief": false,
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_nomination",
+        "confirmation": "assembly_three_fifths"
+      },
+      "term": {
+        "years": 12,
+        "renewable": false
+      },
+      "no_party_membership_while_serving": true,
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "speaker",
+        "governor",
+        "minister",
+        "mayor"
+      ],
+      "tags": [
+        "judiciary"
+      ]
+    },
+    {
+      "id": "OFFICE_COURT_SEAT_4",
+      "kind": "constitutional_court_justice",
+      "title": "Justice of the Constitutional Court",
+      "jurisdiction_id": "TER",
+      "seat_index": 4,
+      "chief": false,
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_nomination",
+        "confirmation": "assembly_three_fifths"
+      },
+      "term": {
+        "years": 12,
+        "renewable": false
+      },
+      "no_party_membership_while_serving": true,
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "speaker",
+        "governor",
+        "minister",
+        "mayor"
+      ],
+      "tags": [
+        "judiciary"
+      ]
+    },
+    {
+      "id": "OFFICE_COURT_SEAT_5",
+      "kind": "constitutional_court_justice",
+      "title": "Justice of the Constitutional Court",
+      "jurisdiction_id": "TER",
+      "seat_index": 5,
+      "chief": false,
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_nomination",
+        "confirmation": "assembly_three_fifths"
+      },
+      "term": {
+        "years": 12,
+        "renewable": false
+      },
+      "no_party_membership_while_serving": true,
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "speaker",
+        "governor",
+        "minister",
+        "mayor"
+      ],
+      "tags": [
+        "judiciary"
+      ]
+    },
+    {
+      "id": "OFFICE_COURT_SEAT_6",
+      "kind": "constitutional_court_justice",
+      "title": "Justice of the Constitutional Court",
+      "jurisdiction_id": "TER",
+      "seat_index": 6,
+      "chief": false,
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_nomination",
+        "confirmation": "assembly_three_fifths"
+      },
+      "term": {
+        "years": 12,
+        "renewable": false
+      },
+      "no_party_membership_while_serving": true,
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "speaker",
+        "governor",
+        "minister",
+        "mayor"
+      ],
+      "tags": [
+        "judiciary"
+      ]
+    },
+    {
+      "id": "OFFICE_COURT_SEAT_7",
+      "kind": "constitutional_court_justice",
+      "title": "Justice of the Constitutional Court",
+      "jurisdiction_id": "TER",
+      "seat_index": 7,
+      "chief": false,
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_nomination",
+        "confirmation": "assembly_three_fifths"
+      },
+      "term": {
+        "years": 12,
+        "renewable": false
+      },
+      "no_party_membership_while_serving": true,
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "speaker",
+        "governor",
+        "minister",
+        "mayor"
+      ],
+      "tags": [
+        "judiciary"
+      ]
+    },
+    {
+      "id": "OFFICE_COURT_SEAT_8",
+      "kind": "constitutional_court_justice",
+      "title": "Justice of the Constitutional Court",
+      "jurisdiction_id": "TER",
+      "seat_index": 8,
+      "chief": false,
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_nomination",
+        "confirmation": "assembly_three_fifths"
+      },
+      "term": {
+        "years": 12,
+        "renewable": false
+      },
+      "no_party_membership_while_serving": true,
+      "incompatible_with_kinds": [
+        "president",
+        "assembly_member",
+        "speaker",
+        "governor",
+        "minister",
+        "mayor"
+      ],
+      "tags": [
+        "judiciary"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_FOREIGN",
+      "kind": "minister",
+      "title": "Minister of Foreign Affairs",
+      "jurisdiction_id": "TER",
+      "portfolio": "foreign",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_FINANCE",
+      "kind": "minister",
+      "title": "Minister of Finance",
+      "jurisdiction_id": "TER",
+      "portfolio": "finance",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_DEFENSE",
+      "kind": "minister",
+      "title": "Minister of Defense",
+      "jurisdiction_id": "TER",
+      "portfolio": "defense",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_JUSTICE",
+      "kind": "minister",
+      "title": "Minister of Justice",
+      "jurisdiction_id": "TER",
+      "portfolio": "justice",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_INTERIOR",
+      "kind": "minister",
+      "title": "Minister of Interior",
+      "jurisdiction_id": "TER",
+      "portfolio": "interior",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_ECONOMY",
+      "kind": "minister",
+      "title": "Minister of Economy",
+      "jurisdiction_id": "TER",
+      "portfolio": "economy",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_LABOUR",
+      "kind": "minister",
+      "title": "Minister of Labour",
+      "jurisdiction_id": "TER",
+      "portfolio": "labour",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_HEALTH",
+      "kind": "minister",
+      "title": "Minister of Health",
+      "jurisdiction_id": "TER",
+      "portfolio": "health",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_EDUCATION",
+      "kind": "minister",
+      "title": "Minister of Education",
+      "jurisdiction_id": "TER",
+      "portfolio": "education",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_TRANSPORT",
+      "kind": "minister",
+      "title": "Minister of Transport",
+      "jurisdiction_id": "TER",
+      "portfolio": "transport",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_ENERGY",
+      "kind": "minister",
+      "title": "Minister of Energy",
+      "jurisdiction_id": "TER",
+      "portfolio": "energy",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MINISTER_AGRICULTURE",
+      "kind": "minister",
+      "title": "Minister of Agriculture",
+      "jurisdiction_id": "TER",
+      "portfolio": "agriculture",
+      "capacity": 1,
+      "selection": {
+        "method": "presidential_appointment"
+      },
+      "term": {
+        "notes": "No fixed constitutional term; removable by presidential dismissal or ministerial censure."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice",
+        "speaker"
+      ],
+      "tags": [
+        "cabinet"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY18",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "FDV",
+      "city_id": "CITY18",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY01",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P01",
+      "city_id": "CITY01",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY02",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P08",
+      "city_id": "CITY02",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY03",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P04",
+      "city_id": "CITY03",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY04",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P07",
+      "city_id": "CITY04",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY05",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P02",
+      "city_id": "CITY05",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY06",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P03",
+      "city_id": "CITY06",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY07",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P05",
+      "city_id": "CITY07",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY08",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P11",
+      "city_id": "CITY08",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY09",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P13",
+      "city_id": "CITY09",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY10",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P09",
+      "city_id": "CITY10",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY11",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P14",
+      "city_id": "CITY11",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY12",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P06",
+      "city_id": "CITY12",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY13",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P08",
+      "city_id": "CITY13",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY14",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P10",
+      "city_id": "CITY14",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY15",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P12",
+      "city_id": "CITY15",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY16",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P12",
+      "city_id": "CITY16",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    },
+    {
+      "id": "OFFICE_MAYOR_CITY17",
+      "kind": "mayor",
+      "title": "Mayor",
+      "jurisdiction_id": "P15",
+      "city_id": "CITY17",
+      "capacity": 1,
+      "selection": {
+        "method": "municipal_election",
+        "details_deferred": true
+      },
+      "term": {
+        "notes": "Detailed municipal election rules deferred."
+      },
+      "incompatible_with_kinds": [
+        "president",
+        "constitutional_court_justice"
+      ],
+      "tags": [
+        "municipal"
+      ]
+    }
+  ]
+}

@@ -1,6 +1,9 @@
-# Phase 0b Review Report (integrity pass)
+# Phase 0b Review Report (canonical)
 
-Content version: **0.3.0-predev** (under review — not canonized).
+Content version at canonization: **0.3.0-predev**.
+Canonized at commit **7e94984** (`Complete Phase 0b canonical political world`).
+Later calendar/office/succession content patches use **0.3.1-predev** without regenerating the 2026 election, roster identities, voter blocs, or pollsters.
+
 Seed `TERENA-2028-CANON-01` / stream `generation`.
 
 ## Candidate identity integrity
@@ -40,9 +43,9 @@ Former accidental **2028-08-15** vacancy removed → seat now ends **2034-08-15*
 House effects = **centered vote-share-point offsets** (`unit: vote_share_points`, `centered: true`, vector sum ≈ 0).
 
 ## Validation
-build / typecheck / lint / format:check / test (73) / validate:content / recount 48/48 — **PASS**.
+build / typecheck / lint / format:check / test (73) / validate:content / recount 48/48 — **PASS** at canonization.
 Python validator updated; not executed here (no Python runtime).
 
 ## Canonization
-**Ready for review approval.** Do not treat as committed canon until you say so.
-**Phase 1 not started.**
+**Phase 0b is canonical** at commit `7e94984`. Political roster, 2026 STV archive, voter blocs, and pollsters are frozen.
+**Phase 1 (simulation kernel) is implemented separately** and must not regenerate that political content.

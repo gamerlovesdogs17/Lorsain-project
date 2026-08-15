@@ -87,6 +87,66 @@ export const NominationRulesFileSchema = z
   })
   .passthrough();
 
+export const IsoDateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+export const WeekdayNameSchema = z.enum([
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+]);
+
+export const ConstitutionCalendarSchema = z
+  .object({
+    id: z.string().min(1),
+    interval_years: z.number().int().positive(),
+    month: z.number().int().min(1).max(12),
+    nth_weekday: z.number().int().min(1).max(5),
+    weekday: WeekdayNameSchema,
+    anchor_year: z.number().int(),
+    assumption_of_office: z
+      .object({
+        month: z.number().int().min(1).max(12),
+        day: z.number().int().min(1).max(31),
+        year_offset_from_election: z.number().int().min(0).max(1),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+export const PresidentialVacancyRuleSchema = z
+  .object({
+    id: z.string().min(1),
+    acting_succession_office_ids: z.array(z.string().min(1)).min(1),
+    special_election: z
+      .object({
+        required_if_more_than_days_before_regular_election: z.number().int().positive(),
+        must_occur_within_days_of_vacancy: z.number().int().positive(),
+        method: z.string().min(1),
+        calendar_does_not_reset: z.boolean(),
+      })
+      .passthrough(),
+    term_limit_treatment: z
+      .object({
+        normal_elected_term_years: z.number().int().positive(),
+        special_remainder_counts_as_elected_term_if_more_than_half_normal: z.boolean(),
+        acting_service_never_counts: z.boolean(),
+      })
+      .passthrough(),
+    president_elect_before_assumption: z
+      .object({
+        applies_after_certified_election_before_assumption: z.boolean(),
+        president_elect_becomes_acting_within_days: z.number().int().positive(),
+        regular_term_still_begins_on_assumption_date: z.boolean(),
+        pre_assumption_acting_does_not_count_as_separate_term: z.boolean(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
 export const ConstitutionFileSchema = z
   .object({
     country_id: z.literal("TER"),
@@ -105,6 +165,11 @@ export const ConstitutionFileSchema = z
         election: z.string(),
       })
       .passthrough(),
+    calendars: z.object({
+      CALENDAR_PRESIDENTIAL_REGULAR: ConstitutionCalendarSchema,
+      CALENDAR_ASSEMBLY_REGULAR: ConstitutionCalendarSchema,
+    }),
+    presidential_vacancy: PresidentialVacancyRuleSchema,
     constitutional_court: z
       .object({
         judges: z.literal(9),
@@ -174,6 +239,10 @@ export const ScenarioFileSchema = z
     assembly: z
       .object({
         party_seats: z.record(z.number()),
+        next_election: IsoDateStringSchema.optional(),
+        election_date: IsoDateStringSchema.optional(),
+        term_start: IsoDateStringSchema.optional(),
+        term_end: IsoDateStringSchema.optional(),
       })
       .passthrough(),
   })
@@ -398,11 +467,17 @@ export const HistoricalCandidates2026Schema = z
 
 export const PresidentialAdministrationSchema = z
   .object({
-    id: z.string(),
-    president_name: z.string(),
-    party_id: z.string(),
-    term_start: z.string(),
-    term_end: z.string(),
+    id: z.string().min(1),
+    president_name: z.string().min(1),
+    president_person_id: z.string().min(1),
+    party_id: z.string().min(1),
+    elected: IsoDateStringSchema,
+    term_start: IsoDateStringSchema,
+    term_end: IsoDateStringSchema,
+    preceded_by_administration_id: z.string().min(1).optional(),
+    succeeded_by_administration_id: z.string().min(1).optional(),
+    succeeded_by_president_id: z.string().min(1).optional(),
+    status: z.string().optional(),
   })
   .passthrough();
 
@@ -420,6 +495,83 @@ export const PresidentialAdministrationsFileSchema = z
           .passthrough(),
       )
       .optional(),
+  })
+  .passthrough();
+
+export const OfficeKindSchema = z.enum([
+  "president",
+  "assembly_member",
+  "speaker",
+  "governor",
+  "constitutional_court_justice",
+  "minister",
+  "mayor",
+]);
+
+export const OfficeDefinitionSchema = z
+  .object({
+    id: z.string().min(1),
+    kind: OfficeKindSchema,
+    title: z.string().min(1),
+    jurisdiction_id: z.string().min(1),
+    capacity: z.number().int().positive(),
+    selection: z
+      .object({
+        method: z.string().min(1),
+      })
+      .passthrough(),
+    term: z.object({}).passthrough(),
+    constituency_id: z.string().min(1).optional(),
+    province_id: z.string().min(1).optional(),
+    city_id: z.string().min(1).optional(),
+    seat_index: z.number().int().min(0).optional(),
+    portfolio: z.string().min(1).optional(),
+    incompatible_with_kinds: z.array(z.string()).optional(),
+    may_coexist_with_kinds: z.array(z.string()).optional(),
+    requires_holder_kinds: z.array(z.string()).optional(),
+    suspend_when_acting_president: z.boolean().optional(),
+    acting_allowed: z.boolean().optional(),
+    no_party_membership_while_serving: z.boolean().optional(),
+    vacancy_rule_id: z.string().optional(),
+  })
+  .passthrough()
+  .superRefine((o, ctx) => {
+    if (o.kind === "assembly_member" && !o.constituency_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "assembly_member requires constituency_id",
+      });
+    }
+    if (o.kind === "governor" && !o.province_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "governor requires province_id",
+      });
+    }
+    if (o.kind === "mayor" && !o.city_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "mayor requires city_id",
+      });
+    }
+    if (o.kind === "constitutional_court_justice" && o.seat_index == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "constitutional_court_justice requires seat_index",
+      });
+    }
+    if (o.kind === "minister" && !o.portfolio) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "minister requires portfolio",
+      });
+    }
+  });
+
+export const OfficesFileSchema = z
+  .object({
+    content_version: z.string().optional(),
+    offices: z.array(OfficeDefinitionSchema),
   })
   .passthrough();
 
@@ -443,4 +595,5 @@ export type VoterBlocsFile = z.infer<typeof VoterBlocsFileSchema>;
 export type PollstersFile = z.infer<typeof PollstersFileSchema>;
 export type HistoricalCandidates2026File = z.infer<typeof HistoricalCandidates2026Schema>;
 export type PresidentialAdministrationsFile = z.infer<typeof PresidentialAdministrationsFileSchema>;
+export type OfficesFile = z.infer<typeof OfficesFileSchema>;
 export type GeoJsonFeatureCollection = z.infer<typeof GeoJsonFeatureCollectionSchema>;

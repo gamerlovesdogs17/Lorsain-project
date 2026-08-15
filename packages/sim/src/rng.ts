@@ -1,7 +1,7 @@
 /**
  * xoshiro128** — Blackman & Vigna (2018).
  * Four uint32 state words; native JS bitwise ops via Math.imul / >>>.
- * Never use Math.random() in simulation logic.
+ * Never use the host PRNG in simulation logic.
  */
 
 export const STREAM_NAMES = [
