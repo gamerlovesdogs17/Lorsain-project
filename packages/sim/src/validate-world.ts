@@ -69,15 +69,67 @@ export function validateStateAgainstWorld(
   state: SimState,
   world: KernelWorld,
 ): CommandError | null {
+  if (state.scenarioStartDate !== world.scenarioStartDate) {
+    return {
+      code: "SCENARIO_START_MISMATCH",
+      message: `Save scenarioStartDate ${state.scenarioStartDate} != world ${world.scenarioStartDate}`,
+    };
+  }
   if (!state.politicians[state.playerPoliticianId]) {
     return {
       code: "INVALID_SAVE_WORLD",
       message: `playerPoliticianId ${state.playerPoliticianId} is not a runtime politician`,
     };
   }
+  if (state.presidential.nextRegularElectionDate !== world.nextRegularPresidentialElectionDate) {
+    return {
+      code: "PRESIDENTIAL_CYCLE_MISMATCH",
+      message: `nextRegularElectionDate ${state.presidential.nextRegularElectionDate} != world ${world.nextRegularPresidentialElectionDate}`,
+    };
+  }
+  for (const id of Object.keys(state.presidential.electedTermCountByPolitician)) {
+    if (!state.politicians[id] && !(id in world.electedTermCounts)) {
+      return {
+        code: "UNKNOWN_POLITICIAN",
+        message: `elected term count for unknown politician ${id}`,
+      };
+    }
+  }
+  if (state.pendingInterrupt && state.pendingInterrupt.date !== state.currentDate) {
+    return {
+      code: "INVALID_SAVE_WORLD",
+      message: "pendingInterrupt.date must equal currentDate",
+    };
+  }
   for (const ev of state.scheduler.events) {
     const resolutionErr = resolutionEventMustBlock(ev.blocking, ev.requiresResolution);
     if (resolutionErr) return resolutionErr;
+    if (ev.status === "pending" && compareIsoDate(ev.dueDate, state.currentDate) < 0) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `pending event ${ev.id} is in the past`,
+      };
+    }
+    if (ev.status === "processed" && compareIsoDate(ev.dueDate, state.currentDate) > 0) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `processed event ${ev.id} is in the future`,
+      };
+    }
+    if (ev.requiresResolution && ev.status === "processed") {
+      const pending = state.pendingInterrupt;
+      if (
+        !pending ||
+        pending.kind !== "BLOCKING_DOMAIN" ||
+        pending.scheduledEventId !== ev.id ||
+        pending.resolutionStatus !== "unresolved"
+      ) {
+        return {
+          code: "UNRESOLVED_DOMAIN_EVENT",
+          message: `processed resolution event ${ev.id} must have an unresolved BLOCKING_DOMAIN interrupt`,
+        };
+      }
+    }
   }
   const termErr = validateOfficeTermSet({
     terms: Object.values(state.officeTerms),

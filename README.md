@@ -4,7 +4,7 @@ This repository holds the **canonical content foundation** and TypeScript simula
 
 ## Status
 
-**Phase 0, 0.5, and 0b are complete/canonical. Phase 1 kernel implemented (uncommitted pending review). Phase 2 not started.**
+**Phase 0, 0.5, and 0b are complete/canonical. Phase 1 deterministic kernel is complete (`b158271`). Phase 1.1 integrity hardening is complete. Phase 2 not started.**
 
 ## Canonical lock
 
@@ -47,4 +47,4 @@ pnpm generate:phase0b  # development-only; outputs are committed canonical JSON
 
 ## Phase order (locked)
 
-0 → 0.5 election-math → **0b content (canonical)** → **1 kernel (implemented)** → 2 NPCs → …
+0 → 0.5 election-math → **0b content (canonical)** → **1 kernel (`b158271`)** → **1.1 save/state integrity** → 2 NPCs → …

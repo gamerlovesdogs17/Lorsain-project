@@ -51,6 +51,7 @@ export {
   occupyingTerms,
   currentHolderIds,
   canAssumeOffice,
+  canResumeTerm,
   officesOfKind,
   activeTermsForPolitician,
   resumeTerm,

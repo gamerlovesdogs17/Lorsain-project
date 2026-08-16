@@ -99,8 +99,9 @@ Do not store a full duplicate world snapshot every month.
 
 - **Phase 0.5** — **COMPLETE** — `packages/election-math` (exact rationals, IRV, STV Droop+WIG, lots, fixtures)
 - **Phase 0b** — **COMPLETE / CANONICAL** (`7e94984`) — 530 roster, 420 MPs, 2026 STV archive, voter blocs, pollsters, eligibility
-- **Phase 1** — **COMPLETE** — deterministic world kernel (calendar, offices/terms, scheduler, commands, save/load, worker protocol types)
-- Phase 2 (politicians/relationships/goals) is next and must not start until Phase 1 is reviewed
+- **Phase 1** — **COMPLETE** (`b158271`) — deterministic world kernel (calendar, offices/terms, scheduler, commands, save/load, worker protocol types)
+- **Phase 1.1** — **COMPLETE** — save/state integrity hardening (scheduler/history temporal rules, domain-block authenticity, world-aware resume)
+- Phase 2 (politicians/relationships/goals) is next and has **not started**
 
 Deliverables:
 
@@ -124,7 +125,7 @@ Acceptance criteria: CI can load every content file, validate every ID reference
 
 ## 10. Phase 1 — world kernel and clock
 
-**COMPLETE (uncommitted pending review).** `@lorsain/sim` provides a deterministic monthly-turn kernel.
+**COMPLETE (`b158271`).** `@lorsain/sim` provides a deterministic monthly-turn kernel. Phase 1.1 adds save/state integrity hardening without changing legitimate execution.
 
 - Date-only Gregorian calendar (no host timezone / wall clock)
 - Regular presidential election: second Saturday in October every 5 years, assume office 20 January following

@@ -262,43 +262,6 @@ describe("JSON payload rejection", () => {
 });
 
 describe("suspend / resume office lifecycle", () => {
-  it("active -> suspended -> active keeps the same term id", () => {
-    const vacancyWorld = syntheticWorld();
-    vacancyWorld.offices.OFFICE_SPEAKER = kernelOffice({
-      id: "OFFICE_SPEAKER",
-      kind: "speaker",
-      suspendWhenActingPresident: true,
-      incompatibleWithKinds: ["president"],
-    });
-    vacancyWorld.successionOfficeIds = ["OFFICE_SPEAKER"];
-    vacancyWorld.startingTerms.push({
-      officeId: "OFFICE_SPEAKER",
-      holderId: "P2",
-      startDate: null,
-      startKnown: false,
-      endDate: null,
-      accessionReason: "preexisting",
-      status: "active",
-      holdingKind: "substantive",
-      sourceElectionId: null,
-      endedDate: null,
-      endedReason: null,
-    });
-    const v = createSimulation({ world: vacancyWorld, playerPoliticianId: "P1" });
-    expect(
-      v.executeCommand({ type: "INJECT_PRESIDENTIAL_VACANCY", reason: "resignation" }).ok,
-    ).toBe(true);
-    const speaker = Object.values(v.getSnapshot().officeTerms).find(
-      (t) => t.officeId === "OFFICE_SPEAKER",
-    )!;
-    expect(speaker.status).toBe("suspended");
-    const speakerId = speaker.id;
-    const resumed = v.executeCommand({ type: "DEV_RESUME_TERM", termId: speakerId });
-    expect(resumed.ok).toBe(true);
-    expect(v.getSnapshot().officeTerms[speakerId]?.status).toBe("active");
-    expect(v.getSnapshot().officeTerms[speakerId]?.id).toBe(speakerId);
-  });
-
   it("ended term cannot be resumed", () => {
     const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
     const id = Object.keys(sim.getSnapshot().officeTerms)[0]!;
@@ -366,6 +329,53 @@ function pausedPresentationRaw(): Record<string, unknown> {
   return JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
 }
 
+function pausedDomainWorld(): { raw: Record<string, unknown>; world: KernelWorld } {
+  const world = jsonClone(syntheticWorld());
+  world.scenarioStartDate = "2028-01-01";
+  world.nextRegularPresidentialElectionDate = "2028-10-14";
+  world.initialScheduled = [
+    {
+      dueDate: "2028-10-14",
+      eventType: "PRESIDENTIAL_ELECTION_DUE",
+      payload: {},
+      priority: 0,
+      blocking: true,
+      requiresResolution: true,
+      source: "CALENDAR_PRESIDENTIAL_REGULAR",
+    },
+  ];
+  const sim = createSimulation({ world, playerPoliticianId: "P1" });
+  for (let i = 0; i < 9; i++) sim.executeCommand({ type: "ADVANCE_TURN" });
+  sim.executeCommand({ type: "ADVANCE_TURN" });
+  return {
+    raw: JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>,
+    world,
+  };
+}
+
+function actingPresidentWorld(): KernelWorld {
+  const world = syntheticWorld();
+  world.offices.OFFICE_ASM = kernelOffice({
+    id: "OFFICE_ASM",
+    kind: "assembly_member",
+    capacity: 9,
+  });
+  world.offices.OFFICE_SPEAKER = kernelOffice({
+    id: "OFFICE_SPEAKER",
+    kind: "speaker",
+    suspendWhenActingPresident: true,
+    incompatibleWithKinds: ["president"],
+    requiresHolderKinds: ["assembly_member"],
+    mayCoexistWithKinds: ["assembly_member"],
+  });
+  world.successionOfficeIds = ["OFFICE_SPEAKER"];
+  world.startingTerms.push(
+    preexistingTerm("OFFICE_ASM", "P2"),
+    preexistingTerm("OFFICE_SPEAKER", "P2"),
+  );
+  return world;
+}
+
 describe("initial KernelWorld validation", () => {
   it("rejects duplicate politician ids", () => {
     const world = syntheticWorld();
@@ -418,6 +428,20 @@ describe("initial KernelWorld validation", () => {
     const err = validateKernelWorld(world);
     expect(err?.code).toBe("INVALID_WORLD");
     expect(err?.message).toMatch(/must not invent a startDate/);
+  });
+
+  it("rejects a starting active known startDate after scenario start", () => {
+    const world = syntheticWorld();
+    world.startingTerms[0] = {
+      ...world.startingTerms[0]!,
+      startKnown: true,
+      startDate: "2000-06-01",
+      endDate: "2005-01-01",
+    };
+    const err = validateKernelWorld(world);
+    expect(err?.code).toBe("INVALID_WORLD");
+    expect(err?.message).toMatch(/startDate is after/);
+    expect(() => createSimulation({ world, playerPoliticianId: "P1" })).toThrow(/INVALID_WORLD/);
   });
 });
 
@@ -775,5 +799,274 @@ describe("duplicate same-office holder", () => {
     );
     expect(validateKernelWorld(world)).toBeNull();
     expect(() => createSimulation({ world, playerPoliticianId: "P1" })).not.toThrow();
+  });
+});
+
+describe("scheduler temporal invariants", () => {
+  it("rejects a future processed scheduler event", () => {
+    const raw = cloneSave();
+    const sim = raw.simulation as { scheduler: { events: Array<Record<string, unknown>> } };
+    const ev = sim.scheduler.events.find((e) => e.eventType === "SYNTHETIC_PING")!;
+    ev.status = "processed";
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("rejects pendingInterrupt.date that does not match currentDate", () => {
+    const raw = pausedPresentationRaw();
+    (raw.simulation as { currentDate: string }).currentDate = "2028-10-20";
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+});
+
+describe("history temporal and reference invariants", () => {
+  it("rejects a future history date", () => {
+    const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
+    expect(sim.executeCommand({ type: "ADVANCE_TURN" }).ok).toBe(true);
+    const raw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const state = raw.simulation as { history: Array<Record<string, unknown>> };
+    state.history[0]!.date = "2099-01-01";
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("rejects a history turn after completedTurns", () => {
+    const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
+    expect(sim.executeCommand({ type: "ADVANCE_TURN" }).ok).toBe(true);
+    const raw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const state = raw.simulation as { history: Array<Record<string, unknown>> };
+    state.history[0]!.turn = 99;
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("rejects a nonexistent sourceScheduledEventId", () => {
+    const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
+    expect(sim.executeCommand({ type: "ADVANCE_TURN" }).ok).toBe(true);
+    const raw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const state = raw.simulation as { history: Array<Record<string, unknown>> };
+    state.history[0]!.sourceScheduledEventId = "SEV999999";
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("rejects a still-pending sourceScheduledEventId", () => {
+    const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
+    expect(sim.executeCommand({ type: "ADVANCE_TURN" }).ok).toBe(true);
+    const raw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const state = raw.simulation as {
+      history: Array<Record<string, unknown>>;
+      scheduler: { events: Array<{ id: string; status: string }> };
+    };
+    const pending = state.scheduler.events.find((e) => e.status === "pending")!;
+    state.history[0]!.sourceScheduledEventId = pending.id;
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+});
+
+describe("domain-resolution save policy", () => {
+  it("rejects BLOCKING_DOMAIN resolutionStatus=resolved", () => {
+    const { raw } = pausedDomainWorld();
+    const sim = raw.simulation as { pendingInterrupt: Record<string, unknown> };
+    sim.pendingInterrupt.resolutionStatus = "resolved";
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("rejects BLOCKING_DOMAIN resolutionStatus=acknowledged", () => {
+    const { raw } = pausedDomainWorld();
+    const sim = raw.simulation as { pendingInterrupt: Record<string, unknown> };
+    sim.pendingInterrupt.resolutionStatus = "acknowledged";
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("rejects a processed requires-resolution event without a matching live block", () => {
+    const { raw } = pausedDomainWorld();
+    const sim = raw.simulation as {
+      pendingInterrupt: unknown;
+      activeTurnTarget: unknown;
+      currentDate: string;
+      completedTurns: number;
+    };
+    sim.pendingInterrupt = null;
+    sim.activeTurnTarget = null;
+    sim.currentDate = "2028-11-01";
+    sim.completedTurns = 10;
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("cannot bypass a processed domain event by deleting pendingInterrupt", () => {
+    const { raw } = pausedDomainWorld();
+    const sim = raw.simulation as {
+      pendingInterrupt: unknown;
+      activeTurnTarget: unknown;
+      currentDate: string;
+      completedTurns: number;
+    };
+    sim.pendingInterrupt = null;
+    sim.activeTurnTarget = null;
+    sim.currentDate = "2028-11-01";
+    sim.completedTurns = 10;
+    const parsed = parseSaveFile(raw);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) {
+      expect(parsed.error.message).toMatch(/unresolved BLOCKING_DOMAIN interrupt/);
+    }
+  });
+});
+
+describe("scenario and presidential restore identity", () => {
+  it("rejects a save whose scenarioStartDate does not match KernelWorld", () => {
+    const world = syntheticWorld();
+    const raw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    const sim = raw.simulation as {
+      scenarioStartDate: string;
+      currentDate: string;
+      completedTurns: number;
+    };
+    sim.scenarioStartDate = "1999-12-01";
+    sim.currentDate = "1999-12-01";
+    sim.completedTurns = 0;
+    expectRestoreRejected(raw, world, "SCENARIO_START_MISMATCH");
+  });
+
+  it("rejects an arbitrary presidential nextRegularElectionDate", () => {
+    const world = syntheticWorld();
+    const raw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    const sim = raw.simulation as { presidential: { nextRegularElectionDate: string } };
+    sim.presidential.nextRegularElectionDate = "2099-01-01";
+    expectRestoreRejected(raw, world, "PRESIDENTIAL_CYCLE_MISMATCH");
+  });
+
+  it("rejects an arbitrary elected-term-count ghost ID", () => {
+    const world = syntheticWorld();
+    const raw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    const sim = raw.simulation as {
+      presidential: { electedTermCountByPolitician: Record<string, number> };
+    };
+    sim.presidential.electedTermCountByPolitician.GHOST = 1;
+    expectRestoreRejected(raw, world, "UNKNOWN_POLITICIAN");
+  });
+});
+
+describe("office-term as-of-date validity", () => {
+  it("rejects a restored active known startDate after currentDate", () => {
+    const world = syntheticWorld();
+    const raw = cloneSave();
+    extraTerm(raw, "TERM000001", {
+      startKnown: true,
+      startDate: "2000-06-01",
+      endDate: "2005-01-01",
+    });
+    expectRestoreRejected(raw, world, "INVALID_TERM_DATES");
+  });
+
+  it("rejects an endedDate after currentDate", () => {
+    const world = syntheticWorld();
+    const raw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    extraTerm(raw, "TERM000099", {
+      officeId: "OFFICE_PRESIDENT",
+      holderId: "P2",
+      startKnown: false,
+      startDate: null,
+      endDate: null,
+      status: "ended",
+      holdingKind: "substantive",
+      endedDate: "2000-06-01",
+      endedReason: "resigned",
+    });
+    expectRestoreRejected(raw, world, "INVALID_TERM_DATES");
+  });
+});
+
+describe("Acting President resume and suspension", () => {
+  it("suspends Speaker duties but keeps Assembly membership active", () => {
+    const sim = createSimulation({
+      world: actingPresidentWorld(),
+      playerPoliticianId: "P1",
+    });
+    expect(
+      sim.executeCommand({ type: "INJECT_PRESIDENTIAL_VACANCY", reason: "resignation" }).ok,
+    ).toBe(true);
+    const terms = Object.values(sim.getSnapshot().officeTerms);
+    const speaker = terms.find((t) => t.officeId === "OFFICE_SPEAKER")!;
+    const assembly = terms.find((t) => t.officeId === "OFFICE_ASM")!;
+    const acting = terms.find(
+      (t) =>
+        t.officeId === "OFFICE_PRESIDENT" && t.holdingKind === "acting" && t.status === "active",
+    )!;
+    expect(acting.holderId).toBe("P2");
+    expect(speaker.status).toBe("suspended");
+    expect(assembly.status).toBe("active");
+    expect(assembly.holderId).toBe("P2");
+  });
+
+  it("rejects resuming Speaker duties while Acting Presidency remains active without mutation", () => {
+    const sim = createSimulation({
+      world: actingPresidentWorld(),
+      playerPoliticianId: "P1",
+    });
+    expect(
+      sim.executeCommand({ type: "INJECT_PRESIDENTIAL_VACANCY", reason: "resignation" }).ok,
+    ).toBe(true);
+    const speakerId = Object.values(sim.getSnapshot().officeTerms).find(
+      (t) => t.officeId === "OFFICE_SPEAKER",
+    )!.id;
+    const before = sim.hashState();
+    const beforeCounters = jsonClone(sim.getSnapshot().counters);
+    const r = sim.executeCommand({ type: "DEV_RESUME_TERM", termId: speakerId });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.code).toBe("ACTING_PRESIDENT_DUTIES_MUST_REMAIN_SUSPENDED");
+    expect(sim.hashState()).toBe(before);
+    expect(sim.getSnapshot().counters).toEqual(beforeCounters);
+  });
+
+  it("allows Speaker resume after the acting presidential term ends", () => {
+    const sim = createSimulation({
+      world: actingPresidentWorld(),
+      playerPoliticianId: "P1",
+    });
+    expect(
+      sim.executeCommand({ type: "INJECT_PRESIDENTIAL_VACANCY", reason: "resignation" }).ok,
+    ).toBe(true);
+    const speakerId = Object.values(sim.getSnapshot().officeTerms).find(
+      (t) => t.officeId === "OFFICE_SPEAKER",
+    )!.id;
+    expect(
+      sim.executeCommand({
+        type: "DEV_VACATE_OFFICE",
+        officeId: "OFFICE_PRESIDENT",
+        reason: "dev_end_acting",
+      }).ok,
+    ).toBe(true);
+    const resumed = sim.executeCommand({ type: "DEV_RESUME_TERM", termId: speakerId });
+    expect(resumed.ok).toBe(true);
+    expect(sim.getSnapshot().officeTerms[speakerId]?.status).toBe("active");
+    expect(sim.getSnapshot().officeTerms[speakerId]?.id).toBe(speakerId);
+  });
+
+  it("rejects a corrupted save with active Acting President and active Speaker duties", () => {
+    const world = actingPresidentWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "P1" });
+    expect(
+      sim.executeCommand({ type: "INJECT_PRESIDENTIAL_VACANCY", reason: "resignation" }).ok,
+    ).toBe(true);
+    const raw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const state = raw.simulation as {
+      officeTerms: Record<string, { officeId: string; status: string }>;
+    };
+    const speaker = Object.values(state.officeTerms).find((t) => t.officeId === "OFFICE_SPEAKER")!;
+    speaker.status = "active";
+    expectRestoreRejected(raw, world, "ACTING_PRESIDENT_DUTIES_MUST_REMAIN_SUSPENDED");
+  });
+
+  it("keeps Assembly membership active throughout Acting Presidency", () => {
+    const sim = createSimulation({
+      world: actingPresidentWorld(),
+      playerPoliticianId: "P1",
+    });
+    expect(
+      sim.executeCommand({ type: "INJECT_PRESIDENTIAL_VACANCY", reason: "resignation" }).ok,
+    ).toBe(true);
+    const assembly = Object.values(sim.getSnapshot().officeTerms).find(
+      (t) => t.officeId === "OFFICE_ASM",
+    )!;
+    expect(assembly.status).toBe("active");
+    expect(assembly.holderId).toBe("P2");
   });
 });

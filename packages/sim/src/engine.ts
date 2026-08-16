@@ -501,7 +501,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
     }
 
     if (command.type === "DEV_RESUME_TERM") {
-      const resumed = resumeTerm(state, command.termId);
+      const resumed = resumeTerm(state, world, command.termId);
       if ("error" in resumed) return fail(resumed.error.code, resumed.error.message);
       const commandId = nextCommandId();
       return {

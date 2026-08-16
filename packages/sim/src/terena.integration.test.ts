@@ -5,6 +5,7 @@ import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { createSimulation, restoreSimulation } from "./engine.js";
 import { hashCanonical, jsonClone } from "./hash.js";
 import { currentHolderIds, occupyingTerms, officesOfKind } from "./offices.js";
+import { parseSaveFile } from "./save.js";
 import { buildTerenaKernelWorld, KernelContentError, type TerenaKernelInput } from "./world.js";
 import { nthWeekdayOfMonth, presidentialAssumptionDate } from "./calendar.js";
 import type { KernelWorld } from "./types.js";
@@ -85,6 +86,10 @@ describe("TERENA_2028 office instantiation", () => {
     );
     expect(mayorFilled.length).toBe(12);
     expect(Object.keys(snap.politicians).length).toBe(530);
+    const occupied = Object.values(snap.officeTerms).filter(
+      (t) => t.status === "active" || t.status === "suspended",
+    ).length;
+    expect(occupied).toBe(476);
     expect(world.offices["OFFICE_PARTY_LEADER"]).toBeUndefined();
 
     const again = loadContentBundleFromRepo(repoRoot);
@@ -297,5 +302,22 @@ describe("authoritative calendar consumption", () => {
     const world = buildTerenaKernelWorld(input);
     expect(world.presidentialCalendar.month).toBe(11);
     expect(world.nextRegularPresidentialElectionDate).toBe(date);
+  });
+});
+
+describe("TERENA_2028 January save integrity", () => {
+  it("rejects mutating the October presidential election to processed", () => {
+    const { world } = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC002" });
+    expect(sim.getSnapshot().currentDate).toBe("2028-01-01");
+    const raw = JSON.parse(JSON.stringify(sim.serializeSave())) as {
+      simulation: { scheduler: { events: Array<{ eventType: string; status: string }> } };
+    };
+    const election = raw.simulation.scheduler.events.find(
+      (e) => e.eventType === "PRESIDENTIAL_ELECTION_DUE",
+    )!;
+    election.status = "processed";
+    expect(parseSaveFile(raw).ok).toBe(false);
+    expect(() => restoreSimulation(raw as never, world)).toThrow();
   });
 });

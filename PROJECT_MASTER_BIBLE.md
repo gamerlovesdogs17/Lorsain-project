@@ -804,7 +804,7 @@ Deliverable: `packages/election-math` with exact BigInt rationals, IRV, Assembly
 
 ## 10. Phase 1 — world kernel and clock
 
-**COMPLETE (pending review commit).** Deterministic calendar, monthly turns with mid-month pause/resume, offices/terms, scheduler, commands/events, save schema v1, worker protocol types. See `docs/DATA_SCHEMA.md` and `@lorsain/sim`.
+**COMPLETE (`b158271`).** Deterministic calendar, monthly turns with mid-month pause/resume, offices/terms, scheduler, commands/events, save schema v1, worker protocol types. Phase 1.1 hardens save/state invariants. See `docs/DATA_SCHEMA.md` and `@lorsain/sim`.
 
 Acceptance criteria: 20-year synthetic save/reload hash match; Terena play stops at the 2028-10-14 presidential-election domain interrupt without inventing a winner.
 

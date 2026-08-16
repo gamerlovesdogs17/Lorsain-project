@@ -240,6 +240,9 @@ function parseScheduled(raw: unknown, currentDate: string): ScheduledEvent | str
   if (st === "pending" && compareIsoDate(raw.dueDate, currentDate) < 0) {
     return `scheduler ${raw.id} pending event is in the past`;
   }
+  if (st === "processed" && compareIsoDate(raw.dueDate, currentDate) > 0) {
+    return `scheduler ${raw.id} processed event is in the future`;
+  }
   return {
     id: raw.id,
     dueDate: raw.dueDate,
@@ -316,6 +319,9 @@ function parseInterrupt(raw: unknown): PendingInterrupt | string {
   }
   if (raw.kind === "BLOCKING_DOMAIN" && raw.requiresResolution !== true) {
     return "BLOCKING_DOMAIN interrupt must require resolution";
+  }
+  if (raw.kind === "BLOCKING_DOMAIN" && raw.resolutionStatus !== "unresolved") {
+    return "BLOCKING_DOMAIN interrupt must remain unresolved in Phase 1";
   }
   if (raw.kind === "PRESENTATION" && raw.requiresResolution !== false) {
     return "PRESENTATION interrupt must not require resolution";
@@ -492,6 +498,40 @@ function parseSimulation(
     }
     if (src.requiresResolution !== pendingInterrupt.requiresResolution) {
       return "pendingInterrupt.requiresResolution must match source event";
+    }
+    if (pendingInterrupt.date !== raw.currentDate) {
+      return "pendingInterrupt.date must equal currentDate";
+    }
+  }
+  for (const ev of events) {
+    if (ev.requiresResolution === true && ev.status === "processed") {
+      if (
+        !pendingInterrupt ||
+        pendingInterrupt.kind !== "BLOCKING_DOMAIN" ||
+        pendingInterrupt.scheduledEventId !== ev.id ||
+        pendingInterrupt.resolutionStatus !== "unresolved"
+      ) {
+        return `processed resolution event ${ev.id} must have an unresolved BLOCKING_DOMAIN interrupt`;
+      }
+    }
+  }
+  for (const ev of history) {
+    if (compareIsoDate(ev.date, raw.currentDate) > 0) {
+      return `history ${ev.id} date is after currentDate`;
+    }
+    if (ev.turn > raw.completedTurns) {
+      return `history ${ev.id} turn is after completedTurns`;
+    }
+    if (ev.sourceScheduledEventId != null) {
+      const src = events.find((e) => e.id === ev.sourceScheduledEventId);
+      if (!src) return `history ${ev.id} sourceScheduledEventId does not exist`;
+      if (src.status === "pending") {
+        return `history ${ev.id} sourceScheduledEventId is still pending`;
+      }
+    }
+    if (ev.sourceCommandId != null) {
+      const n = paddedNumeric("CMD", ev.sourceCommandId);
+      if (n == null || n < 1) return `history ${ev.id} sourceCommandId is not a canonical CMD id`;
     }
   }
   const expectedTarget = addMonths(raw.scenarioStartDate, raw.completedTurns + 1);

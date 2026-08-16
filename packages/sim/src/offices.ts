@@ -204,6 +204,27 @@ export function validateOfficeTermSet(args: {
     if (args.mode === "starting" && term.status === "ended") {
       return reject("INVALID_TERM_DATES", `Starting term for ${term.officeId} must not be ended`);
     }
+    if (
+      term.startKnown &&
+      term.startDate &&
+      isOccupyingStatus(term.status) &&
+      compareIsoDate(term.startDate, args.asOfDate) > 0
+    ) {
+      return reject(
+        "INVALID_TERM_DATES",
+        `Term for ${term.officeId} startDate is after ${args.asOfDate}`,
+      );
+    }
+    if (
+      term.status === "ended" &&
+      term.endedDate &&
+      compareIsoDate(term.endedDate, args.asOfDate) > 0
+    ) {
+      return reject(
+        "INVALID_TERM_DATES",
+        `Term for ${term.officeId} endedDate is after ${args.asOfDate}`,
+      );
+    }
     if (isOccupyingStatus(term.status)) {
       const elig = validateHolderEligibility(office, holder, term.holdingKind);
       if (elig) return elig;
@@ -269,6 +290,8 @@ export function validateOfficeTermSet(args: {
       }
     }
   }
+  const actingErr = validateActingPresidentSuspensions(occupying, args.offices);
+  if (actingErr) return actingErr;
   return null;
 }
 
@@ -282,6 +305,32 @@ export function shouldSuspendWhenActingPresident(office: KernelOffice): boolean 
   if (office.kind === "president" || office.kind === "assembly_member") return false;
   if (office.suspendWhenActingPresident) return true;
   return office.incompatibleWithKinds.includes("president");
+}
+
+export function validateActingPresidentSuspensions(
+  occupying: OfficeTermLike[],
+  offices: Record<string, KernelOffice>,
+): CommandError | null {
+  const actingHolders = new Set<string>();
+  for (const term of occupying) {
+    const office = offices[term.officeId];
+    if (office?.kind === "president" && term.holdingKind === "acting" && term.status === "active") {
+      actingHolders.add(term.holderId);
+    }
+  }
+  if (actingHolders.size === 0) return null;
+  for (const term of occupying) {
+    if (term.status !== "active" || !actingHolders.has(term.holderId)) continue;
+    const office = offices[term.officeId];
+    if (!office) continue;
+    if (shouldSuspendWhenActingPresident(office)) {
+      return reject(
+        "ACTING_PRESIDENT_DUTIES_MUST_REMAIN_SUSPENDED",
+        `${term.holderId} must keep ${term.officeId} suspended while acting as president`,
+      );
+    }
+  }
+  return null;
 }
 
 export function canAssumeOffice(
@@ -405,15 +454,67 @@ export function suspendTerm(state: SimState, termId: string): OfficeTerm | { err
   return term;
 }
 
-export function resumeTerm(state: SimState, termId: string): OfficeTerm | { error: CommandError } {
+export function canResumeTerm(
+  state: SimState,
+  world: KernelWorld,
+  termId: string,
+): CommandError | null {
   const term = state.officeTerms[termId];
-  if (!term) return { error: reject("UNKNOWN_TERM", `Unknown term ${termId}`) };
+  if (!term) return reject("UNKNOWN_TERM", `Unknown term ${termId}`);
   if (term.status === "ended") {
-    return { error: reject("TERM_ENDED", `Ended term ${termId} cannot be resumed`) };
+    return reject("TERM_ENDED", `Ended term ${termId} cannot be resumed`);
   }
   if (term.status !== "suspended") {
-    return { error: reject("NOT_SUSPENDED", `Term ${termId} is not suspended`) };
+    return reject("NOT_SUSPENDED", `Term ${termId} is not suspended`);
   }
+  const office = world.offices[term.officeId];
+  if (!office) return reject("UNKNOWN_OFFICE", `Unknown office ${term.officeId}`);
+  const holder = state.politicians[term.holderId];
+  if (!holder) return reject("UNKNOWN_POLITICIAN", `Unknown politician ${term.holderId}`);
+  const elig = validateHolderEligibility(office, holder, term.holdingKind);
+  if (elig) return elig;
+  const expired = expiredOccupyingTerm(
+    term,
+    office,
+    state.currentDate,
+    state.pendingInterrupt?.requiresResolution === true,
+    "runtime",
+  );
+  if (expired) return expired;
+  const held = activeTermsForPolitician(state, term.holderId);
+  const req = validateHolderKindRequirements(office, term.holderId, held, world.offices);
+  if (req) return req;
+  const actingPres = occupyingTerms(state, "OFFICE_PRESIDENT").some(
+    (t) => t.holderId === term.holderId && t.holdingKind === "acting" && t.status === "active",
+  );
+  if (actingPres && shouldSuspendWhenActingPresident(office)) {
+    return reject(
+      "ACTING_PRESIDENT_DUTIES_MUST_REMAIN_SUSPENDED",
+      `${term.holderId} cannot resume ${term.officeId} while acting as president`,
+    );
+  }
+  if (term.holdingKind === "substantive") {
+    const inc = validateSubstantiveIncompatibilities(
+      office,
+      term.holderId,
+      held.filter(
+        (t) => t.id !== term.id && t.holdingKind === "substantive" && t.status === "active",
+      ),
+      world.offices,
+    );
+    if (inc) return inc;
+  }
+  return null;
+}
+
+export function resumeTerm(
+  state: SimState,
+  world: KernelWorld,
+  termId: string,
+): OfficeTerm | { error: CommandError } {
+  const err = canResumeTerm(state, world, termId);
+  if (err) return { error: err };
+  const term = state.officeTerms[termId]!;
   term.status = "active";
   return term;
 }
