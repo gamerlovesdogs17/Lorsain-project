@@ -6,6 +6,7 @@ import {
   validateElectoralAgainstWorld,
   processedResolutionSatisfied,
 } from "./elections/validation.js";
+import { validateCampaignsAgainstWorld } from "./campaigns/validation.js";
 import { validateOfficeTermSet } from "./offices.js";
 import { resolutionEventMustBlock } from "./scheduler.js";
 import type { CommandError, KernelWorld, OfficeTerm, SimState } from "./types.js";
@@ -254,7 +255,9 @@ export function validateStateAgainstWorld(
   }
   const partyErr = validatePartyAgainstWorld(state, world);
   if (partyErr) return partyErr;
-  return validateElectoralAgainstWorld(state, world);
+  const electoralErr = validateElectoralAgainstWorld(state, world);
+  if (electoralErr) return electoralErr;
+  return validateCampaignsAgainstWorld(state, world);
 }
 
 export function uniqueAllocatedTermIds(state: {

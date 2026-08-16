@@ -36,6 +36,7 @@ import {
   RELATIONSHIP_MAX_ABS_DELTA,
 } from "./agents/policy.js";
 import type { KernelWorld, SaveFile, SimState } from "./types.js";
+import { SAVE_SCHEMA_VERSION } from "./types.js";
 
 function simFor(world: KernelWorld = syntheticWorld(), seed?: string) {
   return createSimulation({ world, playerPoliticianId: "P1", seed });
@@ -79,6 +80,9 @@ function stripToV1(save: SaveFile): Record<string, unknown> {
   delete counters.nextEndorsementId;
   delete counters.nextPartyContestId;
   delete counters.nextDynamicPartyId;
+  delete counters.nextCampaignId;
+  delete counters.nextDebateId;
+  delete sim.campaignRuntime;
   return raw;
 }
 
@@ -596,7 +600,7 @@ describe("save schema v2/v3", () => {
     const parsed = parseSaveFile(v1, "0.3.1-predev");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(4);
+    expect(parsed.save.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     const migrated = restoreSimulation(parsed.save, world);
     expect(migrated.hashState()).toBe(hash);
 

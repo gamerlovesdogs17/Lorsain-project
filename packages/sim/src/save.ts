@@ -7,6 +7,7 @@ import { resolutionEventMustBlock } from "./scheduler.js";
 import { agentCounterError, parseAgentState } from "./agents/validation.js";
 import { parsePartyRuntime, partyCounterError } from "./parties/validation.js";
 import { parseElectoralRuntime, electoralCounterError } from "./elections/validation.js";
+import { parseCampaignRuntime, campaignCounterError } from "./campaigns/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -365,6 +366,8 @@ function parseCounters(raw: unknown): Counters | string {
     "nextPollId",
     "nextElectionId",
     "nextDomainResolutionId",
+    "nextCampaignId",
+    "nextDebateId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
@@ -527,6 +530,10 @@ function parseSimulation(
   if (typeof electoral === "string") return electoral;
   const electoralCountErr = electoralCounterError(electoral, counters);
   if (electoralCountErr) return electoralCountErr;
+  const campaigns = parseCampaignRuntime(raw.campaignRuntime);
+  if (typeof campaigns === "string") return campaigns;
+  const campaignCountErr = campaignCounterError(campaigns, counters);
+  if (campaignCountErr) return campaignCountErr;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -632,6 +639,7 @@ function parseSimulation(
     electoralEnvironment: electoral.electoralEnvironment,
     polls: electoral.polls,
     domainResolutions: electoral.domainResolutions,
+    campaignRuntime: campaigns,
   };
 }
 
@@ -815,3 +823,28 @@ export function migrateSaveV3ToV4(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 3, toSchema: 4, migrate: migrateSaveV3ToV4 });
+
+/**
+ * Phase 4 saves begin Phase 5 campaign-domain state at migration/load.
+ * No fabricated campaign history is written.
+ */
+export function migrateSaveV4ToV5(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 5 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 5 };
+  sim.campaignRuntime = isRecord(sim.campaignRuntime)
+    ? sim.campaignRuntime
+    : { campaigns: {}, debates: {}, lastMonthProcessed: null };
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextCampaignId: isInt(sim.counters.nextCampaignId) ? sim.counters.nextCampaignId : 1,
+      nextDebateId: isInt(sim.counters.nextDebateId) ? sim.counters.nextDebateId : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 4, toSchema: 5, migrate: migrateSaveV4ToV5 });

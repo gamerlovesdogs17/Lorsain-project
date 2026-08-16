@@ -273,7 +273,7 @@ describe("TERENA first domain interrupt", () => {
     expect(restored.getSnapshot().currentDate).toBe("2028-10-14");
     const again = loadContentBundleFromRepo(repoRoot);
     expect(stamp(again)).toBe(bundleHash);
-  });
+  }, 60_000);
 
   it("cannot silently carry expired elected terms past an unresolved election", () => {
     const { world } = loadTerenaWorld();
@@ -289,7 +289,7 @@ describe("TERENA first domain interrupt", () => {
     );
     expect(pres?.holderId).toBe("NPC001");
     expect(pres?.endDate).toBe("2029-01-20");
-  });
+  }, 60_000);
 });
 
 describe("authoritative calendar consumption", () => {

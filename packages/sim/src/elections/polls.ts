@@ -240,6 +240,41 @@ export function recentPolls(
     .slice(0, opts.limit ?? 12);
 }
 
+export function contestPollAverage(
+  state: SimState,
+  currentDate: string,
+  contestId: string,
+): Record<string, number> {
+  const polls = Object.values(state.polls)
+    .filter((p) => p.electionId == null && p.metadata.contestId === contestId)
+    .sort((a, b) =>
+      a.publicationDate < b.publicationDate
+        ? 1
+        : a.publicationDate > b.publicationDate
+          ? -1
+          : a.id < b.id
+            ? 1
+            : -1,
+    )
+    .slice(0, 20);
+  const acc: Record<string, number> = {};
+  let wsum = 0;
+  for (const poll of polls) {
+    const age = Math.max(0, daysBetween(poll.publicationDate, currentDate));
+    const recency = Math.pow(0.5, age / POLL.recencyHalfLifeDays);
+    const quality = typeof poll.metadata.quality === "number" ? poll.metadata.quality : 0.7;
+    const w = recency * (POLL.qualityAverageWeight * quality + (1 - POLL.qualityAverageWeight));
+    for (const row of poll.firstPreference) {
+      acc[row.politicianId] = (acc[row.politicianId] ?? 0) + w * row.share;
+    }
+    wsum += w;
+  }
+  if (wsum <= 0) return {};
+  const out: Record<string, number> = {};
+  for (const [id, v] of Object.entries(acc)) out[id] = v / wsum;
+  return out;
+}
+
 export function pollAverage(
   state: SimState,
   currentDate: string,

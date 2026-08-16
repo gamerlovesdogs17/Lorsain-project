@@ -15,6 +15,7 @@ import type { PublicCandidateFacts } from "./types.js";
 import { constituencyTurnout, mergeTurnout } from "./turnout.js";
 import { scheduleAssumptionIfNeeded } from "./state.js";
 import type { ElectionCandidate, ElectionState } from "./types.js";
+import { FIELD } from "../campaigns/policy.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -111,8 +112,18 @@ export function resolvePresidentialElection(
     constituencyTurnout(world, cid, facts, "presidential", rng),
   );
   const turnout = mergeTurnout(turnoutParts);
-  const perConst = constituencyIds.map((cid, i) =>
-    generateConstituencyBallots(
+  const perConst = constituencyIds.map((cid, i) => {
+    const mobilization: Record<string, number> = {};
+    for (const id of candidateIds) {
+      let org = 0;
+      for (const camp of Object.values(state.campaignRuntime.campaigns)) {
+        if (camp.politicianId !== id) continue;
+        if (camp.status !== "active" || camp.type !== "presidential_general") continue;
+        org = Math.max(org, camp.organizationByConstituency[cid] ?? 0);
+      }
+      mobilization[id] = 1 + FIELD.turnoutScale * org;
+    }
+    return generateConstituencyBallots(
       world,
       state,
       cid,
@@ -120,8 +131,9 @@ export function resolvePresidentialElection(
       turnoutParts[i]!.validVoteValue,
       ideologyById,
       rng,
-    ),
-  );
+      mobilization,
+    );
+  });
   const ballots = mergeNationalBallots(perConst);
   const validSum = integerBallotWeightSum(ballots);
   const partSum = turnoutParts.reduce((a, r) => a + BigInt(r.validVoteValue), 0n);

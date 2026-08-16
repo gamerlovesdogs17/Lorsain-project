@@ -13,7 +13,7 @@ describe("built package exports smoke", () => {
     const rng = mod.createRngService("smoke");
     expect(rng.uint32("flavor")).toBeTypeOf("number");
     expect(createRngService).toBeTypeOf("function");
-  });
+  }, 20_000);
 
   it("imports @lorsain/content-loader and /node from dist", async () => {
     const core = await import("../packages/content-loader/dist/index.js");

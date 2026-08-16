@@ -21,6 +21,7 @@ function deriveDefaultStanding(
   world: KernelWorld,
   state: SimState,
   politicianId: string,
+  applyScenarioPresidentialSeed: boolean,
 ): CandidateStanding {
   const facts = publicPoliticianFacts(world, state, politicianId);
   const standing = defaultStanding(politicianId);
@@ -62,23 +63,25 @@ function deriveDefaultStanding(
       STANDING_INIT.factionChairRecognition,
     );
   }
-  const profile = world.agentProfiles[politicianId];
-  const seed = profile?.presidentialStatus;
-  const bump =
-    seed === "frontrunner"
-      ? STANDING_INIT.presidentialFrontrunner
-      : seed === "likely"
-        ? STANDING_INIT.presidentialLikely
-        : seed === "possible"
-          ? STANDING_INIT.presidentialPossible
-          : seed === "exploring"
-            ? STANDING_INIT.presidentialExploring
-            : null;
-  if (bump) {
-    standing.nameRecognition = Math.max(standing.nameRecognition, bump.recognition);
-    standing.favorability += bump.favorability;
-    standing.enthusiasm = Math.max(standing.enthusiasm, bump.enthusiasm);
-    standing.momentum += bump.momentum;
+  const profile = world.agentProfiles[politicianId] ?? state.generatedAgentProfiles[politicianId];
+  if (applyScenarioPresidentialSeed) {
+    const seed = profile?.presidentialStatus;
+    const bump =
+      seed === "frontrunner"
+        ? STANDING_INIT.presidentialFrontrunner
+        : seed === "likely"
+          ? STANDING_INIT.presidentialLikely
+          : seed === "possible"
+            ? STANDING_INIT.presidentialPossible
+            : seed === "exploring"
+              ? STANDING_INIT.presidentialExploring
+              : null;
+    if (bump) {
+      standing.nameRecognition = Math.max(standing.nameRecognition, bump.recognition);
+      standing.favorability += bump.favorability;
+      standing.enthusiasm = Math.max(standing.enthusiasm, bump.enthusiasm);
+      standing.momentum += bump.momentum;
+    }
   }
   standing.nameRecognition = clamp01(standing.nameRecognition);
   standing.favorability = clampUnit(standing.favorability);
@@ -98,7 +101,7 @@ export function candidateStandingOrDefault(
 ): CandidateStanding {
   const existing = state.candidateStanding[politicianId];
   if (existing) return existing;
-  return deriveDefaultStanding(world, state, politicianId);
+  return deriveDefaultStanding(world, state, politicianId, false);
 }
 
 /**
@@ -111,9 +114,28 @@ export function ensureCandidateStanding(
 ): CandidateStanding {
   const existing = state.candidateStanding[politicianId];
   if (existing) return existing;
-  const standing = deriveDefaultStanding(world, state, politicianId);
+  const standing = deriveDefaultStanding(world, state, politicianId, false);
   state.candidateStanding[politicianId] = standing;
   return standing;
+}
+
+/** Scenario-start only: materialize presidentialStatus into public standing once. */
+export function seedStartingPublicStanding(world: KernelWorld, state: SimState): void {
+  const ids = Object.keys(state.politicians).sort();
+  for (const id of ids) {
+    const profile = world.agentProfiles[id] ?? state.generatedAgentProfiles[id];
+    const seed = profile?.presidentialStatus;
+    if (
+      seed !== "frontrunner" &&
+      seed !== "likely" &&
+      seed !== "possible" &&
+      seed !== "exploring"
+    ) {
+      continue;
+    }
+    if (state.candidateStanding[id]) continue;
+    state.candidateStanding[id] = deriveDefaultStanding(world, state, id, true);
+  }
 }
 
 export function standingMutationError(

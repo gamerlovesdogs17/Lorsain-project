@@ -1,6 +1,6 @@
 import type { KernelWorld, SimState } from "../types.js";
 import { SELECTOR_ELECTABILITY } from "./policy.js";
-import { pollAverage, relevantPresidentialElectionId } from "./polls.js";
+import { contestPollAverage } from "./polls.js";
 import { candidateStandingOrDefault } from "./standing.js";
 import type { PartyContestType } from "../parties/types.js";
 
@@ -10,6 +10,7 @@ export function publicElectabilitySignal(
   state: SimState,
   politicianId: string,
   contestType?: PartyContestType,
+  contestId?: string | null,
 ): number {
   const standing = candidateStandingOrDefault(world, state, politicianId);
   const standingScore =
@@ -17,11 +18,8 @@ export function publicElectabilitySignal(
     ((standing.favorability + 1) / 2) * 0.45 +
     standing.enthusiasm * 0.2;
   let pollShare = 0;
-  if (contestType === "presidential_nomination") {
-    const electionId = relevantPresidentialElectionId(state);
-    if (electionId) {
-      pollShare = pollAverage(state, state.currentDate, { electionId })[politicianId] ?? 0;
-    }
+  if (contestType === "presidential_nomination" && contestId) {
+    pollShare = contestPollAverage(state, state.currentDate, contestId)[politicianId] ?? 0;
   }
   return (
     standingScore * SELECTOR_ELECTABILITY.standing + pollShare * SELECTOR_ELECTABILITY.pollShare

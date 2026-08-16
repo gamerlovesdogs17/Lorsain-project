@@ -52,6 +52,7 @@ import {
 import { createPoll } from "./elections/polls.js";
 import {
   ensureCandidateStanding,
+  seedStartingPublicStanding,
   setCandidateStanding,
   standingMutationError,
 } from "./elections/standing.js";
@@ -72,6 +73,25 @@ import {
 } from "./elections/resolution.js";
 import { emptyIdeology } from "./agents/profile.js";
 import { IDEOLOGY_AXES } from "./agents/types.js";
+import { emptyCampaignRuntime } from "./campaigns/types.js";
+import {
+  campaignAdvertise,
+  campaignAttack,
+  campaignFundraise,
+  campaignMessage,
+  campaignOrganize,
+  campaignPrepareDebate,
+  campaignSeekEndorsement,
+  campaignSeekNominationSupport,
+  campaignVisit,
+  closeGeneralCampaigns,
+  declareCampaign,
+  ensureCampaignForDeclaredCandidacy,
+  transitionNominationToGeneral,
+  reconcileCampaignsAfterCandidacyWithdrawal,
+  withdrawCampaign,
+} from "./campaigns/actions.js";
+import { processCampaignMonth } from "./campaigns/monthly.js";
 import {
   SAVE_SCHEMA_VERSION,
   type Command,
@@ -142,6 +162,8 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextPollId: 1,
       nextElectionId: 1,
       nextDomainResolutionId: 1,
+      nextCampaignId: 1,
+      nextDebateId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
@@ -151,6 +173,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     ...emptyAgentRuntime(),
     ...emptyPartyRuntime(),
     ...emptyElectoralRuntimeState(),
+    campaignRuntime: emptyCampaignRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -164,6 +187,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
   }
   seedPartyInstitutions(state, world);
   seedCanonicalElections(state, world);
+  seedStartingPublicStanding(world, state);
   seedInitialGoals(state, world);
   return state;
 }
@@ -285,6 +309,7 @@ function runTowardTarget(
   commandId: string,
 ): { events: SimEvent[]; interrupt: PendingInterrupt | null } {
   const events: SimEvent[] = [];
+  events.push(...processCampaignMonth(state, world, rng, commandId));
   sortScheduler(state);
   while (true) {
     const next = nextPendingBefore(state, target);
@@ -315,6 +340,20 @@ function runTowardTarget(
 
 function syncRng(state: SimState, rng: RngService): void {
   state.rng = rng.serialize();
+}
+
+function playerOwnsCampaign(state: SimState, campaignId: string): CommandResult | null {
+  const campaign = state.campaignRuntime.campaigns[campaignId];
+  if (!campaign) {
+    return { ok: false, error: { code: "UNKNOWN_CAMPAIGN", message: campaignId } };
+  }
+  if (campaign.politicianId !== state.playerPoliticianId) {
+    return {
+      ok: false,
+      error: { code: "PLAYER_AUTONOMY", message: "player may only command their own campaign" },
+    };
+  }
+  return null;
 }
 
 export function createSimulation(opts: CreateSimulationOptions): Simulation {
@@ -348,6 +387,9 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   state.rng = rng.serialize();
   if (needsPartyInstitutionSeed(state, frozen)) seedPartyInstitutions(state, frozen);
   if (needsElectoralSeed(state, frozen)) seedCanonicalElections(state, frozen);
+  if (Object.keys(state.candidateStanding).length === 0) {
+    seedStartingPublicStanding(frozen, state);
+  }
   if (needsInitialGoals(state)) seedInitialGoals(state, frozen);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
@@ -917,7 +959,14 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         commandId,
       );
       if ("error" in out) return fail(out.error.code, out.error.message);
-      return { ok: true, commandId, events: out.events, interrupt: null };
+      const launched = ensureCampaignForDeclaredCandidacy(
+        state,
+        world,
+        command.contestId,
+        command.politicianId,
+        commandId,
+      );
+      return { ok: true, commandId, events: [...out.events, ...launched], interrupt: null };
     }
 
     if (command.type === "WITHDRAW_PARTY_CONTEST_CANDIDACY") {
@@ -931,7 +980,13 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       const commandId = nextCommandId();
       const out = withdrawCandidacy(state, command.contestId, command.politicianId, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
-      return { ok: true, commandId, events: out.events, interrupt: null };
+      const campaignEvents = reconcileCampaignsAfterCandidacyWithdrawal(
+        state,
+        command.contestId,
+        command.politicianId,
+        commandId,
+      );
+      return { ok: true, commandId, events: [...out.events, ...campaignEvents], interrupt: null };
     }
 
     if (command.type === "ENDORSE_PARTY_CONTEST_CANDIDATE") {
@@ -1004,7 +1059,13 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       syncRng(state, rng);
       if ("error" in out) return fail(out.error.code, out.error.message);
       syncNominationWinnerToElection(state, command.contestId);
-      return { ok: true, commandId, events: out.events, interrupt: null };
+      const transitioned = transitionNominationToGeneral(
+        state,
+        world,
+        command.contestId,
+        commandId,
+      );
+      return { ok: true, commandId, events: [...out.events, ...transitioned], interrupt: null };
     }
 
     if (command.type === "DEV_CANCEL_PARTY_CONTEST") {
@@ -1114,6 +1175,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         metadata: {},
       });
       pending.resolutionStatus = "resolved";
+      closeGeneralCampaigns(state, electionId, out.election.winnerIds[0] ?? "");
       syncRng(state, rng);
       return { ok: true, commandId, events: out.events, interrupt: pending };
     }
@@ -1228,6 +1290,314 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       const out = addElectionCandidate(state, world, command.electionId, candidate);
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "DECLARE_CAMPAIGN") {
+      if (command.politicianId !== state.playerPoliticianId) {
+        return fail("PLAYER_AUTONOMY", "player may only declare their own campaign");
+      }
+      const preview = declareCampaign(
+        jsonClone(state),
+        world,
+        {
+          politicianId: command.politicianId,
+          type: command.campaignType,
+          contestId: command.contestId ?? null,
+          electionId: command.electionId ?? null,
+          constituencyId: command.constituencyId ?? null,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = declareCampaign(
+        state,
+        world,
+        {
+          politicianId: command.politicianId,
+          type: command.campaignType,
+          contestId: command.contestId ?? null,
+          electionId: command.electionId ?? null,
+          constituencyId: command.constituencyId ?? null,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_FUNDRAISE") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const previewRng = restoreRngService(state.rng);
+      const preview = campaignFundraise(
+        world,
+        jsonClone(state),
+        previewRng,
+        { campaignId: command.campaignId, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignFundraise(
+        world,
+        state,
+        rng,
+        { campaignId: command.campaignId, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_VISIT") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const geography = {
+        kind: command.geographyKind,
+        id: command.geographyId ?? null,
+      };
+      const previewRng = restoreRngService(state.rng);
+      const preview = campaignVisit(
+        world,
+        jsonClone(state),
+        previewRng,
+        { campaignId: command.campaignId, geography, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignVisit(
+        world,
+        state,
+        rng,
+        { campaignId: command.campaignId, geography, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_ORGANIZE") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const preview = campaignOrganize(
+        world,
+        jsonClone(state),
+        {
+          campaignId: command.campaignId,
+          constituencyId: command.constituencyId,
+          actorId: state.playerPoliticianId,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignOrganize(
+        world,
+        state,
+        {
+          campaignId: command.campaignId,
+          constituencyId: command.constituencyId,
+          actorId: state.playerPoliticianId,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_ADVERTISE") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const args = {
+        campaignId: command.campaignId,
+        spend: command.spend,
+        messageType: command.messageType,
+        geography: {
+          kind: command.geographyKind ?? "national",
+          id: command.geographyId ?? null,
+        },
+        targetPoliticianId: command.targetPoliticianId ?? null,
+        issueId: command.issueId ?? null,
+        actorId: state.playerPoliticianId,
+      };
+      const previewRng = restoreRngService(state.rng);
+      const preview = campaignAdvertise(world, jsonClone(state), previewRng, args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignAdvertise(world, state, rng, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_MESSAGE") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const previewRng = restoreRngService(state.rng);
+      const preview = campaignMessage(
+        world,
+        jsonClone(state),
+        previewRng,
+        {
+          campaignId: command.campaignId,
+          issueId: command.issueId ?? null,
+          actorId: state.playerPoliticianId,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignMessage(
+        world,
+        state,
+        rng,
+        {
+          campaignId: command.campaignId,
+          issueId: command.issueId ?? null,
+          actorId: state.playerPoliticianId,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_ATTACK") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const previewRng = restoreRngService(state.rng);
+      const preview = campaignAttack(
+        world,
+        jsonClone(state),
+        previewRng,
+        {
+          campaignId: command.campaignId,
+          targetPoliticianId: command.targetPoliticianId,
+          actorId: state.playerPoliticianId,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignAttack(
+        world,
+        state,
+        rng,
+        {
+          campaignId: command.campaignId,
+          targetPoliticianId: command.targetPoliticianId,
+          actorId: state.playerPoliticianId,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_SEEK_ENDORSEMENT") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const previewRng = restoreRngService(state.rng);
+      const preview = campaignSeekEndorsement(
+        world,
+        jsonClone(state),
+        previewRng,
+        {
+          campaignId: command.campaignId,
+          ...(command.endorserId != null ? { endorserId: command.endorserId } : {}),
+          actorId: state.playerPoliticianId,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignSeekEndorsement(
+        world,
+        state,
+        rng,
+        {
+          campaignId: command.campaignId,
+          ...(command.endorserId != null ? { endorserId: command.endorserId } : {}),
+          actorId: state.playerPoliticianId,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_SEEK_NOMINATION_SUPPORT") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const previewRng = restoreRngService(state.rng);
+      const preview = campaignSeekNominationSupport(
+        world,
+        jsonClone(state),
+        previewRng,
+        { campaignId: command.campaignId, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignSeekNominationSupport(
+        world,
+        state,
+        rng,
+        { campaignId: command.campaignId, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_PREPARE_DEBATE") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const preview = campaignPrepareDebate(
+        world,
+        jsonClone(state),
+        { campaignId: command.campaignId, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignPrepareDebate(
+        world,
+        state,
+        { campaignId: command.campaignId, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "WITHDRAW_CAMPAIGN") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const preview = withdrawCampaign(
+        world,
+        jsonClone(state),
+        { campaignId: command.campaignId, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = withdrawCampaign(
+        world,
+        state,
+        { campaignId: command.campaignId, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
     return fail("UNKNOWN_COMMAND", "Unsupported command");

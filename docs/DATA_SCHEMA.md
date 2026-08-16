@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 4 saves use `schemaVersion: 4` and `contentVersion: 0.3.1-predev`. Phase 3 `schemaVersion: 3` saves migrate to v4. Phase 2 `schemaVersion: 2` saves migrate v2→v3→v4. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3→v4.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 5 saves use `schemaVersion: 5` and `contentVersion: 0.3.1-predev`. Phase 4 `schemaVersion: 4` saves migrate to v5 with empty campaign runtime. Phase 3 `schemaVersion: 3` saves migrate v3→v4→v5. Phase 2 `schemaVersion: 2` saves migrate v2→v3→v4→v5. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3→v4→v5.
 
 ## 3. Core static schemas
 
@@ -295,11 +295,11 @@ News and history pages consume events; they do not invent a separate reality.
 
 ## 14. Save root
 
-Phase 4 save envelope (`schemaVersion: 4`):
+Phase 5 save envelope (`schemaVersion: 5`):
 
 ```ts
 interface SaveFile {
-  schemaVersion: 4;
+  schemaVersion: 5;
   contentVersion: string;
   scenarioId: string;
   simulation: SimState;
@@ -307,7 +307,8 @@ interface SaveFile {
   // relationships, memories, beliefs, goals, generatedAgentProfiles,
   // agentProfileOverrides, partyStates, factionStates, endorsements,
   // partyContests, dynamicParties,
-  // elections, candidateStanding, electoralEnvironment, polls, domainResolutions
+  // elections, candidateStanding, electoralEnvironment, polls, domainResolutions,
+  // campaignRuntime (campaigns, debates, lastMonthProcessed)
 }
 ```
 
@@ -321,7 +322,9 @@ Loaded saves are untrusted `unknown` and are fully structurally validated. Conte
 
 **v3 → v4:** Phase 3 saves had no general-election state, public standing, polls, or domain-resolution records. Migration initializes those structures to empty and adds `nextPollId` / `nextElectionId` / `nextDomainResolutionId`. No fabricated polls or completed general-election results are written. `restoreSimulation` seeds canonical upcoming `ELEC_PRES_2028` and `ELEC_ASM_2030` `ElectionState`s from `KernelWorld` when `elections` is empty.
 
-Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
+**v4 → v5:** Phase 4 saves had no campaign runtime. Migration initializes `campaignRuntime` to `{ campaigns: {}, debates: {}, lastMonthProcessed: null }` and adds `nextCampaignId` / `nextDebateId`. No fabricated campaign actions or debate history are written.
+
+Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`, `CAMP`, `DEBATE`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
 
 ### 14.1 Agent state (Phase 2)
 
@@ -355,6 +358,15 @@ PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolve
 - **ElectionState:** separate from `PartyContest`. Statuses: `planned` → `field_open` → `field_finalized` → `voting` → `resolved` / `cancelled`. Canonical 2028 presidential election `ELEC_PRES_2028` starts unfinalized with no nominees. Nomination winners sync into the general-election field without mutating contest archives. Presidential counts call `countIrv`; Assembly constituency counts call `countStv`. Resolved archives replay from stored ballots and lot draws. Current eligibility is checked only for unresolved fields.
 - **DomainResolutionRecord:** `DRES…` evidence for a processed `requiresResolution` event (election or presidential assumption). `RESOLVE_PRESIDENTIAL_ELECTION` is transactional: failure leaves hash, counters, and RNG unchanged when validation can run before draws.
 - **Presidential transition:** a regular election winner is immediately `certifiedPresidentElectId` and that victory counts as an elected term. Assumption is 20 January following. Incompatible prior offices (MP/governor/minister) end with structured reasons; vacancies are not auto-filled. The next regular presidential date is calculated from canonical calendar rules, never hardcoded as 2033. If the president-elect cannot assume, the engine raises a typed constitutional block rather than inventing a successor.
+
+### 14.4 Campaigns (Phase 5)
+
+- **Separate runtime:** `campaignRuntime.campaigns` / `debates` / `lastMonthProcessed`. Not a second politician object. Types: `presidential_nomination` | `presidential_general` | `assembly`. Statuses: `exploring` | `active` | `withdrawn` | `won` | `lost` | `ended`.
+- **Resources:** integer `cashOnHand` / `totalRaised` / `totalSpent` (no negatives, no debt). Capacities in `[0,1]`. Sparse `organizationByConstituency`. Compact `recentEffects` for diminishing returns. Monthly action points (base 2, max 3 with office bonus).
+- **Actions:** player commands only for `playerPoliticianId` (`CAMPAIGN_SEEK_NOMINATION_SUPPORT` is the Labour/Green/Regional League qualification milestone). NPCs get Phase 2 `DecisionOption`s from public polls, standing, endorsements, resources, and own hidden skills/traits. Opponent hidden truth is not an input. Effects clamp per action (`STANDING_DELTA.maxPerAction` / `PUBLIC_EFFECT_CLAMP`) and decay momentum monthly. Attacks, contrast ads, and negative ads require a living rival in the same race (`contestId` for nominations, `electionId` for presidential generals, constituency/election for assembly).
+- **Nomination calendar:** operational offsets from the presidential election date (`packages/sim/src/campaigns/timeline.ts`): open −9 months, qualification/resolution −2 months, field finalize −1 month. Institutional `openPartyContest` / `applyQualification` / `resolvePartyContest` / `finalizePresidentialField` — not player or DEV commands. Failed remaining declared candidacies close; zero qualified candidates cancel the contest; one qualified candidate may win. NU uses real caucus endorsements (NPC outreach may batch a few MPs, each via Phase 2 `chooseEndorsement`). PM seeks `PORG:{partyId}:{provinceId}` endorsements. Civic Reform has no candidate supporter-registration gate.
+- **Integration:** an active nomination campaign must match a `PartyContest` entry; a general campaign must match an `ElectionCandidate`. Withdrawal reconciles both. Nomination winners inherit cash/org into a linked general campaign. Field organization multiplies that candidate's realized constituency shares by `1 + FIELD.turnoutScale * org[cid]` then renormalizes; it does not raise every candidate's turnout. Phase 5 schedules lightweight public nomination polls (`electionId: null`, `metadata.contestId`); `createPoll()` remains Phase 4. Selectorate electability uses standing plus that contest's poll average, never latent support and never another party's polls.
+- **Start:** TERENA_2028 has zero campaigns until declare. Canonical `presidentialStatus` seeds public standing once at init and is not reapplied by `candidateStandingOrDefault`.
 
 ## 15. Map contract
 

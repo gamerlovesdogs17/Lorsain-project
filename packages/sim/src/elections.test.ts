@@ -24,6 +24,7 @@ import {
 } from "./elections/ballots.js";
 import { constituencyTurnout } from "./elections/turnout.js";
 import { miniElectorateWorld } from "./mini-electorate-world.js";
+import { FIELD } from "./campaigns/policy.js";
 import {
   assemblyCaucus,
   evaluatePresidentialEligibility,
@@ -72,10 +73,13 @@ function stripToV3(save: SaveFile): Record<string, unknown> {
   delete sim.electoralEnvironment;
   delete sim.polls;
   delete sim.domainResolutions;
+  delete sim.campaignRuntime;
   const counters = sim.counters as Record<string, unknown>;
   delete counters.nextPollId;
   delete counters.nextElectionId;
   delete counters.nextDomainResolutionId;
+  delete counters.nextCampaignId;
+  delete counters.nextDebateId;
   return raw;
 }
 
@@ -95,7 +99,6 @@ describe("Phase 4 kernel electorate ingest", () => {
     expect(snap.elections[CANONICAL_PRESIDENTIAL_ELECTION_ID]?.winnerIds).toEqual([]);
     expect(Object.keys(snap.elections).length).toBe(2);
     expect(Object.keys(snap.polls).length).toBe(0);
-    expect(Object.keys(snap.candidateStanding).length).toBe(0);
     const planned = Object.values(snap.partyContests).filter(
       (c) => c.type === "presidential_nomination" && c.status === "planned",
     );
@@ -119,6 +122,41 @@ describe("Phase 4 hidden-truth boundary", () => {
     const after = blocSupportShares(mutated, sim2.getSnapshot(), bloc, ["P1", "P2"]);
     expect(after.P1).toBeCloseTo(before.P1!, 12);
     expect(after.P2).toBeCloseTo(before.P2!, 12);
+  });
+});
+
+describe("Phase 5 candidate-specific field organization", () => {
+  it("raises only the organizing candidate's realized share and conserves ballots", () => {
+    const world = miniElectorateWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "P1" });
+    const snap = sim.getSnapshot();
+    const valid = world.constituencyElectorate.C001!.turnout2026.validVoteValue;
+    const baseline = generateConstituencyBallots(
+      world,
+      snap,
+      "C001",
+      ["P1", "P2"],
+      valid,
+      undefined,
+      null,
+      { P1: 1, P2: 1 },
+    );
+    const boosted = generateConstituencyBallots(
+      world,
+      snap,
+      "C001",
+      ["P1", "P2"],
+      valid,
+      undefined,
+      null,
+      { P1: 1 + FIELD.turnoutScale, P2: 1 },
+    );
+    expect(Number(integerBallotWeightSum(baseline))).toBe(valid);
+    expect(Number(integerBallotWeightSum(boosted))).toBe(valid);
+    const baseFirst = firstPreferenceTotals(baseline);
+    const boostFirst = firstPreferenceTotals(boosted);
+    expect(boostFirst.P1 ?? 0).toBeGreaterThan(baseFirst.P1 ?? 0);
+    expect((boostFirst.P1 ?? 0) + (boostFirst.P2 ?? 0)).toBe(valid);
   });
 });
 
@@ -653,7 +691,7 @@ describe("Phase 4 save schema v4", () => {
     const parsed = parseSaveFile(stripToV3(sim.serializeSave()), "0.3.1-predev");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(4);
+    expect(parsed.save.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     const restored = restoreSimulation(parsed.save, world);
     expect(restored.getSnapshot().elections[CANONICAL_PRESIDENTIAL_ELECTION_ID]).toBeTruthy();
     expect(Object.keys(restored.getSnapshot().polls).length).toBe(0);
@@ -661,7 +699,7 @@ describe("Phase 4 save schema v4", () => {
 });
 
 describe("Phase 4 TERENA_2028 domain block", () => {
-  it("reaches 2028-10-14 and blocks on an unfinished presidential field", () => {
+  it("reaches 2028-10-14 and still requires an explicit presidential count", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({ world, playerPoliticianId: "NPC002" });
     for (let i = 0; i < 14; i++) {
@@ -675,9 +713,9 @@ describe("Phase 4 TERENA_2028 domain block", () => {
     }
     const snap = sim.getSnapshot();
     expect(snap.pendingInterrupt?.code).toBe("PRESIDENTIAL_ELECTION_DUE");
-    expect(snap.elections[CANONICAL_PRESIDENTIAL_ELECTION_ID]?.fieldFinalized).toBe(false);
-    const resolve = sim.executeCommand({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
-    expect(resolve.ok).toBe(false);
+    expect(snap.currentDate).toBe("2028-10-14");
+    expect(snap.elections[CANONICAL_PRESIDENTIAL_ELECTION_ID]?.fieldFinalized).toBe(true);
+    expect(snap.elections[CANONICAL_PRESIDENTIAL_ELECTION_ID]?.status).not.toBe("resolved");
   });
 });
 

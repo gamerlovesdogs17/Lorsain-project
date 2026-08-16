@@ -26,6 +26,7 @@ export function constituencyTurnout(
   candidates: readonly PublicCandidateFacts[],
   kind: "presidential" | "assembly",
   rng: RngService | null,
+  extraRate = 0,
 ): TurnoutRecord {
   const el = world.constituencyElectorate[constituencyId];
   if (!el) {
@@ -54,6 +55,7 @@ export function constituencyTurnout(
       el.turnout2026.turnoutRate * TURNOUT.historicalWeight +
       importance +
       enthusiasm * TURNOUT.enthusiasmScale +
+      extraRate +
       noise,
   );
   const clamped = Math.min(TURNOUT.maxRate, Math.max(TURNOUT.minRate, rate));

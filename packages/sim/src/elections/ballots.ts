@@ -153,6 +153,7 @@ export function generateConstituencyBallots(
   validVoteValue: number,
   ideologyById?: Record<string, IdeologyVector | null>,
   rng?: RngService | null,
+  mobilizationByCandidate?: Record<string, number>,
 ): BallotGroupArchive[] {
   if (!Number.isInteger(validVoteValue) || validVoteValue < 0) {
     throw new Error(`validVoteValue must be a nonnegative integer, got ${validVoteValue}`);
@@ -181,7 +182,15 @@ export function generateConstituencyBallots(
     const nBloc = blocVotes[b]!;
     if (nBloc <= 0) continue;
     const latent = blocSupportShares(world, state, bloc, orderedCandidates, ideologyById);
-    const shares = realizeShares(latent, orderedCandidates, rng);
+    let shares = realizeShares(latent, orderedCandidates, rng);
+    if (mobilizationByCandidate) {
+      const scaled: Record<string, number> = {};
+      for (const id of orderedCandidates) {
+        const factor = mobilizationByCandidate[id];
+        scaled[id] = (shares[id] ?? 0) * (factor == null ? 1 : Math.max(0, factor));
+      }
+      shares = renormalizeShares(scaled, orderedCandidates);
+    }
     const firstPrefVotes = largestRemainder(
       orderedCandidates.map((id) => shares[id] ?? 0),
       nBloc,

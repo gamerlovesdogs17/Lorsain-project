@@ -296,16 +296,19 @@ describe("Phase 4 hardening: national weighting / issue / independent / hidden",
       "P2",
     ]);
     expect(after.P1).toBe(before.P1);
-    expect(sim.getSnapshot().candidateStanding).toEqual({});
+    expect(sim.getSnapshot().candidateStanding.P1).toBeDefined();
+    expect(Object.keys(sim.getSnapshot().candidateStanding)).toEqual(["P1"]);
   });
 
   it("does not mutate standing during a support query", () => {
     const world = miniElectorateWorld();
     const sim = createSimulation({ world, playerPoliticianId: "P1" });
     const hash = sim.hashState();
+    const keys = Object.keys(sim.getSnapshot().candidateStanding).sort();
+    expect(keys).toEqual(["P1"]);
     blocSupportShares(world, sim.getSnapshot(), world.voterBlocs.C001_B01!, ["P1", "P2"]);
     expect(sim.hashState()).toBe(hash);
-    expect(Object.keys(sim.getSnapshot().candidateStanding).length).toBe(0);
+    expect(Object.keys(sim.getSnapshot().candidateStanding).sort()).toEqual(keys);
   });
 });
 

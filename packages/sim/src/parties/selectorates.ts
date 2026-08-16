@@ -230,7 +230,7 @@ function publicScore(
   if (group.kind === "members" || group.kind === "convention_delegates") {
     score += cohesion * SELECTOR_PUBLIC_WEIGHTS.discipline;
   }
-  score += publicElectabilitySignal(world, state, candidateId, contest.type);
+  score += publicElectabilitySignal(world, state, candidateId, contest.type, contest.id);
   score += groupIdiosyncrasy(group.id, candidateId) * SELECTOR_GROUP_IDIOSYNCRASY;
   return score;
 }

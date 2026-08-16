@@ -18,6 +18,7 @@ import type {
   PollsterDefinition,
   VoterBlocDefinition,
 } from "./elections/types.js";
+import type { CampaignRuntime } from "./campaigns/types.js";
 import type {
   DynamicPartyDefinition,
   EndorsementRecord,
@@ -32,7 +33,7 @@ import type {
   ProvincialPartyOrganization,
 } from "./parties/types.js";
 
-export const SAVE_SCHEMA_VERSION = 4 as const;
+export const SAVE_SCHEMA_VERSION = 5 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -120,6 +121,8 @@ export type Counters = {
   nextPollId: number;
   nextElectionId: number;
   nextDomainResolutionId: number;
+  nextCampaignId: number;
+  nextDebateId: number;
 };
 
 export type PresidentialRuntime = {
@@ -161,6 +164,7 @@ export type SimState = {
   electoralEnvironment: ElectoralEnvironment;
   polls: Record<string, PollRecord>;
   domainResolutions: Record<string, DomainResolutionRecord>;
+  campaignRuntime: CampaignRuntime;
 };
 
 export type Command =
@@ -317,7 +321,39 @@ export type Command =
       independentQualified?: boolean;
       sourceContestId?: string | null;
     }
-  | { type: "RESOLVE_PRESIDENTIAL_ASSUMPTION" };
+  | { type: "RESOLVE_PRESIDENTIAL_ASSUMPTION" }
+  | {
+      type: "DECLARE_CAMPAIGN";
+      politicianId: string;
+      campaignType: "presidential_nomination" | "presidential_general" | "assembly";
+      contestId?: string | null;
+      electionId?: string | null;
+      constituencyId?: string | null;
+    }
+  | { type: "CAMPAIGN_FUNDRAISE"; campaignId: string }
+  | {
+      type: "CAMPAIGN_VISIT";
+      campaignId: string;
+      geographyKind: "national" | "province" | "constituency";
+      geographyId?: string | null;
+    }
+  | { type: "CAMPAIGN_ORGANIZE"; campaignId: string; constituencyId: string }
+  | {
+      type: "CAMPAIGN_ADVERTISE";
+      campaignId: string;
+      spend: number;
+      messageType: "positive" | "contrast" | "negative";
+      geographyKind?: "national" | "province" | "constituency";
+      geographyId?: string | null;
+      targetPoliticianId?: string | null;
+      issueId?: string | null;
+    }
+  | { type: "CAMPAIGN_MESSAGE"; campaignId: string; issueId?: string | null }
+  | { type: "CAMPAIGN_ATTACK"; campaignId: string; targetPoliticianId: string }
+  | { type: "CAMPAIGN_SEEK_ENDORSEMENT"; campaignId: string; endorserId?: string }
+  | { type: "CAMPAIGN_SEEK_NOMINATION_SUPPORT"; campaignId: string }
+  | { type: "CAMPAIGN_PREPARE_DEBATE"; campaignId: string }
+  | { type: "WITHDRAW_CAMPAIGN"; campaignId: string };
 
 export type CommandError = { code: string; message: string };
 

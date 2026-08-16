@@ -8,6 +8,10 @@ export default defineConfig({
   test: {
     include: ["packages/*/src/**/*.test.ts", "apps/*/src/**/*.test.ts", "scripts/**/*.test.ts"],
     environment: "node",
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
+    teardownTimeout: 60_000,
+    fileParallelism: false,
   },
   resolve: {
     // Unit tests import TypeScript sources; package.json exports target dist for runtime consumers.

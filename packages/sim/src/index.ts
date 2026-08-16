@@ -49,6 +49,7 @@ export {
   migrateSaveV1ToV2,
   migrateSaveV2ToV3,
   migrateSaveV3ToV4,
+  migrateSaveV4ToV5,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -101,6 +102,13 @@ export {
   chooseEndorsement,
   chooseMembershipAction,
 } from "./parties/index.js";
+export {
+  processCampaignMonth,
+  emptyCampaignRuntime,
+  campaignDecisionOptions,
+  chooseCampaignAction,
+} from "./campaigns/index.js";
+export type { CampaignState, CampaignRuntime, DebateState } from "./campaigns/types.js";
 export type {
   Command,
   CommandResult,

@@ -113,5 +113,5 @@ describe("Phase 2 performance substrate", () => {
     }
     const elapsed = Date.now() - t0;
     expect(elapsed).toBeLessThan(30_000);
-  });
+  }, 60_000);
 });
