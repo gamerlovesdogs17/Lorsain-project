@@ -101,8 +101,9 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 0b** — **COMPLETE / CANONICAL** (`7e94984`) — 530 roster, 420 MPs, 2026 STV archive, voter blocs, pollsters, eligibility
 - **Phase 1** — **COMPLETE** (`b158271`) — deterministic world kernel (calendar, offices/terms, scheduler, commands, save/load, worker protocol types)
 - **Phase 1.1** — **COMPLETE** (`1c7b079`) — save/state integrity hardening (scheduler/history temporal rules, domain-block authenticity, world-aware resume)
-- **Phase 2** — **IMPLEMENTED, pending review** — politician agents, sparse relationships/memories/beliefs, deterministic goals, explainable decision engine
-- Phase 3 (parties/factions/nominations as active institutions) has **not started**
+- **Phase 2** — **COMPLETE (`c43c0fb`)** — politician agents, sparse relationships/memories/beliefs, deterministic goals, explainable decision engine
+- **Phase 3** — **IMPLEMENTED, pending review** — parties, factions, leadership, endorsements, membership/defections, split foundation, presidential nomination systems
+- Phase 4 (general elections / campaign simulation) has **not started**
 
 Deliverables:
 
@@ -132,7 +133,7 @@ Acceptance criteria: CI can load every content file, validate every ID reference
 - Regular presidential election: second Saturday in October every 5 years, assume office 20 January following
 - Regular Assembly election: second Sunday in May every 4 years, assume office 1 June following
 - Normalized `SimState`, office definitions vs office terms, scheduler, commands, SimEvents, history
-- Save schemaVersion **1** at Phase 1; **schemaVersion 2** from Phase 2 (v1→v2 migration)
+- Save schemaVersion **1** at Phase 1; **schemaVersion 2** from Phase 2 (v1→v2); **schemaVersion 3** from Phase 3 (v2→v3)
 - Domain interrupts: unresolved political domain events (`requiresResolution`) cannot be skipped with `RESUME_TURN`
 - Worker protocol **types** only (no Worker runtime dependency)
 
@@ -140,7 +141,7 @@ Acceptance criteria: synthetic 20-year save/reload hash match; TERENA_2028 advan
 
 ## 11. Phase 2 — politicians, relationships and goals
 
-**IMPLEMENTED, pending review.** `@lorsain/sim` politician-brain substrate (`packages/sim/src/agents/`). Phase 3 has not started and must not be faked here.
+**COMPLETE (`c43c0fb`).** `@lorsain/sim` politician-brain substrate (`packages/sim/src/agents/`).
 
 - One politician type; the player is identified only by `playerPoliticianId`. NPC planners do not choose actions for that ID.
 - No runtime LLM. Structured causes/results are authoritative; prose is not.
@@ -153,15 +154,15 @@ Acceptance criteria: synthetic 20-year save/reload hash match; TERENA_2028 advan
 - **Domain-agnostic utility engine:** later domains supply `DecisionOption`s keyed to specific active goal IDs; Phase 2 ranks them with trait-weighted signals and a structured breakdown. Bounded `npc-decisions` noise only. Reordering valid unique-id options does not change the choice.
 - Save **schemaVersion 2**. v1 saves migrate with empty cognitive history, then `restoreSimulation` seeds deterministic goals. Documented as: Phase 1 saves begin Phase 2 cognitive history at migration/load because that state did not exist previously.
 
-Acceptance criteria for this phase: required relationship/memory/belief/goal/decision/player-autonomy/save tests in `@lorsain/sim`. Party contests, campaigns, elections, and legislation remain Phase 3+.
+Acceptance criteria for this phase: required relationship/memory/belief/goal/decision/player-autonomy/save tests in `@lorsain/sim`.
 
 ## 12. Phase 3 — parties, factions and nominations
 
-Implement party membership, caucuses, leaders, endorsements, discipline, membership elections, nomination rules and defect/split logic. Encode each 2028 party's nomination method separately through data-driven rule modules.
+**IMPLEMENTED, pending review.** Party institutions live in `packages/sim/src/parties/`. Membership authority is `PoliticianRuntime.partyId` / `factionId` (no persisted member arrays). `PARTY_IND` is a statistical aggregate, never a membership party. Runtime leadership is `PartyState.leaderId` / `FactionState.chairId`, not `AgentProfile.roleTypes` and not office terms. Starting 2028 presidential contests are **planned**, not auto-resolved on monthly turns.
 
-**Counting** for leadership/nomination RCV contests **consumes** `packages/election-math` (completed in Phase 0.5). Do not reimplement RCV/STV here.
+Each 2028 party nomination method is a rule module that builds a compact selectorate and always counts through `@lorsain/election-math` `countIrv`. Save **schemaVersion 3**; v2 saves migrate with empty party structs, then `restoreSimulation` seeds canonical institutions when `partyStates` are empty. Phase 4 general-election/campaign simulation has **not started**.
 
-Acceptance criteria: run 1,000 automated party leadership contests; results respond correctly to faction size, candidate relations, endorsements and uncertainty without collapsing into deterministic faction voting.
+Acceptance criteria: 1,000 automated party leadership contests respond to faction size and endorsements without collapsing into pure noise or a single-faction lock.
 
 ## 13. Phase 4 — election / campaign simulation (not counting math)
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addYears } from "./calendar.js";
 import { createSimulation, restoreSimulation } from "./engine.js";
-import { createRngService } from "./rng.js";
+import { createRngService, type RngService } from "./rng.js";
 import { parseSaveFile } from "./save.js";
 import { jsonClone, hashCanonical } from "./hash.js";
 import { syntheticWorld } from "./synthetic-world.js";
@@ -30,7 +30,11 @@ import {
   evaluateOption,
   type DecisionOption,
 } from "./agents/decisions.js";
-import { DECISION_WEIGHTS, RELATIONSHIP_MAX_ABS_DELTA } from "./agents/policy.js";
+import {
+  DECISION_OPTION_BUDGET,
+  DECISION_WEIGHTS,
+  RELATIONSHIP_MAX_ABS_DELTA,
+} from "./agents/policy.js";
 import type { KernelWorld, SaveFile, SimState } from "./types.js";
 
 function simFor(world: KernelWorld = syntheticWorld(), seed?: string) {
@@ -64,9 +68,17 @@ function stripToV1(save: SaveFile): Record<string, unknown> {
   delete sim.goals;
   delete sim.generatedAgentProfiles;
   delete sim.agentProfileOverrides;
+  delete sim.partyStates;
+  delete sim.factionStates;
+  delete sim.endorsements;
+  delete sim.partyContests;
+  delete sim.dynamicParties;
   const counters = sim.counters as Record<string, unknown>;
   delete counters.nextMemoryId;
   delete counters.nextGoalId;
+  delete counters.nextEndorsementId;
+  delete counters.nextPartyContestId;
+  delete counters.nextDynamicPartyId;
   return raw;
 }
 
@@ -364,6 +376,23 @@ describe("goals", () => {
       birthDate: "1938-01-01",
     });
     const faction = syntheticWorld("SEED-A");
+    faction.partyDefinitions.PARTY_LAB = {
+      partyId: "PARTY_LAB",
+      name: "Labour",
+      short: "LAB",
+      organizationType: "membership_party",
+      nominationRuleId: "none",
+      factionIds: ["FAC_TEST"],
+      canonicalFactionShares: { FAC_TEST: 1 },
+    };
+    faction.factionDefinitions.FAC_TEST = {
+      factionId: "FAC_TEST",
+      partyId: "PARTY_LAB",
+      name: "Test",
+      share: 1,
+    };
+    faction.startingFactionChairs.FAC_TEST = "P2";
+    faction.politicians[1]!.partyId = "PARTY_LAB";
     faction.politicians[1]!.factionId = "FAC_TEST";
     faction.agentProfiles.P2 = syntheticAgentProfile("P2", {
       roleTypes: ["faction_chair"],
@@ -557,8 +586,8 @@ describe("player autonomy", () => {
   });
 });
 
-describe("save schema v2", () => {
-  it("round-trips a new v2 game and migrates v1 saves", () => {
+describe("save schema v2/v3", () => {
+  it("round-trips a new v3 game and migrates v1 saves", () => {
     const world = syntheticWorld();
     const sim = simFor(world);
     const hash = sim.hashState();
@@ -567,7 +596,7 @@ describe("save schema v2", () => {
     const parsed = parseSaveFile(v1, "0.3.1-predev");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(2);
+    expect(parsed.save.schemaVersion).toBe(3);
     const migrated = restoreSimulation(parsed.save, world);
     expect(migrated.hashState()).toBe(hash);
 
@@ -1060,6 +1089,49 @@ describe("Phase 2 hardening: decisions", () => {
     expect(() => evaluateDecision([[] as never], ctx, rng)).toThrow(DecisionContractError);
     expect(() => evaluateDecision([undefined as never], ctx, rng)).toThrow(DecisionContractError);
     expect(rng.serialize()).toEqual(before);
+  });
+
+  it("keeps unconsidered over-budget options after the considered choice", () => {
+    const world = syntheticWorld();
+    world.agentProfiles.P1 = syntheticAgentProfile("P1", {
+      roleTypes: ["president"],
+      aiTier: "light",
+      traits: { ambition: 0.5 },
+    });
+    const sim = simFor(world);
+    const ctx = buildDecisionActorContext(world, sim.getSnapshot(), "P1", ["P2"]);
+    const budget = DECISION_OPTION_BUDGET.light;
+    const opts: DecisionOption[] = [];
+    for (let i = 0; i < budget + 1; i++) {
+      const id = String.fromCharCode(65 + i);
+      opts.push(
+        option(id, { careerBenefit: i === budget ? 0.55 : 0.8 - i * 0.02 }, { uncertainty: 1 }),
+      );
+    }
+    const base = createRngService("LIGHT-BUDGET");
+    const rng: RngService = {
+      algo: base.algo,
+      masterSeed: base.masterSeed,
+      uint32: (stream) => base.uint32(stream),
+      float01: (stream) => {
+        base.uint32(stream);
+        return 0;
+      },
+      serialize: () => base.serialize(),
+    };
+    const out = chooseDecision(opts, ctx, rng);
+    expect(out.chosen).not.toBeNull();
+    expect(out.ranked[0]?.optionId).toBe(out.chosen?.optionId);
+    expect(out.ranked[0]?.considered).toBe(true);
+    expect(out.ranked.filter((r) => r.considered)).toHaveLength(budget);
+    expect(out.ranked.some((r) => !r.considered)).toBe(true);
+    const firstUnconsidered = out.ranked.findIndex((r) => !r.considered);
+    expect(firstUnconsidered).toBe(budget);
+    expect(out.ranked.slice(0, firstUnconsidered).every((r) => r.considered)).toBe(true);
+    expect(out.ranked[firstUnconsidered]?.optionId).toBe(opts[budget]!.optionId);
+    const unconsidered = out.ranked.filter((r) => !r.considered);
+    expect(unconsidered.every((r) => r.finalUtility <= out.ranked[0]!.totalUtility)).toBe(true);
+    expect(out.chosen?.considered).toBe(true);
   });
 });
 

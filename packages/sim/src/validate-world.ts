@@ -1,6 +1,7 @@
 import { compareIsoDate, isIsoDate } from "./calendar.js";
 import { validateKernelAgentProfiles } from "./agents/validation.js";
 import { agentProfileError, getAgentProfile, readIssueSalienceOverride } from "./agents/profile.js";
+import { validatePartyAgainstWorld } from "./parties/validation.js";
 import { validateOfficeTermSet } from "./offices.js";
 import { resolutionEventMustBlock } from "./scheduler.js";
 import type { CommandError, KernelWorld, OfficeTerm, SimState } from "./types.js";
@@ -227,7 +228,7 @@ export function validateStateAgainstWorld(
       };
     }
   }
-  return null;
+  return validatePartyAgainstWorld(state, world);
 }
 
 export function uniqueAllocatedTermIds(state: {

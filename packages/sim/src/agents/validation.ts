@@ -150,11 +150,27 @@ function parseOverride(
   return out;
 }
 
+function dateWindowError(
+  date: string,
+  scenarioStartDate: string,
+  currentDate: string,
+  label: string,
+): string | null {
+  if (compareIsoDate(date, scenarioStartDate) < 0) {
+    return `${label} before scenarioStartDate`;
+  }
+  if (compareIsoDate(date, currentDate) > 0) {
+    return `${label} after currentDate`;
+  }
+  return null;
+}
+
 function parseEdge(
   sourceId: string,
   targetId: string,
   raw: unknown,
   politicianIds: Set<string>,
+  scenarioStartDate: string,
   currentDate: string,
 ): RelationshipEdge | string {
   if (!isRecord(raw)) return `relationships.${sourceId}.${targetId} must be an object`;
@@ -173,9 +189,13 @@ function parseEdge(
   if (!isIsoDate(raw.lastUpdatedDate)) {
     return `relationships.${sourceId}.${targetId} invalid lastUpdatedDate`;
   }
-  if (compareIsoDate(raw.lastUpdatedDate, currentDate) > 0) {
-    return `relationships.${sourceId}.${targetId} lastUpdatedDate after currentDate`;
-  }
+  const windowErr = dateWindowError(
+    raw.lastUpdatedDate,
+    scenarioStartDate,
+    currentDate,
+    `relationships.${sourceId}.${targetId} lastUpdatedDate`,
+  );
+  if (windowErr) return windowErr;
   if (!isInt(raw.interactionCount) || raw.interactionCount < 1) {
     return `relationships.${sourceId}.${targetId} interactionCount must be a positive integer`;
   }
@@ -194,8 +214,9 @@ function parseMemory(
   key: string,
   raw: unknown,
   politicianIds: Set<string>,
+  scenarioStartDate: string,
   currentDate: string,
-  historyIds: Set<string>,
+  historyDates: ReadonlyMap<string, string>,
 ): PoliticalMemory | string {
   if (!isRecord(raw)) return `memories.${key} must be an object`;
   if (raw.id !== key) return `memories.${key} id mismatch`;
@@ -217,7 +238,13 @@ function parseMemory(
     return `memories.${key} invalid kind`;
   }
   if (!isIsoDate(raw.date)) return `memories.${key} invalid date`;
-  if (compareIsoDate(raw.date, currentDate) > 0) return `memories.${key} date after currentDate`;
+  const memDateErr = dateWindowError(
+    raw.date,
+    scenarioStartDate,
+    currentDate,
+    `memories.${key} date`,
+  );
+  if (memDateErr) return memDateErr;
   if (!finiteInRange(raw.valence, -1, 1)) return `memories.${key} valence`;
   if (!finiteInRange(raw.salience, 0, 1)) return `memories.${key} salience`;
   if (typeof raw.durability !== "string" || !isMemoryDurability(raw.durability)) {
@@ -228,8 +255,13 @@ function parseMemory(
   }
   if (firstDuplicate(raw.tags)) return `memories.${key} duplicate tags`;
   if (raw.sourceEventId != null) {
-    if (typeof raw.sourceEventId !== "string" || !historyIds.has(raw.sourceEventId)) {
+    if (typeof raw.sourceEventId !== "string") {
       return `memories.${key} sourceEventId does not resolve`;
+    }
+    const sourceDate = historyDates.get(raw.sourceEventId);
+    if (sourceDate == null) return `memories.${key} sourceEventId does not resolve`;
+    if (compareIsoDate(sourceDate, raw.date) > 0) {
+      return `memories.${key} source event date must not be after memory date`;
     }
   }
   let relationshipEffects: PoliticalMemory["relationshipEffects"] = null;
@@ -266,6 +298,7 @@ function parseBelief(
   key: string,
   raw: unknown,
   politicianIds: Set<string>,
+  scenarioStartDate: string,
   currentDate: string,
 ): BeliefRecord | string {
   if (!isRecord(raw)) return `beliefs.${ownerId}.${targetId}.${key} must be an object`;
@@ -293,9 +326,13 @@ function parseBelief(
     return `beliefs.${ownerId}.${targetId}.${key} confidence`;
   }
   if (!isIsoDate(raw.lastUpdatedDate)) return `beliefs.${ownerId}.${targetId} lastUpdatedDate`;
-  if (compareIsoDate(raw.lastUpdatedDate, currentDate) > 0) {
-    return `beliefs.${ownerId}.${targetId} lastUpdatedDate after currentDate`;
-  }
+  const beliefDateErr = dateWindowError(
+    raw.lastUpdatedDate,
+    scenarioStartDate,
+    currentDate,
+    `beliefs.${ownerId}.${targetId} lastUpdatedDate`,
+  );
+  if (beliefDateErr) return beliefDateErr;
   if (!isInt(raw.evidenceCount) || raw.evidenceCount < 1) {
     return `beliefs.${ownerId}.${targetId} evidenceCount`;
   }
@@ -319,6 +356,7 @@ function parseGoal(
   key: string,
   raw: unknown,
   politicianIds: Set<string>,
+  scenarioStartDate: string,
   currentDate: string,
 ): PoliticianGoal | string {
   if (!isRecord(raw)) return `goals.${key} must be an object`;
@@ -341,11 +379,20 @@ function parseGoal(
   if (!isIsoDate(raw.createdDate) || !isIsoDate(raw.lastReviewedDate)) {
     return `goals.${key} invalid dates`;
   }
-  if (compareIsoDate(raw.createdDate, currentDate) > 0)
-    return `goals.${key} createdDate after currentDate`;
-  if (compareIsoDate(raw.lastReviewedDate, currentDate) > 0) {
-    return `goals.${key} lastReviewedDate after currentDate`;
-  }
+  const createdErr = dateWindowError(
+    raw.createdDate,
+    scenarioStartDate,
+    currentDate,
+    `goals.${key} createdDate`,
+  );
+  if (createdErr) return createdErr;
+  const reviewedErr = dateWindowError(
+    raw.lastReviewedDate,
+    scenarioStartDate,
+    currentDate,
+    `goals.${key} lastReviewedDate`,
+  );
+  if (reviewedErr) return reviewedErr;
   if (compareIsoDate(raw.lastReviewedDate, raw.createdDate) < 0) {
     return `goals.${key} lastReviewedDate before createdDate`;
   }
@@ -384,8 +431,9 @@ export function parseAgentState(
   raw: Record<string, unknown>,
   args: {
     politicianIds: Set<string>;
+    scenarioStartDate: string;
     currentDate: string;
-    historyIds: Set<string>;
+    historyDates: ReadonlyMap<string, string>;
     issueIds?: readonly string[];
     officeIds?: readonly string[];
   },
@@ -396,7 +444,14 @@ export function parseAgentState(
     if (!isRecord(inner)) return `relationships.${sourceId} must be an object`;
     relationships[sourceId] = {};
     for (const [targetId, rec] of Object.entries(inner)) {
-      const edge = parseEdge(sourceId, targetId, rec, args.politicianIds, args.currentDate);
+      const edge = parseEdge(
+        sourceId,
+        targetId,
+        rec,
+        args.politicianIds,
+        args.scenarioStartDate,
+        args.currentDate,
+      );
       if (typeof edge === "string") return edge;
       relationships[sourceId][targetId] = edge;
     }
@@ -404,7 +459,14 @@ export function parseAgentState(
   if (!isRecord(raw.memories)) return "memories must be an object";
   const memories: SimState["memories"] = {};
   for (const [id, rec] of Object.entries(raw.memories)) {
-    const mem = parseMemory(id, rec, args.politicianIds, args.currentDate, args.historyIds);
+    const mem = parseMemory(
+      id,
+      rec,
+      args.politicianIds,
+      args.scenarioStartDate,
+      args.currentDate,
+      args.historyDates,
+    );
     if (typeof mem === "string") return mem;
     memories[id] = mem;
   }
@@ -423,6 +485,7 @@ export function parseAgentState(
           key,
           rec,
           args.politicianIds,
+          args.scenarioStartDate,
           args.currentDate,
         );
         if (typeof belief === "string") return belief;
@@ -433,7 +496,7 @@ export function parseAgentState(
   if (!isRecord(raw.goals)) return "goals must be an object";
   const goals: SimState["goals"] = {};
   for (const [id, rec] of Object.entries(raw.goals)) {
-    const goal = parseGoal(id, rec, args.politicianIds, args.currentDate);
+    const goal = parseGoal(id, rec, args.politicianIds, args.scenarioStartDate, args.currentDate);
     if (typeof goal === "string") return goal;
     goals[id] = goal;
   }

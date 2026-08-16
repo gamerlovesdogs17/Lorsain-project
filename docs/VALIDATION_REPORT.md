@@ -9,6 +9,6 @@ Assembly constituencies crossing province boundaries by design: 34/48
 **STATUS: PASS** (TypeScript `pnpm validate:content`)
 
 Notes:
-- Presidential eligibility is pending/reference until approved.
+- Presidential eligibility is approved/authoritative (`data/terena_presidential_eligibility.json`; runtime evaluates it from KernelWorld).
 - R/RT IDs are canonical geography IDs but not required on `terena_game_map.svg`.
 - Python validator retained; CI runs `python3 scripts/validate_content.py`.

@@ -4,8 +4,29 @@ import { recordObservation } from "./agents/beliefs.js";
 import { needsInitialGoals, reviewGoals, seedInitialGoals } from "./agents/goals.js";
 import { recordPoliticalMemory } from "./agents/memories.js";
 import { applyRelationshipChange } from "./agents/relationships.js";
+import {
+  changeFaction,
+  changePartyMembership,
+  applyRetirementOrDeathVacancies,
+} from "./parties/membership.js";
+import { endorseCandidate, withdrawEndorsement } from "./parties/endorsements.js";
+import {
+  createPartyContest,
+  cancelPartyContest,
+  declareCandidacy,
+  openPartyContest,
+  resolvePartyContest,
+  setQualificationEvidence,
+  withdrawCandidacy,
+} from "./parties/contests.js";
+import { splitFaction } from "./parties/split.js";
+import {
+  emptyPartyRuntime,
+  needsPartyInstitutionSeed,
+  seedPartyInstitutions,
+} from "./parties/state.js";
 import { deepFreeze, hashCanonical, jsonClone } from "./hash.js";
-import { isJsonObject, jsonSafetyError } from "./json.js";
+import { isJsonObject, jsonSafetyError, type JsonObject } from "./json.js";
 import { assumeOffice, endTerm, resumeTerm, vacateOffice } from "./offices.js";
 import {
   STREAM_NAMES,
@@ -87,6 +108,9 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextCommandId: 1,
       nextMemoryId: 1,
       nextGoalId: 1,
+      nextEndorsementId: 1,
+      nextPartyContestId: 1,
+      nextDynamicPartyId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
@@ -94,6 +118,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       certifiedPresidentElectId: null,
     },
     ...emptyAgentRuntime(),
+    ...emptyPartyRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -105,6 +130,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       throw new Error(queued.error.message);
     }
   }
+  seedPartyInstitutions(state, world);
   seedInitialGoals(state, world);
   return state;
 }
@@ -259,6 +285,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   const rng = restoreRngService(parsed.save.simulation.rng);
   const state = jsonClone(parsed.save.simulation);
   state.rng = rng.serialize();
+  if (needsPartyInstitutionSeed(state, frozen)) seedPartyInstitutions(state, frozen);
   if (needsInitialGoals(state)) seedInitialGoals(state, frozen);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
@@ -433,6 +460,41 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
             sourceScheduledEventId: null,
             sourceCommandId: commandId,
           }),
+        );
+        events.push(
+          ...applyRetirementOrDeathVacancies(state, world, command.politicianId, commandId),
+        );
+      }
+      return { ok: true, commandId, events, interrupt: null };
+    }
+
+    if (command.type === "DEV_SET_RETIRED") {
+      const p = state.politicians[command.politicianId];
+      if (!p) return fail("UNKNOWN_POLITICIAN", command.politicianId);
+      const commandId = nextCommandId();
+      p.retired = command.retired;
+      const events: SimEvent[] = [];
+      if (command.retired) {
+        for (const t of Object.values(state.officeTerms)) {
+          if (t.holderId === command.politicianId && t.status !== "ended") {
+            endTerm(state, t.id, state.currentDate, "retirement");
+          }
+        }
+        events.push(
+          pushHistory(state, {
+            date: state.currentDate,
+            type: "POLITICIAN_RETIRED",
+            importance: 0.85,
+            visibility: "public",
+            actorIds: [command.politicianId],
+            entityIds: [command.politicianId],
+            payload: {},
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
+        );
+        events.push(
+          ...applyRetirementOrDeathVacancies(state, world, command.politicianId, commandId),
         );
       }
       return { ok: true, commandId, events, interrupt: null };
@@ -734,6 +796,205 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         ],
         interrupt: null,
       };
+    }
+
+    if (command.type === "CHANGE_PARTY_MEMBERSHIP") {
+      const preview = changePartyMembership(
+        jsonClone(state),
+        world,
+        command.politicianId,
+        command.partyId,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = changePartyMembership(
+        state,
+        world,
+        command.politicianId,
+        command.partyId,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CHANGE_FACTION") {
+      const preview = changeFaction(
+        jsonClone(state),
+        world,
+        command.politicianId,
+        command.factionId,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = changeFaction(state, world, command.politicianId, command.factionId, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DECLARE_PARTY_CONTEST_CANDIDACY") {
+      if (command.politicianId === state.playerPoliticianId) {
+        /* player may declare explicitly */
+      }
+      const preview = declareCandidacy(
+        jsonClone(state),
+        world,
+        command.contestId,
+        command.politicianId,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = declareCandidacy(
+        state,
+        world,
+        command.contestId,
+        command.politicianId,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "WITHDRAW_PARTY_CONTEST_CANDIDACY") {
+      const preview = withdrawCandidacy(
+        jsonClone(state),
+        command.contestId,
+        command.politicianId,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = withdrawCandidacy(state, command.contestId, command.politicianId, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "ENDORSE_PARTY_CONTEST_CANDIDATE") {
+      const endorseArgs = {
+        endorserType: command.endorserType ?? "politician",
+        endorserId: command.endorserId,
+        targetId: command.targetId,
+        contestId: command.contestId,
+      };
+      const preview = endorseCandidate(jsonClone(state), world, endorseArgs, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = endorseCandidate(state, world, endorseArgs, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "WITHDRAW_ENDORSEMENT") {
+      const preview = withdrawEndorsement(jsonClone(state), command.endorsementId, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = withdrawEndorsement(state, command.endorsementId, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DEV_CREATE_PARTY_CONTEST") {
+      const metadata: JsonObject =
+        command.selectorMethod != null ? { selectorMethod: command.selectorMethod } : {};
+      const createArgs = {
+        type: command.contestType,
+        partyId: command.partyId,
+        factionId: command.factionId ?? null,
+        metadata,
+        ...(command.ruleId != null ? { ruleId: command.ruleId } : {}),
+      };
+      const preview = createPartyContest(jsonClone(state), world, createArgs, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = createPartyContest(state, world, createArgs, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DEV_OPEN_PARTY_CONTEST") {
+      const preview = openPartyContest(jsonClone(state), command.contestId, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = openPartyContest(state, command.contestId, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DEV_RESOLVE_PARTY_CONTEST") {
+      const previewRng = restoreRngService(state.rng);
+      const preview = resolvePartyContest(
+        jsonClone(state),
+        world,
+        command.contestId,
+        previewRng,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = resolvePartyContest(state, world, command.contestId, rng, commandId);
+      syncRng(state, rng);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DEV_CANCEL_PARTY_CONTEST") {
+      const preview = cancelPartyContest(jsonClone(state), command.contestId, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = cancelPartyContest(state, command.contestId, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DEV_SET_CONTEST_QUALIFICATION") {
+      const preview = setQualificationEvidence(
+        jsonClone(state),
+        command.contestId,
+        command.politicianId,
+        command.evidence,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = setQualificationEvidence(
+        state,
+        command.contestId,
+        command.politicianId,
+        command.evidence,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "DEV_SPLIT_FACTION") {
+      const preview = splitFaction(
+        jsonClone(state),
+        world,
+        {
+          factionId: command.factionId,
+          newPartyName: command.newPartyName,
+          newPartyShort: command.newPartyShort,
+          politicianIds: command.politicianIds,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = splitFaction(
+        state,
+        world,
+        {
+          factionId: command.factionId,
+          newPartyName: command.newPartyName,
+          newPartyShort: command.newPartyShort,
+          politicianIds: command.politicianIds,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
     return fail("UNKNOWN_COMMAND", "Unsupported command");

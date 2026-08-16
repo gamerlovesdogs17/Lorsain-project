@@ -160,7 +160,11 @@ export function generateGoalDrafts(
     });
   }
 
-  if (profile.roleTypes.includes("faction_chair") && runtime.factionId) {
+  const hasPartyInstitutions = Object.keys(state.partyStates).length > 0;
+  const isFactionChair = hasPartyInstitutions
+    ? Boolean(runtime.factionId && state.factionStates[runtime.factionId]?.chairId === politicianId)
+    : profile.roleTypes.includes("faction_chair") && Boolean(runtime.factionId);
+  if (isFactionChair && runtime.factionId) {
     drafts.push({
       type: "advance_faction",
       priority: clamp01(0.55 + 0.4 * t.factionLoyalty),
@@ -174,7 +178,10 @@ export function generateGoalDrafts(
     });
   }
 
-  if (profile.roleTypes.includes("party_leader") && runtime.partyId) {
+  const isPartyLeader = hasPartyInstitutions
+    ? Boolean(runtime.partyId && state.partyStates[runtime.partyId]?.leaderId === politicianId)
+    : profile.roleTypes.includes("party_leader") && Boolean(runtime.partyId);
+  if (isPartyLeader && runtime.partyId) {
     drafts.push({
       type: "advance_party",
       priority: clamp01(0.55 + 0.4 * t.partyLoyalty),
@@ -212,7 +219,18 @@ export function generateGoalDrafts(
     });
   }
 
-  const status = profile.presidentialStatus;
+  let status = profile.presidentialStatus;
+  if (hasPartyInstitutions) {
+    status = null;
+    for (const contest of Object.values(state.partyContests)) {
+      if (contest.type !== "presidential_nomination") continue;
+      const entry = contest.entries[politicianId];
+      if (!entry || entry.status === "withdrawn" || entry.status === "eliminated") continue;
+      if (entry.status === "winner") continue;
+      status = entry.seedPresidentialStatus ?? "declared";
+      break;
+    }
+  }
   if (
     status &&
     (PRESIDENTIAL_SEEK_STATUSES as readonly string[]).includes(status) &&

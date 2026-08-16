@@ -5,6 +5,7 @@ import { parseCanonicalAllocatedId } from "./ids.js";
 import { parseSerializedRngState, type SerializedRngState } from "./rng.js";
 import { resolutionEventMustBlock } from "./scheduler.js";
 import { agentCounterError, parseAgentState } from "./agents/validation.js";
+import { parsePartyRuntime, partyCounterError } from "./parties/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -357,6 +358,9 @@ function parseCounters(raw: unknown): Counters | string {
     "nextCommandId",
     "nextMemoryId",
     "nextGoalId",
+    "nextEndorsementId",
+    "nextPartyContestId",
+    "nextDynamicPartyId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
@@ -565,14 +569,24 @@ function parseSimulation(
   }
   const presidential = parsePresidential(raw.presidential, new Set(Object.keys(politicians)));
   if (typeof presidential === "string") return presidential;
+  const historyDates = new Map(history.map((ev) => [ev.id, ev.date]));
   const agent = parseAgentState(raw, {
     politicianIds: new Set(Object.keys(politicians)),
+    scenarioStartDate: raw.scenarioStartDate,
     currentDate: raw.currentDate,
-    historyIds: histIds,
+    historyDates,
   });
   if (typeof agent === "string") return agent;
   const agentCountErr = agentCounterError(agent, counters);
   if (agentCountErr) return agentCountErr;
+  const party = parsePartyRuntime(raw, {
+    politicianIds: new Set(Object.keys(politicians)),
+    scenarioStartDate: raw.scenarioStartDate,
+    currentDate: raw.currentDate,
+  });
+  if (typeof party === "string") return party;
+  const partyCountErr = partyCounterError(party, counters);
+  if (partyCountErr) return partyCountErr;
   return {
     schemaVersion: SAVE_SCHEMA_VERSION,
     contentVersion: raw.contentVersion,
@@ -596,6 +610,11 @@ function parseSimulation(
     goals: agent.goals,
     generatedAgentProfiles: agent.generatedAgentProfiles,
     agentProfileOverrides: agent.agentProfileOverrides,
+    partyStates: party.partyStates,
+    factionStates: party.factionStates,
+    endorsements: party.endorsements,
+    partyContests: party.partyContests,
+    dynamicParties: party.dynamicParties,
   };
 }
 
@@ -712,3 +731,37 @@ export function migrateSaveV1ToV2(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 1, toSchema: 2, migrate: migrateSaveV1ToV2 });
+
+/**
+ * Phase 2 saves begin Phase 3 party institutional state at migration/load
+ * because PartyState/FactionState/endorsements/contests did not exist.
+ * No fabricated past contests are written. restoreSimulation seeds canonical
+ * starting leadership from KernelWorld when partyStates are empty.
+ */
+export function migrateSaveV2ToV3(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 3 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 3 };
+  sim.partyStates = isRecord(sim.partyStates) ? sim.partyStates : {};
+  sim.factionStates = isRecord(sim.factionStates) ? sim.factionStates : {};
+  sim.endorsements = isRecord(sim.endorsements) ? sim.endorsements : {};
+  sim.partyContests = isRecord(sim.partyContests) ? sim.partyContests : {};
+  sim.dynamicParties = isRecord(sim.dynamicParties) ? sim.dynamicParties : {};
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextEndorsementId: isInt(sim.counters.nextEndorsementId) ? sim.counters.nextEndorsementId : 1,
+      nextPartyContestId: isInt(sim.counters.nextPartyContestId)
+        ? sim.counters.nextPartyContestId
+        : 1,
+      nextDynamicPartyId: isInt(sim.counters.nextDynamicPartyId)
+        ? sim.counters.nextDynamicPartyId
+        : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 2, toSchema: 3, migrate: migrateSaveV2ToV3 });

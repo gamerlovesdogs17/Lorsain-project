@@ -398,6 +398,9 @@ export type PublicPoliticianFacts = {
   occupying: Array<{ officeId: string; kind: string }>;
   officeIds: string[];
   officeKinds: string[];
+  partyLeaderOf: string | null;
+  factionChairOf: string | null;
+  contestCandidacies: Array<{ contestId: string; status: string; contestType: string }>;
 };
 
 export function publicPoliticianFacts(
@@ -416,6 +419,31 @@ export function publicPoliticianFacts(
     });
   }
   occupying.sort((a, b) => (a.officeId < b.officeId ? -1 : a.officeId > b.officeId ? 1 : 0));
+  let partyLeaderOf: string | null = null;
+  for (const party of Object.values(state.partyStates)) {
+    if (party.leaderId === politicianId) {
+      partyLeaderOf = party.partyId;
+      break;
+    }
+  }
+  let factionChairOf: string | null = null;
+  for (const fac of Object.values(state.factionStates)) {
+    if (fac.chairId === politicianId) {
+      factionChairOf = fac.factionId;
+      break;
+    }
+  }
+  const contestCandidacies: PublicPoliticianFacts["contestCandidacies"] = [];
+  for (const contest of Object.values(state.partyContests)) {
+    const entry = contest.entries[politicianId];
+    if (!entry) continue;
+    contestCandidacies.push({
+      contestId: contest.id,
+      status: entry.status,
+      contestType: contest.type,
+    });
+  }
+  contestCandidacies.sort((a, b) => (a.contestId < b.contestId ? -1 : 1));
   return {
     id: p.id,
     alive: p.alive,
@@ -425,5 +453,8 @@ export function publicPoliticianFacts(
     occupying,
     officeIds: occupying.map((o) => o.officeId),
     officeKinds: occupying.map((o) => o.kind),
+    partyLeaderOf,
+    factionChairOf,
+    contestCandidacies,
   };
 }

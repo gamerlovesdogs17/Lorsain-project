@@ -7,8 +7,21 @@ import type { PoliticalMemory } from "./agents/memories.js";
 import type { AgentProfile, AgentProfileOverride } from "./agents/profile.js";
 import type { RelationshipEdge } from "./agents/relationships.js";
 import type { MemoryDurability, MemoryKind } from "./agents/types.js";
+import type {
+  DynamicPartyDefinition,
+  EndorsementRecord,
+  FactionDefinition,
+  FactionState,
+  NominationMethod,
+  NominationRuleDefinition,
+  PartyContest,
+  PartyDefinition,
+  PartyState,
+  PresidentialEligibilityRules,
+  ProvincialPartyOrganization,
+} from "./parties/types.js";
 
-export const SAVE_SCHEMA_VERSION = 2 as const;
+export const SAVE_SCHEMA_VERSION = 3 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -90,6 +103,9 @@ export type Counters = {
   nextCommandId: number;
   nextMemoryId: number;
   nextGoalId: number;
+  nextEndorsementId: number;
+  nextPartyContestId: number;
+  nextDynamicPartyId: number;
 };
 
 export type PresidentialRuntime = {
@@ -121,6 +137,11 @@ export type SimState = {
   goals: Record<string, PoliticianGoal>;
   generatedAgentProfiles: Record<string, AgentProfile>;
   agentProfileOverrides: Record<string, AgentProfileOverride>;
+  partyStates: Record<string, PartyState>;
+  factionStates: Record<string, FactionState>;
+  endorsements: Record<string, EndorsementRecord>;
+  partyContests: Record<string, PartyContest>;
+  dynamicParties: Record<string, DynamicPartyDefinition>;
 };
 
 export type Command =
@@ -143,6 +164,7 @@ export type Command =
       requiresResolution?: boolean;
     }
   | { type: "DEV_SET_ALIVE"; politicianId: string; alive: boolean }
+  | { type: "DEV_SET_RETIRED"; politicianId: string; retired: boolean }
   | { type: "DEV_VACATE_OFFICE"; officeId: string; reason: string }
   | { type: "DEV_CERTIFY_PRESIDENT_ELECT"; politicianId: string }
   | {
@@ -181,7 +203,58 @@ export type Command =
       sourceReliability: number;
       source?: string | null;
     }
-  | { type: "DEV_REVIEW_AGENT_GOALS"; politicianId?: string };
+  | { type: "DEV_REVIEW_AGENT_GOALS"; politicianId?: string }
+  | {
+      type: "CHANGE_PARTY_MEMBERSHIP";
+      politicianId: string;
+      partyId: string | null;
+    }
+  | { type: "CHANGE_FACTION"; politicianId: string; factionId: string | null }
+  | {
+      type: "DECLARE_PARTY_CONTEST_CANDIDACY";
+      contestId: string;
+      politicianId: string;
+    }
+  | {
+      type: "WITHDRAW_PARTY_CONTEST_CANDIDACY";
+      contestId: string;
+      politicianId: string;
+    }
+  | {
+      type: "ENDORSE_PARTY_CONTEST_CANDIDATE";
+      contestId: string;
+      endorserId: string;
+      targetId: string;
+      endorserType?: "politician" | "faction" | "provincial_organization";
+    }
+  | { type: "WITHDRAW_ENDORSEMENT"; endorsementId: string }
+  | {
+      type: "DEV_CREATE_PARTY_CONTEST";
+      contestType: "presidential_nomination" | "party_leadership" | "faction_chair";
+      partyId: string;
+      factionId?: string | null;
+      ruleId?: string;
+      selectorMethod?: NominationMethod;
+    }
+  | { type: "DEV_OPEN_PARTY_CONTEST"; contestId: string }
+  | { type: "DEV_RESOLVE_PARTY_CONTEST"; contestId: string }
+  | { type: "DEV_CANCEL_PARTY_CONTEST"; contestId: string }
+  | {
+      type: "DEV_SET_CONTEST_QUALIFICATION";
+      contestId: string;
+      politicianId: string;
+      evidence: {
+        memberNominationRequirementSatisfied?: boolean;
+        provincialSupportRequirementSatisfied?: boolean;
+      };
+    }
+  | {
+      type: "DEV_SPLIT_FACTION";
+      factionId: string;
+      newPartyName: string;
+      newPartyShort: string;
+      politicianIds: string[];
+    };
 
 export type CommandError = { code: string; message: string };
 
@@ -257,6 +330,18 @@ export type KernelWorld = {
   electedTermCounts: Record<string, number>;
   agentProfiles: Record<string, AgentProfile>;
   issueIds: string[];
+  partyDefinitions: Record<string, PartyDefinition>;
+  factionDefinitions: Record<string, FactionDefinition>;
+  nominationRules: Record<string, NominationRuleDefinition>;
+  independentAggregatePartyId: string;
+  startingPartyLeaders: Record<string, string>;
+  startingFactionChairs: Record<string, string>;
+  provinceIds: string[];
+  politicianHomeProvince: Record<string, string>;
+  constituencyProvinceShares: Record<string, Array<{ provinceId: string; share: number }>>;
+  partyProvinceBaseline: Record<string, Record<string, string>>;
+  provincialPartyOrganizations: Record<string, ProvincialPartyOrganization>;
+  presidentialEligibility: PresidentialEligibilityRules;
 };
 
 export type CreateSimulationOptions = {

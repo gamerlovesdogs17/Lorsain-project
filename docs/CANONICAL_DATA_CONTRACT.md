@@ -65,7 +65,7 @@ Files in `data/` define scenario/static content. Runtime systems must clone/inst
 ## 6. Electoral counting and eligibility
 
 - Counting rules: `data/terena_electoral_counting.json` + `docs/TERENA_ELECTORAL_COUNTING.md` (implemented in Phase 0.5 `election-math`)
-- Presidential eligibility: `data/terena_presidential_eligibility.json` is **pending/reference** (`derived_or_reference.presidential_eligibility_pending`) until explicitly approved and promoted to authoritative. Draft defaults are not final gameplay law.
+- Presidential eligibility: `data/terena_presidential_eligibility.json` is **approved/authoritative** (`authoritative.presidential_eligibility`). Runtime presidential candidacy (Phase 3+) evaluates these rules from validated KernelWorld input. Do not treat draft defaults as current law.
 
 ## 7. Raw Azgaar source
 

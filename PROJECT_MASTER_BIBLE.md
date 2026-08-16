@@ -810,21 +810,17 @@ Acceptance criteria: 20-year synthetic save/reload hash match; Terena play stops
 
 ## 11. Phase 2 — politicians, relationships and goals
 
-**IMPLEMENTED, pending review.** Persistent politician agents in `@lorsain/sim` (`packages/sim/src/agents/`). One politician type; player = `playerPoliticianId` only. No runtime LLM.
+**COMPLETE (`c43c0fb`).** Persistent politician agents in `@lorsain/sim` (`packages/sim/src/agents/`). One politician type; player = `playerPoliticianId` only. No runtime LLM.
 
 Hidden simulation truth (`AgentProfile` ideology/traits/skills) is not automatically known to others. Other actors hold sparse directional relationships, subjective memories, and beliefs. The decision engine evaluates domain-supplied options from `DecisionActorContext` (self truth + public facts + owned beliefs/relationships/goals), never another politician's hidden profile.
 
-Canonical starting profiles stay on `KernelWorld`. Future generated politicians will use save-owned `generatedAgentProfiles`. Relationships/memories/beliefs start empty (no 530×530 init). Initial goals are deterministic from canonical facts, not the future-history seed. Save schemaVersion **2**; v1 saves migrate with empty cognitive history then receive a deterministic goal seed on restore.
-
-Phase 3 (parties/factions/nominations as executing institutions) has **not started**.
+Canonical starting profiles stay on `KernelWorld`. Future generated politicians will use save-owned `generatedAgentProfiles`. Relationships/memories/beliefs start empty (no 530×530 init). Initial goals are deterministic from canonical facts, not the future-history seed. Save schemaVersion **2** at Phase 2 (`c43c0fb`); v1 saves migrate with empty cognitive history then receive a deterministic goal seed on restore.
 
 ## 12. Phase 3 — parties, factions and nominations
 
-Implement party membership, caucuses, leaders, endorsements, discipline, membership elections, nomination rules and defect/split logic. Encode each 2028 party's nomination method separately through data-driven rule modules.
+**IMPLEMENTED, pending review.** Runtime parties/factions/endorsements/contests in `@lorsain/sim` (`packages/sim/src/parties/`). Membership is derived from `PoliticianRuntime`; `PARTY_IND` is never a joinable party. Leadership is runtime `PartyState`/`FactionState`, not office terms. Nomination RCV always calls `countIrv`. Save schemaVersion **3**; v2→v3 migration seeds empty party structs and `restoreSimulation` initializes canonical 2028 institutions when needed. Phase 4 has **not started**.
 
-**Counting** for leadership/nomination RCV contests **consumes** `packages/election-math` (Phase 0.5). Do not reimplement RCV/STV here.
-
-Acceptance criteria: run 1,000 automated party leadership contests; results respond correctly to faction size, candidate relations, endorsements and uncertainty without collapsing into deterministic faction voting.
+Acceptance criteria: 1,000 automated party leadership contests respond to faction size and endorsements without collapsing into pure noise.
 
 ## 13. Phase 4 — election / campaign simulation (not counting math)
 

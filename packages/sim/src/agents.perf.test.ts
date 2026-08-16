@@ -11,6 +11,7 @@ import { recordObservation } from "./agents/beliefs.js";
 import { buildDecisionActorContext } from "./agents/context.js";
 import { evaluateDecision, emptySignals, type DecisionOption } from "./agents/decisions.js";
 import type { SimState } from "./types.js";
+import { terenaPartyFields } from "./terena-party-input.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 
@@ -25,6 +26,13 @@ describe("Phase 2 performance substrate", () => {
       offices: bundle.content.terena_offices.offices,
       constitution: jsonClone(bundle.content.terena_constitution),
       administrations: bundle.content.terena_presidential_administrations.administrations,
+      ...terenaPartyFields({
+        parties: bundle.content.terena_parties.parties,
+        nominationRules: bundle.content.terena_nomination_rules.rules,
+        provinceFeatures: bundle.content.terena_provinces.features,
+        constituencyFeatures: bundle.content.terena_constituencies.features,
+      }),
+      presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     } satisfies TerenaKernelInput);
     const sim = createSimulation({ world, playerPoliticianId: "NPC002" });
     const state = jsonClone(sim.getSnapshot()) as SimState;

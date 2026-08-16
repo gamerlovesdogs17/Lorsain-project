@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 2 saves use `schemaVersion: 2` and `contentVersion: 0.3.1-predev`. Phase 1 `schemaVersion: 1` saves migrate to v2.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 3 saves use `schemaVersion: 3` and `contentVersion: 0.3.1-predev`. Phase 2 `schemaVersion: 2` saves migrate to v3. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3.
 
 ## 3. Core static schemas
 
@@ -295,17 +295,18 @@ News and history pages consume events; they do not invent a separate reality.
 
 ## 14. Save root
 
-Phase 2 save envelope (`schemaVersion: 2`):
+Phase 3 save envelope (`schemaVersion: 3`):
 
 ```ts
 interface SaveFile {
-  schemaVersion: 2;
+  schemaVersion: 3;
   contentVersion: string;
   scenarioId: string;
   simulation: SimState;
   // rng, calendar, officeTerms, scheduler, history, counters, interrupt,
   // relationships, memories, beliefs, goals, generatedAgentProfiles,
-  // agentProfileOverrides
+  // agentProfileOverrides, partyStates, factionStates, endorsements,
+  // partyContests, dynamicParties
 }
 ```
 
@@ -315,7 +316,9 @@ Loaded saves are untrusted `unknown` and are fully structurally validated. Conte
 
 **v1 → v2:** Phase 1 saves had no agent relationships/memories/beliefs/goals. Migration initializes those structures to empty/default values and adds `nextMemoryId` / `nextGoalId`. Phase 1 saves begin Phase 2 cognitive history at migration/load because that state did not exist previously. No fabricated interpersonal past is written. `restoreSimulation` then runs the same deterministic initial-goal generator used by new games when `goals` is empty and `nextGoalId === 1`.
 
-Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`. `banana`, `EVT0`, and `EVTabc` are rejected.
+**v2 → v3:** Phase 2 saves had no `PartyState` / `FactionState` / endorsements / contests. Migration initializes those structures to empty and adds `nextEndorsementId` / `nextPartyContestId` / `nextDynamicPartyId`. No fabricated past contests are written. `restoreSimulation` seeds canonical starting leadership and planned 2028 presidential contests from `KernelWorld` when `partyStates` are empty.
+
+Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`. `banana`, `EVT0`, and `EVTabc` are rejected.
 
 ### 14.1 Agent state (Phase 2)
 
@@ -324,7 +327,18 @@ Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed
 - **Memories:** owner-subjective `MEM…` records with kind, valence, salience, durability (`fleeting|normal|durable|permanent`), tags, optional source SimEvent. Effective salience is lazy. Non-permanent caps: rich 100 / standard 50 / light 20.
 - **Beliefs:** sparse owner→target topic/dimension estimates. Ideology −1..+1; traits/skills 0..1; confidence 0..1. Updated by observations; confidence becomes stale lazily. Unknown remains unknown. Observation quality is `observationConfidence * sourceReliability`; quality ≤ 0 writes nothing.
 - **Goals:** `GOAL…` records with type, priority, status (`active|satisfied|abandoned|superseded`), horizon, optional targets. Deterministic initial generation from canonical facts. No RNG. Player politicians may hold derived goals; NPC planners still do not act for `playerPoliticianId`. Mutating `reviewGoals` requires `asOfDate === currentDate`.
-- **Decisions:** domain supplies `DecisionOption`s. `chooseDecision().ranked` is sorted by `finalUtility` descending, then `optionId` ascending. Stochastic adjustment uses only the `npc-decisions` stream and is assigned in optionId order.
+- **Decisions:** domain supplies `DecisionOption`s. `chooseDecision().ranked` lists considered options first, then unconsidered diagnostics; within each group `finalUtility` descending, then `optionId` ascending. `ranked[0]` is the chosen option for every nonempty decision. Stochastic adjustment uses only the `npc-decisions` stream and is assigned in optionId order.
+
+### 14.2 Party institutions (Phase 3)
+
+- **Membership authority:** `PoliticianRuntime.partyId` / `factionId`. Independents use `null` / `null`. `PARTY_IND` is a statistical aggregate and must never appear as membership or as a `PartyState`.
+- **Derived queries:** `partyMembers`, `factionMembers`, `assemblyCaucus`, `factionAssemblyCaucus`. No persisted member arrays.
+- **Runtime leadership:** `PartyState.leaderId` and `FactionState.chairId`. `AgentProfile.roleTypes` and office terms are not the live leadership source. Public facts expose `partyLeaderOf` / `factionChairOf` / `contestCandidacies`.
+- **Endorsements:** `END…` records. One active endorsement per endorser per single-winner contest (politician, institutional faction, or provincial organization). Same-target repeats reject (`ALREADY_ENDORSED_CANDIDATE`) without mutation. A later different-target endorsement supersedes. Politician endorsements write one Phase 2 memory and a small relationship delta once. Institutional faction endorsements must belong to the contest party. Provincial-organization endorsements must resolve to `PORG:{partyId}:{provinceId}`.
+- **PartyContest:** planned → open → voting → resolved. Starting 2028 presidential contests seed as **planned** and are not auto-resolved on monthly turns. Qualification uses numeric canon gates where present (NU 0.15 of **current** caucus; PM 4 **distinct legitimate** provincial-org endorsements). Labour/Green/RL boolean flags remain qualification evidence, not invented percentages. Civic `supporter_registration_required` is selectorate composition, not a candidate filing gate. Generic leadership/faction-chair contests require an explicit `selectorMethod` and must not inherit presidential nomination rules. Counts always go through `countIrv`. Formal archives store exact `countInput` ballots (id/weight/rankings) plus the IRV result; lots replay from archived draws. Selector preference noise uses the `campaigns` stream; politician caucus rankings use Phase 2 `npc-decisions`; lots use `elections`.
+- **Selectorates:** compact heterogeneous weighted groups (faction × tendency × member-home region for members/supporters/convention; geography for RL), not citizen entities and not one bloc per faction. Outsider groups that rank two same-faction candidates 1–2 transfer to a cross-faction candidate before the faction rival. Member/supporter/convention faction weights blend canonical shares with current roster composition (`CURRENT_FACTION_BLEND = 0.22`). Mass selectorates use public/institutional facts only. RL provincial weights combine 2026 first-preference × `province_population_shares` with a 0.012 floor.
+- **Provincial party organizations:** `PORG:{partyId}:{provinceId}` — one active unit per membership party × canonical province. Not Phase 9 interest groups.
+- **Splits:** `DEV_SPLIT_FACTION` creates a `DPARTY…` dynamic party, moves listed faction members, and leaves the new party `leadership_vacant` with `PARTY_LEADERSHIP_CONTEST_REQUIRED`. It does not silently appoint `movers[0]` as leader.
 
 PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolved` is rejected). BLOCKING_DOMAIN remains `unresolved` until a domain resolver exists.
 

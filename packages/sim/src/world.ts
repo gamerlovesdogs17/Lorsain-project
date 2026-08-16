@@ -12,6 +12,8 @@ import { expirationPolicyForKind } from "./offices.js";
 import type { JsonObject } from "./json.js";
 import type { KernelOffice, KernelWorld, OfficeTerm, PoliticianRuntime } from "./types.js";
 import { profileFromFigure, type FigureProfileSource } from "./agents/profile.js";
+import { buildPartyKernelSlice, emptyPartyKernelSlice } from "./parties/content.js";
+import { presidentialEligibilityFromContent } from "./parties/eligibility.js";
 
 type Role = {
   type: string;
@@ -25,8 +27,10 @@ type Role = {
 type FigureIn = FigureProfileSource & {
   party_id?: string | null;
   faction_id?: string | null;
+  home_province_id?: string;
   roles?: Role[];
   court?: { seat_index: number; appointed: string; term_ends: string; chief?: boolean };
+  presidential_status?: string | null;
 };
 
 type OfficeIn = {
@@ -101,6 +105,43 @@ export type TerenaKernelInput = {
     term_end: string;
     status?: string;
   }>;
+  parties?: Array<{
+    id: string;
+    name: string;
+    short?: string;
+    organization_type?: string;
+    nomination_rule_id: string;
+    factions: Array<{ id: string; name: string; share: number; party_id?: string }>;
+  }>;
+  nominationRules?: Array<{
+    id: string;
+    party_id: string;
+    method: string;
+    member_weight?: number;
+    affiliate_union_delegate_weight?: number;
+    entry_requirements?: Record<string, unknown>;
+  }>;
+  provinces?: string[];
+  constituencies?: Array<{
+    id: string;
+    provinceShares: Array<{ provinceId: string; share: number }>;
+  }>;
+  assemblyElection?: {
+    constituencies: Array<{
+      constituencyId: string;
+      candidates: Array<{ id: string; partyId: string | null }>;
+      firstPreferences: Record<string, string>;
+    }>;
+  };
+  presidentialEligibility?: {
+    rules: {
+      minimum_age: number;
+      age_measured_on?: string;
+      term_limit_elected: number;
+      must_resign_before_candidacy_filing?: string[];
+      may_campaign_while_holding?: Record<string, boolean>;
+    };
+  };
 };
 
 export class KernelContentError extends Error {
@@ -434,6 +475,22 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     }
   }
 
+  let partySlice = emptyPartyKernelSlice();
+  if (input.parties && input.nominationRules) {
+    try {
+      partySlice = buildPartyKernelSlice({
+        parties: input.parties,
+        nominationRules: input.nominationRules,
+        figures: input.figures,
+        ...(input.provinces ? { provinces: input.provinces } : {}),
+        ...(input.constituencies ? { constituencies: input.constituencies } : {}),
+        ...(input.assemblyElection ? { assemblyElection: input.assemblyElection } : {}),
+      });
+    } catch (e) {
+      throw new KernelContentError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   return {
     contentVersion: input.contentVersion,
     scenarioId: input.scenario.id,
@@ -463,5 +520,13 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     issueIds: catalog.length
       ? catalog
       : [...new Set(input.figures.flatMap((f) => Object.keys(f.issue_salience ?? {})))].sort(),
+    ...partySlice,
+    ...(input.presidentialEligibility
+      ? {
+          presidentialEligibility: presidentialEligibilityFromContent(
+            input.presidentialEligibility,
+          ),
+        }
+      : {}),
   };
 }

@@ -1275,3 +1275,93 @@ describe("Phase 1 preflight: acting president resume is kind-driven", () => {
     if (!r.ok) expect(r.error.code).toBe("ACTING_PRESIDENT_DUTIES_MUST_REMAIN_SUSPENDED");
   });
 });
+
+describe("Phase 2 preflight: saved agent chronology", () => {
+  it("rejects relationship, belief, memory, and goal dates before scenarioStartDate", () => {
+    const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
+    expect(
+      sim.executeCommand({
+        type: "DEV_RECORD_INTERACTION",
+        sourceId: "P1",
+        targetId: "P2",
+        delta: { trust: 0.2 },
+        memory: { kind: "favor", valence: 0.4, salience: 0.5, durability: "normal" },
+      }).ok,
+    ).toBe(true);
+    expect(
+      sim.executeCommand({
+        type: "DEV_RECORD_OBSERVATION",
+        observerId: "P1",
+        targetId: "P2",
+        topic: "trait",
+        dimension: "ambition",
+        observed: 0.4,
+        observationConfidence: 0.6,
+        sourceReliability: 0.7,
+      }).ok,
+    ).toBe(true);
+
+    const relRaw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const relState = relRaw.simulation as {
+      relationships: Record<string, Record<string, { lastUpdatedDate: string }>>;
+    };
+    relState.relationships.P1!.P2!.lastUpdatedDate = "1999-01-01";
+    expect(parseSaveFile(relRaw).ok).toBe(false);
+
+    const beliefRaw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const beliefState = beliefRaw.simulation as {
+      beliefs: Record<string, Record<string, Record<string, { lastUpdatedDate: string }>>>;
+    };
+    beliefState.beliefs.P1!.P2!["trait:ambition"]!.lastUpdatedDate = "1999-01-01";
+    expect(parseSaveFile(beliefRaw).ok).toBe(false);
+
+    const memRaw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const memState = memRaw.simulation as { memories: Record<string, { date: string }> };
+    Object.values(memState.memories)[0]!.date = "1999-01-01";
+    expect(parseSaveFile(memRaw).ok).toBe(false);
+
+    const goalRaw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const goalState = goalRaw.simulation as {
+      goals: Record<string, { createdDate: string; lastReviewedDate: string }>;
+    };
+    const goal = Object.values(goalState.goals)[0]!;
+    goal.createdDate = "1999-01-01";
+    expect(parseSaveFile(goalRaw).ok).toBe(false);
+    goal.createdDate = "2000-01-01";
+    goal.lastReviewedDate = "1999-06-01";
+    expect(parseSaveFile(goalRaw).ok).toBe(false);
+  });
+
+  it("rejects a memory that predates its source SimEvent", () => {
+    const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
+    for (let i = 0; i < 6; i++) {
+      const r = sim.executeCommand({ type: "ADVANCE_TURN" });
+      expect(r.ok).toBe(true);
+      if (r.ok && r.interrupt) {
+        expect(sim.executeCommand({ type: "ACKNOWLEDGE_INTERRUPT" }).ok).toBe(true);
+        expect(sim.executeCommand({ type: "RESUME_TURN" }).ok).toBe(true);
+      }
+    }
+    expect(
+      sim.executeCommand({
+        type: "DEV_RECORD_INTERACTION",
+        sourceId: "P1",
+        targetId: "P2",
+        delta: { affinity: 0.1 },
+        memory: { kind: "favor", valence: 0.2, salience: 0.4, durability: "normal" },
+      }).ok,
+    ).toBe(true);
+    const raw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const state = raw.simulation as {
+      history: Array<{ id: string; date: string; type: string }>;
+      memories: Record<string, { date: string; sourceEventId: string | null }>;
+    };
+    const later = state.history.find((e) => e.date > "2000-01-15")!;
+    expect(later).toBeDefined();
+    const mem = Object.values(state.memories)[0]!;
+    mem.sourceEventId = later.id;
+    mem.date = "2000-01-15";
+    expect(later.date > mem.date).toBe(true);
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+});

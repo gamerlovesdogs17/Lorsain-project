@@ -11,6 +11,7 @@ import { nthWeekdayOfMonth, presidentialAssumptionDate } from "./calendar.js";
 import type { KernelWorld } from "./types.js";
 import { countRelationshipEdges } from "./agents/relationships.js";
 import { SAVE_SCHEMA_VERSION } from "./types.js";
+import { terenaPartyFields } from "./terena-party-input.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 
@@ -46,6 +47,13 @@ function loadTerenaInput() {
       offices: bundle.content.terena_offices.offices,
       constitution: jsonClone(bundle.content.terena_constitution),
       administrations: bundle.content.terena_presidential_administrations.administrations,
+      ...terenaPartyFields({
+        parties: bundle.content.terena_parties.parties,
+        nominationRules: bundle.content.terena_nomination_rules.rules,
+        provinceFeatures: bundle.content.terena_provinces.features,
+        constituencyFeatures: bundle.content.terena_constituencies.features,
+      }),
+      presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     } satisfies TerenaKernelInput,
   };
 }
@@ -356,5 +364,21 @@ describe("TERENA_2028 Phase 2 agent substrate", () => {
     const v1Bytes = JSON.stringify(v1Shaped).length;
     expect(v2Bytes).toBeGreaterThan(v1Bytes);
     expect(v2Bytes).toBeLessThan(2_000_000);
+    expect(Object.keys(snap.partyStates).sort()).toEqual([
+      "PARTY_CR",
+      "PARTY_GRN",
+      "PARTY_LAB",
+      "PARTY_NU",
+      "PARTY_PM",
+      "PARTY_RL",
+    ]);
+    expect(Object.keys(snap.factionStates).length).toBe(15);
+    expect(snap.partyStates.PARTY_IND).toBeUndefined();
+    expect(Object.keys(snap.partyContests).length).toBe(6);
+    expect(
+      Object.values(snap.partyContests).every(
+        (c) => c.type === "presidential_nomination" && c.status === "planned",
+      ),
+    ).toBe(true);
   });
 });

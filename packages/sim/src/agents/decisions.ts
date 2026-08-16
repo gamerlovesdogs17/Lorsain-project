@@ -332,6 +332,7 @@ function sortOptions(options: DecisionOption[]): DecisionOption[] {
 }
 
 function compareRanked(a: UtilityBreakdown, b: UtilityBreakdown): number {
+  if (a.considered !== b.considered) return a.considered ? -1 : 1;
   if (a.finalUtility !== b.finalUtility) return b.finalUtility - a.finalUtility;
   if (a.optionId < b.optionId) return -1;
   if (a.optionId > b.optionId) return 1;

@@ -44,7 +44,13 @@ export {
 
 export { hashCanonical, canonicalize, canonicalJson } from "./hash.js";
 export { createSimulation, restoreSimulation, type Simulation } from "./engine.js";
-export { parseSaveFile, migrateSaveV1ToV2, CONTENT_MIGRATIONS, SCHEMA_MIGRATIONS } from "./save.js";
+export {
+  parseSaveFile,
+  migrateSaveV1ToV2,
+  migrateSaveV2ToV3,
+  CONTENT_MIGRATIONS,
+  SCHEMA_MIGRATIONS,
+} from "./save.js";
 export { SAVE_SCHEMA_VERSION } from "./types.js";
 export { buildTerenaKernelWorld, KernelContentError, type TerenaKernelInput } from "./world.js";
 export {
@@ -85,6 +91,15 @@ export {
   type DecisionOption,
   type UtilityBreakdown,
 } from "./agents/index.js";
+export {
+  partyMembers,
+  factionMembers,
+  assemblyCaucus,
+  factionAssemblyCaucus,
+  publicPartyCulture,
+  chooseEndorsement,
+  chooseMembershipAction,
+} from "./parties/index.js";
 export type {
   Command,
   CommandResult,
