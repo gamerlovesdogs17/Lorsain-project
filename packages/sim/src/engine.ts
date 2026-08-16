@@ -27,7 +27,7 @@ import {
 } from "./parties/state.js";
 import { deepFreeze, hashCanonical, jsonClone } from "./hash.js";
 import { isJsonObject, jsonSafetyError, type JsonObject } from "./json.js";
-import { assumeOffice, endTerm, resumeTerm, vacateOffice } from "./offices.js";
+import { assumeOffice, endTerm, presidentOfficeId, resumeTerm, vacateOffice } from "./offices.js";
 import {
   STREAM_NAMES,
   createRngService,
@@ -44,6 +44,34 @@ import {
 } from "./scheduler.js";
 import { parseSaveFile } from "./save.js";
 import { applyPresidentialVacancy, planPresidentialVacancy } from "./succession.js";
+import {
+  emptyElectoralRuntimeState,
+  needsElectoralSeed,
+  seedCanonicalElections,
+} from "./elections/state.js";
+import { createPoll } from "./elections/polls.js";
+import {
+  ensureCandidateStanding,
+  setCandidateStanding,
+  standingMutationError,
+} from "./elections/standing.js";
+import {
+  finalizePresidentialField,
+  resolvePresidentialElection,
+  syncNominationWinnerToElection,
+} from "./elections/presidential.js";
+import { addElectionCandidate } from "./elections/field.js";
+import {
+  applyElectoralEnvironmentPatch,
+  electoralEnvironmentPatchError,
+} from "./elections/environment.js";
+import {
+  applyPresidentialAssumption,
+  createDomainResolution,
+  payloadElectionId,
+} from "./elections/resolution.js";
+import { emptyIdeology } from "./agents/profile.js";
+import { IDEOLOGY_AXES } from "./agents/types.js";
 import {
   SAVE_SCHEMA_VERSION,
   type Command,
@@ -111,6 +139,9 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextEndorsementId: 1,
       nextPartyContestId: 1,
       nextDynamicPartyId: 1,
+      nextPollId: 1,
+      nextElectionId: 1,
+      nextDomainResolutionId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
@@ -119,6 +150,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     },
     ...emptyAgentRuntime(),
     ...emptyPartyRuntime(),
+    ...emptyElectoralRuntimeState(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -131,6 +163,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     }
   }
   seedPartyInstitutions(state, world);
+  seedCanonicalElections(state, world);
   seedInitialGoals(state, world);
   return state;
 }
@@ -193,6 +226,34 @@ function applyScheduled(
         sourceCommandId: commandId,
       }),
     );
+    return { events, interrupt: null };
+  }
+  if (ev.eventType === "PRESIDENTIAL_ASSUMPTION_DUE") {
+    const out = applyPresidentialAssumption(state, world, {
+      date: ev.dueDate,
+      scheduledEventId: ev.id,
+      commandId,
+    });
+    if ("error" in out) {
+      events.push(
+        pushHistory(state, {
+          date: ev.dueDate,
+          type: "PRESIDENT_ELECT_UNABLE_TO_ASSUME",
+          importance: 1,
+          visibility: "public",
+          actorIds: [],
+          entityIds: [presidentOfficeId(world)],
+          payload: { code: out.error.code, message: out.error.message },
+          sourceScheduledEventId: ev.id,
+          sourceCommandId: commandId,
+        }),
+      );
+      const interrupt = makeInterrupt(ev);
+      interrupt.message = out.error.message;
+      state.pendingInterrupt = interrupt;
+      return { events, interrupt };
+    }
+    events.push(...out.events);
     return { events, interrupt: null };
   }
   events.push(
@@ -286,6 +347,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   const state = jsonClone(parsed.save.simulation);
   state.rng = rng.serialize();
   if (needsPartyInstitutionSeed(state, frozen)) seedPartyInstitutions(state, frozen);
+  if (needsElectoralSeed(state, frozen)) seedCanonicalElections(state, frozen);
   if (needsInitialGoals(state)) seedInitialGoals(state, frozen);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
@@ -899,6 +961,10 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
     if (command.type === "DEV_CREATE_PARTY_CONTEST") {
       const metadata: JsonObject =
         command.selectorMethod != null ? { selectorMethod: command.selectorMethod } : {};
+      if (command.memberWeight != null) metadata.memberWeight = command.memberWeight;
+      if (command.affiliateUnionDelegateWeight != null) {
+        metadata.affiliateUnionDelegateWeight = command.affiliateUnionDelegateWeight;
+      }
       const createArgs = {
         type: command.contestType,
         partyId: command.partyId,
@@ -937,6 +1003,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       const out = resolvePartyContest(state, world, command.contestId, rng, commandId);
       syncRng(state, rng);
       if ("error" in out) return fail(out.error.code, out.error.message);
+      syncNominationWinnerToElection(state, command.contestId);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
@@ -995,6 +1062,172 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       );
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "FINALIZE_ELECTION_FIELD") {
+      const preview = finalizePresidentialField(jsonClone(state), world, command.electionId);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = finalizePresidentialField(state, world, command.electionId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "RESOLVE_PRESIDENTIAL_ELECTION") {
+      const pending = state.pendingInterrupt;
+      if (!pending || pending.code !== "PRESIDENTIAL_ELECTION_DUE") {
+        return fail(
+          "DOMAIN_RESOLUTION_REQUIRED",
+          "pending interrupt is not PRESIDENTIAL_ELECTION_DUE",
+        );
+      }
+      const src = state.scheduler.events.find((e) => e.id === pending.scheduledEventId);
+      const fromEvent = payloadElectionId(src?.payload);
+      if (!fromEvent) {
+        return fail("MISSING_ELECTION_ID", "PRESIDENTIAL_ELECTION_DUE lacks payload.electionId");
+      }
+      if (command.electionId && command.electionId !== fromEvent) {
+        return fail("ELECTION_ID_MISMATCH", `${command.electionId} != ${fromEvent}`);
+      }
+      const electionId = fromEvent;
+      const previewRng = restoreRngService(state.rng);
+      const preview = resolvePresidentialElection(jsonClone(state), world, previewRng, {
+        electionId,
+        scheduledEventId: pending.scheduledEventId,
+        commandId: "CMD000000",
+      });
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = resolvePresidentialElection(state, world, rng, {
+        electionId,
+        scheduledEventId: pending.scheduledEventId,
+        commandId,
+      });
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      createDomainResolution(state, {
+        sourceScheduledEventId: pending.scheduledEventId,
+        domainType: "presidential_election",
+        date: state.currentDate,
+        electionId,
+        resultEventId: out.events[0]!.id,
+        archiveElectionId: electionId,
+        metadata: {},
+      });
+      pending.resolutionStatus = "resolved";
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: pending };
+    }
+
+    if (command.type === "RESOLVE_PRESIDENTIAL_ASSUMPTION") {
+      const pending = state.pendingInterrupt;
+      if (!pending || pending.code !== "PRESIDENTIAL_ASSUMPTION_DUE") {
+        return fail("DOMAIN_RESOLUTION_REQUIRED", "no president-elect assumption block");
+      }
+      return fail(
+        "PRESIDENT_ELECT_UNABLE_TO_ASSUME",
+        "constitution does not define a substitute president-elect",
+      );
+    }
+
+    if (command.type === "DEV_CREATE_POLL") {
+      const election = command.electionId ? state.elections[command.electionId] : undefined;
+      const candidateIds = command.candidateIds;
+      const partyByCandidate: Record<string, string | null> = {};
+      for (const id of candidateIds) {
+        partyByCandidate[id] =
+          election?.candidates[id]?.partyId ?? state.politicians[id]?.partyId ?? null;
+      }
+      const previewRng = restoreRngService(state.rng);
+      const preview = createPoll(world, jsonClone(state), previewRng, {
+        pollsterId: command.pollsterId,
+        electionId: command.electionId ?? null,
+        geographyKind: command.geographyKind,
+        constituencyId: command.constituencyId ?? null,
+        candidateIds,
+        partyByCandidate,
+        fieldStart: state.currentDate,
+        fieldEnd: state.currentDate,
+        publicationDate: state.currentDate,
+        ...(command.sampleSize != null ? { sampleSize: command.sampleSize } : {}),
+      });
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = createPoll(world, state, rng, {
+        pollsterId: command.pollsterId,
+        electionId: command.electionId ?? null,
+        geographyKind: command.geographyKind,
+        constituencyId: command.constituencyId ?? null,
+        candidateIds,
+        partyByCandidate,
+        fieldStart: state.currentDate,
+        fieldEnd: state.currentDate,
+        publicationDate: state.currentDate,
+        ...(command.sampleSize != null ? { sampleSize: command.sampleSize } : {}),
+      });
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      syncRng(state, rng);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "DEV_SET_CANDIDATE_STANDING") {
+      if (!state.politicians[command.politicianId]) {
+        return fail("UNKNOWN_POLITICIAN", command.politicianId);
+      }
+      const standingErr = standingMutationError(command);
+      if (standingErr) return fail(standingErr.code, standingErr.message);
+      const commandId = nextCommandId();
+      ensureCandidateStanding(world, state, command.politicianId);
+      const out = setCandidateStanding(state, command.politicianId, command);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "DEV_SET_ELECTORAL_ENVIRONMENT") {
+      const envErr = electoralEnvironmentPatchError(world, state, command);
+      if (envErr) return fail(envErr.code, envErr.message);
+      const commandId = nextCommandId();
+      applyElectoralEnvironmentPatch(state, command);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "DEV_ADD_ELECTION_CANDIDATE") {
+      const pol = state.politicians[command.politicianId];
+      if (!pol) return fail("UNKNOWN_POLITICIAN", command.politicianId);
+      const ideology =
+        command.publicIdeology == null
+          ? null
+          : {
+              ...emptyIdeology(),
+              ...Object.fromEntries(
+                IDEOLOGY_AXES.filter((a) => typeof command.publicIdeology?.[a] === "number").map(
+                  (a) => [a, command.publicIdeology![a] as number],
+                ),
+              ),
+            };
+      if (command.publicIdeology != null) {
+        for (const axis of IDEOLOGY_AXES) {
+          const v = ideology?.[axis];
+          if (typeof v !== "number" || !Number.isFinite(v) || v < -1 || v > 1) {
+            return fail("INVALID_PUBLIC_IDEOLOGY", `${command.politicianId}.${axis}`);
+          }
+        }
+      }
+      const partyId = command.partyId !== undefined ? command.partyId : pol.partyId;
+      const candidate = {
+        politicianId: command.politicianId,
+        partyId,
+        sourceContestId: command.sourceContestId ?? null,
+        filedDate: state.currentDate,
+        publicIdeology: ideology,
+        withdrawn: false,
+        independentQualified: command.independentQualified === true,
+      };
+      const preview = addElectionCandidate(jsonClone(state), world, command.electionId, candidate);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = addElectionCandidate(state, world, command.electionId, candidate);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
     }
 
     return fail("UNKNOWN_COMMAND", "Unsupported command");

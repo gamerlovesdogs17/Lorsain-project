@@ -10,7 +10,7 @@ import {
   type QualificationEvidence,
 } from "./types.js";
 import { evaluatePresidentialEligibility } from "./eligibility.js";
-import { PRESIDENTIAL_ENTRY_FROM_STATUS } from "./policy.js";
+import { PRESIDENTIAL_ENTRY_FROM_STATUS, isSeedPresidentialStatus } from "./policy.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -35,7 +35,9 @@ export function needsPartyInstitutionSeed(state: SimState, world: KernelWorld): 
 
 export function seedPartyInstitutions(state: SimState, world: KernelWorld): void {
   for (const partyId of membershipPartyIds(world)) {
-    const leaderId = world.startingPartyLeaders[partyId] ?? null;
+    const canonical = world.startingPartyLeaders[partyId] ?? null;
+    const leaderId =
+      canonical && currentPartyOfficeholderEligible(state, canonical, partyId) ? canonical : null;
     const members = partyMembers(state, partyId);
     state.partyStates[partyId] = {
       partyId,
@@ -46,7 +48,11 @@ export function seedPartyInstitutions(state: SimState, world: KernelWorld): void
   }
   for (const factionId of Object.keys(world.factionDefinitions).sort()) {
     const def = world.factionDefinitions[factionId]!;
-    const chairId = world.startingFactionChairs[factionId] ?? null;
+    const canonical = world.startingFactionChairs[factionId] ?? null;
+    const chairId =
+      canonical && currentFactionOfficeholderEligible(state, canonical, def.partyId, factionId)
+        ? canonical
+        : null;
     const members = factionMembers(state, factionId);
     state.factionStates[factionId] = {
       factionId,
@@ -59,6 +65,25 @@ export function seedPartyInstitutions(state: SimState, world: KernelWorld): void
   seedPlannedPresidentialContests(state, world);
 }
 
+function currentPartyOfficeholderEligible(
+  state: SimState,
+  politicianId: string,
+  partyId: string,
+): boolean {
+  const p = state.politicians[politicianId];
+  return !!p && p.alive && !p.retired && p.partyId === partyId;
+}
+
+function currentFactionOfficeholderEligible(
+  state: SimState,
+  politicianId: string,
+  partyId: string,
+  factionId: string,
+): boolean {
+  const p = state.politicians[politicianId];
+  return !!p && p.alive && !p.retired && p.partyId === partyId && p.factionId === factionId;
+}
+
 function seedEntryFromProfile(
   world: KernelWorld,
   state: SimState,
@@ -66,7 +91,9 @@ function seedEntryFromProfile(
 ): ContestEntry | null {
   const profile = getAgentProfile(world, state, politicianId);
   const status = profile?.presidentialStatus ?? null;
-  if (!status || status === "term_limited_incumbent") return null;
+  if (!status || status === "term_limited_incumbent" || !isSeedPresidentialStatus(status)) {
+    return null;
+  }
   const mapped = PRESIDENTIAL_ENTRY_FROM_STATUS[status];
   if (!mapped) return null;
   if (!evaluatePresidentialEligibility(world, state, politicianId).eligible) return null;

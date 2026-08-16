@@ -2,6 +2,7 @@ import type { JsonObject } from "./json.js";
 import type { KernelOffice, KernelWorld } from "./types.js";
 import { expirationPolicyForKind } from "./offices.js";
 import { syntheticAgentProfile } from "./agents/profile.js";
+import { applyInstitutionalPublicIdeology } from "./elections/public-ideology.js";
 
 export function kernelOffice(
   partial: Partial<KernelOffice> & Pick<KernelOffice, "id" | "kind">,
@@ -29,7 +30,7 @@ export function kernelOffice(
 const empty: JsonObject = {};
 
 export function syntheticWorld(seed = "KERNEL-SYN-01"): KernelWorld {
-  return {
+  const world: KernelWorld = {
     contentVersion: "0.3.1-predev",
     scenarioId: "SYNTHETIC_KERNEL",
     scenarioStartDate: "2000-01-01",
@@ -137,5 +138,14 @@ export function syntheticWorld(seed = "KERNEL-SYN-01"): KernelWorld {
         military: false,
       },
     },
+    voterBlocs: {},
+    voterBlocIdsByConstituency: {},
+    constituencyElectorate: {},
+    pollsters: {},
+    issueDimensions: {},
+    partyPublicIdeology: {},
+    factionPublicIdeology: {},
   };
+  applyInstitutionalPublicIdeology(world);
+  return world;
 }

@@ -48,6 +48,7 @@ export {
   parseSaveFile,
   migrateSaveV1ToV2,
   migrateSaveV2ToV3,
+  migrateSaveV3ToV4,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";

@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 3 saves use `schemaVersion: 3` and `contentVersion: 0.3.1-predev`. Phase 2 `schemaVersion: 2` saves migrate to v3. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 4 saves use `schemaVersion: 4` and `contentVersion: 0.3.1-predev`. Phase 3 `schemaVersion: 3` saves migrate to v4. Phase 2 `schemaVersion: 2` saves migrate v2→v3→v4. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3→v4.
 
 ## 3. Core static schemas
 
@@ -295,18 +295,19 @@ News and history pages consume events; they do not invent a separate reality.
 
 ## 14. Save root
 
-Phase 3 save envelope (`schemaVersion: 3`):
+Phase 4 save envelope (`schemaVersion: 4`):
 
 ```ts
 interface SaveFile {
-  schemaVersion: 3;
+  schemaVersion: 4;
   contentVersion: string;
   scenarioId: string;
   simulation: SimState;
   // rng, calendar, officeTerms, scheduler, history, counters, interrupt,
   // relationships, memories, beliefs, goals, generatedAgentProfiles,
   // agentProfileOverrides, partyStates, factionStates, endorsements,
-  // partyContests, dynamicParties
+  // partyContests, dynamicParties,
+  // elections, candidateStanding, electoralEnvironment, polls, domainResolutions
 }
 ```
 
@@ -318,7 +319,9 @@ Loaded saves are untrusted `unknown` and are fully structurally validated. Conte
 
 **v2 → v3:** Phase 2 saves had no `PartyState` / `FactionState` / endorsements / contests. Migration initializes those structures to empty and adds `nextEndorsementId` / `nextPartyContestId` / `nextDynamicPartyId`. No fabricated past contests are written. `restoreSimulation` seeds canonical starting leadership and planned 2028 presidential contests from `KernelWorld` when `partyStates` are empty.
 
-Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`. `banana`, `EVT0`, and `EVTabc` are rejected.
+**v3 → v4:** Phase 3 saves had no general-election state, public standing, polls, or domain-resolution records. Migration initializes those structures to empty and adds `nextPollId` / `nextElectionId` / `nextDomainResolutionId`. No fabricated polls or completed general-election results are written. `restoreSimulation` seeds canonical upcoming `ELEC_PRES_2028` and `ELEC_ASM_2030` `ElectionState`s from `KernelWorld` when `elections` is empty.
+
+Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
 
 ### 14.1 Agent state (Phase 2)
 
@@ -340,7 +343,18 @@ Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed
 - **Provincial party organizations:** `PORG:{partyId}:{provinceId}` — one active unit per membership party × canonical province. Not Phase 9 interest groups.
 - **Splits:** `DEV_SPLIT_FACTION` creates a `DPARTY…` dynamic party, moves listed faction members, and leaves the new party `leadership_vacant` with `PARTY_LEADERSHIP_CONTEST_REQUIRED`. It does not silently appoint `movers[0]` as leader.
 
-PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolved` is rejected). BLOCKING_DOMAIN remains `unresolved` until a domain resolver exists.
+PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolved` is rejected). A processed `requiresResolution` scheduled event is valid if it has **either** a live unresolved `BLOCKING_DOMAIN` interrupt **or** one immutable `DomainResolutionRecord` proving the domain actually resolved. `resolutionStatus = "resolved"` with no evidence is rejected.
+
+### 14.3 Electorate and general elections (Phase 4)
+
+- **Static vs mutable:** `KernelWorld.voterBlocs`, `pollsters`, `issueDimensions`, `constituencyElectorate` (population, seats, `province_population_shares`, compact 2026 turnout only) are immutable starting definitions. Saves do not copy the voter-bloc dataset. Mutable electoral state is sparse: `electoralEnvironment`, lazy `candidateStanding`, `elections`, `polls`, `domainResolutions`.
+- **Public standing vs hidden profile:** `CandidateStanding` (`nameRecognition` 0..1, `favorability` −1..1, `enthusiasm` 0..1, `momentum` −1..1) is public electoral standing. Hidden `AgentProfile` skills/traits/private ideology are not inputs to voter support. Independents need an explicit public ideology on the election field; the engine does not silently substitute `AgentProfile.ideology`.
+- **Support:** bloc utility combines party habit, issue-salience-weighted public ideological fit (salience grouped by ideology axis then normalized so issue-ID cardinality does not overweight an axis), regional/home connection, incumbency/office/leadership, public standing, and sparse national/constituency/issue environment. Softmax with temperature `SUPPORT_SOFTMAX_TEMPERATURE` yields nonnegative shares summing to 1. Exact latent support is simulation truth, not NPC omniscience; `DecisionActorContext` does not receive it. Selectorates may use a small public standing/poll signal only.
+- **Turnout:** aggregated, no voter entities. `registered_2028 = round(population_now × registered_2026 / population_2026)`. Rate mixes canonical `turnout_propensity`, 2026 turnout, election importance, mean enthusiasm, and bounded `campaigns`-stream noise, then clamps. Invalid/blank uses the 2026 rate plus bounded noise. `ballotsCast = invalidOrBlank + validVoteValue` exactly. Valid ballot-group weights are integers from largest remainder and sum to `validVoteValue`.
+- **Polls:** `POLL…` historical records. House effects are centered party vote-share-point offsets, split among same-party candidates, then renormalized. Sample size is explicit or drawn in the pollster range. Quality lowers model-error variance; it never reveals exact latent support. Published polls are not rewritten when candidates later die, switch party, or withdraw. IDs are counters, not RNG.
+- **ElectionState:** separate from `PartyContest`. Statuses: `planned` → `field_open` → `field_finalized` → `voting` → `resolved` / `cancelled`. Canonical 2028 presidential election `ELEC_PRES_2028` starts unfinalized with no nominees. Nomination winners sync into the general-election field without mutating contest archives. Presidential counts call `countIrv`; Assembly constituency counts call `countStv`. Resolved archives replay from stored ballots and lot draws. Current eligibility is checked only for unresolved fields.
+- **DomainResolutionRecord:** `DRES…` evidence for a processed `requiresResolution` event (election or presidential assumption). `RESOLVE_PRESIDENTIAL_ELECTION` is transactional: failure leaves hash, counters, and RNG unchanged when validation can run before draws.
+- **Presidential transition:** a regular election winner is immediately `certifiedPresidentElectId` and that victory counts as an elected term. Assumption is 20 January following. Incompatible prior offices (MP/governor/minister) end with structured reasons; vacancies are not auto-filled. The next regular presidential date is calculated from canonical calendar rules, never hardcoded as 2033. If the president-elect cannot assume, the engine raises a typed constitutional block rather than inventing a successor.
 
 ## 15. Map contract
 

@@ -9,11 +9,23 @@ import {
   type WeekdayName,
 } from "./calendar.js";
 import { expirationPolicyForKind } from "./offices.js";
-import type { JsonObject } from "./json.js";
 import type { KernelOffice, KernelWorld, OfficeTerm, PoliticianRuntime } from "./types.js";
 import { profileFromFigure, type FigureProfileSource } from "./agents/profile.js";
 import { buildPartyKernelSlice, emptyPartyKernelSlice } from "./parties/content.js";
 import { presidentialEligibilityFromContent } from "./parties/eligibility.js";
+import {
+  buildElectorateKernelSlice,
+  emptyElectorateKernelSlice,
+  type ConstituencyGeoInput,
+  type PollsterInput,
+  type VoterBlocConstituencyInput,
+} from "./elections/content.js";
+import type { TurnoutBaseline2026 } from "./elections/types.js";
+import { applyInstitutionalPublicIdeology } from "./elections/public-ideology.js";
+import {
+  CANONICAL_ASSEMBLY_ELECTION_ID,
+  CANONICAL_PRESIDENTIAL_ELECTION_ID,
+} from "./elections/types.js";
 
 type Role = {
   type: string;
@@ -85,7 +97,7 @@ export type TerenaKernelInput = {
   };
   figures: FigureIn[];
   offices: OfficeIn[];
-  issues?: Array<{ id: string }>;
+  issues?: Array<{ id: string; dimension?: string }>;
   constitution: {
     calendars?: Record<string, ContentCalendar>;
     presidential_vacancy?: {
@@ -142,6 +154,10 @@ export type TerenaKernelInput = {
       may_campaign_while_holding?: Record<string, boolean>;
     };
   };
+  voterBlocs?: VoterBlocConstituencyInput[];
+  pollsters?: PollsterInput[];
+  constituencyGeo?: ConstituencyGeoInput[];
+  turnout2026?: Record<string, TurnoutBaseline2026>;
 };
 
 export class KernelContentError extends Error {
@@ -439,12 +455,11 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
   }
 
   const vacancy = input.constitution.presidential_vacancy;
-  const empty: JsonObject = {};
   const initialScheduled: KernelWorld["initialScheduled"] = [
     {
       dueDate: computedPresDate,
       eventType: "PRESIDENTIAL_ELECTION_DUE",
-      payload: empty,
+      payload: { electionId: CANONICAL_PRESIDENTIAL_ELECTION_ID },
       priority: 0,
       blocking: true,
       requiresResolution: true,
@@ -453,7 +468,7 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     {
       dueDate: computedAsmDate,
       eventType: "ASSEMBLY_ELECTION_DUE",
-      payload: empty,
+      payload: { electionId: CANONICAL_ASSEMBLY_ELECTION_ID },
       priority: 0,
       blocking: true,
       requiresResolution: true,
@@ -491,7 +506,33 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     }
   }
 
-  return {
+  let electorateSlice = emptyElectorateKernelSlice();
+  if (input.voterBlocs?.length) {
+    try {
+      const issueIds = catalog.length
+        ? catalog
+        : [...new Set(input.figures.flatMap((f) => Object.keys(f.issue_salience ?? {})))].sort();
+      electorateSlice = buildElectorateKernelSlice({
+        voterBlocs: input.voterBlocs,
+        ...(input.pollsters ? { pollsters: input.pollsters } : {}),
+        issues: (input.issues ?? [])
+          .filter((i): i is { id: string; dimension: string } => typeof i.dimension === "string")
+          .map((i) => ({ id: i.id, dimension: i.dimension })),
+        ...(input.constituencyGeo ? { constituencies: input.constituencyGeo } : {}),
+        ...(input.turnout2026 ? { turnout2026: input.turnout2026 } : {}),
+        partyIds: [
+          ...Object.keys(partySlice.partyDefinitions),
+          partySlice.independentAggregatePartyId,
+        ],
+        issueIds,
+        provinceIds: partySlice.provinceIds,
+      });
+    } catch (e) {
+      throw new KernelContentError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  const world: KernelWorld = {
     contentVersion: input.contentVersion,
     scenarioId: input.scenario.id,
     scenarioStartDate: input.scenario.date as IsoDate,
@@ -528,5 +569,10 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
           ),
         }
       : {}),
+    ...electorateSlice,
+    partyPublicIdeology: {},
+    factionPublicIdeology: {},
   };
+  applyInstitutionalPublicIdeology(world);
+  return world;
 }

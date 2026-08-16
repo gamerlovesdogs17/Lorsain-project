@@ -528,3 +528,8 @@ export function resumeTerm(
 export function officesOfKind(world: KernelWorld, kind: string): KernelOffice[] {
   return Object.values(world.offices).filter((o) => o.kind === kind);
 }
+
+export function presidentOfficeId(world: KernelWorld): string {
+  const offices = officesOfKind(world, "president").sort((a, b) => (a.id < b.id ? -1 : 1));
+  return offices[0]?.id ?? "OFFICE_PRESIDENT";
+}

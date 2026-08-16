@@ -4,6 +4,7 @@ import { recordPoliticalMemory } from "../agents/memories.js";
 import { padId, pushHistory } from "../scheduler.js";
 import { vacateFactionChair, vacatePartyLeadership } from "./membership.js";
 import { reconcilePoliticianContestParticipation } from "./lifecycle.js";
+import { reconcileUnresolvedElectionCandidacies } from "../elections/field.js";
 import { factionMembers } from "./queries.js";
 import type { DynamicPartyDefinition } from "./types.js";
 
@@ -75,6 +76,7 @@ export function splitFaction(
     );
     reviewGoals(state, world, id, state.currentDate);
     reconcilePoliticianContestParticipation(world, state, id, events, commandId);
+    reconcileUnresolvedElectionCandidacies(world, state, id);
   }
   const remaining = factionMembers(state, args.factionId);
   if (remaining.length === 0) {

@@ -596,7 +596,7 @@ describe("save schema v2/v3", () => {
     const parsed = parseSaveFile(v1, "0.3.1-predev");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(3);
+    expect(parsed.save.schemaVersion).toBe(4);
     const migrated = restoreSimulation(parsed.save, world);
     expect(migrated.hashState()).toBe(hash);
 

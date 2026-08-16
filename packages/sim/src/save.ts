@@ -6,6 +6,7 @@ import { parseSerializedRngState, type SerializedRngState } from "./rng.js";
 import { resolutionEventMustBlock } from "./scheduler.js";
 import { agentCounterError, parseAgentState } from "./agents/validation.js";
 import { parsePartyRuntime, partyCounterError } from "./parties/validation.js";
+import { parseElectoralRuntime, electoralCounterError } from "./elections/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -328,8 +329,8 @@ function parseInterrupt(raw: unknown): PendingInterrupt | string {
   if (raw.kind === "BLOCKING_DOMAIN" && raw.requiresResolution !== true) {
     return "BLOCKING_DOMAIN interrupt must require resolution";
   }
-  if (raw.kind === "BLOCKING_DOMAIN" && raw.resolutionStatus !== "unresolved") {
-    return "BLOCKING_DOMAIN interrupt must remain unresolved in Phase 1";
+  if (raw.kind === "BLOCKING_DOMAIN" && raw.resolutionStatus === "acknowledged") {
+    return "BLOCKING_DOMAIN interrupt cannot be acknowledged";
   }
   if (raw.kind === "PRESENTATION" && raw.requiresResolution !== false) {
     return "PRESENTATION interrupt must not require resolution";
@@ -361,6 +362,9 @@ function parseCounters(raw: unknown): Counters | string {
     "nextEndorsementId",
     "nextPartyContestId",
     "nextDynamicPartyId",
+    "nextPollId",
+    "nextElectionId",
+    "nextDomainResolutionId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
@@ -519,15 +523,23 @@ function parseSimulation(
       return "pendingInterrupt.date must equal currentDate";
     }
   }
+  const electoral = parseElectoralRuntime(raw);
+  if (typeof electoral === "string") return electoral;
+  const electoralCountErr = electoralCounterError(electoral, counters);
+  if (electoralCountErr) return electoralCountErr;
+
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
-      if (
-        !pendingInterrupt ||
-        pendingInterrupt.kind !== "BLOCKING_DOMAIN" ||
-        pendingInterrupt.scheduledEventId !== ev.id ||
-        pendingInterrupt.resolutionStatus !== "unresolved"
-      ) {
-        return `processed resolution event ${ev.id} must have an unresolved BLOCKING_DOMAIN interrupt`;
+      const liveBlock =
+        pendingInterrupt &&
+        pendingInterrupt.kind === "BLOCKING_DOMAIN" &&
+        pendingInterrupt.scheduledEventId === ev.id &&
+        pendingInterrupt.resolutionStatus === "unresolved";
+      const dres = Object.values(electoral.domainResolutions).find(
+        (r) => r.sourceScheduledEventId === ev.id,
+      );
+      if (!liveBlock && !dres) {
+        return `processed resolution event ${ev.id} must have an unresolved BLOCKING_DOMAIN interrupt or a DomainResolutionRecord`;
       }
     }
   }
@@ -615,6 +627,11 @@ function parseSimulation(
     endorsements: party.endorsements,
     partyContests: party.partyContests,
     dynamicParties: party.dynamicParties,
+    elections: electoral.elections,
+    candidateStanding: electoral.candidateStanding,
+    electoralEnvironment: electoral.electoralEnvironment,
+    polls: electoral.polls,
+    domainResolutions: electoral.domainResolutions,
   };
 }
 
@@ -765,3 +782,36 @@ export function migrateSaveV2ToV3(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 2, toSchema: 3, migrate: migrateSaveV2ToV3 });
+
+/**
+ * Phase 3 saves begin Phase 4 electoral-domain state at migration/load.
+ * No fabricated polls or completed general-election results are written.
+ * restoreSimulation seeds canonical upcoming ElectionState when elections are empty.
+ */
+export function migrateSaveV3ToV4(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 4 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 4 };
+  sim.elections = isRecord(sim.elections) ? sim.elections : {};
+  sim.candidateStanding = isRecord(sim.candidateStanding) ? sim.candidateStanding : {};
+  sim.electoralEnvironment = isRecord(sim.electoralEnvironment)
+    ? sim.electoralEnvironment
+    : { nationalPartyShift: {}, constituencyPartyShift: {}, issueClimateShift: {} };
+  sim.polls = isRecord(sim.polls) ? sim.polls : {};
+  sim.domainResolutions = isRecord(sim.domainResolutions) ? sim.domainResolutions : {};
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextPollId: isInt(sim.counters.nextPollId) ? sim.counters.nextPollId : 1,
+      nextElectionId: isInt(sim.counters.nextElectionId) ? sim.counters.nextElectionId : 1,
+      nextDomainResolutionId: isInt(sim.counters.nextDomainResolutionId)
+        ? sim.counters.nextDomainResolutionId
+        : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 3, toSchema: 4, migrate: migrateSaveV3ToV4 });

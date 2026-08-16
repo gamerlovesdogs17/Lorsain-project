@@ -1,7 +1,11 @@
-import { compareIsoDate, isIsoDate } from "./calendar.js";
+import { compareIsoDate, isIsoDate, parseIsoDate, regularElectionDate } from "./calendar.js";
 import { validateKernelAgentProfiles } from "./agents/validation.js";
 import { agentProfileError, getAgentProfile, readIssueSalienceOverride } from "./agents/profile.js";
 import { validatePartyAgainstWorld } from "./parties/validation.js";
+import {
+  validateElectoralAgainstWorld,
+  processedResolutionSatisfied,
+} from "./elections/validation.js";
 import { validateOfficeTermSet } from "./offices.js";
 import { resolutionEventMustBlock } from "./scheduler.js";
 import type { CommandError, KernelWorld, OfficeTerm, SimState } from "./types.js";
@@ -86,10 +90,36 @@ export function validateStateAgainstWorld(
       message: `playerPoliticianId ${state.playerPoliticianId} is not a runtime politician`,
     };
   }
-  if (state.presidential.nextRegularElectionDate !== world.nextRegularPresidentialElectionDate) {
+  const runtimePres = state.presidential.nextRegularElectionDate;
+  try {
+    const y = parseIsoDate(runtimePres).year;
+    if (regularElectionDate(world.presidentialCalendar, y) !== runtimePres) {
+      return {
+        code: "PRESIDENTIAL_CYCLE_MISMATCH",
+        message: `nextRegularElectionDate ${runtimePres} is not a canonical presidential election date`,
+      };
+    }
+  } catch {
     return {
       code: "PRESIDENTIAL_CYCLE_MISMATCH",
-      message: `nextRegularElectionDate ${state.presidential.nextRegularElectionDate} != world ${world.nextRegularPresidentialElectionDate}`,
+      message: `nextRegularElectionDate ${runtimePres} is not a canonical presidential election date`,
+    };
+  }
+  if (compareIsoDate(runtimePres, world.nextRegularPresidentialElectionDate) < 0) {
+    return {
+      code: "PRESIDENTIAL_CYCLE_MISMATCH",
+      message: `nextRegularElectionDate ${runtimePres} precedes world ${world.nextRegularPresidentialElectionDate}`,
+    };
+  }
+  if (
+    runtimePres !== world.nextRegularPresidentialElectionDate &&
+    !Object.values(state.elections).some(
+      (e) => e.type === "presidential" && e.status === "resolved",
+    )
+  ) {
+    return {
+      code: "PRESIDENTIAL_CYCLE_MISMATCH",
+      message: `nextRegularElectionDate advanced without a resolved presidential election`,
     };
   }
   for (const id of Object.keys(state.presidential.electedTermCountByPolitician)) {
@@ -122,16 +152,10 @@ export function validateStateAgainstWorld(
       };
     }
     if (ev.requiresResolution && ev.status === "processed") {
-      const pending = state.pendingInterrupt;
-      if (
-        !pending ||
-        pending.kind !== "BLOCKING_DOMAIN" ||
-        pending.scheduledEventId !== ev.id ||
-        pending.resolutionStatus !== "unresolved"
-      ) {
+      if (!processedResolutionSatisfied(state, ev.id)) {
         return {
           code: "UNRESOLVED_DOMAIN_EVENT",
-          message: `processed resolution event ${ev.id} must have an unresolved BLOCKING_DOMAIN interrupt`,
+          message: `processed resolution event ${ev.id} must have an unresolved BLOCKING_DOMAIN interrupt or a DomainResolutionRecord`,
         };
       }
     }
@@ -228,7 +252,9 @@ export function validateStateAgainstWorld(
       };
     }
   }
-  return validatePartyAgainstWorld(state, world);
+  const partyErr = validatePartyAgainstWorld(state, world);
+  if (partyErr) return partyErr;
+  return validateElectoralAgainstWorld(state, world);
 }
 
 export function uniqueAllocatedTermIds(state: {

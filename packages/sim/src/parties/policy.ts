@@ -61,7 +61,22 @@ export const DISCIPLINE_SIGNAL_SCALE = 0.35;
 export const MEMBERSHIP_LOYALTY_STAY = 0.4;
 export const CAMPAIGNS_NOISE_AMP = 0.16;
 
-export const PRESIDENTIAL_ENTRY_FROM_STATUS: Record<string, "potential" | "exploring"> = {
+export const SEED_PRESIDENTIAL_STATUSES = [
+  "frontrunner",
+  "likely",
+  "possible",
+  "exploring",
+] as const;
+export type SeedPresidentialStatus = (typeof SEED_PRESIDENTIAL_STATUSES)[number];
+
+export function isSeedPresidentialStatus(v: unknown): v is SeedPresidentialStatus {
+  return typeof v === "string" && (SEED_PRESIDENTIAL_STATUSES as readonly string[]).includes(v);
+}
+
+export const PRESIDENTIAL_ENTRY_FROM_STATUS: Record<
+  SeedPresidentialStatus,
+  "potential" | "exploring"
+> = {
   frontrunner: "potential",
   likely: "potential",
   possible: "potential",

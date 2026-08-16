@@ -1,4 +1,10 @@
 import type { TerenaKernelInput } from "./world.js";
+import {
+  terenaElectoralFields,
+  type AssemblyTurnoutConstituencyInput,
+  type PollsterInput,
+  type VoterBlocConstituencyInput,
+} from "./elections/content.js";
 
 type GeoFeature = { properties: Record<string, unknown> };
 
@@ -52,4 +58,25 @@ export function terenaPartyFields(args: {
   };
   if (args.assemblyElection) fields.assemblyElection = args.assemblyElection;
   return fields;
+}
+
+export function terenaElectoralFromBundle(bundle: {
+  voterBlocs: { constituencies: VoterBlocConstituencyInput[] };
+  pollsters: { pollsters: PollsterInput[] };
+  content: {
+    terena_issues: { issues: Array<{ id: string; dimension: string }> };
+    terena_constituencies: { features: GeoFeature[] };
+  };
+  assemblyElection2026: { constituencies: AssemblyTurnoutConstituencyInput[] };
+}): ReturnType<typeof terenaElectoralFields> {
+  return terenaElectoralFields({
+    voterBlocs: bundle.voterBlocs.constituencies,
+    pollsters: bundle.pollsters.pollsters,
+    issues: bundle.content.terena_issues.issues.map((i) => ({
+      id: i.id,
+      dimension: i.dimension,
+    })),
+    constituencyFeatures: bundle.content.terena_constituencies.features,
+    assemblyTurnout: bundle.assemblyElection2026.constituencies,
+  });
 }

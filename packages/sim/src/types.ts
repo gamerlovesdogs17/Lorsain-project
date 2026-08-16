@@ -8,6 +8,17 @@ import type { AgentProfile, AgentProfileOverride } from "./agents/profile.js";
 import type { RelationshipEdge } from "./agents/relationships.js";
 import type { MemoryDurability, MemoryKind } from "./agents/types.js";
 import type {
+  CandidateStanding,
+  ConstituencyElectorate,
+  DomainResolutionRecord,
+  ElectionState,
+  ElectoralEnvironment,
+  IdeologyVector,
+  PollRecord,
+  PollsterDefinition,
+  VoterBlocDefinition,
+} from "./elections/types.js";
+import type {
   DynamicPartyDefinition,
   EndorsementRecord,
   FactionDefinition,
@@ -21,7 +32,7 @@ import type {
   ProvincialPartyOrganization,
 } from "./parties/types.js";
 
-export const SAVE_SCHEMA_VERSION = 3 as const;
+export const SAVE_SCHEMA_VERSION = 4 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -106,6 +117,9 @@ export type Counters = {
   nextEndorsementId: number;
   nextPartyContestId: number;
   nextDynamicPartyId: number;
+  nextPollId: number;
+  nextElectionId: number;
+  nextDomainResolutionId: number;
 };
 
 export type PresidentialRuntime = {
@@ -142,6 +156,11 @@ export type SimState = {
   endorsements: Record<string, EndorsementRecord>;
   partyContests: Record<string, PartyContest>;
   dynamicParties: Record<string, DynamicPartyDefinition>;
+  elections: Record<string, ElectionState>;
+  candidateStanding: Record<string, CandidateStanding>;
+  electoralEnvironment: ElectoralEnvironment;
+  polls: Record<string, PollRecord>;
+  domainResolutions: Record<string, DomainResolutionRecord>;
 };
 
 export type Command =
@@ -235,6 +254,8 @@ export type Command =
       factionId?: string | null;
       ruleId?: string;
       selectorMethod?: NominationMethod;
+      memberWeight?: number;
+      affiliateUnionDelegateWeight?: number;
     }
   | { type: "DEV_OPEN_PARTY_CONTEST"; contestId: string }
   | { type: "DEV_RESOLVE_PARTY_CONTEST"; contestId: string }
@@ -254,7 +275,49 @@ export type Command =
       newPartyName: string;
       newPartyShort: string;
       politicianIds: string[];
-    };
+    }
+  | {
+      type: "RESOLVE_PRESIDENTIAL_ELECTION";
+      electionId?: string;
+    }
+  | {
+      type: "FINALIZE_ELECTION_FIELD";
+      electionId: string;
+    }
+  | {
+      type: "DEV_CREATE_POLL";
+      pollsterId: string;
+      electionId?: string;
+      geographyKind: "national" | "constituency";
+      constituencyId?: string | null;
+      candidateIds: string[];
+      sampleSize?: number;
+    }
+  | {
+      type: "DEV_SET_CANDIDATE_STANDING";
+      politicianId: string;
+      nameRecognition?: number;
+      favorability?: number;
+      enthusiasm?: number;
+      momentum?: number;
+    }
+  | {
+      type: "DEV_SET_ELECTORAL_ENVIRONMENT";
+      nationalPartyShift?: Record<string, number>;
+      constituencyId?: string;
+      constituencyPartyShift?: Record<string, number>;
+      issueClimateShift?: Record<string, number>;
+    }
+  | {
+      type: "DEV_ADD_ELECTION_CANDIDATE";
+      electionId: string;
+      politicianId: string;
+      partyId?: string | null;
+      publicIdeology?: Record<string, number> | null;
+      independentQualified?: boolean;
+      sourceContestId?: string | null;
+    }
+  | { type: "RESOLVE_PRESIDENTIAL_ASSUMPTION" };
 
 export type CommandError = { code: string; message: string };
 
@@ -342,6 +405,17 @@ export type KernelWorld = {
   partyProvinceBaseline: Record<string, Record<string, string>>;
   provincialPartyOrganizations: Record<string, ProvincialPartyOrganization>;
   presidentialEligibility: PresidentialEligibilityRules;
+  voterBlocs: Record<string, VoterBlocDefinition>;
+  voterBlocIdsByConstituency: Record<string, string[]>;
+  constituencyElectorate: Record<string, ConstituencyElectorate>;
+  pollsters: Record<string, PollsterDefinition>;
+  issueDimensions: Record<string, string>;
+  /**
+   * Immutable public party ideology baselines, established at scenario construction.
+   * Runtime voter support must not live-average hidden AgentProfile ideology.
+   */
+  partyPublicIdeology: Record<string, IdeologyVector>;
+  factionPublicIdeology: Record<string, IdeologyVector>;
 };
 
 export type CreateSimulationOptions = {

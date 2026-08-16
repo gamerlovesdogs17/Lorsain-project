@@ -11,7 +11,11 @@ import { kernelOffice, syntheticWorld } from "./synthetic-world.js";
 import { syntheticAgentProfile, publicPoliticianFacts } from "./agents/profile.js";
 import { createRngService } from "./rng.js";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { compactAssemblyElectionFromRaw, terenaPartyFields } from "./terena-party-input.js";
+import {
+  compactAssemblyElectionFromRaw,
+  terenaElectoralFromBundle,
+  terenaPartyFields,
+} from "./terena-party-input.js";
 import {
   assemblyCaucus,
   buildProvincialPartyOrganizations,
@@ -49,7 +53,10 @@ function loadTerenaWorld(withElection = false) {
     contentVersion: bundle.manifest.content_version,
     scenario: jsonClone(bundle.content.scenario),
     figures: bundle.content.starting_figures.figures,
-    issues: bundle.content.terena_issues.issues.map((i: { id: string }) => ({ id: i.id })),
+    issues: bundle.content.terena_issues.issues.map((i: { id: string; dimension: string }) => ({
+      id: i.id,
+      dimension: i.dimension,
+    })),
     offices: bundle.content.terena_offices.offices,
     constitution: jsonClone(bundle.content.terena_constitution),
     administrations: bundle.content.terena_presidential_administrations.administrations,
@@ -61,6 +68,7 @@ function loadTerenaWorld(withElection = false) {
       ...(assemblyElection ? { assemblyElection } : {}),
     }),
     presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
+    ...terenaElectoralFromBundle(bundle),
   } satisfies TerenaKernelInput;
   return buildTerenaKernelWorld(input);
 }
@@ -855,7 +863,7 @@ describe("leadership contests, splits, knowledge, player, save", () => {
     const parsed = parseSaveFile(stripToV2(sim.serializeSave()), "0.3.1-predev");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(3);
+    expect(parsed.save.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     expect(restoreSimulation(parsed.save, world).hashState()).toBe(hash);
   });
 
@@ -1812,5 +1820,178 @@ describe("Phase 3 history and lifecycle integrity", () => {
     const later = jsonClone(snap);
     later.presidential.nextRegularElectionDate = "2036-10-11";
     expect(evaluatePresidentialEligibility(world, later, "PYOUNG").eligible).toBe(true);
+  });
+});
+
+describe("Phase 3 preflight A1–A4", () => {
+  it("A1: v2 migration does not resurrect a dead canonical leader or chair", () => {
+    const world = partyMiniWorld("MIG-DEAD");
+    const sim = createSimulation({ world, playerPoliticianId: "P1" });
+    expect(sim.getSnapshot().partyStates.PARTY_LAB?.leaderId).toBe("P3");
+    expect(sim.getSnapshot().factionStates.FAC_LAB_A?.chairId).toBe("P3");
+    const v2 = stripToV2(sim.serializeSave());
+    const politicians = (v2.simulation as { politicians: Record<string, { alive: boolean }> })
+      .politicians;
+    politicians.P3.alive = false;
+    const parsed = parseSaveFile(v2, "0.3.1-predev");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const restored = restoreSimulation(parsed.save, world);
+    const snap = restored.getSnapshot();
+    expect(snap.partyStates.PARTY_LAB?.leaderId).toBeNull();
+    expect(snap.partyStates.PARTY_LAB?.status).toBe("leadership_vacant");
+    expect(snap.factionStates.FAC_LAB_A?.chairId).toBeNull();
+    expect(snap.factionStates.FAC_LAB_A?.status).toBe("chair_vacant");
+    expect(
+      Object.values(snap.partyContests).some(
+        (c) => c.type === "party_leadership" || c.type === "faction_chair",
+      ),
+    ).toBe(false);
+  });
+
+  it("A1: retired or wrong-party canonical officeholders are not seeded active", () => {
+    const world = partyMiniWorld("MIG-RET");
+    const sim = createSimulation({ world, playerPoliticianId: "P1" });
+    const v2 = stripToV2(sim.serializeSave());
+    const politicians = (
+      v2.simulation as {
+        politicians: Record<
+          string,
+          { retired: boolean; partyId: string | null; factionId: string | null }
+        >;
+      }
+    ).politicians;
+    politicians.P3.retired = true;
+    politicians.P12.partyId = "PARTY_LAB";
+    politicians.P12.factionId = null;
+    const parsed = parseSaveFile(v2, "0.3.1-predev");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const snap = restoreSimulation(parsed.save, world).getSnapshot();
+    expect(snap.partyStates.PARTY_LAB?.status).toBe("leadership_vacant");
+    expect(snap.partyStates.PARTY_CR?.status).toBe("leadership_vacant");
+    expect(snap.partyStates.PARTY_CR?.leaderId).toBeNull();
+  });
+
+  it("A2: rejects declaredDate after a resolved contest date", () => {
+    const sim = simFor();
+    const contestId = resolveLabLeadership(sim, ["P3", "P19"]);
+    expectOk(sim, { type: "ADVANCE_TURN" });
+    const snap = sim.getSnapshot();
+    if (snap.pendingInterrupt) {
+      expectOk(sim, { type: "ACKNOWLEDGE_INTERRUPT" });
+      expectOk(sim, { type: "RESUME_TURN" });
+    }
+    const raw = jsonClone(sim.serializeSave()) as {
+      simulation: {
+        currentDate: string;
+        partyContests: Record<
+          string,
+          { resolvedDate: string; entries: Record<string, { declaredDate: string | null }> }
+        >;
+      };
+    };
+    const contest = raw.simulation.partyContests[contestId]!;
+    contest.entries.P3!.declaredDate = raw.simulation.currentDate;
+    expect(contest.entries.P3!.declaredDate > contest.resolvedDate).toBe(true);
+    expect(parsedSave(raw).ok).toBe(false);
+  });
+
+  it("A2: rejects an endorsement dated after the resolved contest", () => {
+    const sim = simFor();
+    expectOk(sim, {
+      type: "DEV_CREATE_PARTY_CONTEST",
+      contestType: "party_leadership",
+      partyId: "PARTY_LAB",
+      selectorMethod: "member_rcv",
+    });
+    const contestId = Object.values(sim.getSnapshot().partyContests).find(
+      (c) => c.type === "party_leadership",
+    )!.id;
+    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P19" });
+    expectOk(sim, {
+      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      contestId,
+      endorserId: "P19",
+      targetId: "P3",
+      endorserType: "politician",
+    });
+    expectOk(sim, { type: "DEV_OPEN_PARTY_CONTEST", contestId });
+    expectOk(sim, { type: "DEV_RESOLVE_PARTY_CONTEST", contestId });
+    expectOk(sim, { type: "ADVANCE_TURN" });
+    const snap = sim.getSnapshot();
+    if (snap.pendingInterrupt) {
+      expectOk(sim, { type: "ACKNOWLEDGE_INTERRUPT" });
+      expectOk(sim, { type: "RESUME_TURN" });
+    }
+    const raw = jsonClone(sim.serializeSave()) as {
+      simulation: {
+        currentDate: string;
+        endorsements: Record<string, { date: string }>;
+      };
+    };
+    const endId = Object.keys(raw.simulation.endorsements)[0]!;
+    raw.simulation.endorsements[endId]!.date = raw.simulation.currentDate;
+    expect(parsedSave(raw).ok).toBe(false);
+  });
+
+  it("A3: rejects non-string seedPresidentialStatus values", () => {
+    const sim = simFor();
+    const contestId = createdContestId(sim, "PARTY_LAB");
+    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    const raw = jsonClone(sim.serializeSave()) as {
+      simulation: {
+        partyContests: Record<string, { entries: Record<string, Record<string, unknown>> }>;
+      };
+    };
+    const pid = "P3";
+    raw.simulation.partyContests[contestId]!.entries[pid]!.seedPresidentialStatus = {
+      status: "frontrunner",
+    };
+    expect(parsedSave(raw).ok).toBe(false);
+    raw.simulation.partyContests[contestId]!.entries[pid]!.seedPresidentialStatus = 123;
+    expect(parsedSave(raw).ok).toBe(false);
+    raw.simulation.partyContests[contestId]!.entries[pid]!.seedPresidentialStatus = [];
+    expect(parsedSave(raw).ok).toBe(false);
+    raw.simulation.partyContests[contestId]!.entries[pid]!.seedPresidentialStatus = "frontrunner";
+    expect(parsedSave(raw).ok).toBe(true);
+  });
+
+  it("A4: generic weighted_ranked_choice does not invent Labour 80/20", () => {
+    const sim = simFor();
+    const missing = sim.executeCommand({
+      type: "DEV_CREATE_PARTY_CONTEST",
+      contestType: "party_leadership",
+      partyId: "PARTY_NU",
+      selectorMethod: "weighted_ranked_choice",
+    });
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.error.code).toBe("SELECTOR_CONFIGURATION_REQUIRED");
+    const created = expectOk(sim, {
+      type: "DEV_CREATE_PARTY_CONTEST",
+      contestType: "party_leadership",
+      partyId: "PARTY_NU",
+      selectorMethod: "weighted_ranked_choice",
+      memberWeight: 0.7,
+      affiliateUnionDelegateWeight: 0.3,
+    });
+    const contestId = created.ok ? String(created.events[0]?.payload.contestId ?? "") : "";
+    const contest = sim.getSnapshot().partyContests[contestId]!;
+    const groups = selectorateForRule(sim.world(), sim.getSnapshot(), contest);
+    const member = groups.filter((g) => g.kind === "members");
+    const union = groups.filter((g) => g.kind === "union_delegates");
+    expect(member.length).toBeGreaterThan(0);
+    expect(union.length).toBeGreaterThan(0);
+    const labour = labourSelectorate(sim.world(), sim.getSnapshot(), "PARTY_LAB");
+    const labourMemberW = labour
+      .filter((g) => g.kind === "members")
+      .reduce((a, g) => a + Number(g.weight.split("/")[0]) / Number(g.weight.split("/")[1]), 0);
+    const nuMemberW = member.reduce(
+      (a, g) => a + Number(g.weight.split("/")[0]) / Number(g.weight.split("/")[1]),
+      0,
+    );
+    expect(Math.abs(nuMemberW - 0.7)).toBeLessThan(1e-9);
+    expect(Math.abs(labourMemberW - 0.8)).toBeLessThan(1e-9);
   });
 });

@@ -11,7 +11,7 @@ import { nthWeekdayOfMonth, presidentialAssumptionDate } from "./calendar.js";
 import type { KernelWorld } from "./types.js";
 import { countRelationshipEdges } from "./agents/relationships.js";
 import { SAVE_SCHEMA_VERSION } from "./types.js";
-import { terenaPartyFields } from "./terena-party-input.js";
+import { terenaElectoralFromBundle, terenaPartyFields } from "./terena-party-input.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 
@@ -43,7 +43,10 @@ function loadTerenaInput() {
       contentVersion: bundle.manifest.content_version,
       scenario: jsonClone(bundle.content.scenario),
       figures: bundle.content.starting_figures.figures,
-      issues: bundle.content.terena_issues.issues.map((i: { id: string }) => ({ id: i.id })),
+      issues: bundle.content.terena_issues.issues.map((i: { id: string; dimension: string }) => ({
+        id: i.id,
+        dimension: i.dimension,
+      })),
       offices: bundle.content.terena_offices.offices,
       constitution: jsonClone(bundle.content.terena_constitution),
       administrations: bundle.content.terena_presidential_administrations.administrations,
@@ -54,6 +57,7 @@ function loadTerenaInput() {
         constituencyFeatures: bundle.content.terena_constituencies.features,
       }),
       presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
+      ...terenaElectoralFromBundle(bundle),
     } satisfies TerenaKernelInput,
   };
 }

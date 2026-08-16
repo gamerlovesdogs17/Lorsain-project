@@ -76,6 +76,26 @@ export function createPartyContest(
         ),
       };
     }
+    if (methodRaw === "weighted_ranked_choice") {
+      const mw = metadata.memberWeight;
+      const uw = metadata.affiliateUnionDelegateWeight;
+      if (
+        typeof mw !== "number" ||
+        typeof uw !== "number" ||
+        !Number.isFinite(mw) ||
+        !Number.isFinite(uw) ||
+        mw < 0 ||
+        uw < 0 ||
+        mw + uw <= 0
+      ) {
+        return {
+          error: reject(
+            "SELECTOR_CONFIGURATION_REQUIRED",
+            "generic weighted_ranked_choice requires explicit memberWeight and affiliateUnionDelegateWeight",
+          ),
+        };
+      }
+    }
     if (args.ruleId && world.nominationRules[args.ruleId]) {
       return {
         error: reject(

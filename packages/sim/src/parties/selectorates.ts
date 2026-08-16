@@ -33,6 +33,7 @@ import type {
   SelectorTendency,
 } from "./types.js";
 import { isNominationMethod } from "./types.js";
+import { publicElectabilitySignal } from "../elections/electability.js";
 
 function shareToRational(share: number): Rational {
   const den = 1_000_000;
@@ -229,6 +230,7 @@ function publicScore(
   if (group.kind === "members" || group.kind === "convention_delegates") {
     score += cohesion * SELECTOR_PUBLIC_WEIGHTS.discipline;
   }
+  score += publicElectabilitySignal(world, state, candidateId, contest.type);
   score += groupIdiosyncrasy(group.id, candidateId) * SELECTOR_GROUP_IDIOSYNCRASY;
   return score;
 }
@@ -416,10 +418,11 @@ export function labourSelectorate(
   world: KernelWorld,
   state: SimState,
   partyId: string,
+  weights?: { memberWeight: number; affiliateUnionDelegateWeight: number },
 ): SelectorGroup[] {
   const rule = world.nominationRules[world.partyDefinitions[partyId]?.nominationRuleId ?? ""];
-  const memberW = rule?.memberWeight ?? 0.8;
-  const unionW = rule?.affiliateUnionDelegateWeight ?? 0.2;
+  const memberW = weights?.memberWeight ?? rule?.memberWeight ?? 0.8;
+  const unionW = weights?.affiliateUnionDelegateWeight ?? rule?.affiliateUnionDelegateWeight ?? 0.2;
   return [
     ...heterogeneousFactionGroups(
       world,
@@ -597,8 +600,25 @@ export function selectorateForRule(
   const method = contestSelectorMethod(contest, world);
   const chairFaction = contest.type === "faction_chair" ? contest.factionId : null;
   switch (method) {
-    case "weighted_ranked_choice":
-      return labourSelectorate(world, state, contest.partyId);
+    case "weighted_ranked_choice": {
+      if (contest.type === "presidential_nomination") {
+        return labourSelectorate(world, state, contest.partyId);
+      }
+      const mw = contest.metadata.memberWeight;
+      const uw = contest.metadata.affiliateUnionDelegateWeight;
+      if (
+        typeof mw !== "number" ||
+        typeof uw !== "number" ||
+        !Number.isFinite(mw) ||
+        !Number.isFinite(uw)
+      ) {
+        return [];
+      }
+      return labourSelectorate(world, state, contest.partyId, {
+        memberWeight: mw,
+        affiliateUnionDelegateWeight: uw,
+      });
+    }
     case "closed_member_rcv":
     case "member_rcv":
       return memberFactionSelectorate(world, state, contest.partyId, chairFaction);

@@ -818,23 +818,19 @@ Canonical starting profiles stay on `KernelWorld`. Future generated politicians 
 
 ## 12. Phase 3 — parties, factions and nominations
 
-**IMPLEMENTED, pending review.** Runtime parties/factions/endorsements/contests in `@lorsain/sim` (`packages/sim/src/parties/`). Membership is derived from `PoliticianRuntime`; `PARTY_IND` is never a joinable party. Leadership is runtime `PartyState`/`FactionState`, not office terms. Nomination RCV always calls `countIrv`. Save schemaVersion **3**; v2→v3 migration seeds empty party structs and `restoreSimulation` initializes canonical 2028 institutions when needed. Phase 4 has **not started**.
+**COMPLETE (`dc9ea2d`).** Runtime parties/factions/endorsements/contests in `@lorsain/sim` (`packages/sim/src/parties/`). Membership is derived from `PoliticianRuntime`; `PARTY_IND` is never a joinable party. Leadership is runtime `PartyState`/`FactionState`, not office terms. Nomination RCV always calls `countIrv`. Save schemaVersion **3**; v2→v3 migration seeds empty party structs and `restoreSimulation` initializes canonical 2028 institutions when needed.
 
 Acceptance criteria: 1,000 automated party leadership contests respond to faction size and endorsements without collapsing into pure noise.
 
-## 13. Phase 4 — election / campaign simulation (not counting math)
+## 13. Phase 4 — electorate, polling, and formal general elections
 
-Implement voter blocs, underlying support, candidate quality, campaign resources, turnout, polling, and campaign AI. Presidential RCV and Assembly STV **counts** call `packages/election-math`.
+**COMPLETE.** Public electorate in `@lorsain/sim` (`packages/sim/src/elections/`). Static voter blocs/pollsters/issue dimensions/2026 turnout priors live on `KernelWorld`. Mutable `SimState` holds sparse electoral environment, lazy public candidate standing, `ElectionState`, historical `PollRecord`s, and `DomainResolutionRecord`s. Voters never read hidden `AgentProfile` traits or skills. Polls observe latent support with house effects and sampling/model error on the `campaigns` stream. Formal presidential IRV and Assembly STV call `@lorsain/election-math` and archive exact inputs. Save schemaVersion **4**; v3→v4 adds empty electoral structs. Nonblocking leftovers live in `docs/KNOWN_ISSUES.md`. Phase 5 campaign actions have **not started**.
 
-Store complete count archives from election-math so election-night UI and historical pages can replay results.
+Acceptance criteria: 10,000 synthetic general-election cases remain legal; poll calibration approaches latent+house-effect; 2028 field stays unfinished until explicitly finalized; a test path can count 2028 and assume office on 2029-01-20.
 
-Acceptance criteria: autonomous campaigns complete without player input; counting remains deterministic via election-math; 10,000 simulated elections show sensible monotonic response to support shifts and no impossible seat totals.
+## 14. Phase 5 — campaign actions
 
-## 14. Phase 5 — campaign simulation
-
-Implement fundraising, budgets, ad markets, field organization, visits, debates, endorsements, attacks, scandal response and candidate dropout. NPCs choose actions using perceived rather than true support.
-
-Acceptance criteria: autonomous NPC candidates can complete an entire presidential and Assembly campaign with no player input; spending cannot exceed funds; candidates respond to changed polling and endorsements.
+**Not started.** Fundraising, cash/budgets, advertising, field organization, travel/visits, debates, attacks, scandal response, dropout, and autonomous campaign action selection. These actions change Phase 4 public standing and environment; they do not replace the electorate model.
 
 ## 15. Phase 6 — legislature
 

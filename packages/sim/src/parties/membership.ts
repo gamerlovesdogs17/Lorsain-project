@@ -6,6 +6,7 @@ import { pushHistory } from "../scheduler.js";
 import { INDEPENDENT_AGGREGATE_ID } from "./policy.js";
 import { isJoinablePartyId } from "./queries.js";
 import { reconcilePoliticianContestParticipation } from "./lifecycle.js";
+import { reconcileUnresolvedElectionCandidacies } from "../elections/field.js";
 import { assertIndependentMembership } from "./state.js";
 
 function reject(code: string, message: string): CommandError {
@@ -154,6 +155,7 @@ export function changePartyMembership(
   );
   reviewGoals(state, world, politicianId, state.currentDate);
   reconcilePoliticianContestParticipation(world, state, politicianId, events, commandId);
+  reconcileUnresolvedElectionCandidacies(world, state, politicianId);
   return { events, previousPartyId, previousFactionId };
 }
 
@@ -190,6 +192,7 @@ export function changeFaction(
     );
     reviewGoals(state, world, politicianId, state.currentDate);
     reconcilePoliticianContestParticipation(world, state, politicianId, events, commandId);
+    reconcileUnresolvedElectionCandidacies(world, state, politicianId);
     return { events, previousPartyId: pol.partyId, previousFactionId };
   }
   const facDef = world.factionDefinitions[factionId];
@@ -222,6 +225,7 @@ export function changeFaction(
   );
   reviewGoals(state, world, politicianId, state.currentDate);
   reconcilePoliticianContestParticipation(world, state, politicianId, events, commandId);
+  reconcileUnresolvedElectionCandidacies(world, state, politicianId);
   return { events, previousPartyId: pol.partyId, previousFactionId };
 }
 
@@ -235,5 +239,6 @@ export function applyRetirementOrDeathVacancies(
   vacatePartyLeadership(state, world, politicianId, events, commandId);
   vacateFactionChair(state, world, politicianId, events, commandId);
   reconcilePoliticianContestParticipation(world, state, politicianId, events, commandId);
+  reconcileUnresolvedElectionCandidacies(world, state, politicianId);
   return events;
 }

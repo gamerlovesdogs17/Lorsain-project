@@ -9,7 +9,7 @@ import {
   isUnresolvedContestStatus,
   politicianEligibleForContest,
 } from "./lifecycle.js";
-import { INDEPENDENT_AGGREGATE_ID } from "./policy.js";
+import { INDEPENDENT_AGGREGATE_ID, isSeedPresidentialStatus } from "./policy.js";
 import { factionMembers, membershipPartyIds, resolvePartyDefinition } from "./queries.js";
 import { contestCountReplayError } from "./replay.js";
 import {
@@ -64,6 +64,17 @@ function parseNonNegativeRational(raw: unknown, label: string): string | null {
   } catch {
     return `${label} is not a valid rational`;
   }
+}
+
+function parseSeedPresidentialStatus(
+  raw: unknown,
+  label: string,
+): { ok: true; value: string | null } | { ok: false; error: string } {
+  if (raw == null) return { ok: true, value: null };
+  if (!isSeedPresidentialStatus(raw)) {
+    return { ok: false, error: `${label} must be null or a recognized seed status` };
+  }
+  return { ok: true, value: raw };
 }
 
 function parseEvidence(raw: unknown, label: string): QualificationEvidence | string {
@@ -491,6 +502,21 @@ export function parsePartyRuntime(
       if (rec.ruleId !== "") {
         return `partyContests.${id} generic contest must not carry a presidential ruleId`;
       }
+      if (method === "weighted_ranked_choice") {
+        const mw = rec.metadata.memberWeight;
+        const uw = rec.metadata.affiliateUnionDelegateWeight;
+        if (
+          typeof mw !== "number" ||
+          typeof uw !== "number" ||
+          !Number.isFinite(mw) ||
+          !Number.isFinite(uw) ||
+          mw < 0 ||
+          uw < 0 ||
+          mw + uw <= 0
+        ) {
+          return `partyContests.${id} generic weighted_ranked_choice requires explicit selector weights`;
+        }
+      }
     }
     if (!isRecord(rec.entries)) return `partyContests.${id} entries`;
     const entries: Record<string, ContestEntry> = {};
@@ -516,20 +542,27 @@ export function parsePartyRuntime(
         if (compareIsoDate(entryRaw.declaredDate, rec.createdDate) < 0) {
           return `partyContests.${id} candidate ${pid} declaredDate before contest createdDate`;
         }
+        if (rec.resolvedDate && compareIsoDate(entryRaw.declaredDate, rec.resolvedDate) > 0) {
+          return `partyContests.${id} candidate ${pid} declaredDate after contest resolvedDate`;
+        }
       }
       const evidence = parseEvidence(
         entryRaw.qualificationEvidence,
         `partyContests.${id}.entries.${pid}.qualificationEvidence`,
       );
       if (typeof evidence === "string") return evidence;
+      const seed = parseSeedPresidentialStatus(
+        entryRaw.seedPresidentialStatus,
+        `partyContests.${id} candidate ${pid} seedPresidentialStatus`,
+      );
+      if (!seed.ok) return seed.error;
       if (entryRaw.status === "winner") winnerEntries += 1;
       entries[pid] = {
         politicianId: pid,
         status: entryRaw.status,
         declaredDate: entryRaw.declaredDate == null ? null : entryRaw.declaredDate,
         qualificationEvidence: evidence,
-        seedPresidentialStatus:
-          entryRaw.seedPresidentialStatus == null ? null : String(entryRaw.seedPresidentialStatus),
+        seedPresidentialStatus: seed.value,
       };
     }
     if (rec.status === "planned") {
@@ -685,6 +718,12 @@ export function parsePartyRuntime(
     }
     if (compareIsoDate(rec.date, args.currentDate) > 0)
       return `endorsements.${id} date after currentDate`;
+    if (compareIsoDate(rec.date, host.createdDate) < 0) {
+      return `endorsements.${id} date before contest createdDate`;
+    }
+    if (host.resolvedDate && compareIsoDate(rec.date, host.resolvedDate) > 0) {
+      return `endorsements.${id} date after contest resolvedDate`;
+    }
     if (typeof rec.public !== "boolean") return `endorsements.${id} public`;
     if (!isJsonObject(rec.metadata)) return `endorsements.${id} metadata`;
     if (rec.status === "active") {

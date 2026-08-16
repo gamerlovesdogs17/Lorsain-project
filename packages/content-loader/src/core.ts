@@ -101,6 +101,9 @@ export type ContentBundle = {
   index: ContentIndex;
   /** Canonical presidential eligibility (Phase 0b authoritative). */
   presidentialEligibility: PresidentialEligibilityFile;
+  voterBlocs: ReturnType<typeof VoterBlocsFileSchema.parse>;
+  pollsters: ReturnType<typeof PollstersFileSchema.parse>;
+  assemblyElection2026: ReturnType<typeof AssemblyElection2026Schema.parse>;
 };
 
 export type ContentFileReader = {
@@ -1322,6 +1325,9 @@ export function validateAndLoadContent(
     content,
     index,
     presidentialEligibility: deepFreeze(eligibility),
+    voterBlocs: deepFreeze(voterBlocs),
+    pollsters: deepFreeze(pollsters),
+    assemblyElection2026: deepFreeze(election2026),
   });
 
   return { report, bundle };
