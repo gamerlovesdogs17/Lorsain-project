@@ -9,6 +9,8 @@ import { parseSaveFile } from "./save.js";
 import { buildTerenaKernelWorld, KernelContentError, type TerenaKernelInput } from "./world.js";
 import { nthWeekdayOfMonth, presidentialAssumptionDate } from "./calendar.js";
 import type { KernelWorld } from "./types.js";
+import { countRelationshipEdges } from "./agents/relationships.js";
+import { SAVE_SCHEMA_VERSION } from "./types.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 
@@ -40,6 +42,7 @@ function loadTerenaInput() {
       contentVersion: bundle.manifest.content_version,
       scenario: jsonClone(bundle.content.scenario),
       figures: bundle.content.starting_figures.figures,
+      issues: bundle.content.terena_issues.issues.map((i: { id: string }) => ({ id: i.id })),
       offices: bundle.content.terena_offices.offices,
       constitution: jsonClone(bundle.content.terena_constitution),
       administrations: bundle.content.terena_presidential_administrations.administrations,
@@ -319,5 +322,39 @@ describe("TERENA_2028 January save integrity", () => {
     election.status = "processed";
     expect(parseSaveFile(raw).ok).toBe(false);
     expect(() => restoreSimulation(raw as never, world)).toThrow();
+  });
+});
+
+describe("TERENA_2028 Phase 2 agent substrate", () => {
+  it("loads 530 canonical profiles without O(N^2) social state", () => {
+    const { world } = loadTerenaWorld();
+    expect(Object.keys(world.agentProfiles).length).toBe(530);
+    const tiers = { rich: 0, standard: 0, light: 0 };
+    for (const p of Object.values(world.agentProfiles)) tiers[p.aiTier] += 1;
+    expect(tiers).toEqual({ rich: 316, standard: 207, light: 7 });
+    const sim = createSimulation({ world, playerPoliticianId: "NPC002" });
+    const snap = sim.getSnapshot();
+    expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
+    expect(countRelationshipEdges(snap)).toBe(0);
+    expect(Object.keys(snap.memories).length).toBe(0);
+    expect(Object.keys(snap.beliefs).length).toBe(0);
+    expect(Object.keys(snap.goals).length).toBeGreaterThan(500);
+    expect(Object.keys(snap.generatedAgentProfiles).length).toBe(0);
+    const v2Bytes = JSON.stringify(sim.serializeSave()).length;
+    const v1Shaped = jsonClone(sim.serializeSave()) as unknown as {
+      schemaVersion: number;
+      simulation: Record<string, unknown>;
+    };
+    v1Shaped.schemaVersion = 1;
+    v1Shaped.simulation.schemaVersion = 1;
+    delete v1Shaped.simulation.relationships;
+    delete v1Shaped.simulation.memories;
+    delete v1Shaped.simulation.beliefs;
+    delete v1Shaped.simulation.goals;
+    delete v1Shaped.simulation.generatedAgentProfiles;
+    delete v1Shaped.simulation.agentProfileOverrides;
+    const v1Bytes = JSON.stringify(v1Shaped).length;
+    expect(v2Bytes).toBeGreaterThan(v1Bytes);
+    expect(v2Bytes).toBeLessThan(2_000_000);
   });
 });

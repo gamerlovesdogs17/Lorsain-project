@@ -1,8 +1,14 @@
 import type { IsoDate, RegularElectionCalendar } from "./calendar.js";
 import type { JsonObject } from "./json.js";
 import type { SerializedRngState, StreamName } from "./rng.js";
+import type { BeliefRecord } from "./agents/beliefs.js";
+import type { PoliticianGoal } from "./agents/goals.js";
+import type { PoliticalMemory } from "./agents/memories.js";
+import type { AgentProfile, AgentProfileOverride } from "./agents/profile.js";
+import type { RelationshipEdge } from "./agents/relationships.js";
+import type { MemoryDurability, MemoryKind } from "./agents/types.js";
 
-export const SAVE_SCHEMA_VERSION = 1 as const;
+export const SAVE_SCHEMA_VERSION = 2 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -82,6 +88,8 @@ export type Counters = {
   nextTermId: number;
   schedulerSequence: number;
   nextCommandId: number;
+  nextMemoryId: number;
+  nextGoalId: number;
 };
 
 export type PresidentialRuntime = {
@@ -107,6 +115,12 @@ export type SimState = {
   history: SimEvent[];
   counters: Counters;
   presidential: PresidentialRuntime;
+  relationships: Record<string, Record<string, RelationshipEdge>>;
+  memories: Record<string, PoliticalMemory>;
+  beliefs: Record<string, Record<string, Record<string, BeliefRecord>>>;
+  goals: Record<string, PoliticianGoal>;
+  generatedAgentProfiles: Record<string, AgentProfile>;
+  agentProfileOverrides: Record<string, AgentProfileOverride>;
 };
 
 export type Command =
@@ -138,7 +152,36 @@ export type Command =
       holdingKind?: "substantive" | "acting";
       accessionReason?: string;
     }
-  | { type: "DEV_RESUME_TERM"; termId: string };
+  | { type: "DEV_RESUME_TERM"; termId: string }
+  | {
+      type: "DEV_RECORD_INTERACTION";
+      sourceId: string;
+      targetId: string;
+      delta: { affinity?: number; trust?: number; respect?: number };
+      memory?: {
+        kind: MemoryKind;
+        valence: number;
+        salience: number;
+        durability: MemoryDurability;
+        tags?: string[];
+        subjectIds?: string[];
+        metadata?: JsonObject;
+        relationshipEffects?: { affinity?: number; trust?: number; respect?: number };
+        sourceEventId?: string | null;
+      };
+    }
+  | {
+      type: "DEV_RECORD_OBSERVATION";
+      observerId: string;
+      targetId: string;
+      topic: "ideology" | "trait" | "skill";
+      dimension: string;
+      observed: number;
+      observationConfidence: number;
+      sourceReliability: number;
+      source?: string | null;
+    }
+  | { type: "DEV_REVIEW_AGENT_GOALS"; politicianId?: string };
 
 export type CommandError = { code: string; message: string };
 
@@ -212,6 +255,8 @@ export type KernelWorld = {
   startingTerms: Array<Omit<OfficeTerm, "id">>;
   initialScheduled: InitialScheduledSpec[];
   electedTermCounts: Record<string, number>;
+  agentProfiles: Record<string, AgentProfile>;
+  issueIds: string[];
 };
 
 export type CreateSimulationOptions = {

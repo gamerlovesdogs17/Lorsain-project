@@ -4,6 +4,7 @@ import { jsonClone } from "./hash.js";
 import { parseSaveFile, type ContentMigration } from "./save.js";
 import { syntheticWorld, kernelOffice } from "./synthetic-world.js";
 import { validateKernelWorld } from "./validate-world.js";
+import { syntheticAgentProfile } from "./agents/profile.js";
 import type { Command, KernelWorld, SaveFile } from "./types.js";
 
 function goodSave(): SaveFile {
@@ -205,6 +206,7 @@ describe("rejected commands do not mutate state", () => {
       partyId: null,
       factionId: null,
     });
+    world.agentProfiles.P3 = syntheticAgentProfile("P3");
     world.startingTerms.push({
       officeId: "OFFICE_SPEAKER",
       holderId: "P2",
@@ -574,6 +576,44 @@ describe("restored-save world-relative validation", () => {
   it("allows a procedural politician who is not in static starting content", () => {
     const world = syntheticWorld();
     const raw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    const simState = raw.simulation as {
+      politicians: Record<string, unknown>;
+      generatedAgentProfiles: Record<string, unknown>;
+    };
+    simState.politicians.PROC1 = {
+      id: "PROC1",
+      alive: true,
+      retired: false,
+      partyId: null,
+      factionId: null,
+    };
+    simState.generatedAgentProfiles.PROC1 = syntheticAgentProfile("PROC1");
+    const parsed = parseSaveFile(raw);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(() => restoreSimulation(parsed.save, world)).not.toThrow();
+  });
+
+  it("rejects a generated profile that shadows a canonical NPC", () => {
+    const world = syntheticWorld();
+    const raw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    const simState = raw.simulation as { generatedAgentProfiles: Record<string, unknown> };
+    simState.generatedAgentProfiles.P1 = syntheticAgentProfile("P1", {
+      traits: { ambition: 0.01 },
+    });
+    expectRestoreRejected(raw, world, "INVALID_SAVE_WORLD");
+  });
+
+  it("rejects an orphan generated profile with no runtime politician", () => {
+    const raw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    const simState = raw.simulation as { generatedAgentProfiles: Record<string, unknown> };
+    simState.generatedAgentProfiles.PROC1 = syntheticAgentProfile("PROC1");
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("rejects a runtime noncanonical politician without a generated profile", () => {
+    const world = syntheticWorld();
+    const raw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
     const simState = raw.simulation as { politicians: Record<string, unknown> };
     simState.politicians.PROC1 = {
       id: "PROC1",
@@ -582,10 +622,80 @@ describe("restored-save world-relative validation", () => {
       partyId: null,
       factionId: null,
     };
-    const parsed = parseSaveFile(raw);
-    expect(parsed.ok).toBe(true);
-    if (!parsed.ok) return;
-    expect(() => restoreSimulation(parsed.save, world)).not.toThrow();
+    expectRestoreRejected(raw, world, "INVALID_SAVE_WORLD");
+  });
+
+  it("rejects unknown trait, skill, ideology, and issue overrides", () => {
+    const world = syntheticWorld();
+    const traitRaw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    (
+      traitRaw.simulation as { agentProfileOverrides: Record<string, unknown> }
+    ).agentProfileOverrides = { P1: { traits: { banana: 0.7 } } };
+    expect(parseSaveFile(traitRaw).ok).toBe(false);
+
+    const skillRaw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    (
+      skillRaw.simulation as { agentProfileOverrides: Record<string, unknown> }
+    ).agentProfileOverrides = { P1: { skills: { banana: 0.7 } } };
+    expect(parseSaveFile(skillRaw).ok).toBe(false);
+
+    const ideologyRaw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    (
+      ideologyRaw.simulation as { agentProfileOverrides: Record<string, unknown> }
+    ).agentProfileOverrides = { P1: { ideology: { banana: 0.2 } } };
+    expect(parseSaveFile(ideologyRaw).ok).toBe(false);
+
+    const issueRaw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    (
+      issueRaw.simulation as { agentProfileOverrides: Record<string, unknown> }
+    ).agentProfileOverrides = { P1: { issueSalience: { BANANA: 0.5 } } };
+    expectRestoreRejected(issueRaw, world, "unknown issue");
+  });
+
+  it("rejects a malformed generated presidentialStatus", () => {
+    const raw = JSON.parse(JSON.stringify(goodSave())) as Record<string, unknown>;
+    const simState = raw.simulation as {
+      politicians: Record<string, unknown>;
+      generatedAgentProfiles: Record<string, unknown>;
+    };
+    simState.politicians.PROC1 = {
+      id: "PROC1",
+      alive: true,
+      retired: false,
+      partyId: null,
+      factionId: null,
+    };
+    simState.generatedAgentProfiles.PROC1 = {
+      ...syntheticAgentProfile("PROC1"),
+      presidentialStatus: 12,
+    };
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("rejects persisted memories with duplicate subjects or malformed effects", () => {
+    const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
+    sim.executeCommand({
+      type: "DEV_RECORD_INTERACTION",
+      sourceId: "P1",
+      targetId: "P2",
+      delta: {},
+      memory: { kind: "favor", valence: 0.2, salience: 0.4, durability: "normal" },
+    });
+    const dupRaw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const mems = (dupRaw.simulation as { memories: Record<string, { subjectIds: string[] }> })
+      .memories;
+    const mem = Object.values(mems)[0]!;
+    mem.subjectIds = ["P2", "P2"];
+    expect(parseSaveFile(dupRaw).ok).toBe(false);
+
+    const effectRaw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const effectMems = (
+      effectRaw.simulation as {
+        memories: Record<string, { relationshipEffects: unknown }>;
+      }
+    ).memories;
+    Object.values(effectMems)[0]!.relationshipEffects = { trust: "bad" };
+    expect(parseSaveFile(effectRaw).ok).toBe(false);
   });
 });
 
@@ -918,10 +1028,15 @@ describe("scenario and presidential restore identity", () => {
       scenarioStartDate: string;
       currentDate: string;
       completedTurns: number;
+      goals: Record<string, { createdDate: string; lastReviewedDate: string }>;
     };
     sim.scenarioStartDate = "1999-12-01";
     sim.currentDate = "1999-12-01";
     sim.completedTurns = 0;
+    for (const goal of Object.values(sim.goals ?? {})) {
+      goal.createdDate = "1999-12-01";
+      goal.lastReviewedDate = "1999-12-01";
+    }
     expectRestoreRejected(raw, world, "SCENARIO_START_MISMATCH");
   });
 
@@ -1068,5 +1183,95 @@ describe("Acting President resume and suspension", () => {
     )!;
     expect(assembly.status).toBe("active");
     expect(assembly.holderId).toBe("P2");
+  });
+});
+
+describe("Phase 1 preflight: canonical persisted IDs", () => {
+  it("rejects non-canonical history, scheduler, and term ids", () => {
+    const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
+    expect(sim.executeCommand({ type: "ADVANCE_TURN" }).ok).toBe(true);
+    const raw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const state = raw.simulation as {
+      history: Array<Record<string, unknown>>;
+      scheduler: { events: Array<Record<string, unknown>> };
+      officeTerms: Record<string, Record<string, unknown>>;
+    };
+    const histId = state.history[0]!.id as string;
+    state.history[0]!.id = "banana";
+    expect(parseSaveFile(raw).ok).toBe(false);
+    state.history[0]!.id = "EVTabc";
+    expect(parseSaveFile(raw).ok).toBe(false);
+    state.history[0]!.id = "EVT0";
+    expect(parseSaveFile(raw).ok).toBe(false);
+    state.history[0]!.id = histId;
+
+    const sev = state.scheduler.events[0]!;
+    const sevId = sev.id as string;
+    sev.id = "banana";
+    expect(parseSaveFile(raw).ok).toBe(false);
+    sev.id = sevId;
+
+    const termId = Object.keys(state.officeTerms)[0]!;
+    const term = state.officeTerms[termId]!;
+    delete state.officeTerms[termId];
+    state.officeTerms.banana = { ...term, id: "banana" };
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+
+  it("accepts allocated ids wider than six digits", () => {
+    const sim = createSimulation({ world: syntheticWorld(), playerPoliticianId: "P1" });
+    expect(sim.executeCommand({ type: "ADVANCE_TURN" }).ok).toBe(true);
+    const raw = JSON.parse(JSON.stringify(sim.serializeSave())) as Record<string, unknown>;
+    const state = raw.simulation as {
+      history: Array<Record<string, unknown>>;
+      counters: { nextEventId: number };
+    };
+    state.history[0]!.id = "EVT1000000";
+    state.counters.nextEventId = 1000001;
+    expect(parseSaveFile(raw).ok).toBe(true);
+  });
+});
+
+describe("Phase 1 preflight: PRESENTATION interrupt status", () => {
+  it("rejects persisted PRESENTATION interrupts marked resolved", () => {
+    const raw = pausedPresentationRaw();
+    const sim = raw.simulation as { pendingInterrupt: Record<string, unknown> };
+    sim.pendingInterrupt.resolutionStatus = "resolved";
+    expect(parseSaveFile(raw).ok).toBe(false);
+  });
+});
+
+describe("Phase 1 preflight: acting president resume is kind-driven", () => {
+  it("blocks speaker resume using office.kind president, not OFFICE_PRESIDENT", () => {
+    const world = actingPresidentWorld();
+    world.offices.OFFICE_HEAD = kernelOffice({
+      id: "OFFICE_HEAD",
+      kind: "president",
+      actingAllowed: true,
+    });
+    delete world.offices.OFFICE_PRESIDENT;
+    world.startingTerms = world.startingTerms
+      .filter((t) => t.officeId !== "OFFICE_PRESIDENT")
+      .map((t) => (t.officeId === "OFFICE_SPEAKER" ? { ...t, status: "suspended" as const } : t));
+    world.startingTerms.push({
+      officeId: "OFFICE_HEAD",
+      holderId: "P2",
+      startDate: null,
+      startKnown: false,
+      endDate: null,
+      accessionReason: "succession",
+      status: "active",
+      holdingKind: "acting",
+      sourceElectionId: null,
+      endedDate: null,
+      endedReason: null,
+    });
+    const sim = createSimulation({ world, playerPoliticianId: "P1" });
+    const speakerId = Object.values(sim.getSnapshot().officeTerms).find(
+      (t) => t.officeId === "OFFICE_SPEAKER",
+    )!.id;
+    const r = sim.executeCommand({ type: "DEV_RESUME_TERM", termId: speakerId });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.code).toBe("ACTING_PRESIDENT_DUTIES_MUST_REMAIN_SUSPENDED");
   });
 });

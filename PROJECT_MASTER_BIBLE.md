@@ -804,17 +804,19 @@ Deliverable: `packages/election-math` with exact BigInt rationals, IRV, Assembly
 
 ## 10. Phase 1 — world kernel and clock
 
-**COMPLETE (`b158271`).** Deterministic calendar, monthly turns with mid-month pause/resume, offices/terms, scheduler, commands/events, save schema v1, worker protocol types. Phase 1.1 hardens save/state invariants. See `docs/DATA_SCHEMA.md` and `@lorsain/sim`.
+**COMPLETE (`b158271`).** Deterministic calendar, monthly turns with mid-month pause/resume, offices/terms, scheduler, commands/events, save schema v1, worker protocol types. Phase 1.1 (`1c7b079`) hardens save/state invariants. See `docs/DATA_SCHEMA.md` and `@lorsain/sim`.
 
 Acceptance criteria: 20-year synthetic save/reload hash match; Terena play stops at the 2028-10-14 presidential-election domain interrupt without inventing a winner.
 
 ## 11. Phase 2 — politicians, relationships and goals
 
-Implement traits, ideology vectors, issue salience, affinity, trust, memory records, ambition and career goals. Build a utility-score framework that systems can reuse without turning every choice into one giant formula.
+**IMPLEMENTED, pending review.** Persistent politician agents in `@lorsain/sim` (`packages/sim/src/agents/`). One politician type; player = `playerPoliticianId` only. No runtime LLM.
 
-Implement NPC knowledge objects so beliefs about polls/votes can differ from truth.
+Hidden simulation truth (`AgentProfile` ideology/traits/skills) is not automatically known to others. Other actors hold sparse directional relationships, subjective memories, and beliefs. The decision engine evaluates domain-supplied options from `DecisionActorContext` (self truth + public facts + owned beliefs/relationships/goals), never another politician's hidden profile.
 
-Acceptance criteria: fixed scenarios demonstrate allies becoming rivals after betrayal, faction loyalty affecting choices, and NPCs making rational but occasionally mistaken candidacy decisions.
+Canonical starting profiles stay on `KernelWorld`. Future generated politicians will use save-owned `generatedAgentProfiles`. Relationships/memories/beliefs start empty (no 530×530 init). Initial goals are deterministic from canonical facts, not the future-history seed. Save schemaVersion **2**; v1 saves migrate with empty cognitive history then receive a deterministic goal seed on restore.
+
+Phase 3 (parties/factions/nominations as executing institutions) has **not started**.
 
 ## 12. Phase 3 — parties, factions and nominations
 

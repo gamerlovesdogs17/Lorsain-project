@@ -44,7 +44,7 @@ export {
 
 export { hashCanonical, canonicalize, canonicalJson } from "./hash.js";
 export { createSimulation, restoreSimulation, type Simulation } from "./engine.js";
-export { parseSaveFile, migrateSaveV1ToV2, CONTENT_MIGRATIONS } from "./save.js";
+export { parseSaveFile, migrateSaveV1ToV2, CONTENT_MIGRATIONS, SCHEMA_MIGRATIONS } from "./save.js";
 export { SAVE_SCHEMA_VERSION } from "./types.js";
 export { buildTerenaKernelWorld, KernelContentError, type TerenaKernelInput } from "./world.js";
 export {
@@ -61,6 +61,30 @@ export { compareScheduled } from "./scheduler.js";
 export { pickActingPresident } from "./succession.js";
 export { validateKernelWorld, validateStateAgainstWorld } from "./validate-world.js";
 export type { JsonValue, JsonObject, JsonPrimitive } from "./json.js";
+export {
+  getAgentProfile,
+  applyRelationshipChange,
+  getRelationship,
+  countRelationshipEdges,
+  recordPoliticalMemory,
+  effectiveSalience,
+  recordObservation,
+  getBelief,
+  reviewGoals,
+  generateGoalDrafts,
+  seedInitialGoals,
+  buildDecisionActorContext,
+  evaluateOption,
+  evaluateDecision,
+  chooseDecision,
+  emptySignals,
+  breakdownSumsToTotal,
+  syntheticAgentProfile,
+  type AgentProfile,
+  type DecisionActorContext,
+  type DecisionOption,
+  type UtilityBreakdown,
+} from "./agents/index.js";
 export type {
   Command,
   CommandResult,

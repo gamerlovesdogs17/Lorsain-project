@@ -1,6 +1,7 @@
 import type { JsonObject } from "./json.js";
 import type { KernelOffice, KernelWorld } from "./types.js";
 import { expirationPolicyForKind } from "./offices.js";
+import { syntheticAgentProfile } from "./agents/profile.js";
 
 export function kernelOffice(
   partial: Partial<KernelOffice> & Pick<KernelOffice, "id" | "kind">,
@@ -107,5 +108,10 @@ export function syntheticWorld(seed = "KERNEL-SYN-01"): KernelWorld {
       },
     ],
     electedTermCounts: { P1: 1 },
+    issueIds: ["ISS_REFORM"],
+    agentProfiles: {
+      P1: syntheticAgentProfile("P1", { roleTypes: ["president"], aiTier: "rich" }),
+      P2: syntheticAgentProfile("P2"),
+    },
   };
 }

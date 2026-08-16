@@ -100,8 +100,9 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 0.5** — **COMPLETE** — `packages/election-math` (exact rationals, IRV, STV Droop+WIG, lots, fixtures)
 - **Phase 0b** — **COMPLETE / CANONICAL** (`7e94984`) — 530 roster, 420 MPs, 2026 STV archive, voter blocs, pollsters, eligibility
 - **Phase 1** — **COMPLETE** (`b158271`) — deterministic world kernel (calendar, offices/terms, scheduler, commands, save/load, worker protocol types)
-- **Phase 1.1** — **COMPLETE** — save/state integrity hardening (scheduler/history temporal rules, domain-block authenticity, world-aware resume)
-- Phase 2 (politicians/relationships/goals) is next and has **not started**
+- **Phase 1.1** — **COMPLETE** (`1c7b079`) — save/state integrity hardening (scheduler/history temporal rules, domain-block authenticity, world-aware resume)
+- **Phase 2** — **IMPLEMENTED, pending review** — politician agents, sparse relationships/memories/beliefs, deterministic goals, explainable decision engine
+- Phase 3 (parties/factions/nominations as active institutions) has **not started**
 
 Deliverables:
 
@@ -131,7 +132,7 @@ Acceptance criteria: CI can load every content file, validate every ID reference
 - Regular presidential election: second Saturday in October every 5 years, assume office 20 January following
 - Regular Assembly election: second Sunday in May every 4 years, assume office 1 June following
 - Normalized `SimState`, office definitions vs office terms, scheduler, commands, SimEvents, history
-- Save schemaVersion **1**, separate from contentVersion and package version
+- Save schemaVersion **1** at Phase 1; **schemaVersion 2** from Phase 2 (v1→v2 migration)
 - Domain interrupts: unresolved political domain events (`requiresResolution`) cannot be skipped with `RESUME_TURN`
 - Worker protocol **types** only (no Worker runtime dependency)
 
@@ -139,11 +140,20 @@ Acceptance criteria: synthetic 20-year save/reload hash match; TERENA_2028 advan
 
 ## 11. Phase 2 — politicians, relationships and goals
 
-Implement traits, ideology vectors, issue salience, affinity, trust, memory records, ambition and career goals. Build a utility-score framework that systems can reuse without turning every choice into one giant formula.
+**IMPLEMENTED, pending review.** `@lorsain/sim` politician-brain substrate (`packages/sim/src/agents/`). Phase 3 has not started and must not be faked here.
 
-Implement NPC knowledge objects so beliefs about polls/votes can differ from truth.
+- One politician type; the player is identified only by `playerPoliticianId`. NPC planners do not choose actions for that ID.
+- No runtime LLM. Structured causes/results are authoritative; prose is not.
+- **Hidden truth vs beliefs:** an actor's true `AgentProfile` is simulation truth. Other politicians hold sparse beliefs. The decision engine receives `DecisionActorContext` (own profile, own goals/relationships/beliefs, public facts), never another politician's hidden profile.
+- **Static vs save-owned profiles:** `KernelWorld.agentProfiles` holds the 530 canonical starting profiles. `SimState.generatedAgentProfiles` is empty and reserved for future post-2028 generated politicians; those IDs must not collide with canonical profiles. `getAgentProfile(world, state, id)` uses the canonical profile when present, otherwise the save-owned generated profile, then sparse `agentProfileOverrides`.
+- **Directional sparse relationships** (−1..+1 affinity/trust/respect). Missing edges are neutral. No 530×530 matrix. Lazy exponential decay toward 0; no monthly O(N²) sweep.
+- **Subjective political memories** with durability classes, lazy effective-salience decay, and tier caps. Global history remains `SimEvent`.
+- **Sparse beliefs** updated by observations with a documented weighted rule. Confidence staleness is lazy. Low confidence does not reveal truth.
+- **Deterministic initial goals** from offices, traits, roles, salience, age, and authored presidential status. No RNG. AI tier caps active goals (rich 5 / standard 3 / light 2).
+- **Domain-agnostic utility engine:** later domains supply `DecisionOption`s keyed to specific active goal IDs; Phase 2 ranks them with trait-weighted signals and a structured breakdown. Bounded `npc-decisions` noise only. Reordering valid unique-id options does not change the choice.
+- Save **schemaVersion 2**. v1 saves migrate with empty cognitive history, then `restoreSimulation` seeds deterministic goals. Documented as: Phase 1 saves begin Phase 2 cognitive history at migration/load because that state did not exist previously.
 
-Acceptance criteria: fixed scenarios demonstrate allies becoming rivals after betrayal, faction loyalty affecting choices, and NPCs making rational but occasionally mistaken candidacy decisions.
+Acceptance criteria for this phase: required relationship/memory/belief/goal/decision/player-autonomy/save tests in `@lorsain/sim`. Party contests, campaigns, elections, and legislation remain Phase 3+.
 
 ## 12. Phase 3 — parties, factions and nominations
 

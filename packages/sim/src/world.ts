@@ -11,6 +11,7 @@ import {
 import { expirationPolicyForKind } from "./offices.js";
 import type { JsonObject } from "./json.js";
 import type { KernelOffice, KernelWorld, OfficeTerm, PoliticianRuntime } from "./types.js";
+import { profileFromFigure, type FigureProfileSource } from "./agents/profile.js";
 
 type Role = {
   type: string;
@@ -21,8 +22,7 @@ type Role = {
   seat_index?: number;
 };
 
-type FigureIn = {
-  id: string;
+type FigureIn = FigureProfileSource & {
   party_id?: string | null;
   faction_id?: string | null;
   roles?: Role[];
@@ -81,6 +81,7 @@ export type TerenaKernelInput = {
   };
   figures: FigureIn[];
   offices: OfficeIn[];
+  issues?: Array<{ id: string }>;
   constitution: {
     calendars?: Record<string, ContentCalendar>;
     presidential_vacancy?: {
@@ -269,6 +270,8 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
 
   const politicians: PoliticianRuntime[] = [];
   const startingTerms: Array<Omit<OfficeTerm, "id">> = [];
+  const catalog = (input.issues ?? []).map((i) => i.id).sort();
+  const agentProfiles: KernelWorld["agentProfiles"] = {};
 
   for (const f of input.figures) {
     politicians.push({
@@ -278,6 +281,11 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
       partyId: f.party_id ?? null,
       factionId: f.faction_id ?? null,
     });
+    try {
+      agentProfiles[f.id] = profileFromFigure(f, catalog.length ? catalog : undefined);
+    } catch (e) {
+      throw new KernelContentError(e instanceof Error ? e.message : String(e));
+    }
     for (const role of f.roles ?? []) {
       if (role.type === "president") {
         startingTerms.push({
@@ -451,5 +459,9 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     startingTerms,
     initialScheduled,
     electedTermCounts: electedCounts,
+    agentProfiles,
+    issueIds: catalog.length
+      ? catalog
+      : [...new Set(input.figures.flatMap((f) => Object.keys(f.issue_salience ?? {})))].sort(),
   };
 }

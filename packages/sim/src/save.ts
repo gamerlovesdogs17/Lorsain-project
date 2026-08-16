@@ -1,8 +1,10 @@
 import { addMonths, compareIsoDate, isIsoDate } from "./calendar.js";
 import { isJsonObject } from "./json.js";
 import { canonicalJson } from "./hash.js";
+import { parseCanonicalAllocatedId } from "./ids.js";
 import { parseSerializedRngState, type SerializedRngState } from "./rng.js";
 import { resolutionEventMustBlock } from "./scheduler.js";
+import { agentCounterError, parseAgentState } from "./agents/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -29,7 +31,6 @@ export type SchemaMigration = {
   migrate: (raw: unknown) => unknown;
 };
 
-/** Registry starts at v1. Add migrateSaveV1ToV2 here when schema 2 exists. */
 export const SCHEMA_MIGRATIONS: SchemaMigration[] = [];
 
 export const CONTENT_MIGRATIONS: ContentMigration[] = [];
@@ -51,10 +52,7 @@ function isInt(v: unknown): v is number {
 }
 
 function paddedNumeric(prefix: string, id: string): number | null {
-  if (!id.startsWith(prefix)) return null;
-  const rest = id.slice(prefix.length);
-  if (!/^\d+$/.test(rest)) return null;
-  return Number(rest);
+  return parseCanonicalAllocatedId(prefix, id);
 }
 
 function rngEqual(a: SerializedRngState, b: SerializedRngState): boolean {
@@ -171,6 +169,9 @@ function parsePolitician(id: string, raw: unknown): PoliticianRuntime | string {
 function parseTerm(key: string, raw: unknown): OfficeTerm | string {
   if (!isRecord(raw)) return `officeTerms.${key} must be an object`;
   if (typeof raw.id !== "string" || raw.id !== key) return `officeTerms.${key} id mismatch`;
+  if (paddedNumeric("TERM", raw.id) == null) {
+    return `officeTerms.${key} id must be TERM followed by a positive integer`;
+  }
   if (typeof raw.officeId !== "string" || typeof raw.holderId !== "string") {
     return `officeTerms.${key} office/holder ids must be strings`;
   }
@@ -222,6 +223,9 @@ function parseTerm(key: string, raw: unknown): OfficeTerm | string {
 function parseScheduled(raw: unknown, currentDate: string): ScheduledEvent | string {
   if (!isRecord(raw)) return "scheduler event must be an object";
   if (typeof raw.id !== "string") return "scheduler event id";
+  if (paddedNumeric("SEV", raw.id) == null) {
+    return `scheduler ${raw.id} id must be SEV followed by a positive integer`;
+  }
   if (!isIsoDate(raw.dueDate)) return `scheduler ${raw.id} invalid dueDate`;
   if (typeof raw.eventType !== "string") return `scheduler ${raw.id} eventType`;
   if (!isJsonObject(raw.payload)) return `scheduler ${raw.id} payload is not JSON-safe`;
@@ -260,6 +264,9 @@ function parseScheduled(raw: unknown, currentDate: string): ScheduledEvent | str
 function parseHistory(raw: unknown): SimEvent | string {
   if (!isRecord(raw)) return "history event must be an object";
   if (typeof raw.id !== "string") return "history id";
+  if (paddedNumeric("EVT", raw.id) == null) {
+    return `history ${raw.id} id must be EVT followed by a positive integer`;
+  }
   if (!isIsoDate(raw.date)) return `history ${raw.id} date`;
   if (!isInt(raw.turn) || raw.turn < 0) return `history ${raw.id} turn`;
   if (typeof raw.type !== "string") return `history ${raw.id} type`;
@@ -326,6 +333,9 @@ function parseInterrupt(raw: unknown): PendingInterrupt | string {
   if (raw.kind === "PRESENTATION" && raw.requiresResolution !== false) {
     return "PRESENTATION interrupt must not require resolution";
   }
+  if (raw.kind === "PRESENTATION" && raw.resolutionStatus === "resolved") {
+    return "PRESENTATION interrupt cannot use resolutionStatus resolved";
+  }
   return {
     kind: raw.kind,
     code: raw.code,
@@ -345,6 +355,8 @@ function parseCounters(raw: unknown): Counters | string {
     "nextTermId",
     "schedulerSequence",
     "nextCommandId",
+    "nextMemoryId",
+    "nextGoalId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
@@ -553,6 +565,14 @@ function parseSimulation(
   }
   const presidential = parsePresidential(raw.presidential, new Set(Object.keys(politicians)));
   if (typeof presidential === "string") return presidential;
+  const agent = parseAgentState(raw, {
+    politicianIds: new Set(Object.keys(politicians)),
+    currentDate: raw.currentDate,
+    historyIds: histIds,
+  });
+  if (typeof agent === "string") return agent;
+  const agentCountErr = agentCounterError(agent, counters);
+  if (agentCountErr) return agentCountErr;
   return {
     schemaVersion: SAVE_SCHEMA_VERSION,
     contentVersion: raw.contentVersion,
@@ -570,6 +590,12 @@ function parseSimulation(
     history,
     counters,
     presidential,
+    relationships: agent.relationships,
+    memories: agent.memories,
+    beliefs: agent.beliefs,
+    goals: agent.goals,
+    generatedAgentProfiles: agent.generatedAgentProfiles,
+    agentProfileOverrides: agent.agentProfileOverrides,
   };
 }
 
@@ -655,7 +681,34 @@ export function parseSaveFile(
   };
 }
 
-/** Placeholder named for the v1→v2 contract. Not registered until schema 2 exists. */
+/**
+ * Phase 1 saves begin Phase 2 cognitive history at migration/load because
+ * relationships/memories/beliefs/goals did not exist previously.
+ * No fabricated interpersonal past is written here. restoreSimulation seeds
+ * deterministic initial goals when nextGoalId is still 1 and goals are empty.
+ */
 export function migrateSaveV1ToV2(raw: unknown): unknown {
-  return raw;
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 2 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 2 };
+  sim.relationships = isRecord(sim.relationships) ? sim.relationships : {};
+  sim.memories = isRecord(sim.memories) ? sim.memories : {};
+  sim.beliefs = isRecord(sim.beliefs) ? sim.beliefs : {};
+  sim.goals = isRecord(sim.goals) ? sim.goals : {};
+  sim.generatedAgentProfiles = isRecord(sim.generatedAgentProfiles)
+    ? sim.generatedAgentProfiles
+    : {};
+  sim.agentProfileOverrides = isRecord(sim.agentProfileOverrides) ? sim.agentProfileOverrides : {};
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextMemoryId: isInt(sim.counters.nextMemoryId) ? sim.counters.nextMemoryId : 1,
+      nextGoalId: isInt(sim.counters.nextGoalId) ? sim.counters.nextGoalId : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
 }
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 1, toSchema: 2, migrate: migrateSaveV1ToV2 });

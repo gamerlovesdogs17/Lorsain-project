@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 1 saves use `schemaVersion: 1` and `contentVersion: 0.3.1-predev`.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 2 saves use `schemaVersion: 2` and `contentVersion: 0.3.1-predev`. Phase 1 `schemaVersion: 1` saves migrate to v2.
 
 ## 3. Core static schemas
 
@@ -295,14 +295,17 @@ News and history pages consume events; they do not invent a separate reality.
 
 ## 14. Save root
 
-Phase 1 save envelope (`schemaVersion: 1`):
+Phase 2 save envelope (`schemaVersion: 2`):
 
 ```ts
 interface SaveFile {
-  schemaVersion: 1;
+  schemaVersion: 2;
   contentVersion: string;
   scenarioId: string;
-  simulation: SimState; // includes authoritative rng, calendar, officeTerms, scheduler, history, counters, interrupt
+  simulation: SimState;
+  // rng, calendar, officeTerms, scheduler, history, counters, interrupt,
+  // relationships, memories, beliefs, goals, generatedAgentProfiles,
+  // agentProfileOverrides
 }
 ```
 
@@ -310,7 +313,20 @@ Authoritative RNG lives only in `simulation.rng`. A leftover root `rng` field, i
 
 Loaded saves are untrusted `unknown` and are fully structurally validated. Content-version mismatches apply registered migrations or return `INCOMPATIBLE_CONTENT`; a migration object that does not actually update the save is not accepted.
 
-Later domain fields (relationships, bills, economy, etc.) are not present in Phase 1. Schema migrations are registered from v1 even though only v1 exists (`migrateSaveV1ToV2` is the named placeholder).
+**v1 → v2:** Phase 1 saves had no agent relationships/memories/beliefs/goals. Migration initializes those structures to empty/default values and adds `nextMemoryId` / `nextGoalId`. Phase 1 saves begin Phase 2 cognitive history at migration/load because that state did not exist previously. No fabricated interpersonal past is written. `restoreSimulation` then runs the same deterministic initial-goal generator used by new games when `goals` is empty and `nextGoalId === 1`.
+
+Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`. `banana`, `EVT0`, and `EVTabc` are rejected.
+
+### 14.1 Agent state (Phase 2)
+
+- **AgentProfile** (immutable starting truth): ideology −1..+1, traits/skills 0..1, issue salience, `ai_tier`. Stored on `KernelWorld.agentProfiles` for the 530 starters. `SimState.generatedAgentProfiles` is the save-owned slot for future generated politicians and **must not** contain canonical IDs. `getAgentProfile` uses the canonical KernelWorld profile when present, otherwise the generated profile, then sparse `agentProfileOverrides`.
+- **Relationships:** `relationships[sourceId][targetId]` = `{ affinity, trust, respect, lastUpdatedDate, interactionCount }` in −1..+1. Directional. `sourceId !== targetId`. Missing = neutral. Lazy decay toward 0; affinity decays faster than trust/respect. Per-interaction deltas saturate at ±0.25.
+- **Memories:** owner-subjective `MEM…` records with kind, valence, salience, durability (`fleeting|normal|durable|permanent`), tags, optional source SimEvent. Effective salience is lazy. Non-permanent caps: rich 100 / standard 50 / light 20.
+- **Beliefs:** sparse owner→target topic/dimension estimates. Ideology −1..+1; traits/skills 0..1; confidence 0..1. Updated by observations; confidence becomes stale lazily. Unknown remains unknown. Observation quality is `observationConfidence * sourceReliability`; quality ≤ 0 writes nothing.
+- **Goals:** `GOAL…` records with type, priority, status (`active|satisfied|abandoned|superseded`), horizon, optional targets. Deterministic initial generation from canonical facts. No RNG. Player politicians may hold derived goals; NPC planners still do not act for `playerPoliticianId`. Mutating `reviewGoals` requires `asOfDate === currentDate`.
+- **Decisions:** domain supplies `DecisionOption`s. `chooseDecision().ranked` is sorted by `finalUtility` descending, then `optionId` ascending. Stochastic adjustment uses only the `npc-decisions` stream and is assigned in optionId order.
+
+PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolved` is rejected). BLOCKING_DOMAIN remains `unresolved` until a domain resolver exists.
 
 ## 15. Map contract
 

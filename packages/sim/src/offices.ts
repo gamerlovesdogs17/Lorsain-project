@@ -484,9 +484,15 @@ export function canResumeTerm(
   const held = activeTermsForPolitician(state, term.holderId);
   const req = validateHolderKindRequirements(office, term.holderId, held, world.offices);
   if (req) return req;
-  const actingPres = occupyingTerms(state, "OFFICE_PRESIDENT").some(
-    (t) => t.holderId === term.holderId && t.holdingKind === "acting" && t.status === "active",
-  );
+  const actingPres = Object.values(state.officeTerms).some((t) => {
+    const held = world.offices[t.officeId];
+    return (
+      held?.kind === "president" &&
+      t.holderId === term.holderId &&
+      t.holdingKind === "acting" &&
+      t.status === "active"
+    );
+  });
   if (actingPres && shouldSuspendWhenActingPresident(office)) {
     return reject(
       "ACTING_PRESIDENT_DUTIES_MUST_REMAIN_SUSPENDED",

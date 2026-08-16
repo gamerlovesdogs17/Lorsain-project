@@ -1,4 +1,9 @@
 import { addMonths, isIsoDate, type IsoDate } from "./calendar.js";
+import { emptyAgentRuntime } from "./agents/validation.js";
+import { recordObservation } from "./agents/beliefs.js";
+import { needsInitialGoals, reviewGoals, seedInitialGoals } from "./agents/goals.js";
+import { recordPoliticalMemory } from "./agents/memories.js";
+import { applyRelationshipChange } from "./agents/relationships.js";
 import { deepFreeze, hashCanonical, jsonClone } from "./hash.js";
 import { isJsonObject, jsonSafetyError } from "./json.js";
 import { assumeOffice, endTerm, resumeTerm, vacateOffice } from "./offices.js";
@@ -80,12 +85,15 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextTermId: 1,
       schedulerSequence: 1,
       nextCommandId: 1,
+      nextMemoryId: 1,
+      nextGoalId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
       electedTermCountByPolitician: { ...world.electedTermCounts },
       certifiedPresidentElectId: null,
     },
+    ...emptyAgentRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -97,6 +105,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       throw new Error(queued.error.message);
     }
   }
+  seedInitialGoals(state, world);
   return state;
 }
 
@@ -250,6 +259,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   const rng = restoreRngService(parsed.save.simulation.rng);
   const state = jsonClone(parsed.save.simulation);
   state.rng = rng.serialize();
+  if (needsInitialGoals(state)) seedInitialGoals(state, frozen);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
@@ -516,6 +526,208 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
             actorIds: [resumed.holderId],
             entityIds: [resumed.officeId, resumed.id],
             payload: {},
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
+        ],
+        interrupt: null,
+      };
+    }
+
+    if (command.type === "DEV_RECORD_INTERACTION") {
+      if (!state.politicians[command.sourceId]) {
+        return fail("UNKNOWN_POLITICIAN", command.sourceId);
+      }
+      if (!state.politicians[command.targetId]) {
+        return fail("UNKNOWN_POLITICIAN", command.targetId);
+      }
+      if (command.sourceId === command.targetId) {
+        return fail("INVALID_RELATIONSHIP", "sourceId must not equal targetId");
+      }
+      const delta = command.delta ?? {};
+      const relPreview = applyRelationshipChange(
+        jsonClone(state),
+        command.sourceId,
+        command.targetId,
+        delta,
+        state.currentDate,
+      );
+      if ("error" in relPreview) return fail(relPreview.error.code, relPreview.error.message);
+      if (command.memory) {
+        const memPreview = recordPoliticalMemory(
+          jsonClone(state),
+          world,
+          {
+            ownerId: command.sourceId,
+            subjectIds: command.memory.subjectIds ?? [command.targetId],
+            kind: command.memory.kind,
+            valence: command.memory.valence,
+            salience: command.memory.salience,
+            durability: command.memory.durability,
+            tags: command.memory.tags,
+            sourceEventId: command.memory.sourceEventId,
+            relationshipEffects: command.memory.relationshipEffects,
+            metadata: command.memory.metadata,
+          },
+          state.currentDate,
+        );
+        if ("error" in memPreview) return fail(memPreview.error.code, memPreview.error.message);
+      }
+      const commandId = nextCommandId();
+      const events: SimEvent[] = [];
+      const rel = applyRelationshipChange(
+        state,
+        command.sourceId,
+        command.targetId,
+        delta,
+        state.currentDate,
+      );
+      if ("error" in rel) return fail(rel.error.code, rel.error.message);
+      if (rel.edge) {
+        events.push(
+          pushHistory(state, {
+            date: state.currentDate,
+            type: "RELATIONSHIP_CHANGED",
+            importance: 0.2,
+            visibility: "system",
+            actorIds: [command.sourceId, command.targetId],
+            entityIds: [command.sourceId, command.targetId],
+            payload: {
+              affinity: rel.edge.affinity,
+              trust: rel.edge.trust,
+              respect: rel.edge.respect,
+            },
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
+        );
+      }
+      if (command.memory) {
+        const recorded = recordPoliticalMemory(
+          state,
+          world,
+          {
+            ownerId: command.sourceId,
+            subjectIds: command.memory.subjectIds ?? [command.targetId],
+            kind: command.memory.kind,
+            valence: command.memory.valence,
+            salience: command.memory.salience,
+            durability: command.memory.durability,
+            tags: command.memory.tags,
+            sourceEventId: command.memory.sourceEventId,
+            relationshipEffects: command.memory.relationshipEffects,
+            metadata: command.memory.metadata,
+          },
+          state.currentDate,
+        );
+        if ("error" in recorded) return fail(recorded.error.code, recorded.error.message);
+        events.push(
+          pushHistory(state, {
+            date: state.currentDate,
+            type: "MEMORY_RECORDED",
+            importance: 0.25,
+            visibility: "system",
+            actorIds: [command.sourceId],
+            entityIds: recorded.memory.subjectIds,
+            payload: { memoryId: recorded.memory.id, kind: recorded.memory.kind },
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
+        );
+      }
+      return { ok: true, commandId, events, interrupt: null };
+    }
+
+    if (command.type === "DEV_RECORD_OBSERVATION") {
+      const preview = recordObservation(
+        jsonClone(state),
+        {
+          observerId: command.observerId,
+          targetId: command.targetId,
+          topic: command.topic,
+          dimension: command.dimension,
+          observed: command.observed,
+          observationConfidence: command.observationConfidence,
+          sourceReliability: command.sourceReliability,
+          source: command.source ?? null,
+        },
+        state.currentDate,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      if (!preview.changed) {
+        return fail("NO_INFORMATION", "observation quality is zero; no belief was written");
+      }
+      const commandId = nextCommandId();
+      const out = recordObservation(
+        state,
+        {
+          observerId: command.observerId,
+          targetId: command.targetId,
+          topic: command.topic,
+          dimension: command.dimension,
+          observed: command.observed,
+          observationConfidence: command.observationConfidence,
+          sourceReliability: command.sourceReliability,
+          source: command.source ?? null,
+        },
+        state.currentDate,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      if (!out.changed) {
+        return fail("NO_INFORMATION", "observation quality is zero; no belief was written");
+      }
+      return {
+        ok: true,
+        commandId,
+        events: [
+          pushHistory(state, {
+            date: state.currentDate,
+            type: "BELIEF_UPDATED",
+            importance: 0.2,
+            visibility: "system",
+            actorIds: [command.observerId],
+            entityIds: [command.targetId],
+            payload: {
+              topic: out.belief.topic,
+              dimension: out.belief.dimension,
+              estimate: out.belief.estimate,
+              confidence: out.belief.confidence,
+            },
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
+        ],
+        interrupt: null,
+      };
+    }
+
+    if (command.type === "DEV_REVIEW_AGENT_GOALS") {
+      const ids = command.politicianId
+        ? [command.politicianId]
+        : Object.keys(state.politicians).sort();
+      for (const id of ids) {
+        const preview = reviewGoals(jsonClone(state), world, id, state.currentDate);
+        if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      }
+      const commandId = nextCommandId();
+      const reviewed: string[] = [];
+      for (const id of ids) {
+        const out = reviewGoals(state, world, id, state.currentDate);
+        if ("error" in out) return fail(out.error.code, out.error.message);
+        reviewed.push(id);
+      }
+      return {
+        ok: true,
+        commandId,
+        events: [
+          pushHistory(state, {
+            date: state.currentDate,
+            type: "GOALS_REVIEWED",
+            importance: 0.15,
+            visibility: "system",
+            actorIds: reviewed,
+            entityIds: reviewed,
+            payload: { count: reviewed.length },
             sourceScheduledEventId: null,
             sourceCommandId: commandId,
           }),

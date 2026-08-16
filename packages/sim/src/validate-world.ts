@@ -1,4 +1,6 @@
 import { compareIsoDate, isIsoDate } from "./calendar.js";
+import { validateKernelAgentProfiles } from "./agents/validation.js";
+import { agentProfileError, getAgentProfile, readIssueSalienceOverride } from "./agents/profile.js";
 import { validateOfficeTermSet } from "./offices.js";
 import { resolutionEventMustBlock } from "./scheduler.js";
 import type { CommandError, KernelWorld, OfficeTerm, SimState } from "./types.js";
@@ -58,6 +60,8 @@ export function validateKernelWorld(world: KernelWorld): CommandError | null {
     const resolutionErr = resolutionEventMustBlock(ev.blocking, ev.requiresResolution);
     if (resolutionErr) return resolutionErr;
   }
+  const profileErr = validateKernelAgentProfiles(world);
+  if (profileErr) return profileErr;
   return null;
 }
 
@@ -140,6 +144,89 @@ export function validateStateAgainstWorld(
     mode: "runtime",
   });
   if (termErr) return termErr;
+  const canonicalIds = new Set(Object.keys(world.agentProfiles));
+  for (const id of Object.keys(state.politicians)) {
+    const canonical = world.agentProfiles[id];
+    const generated = state.generatedAgentProfiles[id];
+    if (canonical && generated) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `generatedAgentProfiles.${id} shadows canonical AgentProfile`,
+      };
+    }
+    if (!canonical && !generated) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `runtime politician ${id} has no canonical or generated AgentProfile`,
+      };
+    }
+    const profile = getAgentProfile(world, state, id);
+    if (!profile) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `No AgentProfile for runtime politician ${id}`,
+      };
+    }
+    if (profile.politicianId !== id) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `AgentProfile ${id} politicianId mismatch`,
+      };
+    }
+    const profileErr = agentProfileError(profile, world.issueIds);
+    if (profileErr) {
+      return { code: "INVALID_SAVE_WORLD", message: profileErr };
+    }
+  }
+  for (const id of Object.keys(state.generatedAgentProfiles)) {
+    if (!state.politicians[id]) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `generatedAgentProfiles.${id} has no runtime politician`,
+      };
+    }
+    if (canonicalIds.has(id)) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `generatedAgentProfiles.${id} collides with canonical AgentProfile`,
+      };
+    }
+  }
+  for (const [id, over] of Object.entries(state.agentProfileOverrides)) {
+    if (!state.politicians[id]) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `agentProfileOverrides.${id} unknown politician`,
+      };
+    }
+    if (over.issueSalience) {
+      const sal = readIssueSalienceOverride(over.issueSalience, world.issueIds);
+      if (typeof sal === "string") {
+        return {
+          code: "INVALID_SAVE_WORLD",
+          message: `agentProfileOverrides.${id} ${sal}`,
+        };
+      }
+    }
+  }
+  for (const goal of Object.values(state.goals)) {
+    if (goal.targetOfficeId && !world.offices[goal.targetOfficeId]) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `goal ${goal.id} targetOfficeId does not resolve`,
+      };
+    }
+    if (
+      goal.targetIssueId &&
+      world.issueIds.length > 0 &&
+      !world.issueIds.includes(goal.targetIssueId)
+    ) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `goal ${goal.id} targetIssueId does not resolve`,
+      };
+    }
+  }
   return null;
 }
 
