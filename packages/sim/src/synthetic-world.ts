@@ -146,6 +146,13 @@ export function syntheticWorld(seed = "KERNEL-SYN-01"): KernelWorld {
     partyPublicIdeology: {},
     factionPublicIdeology: {},
     legislativeConstitution: { assemblySeatCount: 0, assemblyAbsoluteMajority: 1 },
+    executiveConstitution: {
+      assemblyCensureFraction: 0.55,
+      regulationReviewDays: 60,
+      emergencyInitialDays: 14,
+      emergencyExtensionDays: 30,
+      warUnilateralDays: 30,
+    },
   };
   applyInstitutionalPublicIdeology(world);
   return world;

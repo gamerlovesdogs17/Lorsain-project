@@ -38,8 +38,9 @@ import type {
   LegislativeVoteChoice,
   LegislativeVoteStage,
 } from "./legislature/types.js";
+import type { ExecutiveRuntime, MotionKind } from "./executive/types.js";
 
-export const SAVE_SCHEMA_VERSION = 6 as const;
+export const SAVE_SCHEMA_VERSION = 7 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -133,6 +134,11 @@ export type Counters = {
   nextAmendmentId: number;
   nextLegislativeVoteId: number;
   nextLawId: number;
+  nextRegulationId: number;
+  nextMotionId: number;
+  nextEmergencyId: number;
+  nextWarPowerId: number;
+  nextBudgetId: number;
 };
 
 export type PresidentialRuntime = {
@@ -176,6 +182,7 @@ export type SimState = {
   domainResolutions: Record<string, DomainResolutionRecord>;
   campaignRuntime: CampaignRuntime;
   legislatureRuntime: LegislatureRuntime;
+  executiveRuntime: ExecutiveRuntime;
 };
 
 export type Command =
@@ -384,7 +391,20 @@ export type Command =
   | { type: "SIGN_BILL"; billId: string }
   | { type: "RETURN_BILL"; billId: string }
   | { type: "SCHEDULE_BILL"; billId: string }
-  | { type: "DELAY_BILL"; billId: string };
+  | { type: "DELAY_BILL"; billId: string }
+  | { type: "APPOINT_MINISTER"; officeId: string; politicianId: string }
+  | { type: "DISMISS_MINISTER"; officeId: string }
+  | {
+      type: "ISSUE_REGULATION";
+      ministryOfficeId: string;
+      policyItems: PolicyItem[];
+      major?: boolean;
+    }
+  | { type: "INTRODUCE_MOTION"; kind: MotionKind; targetId: string }
+  | { type: "CAST_MOTION_VOTE"; motionId: string; choice: LegislativeVoteChoice }
+  | { type: "PROPOSE_BUDGET"; allocations: Record<string, number> }
+  | { type: "DECLARE_EMERGENCY" }
+  | { type: "BEGIN_WAR_POWERS" };
 
 export type CommandError = { code: string; message: string };
 
@@ -486,6 +506,13 @@ export type KernelWorld = {
   legislativeConstitution: {
     assemblySeatCount: number;
     assemblyAbsoluteMajority: number;
+  };
+  executiveConstitution: {
+    assemblyCensureFraction: number;
+    regulationReviewDays: number;
+    emergencyInitialDays: number;
+    emergencyExtensionDays: number;
+    warUnilateralDays: number;
   };
 };
 

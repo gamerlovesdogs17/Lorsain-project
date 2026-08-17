@@ -110,6 +110,19 @@ import {
 } from "./legislature/procedure.js";
 import { upsertRecommendations } from "./legislature/recommendations.js";
 import { seedCommitteesIfNeeded } from "./legislature/state.js";
+import { emptyExecutiveRuntime, isMotionKind } from "./executive/types.js";
+import { processExecutiveMonth } from "./executive/monthly.js";
+import {
+  appointMinister,
+  beginWarPowers,
+  castMotionVote,
+  declareEmergency,
+  dismissMinister,
+  introduceMotion,
+  issueRegulation,
+  proposeBudget,
+} from "./executive/procedure.js";
+import { seedMinistriesIfNeeded } from "./executive/state.js";
 import {
   SAVE_SCHEMA_VERSION,
   type Command,
@@ -186,6 +199,11 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextAmendmentId: 1,
       nextLegislativeVoteId: 1,
       nextLawId: 1,
+      nextRegulationId: 1,
+      nextMotionId: 1,
+      nextEmergencyId: 1,
+      nextWarPowerId: 1,
+      nextBudgetId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
@@ -197,6 +215,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     ...emptyElectoralRuntimeState(),
     campaignRuntime: emptyCampaignRuntime(),
     legislatureRuntime: emptyLegislatureRuntime(),
+    executiveRuntime: emptyExecutiveRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -213,6 +232,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
   seedStartingPublicStanding(world, state);
   seedInitialGoals(state, world);
   seedCommitteesIfNeeded(world, state);
+  seedMinistriesIfNeeded(world, state);
   return state;
 }
 
@@ -335,6 +355,7 @@ function runTowardTarget(
   const events: SimEvent[] = [];
   events.push(...processCampaignMonth(state, world, rng, commandId));
   events.push(...processLegislatureMonth(state, world, rng, commandId));
+  events.push(...processExecutiveMonth(state, world, rng, commandId));
   sortScheduler(state);
   while (true) {
     const next = nextPendingBefore(state, target);
@@ -417,6 +438,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   }
   if (needsInitialGoals(state)) seedInitialGoals(state, frozen);
   seedCommitteesIfNeeded(frozen, state);
+  seedMinistriesIfNeeded(frozen, state);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
@@ -1783,6 +1805,168 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         { billId: command.billId, actorId: state.playerPoliticianId },
         commandId,
       );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "APPOINT_MINISTER") {
+      const preview = appointMinister(
+        world,
+        jsonClone(state),
+        {
+          actorId: state.playerPoliticianId,
+          officeId: command.officeId,
+          politicianId: command.politicianId,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = appointMinister(
+        world,
+        state,
+        {
+          actorId: state.playerPoliticianId,
+          officeId: command.officeId,
+          politicianId: command.politicianId,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DISMISS_MINISTER") {
+      const preview = dismissMinister(
+        world,
+        jsonClone(state),
+        { actorId: state.playerPoliticianId, officeId: command.officeId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = dismissMinister(
+        world,
+        state,
+        { actorId: state.playerPoliticianId, officeId: command.officeId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "ISSUE_REGULATION") {
+      const preview = issueRegulation(
+        world,
+        jsonClone(state),
+        {
+          actorId: state.playerPoliticianId,
+          ministryOfficeId: command.ministryOfficeId,
+          policyItems: command.policyItems,
+          major: command.major === true,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = issueRegulation(
+        world,
+        state,
+        {
+          actorId: state.playerPoliticianId,
+          ministryOfficeId: command.ministryOfficeId,
+          policyItems: command.policyItems,
+          major: command.major === true,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "INTRODUCE_MOTION") {
+      if (!isMotionKind(command.kind)) return fail("INVALID_MOTION", command.kind);
+      const preview = introduceMotion(
+        world,
+        jsonClone(state),
+        { sponsorId: state.playerPoliticianId, kind: command.kind, targetId: command.targetId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = introduceMotion(
+        world,
+        state,
+        { sponsorId: state.playerPoliticianId, kind: command.kind, targetId: command.targetId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_MOTION_VOTE") {
+      if (!isLegislativeVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      const preview = castMotionVote(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        motionId: command.motionId,
+        choice: command.choice,
+      });
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castMotionVote(world, state, {
+        actorId: state.playerPoliticianId,
+        motionId: command.motionId,
+        choice: command.choice,
+      });
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "PROPOSE_BUDGET") {
+      const preview = proposeBudget(
+        world,
+        jsonClone(state),
+        { actorId: state.playerPoliticianId, allocations: command.allocations },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = proposeBudget(
+        world,
+        state,
+        { actorId: state.playerPoliticianId, allocations: command.allocations },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DECLARE_EMERGENCY") {
+      const preview = declareEmergency(
+        world,
+        jsonClone(state),
+        { actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = declareEmergency(world, state, { actorId: state.playerPoliticianId }, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "BEGIN_WAR_POWERS") {
+      const preview = beginWarPowers(
+        world,
+        jsonClone(state),
+        { actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = beginWarPowers(world, state, { actorId: state.playerPoliticianId }, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }

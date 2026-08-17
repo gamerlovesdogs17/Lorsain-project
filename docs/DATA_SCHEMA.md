@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 6 saves use `schemaVersion: 6` and `contentVersion: 0.3.1-predev`. Phase 5 `schemaVersion: 5` saves migrate to v6 with empty legislature runtime. Phase 4 `schemaVersion: 4` saves migrate v4→v5→v6. Phase 3 `schemaVersion: 3` saves migrate v3→v4→v5→v6. Phase 2 `schemaVersion: 2` saves migrate v2→v3→v4→v5→v6. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3→v4→v5→v6.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 7 saves use `schemaVersion: 7` and `contentVersion: 0.3.1-predev`. Phase 6 `schemaVersion: 6` saves migrate to v7 with empty executive runtime. Phase 5 `schemaVersion: 5` saves migrate v5→v6→v7. Phase 4 `schemaVersion: 4` saves migrate v4→v5→v6→v7. Phase 3 `schemaVersion: 3` saves migrate v3→v4→v5→v6→v7. Phase 2 `schemaVersion: 2` saves migrate v2→v3→v4→v5→v6→v7. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3→v4→v5→v6→v7.
 
 ## 3. Core static schemas
 
@@ -295,11 +295,11 @@ News and history pages consume events; they do not invent a separate reality.
 
 ## 14. Save root
 
-Phase 6 save envelope (`schemaVersion: 6`):
+Phase 7 save envelope (`schemaVersion: 7`):
 
 ```ts
 interface SaveFile {
-  schemaVersion: 6;
+  schemaVersion: 7;
   contentVersion: string;
   scenarioId: string;
   simulation: SimState;
@@ -310,7 +310,9 @@ interface SaveFile {
   // elections, candidateStanding, electoralEnvironment, polls, domainResolutions,
   // campaignRuntime (campaigns, debates, lastMonthProcessed),
   // legislatureRuntime (committees, bills, amendments, legislativeVotes,
-  // enactedLaws, recommendations, floorQueue, pendingPlayerVotes, lastMonthProcessed)
+  // enactedLaws, recommendations, floorQueue, pendingPlayerVotes, lastMonthProcessed),
+  // executiveRuntime (ministries, regulations, budgets, emergencies, warPowers,
+  // motions, pendingPlayerMotionVotes, lastMonthProcessed, emergencyTrigger, warTrigger)
 }
 ```
 
@@ -328,7 +330,9 @@ Loaded saves are untrusted `unknown` and are fully structurally validated. Conte
 
 **v5 → v6:** Phase 5 saves had no legislature runtime. Migration initializes empty `legislatureRuntime` and adds `nextBillId` / `nextAmendmentId` / `nextLegislativeVoteId` / `nextLawId`. No fabricated bills, votes, or enacted laws are written. `restoreSimulation` seeds functional committees from current Assembly membership when committees are empty.
 
-Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`, `CAMP`, `DEBATE`, `BILL`, `AMD`, `LVOTE`, `LAW`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
+**v6 → v7:** Phase 6 saves had no executive runtime. Migration initializes empty `executiveRuntime` and adds `nextRegulationId` / `nextMotionId` / `nextEmergencyId` / `nextWarPowerId` / `nextBudgetId`. No fabricated cabinet actions, regulations, motions, emergencies, or budgets are written. `restoreSimulation` seeds ministry admin stubs from current minister offices when ministries are empty.
+
+Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`, `CAMP`, `DEBATE`, `BILL`, `AMD`, `LVOTE`, `LAW`, `REG`, `MOT`, `EMG`, `WAR`, `BUD`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
 
 ### 14.1 Agent state (Phase 2)
 
@@ -382,6 +386,20 @@ PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolve
 - **Speaker:** current `speaker` office holder. NPC Speaker may reorder the floor queue by party. Player Speaker does not receive autonomous political scheduling; clerical FIFO continues. `SCHEDULE_BILL` / `DELAY_BILL` are explicit player commands.
 - **Caps:** at most 2 NPC introductions per month and 10 active bills. Monthly work is a few committee bills plus one floor item, not O(all politicians × all bills × all relationships).
 - **Start:** TERENA_2028 seeds committees from the 420 sitting MPs and has zero bills until play.
+
+### 14.6 Executive (Phase 7)
+
+- **Separate runtime:** `executiveRuntime` on `SimState`. Cabinet membership is **derived** from current minister `OfficeTerm`s (12 canonical offices). Do not store an authoritative parallel cabinet array.
+- **Constitutional parameters:** `KernelWorld.executiveConstitution` from `terena_constitution.json` (censure fraction 0.55 → 231 of 420 authorized seats; regulation review 60 days; emergency 14 / extension 30; war unilateral 30). Vacancies do not shrink the Assembly denominator.
+- **Commands:** `APPOINT_MINISTER` / `DISMISS_MINISTER` (current presidential authority, including Acting President); `ISSUE_REGULATION` (structured `PolicyItem`s; major regulations carry a review deadline); `INTRODUCE_MOTION` / `CAST_MOTION_VOTE`; `PROPOSE_BUDGET`; `DECLARE_EMERGENCY` / `BEGIN_WAR_POWERS` only when a legitimate domain/test trigger is set. Player President is never auto-decided.
+- **Motions:** `MOT…` with `stageReadyDate`. Tally next month or later. Player pending vote cannot be skipped into a later motion. Uncast = abstain. Censure: yes ≥ ceil(authorized seats × 0.55). Other Phase-7 motions: simple majority of votes cast, tie fails (documented default).
+- **Budget:** calendar-year fiscal cycle. If a new proposal is not approved, the previous lawful budget continues. No shutdown.
+- **Emergency / war:** structured state only. No random generation. Phase 8/10 add court review and actual wars.
+- **IDs:** `REG…`, `MOT…`, `EMG…`, `WAR…`, `BUD…`.
+
+### 14.7 Game UI (Phase 7)
+
+`apps/game` is a React 19 + Vite host. It never mutates `SimState` entities directly. Browser content loading uses Vite `import.meta.glob` of canonical `data/` and `maps/` through `@lorsain/content-loader` (not `/node`). Saves persist serialized `SaveFile`s in IndexedDB (Dexie) and round-trip through `parseSaveFile` / `restoreSimulation`. Normal UI shows public facts, polls, and qualitative labels — not hidden traits, skills, private goals, or latent support. Developer/debug mode may expose numbers separately.
 
 ## 15. Map contract
 

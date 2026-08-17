@@ -21,7 +21,7 @@ import {
   allocateLawId,
   allocateLegislativeVoteId,
   currentAssemblyMemberIds,
-  currentPresidentId,
+  currentPresidentialAuthorityId,
   currentSpeakerId,
 } from "./state.js";
 
@@ -446,7 +446,7 @@ export function signBill(
   if (bill.status !== "sent_to_president") {
     return { error: reject("INVALID_BILL", bill.status) };
   }
-  const president = currentPresidentId(world, state);
+  const president = currentPresidentialAuthorityId(world, state);
   if (president !== args.actorId) return { error: reject("NOT_PRESIDENT", args.actorId) };
   bill.presidentialDisposition = "signed";
   bill.status = "signed";
@@ -468,7 +468,7 @@ export function returnBill(
   if (bill.status !== "sent_to_president") {
     return { error: reject("INVALID_BILL", bill.status) };
   }
-  const president = currentPresidentId(world, state);
+  const president = currentPresidentialAuthorityId(world, state);
   if (president !== args.actorId) return { error: reject("NOT_PRESIDENT", args.actorId) };
   bill.presidentialDisposition = "returned";
   bill.status = "repassage_scheduled";
