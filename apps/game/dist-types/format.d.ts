@@ -1,0 +1,19 @@
+import type { KernelWorld, SimState } from "@lorsain/sim";
+export declare function politicianName(figures: Map<string, {
+    name: string;
+}>, id: string): string;
+export declare function partyName(world: KernelWorld, partyId: string | null): string;
+export declare function qualitativeStanding(n: number | undefined): string;
+export declare function playerOffices(world: KernelWorld, state: SimState, id: string): string[];
+export declare function isMp(world: KernelWorld, state: SimState, id: string): boolean;
+export declare function isSpeaker(world: KernelWorld, state: SimState, id: string): boolean;
+export declare function isPresident(world: KernelWorld, state: SimState, id: string): boolean;
+export declare function playerCampaign(state: SimState): import("@lorsain/sim").CampaignState | undefined;
+export declare function cabinet(world: KernelWorld, state: SimState): {
+    officeId: string;
+    title: string;
+    portfolio: string | null;
+    holderId: string | null;
+}[];
+export declare function holdersOfKind(world: KernelWorld, state: SimState, officeId: string): string[];
+//# sourceMappingURL=format.d.ts.map
