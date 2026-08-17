@@ -6,6 +6,7 @@ import { padId, pushHistory } from "../scheduler.js";
 import {
   endEndorsementsForTarget,
   isCurrentlyActiveCandidate,
+  isDeclaredContestCandidate,
   isLiveEndorsement,
   isUnresolvedContestStatus,
   politicianEligibleForContest,
@@ -13,6 +14,7 @@ import {
 import { resolveProvincialOrganization } from "./organizations.js";
 import { ENDORSEMENT_RELATIONSHIP_DELTA } from "./policy.js";
 import type { EndorsementRecord, EndorserType } from "./types.js";
+import { politiciansAreActiveRaceRivals } from "../campaigns/race.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -129,6 +131,20 @@ export function endorseCandidate(
   if (endorserErr) return { error: endorserErr };
   if (args.endorserType === "politician" && args.endorserId === args.targetId) {
     return { error: reject("INVALID_ENDORSEMENT", "cannot endorse self") };
+  }
+  if (args.endorserType === "politician") {
+    const endorserActiveInContest = isDeclaredContestCandidate(contest, args.endorserId);
+    if (
+      endorserActiveInContest ||
+      politiciansAreActiveRaceRivals(state, args.endorserId, args.targetId)
+    ) {
+      return {
+        error: reject(
+          "ACTIVE_RIVAL",
+          `${args.endorserId} cannot endorse a rival while remaining an active candidate in the same race`,
+        ),
+      };
+    }
   }
 
   if (SINGLE_WINNER_TYPES.has(contest.type)) {

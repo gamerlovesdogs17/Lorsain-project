@@ -92,6 +92,7 @@ import {
   withdrawCampaign,
 } from "./campaigns/actions.js";
 import { processCampaignMonth } from "./campaigns/monthly.js";
+import { ensureActionPoints } from "./campaigns/state.js";
 import {
   emptyLegislatureRuntime,
   isLegislativeVoteChoice,
@@ -368,6 +369,11 @@ function runTowardTarget(
   state.completedTurns += 1;
   state.activeTurnTarget = null;
   state.pendingInterrupt = null;
+  for (const campaign of Object.values(state.campaignRuntime.campaigns)) {
+    if (campaign.status === "active" || campaign.status === "exploring") {
+      ensureActionPoints(world, state, campaign);
+    }
+  }
   events.push(
     pushHistory(state, {
       date: target,
@@ -1526,6 +1532,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         {
           campaignId: command.campaignId,
           targetPoliticianId: command.targetPoliticianId,
+          issueId: command.issueId ?? null,
           actorId: state.playerPoliticianId,
         },
         null,
@@ -1539,6 +1546,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         {
           campaignId: command.campaignId,
           targetPoliticianId: command.targetPoliticianId,
+          issueId: command.issueId ?? null,
           actorId: state.playerPoliticianId,
         },
         commandId,

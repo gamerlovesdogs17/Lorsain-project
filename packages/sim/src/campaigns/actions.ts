@@ -12,6 +12,7 @@ import { chooseEndorsement } from "../parties/decisions.js";
 import { provincialOrgId, resolveProvincialOrganization } from "../parties/organizations.js";
 import { assemblyCaucus } from "../parties/queries.js";
 import { contestSelectorMethod } from "../parties/selectorates.js";
+import { isDeclaredContestCandidate } from "../parties/lifecycle.js";
 import { candidateStandingOrDefault } from "../elections/standing.js";
 import { withdrawUnresolvedCandidacy } from "../elections/field.js";
 import { contestPollAverage, pollAverage } from "../elections/polls.js";
@@ -23,6 +24,7 @@ import {
   campaignGeographyError,
   campaignMessageTypeError,
   isAliveRaceRival,
+  politiciansAreActiveRaceRivals,
 } from "./race.js";
 import {
   activeCampaignFor,
@@ -620,7 +622,12 @@ export function campaignAttack(
   world: KernelWorld,
   state: SimState,
   rng: RngService,
-  args: { campaignId: string; targetPoliticianId: string; actorId?: string },
+  args: {
+    campaignId: string;
+    targetPoliticianId: string;
+    issueId?: string | null;
+    actorId?: string;
+  },
   commandId: string | null,
 ): { events: SimEvent[] } | { error: CommandError } {
   const existing = requireActiveCampaign(state, args.campaignId);
@@ -637,6 +644,9 @@ export function campaignAttack(
     return {
       error: reject("INVALID_TARGET", `${args.targetPoliticianId} is not a rival in this race`),
     };
+  }
+  if (args.issueId && world.issueIds.length > 0 && !world.issueIds.includes(args.issueId)) {
+    return { error: reject("UNKNOWN_ISSUE", args.issueId) };
   }
   const campaign = beginAction(world, state, args.campaignId, args.actorId);
   if ("error" in campaign) return campaign;
@@ -680,6 +690,7 @@ export function campaignAttack(
         {
           campaignId: campaign.id,
           targetPoliticianId: args.targetPoliticianId,
+          issueId: args.issueId ?? null,
           backfire,
           effect: mag,
         },
@@ -727,7 +738,9 @@ export function campaignSeekEndorsement(
         id !== state.playerPoliticianId &&
         !takenPoliticians.has(id) &&
         state.politicians[id]?.alive &&
-        !state.politicians[id]?.retired,
+        !state.politicians[id]?.retired &&
+        !isDeclaredContestCandidate(contest, id) &&
+        !politiciansAreActiveRaceRivals(state, id, existing.politicianId),
     )
     .sort();
   const orgPool = world.provinceIds
@@ -749,6 +762,17 @@ export function campaignSeekEndorsement(
     const org = resolveProvincialOrganization(world, args.endorserId);
     if (org) asks.push({ endorserType: "provincial_organization", endorserId: args.endorserId });
     else if (state.politicians[args.endorserId]) {
+      if (
+        isDeclaredContestCandidate(contest, args.endorserId) ||
+        politiciansAreActiveRaceRivals(state, args.endorserId, existing.politicianId)
+      ) {
+        return {
+          error: reject(
+            "ACTIVE_RIVAL",
+            `${args.endorserId} cannot endorse a rival while remaining an active candidate in the same race`,
+          ),
+        };
+      }
       asks.push({ endorserType: "politician", endorserId: args.endorserId });
     } else {
       return { error: reject("NO_ENDORSER", args.endorserId) };

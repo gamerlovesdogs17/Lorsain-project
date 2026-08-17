@@ -50,6 +50,23 @@ export function isAliveRaceRival(
   return activeRaceCampaigns(state, campaign).some((c) => c.politicianId === politicianId);
 }
 
+/** True when both politicians currently campaign in the same race (Phase 5 scope). */
+export function politiciansAreActiveRaceRivals(
+  state: SimState,
+  endorserId: string,
+  targetId: string,
+): boolean {
+  if (endorserId === targetId) return false;
+  const a = Object.values(state.campaignRuntime.campaigns).find(
+    (c) => c.politicianId === endorserId && (c.status === "active" || c.status === "exploring"),
+  );
+  const b = Object.values(state.campaignRuntime.campaigns).find(
+    (c) => c.politicianId === targetId && (c.status === "active" || c.status === "exploring"),
+  );
+  if (!a || !b) return false;
+  return sameCampaignRace(a, b);
+}
+
 export function campaignGeographyError(
   world: KernelWorld,
   geography: CampaignGeography,

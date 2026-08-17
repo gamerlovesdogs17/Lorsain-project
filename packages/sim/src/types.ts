@@ -367,7 +367,12 @@ export type Command =
       issueId?: string | null;
     }
   | { type: "CAMPAIGN_MESSAGE"; campaignId: string; issueId?: string | null }
-  | { type: "CAMPAIGN_ATTACK"; campaignId: string; targetPoliticianId: string }
+  | {
+      type: "CAMPAIGN_ATTACK";
+      campaignId: string;
+      targetPoliticianId: string;
+      issueId?: string | null;
+    }
   | { type: "CAMPAIGN_SEEK_ENDORSEMENT"; campaignId: string; endorserId?: string }
   | { type: "CAMPAIGN_SEEK_NOMINATION_SUPPORT"; campaignId: string }
   | { type: "CAMPAIGN_PREPARE_DEBATE"; campaignId: string }

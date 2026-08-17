@@ -20,17 +20,11 @@ import {
   readImportedSave,
   type SavedGameRow,
 } from "./saves.js";
-import {
-  isMp,
-  isPresident,
-  isSpeaker,
-  partyName,
-  playerCampaign,
-  playerOffices,
-  politicianName,
-} from "./format.js";
+import { playerCampaign, playerOffices, politicianName } from "./format.js";
 import { GamePages, type Figure, type Screen } from "./pages.js";
 import { DecisionPanel } from "./decisions.js";
+import { useCommandFeedback } from "./feedback.js";
+import { catalogFromBundle, partyDisplayName, politicianDisplayName } from "./presentation.js";
 
 export default function App() {
   const [bundle, setBundle] = useState<ContentBundle | null>(null);
@@ -48,6 +42,7 @@ export default function App() {
   const [selectedBill, setSelectedBill] = useState<string | null>(null);
   const [mapHover, setMapHover] = useState<string | null>(null);
   const [debug, setDebug] = useState(false);
+  const feedback = useCommandFeedback();
 
   useEffect(() => {
     try {
@@ -64,6 +59,10 @@ export default function App() {
     for (const f of (bundle?.content.starting_figures.figures ?? []) as Figure[]) map.set(f.id, f);
     return map;
   }, [bundle]);
+  const catalog = useMemo(
+    () => (bundle ? catalogFromBundle(bundle, figures) : null),
+    [bundle, figures],
+  );
 
   function refresh(next: Simulation) {
     setSim(next);
@@ -123,7 +122,7 @@ export default function App() {
       setTurnEvents(sim.getSnapshot().history.slice(before));
       refresh(sim);
       setBusy(false);
-      if (!result.ok) setError(result.error.message);
+      if (!result.ok) feedback.setNotice(result.error.message);
     }, 20);
   }
 
@@ -282,7 +281,7 @@ export default function App() {
       </div>
     );
   }
-  if (!sim || !snap) return null;
+  if (!sim || !snap || !catalog) return null;
   const player = snap.politicians[snap.playerPoliticianId]!;
   const offices = playerOffices(world, snap, snap.playerPoliticianId);
   const interrupt = snap.pendingInterrupt;
@@ -313,8 +312,8 @@ export default function App() {
           <div>
             <strong>{snap.currentDate}</strong>
             <div className="muted">
-              {politicianName(figures, snap.playerPoliticianId)} · {offices[0] ?? "No office"} ·{" "}
-              {partyName(world, player.partyId)}
+              {politicianDisplayName(catalog, snap.playerPoliticianId)} ·{" "}
+              {offices[0] ?? "No office"} · {partyDisplayName(world, player.partyId, snap)}
             </div>
           </div>
           <div className="row">
@@ -338,15 +337,13 @@ export default function App() {
           </div>
         </header>
         <div className="page">
+          {feedback.overlay()}
           <DecisionPanel
             world={world}
             snap={snap}
             sim={sim}
-            interrupt={interrupt}
-            mp={isMp(world, snap, snap.playerPoliticianId)}
-            president={isPresident(world, snap, snap.playerPoliticianId)}
-            speaker={isSpeaker(world, snap, snap.playerPoliticianId)}
             onDone={() => refresh(sim)}
+            report={feedback.report}
           />
           <GamePages
             screen={screen}
@@ -354,6 +351,7 @@ export default function App() {
             snap={snap}
             sim={sim}
             bundle={bundle}
+            catalog={catalog}
             figures={figures}
             offices={offices}
             events={turnEvents}
@@ -365,6 +363,8 @@ export default function App() {
             debug={debug}
             setDebug={setDebug}
             onDone={() => refresh(sim)}
+            report={feedback.report}
+            askConfirm={feedback.askConfirm}
           />
         </div>
       </div>

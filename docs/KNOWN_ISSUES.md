@@ -92,3 +92,14 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P7-UI-POLISH | NONBLOCKING | First playable UI is information-dense and unpolished. Charts, chamber animation, map analytics, and typography wait for Phase 11. |
 | P7-WORKER | NONBLOCKING | Turns run on the main thread with a processing indicator. Web Worker integration is deferred to Phase 11. |
 | P7-REG-ANNUL-DEFAULT | NONBLOCKING | Regulation annulment uses simple majority of votes cast (tie fails). That is a Phase-7 procedural default, not a quoted constitutional rule. |
+
+## Phase 7.1 notes
+
+Phase 7.1 First Playtest UX is **COMPLETE**. Phase 8 courts have **not started**.
+
+No Phase 7.1 **BLOCKING** items remain for first manual playtesting.
+
+| ID | Severity | Issue |
+| --- | --- | --- |
+| P71-UI-POLISH | NONBLOCKING | Presentation is functional, not final. Charts, animation, map analytics, and typography wait for Phase 11. |
+| P71-NEWS | NONBLOCKING | Home briefing uses structured events, not generated newspaper copy (Phase 9). |

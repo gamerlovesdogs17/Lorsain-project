@@ -1,10 +1,10 @@
-# Lorsain Political Simulator — Phase 7 Executive + Playable UI (COMPLETE)
+# Lorsain Political Simulator — Phase 7.1 First Playtest UX (COMPLETE)
 
 This repository holds the **canonical content foundation**, TypeScript simulation kernel, and playable React game for a single-player political simulation set in Lorsain / Terena.
 
 ## Status
 
-**Phase 0, 0.5, and 0b are complete/canonical. Phase 1 kernel (`b158271`) and Phase 1.1 integrity hardening (`1c7b079`) are complete. Phase 2 politician-agent substrate is complete at `c43c0fb`. Phase 3 parties/factions/nominations is COMPLETE at `dc9ea2d`. Phase 4 electorate/support/polling/turnout/formal general elections is COMPLETE at `1352dc4`. Phase 5 campaign simulation is COMPLETE at `e3a6aae`. Phase 6 legislature is COMPLETE at `3c976fa`. Phase 7 Executive + Playable UI is COMPLETE. Blockers vs backlog: `docs/KNOWN_ISSUES.md`.**
+**Phase 0, 0.5, and 0b are complete/canonical. Phase 1 kernel (`b158271`) and Phase 1.1 integrity hardening (`1c7b079`) are complete. Phase 2 politician-agent substrate is complete at `c43c0fb`. Phase 3 parties/factions/nominations is COMPLETE at `dc9ea2d`. Phase 4 electorate/support/polling/turnout/formal general elections is COMPLETE at `1352dc4`. Phase 5 campaign simulation is COMPLETE at `e3a6aae`. Phase 6 legislature is COMPLETE at `3c976fa`. Phase 7 Executive + Playable UI is COMPLETE at `90b54d4`. Phase 7.1 First Playtest UX is COMPLETE. Blockers vs backlog: `docs/KNOWN_ISSUES.md`.**
 
 ## Canonical lock
 
@@ -66,6 +66,6 @@ pnpm game:build
 
 ## Phase order (locked)
 
-0 → 0.5 election-math → **0b content (canonical)** → **1 kernel (`b158271`)** → **1.1 save/state integrity (`1c7b079`)** → **2 politician agents (`c43c0fb`)** → **3 parties/factions/nominations (`dc9ea2d`)** → **4 electorate / polls / general elections (`1352dc4`)** → **5 campaign simulation (`e3a6aae`)** → **6 legislature (`3c976fa`)** → **7 executive + playable UI (COMPLETE)** → 8 courts → 9 economy/organizations/media → 10 foreign affairs → 11 final integration + UI polish + balance + content.
+0 → 0.5 election-math → **0b content (canonical)** → **1 kernel (`b158271`)** → **1.1 save/state integrity (`1c7b079`)** → **2 politician agents (`c43c0fb`)** → **3 parties/factions/nominations (`dc9ea2d`)** → **4 electorate / polls / general elections (`1352dc4`)** → **5 campaign simulation (`e3a6aae`)** → **6 legislature (`3c976fa`)** → **7 executive + playable UI (`90b54d4`)** → **7.1 first playtest UX (COMPLETE)** → 8 courts → 9 economy/organizations/media → 10 foreign affairs → 11 final integration + UI polish + balance + content.
 
-**Phase 4** owns the public electorate: voter blocs, underlying support, public candidate standing, polls, turnout, and formal presidential RCV / Assembly STV counts. **Phase 5** owns campaign activity that changes that standing. **Phase 6** owns the Assembly. **Phase 7** owns executive government (cabinet from minister `OfficeTerm`s, regulations, Assembly motions, budget continuity, emergency/war-power frameworks) and the first playable React UI. Phase 8 courts have not started. The old separate Phase 12 full UI / Phase 13 balance roadmap is superseded; Phase 11 absorbs those final tasks.
+**Phase 4** owns the public electorate: voter blocs, underlying support, public candidate standing, polls, turnout, and formal presidential RCV / Assembly STV counts. **Phase 5** owns campaign activity that changes that standing. **Phase 6** owns the Assembly. **Phase 7** owns executive government and the first playable React UI. **Phase 7.1** turns those engine controls into understandable player controls (no silent omitted votes, campaign/policy forms, human-readable names). Phase 8 courts have not started. The old separate Phase 12 full UI / Phase 13 balance roadmap is superseded; Phase 11 absorbs those final tasks.

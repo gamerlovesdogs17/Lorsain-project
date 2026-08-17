@@ -185,6 +185,43 @@ button {
 .seat.vacant {
   background: #cfc9bd;
 }
+.swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 1px;
+  vertical-align: middle;
+}
+.notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+  background: #fff6e8;
+  border: 1px solid #e0c48a;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.8rem;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 36, 48, 0.35);
+  display: grid;
+  place-items: center;
+  z-index: 20;
+}
+.modal {
+  max-width: 28rem;
+  width: calc(100% - 2rem);
+}
+.decision-list {
+  max-height: 22rem;
+  overflow: auto;
+}
+.card h4 {
+  margin: 0.9rem 0 0.35rem;
+  font-size: 0.92rem;
+}
 .map-wrap svg {
   width: 100%;
   height: auto;

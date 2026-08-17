@@ -69,6 +69,15 @@ export function isCurrentlyActiveCandidate(contest: PartyContest, status: string
   return isUnresolvedContestStatus(contest.status) && isActiveContestCandidateStatus(status);
 }
 
+/** Declared/exploring/qualified in an unresolved contest — not a mere potential listing. */
+export function isDeclaredContestCandidate(contest: PartyContest, politicianId: string): boolean {
+  const entry = contest.entries[politicianId];
+  if (!entry) return false;
+  if (entry.status === "potential" || entry.status === "withdrawn") return false;
+  if (entry.status === "eliminated" || entry.status === "winner") return false;
+  return isCurrentlyActiveCandidate(contest, entry.status);
+}
+
 export function isLiveEndorsement(state: SimState, rec: EndorsementRecord): boolean {
   if (rec.status !== "active") return false;
   const contest = state.partyContests[rec.contestId];

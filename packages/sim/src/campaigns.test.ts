@@ -563,3 +563,26 @@ describe("Phase 5 rejected commands leave RNG unchanged", () => {
     expect(out.raised).toBe(out2.raised);
   });
 });
+
+describe("Phase 7.1 campaign action-point month refresh", () => {
+  it("refreshes the current month budget after ADVANCE_TURN without requiring an action", () => {
+    const sim = createSimulation({
+      world: miniElectorateWorld(),
+      playerPoliticianId: "P1",
+      seed: "P71-AP",
+    });
+    declarePlayerAssembly(sim);
+    const camp = playerCampaign(sim);
+    const max = camp.actionPointsMax;
+    expect(max).toBeGreaterThan(0);
+    while (playerCampaign(sim).actionPointsRemaining > 0) {
+      expectOk(sim, { type: "CAMPAIGN_FUNDRAISE", campaignId: playerCampaign(sim).id });
+    }
+    expect(playerCampaign(sim).actionPointsRemaining).toBe(0);
+    expectOk(sim, { type: "ADVANCE_TURN" });
+    const next = playerCampaign(sim);
+    expect(next.actionPointsRemaining).toBe(next.actionPointsMax);
+    expect(next.actionPointsRemaining).toBe(max);
+    expect(next.actionPointsMonth).toBe(sim.getSnapshot().currentDate.slice(0, 7) + "-01");
+  });
+});

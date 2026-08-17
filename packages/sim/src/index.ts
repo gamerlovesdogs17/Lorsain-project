@@ -122,6 +122,7 @@ export {
   emptyLegislatureRuntime,
   whipEstimate,
   absoluteMajorityNeeded,
+  COMMITTEE_NAMES,
 } from "./legislature/index.js";
 export type {
   LegislatureRuntime,
@@ -150,4 +151,17 @@ export type {
   ScheduledEvent,
   CreateSimulationOptions,
 } from "./types.js";
-export type { HostToWorkerMessage, WorkerToHostMessage } from "./worker-protocol.js";
+export {
+  collectPlayerActionableDecisions,
+  type PlayerActionableDecision,
+  type PlayerDecisionKind,
+} from "./player-decisions.js";
+export {
+  activeRaceCampaigns,
+  isAliveRaceRival,
+  politiciansAreActiveRaceRivals,
+  sameCampaignRace,
+} from "./campaigns/race.js";
+export { shouldHoldDebate } from "./campaigns/debates.js";
+export { isDeclaredContestCandidate } from "./parties/lifecycle.js";
+export { partyStance, factionStance } from "./legislature/recommendations.js";

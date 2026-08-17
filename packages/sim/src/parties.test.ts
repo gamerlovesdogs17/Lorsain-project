@@ -531,6 +531,44 @@ describe("endorsements", () => {
     const save = sim.serializeSave();
     expect(restoreSimulation(save, sim.world()).hashState()).toBe(hash);
   });
+
+  it("rejects endorsement by an active same-race rival and allows it after withdrawal", () => {
+    const sim = simFor();
+    const contestId = createdContestId(sim, "PARTY_LAB");
+    expectOk(sim, {
+      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      contestId,
+      politicianId: "P3",
+    });
+    expectOk(sim, {
+      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      contestId,
+      politicianId: "P4",
+    });
+    const blocked = sim.executeCommand({
+      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      contestId,
+      endorserId: "P3",
+      targetId: "P4",
+    });
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.error.code).toBe("ACTIVE_RIVAL");
+    expectOk(sim, {
+      type: "WITHDRAW_PARTY_CONTEST_CANDIDACY",
+      contestId,
+      politicianId: "P3",
+    });
+    expectOk(sim, {
+      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      contestId,
+      endorserId: "P3",
+      targetId: "P4",
+    });
+    const rec = Object.values(sim.getSnapshot().endorsements).find(
+      (e) => e.endorserId === "P3" && e.status === "active",
+    );
+    expect(rec?.targetId).toBe("P4");
+  });
 });
 
 function nominate(
@@ -1917,7 +1955,7 @@ describe("Phase 3 preflight A1–A4", () => {
       (c) => c.type === "party_leadership",
     )!.id;
     expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P19" });
+    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
     expectOk(sim, {
       type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,

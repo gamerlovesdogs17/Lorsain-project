@@ -106,7 +106,8 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 4** — **COMPLETE (`1352dc4`)** — electorate, underlying support, public standing, polling, turnout, formal general-election RCV/STV, domain resolution (nonblocking leftovers: `docs/KNOWN_ISSUES.md`)
 - **Phase 5** — **COMPLETE (`e3a6aae`)** — campaign organizations, resources, actions, debates, NPC strategy, operational nomination calendar, nomination/general integration.
 - **Phase 6** — **COMPLETE (`3c976fa`)** — Assembly sessions, functional committees, structured bills, amendments, votes, whip estimates, presidential return veto and 211-vote repassage. Stage timing guarantees the player a month to act before committee/floor/repassage tallies.
-- **Phase 7** — **COMPLETE** — executive government + first playable React UI. Phase 8 courts have **not started**.
+- **Phase 7** — **COMPLETE (`90b54d4`)** — executive government + first playable React UI.
+- **Phase 7.1** — **COMPLETE** — first-playtest UX: no silently omitted player decisions, campaign/policy forms, human-readable presentation, Home briefing, canonical party colors, command feedback. Phase 8 courts have **not started**.
 
 Deliverables:
 
@@ -178,7 +179,8 @@ Layering:
 - Phase 4: voters, underlying support, public standing, polls, turnout, formal general elections (**COMPLETE `1352dc4`**)
 - Phase 5: campaign actions that **change** public standing/support (**COMPLETE `e3a6aae`**)
 - Phase 6: legislature — **COMPLETE (`3c976fa`)**
-- Phase 7: executive + playable UI — **COMPLETE**
+- Phase 7: executive + playable UI — **COMPLETE (`90b54d4`)**
+- Phase 7.1: first playtest UX — **COMPLETE**
 - Phase 8: courts + constitutional system
 - Phase 9: economy + organizations + media
 - Phase 10: foreign affairs

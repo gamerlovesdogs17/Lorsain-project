@@ -842,6 +842,10 @@ Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate 
 
 **COMPLETE.** Runtime executive in `packages/sim/src/executive/` as `SimState.executiveRuntime`. Cabinet is derived from minister `OfficeTerm`s (12 canonical portfolios). Commands: appoint/dismiss minister, issue regulation, Assembly motions (censure 231/420, regulation annulment, budget, emergency, war authorization), propose budget with continuing appropriation, emergency 14+30 and war-power 30-day frameworks. Acting President uses the same presidential authority helper. Player President is never auto-decided. Save schemaVersion **7**; v6→v7 initializes empty executive runtime. 20-year synthetic kernel hash: `58c049dad4ca4b020941da51854bd889`. Playable React+Vite UI in `apps/game` (`pnpm game` / `start-game.bat`). Browser-safe canonical content load, IndexedDB save/load, role-aware screens. Phase 8 courts have **not started**. The old Phase 12/13 roadmap is superseded; Phase 11 absorbs polish/balance.
 
+## 16.1 Phase 7.1 — first playtest UX
+
+**COMPLETE.** Player decisions are never silently omitted (`collectPlayerActionableDecisions`). Active same-race rivals cannot endorse each other. Campaign/policy commands use valid-choice forms. Monthly campaign action points refresh on turn advance. Home/Assembly/Elections/Map use human-readable names from canon. Command rejection uses an in-game notice. Developer numbers live under Archive.
+
 ## 17. Phase 8 — courts and constitution
 
 Implement Constitutional Court membership, appointments, case pipeline, doctrine/precedent flags, emergency review, election litigation and constitutional remedies.
