@@ -101,6 +101,11 @@ export type TerenaKernelInput = {
   constitution: {
     calendars?: Record<string, ContentCalendar>;
     assembly?: { seats?: number; absolute_majority?: number };
+    ministerial_censure?: { threshold_fraction?: number };
+    budget?: Record<string, unknown>;
+    regulation_review?: { review_days?: number };
+    war_powers?: { unilateral_days?: number };
+    emergency?: { initial_days?: number; extension_days?: number };
     presidential_vacancy?: {
       acting_succession_office_ids?: string[];
       special_election?: {
@@ -576,6 +581,13 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     legislativeConstitution: {
       assemblySeatCount: input.constitution.assembly?.seats ?? 420,
       assemblyAbsoluteMajority: input.constitution.assembly?.absolute_majority ?? 211,
+    },
+    executiveConstitution: {
+      assemblyCensureFraction: input.constitution.ministerial_censure?.threshold_fraction ?? 0.55,
+      regulationReviewDays: input.constitution.regulation_review?.review_days ?? 60,
+      emergencyInitialDays: input.constitution.emergency?.initial_days ?? 14,
+      emergencyExtensionDays: input.constitution.emergency?.extension_days ?? 30,
+      warUnilateralDays: input.constitution.war_powers?.unilateral_days ?? 30,
     },
   };
   applyInstitutionalPublicIdeology(world);

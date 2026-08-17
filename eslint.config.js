@@ -5,7 +5,14 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "source/**", "maps/**", ".cursor/**"],
+    ignores: [
+      "**/dist/**",
+      "**/dist-types/**",
+      "**/node_modules/**",
+      "source/**",
+      "maps/**",
+      ".cursor/**",
+    ],
   },
   {
     files: ["**/*.{ts,tsx,js,mjs,cjs}"],

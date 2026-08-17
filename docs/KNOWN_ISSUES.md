@@ -65,7 +65,7 @@ Phase 5 campaign simulation is **COMPLETE** at `e3a6aae`.
 
 ## Phase 6 notes
 
-Phase 6 legislature is **COMPLETE**. Phase 7 has **not started**.
+Phase 6 legislature is **COMPLETE** at `3c976fa`.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
@@ -75,3 +75,18 @@ Phase 6 legislature is **COMPLETE**. Phase 7 has **not started**.
 | P6-NEGOTIATION | NONBLOCKING | Committee negotiation is a small magnitude-softening amendment, not a full multi-round bargain with side payments. |
 | P6-WHIP | NONBLOCKING | Whip estimates are imperfect public ranges, not a calibrated polling model. |
 | P6-VITEST-RPC | NONBLOCKING | Vitest workers time out RPC at 60s per file. The Phase 5 four-seed realism harness was split into `campaigns.realism.test.ts` (2 seeds) so each file stays under that limit after 420-MP legislative months. |
+
+---
+
+## Phase 7 notes
+
+Phase 7 Executive + Playable UI is **implemented pending review**. Phase 8 courts have **not started**.
+
+| ID | Severity | Issue |
+| --- | --- | --- |
+| P7-SAVE-XREF | NONBLOCKING | Hostile executive JSON (orphaned REG/MOT/EMG/WAR/BUD ids, invented ministry records) is not exhaustively cross-validated. |
+| P7-MINISTRY-DEPTH | NONBLOCKING | Ministries only store administrativeCapacity / currentPriorities. Deep cabinet politics and Phase 9 economic effects are deferred. |
+| P7-BUDGET-ECON | NONBLOCKING | Budget is indexed envelopes and continuity, not a macroeconomy. |
+| P7-UI-POLISH | NONBLOCKING | First playable UI is information-dense and unpolished. Charts, chamber animation, map analytics, and typography wait for Phase 11. |
+| P7-WORKER | NONBLOCKING | Turns run on the main thread with a processing indicator. Web Worker integration is deferred to Phase 11. |
+| P7-REG-ANNUL-DEFAULT | NONBLOCKING | Regulation annulment uses simple majority of votes cast (tie fails). That is a Phase-7 procedural default, not a quoted constitutional rule. |

@@ -15,7 +15,9 @@
     "validate:content": "pnpm --filter @lorsain/content-loader validate",
     "validate:python": "python scripts/validate_content.py",
     "generate:phase0b": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/phase0b/run.ts",
-    "validate:phase0b:recount": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/phase0b/recount_validate.ts"
+    "validate:phase0b:recount": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/phase0b/recount_validate.ts",
+    "game": "pnpm --filter @lorsain/game dev",
+    "game:build": "pnpm --filter @lorsain/game build"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

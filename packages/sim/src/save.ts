@@ -9,6 +9,7 @@ import { parsePartyRuntime, partyCounterError } from "./parties/validation.js";
 import { parseElectoralRuntime, electoralCounterError } from "./elections/validation.js";
 import { parseCampaignRuntime, campaignCounterError } from "./campaigns/validation.js";
 import { parseLegislatureRuntime, legislatureCounterError } from "./legislature/validation.js";
+import { parseExecutiveRuntime, executiveCounterError } from "./executive/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -373,6 +374,11 @@ function parseCounters(raw: unknown): Counters | string {
     "nextAmendmentId",
     "nextLegislativeVoteId",
     "nextLawId",
+    "nextRegulationId",
+    "nextMotionId",
+    "nextEmergencyId",
+    "nextWarPowerId",
+    "nextBudgetId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
@@ -543,6 +549,10 @@ function parseSimulation(
   if (typeof legislature === "string") return legislature;
   const legislatureCountErr = legislatureCounterError(legislature, counters);
   if (legislatureCountErr) return legislatureCountErr;
+  const executive = parseExecutiveRuntime(raw.executiveRuntime);
+  if (typeof executive === "string") return executive;
+  const executiveCountErr = executiveCounterError(executive, counters);
+  if (executiveCountErr) return executiveCountErr;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -650,6 +660,7 @@ function parseSimulation(
     domainResolutions: electoral.domainResolutions,
     campaignRuntime: campaigns,
     legislatureRuntime: legislature,
+    executiveRuntime: executive,
   };
 }
 
@@ -899,3 +910,42 @@ export function migrateSaveV5ToV6(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 5, toSchema: 6, migrate: migrateSaveV5ToV6 });
+
+/**
+ * Phase 6 saves begin Phase 7 executive-domain state at migration/load.
+ * No fabricated appointments, regulations, motions, or emergencies are written.
+ */
+export function migrateSaveV6ToV7(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 7 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 7 };
+  sim.executiveRuntime = isRecord(sim.executiveRuntime)
+    ? sim.executiveRuntime
+    : {
+        ministries: {},
+        regulations: {},
+        budgets: {},
+        emergencies: {},
+        warPowers: {},
+        motions: {},
+        pendingPlayerMotionVotes: {},
+        lastMonthProcessed: null,
+        emergencyTrigger: false,
+        warTrigger: false,
+      };
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextRegulationId: isInt(sim.counters.nextRegulationId) ? sim.counters.nextRegulationId : 1,
+      nextMotionId: isInt(sim.counters.nextMotionId) ? sim.counters.nextMotionId : 1,
+      nextEmergencyId: isInt(sim.counters.nextEmergencyId) ? sim.counters.nextEmergencyId : 1,
+      nextWarPowerId: isInt(sim.counters.nextWarPowerId) ? sim.counters.nextWarPowerId : 1,
+      nextBudgetId: isInt(sim.counters.nextBudgetId) ? sim.counters.nextBudgetId : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 6, toSchema: 7, migrate: migrateSaveV6ToV7 });

@@ -4,7 +4,7 @@ import { monthStart } from "../campaigns/effects.js";
 import { LEGISLATURE } from "./policy.js";
 import {
   currentAssemblyMemberIds,
-  currentPresidentId,
+  currentPresidentialAuthorityId,
   currentSpeakerId,
   seedCommitteesIfNeeded,
 } from "./state.js";
@@ -299,7 +299,7 @@ function presidentialWork(
   commandId: string,
 ): SimEvent[] {
   const events: SimEvent[] = [];
-  const president = currentPresidentId(world, state);
+  const president = currentPresidentialAuthorityId(world, state);
   if (!president) return events;
   const bills = Object.values(state.legislatureRuntime.bills)
     .filter((b) => b.status === "sent_to_president")

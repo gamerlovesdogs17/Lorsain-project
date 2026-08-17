@@ -34,6 +34,18 @@ export function currentPresidentId(world: KernelWorld, state: SimState): string 
   return terms[0]?.holderId ?? null;
 }
 
+/** Substantive president, else the current acting president. */
+export function currentPresidentialAuthorityId(world: KernelWorld, state: SimState): string | null {
+  const substantive = currentPresidentId(world, state);
+  if (substantive) return substantive;
+  const office = officesOfKind(world, "president")[0];
+  if (!office) return null;
+  const acting = occupyingTerms(state, office.id).find(
+    (t) => t.status === "active" && t.holdingKind === "acting",
+  );
+  return acting?.holderId ?? null;
+}
+
 export function mpConstituencyId(
   world: KernelWorld,
   state: SimState,

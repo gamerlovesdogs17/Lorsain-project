@@ -834,15 +834,13 @@ Acceptance criteria: 10,000 synthetic general-election cases remain legal; poll 
 
 ## 15. Phase 6 — legislature
 
-**COMPLETE.** Runtime Assembly in `packages/sim/src/legislature/` as `SimState.legislatureRuntime`. Membership is derived from live `assembly_member` terms. Five functional committees (not canonical content) map issue dimensions. Structured `PolicyItem` bills, individual Phase 2 NPC votes, imperfect whip estimates, suspensive presidential return, and constitutional 211-yes repassage on the authorized 420-seat Assembly (vacancies do not shrink the denominator). Bills are visible a month before committee/floor/repassage tallies. `CAST_LEGISLATIVE_VOTE` targets a specific stage. Proposed amendments are adopted or rejected before the parent bill leaves that stage. Player never auto-sponsors, auto-votes, or auto-signs. Ordinary majority is simple majority of votes cast (tie fails) — an implementation default, not constitutional canon. Save schemaVersion **6**; v5→v6 adds empty legislature structures. `contentVersion` remains `0.3.1-predev`. 20-year synthetic kernel hash: `c98484fa46cfa98358742cf4d73f018d`. Phase 7 has **not started**.
+**COMPLETE (`3c976fa`).** Runtime Assembly in `packages/sim/src/legislature/` as `SimState.legislatureRuntime`. Membership is derived from live `assembly_member` terms. Five functional committees (not canonical content) map issue dimensions. Structured `PolicyItem` bills, individual Phase 2 NPC votes, imperfect whip estimates, suspensive presidential return, and constitutional 211-yes repassage on the authorized 420-seat Assembly (vacancies do not shrink the denominator). Bills are visible a month before committee/floor/repassage tallies. `CAST_LEGISLATIVE_VOTE` targets a specific stage. Proposed amendments are adopted or rejected before the parent bill leaves that stage. Player never auto-sponsors, auto-votes, or auto-signs. Ordinary majority is simple majority of votes cast (tie fails) — an implementation default, not constitutional canon. Save schemaVersion **6**; v5→v6 adds empty legislature structures. `contentVersion` remains `0.3.1-predev`. 20-year synthetic kernel hash at Phase 6 close: `c98484fa46cfa98358742cf4d73f018d`.
 
 Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate and pass/fail bills for four simulated years; coalition patterns differ by issue instead of producing one permanent government/opposition split.
 
-## 16. Phase 7 — executive and ministries
+## 16. Phase 7 — executive + playable UI
 
-Implement cabinet appointments, ministry portfolios, agency capacity, regulations, ministerial censure, budget proposal, budget continuity, executive actions and implementation quality.
-
-Acceptance criteria: a president can govern with a hostile Assembly but cannot ignore law or money; repeated appointment of unacceptable ministers produces censure and political cost rather than deadlock.
+**Implemented pending review.** Runtime executive in `packages/sim/src/executive/` as `SimState.executiveRuntime`. Cabinet is derived from minister `OfficeTerm`s (12 canonical portfolios). Commands: appoint/dismiss minister, issue regulation, Assembly motions (censure 231/420, regulation annulment, budget, emergency, war authorization), propose budget with continuing appropriation, emergency 14+30 and war-power 30-day frameworks. Acting President uses the same presidential authority helper. Player President is never auto-decided. Save schemaVersion **7**; v6→v7 initializes empty executive runtime. 20-year synthetic kernel hash: `58c049dad4ca4b020941da51854bd889`. Playable React+Vite UI in `apps/game` (`pnpm game` / `start-game.bat`). Browser-safe canonical content load, IndexedDB save/load, role-aware screens. Phase 8 courts have **not started**. The old Phase 12/13 roadmap is superseded; Phase 11 absorbs polish/balance.
 
 ## 17. Phase 8 — courts and constitution
 
@@ -850,50 +848,17 @@ Implement Constitutional Court membership, appointments, case pipeline, doctrine
 
 Acceptance criteria: unconstitutional actions can be challenged; judge philosophy and precedent affect outcomes; court composition changes only through valid appointments/vacancies.
 
-## 18. Phase 9 — economy and organizations
+## 18. Phase 9 — economy, organizations, and media
 
-Implement national/provincial economic indicators and major sectors. Add unions, business groups, farm groups, advocacy organizations, endorsements and lobbying.
+Implement national/provincial economic indicators and major sectors. Add unions, business groups, farm groups, advocacy organizations, endorsements and lobbying. Implement outlets, audience/reputation, structured article generation, and polling presentation.
 
-Acceptance criteria: policy changes have delayed measurable effects; organizations choose endorsements based on interests/relationships; economic shocks change politics without mechanically determining elections.
+## 19. Phase 10 — foreign affairs
 
-## 19. Phase 10 — media and information
+Implement 48 foreign states, leaders, strategic goals, bilateral relations, trade exposure, treaties, sanctions, military posture, diplomatic actions and crisis escalation.
 
-Implement outlets, audience/reputation, structured article generation, investigations, rumors and polling presentation. Build a newspaper/digest home screen from simulation events.
+## 20. Phase 11 — final integration + UI polish + balance + content
 
-Acceptance criteria: the same underlying event is covered differently by outlets without fabricating different objective facts; player information reflects source quality.
-
-## 20. Phase 11 — foreign affairs
-
-Implement 48 foreign states, leaders, strategic goals, bilateral relations, trade exposure, treaties, sanctions, military posture, diplomatic actions and crisis escalation. Initially abstract foreign domestic politics except for leadership/election changes in major states; deepen later.
-
-Acceptance criteria: 50-year hands-off simulations do not produce constant world war or permanent peace. Alliance commitments, geography and capability alter behavior.
-
-## 21. Phase 12 — full UI
-
-Core screens:
-
-- monthly dashboard/news digest
-- politician profile and relationship network
-- career/actions screen
-- party and faction pages
-- election/campaign pages
-- Assembly chamber, bill and committee pages
-- executive/cabinet pages
-- court page
-- organizations/media pages
-- Terena interactive SVG map
-- world foreign-affairs SVG map
-- economy dashboard
-- historical archive/wiki
-- save/load/export settings
-
-Map components must consume stable SVG IDs and external JSON. Filling `C001` by election winner or `P09` by unemployment should require no SVG editing.
-
-## 22. Phase 13 — balance and content pass
-
-Run large batches before adding more features. Calibrate party support, incumbency, campaign effects, relationships, career ambition, scandal frequency, legislative productivity and foreign crises.
-
-Create developer dashboards for distributions instead of balancing by anecdotal single runs.
+Polish the playable UI, remaining screens, coefficients, and large-batch balance. Absorbs the old Phase 12 full UI and Phase 13 balance/content tasks.
 
 ## 23. First playable vertical slice
 
