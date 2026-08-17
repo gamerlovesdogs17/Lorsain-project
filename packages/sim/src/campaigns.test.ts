@@ -80,7 +80,7 @@ function declarePlayerAssembly(sim: Simulation) {
 }
 
 describe("Phase 5 campaign finance and actions", () => {
-  it("starts with no campaigns and schemaVersion 5", () => {
+  it("starts with no campaigns and current schemaVersion", () => {
     const sim = createSimulation({ world: miniElectorateWorld(), playerPoliticianId: "P1" });
     const snap = sim.getSnapshot();
     expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
@@ -460,15 +460,22 @@ describe("Phase 5 campaign finance and actions", () => {
     const sim = v4.simulation as Record<string, unknown>;
     sim.schemaVersion = 4;
     delete sim.campaignRuntime;
+    delete sim.legislatureRuntime;
     const counters = sim.counters as Record<string, unknown>;
     delete counters.nextCampaignId;
     delete counters.nextDebateId;
+    delete counters.nextBillId;
+    delete counters.nextAmendmentId;
+    delete counters.nextLegislativeVoteId;
+    delete counters.nextLawId;
     const parsed = parseSaveFile(v4, "0.3.1-predev");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(5);
+    expect(parsed.save.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     expect(parsed.save.simulation.campaignRuntime.campaigns).toEqual({});
     expect(parsed.save.simulation.counters.nextCampaignId).toBe(1);
+    expect(parsed.save.simulation.legislatureRuntime.bills).toEqual({});
+    expect(parsed.save.simulation.counters.nextBillId).toBe(1);
   });
 });
 

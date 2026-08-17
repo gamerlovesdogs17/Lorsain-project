@@ -1,0 +1,203 @@
+import type { IsoDate } from "../calendar.js";
+import type { JsonObject } from "../json.js";
+
+export const COMMITTEE_IDS = [
+  "COMMITTEE_ECONOMIC",
+  "COMMITTEE_SOCIAL_ECONOMIC",
+  "COMMITTEE_SOCIAL",
+  "COMMITTEE_INSTITUTIONAL",
+  "COMMITTEE_FOREIGN",
+] as const;
+export type CommitteeId = (typeof COMMITTEE_IDS)[number];
+
+export const COMMITTEE_DIMENSIONS: Record<CommitteeId, string> = {
+  COMMITTEE_ECONOMIC: "economic",
+  COMMITTEE_SOCIAL_ECONOMIC: "economic-social",
+  COMMITTEE_SOCIAL: "social",
+  COMMITTEE_INSTITUTIONAL: "institutional",
+  COMMITTEE_FOREIGN: "foreign",
+};
+
+export const BILL_STATUSES = [
+  "draft",
+  "introduced",
+  "committee",
+  "committee_failed",
+  "committee_passed",
+  "floor_scheduled",
+  "floor_failed",
+  "floor_passed",
+  "sent_to_president",
+  "signed",
+  "returned_by_president",
+  "repassage_scheduled",
+  "repassed",
+  "repassage_failed",
+  "enacted",
+  "withdrawn",
+] as const;
+export type BillStatus = (typeof BILL_STATUSES)[number];
+
+export const LEGISLATIVE_VOTE_CHOICES = ["yes", "no", "abstain"] as const;
+export type LegislativeVoteChoice = (typeof LEGISLATIVE_VOTE_CHOICES)[number];
+
+export const LEGISLATIVE_VOTE_STAGES = ["committee", "floor", "repassage"] as const;
+export type LegislativeVoteStage = (typeof LEGISLATIVE_VOTE_STAGES)[number];
+
+export const RECOMMENDATION_STANCES = ["support", "oppose", "free_vote"] as const;
+export type RecommendationStance = (typeof RECOMMENDATION_STANCES)[number];
+
+export const AMENDMENT_STATUSES = ["proposed", "adopted", "rejected", "withdrawn"] as const;
+export type AmendmentStatus = (typeof AMENDMENT_STATUSES)[number];
+
+export const PRESIDENTIAL_DISPOSITIONS = ["pending", "signed", "returned", "none"] as const;
+export type PresidentialDisposition = (typeof PRESIDENTIAL_DISPOSITIONS)[number];
+
+export type PolicyItem = {
+  issueId: string;
+  direction: number;
+  magnitude: number;
+  fiscalImpact: number | null;
+};
+
+export type CommitteeState = {
+  id: CommitteeId;
+  name: string;
+  dimension: string;
+  memberIds: string[];
+};
+
+export type BillState = {
+  id: string;
+  sponsorId: string;
+  cosponsorIds: string[];
+  introducedDate: IsoDate | null;
+  title: string;
+  summary: string;
+  policyItems: PolicyItem[];
+  assignedCommitteeId: CommitteeId | null;
+  status: BillStatus;
+  amendmentIds: string[];
+  committeeVoteId: string | null;
+  floorVoteId: string | null;
+  presidentialDisposition: PresidentialDisposition;
+  repassageVoteId: string | null;
+  enactedDate: IsoDate | null;
+  enactedLawId: string | null;
+  /** Month the current vote-bearing stage began. Tallied only after a later month. */
+  stageReadyDate: IsoDate | null;
+  metadata: JsonObject;
+};
+
+export type AmendmentState = {
+  id: string;
+  billId: string;
+  sponsorId: string;
+  date: IsoDate;
+  policyItems: PolicyItem[];
+  status: AmendmentStatus;
+  metadata: JsonObject;
+};
+
+export type LegislativeVoteRecord = {
+  id: string;
+  billId: string;
+  stage: LegislativeVoteStage;
+  date: IsoDate;
+  committeeId: CommitteeId | null;
+  votes: Record<string, LegislativeVoteChoice>;
+  yes: number;
+  no: number;
+  abstain: number;
+  passed: boolean;
+  threshold: "simple_majority_cast" | "absolute_majority";
+  metadata: JsonObject;
+};
+
+export type EnactedLawRecord = {
+  id: string;
+  billId: string;
+  title: string;
+  policyItems: PolicyItem[];
+  amendmentIds: string[];
+  floorVoteId: string | null;
+  repassageVoteId: string | null;
+  presidentialDisposition: PresidentialDisposition;
+  enactedDate: IsoDate;
+  sponsorId: string;
+  eventIds: string[];
+  metadata: JsonObject;
+};
+
+export type PendingPlayerVote = {
+  billId: string;
+  stage: LegislativeVoteStage;
+  choice: LegislativeVoteChoice;
+  amendmentId: string | null;
+};
+
+export type PartyRecommendation = {
+  partyId: string;
+  billId: string;
+  stance: RecommendationStance;
+};
+
+export type FactionRecommendation = {
+  factionId: string;
+  billId: string;
+  stance: RecommendationStance;
+};
+
+export type LegislatureRuntime = {
+  committees: Record<string, CommitteeState>;
+  bills: Record<string, BillState>;
+  amendments: Record<string, AmendmentState>;
+  legislativeVotes: Record<string, LegislativeVoteRecord>;
+  enactedLaws: Record<string, EnactedLawRecord>;
+  partyRecommendations: Record<string, PartyRecommendation>;
+  factionRecommendations: Record<string, FactionRecommendation>;
+  floorQueue: string[];
+  pendingPlayerVotes: Record<string, PendingPlayerVote>;
+  lastMonthProcessed: IsoDate | null;
+  sessionLabel: string;
+};
+
+export function emptyLegislatureRuntime(): LegislatureRuntime {
+  return {
+    committees: {},
+    bills: {},
+    amendments: {},
+    legislativeVotes: {},
+    enactedLaws: {},
+    partyRecommendations: {},
+    factionRecommendations: {},
+    floorQueue: [],
+    pendingPlayerVotes: {},
+    lastMonthProcessed: null,
+    sessionLabel: "assembly",
+  };
+}
+
+export function isBillStatus(v: string): v is BillStatus {
+  return (BILL_STATUSES as readonly string[]).includes(v);
+}
+
+export function isCommitteeId(v: string): v is CommitteeId {
+  return (COMMITTEE_IDS as readonly string[]).includes(v);
+}
+
+export function isLegislativeVoteChoice(v: string): v is LegislativeVoteChoice {
+  return (LEGISLATIVE_VOTE_CHOICES as readonly string[]).includes(v);
+}
+
+export function isLegislativeVoteStage(v: string): v is LegislativeVoteStage {
+  return (LEGISLATIVE_VOTE_STAGES as readonly string[]).includes(v);
+}
+
+export function pendingVoteKey(
+  billId: string,
+  stage: LegislativeVoteStage,
+  amendmentId: string | null = null,
+): string {
+  return `${billId}:${stage}:${amendmentId ?? "_"}`;
+}

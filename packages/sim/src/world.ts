@@ -100,6 +100,7 @@ export type TerenaKernelInput = {
   issues?: Array<{ id: string; dimension?: string }>;
   constitution: {
     calendars?: Record<string, ContentCalendar>;
+    assembly?: { seats?: number; absolute_majority?: number };
     presidential_vacancy?: {
       acting_succession_office_ids?: string[];
       special_election?: {
@@ -572,6 +573,10 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     ...electorateSlice,
     partyPublicIdeology: {},
     factionPublicIdeology: {},
+    legislativeConstitution: {
+      assemblySeatCount: input.constitution.assembly?.seats ?? 420,
+      assemblyAbsoluteMajority: input.constitution.assembly?.absolute_majority ?? 211,
+    },
   };
   applyInstitutionalPublicIdeology(world);
   return world;

@@ -32,8 +32,14 @@ import type {
   PresidentialEligibilityRules,
   ProvincialPartyOrganization,
 } from "./parties/types.js";
+import type {
+  LegislatureRuntime,
+  PolicyItem,
+  LegislativeVoteChoice,
+  LegislativeVoteStage,
+} from "./legislature/types.js";
 
-export const SAVE_SCHEMA_VERSION = 5 as const;
+export const SAVE_SCHEMA_VERSION = 6 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -123,6 +129,10 @@ export type Counters = {
   nextDomainResolutionId: number;
   nextCampaignId: number;
   nextDebateId: number;
+  nextBillId: number;
+  nextAmendmentId: number;
+  nextLegislativeVoteId: number;
+  nextLawId: number;
 };
 
 export type PresidentialRuntime = {
@@ -165,6 +175,7 @@ export type SimState = {
   polls: Record<string, PollRecord>;
   domainResolutions: Record<string, DomainResolutionRecord>;
   campaignRuntime: CampaignRuntime;
+  legislatureRuntime: LegislatureRuntime;
 };
 
 export type Command =
@@ -353,7 +364,27 @@ export type Command =
   | { type: "CAMPAIGN_SEEK_ENDORSEMENT"; campaignId: string; endorserId?: string }
   | { type: "CAMPAIGN_SEEK_NOMINATION_SUPPORT"; campaignId: string }
   | { type: "CAMPAIGN_PREPARE_DEBATE"; campaignId: string }
-  | { type: "WITHDRAW_CAMPAIGN"; campaignId: string };
+  | { type: "WITHDRAW_CAMPAIGN"; campaignId: string }
+  | {
+      type: "INTRODUCE_BILL";
+      policyItems: PolicyItem[];
+      title?: string;
+      summary?: string;
+      cosponsorIds?: string[];
+    }
+  | { type: "COSPONSOR_BILL"; billId: string }
+  | { type: "PROPOSE_AMENDMENT"; billId: string; policyItems: PolicyItem[] }
+  | {
+      type: "CAST_LEGISLATIVE_VOTE";
+      billId: string;
+      stage: LegislativeVoteStage;
+      choice: LegislativeVoteChoice;
+      amendmentId?: string;
+    }
+  | { type: "SIGN_BILL"; billId: string }
+  | { type: "RETURN_BILL"; billId: string }
+  | { type: "SCHEDULE_BILL"; billId: string }
+  | { type: "DELAY_BILL"; billId: string };
 
 export type CommandError = { code: string; message: string };
 
@@ -452,6 +483,10 @@ export type KernelWorld = {
    */
   partyPublicIdeology: Record<string, IdeologyVector>;
   factionPublicIdeology: Record<string, IdeologyVector>;
+  legislativeConstitution: {
+    assemblySeatCount: number;
+    assemblyAbsoluteMajority: number;
+  };
 };
 
 export type CreateSimulationOptions = {

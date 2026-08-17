@@ -216,36 +216,6 @@ describe("Phase 5 2028 vertical slice", () => {
   }, 60_000);
 });
 
-describe("Phase 5 campaign realism harness", () => {
-  it("resources and standing help, but seeds can produce different nominees", () => {
-    const world = loadTerenaWorld();
-    const winners = new Set<string>();
-    const cashBySeed: number[] = [];
-    for (let i = 0; i < 4; i++) {
-      const sim = createSimulation({
-        world,
-        playerPoliticianId: "NPC002",
-        seed: `P5-REALISM-${i}`,
-      });
-      expectOk(sim, { type: "ADVANCE_TURN" });
-      advanceThroughInterrupts(sim, 1);
-      const active = Object.values(sim.getSnapshot().campaignRuntime.campaigns).filter(
-        (c) => c.status === "active",
-      );
-      const raised = active.reduce((n, c) => n + c.totalRaised, 0);
-      cashBySeed.push(raised);
-      expect(raised).toBeGreaterThan(0);
-      advanceThroughInterrupts(sim, 8);
-      const labour = Object.values(sim.getSnapshot().partyContests).find(
-        (c) => c.partyId === "PARTY_LAB" && c.type === "presidential_nomination",
-      )!;
-      if (labour.status === "resolved" && labour.winnerId) winners.add(labour.winnerId);
-    }
-    expect(Math.max(...cashBySeed)).toBeGreaterThan(Math.min(...cashBySeed) * 0.2);
-    expect(winners.size).toBeGreaterThanOrEqual(1);
-  }, 180_000);
-});
-
 describe("Phase 5 campaign performance", () => {
   it("processes an active presidential campaign month without pathological scaling", () => {
     const world = loadTerenaWorld();

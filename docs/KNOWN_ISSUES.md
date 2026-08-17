@@ -50,7 +50,7 @@ No Phase 4 **BLOCKING** items remain for the 2028–2029 supported gameplay path
 
 ## Phase 5 notes
 
-Phase 5 campaign simulation is **COMPLETE**. Phase 6 has **not started**.
+Phase 5 campaign simulation is **COMPLETE** at `e3a6aae`.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
@@ -60,3 +60,18 @@ Phase 5 campaign simulation is **COMPLETE**. Phase 6 has **not started**.
 | P5-QUAL-GATES | **FIXED** | Qualification uses campaign milestones and real endorsements; DEV evidence injection is not required for the 2028 path. |
 | P5-POLL-CADENCE | NONBLOCKING | Monthly public polls rotate one nomination contest plus one general field rather than firing every pollster every day. Cadence is approximate. |
 | P5-ATTACK-LEADER | NONBLOCKING | NPC attack targeting uses public standing order among active same-race rivals, not a full poll-based targeting planner. |
+
+---
+
+## Phase 6 notes
+
+Phase 6 legislature is **COMPLETE**. Phase 7 has **not started**.
+
+| ID | Severity | Issue |
+| --- | --- | --- |
+| P6-COMMITTEES-CANON | NONBLOCKING | Committees are functional dimension scaffolding, not the richer canonical committee content that may arrive later. |
+| P6-MAJORITY-DEFAULT | NONBLOCKING | Ordinary committee/floor/amendment majority is simple majority of votes cast (tie fails). That is an implementation default, not a quoted constitutional rule. Repassage after return uses the world constitutional absolute majority (Terena 211 of 420 authorized seats, including when a seat is vacant). |
+| P6-SAVE-XREF | NONBLOCKING | Hostile legislature JSON (orphaned BILL/AMD/LVOTE/LAW ids, invented committee membership) is not exhaustively cross-validated. |
+| P6-NEGOTIATION | NONBLOCKING | Committee negotiation is a small magnitude-softening amendment, not a full multi-round bargain with side payments. |
+| P6-WHIP | NONBLOCKING | Whip estimates are imperfect public ranges, not a calibrated polling model. |
+| P6-VITEST-RPC | NONBLOCKING | Vitest workers time out RPC at 60s per file. The Phase 5 four-seed realism harness was split into `campaigns.realism.test.ts` (2 seeds) so each file stays under that limit after 420-MP legislative months. |

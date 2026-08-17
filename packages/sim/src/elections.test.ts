@@ -74,12 +74,17 @@ function stripToV3(save: SaveFile): Record<string, unknown> {
   delete sim.polls;
   delete sim.domainResolutions;
   delete sim.campaignRuntime;
+  delete sim.legislatureRuntime;
   const counters = sim.counters as Record<string, unknown>;
   delete counters.nextPollId;
   delete counters.nextElectionId;
   delete counters.nextDomainResolutionId;
   delete counters.nextCampaignId;
   delete counters.nextDebateId;
+  delete counters.nextBillId;
+  delete counters.nextAmendmentId;
+  delete counters.nextLegislativeVoteId;
+  delete counters.nextLawId;
   return raw;
 }
 

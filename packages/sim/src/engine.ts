@@ -93,6 +93,24 @@ import {
 } from "./campaigns/actions.js";
 import { processCampaignMonth } from "./campaigns/monthly.js";
 import {
+  emptyLegislatureRuntime,
+  isLegislativeVoteChoice,
+  isLegislativeVoteStage,
+} from "./legislature/types.js";
+import { processLegislatureMonth } from "./legislature/monthly.js";
+import {
+  cosponsorBill,
+  delayBill,
+  introduceBill,
+  proposeAmendment,
+  returnBill,
+  scheduleBill,
+  signBill,
+  castPlayerVote,
+} from "./legislature/procedure.js";
+import { upsertRecommendations } from "./legislature/recommendations.js";
+import { seedCommitteesIfNeeded } from "./legislature/state.js";
+import {
   SAVE_SCHEMA_VERSION,
   type Command,
   type CommandResult,
@@ -164,6 +182,10 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextDomainResolutionId: 1,
       nextCampaignId: 1,
       nextDebateId: 1,
+      nextBillId: 1,
+      nextAmendmentId: 1,
+      nextLegislativeVoteId: 1,
+      nextLawId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
@@ -174,6 +196,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     ...emptyPartyRuntime(),
     ...emptyElectoralRuntimeState(),
     campaignRuntime: emptyCampaignRuntime(),
+    legislatureRuntime: emptyLegislatureRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -189,6 +212,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
   seedCanonicalElections(state, world);
   seedStartingPublicStanding(world, state);
   seedInitialGoals(state, world);
+  seedCommitteesIfNeeded(world, state);
   return state;
 }
 
@@ -310,6 +334,7 @@ function runTowardTarget(
 ): { events: SimEvent[]; interrupt: PendingInterrupt | null } {
   const events: SimEvent[] = [];
   events.push(...processCampaignMonth(state, world, rng, commandId));
+  events.push(...processLegislatureMonth(state, world, rng, commandId));
   sortScheduler(state);
   while (true) {
     const next = nextPendingBefore(state, target);
@@ -391,6 +416,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
     seedStartingPublicStanding(frozen, state);
   }
   if (needsInitialGoals(state)) seedInitialGoals(state, frozen);
+  seedCommitteesIfNeeded(frozen, state);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
@@ -1594,6 +1620,167 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         world,
         state,
         { campaignId: command.campaignId, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "INTRODUCE_BILL") {
+      const args = {
+        sponsorId: state.playerPoliticianId,
+        policyItems: command.policyItems,
+        ...(command.title != null ? { title: command.title } : {}),
+        ...(command.summary != null ? { summary: command.summary } : {}),
+        ...(command.cosponsorIds != null ? { cosponsorIds: command.cosponsorIds } : {}),
+      };
+      const preview = introduceBill(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = introduceBill(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      upsertRecommendations(world, state, out.bill);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "COSPONSOR_BILL") {
+      const preview = cosponsorBill(
+        world,
+        jsonClone(state),
+        { billId: command.billId, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = cosponsorBill(
+        world,
+        state,
+        { billId: command.billId, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "PROPOSE_AMENDMENT") {
+      const preview = proposeAmendment(
+        world,
+        jsonClone(state),
+        {
+          billId: command.billId,
+          sponsorId: state.playerPoliticianId,
+          policyItems: command.policyItems,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = proposeAmendment(
+        world,
+        state,
+        {
+          billId: command.billId,
+          sponsorId: state.playerPoliticianId,
+          policyItems: command.policyItems,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_LEGISLATIVE_VOTE") {
+      if (!isLegislativeVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      if (!isLegislativeVoteStage(command.stage)) {
+        return fail("INVALID_STAGE", command.stage);
+      }
+      const voteArgs = {
+        billId: command.billId,
+        actorId: state.playerPoliticianId,
+        choice: command.choice,
+        stage: command.stage,
+        amendmentId: command.amendmentId ?? null,
+      };
+      const preview = castPlayerVote(world, jsonClone(state), voteArgs);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castPlayerVote(world, state, voteArgs);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "SIGN_BILL") {
+      const preview = signBill(
+        world,
+        jsonClone(state),
+        { billId: command.billId, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = signBill(
+        world,
+        state,
+        { billId: command.billId, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "RETURN_BILL") {
+      const preview = returnBill(
+        world,
+        jsonClone(state),
+        { billId: command.billId, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = returnBill(
+        world,
+        state,
+        { billId: command.billId, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "SCHEDULE_BILL") {
+      const preview = scheduleBill(
+        world,
+        jsonClone(state),
+        { billId: command.billId, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = scheduleBill(
+        world,
+        state,
+        { billId: command.billId, actorId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DELAY_BILL") {
+      const preview = delayBill(
+        world,
+        jsonClone(state),
+        { billId: command.billId, actorId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = delayBill(
+        world,
+        state,
+        { billId: command.billId, actorId: state.playerPoliticianId },
         commandId,
       );
       if ("error" in out) return fail(out.error.code, out.error.message);

@@ -348,7 +348,12 @@ function stripToV2(save: SaveFile): Record<string, unknown> {
   delete counters.nextDynamicPartyId;
   delete counters.nextCampaignId;
   delete counters.nextDebateId;
+  delete counters.nextBillId;
+  delete counters.nextAmendmentId;
+  delete counters.nextLegislativeVoteId;
+  delete counters.nextLawId;
   delete sim.campaignRuntime;
+  delete sim.legislatureRuntime;
   return raw;
 }
 

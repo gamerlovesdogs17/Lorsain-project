@@ -104,7 +104,8 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 2** — **COMPLETE (`c43c0fb`)** — politician agents, sparse relationships/memories/beliefs, deterministic goals, explainable decision engine
 - **Phase 3** — **COMPLETE (`dc9ea2d`)** — parties, factions, leadership, endorsements, membership/defections, split foundation, presidential nomination systems
 - **Phase 4** — **COMPLETE (`1352dc4`)** — electorate, underlying support, public standing, polling, turnout, formal general-election RCV/STV, domain resolution (nonblocking leftovers: `docs/KNOWN_ISSUES.md`)
-- **Phase 5** — **COMPLETE** — campaign organizations, resources, actions, debates, NPC strategy, operational nomination calendar, nomination/general integration. Phase 6 has **not started**.
+- **Phase 5** — **COMPLETE (`e3a6aae`)** — campaign organizations, resources, actions, debates, NPC strategy, operational nomination calendar, nomination/general integration.
+- **Phase 6** — **COMPLETE** — Assembly sessions, functional committees, structured bills, amendments, votes, whip estimates, presidential return veto and 211-vote repassage. Stage timing guarantees the player a month to act before committee/floor/repassage tallies. Phase 7 has **not started**.
 
 Deliverables:
 
@@ -134,7 +135,7 @@ Acceptance criteria: CI can load every content file, validate every ID reference
 - Regular presidential election: second Saturday in October every 5 years, assume office 20 January following
 - Regular Assembly election: second Sunday in May every 4 years, assume office 1 June following
 - Normalized `SimState`, office definitions vs office terms, scheduler, commands, SimEvents, history
-- Save schemaVersion **1** at Phase 1; **schemaVersion 2** from Phase 2 (v1→v2); **schemaVersion 3** from Phase 3 (v2→v3); **schemaVersion 4** from Phase 4 (v3→v4); **schemaVersion 5** from Phase 5 (v4→v5)
+- Save schemaVersion **1** at Phase 1; **schemaVersion 2** from Phase 2 (v1→v2); **schemaVersion 3** from Phase 3 (v2→v3); **schemaVersion 4** from Phase 4 (v3→v4); **schemaVersion 5** from Phase 5 (v4→v5); **schemaVersion 6** from Phase 6 (v5→v6)
 - Domain interrupts: unresolved political domain events (`requiresResolution`) cannot be skipped with `RESUME_TURN`
 - Worker protocol **types** only (no Worker runtime dependency)
 
@@ -174,8 +175,8 @@ Layering:
 - Phase 2: politician minds (hidden `AgentProfile`)
 - Phase 3: party/faction selectorates and nominations
 - Phase 4: voters, underlying support, public standing, polls, turnout, formal general elections (**COMPLETE `1352dc4`**)
-- Phase 5: campaign actions that **change** public standing/support (**COMPLETE**)
-- Phase 6: legislature — **not started**
+- Phase 5: campaign actions that **change** public standing/support (**COMPLETE `e3a6aae`**)
+- Phase 6: legislature — **COMPLETE**
 
 `KernelWorld` holds immutable voter blocs, pollster definitions, issue→ideology dimensions, constituency population, and compact 2026 turnout priors. `SimState` holds only mutable electoral objects: sparse environment shifts, lazy public candidate standing, `ElectionState`, `PollRecord`s, `DomainResolutionRecord`s. Canonical voter-bloc JSON is **not** copied into saves.
 
@@ -197,19 +198,19 @@ Causal chain: campaign action → public standing/org/cash → Phase 4 underlyin
 
 `presidentialStatus` is scenario-start metadata only: materialized once into public standing at TERENA_2028 init. Future standing comes from runtime history/campaigns.
 
-Save **schemaVersion 5**; v4→v5 adds empty campaign runtime and `nextCampaignId` / `nextDebateId`. No fabricated campaign history. `contentVersion` remains `0.3.1-predev`. 20-year synthetic kernel hash: `d719f8693a6e3e532f9095e9c2e753d3`.
+Save **schemaVersion 5**; v4→v5 adds empty campaign runtime and `nextCampaignId` / `nextDebateId`. No fabricated campaign history. `contentVersion` remains `0.3.1-predev`. 20-year synthetic kernel hash at Phase 5 close: `d719f8693a6e3e532f9095e9c2e753d3`.
 
 From Phase 5 onward: fix **BLOCKING** issues (legitimate gameplay, save corruption, determinism, invalid election/campaign math, vertical-slice breakage). Record **NONBLOCKING** hostile-save / future-cycle / docs gaps in `docs/KNOWN_ISSUES.md` and continue.
 
 Acceptance criteria: zero-DEV 2028 nomination+general path reaches October IRV and January assumption; player loss is not game-over; spending cannot exceed funds; cross-race attacks reject unchanged; deterministic save/restore mid-campaign; Phase 0b content unchanged.
 
-## 15. Phase 6 — legislature
+## 15. Phase 6 — legislature (COMPLETE)
 
-Implement Assembly sessions, Speaker powers, committees, bills, amendments, scheduling, whip estimates, negotiations, votes, presidential return veto and repassage.
+Runtime Assembly lives in `packages/sim/src/legislature/` as `SimState.legislatureRuntime`. Membership is derived from current `assembly_member` terms (not a copied roster). Five functional committees map issue dimensions. Bills carry structured `PolicyItem`s. **Stage timing is backend-guaranteed:** month N introduce (visible), month N+1 or later committee tally, month N+2 or later floor tally if committee passed; returned bills wait a month before repassage. `CAST_LEGISLATIVE_VOTE` is `{ billId, stage, choice, amendmentId? }` (`committee` | `floor` | `repassage`); pending choices cannot cross stages. Proposed amendments are voted (ordinary majority of votes cast, tie fails) before the parent bill leaves that stage. Ordinary committee/floor votes use simple majority of votes cast (tie fails). After a suspensive presidential return, repassage uses `KernelWorld.legislativeConstitution.assemblyAbsoluteMajority` from `terena_constitution.json` (**211** for Terena's authorized 420 seats). Vacancies do not shrink that denominator. Synthetic/harness worlds supply their own constitutional pair (harness: 36/19). Player never auto-sponsors, auto-votes, or auto-signs; uncast player votes are **ABSTAIN**. NPC votes are individual Phase 2 decisions. Speaker political queue sort is NPC-only; player Speaker keeps clerical FIFO unless they issue `SCHEDULE_BILL` / `DELAY_BILL`.
 
-Start with structured policy parameters rather than free-form legislative text. Text summaries are generated from policy data.
+Save **schemaVersion 6**; v5→v6 adds empty legislature runtime and `nextBillId` / `nextAmendmentId` / `nextLegislativeVoteId` / `nextLawId`. No fabricated bills. `contentVersion` remains `0.3.1-predev`. 20-year synthetic kernel hash: `c98484fa46cfa98358742cf4d73f018d` (changed from Phase 5 `d719f8693a6e3e532f9095e9c2e753d3` because schema 6 adds empty legislature fields). Phase 7 executive has **not started**.
 
-Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate and pass/fail bills for four simulated years; coalition patterns differ by issue instead of producing one permanent government/opposition split.
+Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate and pass/fail bills for four simulated years; coalition patterns differ by issue instead of producing one permanent government/opposition split. Player autonomy and constitutional 211-vote suspensive-veto override hold.
 
 ## 16. Phase 7 — executive and ministries
 
