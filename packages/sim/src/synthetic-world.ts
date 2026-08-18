@@ -153,6 +153,14 @@ export function syntheticWorld(seed = "KERNEL-SYN-01"): KernelWorld {
       emergencyExtensionDays: 30,
       warUnilateralDays: 30,
     },
+    courtConstitution: {
+      judges: 9,
+      termYears: 12,
+      renewable: false,
+      confirmationFraction: 0.6,
+      recallReferralFraction: 0.6,
+      recallVoteDays: 60,
+    },
   };
   applyInstitutionalPublicIdeology(world);
   return world;

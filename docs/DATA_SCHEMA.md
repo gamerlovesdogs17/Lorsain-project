@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 7 saves use `schemaVersion: 7` and `contentVersion: 0.3.1-predev`. Phase 6 `schemaVersion: 6` saves migrate to v7 with empty executive runtime. Phase 5 `schemaVersion: 5` saves migrate v5→v6→v7. Phase 4 `schemaVersion: 4` saves migrate v4→v5→v6→v7. Phase 3 `schemaVersion: 3` saves migrate v3→v4→v5→v6→v7. Phase 2 `schemaVersion: 2` saves migrate v2→v3→v4→v5→v6→v7. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3→v4→v5→v6→v7.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 8 saves use `schemaVersion: 8` and `contentVersion: 0.3.1-predev`. Phase 7 `schemaVersion: 7` saves migrate to v8 with empty constitutional runtime. Phase 6 `schemaVersion: 6` saves migrate v6→v7→v8. Phase 5 `schemaVersion: 5` saves migrate v5→v6→v7→v8. Phase 4 `schemaVersion: 4` saves migrate v4→v5→v6→v7→v8. Phase 3 `schemaVersion: 3` saves migrate v3→v4→v5→v6→v7→v8. Phase 2 `schemaVersion: 2` saves migrate v2→v3→v4→v5→v6→v7→v8. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3→v4→v5→v6→v7→v8.
 
 ## 3. Core static schemas
 
@@ -295,11 +295,11 @@ News and history pages consume events; they do not invent a separate reality.
 
 ## 14. Save root
 
-Phase 7 save envelope (`schemaVersion: 7`):
+Phase 8 save envelope (`schemaVersion: 8`):
 
 ```ts
 interface SaveFile {
-  schemaVersion: 7;
+  schemaVersion: 8;
   contentVersion: string;
   scenarioId: string;
   simulation: SimState;
@@ -308,11 +308,9 @@ interface SaveFile {
   // agentProfileOverrides, partyStates, factionStates, endorsements,
   // partyContests, dynamicParties,
   // elections, candidateStanding, electoralEnvironment, polls, domainResolutions,
-  // campaignRuntime (campaigns, debates, lastMonthProcessed),
-  // legislatureRuntime (committees, bills, amendments, legislativeVotes,
-  // enactedLaws, recommendations, floorQueue, pendingPlayerVotes, lastMonthProcessed),
-  // executiveRuntime (ministries, regulations, budgets, emergencies, warPowers,
-  // motions, pendingPlayerMotionVotes, lastMonthProcessed, emergencyTrigger, warTrigger)
+  // campaignRuntime, legislatureRuntime, executiveRuntime,
+  // constitutionalRuntime (courtCases, courtDecisions, nominations, impeachments,
+  // recalls, precedents, grounds, pendingPlayerVotes, lastMonthProcessed)
 }
 ```
 
@@ -332,7 +330,9 @@ Loaded saves are untrusted `unknown` and are fully structurally validated. Conte
 
 **v6 → v7:** Phase 6 saves had no executive runtime. Migration initializes empty `executiveRuntime` and adds `nextRegulationId` / `nextMotionId` / `nextEmergencyId` / `nextWarPowerId` / `nextBudgetId`. No fabricated cabinet actions, regulations, motions, emergencies, or budgets are written. `restoreSimulation` seeds ministry admin stubs from current minister offices when ministries are empty.
 
-Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`, `CAMP`, `DEBATE`, `BILL`, `AMD`, `LVOTE`, `LAW`, `REG`, `MOT`, `EMG`, `WAR`, `BUD`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
+**v7 → v8:** Phase 7 saves had no constitutional runtime. Migration initializes empty `constitutionalRuntime` (including `grounds: {}`) and adds `nextCaseId` / `nextCourtNominationId` / `nextCourtDecisionId` / `nextImpeachmentId` / `nextRecallId` / `nextConstitutionalGroundsId`. No fabricated historical cases, nominations, impeachments, or grounds records are written. Membership is derived from existing Constitutional Court `OfficeTerm`s.
+
+Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`, `CAMP`, `DEBATE`, `BILL`, `AMD`, `LVOTE`, `LAW`, `REG`, `MOT`, `EMG`, `WAR`, `BUD`, `CASE`, `CNOM`, `CDEC`, `IMPEACH`, `RECALL`, `CGND`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
 
 ### 14.1 Agent state (Phase 2)
 
@@ -394,12 +394,24 @@ PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolve
 - **Commands:** `APPOINT_MINISTER` / `DISMISS_MINISTER` (current presidential authority, including Acting President); `ISSUE_REGULATION` (structured `PolicyItem`s; major regulations carry a review deadline); `INTRODUCE_MOTION` / `CAST_MOTION_VOTE`; `PROPOSE_BUDGET`; `DECLARE_EMERGENCY` / `BEGIN_WAR_POWERS` only when a legitimate domain/test trigger is set. Player President is never auto-decided.
 - **Motions:** `MOT…` with `stageReadyDate`. Tally next month or later. Player pending vote cannot be skipped into a later motion. Uncast = abstain. Censure: yes ≥ ceil(authorized seats × 0.55). Other Phase-7 motions: simple majority of votes cast, tie fails (documented default).
 - **Budget:** calendar-year fiscal cycle. If a new proposal is not approved, the previous lawful budget continues. No shutdown.
-- **Emergency / war:** structured state only. No random generation. Phase 8/10 add court review and actual wars.
+- **Emergency / war:** structured state only. No random generation. Phase 8 adds constitutional court review of emergencies; actual wars wait for Phase 10.
 - **IDs:** `REG…`, `MOT…`, `EMG…`, `WAR…`, `BUD…`.
 
 ### 14.7 Game UI (Phase 7)
 
-`apps/game` is a React 19 + Vite host. It never mutates `SimState` entities directly. Browser content loading uses Vite `import.meta.glob` of canonical `data/` and `maps/` through `@lorsain/content-loader` (not `/node`). Saves persist serialized `SaveFile`s in IndexedDB (Dexie) and round-trip through `parseSaveFile` / `restoreSimulation`. Normal UI shows public facts, polls, and qualitative labels — not hidden traits, skills, private goals, or latent support. Developer/debug mode may expose numbers separately.
+`apps/game` is a React 19 + Vite host. It never mutates `SimState` entities directly. Browser content loading uses Vite `import.meta.glob` of canonical `data/` and `maps/` through `@lorsain/content-loader` (not `/node`). Saves persist serialized `SaveFile`s in IndexedDB (Dexie) and round-trip through `parseSaveFile` / `restoreSimulation`. Normal UI shows public facts, polls, and qualitative labels — not hidden traits, skills, private goals, or latent support. Developer/debug mode may expose numbers separately. Phase 8 adds a role-aware Courts screen.
+
+### 14.8 Constitutional Court (Phase 8)
+
+- **Separate runtime:** `constitutionalRuntime` on `SimState`. The nine-judge bench is **derived** from active `constitutional_court_justice` `OfficeTerm`s. Do not store an authoritative parallel roster.
+- **Constitutional parameters:** `KernelWorld.courtConstitution` from `terena_constitution.json` (9 judges, 12-year terms, `renewable` boolean — false for Terena, confirmation fraction 0.6 → **252** of 420 authorized seats, recall referral 0.6 → **252**). When `renewable === false`, a politician who has ever held a substantive Constitutional Court `OfficeTerm` (any seat, including ended terms) cannot be nominated again (`COURT_TERM_NONRENEWABLE`). Impeachment uses `ceil(seats * 2 / 3)` → **280**, not the rounded 0.6666667 percent helper. Vacancies do not shrink the Assembly denominator.
+- **Nomination:** vacancy → `awaiting_nomination` → `NOMINATE_CONSTITUTIONAL_JUDGE` (player President only; NPC President via Phase 2). Assembly confirmation next month. Player MP is never auto-voted; missed vote is `ABSTAIN`.
+- **Cases:** `CASE…` with structured `caseType`, petitioner/respondent, challenged entity, constitutional question/rule, meritsLean, participating judges, votes, disposition. Types: `LAW_REVIEW`, `REGULATION_REVIEW`, `EXECUTIVE_ACTION_REVIEW`, `EMERGENCY_REVIEW`, `ELECTION_CONSTITUTIONAL_DISPUTE`, `IMPEACHMENT_JUDGMENT`. Active caseload capped at 3 except impeachment judgments.
+- **Decisions:** `CDEC…`. `UPHOLD` / `INVALIDATE`. Player judge never auto-votes; missed deadline is `nonparticipation`. Invalidated laws stay archived with `operative: false`. Regulations may be `active`, `annulled`, `invalidated`, or `expired`. Lightweight `PrecedentRecord`s influence later similar cases.
+- **Grounds:** `CGND…` `ConstitutionalGroundsRecord`s (`id`, `targetPoliticianId`, `grounds`, `sourceKind`, `sourceId`, `createdDate`, `evidenceStrength`, `severity`, `public`, `status`, `metadata`). Phase 8 may create them from serious Court invalidations of presidential emergencies, major regulations, executive actions, or war powers. Future corruption/treason/scandal systems may add more. Normal 2028 play may have none.
+- **Impeachment:** `IMPEACH…`. Command is `INTRODUCE_IMPEACHMENT { basisId }`. Target and grounds derive from an available public basis against the current President. Assembly 280 YES then Court `IMPEACHMENT_JUDGMENT` using copied `evidenceStrength` / `severity`, not the grounds label as fake evidence. Only a Court INVALIDATE creates a presidential vacancy through existing Phase 1 succession.
+- **Recall:** `RECALL…`. Assembly 252 YES refers a national YES/NO vote (60-day window) using Phase 4 blocs/public standing. Success uses existing succession. Recall is political; impeachment is constitutional.
+- **IDs:** `CASE…`, `CNOM…`, `CDEC…`, `IMPEACH…`, `RECALL…`, `CGND…`.
 
 ## 15. Map contract
 

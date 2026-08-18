@@ -106,6 +106,13 @@ export type TerenaKernelInput = {
     regulation_review?: { review_days?: number };
     war_powers?: { unilateral_days?: number };
     emergency?: { initial_days?: number; extension_days?: number };
+    recall?: { assembly_referral_fraction?: number };
+    constitutional_court?: {
+      judges?: number;
+      term_years?: number;
+      renewable?: boolean;
+      confirmation_fraction?: number;
+    };
     presidential_vacancy?: {
       acting_succession_office_ids?: string[];
       special_election?: {
@@ -588,6 +595,14 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
       emergencyInitialDays: input.constitution.emergency?.initial_days ?? 14,
       emergencyExtensionDays: input.constitution.emergency?.extension_days ?? 30,
       warUnilateralDays: input.constitution.war_powers?.unilateral_days ?? 30,
+    },
+    courtConstitution: {
+      judges: input.constitution.constitutional_court?.judges ?? 9,
+      termYears: input.constitution.constitutional_court?.term_years ?? 12,
+      renewable: input.constitution.constitutional_court?.renewable === true,
+      confirmationFraction: input.constitution.constitutional_court?.confirmation_fraction ?? 0.6,
+      recallReferralFraction: input.constitution.recall?.assembly_referral_fraction ?? 0.6,
+      recallVoteDays: 60,
     },
   };
   applyInstitutionalPublicIdeology(world);

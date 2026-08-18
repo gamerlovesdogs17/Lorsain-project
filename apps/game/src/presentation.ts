@@ -221,6 +221,38 @@ export function eventDisplay(
       return `The President proposes a budget`;
     case "MOTION_INTRODUCED":
       return `${lead ?? "An MP"} introduces an Assembly motion`;
+    case "COURT_VACANCY":
+      return `A Constitutional Court seat becomes vacant`;
+    case "JUDGE_NOMINATED":
+      return `${lead ?? "The President"} nominates ${second ?? "a judge"}`;
+    case "JUDGE_CONFIRMED":
+      return `The Assembly confirms ${second ?? lead ?? "a Constitutional Court judge"}`;
+    case "JUDGE_REJECTED":
+      return `The Assembly rejects a judicial nominee`;
+    case "CASE_FILED":
+      return `A constitutional case is filed`;
+    case "COURT_DECISION":
+      return `The Constitutional Court ${String(event.payload.disposition ?? "decides a case").toLowerCase()}s a case ${event.payload.uphold != null ? `(${String(event.payload.uphold)}–${String(event.payload.invalidate)})` : ""}`.trim();
+    case "LAW_INVALIDATED":
+      return `The Court invalidates a law`;
+    case "REGULATION_INVALIDATED":
+      return `The Court invalidates a regulation`;
+    case "IMPEACHMENT_INTRODUCED":
+      return `${lead ?? "An MP"} introduces an impeachment`;
+    case "PRESIDENT_IMPEACHED":
+      return `The Assembly impeaches the President`;
+    case "IMPEACHMENT_REJECTED":
+      return `An impeachment does not succeed`;
+    case "PRESIDENT_REMOVED":
+      return `The President is removed from office`;
+    case "RECALL_INTRODUCED":
+      return `${lead ?? "An MP"} introduces a national recall referral`;
+    case "RECALL_REFERRED":
+      return `The Assembly refers a presidential recall to a national vote`;
+    case "RECALL_FAILED":
+      return `A presidential recall fails`;
+    case "RECALL_SUCCEEDED":
+      return `Voters recall the President`;
     case "TURN_COMPLETED":
       return `Month completed`;
     case "POLL_PUBLISHED":

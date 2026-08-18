@@ -80,7 +80,7 @@ Phase 6 legislature is **COMPLETE** at `3c976fa`.
 
 ## Phase 7 notes
 
-Phase 7 Executive + Playable UI is **COMPLETE**. Phase 8 courts have **not started**.
+Phase 7 Executive + Playable UI is **COMPLETE**. Phase 8 Courts + Constitutional System is **COMPLETE**.
 
 No Phase 7 **BLOCKING** items remain for the first manual playtest path (title → New Game → Play → End Turn; player President chooses ministers).
 
@@ -95,11 +95,14 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title �
 
 ## Phase 7.1 notes
 
-Phase 7.1 First Playtest UX is **COMPLETE**. Phase 8 courts have **not started**.
+**Phase 7.1 First Playtest UX is COMPLETE (`670b38b`). Phase 8 Courts + Constitutional System is COMPLETE.**
 
-No Phase 7.1 **BLOCKING** items remain for first manual playtesting.
+Phase 8 **BLOCKING** items from the close review are fixed: nonrenewable Court terms are data-driven (`courtConstitution.renewable`), and impeachment requires a structured public `ConstitutionalGroundsRecord`. Intentionally simplified legal procedure remains NONBLOCKING.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
+| P8-DOCTRINE | NONBLOCKING | No full written opinions, standing doctrine, interlocutory appeals, or lower courts. |
+| P8-CASELAW-UI | NONBLOCKING | Precedent summary is a short list, not a case-law search system. |
+| P8-PARTIAL-INVALIDATION | NONBLOCKING | Phase 8 uses whole-law disposition rather than item-level invalidation. |
 | P71-UI-POLISH | NONBLOCKING | Presentation is functional, not final. Charts, animation, map analytics, and typography wait for Phase 11. |
 | P71-NEWS | NONBLOCKING | Home briefing uses structured events, not generated newspaper copy (Phase 9). |

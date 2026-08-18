@@ -107,7 +107,8 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 5** — **COMPLETE (`e3a6aae`)** — campaign organizations, resources, actions, debates, NPC strategy, operational nomination calendar, nomination/general integration.
 - **Phase 6** — **COMPLETE (`3c976fa`)** — Assembly sessions, functional committees, structured bills, amendments, votes, whip estimates, presidential return veto and 211-vote repassage. Stage timing guarantees the player a month to act before committee/floor/repassage tallies.
 - **Phase 7** — **COMPLETE (`90b54d4`)** — executive government + first playable React UI.
-- **Phase 7.1** — **COMPLETE** — first-playtest UX: no silently omitted player decisions, campaign/policy forms, human-readable presentation, Home briefing, canonical party colors, command feedback. Phase 8 courts have **not started**.
+- **Phase 7.1** — **COMPLETE (`670b38b`)** — first-playtest UX: no silently omitted player decisions, campaign/policy forms, human-readable presentation, Home briefing, canonical party colors, command feedback.
+- **Phase 8** — **COMPLETE** — Constitutional Court, nomination/252 confirmation, judicial review, nonrenewable 12-year terms, impeachment 280 + Court judgment requiring a structured public basis, recall referral 252 + national vote.
 
 Deliverables:
 
@@ -137,7 +138,7 @@ Acceptance criteria: CI can load every content file, validate every ID reference
 - Regular presidential election: second Saturday in October every 5 years, assume office 20 January following
 - Regular Assembly election: second Sunday in May every 4 years, assume office 1 June following
 - Normalized `SimState`, office definitions vs office terms, scheduler, commands, SimEvents, history
-- Save schemaVersion **1** at Phase 1; **schemaVersion 2** from Phase 2 (v1→v2); **schemaVersion 3** from Phase 3 (v2→v3); **schemaVersion 4** from Phase 4 (v3→v4); **schemaVersion 5** from Phase 5 (v4→v5); **schemaVersion 6** from Phase 6 (v5→v6); **schemaVersion 7** from Phase 7 (v6→v7)
+- Save schemaVersion **1** at Phase 1; **schemaVersion 2** from Phase 2 (v1→v2); **schemaVersion 3** from Phase 3 (v2→v3); **schemaVersion 4** from Phase 4 (v3→v4); **schemaVersion 5** from Phase 5 (v4→v5); **schemaVersion 6** from Phase 6 (v5→v6); **schemaVersion 7** from Phase 7 (v6→v7); **schemaVersion 8** from Phase 8 (v7→v8)
 - Domain interrupts: unresolved political domain events (`requiresResolution`) cannot be skipped with `RESUME_TURN`
 - Worker protocol **types** only (no Worker runtime dependency)
 
@@ -228,15 +229,17 @@ Merged former “Phase 6.5 playable UI” and executive/ministry simulation.
 
 Save **schemaVersion 7**; v6→v7 adds empty executive runtime and `nextRegulationId` / `nextMotionId` / `nextEmergencyId` / `nextWarPowerId` / `nextBudgetId`. No fabricated past executive actions. `contentVersion` remains `0.3.1-predev`. 20-year synthetic kernel hash: `58c049dad4ca4b020941da51854bd889` (changed from Phase 6 `c98484fa46cfa98358742cf4d73f018d` because schema 7 adds empty executive fields).
 
-**Playable UI** is `apps/game`: React 19 + Vite, consuming `@lorsain/sim` only through commands. Launch with `pnpm game` or `start-game.bat`. Browser content loading uses `import.meta.glob` over canonical `data/` and `maps/`. IndexedDB (Dexie) stores serialized `SaveFile`s. Screens: title/New Game/Load, politician select, Home, Career, Assembly (including a 420-seat chamber from live membership), Party, Campaign, Elections (IRV rounds), Executive, Terena map, Archive. Role-aware actions. Hidden traits/skills/private goals are not shown in normal UI.
+**Playable UI** is `apps/game`: React 19 + Vite, consuming `@lorsain/sim` only through commands. Launch with `pnpm game` or `start-game.bat`. Browser content loading uses `import.meta.glob` over canonical `data/` and `maps/`. IndexedDB (Dexie) stores serialized `SaveFile`s. Screens: title/New Game/Load, politician select, Home, Career, Assembly (including a 420-seat chamber from live membership), Party, Campaign, Elections (IRV rounds), Executive, Courts, Terena map, Archive. Role-aware actions. Hidden traits/skills/private goals are not shown in normal UI.
 
-Phase 8 courts have **not started**. Web Worker turn processing is deferred to Phase 11 if still needed.
+Web Worker turn processing is deferred to Phase 11 if still needed.
 
 ## 17. Phase 8 — courts and constitution
 
-Implement Constitutional Court membership, appointments, case pipeline, doctrine/precedent flags, emergency review, election litigation and constitutional remedies.
+**COMPLETE.** Runtime Constitutional Court lives in `packages/sim/src/courts/` as `SimState.constitutionalRuntime`. Membership is **derived** from active `constitutional_court_justice` `OfficeTerm`s (nine canonical seats). There is no duplicate nine-person roster. Terms are 12-year; `KernelWorld.courtConstitution.renewable` is loaded from `terena_constitution.json` (false for Terena). When `renewable === false`, any politician who has ever held a substantive Constitutional Court `OfficeTerm` (active or ended, any seat) is ineligible (`COURT_TERM_NONRENEWABLE`). Vacancies create `awaiting_nomination` slots. `NOMINATE_CONSTITUTIONAL_JUDGE` is player-President only when the player holds the office; NPC Presidents nominate through Phase 2 using their own hidden profile and public facts about the nominee. Assembly confirmation is **252 YES** of the authorized 420-seat Assembly (`ceil(420 * 0.6)`). Impeachment is **280 YES** (`ceil(420 * 2 / 3)`, not the rounded 0.6666667 percent helper) plus a Court `IMPEACHMENT_JUDGMENT`. Introduction requires a public, actionable `ConstitutionalGroundsRecord` (`INTRODUCE_IMPEACHMENT { basisId }`); the player cannot manufacture evidence by choosing a grounds label. Assembly and Court merits use stored `evidenceStrength` / `severity`. Recall referral is **252 YES**, then a national YES/NO vote using existing Phase 4 blocs; success uses existing Phase 1 succession. Vacancies do not lower thresholds. Recall remains political and distinct from impeachment.
 
-Acceptance criteria: unconstitutional actions can be challenged; judge philosophy and precedent affect outcomes; court composition changes only through valid appointments/vacancies.
+Case types: `LAW_REVIEW`, `REGULATION_REVIEW`, `EXECUTIVE_ACTION_REVIEW`, `EMERGENCY_REVIEW`, `ELECTION_CONSTITUTIONAL_DISPUTE`, `IMPEACHMENT_JUDGMENT`. Dispositions are `UPHOLD` / `INVALIDATE`. Invalidated laws remain archived with `operative: false`. Regulations may be `active`, `annulled`, `invalidated`, or `expired`. Player judges never auto-vote; missed deadlines become `nonparticipation`. Party/faction loyalty is muted on the bench. Lightweight precedent records influence later similar cases. Emergency review is expedited and does not change the canonical 14-day initial emergency. Serious Court invalidations of presidential emergencies, major regulations, executive actions, or war powers may create a public impeachment basis. Treason/corruption/scandal generators are not invented in Phase 8.
+
+Save **schemaVersion 8**; v7→v8 adds empty `constitutionalRuntime` (including `grounds: {}`) and `nextCaseId` / `nextCourtNominationId` / `nextCourtDecisionId` / `nextImpeachmentId` / `nextRecallId` / `nextConstitutionalGroundsId`. No fabricated historical cases. `contentVersion` remains `0.3.1-predev`. Legal procedure is intentionally simplified (no lower courts, no written opinions, whole-law disposition). 20-year synthetic kernel hash: `9e72db0735b48e9b02fa8110a93cd48c` (changed from the pre-blocker-fix hash `e437da840c998dd577d778129f792f43` because empty court runtime now includes `grounds` and `nextConstitutionalGroundsId`, and `courtConstitution.renewable`).
 
 ## 18. Phase 9 — economy, organizations, and media
 
@@ -256,15 +259,15 @@ Polish the playable UI, add remaining screens (courts, organizations/media depth
 
 ## 21. First playable vertical slice
 
-The Phase 7 UI is the first playable target:
+The Phase 7 UI plus Phase 8 Courts screen is the first playable constitutional target:
 
 - 2028 scenario load
-- player as an Assembly member, presidential candidate, or sitting President
+- player as an Assembly member, presidential candidate, sitting President, or Constitutional Court judge
 - End Turn through October 2028 IRV and 20 January 2029 assumption
-- campaign, legislature, and executive commands without DEV commands
+- campaign, legislature, executive, and court commands without DEV commands
 - save/load in the browser
 
-Phase 11 later adds court, organizations/media, economy, and wiki polish. Map components must consume stable SVG IDs and external JSON.
+Phase 11 later adds organizations/media, economy, and wiki polish. Map components must consume stable SVG IDs and external JSON.
 
 ## 22. Performance targets
 

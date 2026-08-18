@@ -10,6 +10,7 @@ import { parseElectoralRuntime, electoralCounterError } from "./elections/valida
 import { parseCampaignRuntime, campaignCounterError } from "./campaigns/validation.js";
 import { parseLegislatureRuntime, legislatureCounterError } from "./legislature/validation.js";
 import { parseExecutiveRuntime, executiveCounterError } from "./executive/validation.js";
+import { parseConstitutionalRuntime, constitutionalCounterError } from "./courts/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -379,6 +380,12 @@ function parseCounters(raw: unknown): Counters | string {
     "nextEmergencyId",
     "nextWarPowerId",
     "nextBudgetId",
+    "nextCaseId",
+    "nextCourtNominationId",
+    "nextCourtDecisionId",
+    "nextImpeachmentId",
+    "nextRecallId",
+    "nextConstitutionalGroundsId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
@@ -553,6 +560,10 @@ function parseSimulation(
   if (typeof executive === "string") return executive;
   const executiveCountErr = executiveCounterError(executive, counters);
   if (executiveCountErr) return executiveCountErr;
+  const constitutional = parseConstitutionalRuntime(raw.constitutionalRuntime);
+  if (typeof constitutional === "string") return constitutional;
+  const constitutionalCountErr = constitutionalCounterError(constitutional, counters);
+  if (constitutionalCountErr) return constitutionalCountErr;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -661,6 +672,7 @@ function parseSimulation(
     campaignRuntime: campaigns,
     legislatureRuntime: legislature,
     executiveRuntime: executive,
+    constitutionalRuntime: constitutional,
   };
 }
 
@@ -949,3 +961,48 @@ export function migrateSaveV6ToV7(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 6, toSchema: 7, migrate: migrateSaveV6ToV7 });
+
+/**
+ * Phase 7 saves begin Phase 8 constitutional-court state at migration/load.
+ * No fabricated cases, nominations, or impeachments are written.
+ */
+export function migrateSaveV7ToV8(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 8 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 8 };
+  sim.constitutionalRuntime = isRecord(sim.constitutionalRuntime)
+    ? sim.constitutionalRuntime
+    : {
+        courtCases: {},
+        courtDecisions: {},
+        nominations: {},
+        impeachments: {},
+        recalls: {},
+        precedents: {},
+        grounds: {},
+        pendingPlayerVotes: {},
+        lastMonthProcessed: null,
+      };
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextCaseId: isInt(sim.counters.nextCaseId) ? sim.counters.nextCaseId : 1,
+      nextCourtNominationId: isInt(sim.counters.nextCourtNominationId)
+        ? sim.counters.nextCourtNominationId
+        : 1,
+      nextCourtDecisionId: isInt(sim.counters.nextCourtDecisionId)
+        ? sim.counters.nextCourtDecisionId
+        : 1,
+      nextImpeachmentId: isInt(sim.counters.nextImpeachmentId) ? sim.counters.nextImpeachmentId : 1,
+      nextRecallId: isInt(sim.counters.nextRecallId) ? sim.counters.nextRecallId : 1,
+      nextConstitutionalGroundsId: isInt(sim.counters.nextConstitutionalGroundsId)
+        ? sim.counters.nextConstitutionalGroundsId
+        : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 7, toSchema: 8, migrate: migrateSaveV7ToV8 });

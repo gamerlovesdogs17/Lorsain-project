@@ -11,6 +11,7 @@ import {
 } from "@lorsain/sim";
 import { AssemblyPage } from "./assemblyScreen.js";
 import { CampaignPage } from "./campaignScreen.js";
+import { CourtsPage } from "./courtsScreen.js";
 import { ExecutivePage } from "./executiveScreen.js";
 import { isMp, playerCampaign, qualitativeStanding } from "./format.js";
 import {
@@ -33,6 +34,7 @@ export type Screen =
   | "campaign"
   | "elections"
   | "executive"
+  | "courts"
   | "terena"
   | "archive";
 
@@ -87,6 +89,7 @@ export function GamePages(props: PageProps) {
   if (screen === "campaign") return <CampaignPage {...props} />;
   if (screen === "elections") return <Elections {...props} />;
   if (screen === "executive") return <ExecutivePage {...props} />;
+  if (screen === "courts") return <CourtsPage {...props} />;
   if (screen === "terena") return <Terena {...props} />;
   return <Archive {...props} />;
 }
@@ -109,7 +112,9 @@ function Home(props: PageProps) {
   const endorsements = monthEvents.filter((e) => e.type.includes("ENDORSEMENT"));
   const elections = Object.values(props.snap.elections);
   const executive = monthEvents.filter((e) =>
-    /MINISTER|REGULATION|BUDGET|EMERGENCY|WAR|MOTION/.test(e.type),
+    /MINISTER|REGULATION|BUDGET|EMERGENCY|WAR|MOTION|COURT|JUDGE|IMPEACH|RECALL|LAW_INVALIDATED/.test(
+      e.type,
+    ),
   );
   return (
     <div className="grid">

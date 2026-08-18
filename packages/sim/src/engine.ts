@@ -125,6 +125,22 @@ import {
 } from "./executive/procedure.js";
 import { seedMinistriesIfNeeded } from "./executive/state.js";
 import {
+  emptyConstitutionalRuntime,
+  isCourtCaseType,
+  isJudicialVoteChoice,
+} from "./courts/types.js";
+import { processCourtsMonth } from "./courts/monthly.js";
+import {
+  castConfirmationVote,
+  castImpeachmentVote,
+  castJudicialVote,
+  castRecallReferralVote,
+  fileConstitutionalCase,
+  introduceImpeachment,
+  introduceRecallReferral,
+  nominateConstitutionalJudge,
+} from "./courts/procedure.js";
+import {
   SAVE_SCHEMA_VERSION,
   type Command,
   type CommandResult,
@@ -205,6 +221,12 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextEmergencyId: 1,
       nextWarPowerId: 1,
       nextBudgetId: 1,
+      nextCaseId: 1,
+      nextCourtNominationId: 1,
+      nextCourtDecisionId: 1,
+      nextImpeachmentId: 1,
+      nextRecallId: 1,
+      nextConstitutionalGroundsId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
@@ -217,6 +239,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     campaignRuntime: emptyCampaignRuntime(),
     legislatureRuntime: emptyLegislatureRuntime(),
     executiveRuntime: emptyExecutiveRuntime(),
+    constitutionalRuntime: emptyConstitutionalRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -357,6 +380,7 @@ function runTowardTarget(
   events.push(...processCampaignMonth(state, world, rng, commandId));
   events.push(...processLegislatureMonth(state, world, rng, commandId));
   events.push(...processExecutiveMonth(state, world, rng, commandId));
+  events.push(...processCourtsMonth(state, world, rng, commandId));
   sortScheduler(state);
   while (true) {
     const next = nextPendingBefore(state, target);
@@ -1975,6 +1999,190 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       if ("error" in preview) return fail(preview.error.code, preview.error.message);
       const commandId = nextCommandId();
       const out = beginWarPowers(world, state, { actorId: state.playerPoliticianId }, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "NOMINATE_CONSTITUTIONAL_JUDGE") {
+      const preview = nominateConstitutionalJudge(
+        world,
+        jsonClone(state),
+        {
+          actorId: state.playerPoliticianId,
+          nomineeId: command.nomineeId,
+          seatOfficeId: command.seatOfficeId,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = nominateConstitutionalJudge(
+        world,
+        state,
+        {
+          actorId: state.playerPoliticianId,
+          nomineeId: command.nomineeId,
+          seatOfficeId: command.seatOfficeId,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_CONFIRMATION_VOTE") {
+      if (!isLegislativeVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      const preview = castConfirmationVote(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        nominationId: command.nominationId,
+        choice: command.choice,
+      });
+      if (preview.error) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castConfirmationVote(world, state, {
+        actorId: state.playerPoliticianId,
+        nominationId: command.nominationId,
+        choice: command.choice,
+      });
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "CAST_JUDICIAL_VOTE") {
+      if (!isJudicialVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      const preview = castJudicialVote(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        caseId: command.caseId,
+        choice: command.choice,
+      });
+      if (preview.error) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castJudicialVote(world, state, {
+        actorId: state.playerPoliticianId,
+        caseId: command.caseId,
+        choice: command.choice,
+      });
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "INTRODUCE_IMPEACHMENT") {
+      const preview = introduceImpeachment(
+        world,
+        jsonClone(state),
+        {
+          actorId: state.playerPoliticianId,
+          basisId: command.basisId,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = introduceImpeachment(
+        world,
+        state,
+        {
+          actorId: state.playerPoliticianId,
+          basisId: command.basisId,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_IMPEACHMENT_VOTE") {
+      if (!isLegislativeVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      const preview = castImpeachmentVote(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        proceedingId: command.proceedingId,
+        choice: command.choice,
+      });
+      if (preview.error) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castImpeachmentVote(world, state, {
+        actorId: state.playerPoliticianId,
+        proceedingId: command.proceedingId,
+        choice: command.choice,
+      });
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "INTRODUCE_RECALL_REFERRAL") {
+      const recallArgs = { actorId: state.playerPoliticianId };
+      const preview = introduceRecallReferral(world, jsonClone(state), recallArgs, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = introduceRecallReferral(world, state, recallArgs, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_RECALL_REFERRAL_VOTE") {
+      if (!isLegislativeVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      const preview = castRecallReferralVote(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        proceedingId: command.proceedingId,
+        choice: command.choice,
+      });
+      if (preview.error) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castRecallReferralVote(world, state, {
+        actorId: state.playerPoliticianId,
+        proceedingId: command.proceedingId,
+        choice: command.choice,
+      });
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "FILE_CONSTITUTIONAL_CASE") {
+      if (!isCourtCaseType(command.caseType)) {
+        return fail("INVALID_CASE_TYPE", command.caseType);
+      }
+      const preview = fileConstitutionalCase(
+        world,
+        jsonClone(state),
+        {
+          actorId: state.playerPoliticianId,
+          caseType: command.caseType,
+          challengedKind: command.challengedKind ?? "law",
+          challengedId: command.challengedId,
+          respondentId: command.respondentId ?? state.playerPoliticianId,
+          constitutionalQuestion: command.constitutionalQuestion,
+          constitutionalRule: command.constitutionalRule,
+          meritsLean: command.meritsLean ?? 0,
+          expedited: command.expedited === true,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = fileConstitutionalCase(
+        world,
+        state,
+        {
+          actorId: state.playerPoliticianId,
+          caseType: command.caseType,
+          challengedKind: command.challengedKind ?? "law",
+          challengedId: command.challengedId,
+          respondentId: command.respondentId ?? state.playerPoliticianId,
+          constitutionalQuestion: command.constitutionalQuestion,
+          constitutionalRule: command.constitutionalRule,
+          meritsLean: command.meritsLean ?? 0,
+          expedited: command.expedited === true,
+        },
+        commandId,
+      );
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }

@@ -201,6 +201,9 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
         eventIds: Array.isArray(rec.eventIds)
           ? rec.eventIds.filter((x): x is string => typeof x === "string")
           : [],
+        operative: rec.operative !== false,
+        invalidatedByDecisionId:
+          typeof rec.invalidatedByDecisionId === "string" ? rec.invalidatedByDecisionId : null,
         metadata: isRecord(rec.metadata) ? (rec.metadata as EnactedLawRecord["metadata"]) : {},
       };
     }

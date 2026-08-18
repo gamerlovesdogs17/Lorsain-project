@@ -126,6 +126,8 @@ export type EnactedLawRecord = {
   enactedDate: IsoDate;
   sponsorId: string;
   eventIds: string[];
+  operative: boolean;
+  invalidatedByDecisionId: string | null;
   metadata: JsonObject;
 };
 

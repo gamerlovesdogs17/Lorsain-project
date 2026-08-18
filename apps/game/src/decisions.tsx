@@ -114,6 +114,64 @@ export function DecisionPanel(props: {
               />
             );
           }
+          if (d.kind === "confirmation_vote") {
+            return (
+              <VoteRow
+                key={d.key}
+                label={d.label}
+                onCast={(choice) =>
+                  run({ type: "CAST_CONFIRMATION_VOTE", nominationId: d.nominationId!, choice })
+                }
+              />
+            );
+          }
+          if (d.kind === "impeachment_vote") {
+            return (
+              <VoteRow
+                key={d.key}
+                label={d.label}
+                onCast={(choice) =>
+                  run({ type: "CAST_IMPEACHMENT_VOTE", proceedingId: d.proceedingId!, choice })
+                }
+              />
+            );
+          }
+          if (d.kind === "recall_vote") {
+            return (
+              <VoteRow
+                key={d.key}
+                label={d.label}
+                onCast={(choice) =>
+                  run({ type: "CAST_RECALL_REFERRAL_VOTE", proceedingId: d.proceedingId!, choice })
+                }
+              />
+            );
+          }
+          if (d.kind === "judicial_vote") {
+            return (
+              <div key={d.key} className="row" style={{ marginTop: "0.4rem" }}>
+                <span>{d.label}</span>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() =>
+                    run({ type: "CAST_JUDICIAL_VOTE", caseId: d.caseId!, choice: "uphold" })
+                  }
+                >
+                  Uphold
+                </button>
+                <button
+                  type="button"
+                  className="btn danger"
+                  onClick={() =>
+                    run({ type: "CAST_JUDICIAL_VOTE", caseId: d.caseId!, choice: "invalidate" })
+                  }
+                >
+                  Invalidate
+                </button>
+              </div>
+            );
+          }
           if (
             d.kind === "committee_vote" ||
             d.kind === "floor_vote" ||

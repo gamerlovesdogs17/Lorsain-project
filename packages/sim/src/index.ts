@@ -52,6 +52,7 @@ export {
   migrateSaveV4ToV5,
   migrateSaveV5ToV6,
   migrateSaveV6ToV7,
+  migrateSaveV7ToV8,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -137,6 +138,35 @@ export {
   deriveCabinet,
 } from "./executive/index.js";
 export type { ExecutiveRuntime, AssemblyMotion, RegulationState } from "./executive/types.js";
+export {
+  processCourtsMonth,
+  emptyConstitutionalRuntime,
+  deriveCourtBench,
+  currentCourtJudgeIds,
+  confirmationYesNeeded,
+  impeachmentYesNeeded,
+  recallReferralYesNeeded,
+  vacantCourtSeatIds,
+  recordConfirmationVote,
+  recordImpeachmentVote,
+  recordRecallReferralVote,
+  recordJudicialDecision,
+  tallyJudicialDisposition,
+  fileConstitutionalCase,
+  nationalRecallYesShare,
+  caseTitle,
+  judicialEligibilityError,
+  createConstitutionalGrounds,
+  availableImpeachmentBases,
+} from "./courts/index.js";
+export type {
+  ConstitutionalRuntime,
+  ConstitutionalGroundsRecord,
+  CourtCase,
+  CourtDecision,
+  CourtNomination,
+} from "./courts/types.js";
+export { IMPEACHMENT_GROUNDS } from "./courts/types.js";
 export type {
   Command,
   CommandResult,

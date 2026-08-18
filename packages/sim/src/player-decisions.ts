@@ -2,6 +2,7 @@ import type { KernelWorld, PendingInterrupt, SimState } from "./types.js";
 import { currentAssemblyMemberIds } from "./legislature/state.js";
 import { pendingVoteKey, type LegislativeVoteStage } from "./legislature/types.js";
 import { currentPresidentialAuthorityId } from "./executive/state.js";
+import { currentCourtJudgeIds } from "./courts/state.js";
 
 export type PlayerDecisionKind =
   | "interrupt"
@@ -157,6 +158,65 @@ export function collectPlayerActionableDecisions(
         kind: "motion_vote",
         label: `Motion: ${motion.kind.replace(/_/g, " ")}`,
         motionId: motion.id,
+      });
+    }
+  }
+
+  if (mp) {
+    const noms = Object.values(state.constitutionalRuntime.nominations).sort((a, b) =>
+      a.id < b.id ? -1 : 1,
+    );
+    for (const nom of noms) {
+      if (nom.status !== "pending_confirmation") continue;
+      if (state.constitutionalRuntime.pendingPlayerVotes[`confirmation:${nom.id}`]) continue;
+      out.push({
+        key: `confirmation:${nom.id}`,
+        kind: "confirmation_vote",
+        label: `Confirm judicial nominee`,
+        nominationId: nom.id,
+      });
+    }
+    const impeachments = Object.values(state.constitutionalRuntime.impeachments).sort((a, b) =>
+      a.id < b.id ? -1 : 1,
+    );
+    for (const rec of impeachments) {
+      if (rec.status !== "assembly_pending") continue;
+      if (state.constitutionalRuntime.pendingPlayerVotes[`impeachment:${rec.id}`]) continue;
+      out.push({
+        key: `impeachment:${rec.id}`,
+        kind: "impeachment_vote",
+        label: `Impeachment vote`,
+        proceedingId: rec.id,
+      });
+    }
+    const recalls = Object.values(state.constitutionalRuntime.recalls).sort((a, b) =>
+      a.id < b.id ? -1 : 1,
+    );
+    for (const rec of recalls) {
+      if (rec.status !== "referral_pending") continue;
+      if (state.constitutionalRuntime.pendingPlayerVotes[`recall:${rec.id}`]) continue;
+      out.push({
+        key: `recall:${rec.id}`,
+        kind: "recall_vote",
+        label: `Recall referral vote`,
+        proceedingId: rec.id,
+      });
+    }
+  }
+
+  const judge = currentCourtJudgeIds(world, state).includes(playerId);
+  if (judge) {
+    const cases = Object.values(state.constitutionalRuntime.courtCases).sort((a, b) =>
+      a.id < b.id ? -1 : 1,
+    );
+    for (const courtCase of cases) {
+      if (courtCase.status !== "pending") continue;
+      if (state.constitutionalRuntime.pendingPlayerVotes[`judicial:${courtCase.id}`]) continue;
+      out.push({
+        key: `judicial:${courtCase.id}`,
+        kind: "judicial_vote",
+        label: `Court case: ${courtCase.constitutionalQuestion}`,
+        caseId: courtCase.id,
       });
     }
   }

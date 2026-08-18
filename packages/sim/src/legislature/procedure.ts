@@ -505,6 +505,8 @@ function enactLaw(state: SimState, bill: BillState, commandId: string | null): S
     enactedDate: state.currentDate,
     sponsorId: bill.sponsorId,
     eventIds: [],
+    operative: true,
+    invalidatedByDecisionId: null,
     metadata: {},
   };
   const ev = event(

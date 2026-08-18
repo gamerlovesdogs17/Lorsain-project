@@ -298,6 +298,7 @@ export default function App() {
             ["campaign", "Campaign"],
             ["elections", "Elections"],
             ["executive", "Executive"],
+            ["courts", "Courts"],
             ["terena", "Terena"],
             ["archive", "Archive"],
           ] as const

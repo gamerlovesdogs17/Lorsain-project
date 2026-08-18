@@ -39,8 +39,9 @@ import type {
   LegislativeVoteStage,
 } from "./legislature/types.js";
 import type { ExecutiveRuntime, MotionKind } from "./executive/types.js";
+import type { ConstitutionalRuntime, CourtCaseType, JudicialVoteChoice } from "./courts/types.js";
 
-export const SAVE_SCHEMA_VERSION = 7 as const;
+export const SAVE_SCHEMA_VERSION = 8 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -139,6 +140,12 @@ export type Counters = {
   nextEmergencyId: number;
   nextWarPowerId: number;
   nextBudgetId: number;
+  nextCaseId: number;
+  nextCourtNominationId: number;
+  nextCourtDecisionId: number;
+  nextImpeachmentId: number;
+  nextRecallId: number;
+  nextConstitutionalGroundsId: number;
 };
 
 export type PresidentialRuntime = {
@@ -183,6 +190,7 @@ export type SimState = {
   campaignRuntime: CampaignRuntime;
   legislatureRuntime: LegislatureRuntime;
   executiveRuntime: ExecutiveRuntime;
+  constitutionalRuntime: ConstitutionalRuntime;
 };
 
 export type Command =
@@ -409,7 +417,45 @@ export type Command =
   | { type: "CAST_MOTION_VOTE"; motionId: string; choice: LegislativeVoteChoice }
   | { type: "PROPOSE_BUDGET"; allocations: Record<string, number> }
   | { type: "DECLARE_EMERGENCY" }
-  | { type: "BEGIN_WAR_POWERS" };
+  | { type: "BEGIN_WAR_POWERS" }
+  | { type: "NOMINATE_CONSTITUTIONAL_JUDGE"; nomineeId: string; seatOfficeId: string }
+  | {
+      type: "CAST_CONFIRMATION_VOTE";
+      nominationId: string;
+      choice: LegislativeVoteChoice;
+    }
+  | { type: "CAST_JUDICIAL_VOTE"; caseId: string; choice: JudicialVoteChoice }
+  | { type: "INTRODUCE_IMPEACHMENT"; basisId: string }
+  | {
+      type: "CAST_IMPEACHMENT_VOTE";
+      proceedingId: string;
+      choice: LegislativeVoteChoice;
+    }
+  | { type: "INTRODUCE_RECALL_REFERRAL"; targetId?: string }
+  | {
+      type: "CAST_RECALL_REFERRAL_VOTE";
+      proceedingId: string;
+      choice: LegislativeVoteChoice;
+    }
+  | {
+      type: "FILE_CONSTITUTIONAL_CASE";
+      caseType: CourtCaseType;
+      challengedKind?:
+        | "law"
+        | "regulation"
+        | "emergency"
+        | "war_power"
+        | "appointment"
+        | "election"
+        | "impeachment"
+        | "executive_action";
+      challengedId: string;
+      respondentId?: string;
+      constitutionalQuestion: string;
+      constitutionalRule: string;
+      meritsLean?: number;
+      expedited?: boolean;
+    };
 
 export type CommandError = { code: string; message: string };
 
@@ -518,6 +564,14 @@ export type KernelWorld = {
     emergencyInitialDays: number;
     emergencyExtensionDays: number;
     warUnilateralDays: number;
+  };
+  courtConstitution: {
+    judges: number;
+    termYears: number;
+    renewable: boolean;
+    confirmationFraction: number;
+    recallReferralFraction: number;
+    recallVoteDays: number;
   };
 };
 
