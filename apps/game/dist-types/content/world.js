@@ -19,6 +19,8 @@ export function kernelWorldFromBundle(bundle) {
         }),
         presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
         ...terenaElectoralFromBundle(bundle),
+        organizations: bundle.content.terena_organizations.organizations,
+        mediaOutlets: bundle.content.terena_media.outlets,
     });
 }
 //# sourceMappingURL=world.js.map

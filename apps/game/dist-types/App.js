@@ -1,12 +1,16 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useMemo, useState } from "react";
-import { createSimulation, parseSaveFile, restoreSimulation, } from "@lorsain/sim";
+import { collectPlayerActionableDecisions, createSimulation, parseSaveFile, restoreSimulation, } from "@lorsain/sim";
 import { loadBrowserContentBundle } from "./content/browserReader.js";
 import { kernelWorldFromBundle } from "./content/world.js";
 import { downloadSave, getSave, listSaves, putSave, readImportedSave, } from "./saves.js";
-import { isMp, isPresident, isSpeaker, partyName, playerCampaign, playerOffices, politicianName, } from "./format.js";
+import { playerCampaign, playerOffices, politicianName } from "./format.js";
 import { GamePages } from "./pages.js";
 import { DecisionPanel } from "./decisions.js";
+import { useCommandFeedback } from "./feedback.js";
+import { catalogFromBundle, partyDisplayName, politicianDisplayName } from "./presentation.js";
+import { GameShell } from "./ui/shell.js";
+import { PoliticianCard } from "./ui/politician.js";
 export default function App() {
     const [bundle, setBundle] = useState(null);
     const [world, setWorld] = useState(null);
@@ -23,6 +27,7 @@ export default function App() {
     const [selectedBill, setSelectedBill] = useState(null);
     const [mapHover, setMapHover] = useState(null);
     const [debug, setDebug] = useState(false);
+    const feedback = useCommandFeedback();
     useEffect(() => {
         try {
             const loaded = loadBrowserContentBundle();
@@ -39,6 +44,7 @@ export default function App() {
             map.set(f.id, f);
         return map;
     }, [bundle]);
+    const catalog = useMemo(() => (bundle ? catalogFromBundle(bundle, figures) : null), [bundle, figures]);
     function refresh(next) {
         setSim(next);
         setSnap(next.getSnapshot());
@@ -98,7 +104,7 @@ export default function App() {
             refresh(sim);
             setBusy(false);
             if (!result.ok)
-                setError(result.error.message);
+                feedback.setNotice(result.error.message);
         }, 20);
     }
     if (error) {
@@ -144,23 +150,15 @@ export default function App() {
             const d = rank(a) - rank(b);
             return d !== 0 ? d : a.name.localeCompare(b.name);
         });
-        return (_jsxs("div", { className: "page", children: [_jsx("h2", { children: "Choose a politician" }), _jsx("p", { className: "muted", children: "Public offices and biographies only. Hidden traits are not shown." }), _jsxs("div", { className: "row", children: [_jsx("input", { className: "search", placeholder: "Search", value: query, onChange: (e) => setQuery(e.target.value) }), _jsxs("select", { value: partyFilter, onChange: (e) => setPartyFilter(e.target.value), children: [_jsx("option", { value: "all", children: "All parties" }), Object.values(world.partyDefinitions).map((p) => (_jsx("option", { value: p.partyId, children: p.name }, p.partyId)))] }), _jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" })] }), _jsx("div", { className: "list", style: { marginTop: "1rem" }, children: list.slice(0, 80).map((f) => (_jsxs("div", { className: "pick", children: [_jsxs("div", { children: [_jsx("strong", { children: f.name }), _jsxs("div", { className: "muted", children: [f.office ?? "Private citizen", " \u00B7 ", f.party ?? "Independent", f.faction ? ` / ${f.faction}` : "", " \u00B7 ", f.home] }), _jsx("div", { className: "muted", children: f.notes ?? f.display_summary })] }), _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" })] }, f.id))) })] }));
+        const tempCatalog = catalogFromBundle(bundle, figures);
+        return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: "Choose your career" }), _jsx("p", { className: "muted", children: "Select a politician to begin. Public offices and biographies only \u2014 hidden traits are never shown." })] }), _jsxs("div", { className: "row new-game-filters", children: [_jsx("input", { className: "search", placeholder: "Search by name, office, party, or home", value: query, onChange: (e) => setQuery(e.target.value) }), _jsxs("select", { value: partyFilter, onChange: (e) => setPartyFilter(e.target.value), children: [_jsx("option", { value: "all", children: "All parties" }), Object.values(world.partyDefinitions).map((p) => (_jsx("option", { value: p.partyId, children: p.name }, p.partyId)))] }), _jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" })] }), _jsx("div", { className: "politician-card-grid", children: list.slice(0, 60).map((f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), ...((f.notes ?? f.display_summary) ? { descriptor: f.notes ?? f.display_summary } : {}), action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id))) })] }));
     }
-    if (!sim || !snap)
+    if (!sim || !snap || !catalog)
         return null;
     const player = snap.politicians[snap.playerPoliticianId];
     const offices = playerOffices(world, snap, snap.playerPoliticianId);
     const interrupt = snap.pendingInterrupt;
-    return (_jsxs("div", { className: `shell ${busy ? "busy" : ""}`, children: [_jsxs("nav", { className: "nav", children: [_jsx("h2", { children: "Lorsain" }), [
-                        ["home", "Home"],
-                        ["career", "Career"],
-                        ["assembly", "Assembly"],
-                        ["party", "Party"],
-                        ["campaign", "Campaign"],
-                        ["elections", "Elections"],
-                        ["executive", "Executive"],
-                        ["terena", "Terena"],
-                        ["archive", "Archive"],
-                    ].map(([id, label]) => (_jsx("button", { className: screen === id ? "active" : "", onClick: () => setScreen(id), children: label }, id)))] }), _jsxs("div", { className: "main", children: [_jsxs("header", { className: "topbar", children: [_jsxs("div", { children: [_jsx("strong", { children: snap.currentDate }), _jsxs("div", { className: "muted", children: [politicianName(figures, snap.playerPoliticianId), " \u00B7 ", offices[0] ?? "No office", " \u00B7", " ", partyName(world, player.partyId)] })] }), _jsxs("div", { className: "row", children: [busy ? _jsx("span", { className: "muted", children: "Processing\u2026" }) : null, _jsx("button", { className: "btn secondary", onClick: () => void saveGame(), children: "Save" }), _jsx("button", { className: "btn secondary", onClick: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), children: "Export" }), _jsx("button", { className: "btn", onClick: endTurn, disabled: busy || Boolean(interrupt?.requiresResolution), children: "End Turn" })] })] }), _jsxs("div", { className: "page", children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, interrupt: interrupt, mp: isMp(world, snap, snap.playerPoliticianId), president: isPresident(world, snap, snap.playerPoliticianId), speaker: isSpeaker(world, snap, snap.playerPoliticianId), onDone: () => refresh(sim) }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim) })] })] })] }));
+    const decisionCount = collectPlayerActionableDecisions(world, snap).length;
+    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, busy: busy, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), children: [feedback.overlay(), _jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, askConfirm: feedback.askConfirm })] }));
 }
 //# sourceMappingURL=App.js.map

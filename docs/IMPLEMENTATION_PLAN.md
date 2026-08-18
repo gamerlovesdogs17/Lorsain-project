@@ -108,7 +108,9 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 6** — **COMPLETE (`3c976fa`)** — Assembly sessions, functional committees, structured bills, amendments, votes, whip estimates, presidential return veto and 211-vote repassage. Stage timing guarantees the player a month to act before committee/floor/repassage tallies.
 - **Phase 7** — **COMPLETE (`90b54d4`)** — executive government + first playable React UI.
 - **Phase 7.1** — **COMPLETE (`670b38b`)** — first-playtest UX: no silently omitted player decisions, campaign/policy forms, human-readable presentation, Home briefing, canonical party colors, command feedback.
-- **Phase 8** — **COMPLETE** — Constitutional Court, nomination/252 confirmation, judicial review, nonrenewable 12-year terms, impeachment 280 + Court judgment requiring a structured public basis, recall referral 252 + national vote.
+- **Phase 8** — **COMPLETE (`72733d4`)** — Constitutional Court, nomination/252 confirmation, judicial review, nonrenewable 12-year terms, impeachment 280 + Court judgment requiring a structured public basis, recall referral 252 + national vote.
+- **Phase 9** — **COMPLETE** — political macroeconomy, canonical organizations/media, UI System V2, derived GeoJSON Terena map, schemaVersion 9.
+- **Phase 9.5** — **COMPLETE** — UI System V3 playtest UX pass: grouped navigation, campaign command center, player-safe labels, map hover/click fix, responsive shell. See `docs/UI_SYSTEM_V3.md`.
 
 Deliverables:
 
@@ -239,13 +241,15 @@ Web Worker turn processing is deferred to Phase 11 if still needed.
 
 Case types: `LAW_REVIEW`, `REGULATION_REVIEW`, `EXECUTIVE_ACTION_REVIEW`, `EMERGENCY_REVIEW`, `ELECTION_CONSTITUTIONAL_DISPUTE`, `IMPEACHMENT_JUDGMENT`. Dispositions are `UPHOLD` / `INVALIDATE`. Invalidated laws remain archived with `operative: false`. Regulations may be `active`, `annulled`, `invalidated`, or `expired`. Player judges never auto-vote; missed deadlines become `nonparticipation`. Party/faction loyalty is muted on the bench. Lightweight precedent records influence later similar cases. Emergency review is expedited and does not change the canonical 14-day initial emergency. Serious Court invalidations of presidential emergencies, major regulations, executive actions, or war powers may create a public impeachment basis. Treason/corruption/scandal generators are not invented in Phase 8.
 
-Save **schemaVersion 8**; v7→v8 adds empty `constitutionalRuntime` (including `grounds: {}`) and `nextCaseId` / `nextCourtNominationId` / `nextCourtDecisionId` / `nextImpeachmentId` / `nextRecallId` / `nextConstitutionalGroundsId`. No fabricated historical cases. `contentVersion` remains `0.3.1-predev`. Legal procedure is intentionally simplified (no lower courts, no written opinions, whole-law disposition). 20-year synthetic kernel hash: `9e72db0735b48e9b02fa8110a93cd48c` (changed from the pre-blocker-fix hash `e437da840c998dd577d778129f792f43` because empty court runtime now includes `grounds` and `nextConstitutionalGroundsId`, and `courtConstitution.renewable`).
+Save **schemaVersion 8**; v7→v8 adds empty `constitutionalRuntime` (including `grounds: {}`) and court counters. … 20-year synthetic kernel hash: `9e72db0735b48e9b02fa8110a93cd48c`. **Commit: `72733d4`.**
 
-## 18. Phase 9 — economy, organizations, and media
+## 18. Phase 9 — economy, organizations, media, UI v2, map
 
-Implement national/provincial economic indicators and major sectors. Add unions, business groups, farm groups, advocacy organizations, endorsements and lobbying. Implement outlets, audience/reputation, structured article generation, investigations, rumors and polling presentation.
+**COMPLETE.** Normalized economy indices (Jan 2028 = 100), lagged policy effects, regional variation from voter-bloc archetypes. Ten canonical organizations from `terena_organizations.json`; seven media outlets from `terena_media.json`. Stories from real public events only. Month order: economy → organizations → campaign/legislature/executive/courts → scheduled → media. UI System V2 + `<TerenaMap />` from GeoJSON (no runtime `terena_svg` injection). Save **schemaVersion 9**; v8→v9 baseline economy, empty org/media history. 20-year synthetic hash: `6b3dea55f2279a6216bb676c8fa1175b`. See `docs/UI_SYSTEM_V2.md`.
 
-Acceptance criteria: policy changes have delayed measurable effects; organizations choose endorsements based on interests/relationships; the same underlying event is covered differently by outlets without fabricating different objective facts.
+## 18.5. Phase 9.5 — UI System V3 playtest UX
+
+**COMPLETE.** UI-only pass (no simulation rule changes): grouped navigation + responsive drawer, End Turn–first top bar, political briefing Home, politician cards/profile, campaign command center with action drawers, election vote formatting, map legend + lighter selection stroke + hover-vs-click fix, assembly bill progress track, archive filters, organizations relationship labels. Player-safe presentation in `apps/game/src/presentation/display.ts` with regression tests. See `docs/UI_SYSTEM_V3.md`. **Phase 10 not started.**
 
 ## 19. Phase 10 — foreign affairs
 

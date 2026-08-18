@@ -16,6 +16,7 @@ import {
 } from "@lorsain/sim";
 import { useMemo, useState } from "react";
 import { politicianDisplayName, type PresentationCatalog } from "./presentation.js";
+import { PageHeader } from "./ui/kit.js";
 
 export function CourtsPage(props: {
   world: KernelWorld;
@@ -75,15 +76,22 @@ export function CourtsPage(props: {
   );
 
   return (
-    <div className="grid">
+    <div>
+      <PageHeader
+        kicker="Judiciary"
+        title="Constitutional Court"
+        subtitle="Nine-seat bench · vacancies, docket, and recent decisions."
+      />
+      <div className="grid">
       <div className="card">
-        <h3>Constitutional Court</h3>
+        <h3>Bench</h3>
         <p className="muted">
           Nine judges · 12-year nonrenewable terms · confirmation {confirmationYesNeeded(world)} yes
           of {world.legislativeConstitution.assemblySeatCount} authorized seats · impeachment{" "}
           {impeachmentYesNeeded(world)} yes plus Court judgment.
         </p>
-        <table>
+        <div className="bench-grid">
+        <table className="table">
           <thead>
             <tr>
               <th>Seat</th>
@@ -101,6 +109,7 @@ export function CourtsPage(props: {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       {president && vacancies.length > 0 ? (
         <div className="card">
@@ -403,6 +412,7 @@ export function CourtsPage(props: {
               </div>
             ))
         )}
+      </div>
       </div>
     </div>
   );

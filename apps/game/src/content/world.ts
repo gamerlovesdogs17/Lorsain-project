@@ -27,5 +27,7 @@ export function kernelWorldFromBundle(bundle: ContentBundle): KernelWorld {
     } as never),
     presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     ...terenaElectoralFromBundle(bundle as never),
+    organizations: bundle.content.terena_organizations.organizations,
+    mediaOutlets: bundle.content.terena_media.outlets,
   } as unknown as TerenaKernelInput);
 }

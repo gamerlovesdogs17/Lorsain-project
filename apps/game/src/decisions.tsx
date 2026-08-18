@@ -1,6 +1,7 @@
 import type { Command, KernelWorld, SimState, Simulation } from "@lorsain/sim";
 import { collectPlayerActionableDecisions } from "@lorsain/sim";
 import type { CommandResult } from "@lorsain/sim";
+import { interruptDisplay } from "./presentation/display.js";
 
 function VoteRow({
   label,
@@ -54,7 +55,7 @@ export function DecisionPanel(props: {
       </p>
       {interrupt ? (
         <div>
-          <div>{interrupt.message}</div>
+          <div>{interruptDisplay(interrupt)}</div>
           {interrupt.code === "PRESIDENTIAL_ELECTION_DUE" ? (
             <button
               type="button"

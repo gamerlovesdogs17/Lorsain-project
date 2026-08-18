@@ -171,6 +171,23 @@ export type TerenaKernelInput = {
   pollsters?: PollsterInput[];
   constituencyGeo?: ConstituencyGeoInput[];
   turnout2026?: Record<string, TurnoutBaseline2026>;
+  organizations?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    lean?: string;
+    strength?: number;
+    issues: string[];
+    lean_party_ids?: string[];
+  }>;
+  mediaOutlets?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    ideology: number;
+    factual_reputation: number;
+    audience?: string;
+  }>;
 };
 
 export class KernelContentError extends Error {
@@ -604,6 +621,33 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
       recallReferralFraction: input.constitution.recall?.assembly_referral_fraction ?? 0.6,
       recallVoteDays: 60,
     },
+    interestOrganizations: Object.fromEntries(
+      (input.organizations ?? []).map((o) => [
+        o.id,
+        {
+          id: o.id,
+          name: o.name,
+          type: o.type,
+          lean: o.lean ?? "",
+          strength: typeof o.strength === "number" ? o.strength : 0.5,
+          issues: [...o.issues],
+          leanPartyIds: [...(o.lean_party_ids ?? [])],
+        },
+      ]),
+    ),
+    mediaOutlets: Object.fromEntries(
+      (input.mediaOutlets ?? []).map((o) => [
+        o.id,
+        {
+          id: o.id,
+          name: o.name,
+          type: o.type,
+          ideology: o.ideology,
+          factualReputation: o.factual_reputation,
+          audience: o.audience ?? "national",
+        },
+      ]),
+    ),
   };
   applyInstitutionalPublicIdeology(world);
   return world;

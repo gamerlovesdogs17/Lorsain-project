@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 8 saves use `schemaVersion: 8` and `contentVersion: 0.3.1-predev`. Phase 7 `schemaVersion: 7` saves migrate to v8 with empty constitutional runtime. Phase 6 `schemaVersion: 6` saves migrate v6→v7→v8. Phase 5 `schemaVersion: 5` saves migrate v5→v6→v7→v8. Phase 4 `schemaVersion: 4` saves migrate v4→v5→v6→v7→v8. Phase 3 `schemaVersion: 3` saves migrate v3→v4→v5→v6→v7→v8. Phase 2 `schemaVersion: 2` saves migrate v2→v3→v4→v5→v6→v7→v8. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3→v4→v5→v6→v7→v8.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 9 working tree uses `schemaVersion: 9` and `contentVersion: 0.3.1-predev`. Phase 8 saves (`schemaVersion: 8`) migrate to v9 with baseline economy and empty org/media history.
 
 ## 3. Core static schemas
 

@@ -21,6 +21,7 @@ import {
   stanceLabel,
   type PresentationCatalog,
 } from "./presentation.js";
+import { PageHeader, TabBar, BillProgressTrack } from "./ui/kit.js";
 
 type AssemblyTab = "overview" | "bills" | "committees" | "votes";
 
@@ -59,18 +60,21 @@ export function AssemblyPage(props: {
 
   return (
     <div>
-      <div className="row" style={{ marginBottom: "0.8rem" }}>
-        {(["overview", "bills", "committees", "votes"] as const).map((id) => (
-          <button
-            key={id}
-            type="button"
-            className={`btn ${tab === id ? "" : "secondary"}`}
-            onClick={() => setTab(id)}
-          >
-            {id[0]!.toUpperCase() + id.slice(1)}
-          </button>
-        ))}
-      </div>
+      <PageHeader
+        kicker="Legislature"
+        title="National Assembly"
+        subtitle={`${mps.length} sitting of ${props.world.legislativeConstitution.assemblySeatCount} authorized seats.`}
+      />
+      <TabBar
+        tabs={[
+          { id: "overview", label: "Overview" },
+          { id: "bills", label: "Bills" },
+          { id: "committees", label: "Committees" },
+          { id: "votes", label: "Votes" },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
       {tab === "overview" ? (
         <div className="card">
           <h3>Assembly overview</h3>
@@ -261,6 +265,7 @@ export function AssemblyPage(props: {
           {bill ? (
             <div className="card">
               <h3>{bill.title}</h3>
+              <BillProgressTrack status={bill.status} />
               <p className="muted">
                 {billStatusLabel(bill.status)} · {committeeDisplayName(bill.assignedCommitteeId)}
               </p>

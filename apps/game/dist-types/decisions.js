@@ -1,83 +1,56 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-function run(sim, command) {
-    return sim.executeCommand(command);
+import { collectPlayerActionableDecisions } from "@lorsain/sim";
+import { interruptDisplay } from "./presentation/display.js";
+function VoteRow({ label, onCast, }) {
+    return (_jsxs("div", { className: "row", style: { marginTop: "0.4rem" }, children: [_jsx("span", { children: label }), _jsx("button", { type: "button", className: "btn", onClick: () => onCast("yes"), children: "Yes" }), _jsx("button", { type: "button", className: "btn secondary", onClick: () => onCast("no"), children: "No" }), _jsx("button", { type: "button", className: "btn secondary", onClick: () => onCast("abstain"), children: "Abstain" })] }));
 }
 export function DecisionPanel(props) {
-    const { snap, sim, interrupt, mp, president } = props;
-    const bills = Object.values(snap.legislatureRuntime.bills);
-    const pendingSign = president ? bills.filter((b) => b.status === "sent_to_president") : [];
-    const committeeBills = mp
-        ? bills.filter((b) => {
-            if (b.status !== "committee" || !b.assignedCommitteeId)
-                return false;
-            return (snap.legislatureRuntime.committees[b.assignedCommitteeId]?.memberIds.includes(snap.playerPoliticianId) ?? false);
-        })
-        : [];
-    const floorBills = mp ? bills.filter((b) => b.status === "floor_scheduled") : [];
-    const repass = mp ? bills.filter((b) => b.status === "repassage_scheduled") : [];
-    const motions = mp
-        ? Object.values(snap.executiveRuntime.motions).filter((m) => m.status === "scheduled")
-        : [];
-    const amendments = Object.values(snap.legislatureRuntime.amendments).filter((a) => {
-        if (a.status !== "proposed")
-            return false;
-        return [...committeeBills, ...floorBills, ...repass].some((b) => b.id === a.billId);
-    });
-    if (!interrupt &&
-        pendingSign.length === 0 &&
-        committeeBills.length === 0 &&
-        floorBills.length === 0 &&
-        repass.length === 0 &&
-        motions.length === 0 &&
-        amendments.length === 0) {
+    const { snap, sim, world } = props;
+    const interrupt = snap.pendingInterrupt;
+    const decisions = collectPlayerActionableDecisions(world, snap);
+    if (decisions.length === 0)
         return null;
+    function run(command) {
+        props.report(sim.executeCommand(command));
+        props.onDone();
     }
-    return (_jsxs("div", { className: "alert", children: [_jsx("strong", { children: "Required decisions" }), interrupt ? (_jsxs("div", { children: [_jsxs("div", { children: [interrupt.code, ": ", interrupt.message] }), interrupt.code === "PRESIDENTIAL_ELECTION_DUE" ? (_jsx("button", { className: "btn", onClick: () => {
-                            run(sim, { type: "RESOLVE_PRESIDENTIAL_ELECTION" });
-                            run(sim, { type: "RESUME_TURN" });
-                            props.onDone();
-                        }, children: "Resolve presidential election" })) : interrupt.requiresResolution ? (_jsx("p", { className: "muted", children: "This event cannot be skipped. Use the legal action above." })) : (_jsx("button", { className: "btn", onClick: () => {
-                            run(sim, { type: "ACKNOWLEDGE_INTERRUPT" });
-                            run(sim, { type: "RESUME_TURN" });
-                            props.onDone();
-                        }, children: "Continue" }))] })) : null, pendingSign.map((b) => (_jsxs("div", { className: "row", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: b.title }), _jsx("button", { className: "btn", onClick: () => {
-                            run(sim, { type: "SIGN_BILL", billId: b.id });
-                            props.onDone();
-                        }, children: "Sign" }), _jsx("button", { className: "btn danger", onClick: () => {
-                            run(sim, { type: "RETURN_BILL", billId: b.id });
-                            props.onDone();
-                        }, children: "Return" })] }, b.id))), committeeBills.slice(0, 3).map((b) => (_jsx(VoteRow, { label: `Committee: ${b.title}`, onCast: (choice) => {
-                    run(sim, { type: "CAST_LEGISLATIVE_VOTE", billId: b.id, stage: "committee", choice });
-                    props.onDone();
-                } }, `c-${b.id}`))), floorBills.slice(0, 2).map((b) => (_jsx(VoteRow, { label: `Floor: ${b.title}`, onCast: (choice) => {
-                    run(sim, { type: "CAST_LEGISLATIVE_VOTE", billId: b.id, stage: "floor", choice });
-                    props.onDone();
-                } }, `f-${b.id}`))), repass.slice(0, 1).map((b) => (_jsx(VoteRow, { label: `Repassage: ${b.title}`, onCast: (choice) => {
-                    run(sim, { type: "CAST_LEGISLATIVE_VOTE", billId: b.id, stage: "repassage", choice });
-                    props.onDone();
-                } }, `r-${b.id}`))), amendments.slice(0, 3).map((a) => {
-                const parent = snap.legislatureRuntime.bills[a.billId];
-                const stage = parent?.status === "floor_scheduled"
-                    ? "floor"
-                    : parent?.status === "repassage_scheduled"
-                        ? "repassage"
-                        : "committee";
-                return (_jsx(VoteRow, { label: `Amendment ${a.id}`, onCast: (choice) => {
-                        run(sim, {
-                            type: "CAST_LEGISLATIVE_VOTE",
-                            billId: a.billId,
-                            stage,
-                            choice,
-                            amendmentId: a.id,
-                        });
-                        props.onDone();
-                    } }, a.id));
-            }), motions.slice(0, 2).map((m) => (_jsx(VoteRow, { label: `Motion ${m.kind}`, onCast: (choice) => {
-                    run(sim, { type: "CAST_MOTION_VOTE", motionId: m.id, choice });
-                    props.onDone();
-                } }, m.id)))] }));
-}
-function VoteRow({ label, onCast, }) {
-    return (_jsxs("div", { className: "row", style: { marginTop: "0.4rem" }, children: [_jsx("span", { children: label }), _jsx("button", { className: "btn", onClick: () => onCast("yes"), children: "Yes" }), _jsx("button", { className: "btn secondary", onClick: () => onCast("no"), children: "No" }), _jsx("button", { className: "btn secondary", onClick: () => onCast("abstain"), children: "Abstain" })] }));
+    const votes = decisions.filter((d) => d.kind !== "interrupt" && d.kind !== "sign_bill");
+    const signs = decisions.filter((d) => d.kind === "sign_bill");
+    return (_jsxs("div", { className: "alert", children: [_jsx("strong", { children: "Required decisions" }), _jsxs("p", { className: "muted", children: [decisions.length, " item", decisions.length === 1 ? "" : "s", " need your action before the month can close without abstention."] }), interrupt ? (_jsxs("div", { children: [_jsx("div", { children: interruptDisplay(interrupt) }), interrupt.code === "PRESIDENTIAL_ELECTION_DUE" ? (_jsx("button", { type: "button", className: "btn", onClick: () => {
+                            run({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
+                            run({ type: "RESUME_TURN" });
+                        }, children: "Resolve presidential election" })) : interrupt.requiresResolution ? (_jsx("p", { className: "muted", children: "This event cannot be skipped. Use the legal action above." })) : (_jsx("button", { type: "button", className: "btn", onClick: () => {
+                            run({ type: "ACKNOWLEDGE_INTERRUPT" });
+                            run({ type: "RESUME_TURN" });
+                        }, children: "Continue" }))] })) : null, signs.map((d) => (_jsxs("div", { className: "row", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: d.label }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "SIGN_BILL", billId: d.billId }), children: "Sign" }), _jsx("button", { type: "button", className: "btn danger", onClick: () => run({ type: "RETURN_BILL", billId: d.billId }), children: "Return" })] }, d.key))), _jsx("div", { className: "decision-list", children: votes.map((d) => {
+                    if (d.kind === "motion_vote") {
+                        return (_jsx(VoteRow, { label: d.label, onCast: (choice) => run({ type: "CAST_MOTION_VOTE", motionId: d.motionId, choice }) }, d.key));
+                    }
+                    if (d.kind === "confirmation_vote") {
+                        return (_jsx(VoteRow, { label: d.label, onCast: (choice) => run({ type: "CAST_CONFIRMATION_VOTE", nominationId: d.nominationId, choice }) }, d.key));
+                    }
+                    if (d.kind === "impeachment_vote") {
+                        return (_jsx(VoteRow, { label: d.label, onCast: (choice) => run({ type: "CAST_IMPEACHMENT_VOTE", proceedingId: d.proceedingId, choice }) }, d.key));
+                    }
+                    if (d.kind === "recall_vote") {
+                        return (_jsx(VoteRow, { label: d.label, onCast: (choice) => run({ type: "CAST_RECALL_REFERRAL_VOTE", proceedingId: d.proceedingId, choice }) }, d.key));
+                    }
+                    if (d.kind === "judicial_vote") {
+                        return (_jsxs("div", { className: "row", style: { marginTop: "0.4rem" }, children: [_jsx("span", { children: d.label }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "CAST_JUDICIAL_VOTE", caseId: d.caseId, choice: "uphold" }), children: "Uphold" }), _jsx("button", { type: "button", className: "btn danger", onClick: () => run({ type: "CAST_JUDICIAL_VOTE", caseId: d.caseId, choice: "invalidate" }), children: "Invalidate" })] }, d.key));
+                    }
+                    if (d.kind === "committee_vote" ||
+                        d.kind === "floor_vote" ||
+                        d.kind === "repassage_vote" ||
+                        d.kind === "amendment_vote") {
+                        return (_jsx(VoteRow, { label: d.label, onCast: (choice) => run({
+                                type: "CAST_LEGISLATIVE_VOTE",
+                                billId: d.billId,
+                                stage: d.stage,
+                                choice,
+                                ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
+                            }) }, d.key));
+                    }
+                    return (_jsx("div", { className: "muted", style: { marginTop: "0.4rem" }, children: d.label }, d.key));
+                }) })] }));
 }
 //# sourceMappingURL=decisions.js.map

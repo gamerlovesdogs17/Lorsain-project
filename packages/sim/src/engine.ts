@@ -130,6 +130,18 @@ import {
   isJudicialVoteChoice,
 } from "./courts/types.js";
 import { processCourtsMonth } from "./courts/monthly.js";
+import { processEconomyMonth } from "./economy/monthly.js";
+import { baselineEconomyRuntime } from "./economy/types.js";
+import { processOrganizationsMonth } from "./organizations/monthly.js";
+import {
+  askOrganizationBillSupport,
+  discussOrganizationPolicy,
+  meetOrganization,
+  seekOrganizationEndorsement,
+} from "./organizations/procedure.js";
+import { seedOrganizationRuntime } from "./organizations/types.js";
+import { processMediaMonth } from "./media/monthly.js";
+import { emptyMediaRuntime } from "./media/types.js";
 import {
   castConfirmationVote,
   castImpeachmentVote,
@@ -227,6 +239,10 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextImpeachmentId: 1,
       nextRecallId: 1,
       nextConstitutionalGroundsId: 1,
+      nextLaggedEffectId: 1,
+      nextEconomicShockId: 1,
+      nextOrgActionId: 1,
+      nextMediaStoryId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
@@ -240,6 +256,9 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     legislatureRuntime: emptyLegislatureRuntime(),
     executiveRuntime: emptyExecutiveRuntime(),
     constitutionalRuntime: emptyConstitutionalRuntime(),
+    economyRuntime: baselineEconomyRuntime(world.provinceIds, world.scenarioStartDate),
+    organizationRuntime: seedOrganizationRuntime(world.interestOrganizations),
+    mediaRuntime: emptyMediaRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -369,6 +388,7 @@ function applyScheduled(
   return { events, interrupt: null };
 }
 
+/** Month order: economy lags → organizations → campaign/legislature/executive/courts → scheduled events → media last. */
 function runTowardTarget(
   state: SimState,
   world: KernelWorld,
@@ -377,6 +397,8 @@ function runTowardTarget(
   commandId: string,
 ): { events: SimEvent[]; interrupt: PendingInterrupt | null } {
   const events: SimEvent[] = [];
+  events.push(...processEconomyMonth(state, world, rng, commandId));
+  events.push(...processOrganizationsMonth(state, world, rng, commandId));
   events.push(...processCampaignMonth(state, world, rng, commandId));
   events.push(...processLegislatureMonth(state, world, rng, commandId));
   events.push(...processExecutiveMonth(state, world, rng, commandId));
@@ -389,6 +411,7 @@ function runTowardTarget(
     events.push(...out.events);
     if (out.interrupt) return { events, interrupt: out.interrupt };
   }
+  events.push(...processMediaMonth(state, world, rng, commandId));
   state.currentDate = target;
   state.completedTurns += 1;
   state.activeTurnTarget = null;
@@ -469,6 +492,18 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   if (needsInitialGoals(state)) seedInitialGoals(state, frozen);
   seedCommitteesIfNeeded(frozen, state);
   seedMinistriesIfNeeded(frozen, state);
+  if (Object.keys(state.organizationRuntime.actors).length === 0) {
+    state.organizationRuntime.actors = seedOrganizationRuntime(frozen.interestOrganizations).actors;
+  }
+  if (Object.keys(state.economyRuntime.provinces).length === 0) {
+    for (const id of frozen.provinceIds) {
+      state.economyRuntime.provinces[id] = {
+        conditionsIndex: 100,
+        employmentIndex: 100,
+        housingIndex: 100,
+      };
+    }
+  }
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
@@ -2183,6 +2218,69 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         },
         commandId,
       );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "MEET_ORGANIZATION") {
+      const preview = meetOrganization(
+        world,
+        jsonClone(state),
+        { actorId: state.playerPoliticianId, organizationId: command.organizationId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = meetOrganization(
+        world,
+        state,
+        { actorId: state.playerPoliticianId, organizationId: command.organizationId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "SEEK_ORGANIZATION_ENDORSEMENT") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        organizationId: command.organizationId,
+        campaignId: command.campaignId,
+      };
+      const preview = seekOrganizationEndorsement(world, jsonClone(state), args, null, 0);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const roll = rng.float01("npc-decisions");
+      const commandId = nextCommandId();
+      const out = seekOrganizationEndorsement(world, state, args, commandId, roll);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "ASK_ORGANIZATION_BILL_SUPPORT") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        organizationId: command.organizationId,
+        billId: command.billId,
+      };
+      const preview = askOrganizationBillSupport(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = askOrganizationBillSupport(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DISCUSS_ORGANIZATION_POLICY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        organizationId: command.organizationId,
+        issueId: command.issueId,
+        direction: command.direction,
+      };
+      const preview = discussOrganizationPolicy(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = discussOrganizationPolicy(world, state, args, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }

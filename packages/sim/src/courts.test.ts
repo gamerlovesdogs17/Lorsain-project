@@ -221,7 +221,7 @@ describe("Phase 8 courts kernel", () => {
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "P8-EMPTY" });
     const snap = sim.getSnapshot();
     expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(snap.schemaVersion).toBe(8);
+    expect(snap.schemaVersion).toBe(9);
     expect(snap.constitutionalRuntime).toEqual(emptyConstitutionalRuntime());
     expect(deriveCourtBench(world, snap)).toHaveLength(9);
     expect(deriveCourtBench(world, snap).every((s) => s.holderId != null)).toBe(true);
@@ -245,7 +245,7 @@ describe("Phase 8 courts kernel", () => {
     const parsed = parseSaveFile(save);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(8);
+    expect(parsed.save.schemaVersion).toBe(9);
     expect(parsed.save.simulation.constitutionalRuntime.courtCases).toEqual({});
     expect(
       restoreSimulation(parsed.save, world).getSnapshot().constitutionalRuntime.courtCases,

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  collectPlayerActionableDecisions,
   createSimulation,
   parseSaveFile,
   restoreSimulation,
@@ -25,6 +26,8 @@ import { GamePages, type Figure, type Screen } from "./pages.js";
 import { DecisionPanel } from "./decisions.js";
 import { useCommandFeedback } from "./feedback.js";
 import { catalogFromBundle, partyDisplayName, politicianDisplayName } from "./presentation.js";
+import { GameShell } from "./ui/shell.js";
+import { PoliticianCard } from "./ui/politician.js";
 
 export default function App() {
   const [bundle, setBundle] = useState<ContentBundle | null>(null);
@@ -238,14 +241,20 @@ export default function App() {
         const d = rank(a) - rank(b);
         return d !== 0 ? d : a.name.localeCompare(b.name);
       });
+    const tempCatalog = catalogFromBundle(bundle, figures);
     return (
-      <div className="page">
-        <h2>Choose a politician</h2>
-        <p className="muted">Public offices and biographies only. Hidden traits are not shown.</p>
-        <div className="row">
+      <div className="page new-game-page">
+        <div className="new-game-header">
+          <h2 className="serif-head">Choose your career</h2>
+          <p className="muted">
+            Select a politician to begin. Public offices and biographies only — hidden traits are
+            never shown.
+          </p>
+        </div>
+        <div className="row new-game-filters">
           <input
             className="search"
-            placeholder="Search"
+            placeholder="Search by name, office, party, or home"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -261,21 +270,25 @@ export default function App() {
             Back
           </button>
         </div>
-        <div className="list" style={{ marginTop: "1rem" }}>
-          {list.slice(0, 80).map((f) => (
-            <div className="pick" key={f.id}>
-              <div>
-                <strong>{f.name}</strong>
-                <div className="muted">
-                  {f.office ?? "Private citizen"} · {f.party ?? "Independent"}
-                  {f.faction ? ` / ${f.faction}` : ""} · {f.home}
-                </div>
-                <div className="muted">{f.notes ?? f.display_summary}</div>
-              </div>
-              <button className="btn" onClick={() => startGame(f.id)}>
-                Play
-              </button>
-            </div>
+        <div className="politician-card-grid">
+          {list.slice(0, 60).map((f) => (
+            <PoliticianCard
+              key={f.id}
+              catalog={tempCatalog}
+              world={world}
+              politicianId={f.id}
+              name={f.name}
+              partyLabel={f.party ?? "Independent"}
+              partyId={f.party_id ?? null}
+              {...(f.office ? { office: f.office } : {})}
+              {...(f.home ? { home: f.home } : {})}
+              {...((f.notes ?? f.display_summary) ? { descriptor: f.notes ?? f.display_summary } : {})}
+              action={
+                <button className="btn" onClick={() => startGame(f.id)}>
+                  Play
+                </button>
+              }
+            />
           ))}
         </div>
       </div>
@@ -285,90 +298,49 @@ export default function App() {
   const player = snap.politicians[snap.playerPoliticianId]!;
   const offices = playerOffices(world, snap, snap.playerPoliticianId);
   const interrupt = snap.pendingInterrupt;
+  const decisionCount = collectPlayerActionableDecisions(world, snap).length;
   return (
-    <div className={`shell ${busy ? "busy" : ""}`}>
-      <nav className="nav">
-        <h2>Lorsain</h2>
-        {(
-          [
-            ["home", "Home"],
-            ["career", "Career"],
-            ["assembly", "Assembly"],
-            ["party", "Party"],
-            ["campaign", "Campaign"],
-            ["elections", "Elections"],
-            ["executive", "Executive"],
-            ["courts", "Courts"],
-            ["terena", "Terena"],
-            ["archive", "Archive"],
-          ] as const
-        ).map(([id, label]) => (
-          <button key={id} className={screen === id ? "active" : ""} onClick={() => setScreen(id)}>
-            {label}
-          </button>
-        ))}
-      </nav>
-      <div className="main">
-        <header className="topbar">
-          <div>
-            <strong>{snap.currentDate}</strong>
-            <div className="muted">
-              {politicianDisplayName(catalog, snap.playerPoliticianId)} ·{" "}
-              {offices[0] ?? "No office"} · {partyDisplayName(world, player.partyId, snap)}
-            </div>
-          </div>
-          <div className="row">
-            {busy ? <span className="muted">Processing…</span> : null}
-            <button className="btn secondary" onClick={() => void saveGame()}>
-              Save
-            </button>
-            <button
-              className="btn secondary"
-              onClick={() => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`)}
-            >
-              Export
-            </button>
-            <button
-              className="btn"
-              onClick={endTurn}
-              disabled={busy || Boolean(interrupt?.requiresResolution)}
-            >
-              End Turn
-            </button>
-          </div>
-        </header>
-        <div className="page">
-          {feedback.overlay()}
-          <DecisionPanel
-            world={world}
-            snap={snap}
-            sim={sim}
-            onDone={() => refresh(sim)}
-            report={feedback.report}
-          />
-          <GamePages
-            screen={screen}
-            world={world}
-            snap={snap}
-            sim={sim}
-            bundle={bundle}
-            catalog={catalog}
-            figures={figures}
-            offices={offices}
-            events={turnEvents}
-            campaign={playerCampaign(snap)}
-            selectedBill={selectedBill}
-            setSelectedBill={setSelectedBill}
-            mapHover={mapHover}
-            setMapHover={setMapHover}
-            debug={debug}
-            setDebug={setDebug}
-            onDone={() => refresh(sim)}
-            report={feedback.report}
-            askConfirm={feedback.askConfirm}
-          />
-        </div>
-      </div>
-    </div>
+    <GameShell
+      screen={screen}
+      onNavigate={setScreen}
+      date={snap.currentDate}
+      playerLine={`${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`}
+      decisionCount={decisionCount}
+      busy={busy}
+      endTurnDisabled={Boolean(interrupt?.requiresResolution)}
+      onEndTurn={endTurn}
+      onSave={() => void saveGame()}
+      onExport={() => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`)}
+    >
+      {feedback.overlay()}
+      <DecisionPanel
+        world={world}
+        snap={snap}
+        sim={sim}
+        onDone={() => refresh(sim)}
+        report={feedback.report}
+      />
+      <GamePages
+        screen={screen}
+        world={world}
+        snap={snap}
+        sim={sim}
+        bundle={bundle}
+        catalog={catalog}
+        figures={figures}
+        offices={offices}
+        events={turnEvents}
+        campaign={playerCampaign(snap)}
+        selectedBill={selectedBill}
+        setSelectedBill={setSelectedBill}
+        mapHover={mapHover}
+        setMapHover={setMapHover}
+        debug={debug}
+        setDebug={setDebug}
+        onDone={() => refresh(sim)}
+        report={feedback.report}
+        askConfirm={feedback.askConfirm}
+      />
+    </GameShell>
   );
 }

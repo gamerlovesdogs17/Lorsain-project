@@ -161,6 +161,8 @@ export function syntheticWorld(seed = "KERNEL-SYN-01"): KernelWorld {
       recallReferralFraction: 0.6,
       recallVoteDays: 60,
     },
+    interestOrganizations: {},
+    mediaOutlets: {},
   };
   applyInstitutionalPublicIdeology(world);
   return world;

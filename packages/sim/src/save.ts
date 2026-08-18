@@ -11,6 +11,9 @@ import { parseCampaignRuntime, campaignCounterError } from "./campaigns/validati
 import { parseLegislatureRuntime, legislatureCounterError } from "./legislature/validation.js";
 import { parseExecutiveRuntime, executiveCounterError } from "./executive/validation.js";
 import { parseConstitutionalRuntime, constitutionalCounterError } from "./courts/validation.js";
+import { parseEconomyRuntime, economyCounterError } from "./economy/validation.js";
+import { parseOrganizationRuntime, organizationCounterError } from "./organizations/validation.js";
+import { parseMediaRuntime, mediaCounterError } from "./media/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -386,6 +389,10 @@ function parseCounters(raw: unknown): Counters | string {
     "nextImpeachmentId",
     "nextRecallId",
     "nextConstitutionalGroundsId",
+    "nextLaggedEffectId",
+    "nextEconomicShockId",
+    "nextOrgActionId",
+    "nextMediaStoryId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
@@ -564,6 +571,18 @@ function parseSimulation(
   if (typeof constitutional === "string") return constitutional;
   const constitutionalCountErr = constitutionalCounterError(constitutional, counters);
   if (constitutionalCountErr) return constitutionalCountErr;
+  const economy = parseEconomyRuntime(raw.economyRuntime);
+  if (typeof economy === "string") return economy;
+  const economyCountErr = economyCounterError(economy, counters);
+  if (economyCountErr) return economyCountErr;
+  const organizations = parseOrganizationRuntime(raw.organizationRuntime);
+  if (typeof organizations === "string") return organizations;
+  const orgCountErr = organizationCounterError(organizations, counters);
+  if (orgCountErr) return orgCountErr;
+  const media = parseMediaRuntime(raw.mediaRuntime);
+  if (typeof media === "string") return media;
+  const mediaCountErr = mediaCounterError(media, counters);
+  if (mediaCountErr) return mediaCountErr;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -673,6 +692,9 @@ function parseSimulation(
     legislatureRuntime: legislature,
     executiveRuntime: executive,
     constitutionalRuntime: constitutional,
+    economyRuntime: economy,
+    organizationRuntime: organizations,
+    mediaRuntime: media,
   };
 }
 
@@ -1006,3 +1028,78 @@ export function migrateSaveV7ToV8(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 7, toSchema: 8, migrate: migrateSaveV7ToV8 });
+
+/**
+ * Phase 8 saves begin Phase 9 economy / organization / media state at migration.
+ * No fabricated prior media stories or organization actions. Economy starts at
+ * January 2028 = 100 baseline indices.
+ */
+export function migrateSaveV8ToV9(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 9 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 9 };
+  const start =
+    typeof sim.scenarioStartDate === "string" ? sim.scenarioStartDate : "2028-01-01";
+  sim.economyRuntime = isRecord(sim.economyRuntime)
+    ? sim.economyRuntime
+    : {
+        national: {
+          outputIndex: 100,
+          employmentIndex: 100,
+          priceIndex: 100,
+          realWageIndex: 100,
+          housingIndex: 100,
+          confidenceIndex: 100,
+          fiscalPressure: 0.35,
+        },
+        history: [
+          {
+            date: start,
+            outputIndex: 100,
+            employmentIndex: 100,
+            priceIndex: 100,
+            realWageIndex: 100,
+            housingIndex: 100,
+            confidenceIndex: 100,
+            fiscalPressure: 0.35,
+          },
+        ],
+        provinces: {},
+        sectors: {
+          labor: { conditionsIndex: 100 },
+          manufacturing: { conditionsIndex: 100 },
+          agriculture: { conditionsIndex: 100 },
+          services: { conditionsIndex: 100 },
+          housing: { conditionsIndex: 100 },
+          trade: { conditionsIndex: 100 },
+        },
+        laggedEffects: [],
+        shocks: [],
+        appliedPolicySources: {},
+        lastMonthProcessed: null,
+      };
+  sim.organizationRuntime = isRecord(sim.organizationRuntime)
+    ? sim.organizationRuntime
+    : { actors: {}, meetingsThisMonth: 0, lastMonthProcessed: null, metadata: {} };
+  sim.mediaRuntime = isRecord(sim.mediaRuntime)
+    ? sim.mediaRuntime
+    : { stories: {}, lingering: [], lastMonthProcessed: null };
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextLaggedEffectId: isInt(sim.counters.nextLaggedEffectId)
+        ? sim.counters.nextLaggedEffectId
+        : 1,
+      nextEconomicShockId: isInt(sim.counters.nextEconomicShockId)
+        ? sim.counters.nextEconomicShockId
+        : 1,
+      nextOrgActionId: isInt(sim.counters.nextOrgActionId) ? sim.counters.nextOrgActionId : 1,
+      nextMediaStoryId: isInt(sim.counters.nextMediaStoryId) ? sim.counters.nextMediaStoryId : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 8, toSchema: 9, migrate: migrateSaveV8ToV9 });

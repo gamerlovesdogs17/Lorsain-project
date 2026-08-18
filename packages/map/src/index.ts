@@ -1,5 +1,34 @@
-/** SVG/GeoJSON helpers (no React). Full overlay tooling comes with the UI phase. */
+export {
+  boundsOfFeatures,
+  emptyBBox,
+  extendBBox,
+  featureId,
+  featureName,
+  fitViewBox,
+  geometryCentroid,
+  geometryToSvgPath,
+  hitFeature,
+  isValidBBox,
+  prepareCities,
+  prepareFeatures,
+  prepareTerenaMap,
+  projectLonLat,
+  ringCentroid,
+} from "./geometry.js";
+export type {
+  BBox,
+  CanonicalCity,
+  GeoJsonFeature,
+  GeoJsonFeatureCollection,
+  GeoJsonGeometry,
+  Position,
+  PreparedCity,
+  PreparedMap,
+  PreparedPath,
+  ViewTransform,
+} from "./geometry.js";
 
+/** Kept for reference-asset tooling. Not used as the runtime Terena map. */
 export function extractSvgIds(svgText: string): string[] {
   const ids: string[] = [];
   const re = /\bid="([^"]+)"/g;

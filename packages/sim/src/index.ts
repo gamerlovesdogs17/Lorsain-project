@@ -53,6 +53,7 @@ export {
   migrateSaveV5ToV6,
   migrateSaveV6ToV7,
   migrateSaveV7ToV8,
+  migrateSaveV8ToV9,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -167,6 +168,21 @@ export type {
   CourtNomination,
 } from "./courts/types.js";
 export { IMPEACHMENT_GROUNDS } from "./courts/types.js";
+export {
+  processEconomyMonth,
+  emptyEconomyRuntime,
+  baselineEconomyRuntime,
+} from "./economy/index.js";
+export type { EconomyRuntime, NationalEconomyIndices } from "./economy/types.js";
+export {
+  processOrganizationsMonth,
+  meetOrganization,
+  organizationPressureForBill,
+  MAX_ORG_MEETINGS_PER_MONTH,
+} from "./organizations/index.js";
+export type { OrganizationRuntime, CanonicalInterestOrganization } from "./organizations/types.js";
+export { processMediaMonth, storiesChronological, emptyMediaRuntime } from "./media/index.js";
+export type { MediaRuntime, MediaStory, CanonicalMediaOutlet } from "./media/types.js";
 export type {
   Command,
   CommandResult,

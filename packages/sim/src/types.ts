@@ -40,8 +40,14 @@ import type {
 } from "./legislature/types.js";
 import type { ExecutiveRuntime, MotionKind } from "./executive/types.js";
 import type { ConstitutionalRuntime, CourtCaseType, JudicialVoteChoice } from "./courts/types.js";
+import type { EconomyRuntime } from "./economy/types.js";
+import type {
+  CanonicalInterestOrganization,
+  OrganizationRuntime,
+} from "./organizations/types.js";
+import type { CanonicalMediaOutlet, MediaRuntime } from "./media/types.js";
 
-export const SAVE_SCHEMA_VERSION = 8 as const;
+export const SAVE_SCHEMA_VERSION = 9 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -146,6 +152,10 @@ export type Counters = {
   nextImpeachmentId: number;
   nextRecallId: number;
   nextConstitutionalGroundsId: number;
+  nextLaggedEffectId: number;
+  nextEconomicShockId: number;
+  nextOrgActionId: number;
+  nextMediaStoryId: number;
 };
 
 export type PresidentialRuntime = {
@@ -191,6 +201,9 @@ export type SimState = {
   legislatureRuntime: LegislatureRuntime;
   executiveRuntime: ExecutiveRuntime;
   constitutionalRuntime: ConstitutionalRuntime;
+  economyRuntime: EconomyRuntime;
+  organizationRuntime: OrganizationRuntime;
+  mediaRuntime: MediaRuntime;
 };
 
 export type Command =
@@ -426,6 +439,15 @@ export type Command =
     }
   | { type: "CAST_JUDICIAL_VOTE"; caseId: string; choice: JudicialVoteChoice }
   | { type: "INTRODUCE_IMPEACHMENT"; basisId: string }
+  | { type: "MEET_ORGANIZATION"; organizationId: string }
+  | { type: "SEEK_ORGANIZATION_ENDORSEMENT"; organizationId: string; campaignId: string }
+  | { type: "ASK_ORGANIZATION_BILL_SUPPORT"; organizationId: string; billId: string }
+  | {
+      type: "DISCUSS_ORGANIZATION_POLICY";
+      organizationId: string;
+      issueId: string;
+      direction: number;
+    }
   | {
       type: "CAST_IMPEACHMENT_VOTE";
       proceedingId: string;
@@ -573,6 +595,8 @@ export type KernelWorld = {
     recallReferralFraction: number;
     recallVoteDays: number;
   };
+  interestOrganizations: Record<string, CanonicalInterestOrganization>;
+  mediaOutlets: Record<string, CanonicalMediaOutlet>;
 };
 
 export type CreateSimulationOptions = {

@@ -95,9 +95,22 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title �
 
 ## Phase 7.1 notes
 
-**Phase 7.1 First Playtest UX is COMPLETE (`670b38b`). Phase 8 Courts + Constitutional System is COMPLETE.**
+**Phase 7.1 First Playtest UX is COMPLETE (`670b38b`). Phase 8 Courts + Constitutional System is COMPLETE (`72733d4`). Phase 9 Economy/Organizations/Media is COMPLETE. Phase 9.5 UI System V3 is COMPLETE.**
 
-Phase 8 **BLOCKING** items from the close review are fixed: nonrenewable Court terms are data-driven (`courtConstitution.renewable`), and impeachment requires a structured public `ConstitutionalGroundsRecord`. Intentionally simplified legal procedure remains NONBLOCKING.
+| ID | Severity | Issue |
+| --- | --- | --- |
+| P95-INTERRUPT-LEAK | **FIXED in Phase 9.5** | Home/decisions no longer show raw `PRESIDENTIAL_ELECTION_DUE` or `Unresolved domain event …` strings. |
+| P95-VOTE-FORMAT | **FIXED in Phase 9.5** | Election results use `formatPublicNumber()` — no `6205093/1` rational leak. |
+| P95-CAMPAIGN-ACTIONS | **FIXED in Phase 9.5** | Campaign action buttons disable at 0 actions with visible `0 / N` counter. |
+| P95-MAP-HOVER | **FIXED in Phase 9.5** | Map hover no longer calls persistent `onSelect`. |
+| P9-BUNDLE-SIZE | NONBLOCKING | Production game bundle ~10.5MB (GeoJSON in client). Code-split or server-side map prep in Phase 11. |
+| P9-CITY-PLACEMENT | NONBLOCKING | Canonical city JSON uses authoring x/y; runtime map places cities at province centroids + offset. Documented in `@lorsain/map`. |
+| P9-FORMAT-CRLF | NONBLOCKING | Repo-wide `format:check` may fail on pre-existing CRLF files; format only Phase 9 touched files when committing. |
+| P9-PYTHON | NONBLOCKING | `python scripts/validate_content.py` may exit 9009 on Windows Store stub. |
+| P9-UI-POLISH | NONBLOCKING | Phase 9.5 establishes game-facing UI V3; charting and animation deferred to Phase 11. |
+| P95-COURTS-POLISH | NONBLOCKING | Courts bench cards and docket presentation can be refined further in Phase 11. |
+| P95-CHAMBER-VIZ | NONBLOCKING | Assembly seat grid remains functional; semicircle/chamber art deferred. |
+| P95-SCREENSHOTS | NONBLOCKING | Automated visual regression / screenshot CI not yet wired. |
 
 | ID | Severity | Issue |
 | --- | --- | --- |

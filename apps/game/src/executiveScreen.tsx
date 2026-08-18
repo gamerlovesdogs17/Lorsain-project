@@ -15,6 +15,8 @@ import {
   politicianDisplayName,
   type PresentationCatalog,
 } from "./presentation.js";
+import { PageHeader, SectionCard } from "./ui/kit.js";
+import { PoliticianCard, PoliticianProfile } from "./ui/politician.js";
 
 export function ExecutivePage(props: {
   world: KernelWorld;
@@ -79,47 +81,71 @@ export function ExecutivePage(props: {
   }, [appointQuery, props.catalog, props.snap, props.world, selectedOfficeId]);
 
   return (
-    <div className="card">
-      <h3>Executive</h3>
-      <p>President: {presidentId ? politicianDisplayName(props.catalog, presidentId) : "vacant"}</p>
-      <table className="table">
-        <tbody>
-          {cab.map((m) => (
-            <tr key={m.officeId}>
-              <td>{m.title}</td>
-              <td>{m.holderId ? politicianDisplayName(props.catalog, m.holderId) : "vacant"}</td>
-              {president && m.holderId ? (
-                <td>
-                  <button
-                    type="button"
-                    className="btn danger"
-                    onClick={() =>
-                      props.askConfirm({
-                        title: "Dismiss minister",
-                        body: `Dismiss ${politicianDisplayName(props.catalog, m.holderId!)} as ${m.title}?`,
-                        confirmLabel: "Dismiss",
-                        action: () => {
-                          props.report(
-                            props.sim.executeCommand({
-                              type: "DISMISS_MINISTER",
-                              officeId: m.officeId,
-                            }),
-                          );
-                          props.onDone();
-                        },
-                      })
-                    }
-                  >
-                    Dismiss
-                  </button>
-                </td>
-              ) : (
-                <td />
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div>
+      <PageHeader kicker="Government" title="Executive" subtitle="President, cabinet, budget, and regulations." />
+      {presidentId ? (
+        <PoliticianProfile
+          catalog={props.catalog}
+          world={props.world}
+          state={props.snap}
+          politicianId={presidentId}
+          office="President"
+          party={partyDisplayName(
+            props.world,
+            props.snap.politicians[presidentId]?.partyId ?? null,
+            props.snap,
+          )}
+        />
+      ) : null}
+      <SectionCard title="Cabinet">
+        <div className="politician-card-grid">
+          {cab.map((m) =>
+            m.holderId ? (
+              <PoliticianCard
+                key={m.officeId}
+                catalog={props.catalog}
+                world={props.world}
+                state={props.snap}
+                politicianId={m.holderId}
+                office={m.title}
+                action={
+                  president ? (
+                    <button
+                      type="button"
+                      className="btn quiet"
+                      onClick={() =>
+                        props.askConfirm({
+                          title: "Dismiss minister",
+                          body: `Dismiss ${politicianDisplayName(props.catalog, m.holderId!)} as ${m.title}?`,
+                          confirmLabel: "Dismiss",
+                          action: () => {
+                            props.report(
+                              props.sim.executeCommand({
+                                type: "DISMISS_MINISTER",
+                                officeId: m.officeId,
+                              }),
+                            );
+                            props.onDone();
+                          },
+                        })
+                      }
+                    >
+                      Dismiss
+                    </button>
+                  ) : null
+                }
+              />
+            ) : (
+              <div key={m.officeId} className="politician-card static compact">
+                <div className="politician-card-body">
+                  <strong>{m.title}</strong>
+                  <div className="muted">Vacant</div>
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+      </SectionCard>
       {president && vacantMinistries.length > 0 ? (
         <div className="card" style={{ marginTop: "0.8rem" }}>
           <h3>Appoint a minister</h3>

@@ -848,11 +848,15 @@ Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate 
 
 ## 17. Phase 8 — courts and constitution
 
-**COMPLETE.** Runtime Court in `packages/sim/src/courts/` as `SimState.constitutionalRuntime`. Nine-judge membership is derived from active Constitutional Court `OfficeTerm`s. 12-year terms; `courtConstitution.renewable` from canon (false for Terena) blocks any later Constitutional Court appointment after a substantive term. President nominates; Assembly confirms with **252 YES** of 420 authorized seats. Judicial review of laws/regulations/emergencies/executive actions/elections/impeachment judgments. Lightweight precedent. Player judge never auto-votes (procedural nonparticipation after a missed opportunity). Impeachment: structured public `ConstitutionalGroundsRecord` required, then **280 YES** plus Court judgment using stored evidence/severity, then existing succession. Recall: **252 YES** referral then national YES/NO using Phase 4 blocs. Save schemaVersion **8**; v7→v8 empty court runtime including `grounds` and `nextConstitutionalGroundsId`. 20-year synthetic kernel hash: `9e72db0735b48e9b02fa8110a93cd48c`. `contentVersion` remains `0.3.1-predev`. Courts screen is role-aware. Legal procedure is intentionally simplified.
+**Phase 8 COMPLETE at `72733d4`.** Runtime Court in `packages/sim/src/courts/` as `SimState.constitutionalRuntime`. … Save schemaVersion **8** at close; v7→v8 empty court runtime including `grounds` and `nextConstitutionalGroundsId`. 20-year synthetic kernel hash at Phase 8 close: `9e72db0735b48e9b02fa8110a93cd48c` (schema 8).
 
-## 18. Phase 9 — economy, organizations, and media
+## 18. Phase 9 — economy, organizations, media, UI v2, map
 
-Implement national/provincial economic indicators and major sectors. Add unions, business groups, farm groups, advocacy organizations, endorsements and lobbying. Implement outlets, audience/reputation, structured article generation, and polling presentation.
+**COMPLETE.** Political macroeconomy (`packages/sim/src/economy/`), autonomous canonical organizations (`packages/sim/src/organizations/`), structured media (`packages/sim/src/media/`), UI System V2 (`apps/game/src/ui/`, `docs/UI_SYSTEM_V2.md`), derived interactive map (`@lorsain/map`, `<TerenaMap />`). Save schemaVersion **9**; v8→v9 initializes economy baseline indices (Jan 2028 = 100) and empty org/media history. 20-year synthetic kernel hash (schema 9): `6b3dea55f2279a6216bb676c8fa1175b`. `contentVersion` remains `0.3.1-predev`.
+
+## 18.5. Phase 9.5 — UI System V3 playtest UX
+
+**COMPLETE.** UI/UX V3 pass documented in `docs/UI_SYSTEM_V3.md`: grouped nav, briefing Home, campaign command center, player-safe interrupt/vote formatters, map polish, responsive shell. No Phase 10 work included.
 
 ## 19. Phase 10 — foreign affairs
 
