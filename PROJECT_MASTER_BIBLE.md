@@ -864,7 +864,11 @@ Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate 
 
 ## 19. Phase 10 — foreign affairs
 
-**COMPLETE.** Runtime foreign affairs in `packages/sim/src/foreign/` as `SimState.foreignAffairsRuntime`. 48 countries from canonical content; 47 foreign leaders; bilateral relations; trade exposure; treaties (with Assembly ratification); sanctions; crisis lifecycle; abstract conflict; deterministic AI on `foreign-affairs` stream; economy lag + media integration; Terena war-powers respected. World map + Foreign Affairs UI. Save schemaVersion **10**; v9→v10 empty foreign runtime then baseline seed. 20-year synthetic kernel hash: `93c4b3726b91848aff9ea96a07cb9e92`. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`. **Phase 11 not started.**
+**COMPLETE (`9b3bda7`).** Runtime foreign affairs in `packages/sim/src/foreign/` as `SimState.foreignAffairsRuntime`. Architecture: 48 canonical countries, 47 foreign leaders + Terena President from domestic offices, bilateral relations, trade exposure, treaties, sanctions, crisis lifecycle, abstract conflict, deterministic AI on `foreign-affairs` stream, economy lag + media integration, world map + Foreign Affairs UI. Save schemaVersion **10**.
+
+## 19.1 Phase 10.1 — foreign affairs functional completion
+
+**COMPLETE.** Fixes independent-review blockers without replacing Phase 10 architecture: all **48** runtime countries (W41 with `leaderId: null`, domestic President resolver); President sanctions/posture; foreign AI toward Terena + NPC Terena diplomacy when player ≠ President; crisis emergence + explicit state machine + structured events; conflict records when crises enter conflict; war-powers bridge (`armExecutiveTrigger("war")`); treaty counterparty consent lifecycle; latent vs public crisis labeling; runtime leader display; long-horizon calibration harness. 20-year synthetic kernel hash: `6c6170bc892a0f43ca20690a2f6b16f5`. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`. **Phase 11 not started.**
 
 ## 20. Phase 11 — final integration + UI polish + balance + content
 

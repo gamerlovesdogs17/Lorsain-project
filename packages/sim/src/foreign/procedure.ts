@@ -14,6 +14,7 @@ import { allocateDiplomaticActionId, getBilateralRelation } from "./state.js";
 import { adjustRelation, outreachRelationDelta } from "./relations.js";
 import { imposeSanctions, liftSanctions } from "./sanctions.js";
 import { proposeTreaty } from "./treaties.js";
+import { acceptIncomingTreaty, rejectIncomingTreaty } from "./treaties.js";
 import { deescalateCrisis } from "./crises.js";
 import { queueTradeNegotiationEffect } from "./economy-bridge.js";
 
@@ -472,7 +473,7 @@ export function castTreatyRatificationVote(
     return { error: reject("PLAYER_AUTONOMY", args.actorId) };
   }
   const treaty = state.foreignAffairsRuntime.treaties[args.treatyId];
-  if (!treaty || treaty.ratificationStatus !== "pending") {
+  if (!treaty || treaty.status !== "ratification_pending" || treaty.ratificationStatus !== "pending") {
     return { error: reject("NO_PENDING_TREATY", args.treatyId) };
   }
   state.foreignAffairsRuntime.pendingPlayerTreatyVotes[args.treatyId] = {
@@ -480,4 +481,68 @@ export function castTreatyRatificationVote(
     choice: args.choice,
   };
   return { ok: true };
+}
+
+export function respondIncomingDiplomacy(
+  world: KernelWorld,
+  state: SimState,
+  args: { actorId: string; pendingId: string; response: "accept" | "reject" },
+  commandId: string | null,
+): { events: SimEvent[] } | { error: CommandError } {
+  const autonomy = playerOnly(args.actorId, state);
+  if (autonomy) return { error: autonomy };
+  const pres = requirePresident(world, state, args.actorId);
+  if (pres) return { error: pres };
+
+  const pending = state.foreignAffairsRuntime.pendingIncomingDiplomacy.find(
+    (p) => p.id === args.pendingId,
+  );
+  if (!pending) return { error: reject("NOT_FOUND", args.pendingId) };
+
+  if (pending.kind === "treaty_proposal") {
+    if (args.response === "accept") {
+      const out = acceptIncomingTreaty(state, args.pendingId, commandId);
+      if ("error" in out) return { error: reject(out.error.code, out.error.message) };
+      return { events: out.events };
+    }
+    const out = rejectIncomingTreaty(state, args.pendingId, commandId);
+    if ("error" in out) return { error: reject(out.error.code, out.error.message) };
+    return { events: out.events };
+  }
+
+  if (pending.kind === "summit_invite") {
+    const idx = state.foreignAffairsRuntime.pendingIncomingDiplomacy.findIndex(
+      (p) => p.id === args.pendingId,
+    );
+    if (idx >= 0) state.foreignAffairsRuntime.pendingIncomingDiplomacy.splice(idx, 1);
+    if (args.response === "accept") {
+      const rel = getBilateralRelation(
+        state.foreignAffairsRuntime,
+        TERENA_WORLD_ID,
+        pending.actorCountryId,
+      );
+      if (rel) {
+        adjustRelation(rel, { general: 6, trust: 0.08, securityTension: -0.04 });
+        rel.lastUpdated = state.currentDate;
+      }
+      return {
+        events: [
+          pushHistory(state, {
+            date: state.currentDate,
+            type: "DIPLOMATIC_SUMMIT",
+            importance: 0.72,
+            visibility: "public",
+            actorIds: [args.actorId],
+            entityIds: [pending.actorCountryId],
+            payload: { targetCountryId: pending.actorCountryId, incoming: true },
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
+        ],
+      };
+    }
+    return { events: [] };
+  }
+
+  return { error: reject("INVALID_KIND", pending.kind) };
 }

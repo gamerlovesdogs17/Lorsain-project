@@ -1,8 +1,9 @@
 import type { IsoDate } from "../calendar.js";
 import type { KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
+import { currentPresidentialAuthorityId } from "../executive/state.js";
 import { allocateForeignLeaderId } from "./state.js";
-import type { CanonicalWorldLeader } from "./types.js";
+import { TERENA_WORLD_ID, type CanonicalWorldLeader } from "./types.js";
 
 const DEMOCRATIC = /republic|monarchy|democracy|federal|parliamentary|constitutional/i;
 const AUTHORITARIAN = /managed|theocracy|empire|autocracy|principality/i;
@@ -21,6 +22,44 @@ function leaderTitle(government: string): string {
   return "Head of State";
 }
 
+export function resolveCountryLeaderId(
+  world: KernelWorld,
+  state: SimState,
+  countryId: string,
+): string | null {
+  if (countryId === TERENA_WORLD_ID) {
+    return currentPresidentialAuthorityId(world, state);
+  }
+  return state.foreignAffairsRuntime.countries[countryId]?.leaderId ?? null;
+}
+
+export function resolveCountryLeaderDisplay(
+  world: KernelWorld,
+  state: SimState,
+  countryId: string,
+): { name: string; title: string } | null {
+  if (countryId === TERENA_WORLD_ID) {
+    const authorityId = currentPresidentialAuthorityId(world, state);
+    if (!authorityId) return null;
+    return { name: authorityId, title: "President" };
+  }
+  const runtime = state.foreignAffairsRuntime.countries[countryId];
+  if (!runtime) return null;
+  const activeLeader = runtime.metadata.activeLeader;
+  if (activeLeader && typeof activeLeader === "object" && activeLeader !== null) {
+    const rec = activeLeader as { name?: string; title?: string };
+    if (typeof rec.name === "string" && typeof rec.title === "string") {
+      return { name: rec.name, title: rec.title };
+    }
+  }
+  const leaderId = runtime.leaderId;
+  if (leaderId && world.worldLeaders[leaderId]) {
+    const leader = world.worldLeaders[leaderId]!;
+    return { name: leader.name, title: leader.title };
+  }
+  return null;
+}
+
 export function maybeChangeLeader(
   world: KernelWorld,
   state: SimState,
@@ -28,6 +67,7 @@ export function maybeChangeLeader(
   rng: RngService,
   date: IsoDate,
 ): CanonicalWorldLeader | null {
+  if (countryId === TERENA_WORLD_ID) return null;
   const canonical = world.worldCountries[countryId];
   const runtime = state.foreignAffairsRuntime.countries[countryId];
   if (!canonical || !runtime) return null;
@@ -59,6 +99,7 @@ export function processLeadershipChanges(
   const changed: CanonicalWorldLeader[] = [];
   const tiers = ["superpower", "great power", "major power"];
   for (const countryId of Object.keys(state.foreignAffairsRuntime.countries).sort()) {
+    if (countryId === TERENA_WORLD_ID) continue;
     const canonical = world.worldCountries[countryId];
     if (!canonical) continue;
     const isMajor = tiers.some((t) => canonical.powerTier.toLowerCase() === t);

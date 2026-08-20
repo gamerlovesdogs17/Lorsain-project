@@ -4,7 +4,7 @@ This repository holds the **canonical content foundation**, TypeScript simulatio
 
 ## Status
 
-**Phase 0–9.6 COMPLETE. Phase 10 Foreign Affairs COMPLETE.** Current UI truth: `docs/UI_SYSTEM_V3_1.md`. Foreign affairs design: `docs/FOREIGN_AFFAIRS_SYSTEM.md`. Blockers vs backlog: `docs/KNOWN_ISSUES.md`.
+**Phase 0–9.6 COMPLETE. Phase 10 (`9b3bda7`) + Phase 10.1 foreign affairs functional completion COMPLETE.** Current UI truth: `docs/UI_SYSTEM_V3_1.md`. Foreign affairs design: `docs/FOREIGN_AFFAIRS_SYSTEM.md`. Blockers vs backlog: `docs/KNOWN_ISSUES.md`. **Phase 11 not started.**
 
 ## Canonical lock
 

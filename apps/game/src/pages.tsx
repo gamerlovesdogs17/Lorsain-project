@@ -4,6 +4,7 @@ import {
   collectPlayerActionableDecisions,
   currentAssemblyMemberIds,
   storiesChronological,
+  TERENA_WORLD_ID,
   type CommandResult,
   type KernelWorld,
   type SimEvent,
@@ -18,7 +19,7 @@ import { EconomyPage } from "./economyScreen.js";
 import { ForeignAffairsPage } from "./foreignAffairsScreen.js";
 import { OrganizationsPage } from "./organizationsScreen.js";
 import { NewsPage } from "./newsScreen.js";
-import { isMp, playerCampaign, qualitativeStanding } from "./format.js";
+import { isMp, isPresident, playerCampaign, qualitativeStanding } from "./format.js";
 import {
   contestDisplayName,
   campaignTypeLabel,
@@ -27,10 +28,15 @@ import {
   electionDisplayName,
   eventDisplay,
   factionDisplayName,
+  isPublicCrisisStage,
+  latentStrategicTensions,
   partyColor,
   partyDisplayName,
   politicianDisplayName,
   pollShareLine,
+  publicSeverityLabel,
+  mediaHeadlineForEvent,
+  treatyStatusLabel,
   treatyTypeLabel,
   type PresentationCatalog,
 } from "./presentation.js";
@@ -146,9 +152,15 @@ function Home(props: PageProps) {
   const lead =
     [...monthEvents].sort((a, b) => b.importance - a.importance)[0] ??
     props.snap.history.filter((e) => e.type !== "TURN_COMPLETED").slice(-1)[0];
-  const terenaCrisis = Object.values(props.snap.foreignAffairsRuntime.crises).find(
-    (c) => c.stage !== "settled" && c.participantIds.includes("W41"),
+  const terenaPublicCrisis = Object.values(props.snap.foreignAffairsRuntime.crises).find(
+    (c) =>
+      isPublicCrisisStage(c.stage) && c.participantIds.includes(TERENA_WORLD_ID),
   );
+  const terenaLatentTension = latentStrategicTensions(props.snap).find((c) =>
+    c.participantIds.includes(TERENA_WORLD_ID),
+  );
+  const playerIsPresident = isPresident(props.world, props.snap, props.snap.playerPoliticianId);
+  const warTrigger = props.snap.executiveRuntime.warTrigger;
   const feed = monthEvents.slice(-12).reverse();
   const stories = storiesChronological(props.snap).slice(0, 5);
   const polls = Object.values(props.snap.polls).slice(-2);
@@ -205,17 +217,43 @@ function Home(props: PageProps) {
         <EmptyState>No major developments this month.</EmptyState>
       )}
 
-      {terenaCrisis ? (
+      {terenaPublicCrisis ? (
         <div className="briefing-urgent alert">
           <strong>International crisis</strong>
           <p>
             Terena is involved in an active international crisis (
-            {crisisStageLabel(terenaCrisis.stage)}). See{" "}
-            {terenaCrisis.participantIds
-              .filter((id) => id !== "W41")
+            {crisisStageLabel(terenaPublicCrisis.stage)} ·{" "}
+            {publicSeverityLabel(terenaPublicCrisis.intensity, terenaPublicCrisis.stage)}). See{" "}
+            {terenaPublicCrisis.participantIds
+              .filter((id) => id !== TERENA_WORLD_ID)
               .map((id) => countryDisplayName(props.world, id))
               .join(", ") || "foreign partners"}{" "}
             on the Foreign Affairs map.
+          </p>
+        </div>
+      ) : null}
+
+      {terenaLatentTension && !terenaPublicCrisis ? (
+        <div className="briefing-note alert">
+          <strong>Strategic tension</strong>
+          <p>
+            Background tension with{" "}
+            {terenaLatentTension.participantIds
+              .filter((id) => id !== TERENA_WORLD_ID)
+              .map((id) => countryDisplayName(props.world, id))
+              .join(", ") || "a foreign power"}{" "}
+            persists ({publicSeverityLabel(terenaLatentTension.intensity, terenaLatentTension.stage)}
+            ). Monitor developments on the Foreign Affairs map.
+          </p>
+        </div>
+      ) : null}
+
+      {playerIsPresident && warTrigger ? (
+        <div className="briefing-urgent alert">
+          <strong>War powers decision required</strong>
+          <p>
+            International developments require presidential war powers. Open Executive or Foreign
+            Affairs to invoke war powers or seek Assembly authorization.
           </p>
         </div>
       ) : null}
@@ -273,7 +311,12 @@ function Home(props: PageProps) {
                 {stories.map((s) => (
                   <NewsItem
                     key={s.id}
-                    headline={s.headlineKey}
+                    headline={
+                      s.headlineKey === "Political developments" ||
+                      s.headlineKey === "Political storm in Valen"
+                        ? mediaHeadlineForEvent(s.factEventType, s.framing)
+                        : s.headlineKey
+                    }
                     outlet={props.world.mediaOutlets[s.outletId]?.name ?? s.outletId}
                     date={s.date}
                     category={s.category}
@@ -901,7 +944,7 @@ function Archive(props: PageProps) {
             <SectionCard title="Treaties">
               {treaties.map((t) => (
                 <div key={t.id}>
-                  {t.title} · {treatyTypeLabel(t.kind)} · {t.status}
+                  {t.title} · {treatyTypeLabel(t.kind)} · {treatyStatusLabel(t)}
                   {t.signedDate ? ` · ${t.signedDate}` : ""}
                 </div>
               ))}

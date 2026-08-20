@@ -4,8 +4,10 @@ import {
   emptyForeignAffairsRuntime,
   isCrisisStage,
   isMilitaryPostureLevel,
+  isSanctionScope,
   isStrategicGoalId,
   isTreatyKind,
+  isTreatyStatus,
   type ForeignAffairsRuntime,
 } from "./types.js";
 
@@ -15,6 +17,10 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
+}
+
+function clampTrend(n: number): number {
+  return Math.max(-1, Math.min(1, n));
 }
 
 function clampRelation(n: number): number {
@@ -35,6 +41,24 @@ function parseBilateral(raw: unknown): ForeignAffairsRuntime["bilateralRelations
   };
 }
 
+function parsePendingIncoming(raw: unknown): ForeignAffairsRuntime["pendingIncomingDiplomacy"][number] | null {
+  if (!isRecord(raw)) return null;
+  if (typeof raw.id !== "string" || typeof raw.actorCountryId !== "string") return null;
+  const kind = raw.kind === "summit_invite" ? "summit_invite" : "treaty_proposal";
+  return {
+    id: raw.id,
+    kind,
+    actorCountryId: raw.actorCountryId,
+    targetCountryId: typeof raw.targetCountryId === "string" ? raw.targetCountryId : "",
+    treatyId: raw.treatyId != null && typeof raw.treatyId === "string" ? raw.treatyId : null,
+    treatyKind:
+      typeof raw.treatyKind === "string" && isTreatyKind(raw.treatyKind) ? raw.treatyKind : null,
+    title: raw.title != null && typeof raw.title === "string" ? raw.title : null,
+    date: typeof raw.date === "string" && isIsoDate(raw.date) ? raw.date : "2000-01-01",
+    metadata: isRecord(raw.metadata) ? (raw.metadata as ForeignAffairsRuntime["pendingIncomingDiplomacy"][0]["metadata"]) : {},
+  };
+}
+
 export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime | string {
   if (raw == null) return emptyForeignAffairsRuntime();
   if (!isRecord(raw)) return "foreignAffairsRuntime must be an object";
@@ -49,6 +73,10 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
     typeof raw.diplomaticActionsThisMonth === "number"
       ? Math.max(0, raw.diplomaticActionsThisMonth)
       : 0;
+  runtime.warTriggerArmedByConflictId =
+    raw.warTriggerArmedByConflictId != null && typeof raw.warTriggerArmedByConflictId === "string"
+      ? raw.warTriggerArmedByConflictId
+      : null;
   if (isRecord(raw.countries)) {
     for (const [id, rec] of Object.entries(raw.countries)) {
       if (!isRecord(rec)) continue;
@@ -61,7 +89,12 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
           : "normal";
       runtime.countries[id] = {
         countryId: id,
-        leaderId: typeof rec.leaderId === "string" ? rec.leaderId : "",
+        leaderId:
+          rec.leaderId === null
+            ? null
+            : typeof rec.leaderId === "string"
+              ? rec.leaderId
+              : null,
         posture,
         capabilities: isRecord(rec.capabilities)
           ? {
@@ -73,7 +106,7 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
               cyber: clamp01(Number(rec.capabilities.cyber ?? 0.2)),
               logistics: clamp01(Number(rec.capabilities.logistics ?? 0.3)),
             }
-          : emptyForeignAffairsRuntime().countries[id]?.capabilities ?? {
+          : {
               economic: 0.3,
               land: 0.3,
               air: 0.3,
@@ -90,6 +123,10 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
         activeSanctionIds: Array.isArray(rec.activeSanctionIds)
           ? rec.activeSanctionIds.filter((x): x is string => typeof x === "string")
           : [],
+        governmentStability: clamp01(Number(rec.governmentStability ?? 0.55)),
+        economicCapacity: clamp01(Number(rec.economicCapacity ?? 0.45)),
+        economicTrend: clampTrend(Number(rec.economicTrend ?? 0)),
+        domesticPressure: clamp01(Number(rec.domesticPressure ?? 0.4)),
         metadata: isRecord(rec.metadata) ? (rec.metadata as ForeignAffairsRuntime["countries"][string]["metadata"]) : {},
       };
     }
@@ -103,6 +140,14 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
   if (isRecord(raw.treaties)) {
     for (const [id, rec] of Object.entries(raw.treaties)) {
       if (!isRecord(rec) || parseCanonicalAllocatedId("TRT", id) == null) continue;
+      const counterpartyResponses: Record<string, "pending" | "accepted" | "rejected"> = {};
+      if (isRecord(rec.counterpartyResponses)) {
+        for (const [cid, resp] of Object.entries(rec.counterpartyResponses)) {
+          if (resp === "pending" || resp === "accepted" || resp === "rejected") {
+            counterpartyResponses[cid] = resp;
+          }
+        }
+      }
       runtime.treaties[id] = {
         id,
         kind: typeof rec.kind === "string" && isTreatyKind(rec.kind) ? rec.kind : "trade",
@@ -116,12 +161,7 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
             ? rec.signedDate
             : null,
         status:
-          rec.status === "active" ||
-          rec.status === "proposed" ||
-          rec.status === "suspended" ||
-          rec.status === "terminated"
-            ? rec.status
-            : "proposed",
+          typeof rec.status === "string" && isTreatyStatus(rec.status) ? rec.status : "proposed",
         ratificationStatus:
           rec.ratificationStatus === "pending" ||
           rec.ratificationStatus === "ratified" ||
@@ -134,6 +174,7 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
           rec.ratificationVoteId != null && typeof rec.ratificationVoteId === "string"
             ? rec.ratificationVoteId
             : null,
+        counterpartyResponses,
         metadata: isRecord(rec.metadata) ? (rec.metadata as ForeignAffairsRuntime["treaties"][string]["metadata"]) : {},
       };
     }
@@ -155,6 +196,8 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
             : null,
         severity: clamp01(Number(rec.severity ?? 0.3)),
         economicWeight: clamp01(Number(rec.economicWeight ?? 0.2)),
+        scope:
+          typeof rec.scope === "string" && isSanctionScope(rec.scope) ? rec.scope : "targeted",
         active: rec.active !== false,
         metadata: isRecord(rec.metadata) ? (rec.metadata as ForeignAffairsRuntime["sanctions"][string]["metadata"]) : {},
       };
@@ -191,6 +234,8 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
         belligerentIds: Array.isArray(rec.belligerentIds)
           ? rec.belligerentIds.filter((x): x is string => typeof x === "string")
           : [],
+        aggressorId:
+          rec.aggressorId != null && typeof rec.aggressorId === "string" ? rec.aggressorId : null,
         startedDate:
           typeof rec.startedDate === "string" && isIsoDate(rec.startedDate)
             ? rec.startedDate
@@ -201,6 +246,18 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
             : null,
         intensity: clamp01(Number(rec.intensity ?? 0.5)),
         crisisId: rec.crisisId != null && typeof rec.crisisId === "string" ? rec.crisisId : null,
+        objectives: Array.isArray(rec.objectives)
+          ? rec.objectives.filter((x): x is string => typeof x === "string")
+          : [],
+        balance: clamp01(Number(rec.balance ?? 0.5)),
+        politicalCost: clamp01(Number(rec.politicalCost ?? 0.3)),
+        outcome: rec.outcome != null && typeof rec.outcome === "string" ? rec.outcome : null,
+        ceasefireDate:
+          rec.ceasefireDate != null && typeof rec.ceasefireDate === "string" && isIsoDate(rec.ceasefireDate)
+            ? rec.ceasefireDate
+            : null,
+        warPowerId:
+          rec.warPowerId != null && typeof rec.warPowerId === "string" ? rec.warPowerId : null,
         metadata: isRecord(rec.metadata) ? (rec.metadata as ForeignAffairsRuntime["conflicts"][string]["metadata"]) : {},
       };
     }
@@ -263,6 +320,11 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
       };
     }
   }
+  if (Array.isArray(raw.pendingIncomingDiplomacy)) {
+    runtime.pendingIncomingDiplomacy = raw.pendingIncomingDiplomacy
+      .map(parsePendingIncoming)
+      .filter((p): p is NonNullable<typeof p> => p != null);
+  }
   if (Array.isArray(raw.pendingPresidentialActions)) {
     runtime.pendingPresidentialActions = raw.pendingPresidentialActions
       .filter((rec): rec is Record<string, unknown> => isRecord(rec))
@@ -275,7 +337,6 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
             rec.kind === "lift_sanctions" ||
             rec.kind === "posture_change" ||
             rec.kind === "exercises" ||
-            rec.kind === "treaty_proposal" ||
             rec.kind === "warning" ||
             rec.kind === "mediation" ||
             rec.kind === "trade_negotiation" ||
@@ -313,6 +374,7 @@ export function foreignCounterError(
     nextForeignLeaderId: number;
     nextDiplomaticActionId: number;
     nextTreatyRatificationId: number;
+    nextIncomingDiplomacyId?: number;
   },
 ): string | null {
   const max = (prefix: string, ids: string[]) =>
@@ -329,6 +391,12 @@ export function foreignCounterError(
   }
   if (counters.nextTreatyRatificationId <= max("TRV", Object.keys(runtime.treatyRatifications))) {
     return "nextTreatyRatificationId";
+  }
+  if (
+    counters.nextIncomingDiplomacyId != null &&
+    counters.nextIncomingDiplomacyId <= max("IND", runtime.pendingIncomingDiplomacy.map((p) => p.id))
+  ) {
+    return "nextIncomingDiplomacyId";
   }
   return null;
 }

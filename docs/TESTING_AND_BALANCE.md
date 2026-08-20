@@ -54,17 +54,20 @@ Run the batch calibrator after foreign-affairs changes:
 pnpm calibrate:foreign
 ```
 
-Default batch: **20 seeds × 15 years** (180 monthly turns), hands-off MP (`NPC030`), no player diplomatic commands. The script prints per-seed totals and distribution summaries for:
+Default batch: **20 seeds × 15 years** (180 monthly turns), hands-off MP (`NPC030`), no player diplomatic commands. Uses the **calibration-only** foreign month driver (`advanceForeignCalibrationMonths`) so domestic election interrupts do not truncate the horizon.
 
-- non-preexisting crises
-- sanctions imposed
-- treaties signed (excluding seeded DC collective-security)
-- active wars at horizon
+The script prints per-seed totals and distribution summaries for:
+
+- emergent crises created and settled
+- conflicts started and ended (**ever**, not only active at horizon)
+- Terena and Vaskara–Terena wars
+- sanctions imposed and lifted
+- treaties proposed, rejected, and activated (excluding seeded DC collective-security)
+- foreign AI actions toward Terena
 - foreign leadership changes
-- average crisis duration (months)
-- elevated-posture signals (including Vaskara baseline)
+- elevated-posture signals
 
-**Unit tests** (`packages/sim/src/foreign.test.ts`, `foreign.determinism.test.ts`) cover baseline seeding (48 countries, canonical Terena relations), Vaskara heightened posture + latent crisis, determinism, save/reload, v9→v10 migration (no fabricated history), player autonomy (MP treaty votes, President sanctions/treaties), and information boundaries (`strategicGoals` stay out of public history/decisions).
+**Unit tests** (`packages/sim/src/foreign.test.ts`, `foreign.determinism.test.ts`) cover baseline seeding (48 countries including W41 with domestic President, canonical Terena relations), Vaskara heightened posture + **latent** (not public active) crisis, determinism, save/reload, v9→v10 migration (no fabricated history), player autonomy (MP treaty votes, President sanctions/treaties/posture), Phase 10.1 regressions (crisis machine, treaty counterparty, war-powers trigger, leader display), and information boundaries.
 
 **Desired long-run behavior** (extend batch to 100×50 years when tuning): a broad distribution where many saves have no great-power war, some have serious regional wars, and only a small minority escalate into system-wide conflict. Vaskara/Terena tension should raise risk without making war inevitable.
 

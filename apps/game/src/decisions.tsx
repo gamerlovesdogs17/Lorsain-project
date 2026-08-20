@@ -1,6 +1,8 @@
 import type { Command, KernelWorld, SimState, Simulation } from "@lorsain/sim";
 import { collectPlayerActionableDecisions } from "@lorsain/sim";
 import type { CommandResult } from "@lorsain/sim";
+import { isPresident } from "./format.js";
+import { foreignPresidentialActionLabel } from "./presentation.js";
 import { interruptDisplay } from "./presentation/display.js";
 
 function VoteRow({
@@ -36,15 +38,23 @@ export function DecisionPanel(props: {
   const { snap, sim, world } = props;
   const interrupt = snap.pendingInterrupt;
   const decisions = collectPlayerActionableDecisions(world, snap);
-  if (decisions.length === 0) return null;
+  const president = isPresident(world, snap, snap.playerPoliticianId);
+  const warTrigger = snap.executiveRuntime.warTrigger;
+  if (decisions.length === 0 && !(president && warTrigger)) return null;
 
   function run(command: Command) {
     props.report(sim.executeCommand(command));
     props.onDone();
   }
 
-  const votes = decisions.filter((d) => d.kind !== "interrupt" && d.kind !== "sign_bill");
+  const votes = decisions.filter(
+    (d) =>
+      d.kind !== "interrupt" &&
+      d.kind !== "sign_bill" &&
+      d.kind !== "foreign_presidential_action",
+  );
   const signs = decisions.filter((d) => d.kind === "sign_bill");
+  const incomingDiplomacy = decisions.filter((d) => d.kind === "foreign_presidential_action");
 
   return (
     <div className="alert">
@@ -83,6 +93,58 @@ export function DecisionPanel(props: {
           )}
         </div>
       ) : null}
+      {president && warTrigger ? (
+        <div className="row" style={{ marginTop: "0.5rem" }}>
+          <span>International crisis requires war powers authorization</span>
+          <button type="button" className="btn" onClick={() => run({ type: "BEGIN_WAR_POWERS" })}>
+            Begin war powers
+          </button>
+        </div>
+      ) : null}
+      {incomingDiplomacy.map((d) => {
+        const action = snap.foreignAffairsRuntime.pendingPresidentialActions.find(
+          (a) =>
+            d.targetCountryId != null
+              ? a.targetCountryId === d.targetCountryId && d.key.includes(a.kind)
+              : d.key.includes(a.kind),
+        );
+        const label = action
+          ? foreignPresidentialActionLabel(world, snap, action)
+          : d.label;
+        return (
+          <div key={d.key} className="row incoming-diplomacy-decision" style={{ marginTop: "0.5rem" }}>
+            <span>{label}</span>
+            <button
+              type="button"
+              className="btn"
+              onClick={() =>
+                run({
+                  type: "RESPOND_INCOMING_DIPLOMACY",
+                  accept: true,
+                  kind: action?.kind,
+                  targetCountryId: action?.targetCountryId ?? d.targetCountryId,
+                } as unknown as Command)
+              }
+            >
+              Accept
+            </button>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() =>
+                run({
+                  type: "RESPOND_INCOMING_DIPLOMACY",
+                  accept: false,
+                  kind: action?.kind,
+                  targetCountryId: action?.targetCountryId ?? d.targetCountryId,
+                } as unknown as Command)
+              }
+            >
+              Decline
+            </button>
+          </div>
+        );
+      })}
       {signs.map((d) => (
         <div key={d.key} className="row" style={{ marginTop: "0.5rem" }}>
           <span>{d.label}</span>

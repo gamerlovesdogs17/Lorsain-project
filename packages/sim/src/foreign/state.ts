@@ -38,6 +38,10 @@ export function allocateTreatyRatificationId(state: SimState): string {
   return padId("TRV", state.counters.nextTreatyRatificationId++);
 }
 
+export function allocateIncomingDiplomacyId(state: SimState): string {
+  return padId("IND", state.counters.nextIncomingDiplomacyId++);
+}
+
 export function ensureForeignAffairsRuntime(state: SimState): ForeignAffairsRuntime {
   if (!state.foreignAffairsRuntime) {
     state.foreignAffairsRuntime = emptyForeignAffairsRuntime();

@@ -144,6 +144,7 @@ import { processMediaMonth } from "./media/monthly.js";
 import { emptyMediaRuntime } from "./media/types.js";
 import { emptyForeignAffairsRuntime } from "./foreign/types.js";
 import { processForeignAffairsMonth } from "./foreign/monthly.js";
+import { advanceForeignCalibrationMonths as advanceForeignCalibrationMonthsHarness } from "./foreign/calibration-harness.js";
 import { seedForeignAffairsRuntime } from "./foreign/baseline.js";
 import { needsForeignAffairsSeed } from "./foreign/state.js";
 import {
@@ -158,7 +159,9 @@ import {
   playerImposeSanctions,
   playerLiftSanctions,
   playerProposeTreaty,
+  respondIncomingDiplomacy,
 } from "./foreign/procedure.js";
+import { linkWarPowerToConflict, resolveWarTriggerConflictId } from "./foreign/war-powers-bridge.js";
 import { isMilitaryPostureLevel, isTreatyKind } from "./foreign/types.js";
 import {
   castConfirmationVote,
@@ -194,6 +197,8 @@ export type Simulation = {
   getSnapshot(): SimState;
   hashState(): string;
   world(): KernelWorld;
+  /** Calibration-only foreign month driver; bypasses domestic scheduled interrupts. */
+  advanceForeignCalibrationMonths(months: number): number;
 };
 
 function freezeWorld(world: KernelWorld): KernelWorld {
@@ -268,6 +273,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextForeignLeaderId: 1,
       nextDiplomaticActionId: 1,
       nextTreatyRatificationId: 1,
+      nextIncomingDiplomacyId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
@@ -2064,6 +2070,15 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       const commandId = nextCommandId();
       const out = beginWarPowers(world, state, { actorId: state.playerPoliticianId }, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
+      const warEvent = out.events.find((e) => e.type === "WAR_POWERS_BEGUN");
+      const warPowerId =
+        warEvent && typeof warEvent.payload.warPowerId === "string"
+          ? warEvent.payload.warPowerId
+          : null;
+      const conflictId = resolveWarTriggerConflictId(state);
+      if (warPowerId && conflictId) {
+        linkWarPowerToConflict(state, conflictId, warPowerId);
+      }
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
@@ -2482,6 +2497,48 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: [], interrupt: null };
     }
 
+    if (command.type === "RESPOND_INCOMING_DIPLOMACY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        pendingId: command.pendingId,
+        response: command.response,
+      };
+      const preview = respondIncomingDiplomacy(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = respondIncomingDiplomacy(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "ACCEPT_INCOMING_TREATY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        pendingId: command.pendingId,
+        response: "accept" as const,
+      };
+      const preview = respondIncomingDiplomacy(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = respondIncomingDiplomacy(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "REJECT_INCOMING_TREATY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        pendingId: command.pendingId,
+        response: "reject" as const,
+      };
+      const preview = respondIncomingDiplomacy(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = respondIncomingDiplomacy(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
     return fail("UNKNOWN_COMMAND", "Unsupported command");
   };
 
@@ -2506,6 +2563,11 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
     },
     world(): KernelWorld {
       return world;
+    },
+    advanceForeignCalibrationMonths(months: number): number {
+      const count = advanceForeignCalibrationMonthsHarness(state, world, rng, months);
+      syncRng(state, rng);
+      return count;
     },
   };
 }

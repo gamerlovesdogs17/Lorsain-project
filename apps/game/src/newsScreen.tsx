@@ -6,7 +6,7 @@ import {
 } from "@lorsain/sim";
 import { useMemo, useState } from "react";
 import { EmptyState, PageHeader, TabBar } from "./ui/kit.js";
-import { eventDisplay, type PresentationCatalog } from "./presentation.js";
+import { eventDisplay, mediaHeadlineForEvent, type PresentationCatalog } from "./presentation.js";
 
 const TABS = [
   "all",
@@ -16,6 +16,7 @@ const TABS = [
   "economy",
   "courts",
   "organizations",
+  "foreign",
 ] as const;
 
 function eventKey(story: MediaStory): string {
@@ -67,7 +68,10 @@ export function NewsPage(props: {
           : undefined;
         const headline = sourceEvent
           ? eventDisplay(props.catalog, props.world, props.snap, sourceEvent)
-          : lead.headlineKey;
+          : lead.headlineKey === "Political developments" ||
+              lead.headlineKey === "Political storm in Valen"
+            ? mediaHeadlineForEvent(lead.factEventType, lead.framing)
+            : lead.headlineKey;
         return (
           <article key={`${eventKey(lead)}-${i}`} className={`news-event${i === 0 ? " lead" : ""}`}>
             <div className="news-event-lead">
@@ -80,7 +84,12 @@ export function NewsPage(props: {
               {group.stories.map((s) => (
                 <div key={s.id} className="outlet-treatment">
                   <strong>{props.world.mediaOutlets[s.outletId]?.name ?? s.outletId}</strong>
-                  <span>{s.headlineKey}</span>
+                  <span>
+                    {s.headlineKey === "Political developments" ||
+                    s.headlineKey === "Political storm in Valen"
+                      ? mediaHeadlineForEvent(s.factEventType, s.framing)
+                      : s.headlineKey}
+                  </span>
                   <span className="muted">{s.framing}</span>
                 </div>
               ))}

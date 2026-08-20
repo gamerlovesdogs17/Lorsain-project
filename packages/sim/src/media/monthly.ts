@@ -44,6 +44,12 @@ const EVENT_CATEGORY: Record<string, MediaCategory> = {
   FOREIGN_LEADERSHIP_CHANGE: "foreign",
   TRADE_NEGOTIATION: "foreign",
   ALLIANCE_CONSULTATION: "foreign",
+  FOREIGN_CRISIS_INCIDENT: "foreign",
+  FOREIGN_CRISIS_ESCALATED: "foreign",
+  FOREIGN_CRISIS_DEESCALATED: "foreign",
+  FOREIGN_CRISIS_SETTLED: "foreign",
+  INTERNATIONAL_CONFLICT_ENDED: "foreign",
+  MILITARY_EXERCISES: "foreign",
 };
 
 function categoryOf(type: string): MediaCategory {
@@ -67,8 +73,35 @@ function categoryOf(type: string): MediaCategory {
   return "politics";
 }
 
-function headlineFor(type: string, framing: MediaStory["framing"]): string {
+function headlineFor(type: string, framing: MediaStory["framing"], payload?: Record<string, unknown>): string {
   const sensational = framing === "sensational";
+  if (type === "FOREIGN_CRISIS_ESCALATED" || type === "FOREIGN_CRISIS_INCIDENT") {
+    return sensational ? "Border crisis erupts abroad" : "International crisis escalates";
+  }
+  if (type === "FOREIGN_CRISIS_DEESCALATED" || type === "FOREIGN_CRISIS_SETTLED") {
+    return sensational ? "Diplomats pull back from the brink" : "International tensions ease";
+  }
+  if (type === "INTERNATIONAL_CONFLICT_STARTED") {
+    return sensational ? "War fears grip the Meridian basin" : "International conflict begins";
+  }
+  if (type === "INTERNATIONAL_CONFLICT_ENDED") {
+    const outcome = payload?.outcome;
+    return sensational
+      ? "Ceasefire shock after foreign clash"
+      : `International conflict ends${outcome ? `: ${outcome}` : ""}`;
+  }
+  if (type === "SANCTIONS_IMPOSED") {
+    return sensational ? "Sanctions hammer trade partners" : "New sanctions imposed";
+  }
+  if (type === "SANCTIONS_LIFTED") {
+    return sensational ? "Sanctions lifted in surprise move" : "Sanctions lifted";
+  }
+  if (type === "TREATY_PROPOSED" || type === "TREATY_RATIFIED") {
+    return sensational ? "Diplomatic breakthrough in the wings" : "Treaty diplomacy advances";
+  }
+  if (type === "MILITARY_EXERCISES" || type === "MILITARY_POSTURE_CHANGED" || type === "TERENA_POSTURE_CHANGED") {
+    return sensational ? "Military posturing raises alarms" : "Military posture shift reported";
+  }
   if (type.includes("COURT") || type === "COURT_DECISION") {
     return sensational ? "Court bombshell upends the rules" : "Constitutional Court issues a decision";
   }
@@ -163,7 +196,7 @@ export function processMediaMonth(
         category: pick.cat,
         importance: Math.min(1, pick.ev.importance),
         framing,
-        headlineKey: headlineFor(pick.ev.type, framing),
+        headlineKey: headlineFor(pick.ev.type, framing, pick.ev.payload as Record<string, unknown>),
         summaryKey: pick.ev.type,
         factEventType: pick.ev.type,
         publicEffects: { framing },

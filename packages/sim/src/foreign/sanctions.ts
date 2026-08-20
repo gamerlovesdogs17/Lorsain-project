@@ -12,7 +12,7 @@ function clamp01(n: number): number {
 
 export function imposeSanctions(
   state: SimState,
-  args: { imposerId: string; targetId: string; severity: number },
+  args: { imposerId: string; targetId: string; severity: number; scope?: import("./types.js").SanctionScope },
   commandId: string | null,
 ): { sanction: SanctionRecord; events: SimEvent[] } | { error: { code: string; message: string } } {
   const severity = clamp01(args.severity);
@@ -32,6 +32,7 @@ export function imposeSanctions(
   }
   const id = allocateSanctionId(state);
   const economicWeight = clamp01(severity * (imposer.tradeExposure + 0.15));
+  const scope = args.scope ?? "targeted";
   const sanction: SanctionRecord = {
     id,
     imposerId: args.imposerId,
@@ -40,6 +41,7 @@ export function imposeSanctions(
     liftedDate: null,
     severity,
     economicWeight,
+    scope,
     active: true,
     metadata: {},
   };
@@ -59,7 +61,7 @@ export function imposeSanctions(
       visibility: "public",
       actorIds: [args.imposerId],
       entityIds: [args.targetId, id],
-      payload: { imposerId: args.imposerId, targetId: args.targetId, severity, sanctionId: id },
+      payload: { imposerId: args.imposerId, targetId: args.targetId, severity, scope, sanctionId: id },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,
     }),

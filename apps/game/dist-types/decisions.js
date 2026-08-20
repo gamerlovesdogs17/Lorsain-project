@@ -1,5 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { collectPlayerActionableDecisions } from "@lorsain/sim";
+import { isPresident } from "./format.js";
+import { foreignPresidentialActionLabel } from "./presentation.js";
 import { interruptDisplay } from "./presentation/display.js";
 function VoteRow({ label, onCast, }) {
     return (_jsxs("div", { className: "row", style: { marginTop: "0.4rem" }, children: [_jsx("span", { children: label }), _jsx("button", { type: "button", className: "btn", onClick: () => onCast("yes"), children: "Yes" }), _jsx("button", { type: "button", className: "btn secondary", onClick: () => onCast("no"), children: "No" }), _jsx("button", { type: "button", className: "btn secondary", onClick: () => onCast("abstain"), children: "Abstain" })] }));
@@ -8,21 +10,44 @@ export function DecisionPanel(props) {
     const { snap, sim, world } = props;
     const interrupt = snap.pendingInterrupt;
     const decisions = collectPlayerActionableDecisions(world, snap);
-    if (decisions.length === 0)
+    const president = isPresident(world, snap, snap.playerPoliticianId);
+    const warTrigger = snap.executiveRuntime.warTrigger;
+    if (decisions.length === 0 && !(president && warTrigger))
         return null;
     function run(command) {
         props.report(sim.executeCommand(command));
         props.onDone();
     }
-    const votes = decisions.filter((d) => d.kind !== "interrupt" && d.kind !== "sign_bill");
+    const votes = decisions.filter((d) => d.kind !== "interrupt" &&
+        d.kind !== "sign_bill" &&
+        d.kind !== "foreign_presidential_action");
     const signs = decisions.filter((d) => d.kind === "sign_bill");
+    const incomingDiplomacy = decisions.filter((d) => d.kind === "foreign_presidential_action");
     return (_jsxs("div", { className: "alert", children: [_jsx("strong", { children: "Required decisions" }), _jsxs("p", { className: "muted", children: [decisions.length, " item", decisions.length === 1 ? "" : "s", " need your action before the month can close without abstention."] }), interrupt ? (_jsxs("div", { children: [_jsx("div", { children: interruptDisplay(interrupt) }), interrupt.code === "PRESIDENTIAL_ELECTION_DUE" ? (_jsx("button", { type: "button", className: "btn", onClick: () => {
                             run({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
                             run({ type: "RESUME_TURN" });
                         }, children: "Resolve presidential election" })) : interrupt.requiresResolution ? (_jsx("p", { className: "muted", children: "This event cannot be skipped. Use the legal action above." })) : (_jsx("button", { type: "button", className: "btn", onClick: () => {
                             run({ type: "ACKNOWLEDGE_INTERRUPT" });
                             run({ type: "RESUME_TURN" });
-                        }, children: "Continue" }))] })) : null, signs.map((d) => (_jsxs("div", { className: "row", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: d.label }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "SIGN_BILL", billId: d.billId }), children: "Sign" }), _jsx("button", { type: "button", className: "btn danger", onClick: () => run({ type: "RETURN_BILL", billId: d.billId }), children: "Return" })] }, d.key))), _jsx("div", { className: "decision-list", children: votes.map((d) => {
+                        }, children: "Continue" }))] })) : null, president && warTrigger ? (_jsxs("div", { className: "row", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: "International crisis requires war powers authorization" }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "BEGIN_WAR_POWERS" }), children: "Begin war powers" })] })) : null, incomingDiplomacy.map((d) => {
+                const action = snap.foreignAffairsRuntime.pendingPresidentialActions.find((a) => d.targetCountryId != null
+                    ? a.targetCountryId === d.targetCountryId && d.key.includes(a.kind)
+                    : d.key.includes(a.kind));
+                const label = action
+                    ? foreignPresidentialActionLabel(world, snap, action)
+                    : d.label;
+                return (_jsxs("div", { className: "row incoming-diplomacy-decision", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: label }), _jsx("button", { type: "button", className: "btn", onClick: () => run({
+                                type: "RESPOND_INCOMING_DIPLOMACY",
+                                accept: true,
+                                kind: action?.kind,
+                                targetCountryId: action?.targetCountryId ?? d.targetCountryId,
+                            }), children: "Accept" }), _jsx("button", { type: "button", className: "btn secondary", onClick: () => run({
+                                type: "RESPOND_INCOMING_DIPLOMACY",
+                                accept: false,
+                                kind: action?.kind,
+                                targetCountryId: action?.targetCountryId ?? d.targetCountryId,
+                            }), children: "Decline" })] }, d.key));
+            }), signs.map((d) => (_jsxs("div", { className: "row", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: d.label }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "SIGN_BILL", billId: d.billId }), children: "Sign" }), _jsx("button", { type: "button", className: "btn danger", onClick: () => run({ type: "RETURN_BILL", billId: d.billId }), children: "Return" })] }, d.key))), _jsx("div", { className: "decision-list", children: votes.map((d) => {
                     if (d.kind === "motion_vote") {
                         return (_jsx(VoteRow, { label: d.label, onCast: (choice) => run({ type: "CAST_MOTION_VOTE", motionId: d.motionId, choice }) }, d.key));
                     }
@@ -34,6 +59,13 @@ export function DecisionPanel(props) {
                     }
                     if (d.kind === "recall_vote") {
                         return (_jsx(VoteRow, { label: d.label, onCast: (choice) => run({ type: "CAST_RECALL_REFERRAL_VOTE", proceedingId: d.proceedingId, choice }) }, d.key));
+                    }
+                    if (d.kind === "treaty_ratification_vote") {
+                        return (_jsx(VoteRow, { label: d.label, onCast: (choice) => run({
+                                type: "CAST_TREATY_RATIFICATION_VOTE",
+                                treatyId: d.treatyId,
+                                choice,
+                            }) }, d.key));
                     }
                     if (d.kind === "judicial_vote") {
                         return (_jsxs("div", { className: "row", style: { marginTop: "0.4rem" }, children: [_jsx("span", { children: d.label }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "CAST_JUDICIAL_VOTE", caseId: d.caseId, choice: "uphold" }), children: "Uphold" }), _jsx("button", { type: "button", className: "btn danger", onClick: () => run({ type: "CAST_JUDICIAL_VOTE", caseId: d.caseId, choice: "invalidate" }), children: "Invalidate" })] }, d.key));

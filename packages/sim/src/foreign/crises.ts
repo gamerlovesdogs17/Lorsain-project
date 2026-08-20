@@ -1,92 +1,249 @@
 import type { IsoDate } from "../calendar.js";
 import type { RngService } from "../rng.js";
-import type { SimState } from "../types.js";
-import type { CrisisStage, InternationalCrisis } from "./types.js";
+import type { KernelWorld, SimEvent, SimState } from "../types.js";
+import { pushHistory } from "../scheduler.js";
 import { adjustRelation } from "./relations.js";
+import type { CrisisStage, InternationalCrisis } from "./types.js";
+import { isPublicCrisisStage } from "./types.js";
+import { beginConflictFromCrisisWithWarTrigger } from "./conflicts.js";
 
-const STAGE_ORDER: CrisisStage[] = [
-  "latent",
-  "incident",
-  "active",
-  "deescalating",
-  "settled",
-  "conflict",
-];
-
-function stageIndex(stage: CrisisStage): number {
-  return STAGE_ORDER.indexOf(stage);
-}
-
-export function escalateCrisis(
+export function transitionLatent(
   crisis: InternationalCrisis,
   date: IsoDate,
-  delta = 1,
+  target: "incident" | "settled",
 ): CrisisStage {
-  const idx = Math.min(STAGE_ORDER.length - 1, stageIndex(crisis.stage) + delta);
-  const next = STAGE_ORDER[idx]!;
-  if (next !== crisis.stage) {
-    crisis.stage = next;
-    crisis.lastStageChange = date;
-    crisis.intensity = Math.min(1, crisis.intensity + 0.12 * delta);
+  crisis.stage = target;
+  crisis.lastStageChange = date;
+  if (target === "incident") {
+    crisis.intensity = Math.min(1, crisis.intensity + 0.1);
+  } else {
+    crisis.intensity = Math.max(0, crisis.intensity - 0.15);
   }
   return crisis.stage;
 }
 
+export function transitionIncident(
+  crisis: InternationalCrisis,
+  date: IsoDate,
+  target: "active" | "deescalating" | "settled",
+): CrisisStage {
+  crisis.stage = target;
+  crisis.lastStageChange = date;
+  if (target === "active") {
+    crisis.intensity = Math.min(1, crisis.intensity + 0.12);
+  } else if (target === "settled") {
+    crisis.intensity = Math.max(0, crisis.intensity - 0.2);
+  } else {
+    crisis.intensity = Math.max(0, crisis.intensity - 0.08);
+  }
+  return crisis.stage;
+}
+
+export function transitionActive(
+  crisis: InternationalCrisis,
+  date: IsoDate,
+  target: "deescalating" | "conflict",
+): CrisisStage {
+  crisis.stage = target;
+  crisis.lastStageChange = date;
+  if (target === "conflict") {
+    crisis.intensity = Math.min(1, crisis.intensity + 0.18);
+  } else {
+    crisis.intensity = Math.max(0, crisis.intensity - 0.1);
+  }
+  return crisis.stage;
+}
+
+export function transitionDeescalating(
+  crisis: InternationalCrisis,
+  date: IsoDate,
+  target: "settled" | "active",
+): CrisisStage {
+  crisis.stage = target;
+  crisis.lastStageChange = date;
+  if (target === "settled") {
+    crisis.intensity = Math.max(0, crisis.intensity - 0.2);
+  } else {
+    crisis.intensity = Math.min(1, crisis.intensity + 0.08);
+  }
+  return crisis.stage;
+}
+
+export function transitionConflictToCeasefire(
+  crisis: InternationalCrisis,
+  date: IsoDate,
+): CrisisStage {
+  crisis.stage = "deescalating";
+  crisis.lastStageChange = date;
+  crisis.intensity = Math.max(0, crisis.intensity - 0.15);
+  return crisis.stage;
+}
+
+/** @deprecated Use explicit transition functions instead of ordinal arithmetic. */
+export function escalateCrisis(
+  crisis: InternationalCrisis,
+  date: IsoDate,
+  _delta = 1,
+): CrisisStage {
+  switch (crisis.stage) {
+    case "latent":
+      return transitionLatent(crisis, date, "incident");
+    case "incident":
+      return transitionIncident(crisis, date, "active");
+    case "active":
+      return transitionActive(crisis, date, "conflict");
+    case "deescalating":
+      return transitionDeescalating(crisis, date, "active");
+    default:
+      return crisis.stage;
+  }
+}
+
+/** @deprecated Use explicit transition functions instead. */
 export function deescalateCrisis(
   crisis: InternationalCrisis,
   date: IsoDate,
 ): CrisisStage {
-  if (crisis.stage === "conflict") {
-    crisis.stage = "deescalating";
-  } else if (crisis.stage === "active" || crisis.stage === "incident") {
-    crisis.stage = "deescalating";
-  } else if (crisis.stage === "deescalating") {
-    crisis.stage = "settled";
-    crisis.intensity = Math.max(0, crisis.intensity - 0.2);
-  } else if (crisis.stage === "latent") {
-    crisis.stage = "settled";
-    crisis.intensity = Math.max(0, crisis.intensity - 0.15);
+  switch (crisis.stage) {
+    case "conflict":
+      return transitionConflictToCeasefire(crisis, date);
+    case "active":
+    case "incident":
+      return transitionIncident(crisis, date, "deescalating");
+    case "deescalating":
+      return transitionDeescalating(crisis, date, "settled");
+    case "latent":
+      return transitionLatent(crisis, date, "settled");
+    default:
+      return crisis.stage;
   }
-  crisis.lastStageChange = date;
-  return crisis.stage;
+}
+
+function crisisEventType(
+  from: CrisisStage,
+  to: CrisisStage,
+): "FOREIGN_CRISIS_INCIDENT" | "FOREIGN_CRISIS_ESCALATED" | "FOREIGN_CRISIS_DEESCALATED" | "FOREIGN_CRISIS_SETTLED" | null {
+  if (from === "latent" && to === "incident") return "FOREIGN_CRISIS_INCIDENT";
+  if (to === "settled") return "FOREIGN_CRISIS_SETTLED";
+  if (
+    (from === "latent" || from === "incident") &&
+    (to === "active" || to === "conflict")
+  ) {
+    return "FOREIGN_CRISIS_ESCALATED";
+  }
+  if (
+    (from === "active" || from === "conflict" || from === "incident") &&
+    to === "deescalating"
+  ) {
+    return "FOREIGN_CRISIS_DEESCALATED";
+  }
+  if (from === "deescalating" && to === "active") return "FOREIGN_CRISIS_ESCALATED";
+  return null;
+}
+
+function applyRelationDrift(
+  state: SimState,
+  crisis: InternationalCrisis,
+  stage: CrisisStage,
+  date: IsoDate,
+): void {
+  if (!crisis.focalPairKey) return;
+  const rel = state.foreignAffairsRuntime.bilateralRelations[crisis.focalPairKey];
+  if (!rel) return;
+  const tensionDelta =
+    stage === "settled" || stage === "deescalating"
+      ? -0.03
+      : stage === "conflict"
+        ? 0.08
+        : 0.02;
+  adjustRelation(rel, { securityTension: tensionDelta });
+  rel.lastUpdated = date;
 }
 
 export function processCrisisLifecycle(
+  world: KernelWorld,
   state: SimState,
   rng: RngService,
   date: IsoDate,
-): void {
+  commandId: string | null = null,
+): SimEvent[] {
+  const events: SimEvent[] = [];
   for (const crisis of Object.values(state.foreignAffairsRuntime.crises)) {
     if (crisis.stage === "settled") continue;
+    const prev = crisis.stage;
     const drift = rng.float01("foreign-affairs");
-    if (crisis.stage === "latent" && drift < 0.02) {
-      escalateCrisis(crisis, date, 1);
-    } else if (crisis.stage === "incident" && drift < 0.08) {
-      escalateCrisis(crisis, date, 1);
-    } else if (crisis.stage === "active" && drift < 0.06) {
-      if (rng.float01("foreign-affairs") < 0.15) {
-        escalateCrisis(crisis, date, 2);
-      } else if (rng.float01("foreign-affairs") < 0.25) {
-        deescalateCrisis(crisis, date);
+
+    if (crisis.stage === "latent") {
+      if (drift < 0.02) transitionLatent(crisis, date, "incident");
+      else if (drift > 0.97) transitionLatent(crisis, date, "settled");
+    } else if (crisis.stage === "incident") {
+      if (drift < 0.08) transitionIncident(crisis, date, "active");
+      else if (drift < 0.14) transitionIncident(crisis, date, "deescalating");
+      else if (drift > 0.96) transitionIncident(crisis, date, "settled");
+    } else if (crisis.stage === "active") {
+      if (drift < 0.06) {
+        if (rng.float01("foreign-affairs") < 0.15) {
+          transitionActive(crisis, date, "conflict");
+        } else {
+          transitionActive(crisis, date, "deescalating");
+        }
+      } else if (drift < 0.1) {
+        transitionActive(crisis, date, "deescalating");
       }
-    } else if (crisis.stage === "deescalating" && drift < 0.35) {
-      deescalateCrisis(crisis, date);
+    } else if (crisis.stage === "deescalating") {
+      if (drift < 0.35) transitionDeescalating(crisis, date, "settled");
+      else if (drift > 0.98) transitionDeescalating(crisis, date, "active");
+    } else if (crisis.stage === "conflict") {
+      if (drift < 0.08) transitionConflictToCeasefire(crisis, date);
     }
-    const stage = crisis.stage as CrisisStage;
-    if (crisis.focalPairKey) {
-      const rel = state.foreignAffairsRuntime.bilateralRelations[crisis.focalPairKey];
-      if (rel) {
-        const tensionDelta =
-          stage === "settled" || stage === "deescalating"
-            ? -0.03
-            : stage === "conflict"
-              ? 0.08
-              : 0.02;
-        adjustRelation(rel, { securityTension: tensionDelta });
-        rel.lastUpdated = date;
+
+    applyRelationDrift(state, crisis, crisis.stage, date);
+
+    if (crisis.stage !== prev) {
+      const eventType = crisisEventType(prev, crisis.stage);
+      if (eventType) {
+        events.push(
+          pushHistory(state, {
+            date,
+            type: eventType,
+            importance: crisis.stage === "conflict" ? 0.9 : 0.65,
+            visibility: isPublicCrisisStage(crisis.stage) ? "public" : "system",
+            actorIds: crisis.participantIds,
+            entityIds: [crisis.id],
+            payload: {
+              crisisId: crisis.id,
+              fromStage: prev,
+              toStage: crisis.stage,
+              intensity: crisis.intensity,
+              focalPairKey: crisis.focalPairKey,
+            },
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
+        );
+      }
+      if (crisis.stage === "conflict" && prev !== "conflict") {
+        const existing = Object.values(state.foreignAffairsRuntime.conflicts).find(
+          (c) => c.crisisId === crisis.id && c.endedDate == null,
+        );
+        if (!existing) {
+          const aggressorId =
+            (crisis.metadata.aggressorId as string | undefined) ?? crisis.participantIds[0];
+          events.push(
+            ...beginConflictFromCrisisWithWarTrigger(
+              world,
+              state,
+              crisis,
+              date,
+              commandId,
+              aggressorId,
+            ).events,
+          );
+        }
       }
     }
   }
+  return events;
 }
 
 export function crisisPairIds(crisis: InternationalCrisis): [string, string] | null {
@@ -95,6 +252,14 @@ export function crisisPairIds(crisis: InternationalCrisis): [string, string] | n
   return [sorted[0]!, sorted[1]!];
 }
 
+export function publicActiveCrises(
+  runtime: SimState["foreignAffairsRuntime"],
+): InternationalCrisis[] {
+  return Object.values(runtime.crises).filter((c) => isPublicCrisisStage(c.stage));
+}
+
 export function activeCrises(runtime: SimState["foreignAffairsRuntime"]): InternationalCrisis[] {
   return Object.values(runtime.crises).filter((c) => c.stage !== "settled");
 }
+
+export { isPublicCrisisStage };

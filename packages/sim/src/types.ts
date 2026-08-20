@@ -171,6 +171,7 @@ export type Counters = {
   nextForeignLeaderId: number;
   nextDiplomaticActionId: number;
   nextTreatyRatificationId: number;
+  nextIncomingDiplomacyId: number;
 };
 
 export type PresidentialRuntime = {
@@ -508,7 +509,14 @@ export type Command =
       type: "CAST_TREATY_RATIFICATION_VOTE";
       treatyId: string;
       choice: "yes" | "no" | "abstain";
-    };
+    }
+  | {
+      type: "RESPOND_INCOMING_DIPLOMACY";
+      pendingId: string;
+      response: "accept" | "reject";
+    }
+  | { type: "ACCEPT_INCOMING_TREATY"; pendingId: string }
+  | { type: "REJECT_INCOMING_TREATY"; pendingId: string };
 
 export type CommandError = { code: string; message: string };
 

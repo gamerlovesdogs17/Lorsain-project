@@ -508,6 +508,29 @@ button {
 .foreign-crisis-row:last-child {
   border-bottom: none;
 }
+.foreign-war-urgent,
+.foreign-incoming-diplomacy {
+  margin-top: 0.75rem;
+}
+.incoming-diplomacy-drawer {
+  border-left: 3px solid var(--warn);
+}
+.incoming-diplomacy-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.incoming-diplomacy-decision {
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.briefing-note.alert {
+  border-left-color: var(--muted);
+  background: rgba(107, 114, 128, 0.08);
+}
+.foreign-tension-row {
+  opacity: 0.92;
+}
 @media (max-width: 900px) {
   .foreign-affairs-page .foreign-affairs-layout {
     grid-template-columns: 1fr;

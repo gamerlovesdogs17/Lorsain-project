@@ -18,7 +18,7 @@ export function collectForeignPlayerDecisions(
     )) {
       if (rat.status !== "pending") continue;
       const treaty = state.foreignAffairsRuntime.treaties[rat.treatyId];
-      if (!treaty) continue;
+      if (!treaty || treaty.status !== "ratification_pending") continue;
       const pending = state.foreignAffairsRuntime.pendingPlayerTreatyVotes[rat.treatyId];
       if (pending?.choice) continue;
       out.push({
@@ -31,6 +31,36 @@ export function collectForeignPlayerDecisions(
   }
 
   if (president) {
+    for (const incoming of state.foreignAffairsRuntime.pendingIncomingDiplomacy) {
+      if (incoming.kind === "treaty_proposal") {
+        const decision: PlayerActionableDecision = {
+          key: `incoming_treaty:${incoming.id}`,
+          kind: "incoming_treaty",
+          label: `Incoming treaty: ${incoming.title ?? incoming.treatyKind ?? "proposal"}`,
+          targetCountryId: incoming.actorCountryId,
+          pendingId: incoming.id,
+        };
+        if (incoming.treatyId) decision.treatyId = incoming.treatyId;
+        out.push(decision);
+      } else if (incoming.kind === "summit_invite") {
+        out.push({
+          key: `incoming_summit:${incoming.id}`,
+          kind: "incoming_summit",
+          label: `Summit invitation from ${incoming.actorCountryId}`,
+          targetCountryId: incoming.actorCountryId,
+          pendingId: incoming.id,
+        });
+      }
+    }
+
+    if (state.executiveRuntime.warTrigger) {
+      out.push({
+        key: "war_powers:trigger",
+        kind: "war_powers",
+        label: "International conflict — invoke war powers?",
+      });
+    }
+
     for (const action of state.foreignAffairsRuntime.pendingPresidentialActions) {
       const decision: PlayerActionableDecision = {
         key: `foreign_pending:${action.kind}:${action.targetCountryId ?? "none"}`,

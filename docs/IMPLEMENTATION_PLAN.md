@@ -112,7 +112,8 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 9** — **COMPLETE** — political macroeconomy, canonical organizations/media, UI System V2, derived GeoJSON Terena map, schemaVersion 9.
 - **Phase 9.5** — **COMPLETE** — UI System V3 shell: grouped navigation, campaign command center, player-safe labels, map hover/click fix, responsive shell. Several screen-depth items were documented as done but incomplete; see Phase 9.6.
 - **Phase 9.6** — **COMPLETE** — UI System V3.1: map fill/plurality blockers, Trade baseline, presidential/party/courts/news/assembly/new-game/economy depth. See `docs/UI_SYSTEM_V3_1.md`.
-- **Phase 10** — **COMPLETE** — Foreign affairs: 48-state runtime, leaders, relations, trade, treaties, sanctions, crises, abstract conflict, world map UI, schemaVersion 10. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`. **Phase 11 not started.**
+- **Phase 10** — **COMPLETE (`9b3bda7`)** — Foreign affairs architecture: 48-state runtime, leaders, relations, trade, treaties, sanctions, crises, abstract conflict, world map UI, schemaVersion 10. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`.
+- **Phase 10.1** — **COMPLETE** — Foreign affairs functional completion: Terena runtime, AI toward Terena, crisis/conflict reachability, war powers, treaty consent, UI/presentation fixes, regression tests, long-horizon calibration. **Phase 11 not started.**
 
 Deliverables:
 
@@ -266,7 +267,7 @@ Save **schemaVersion 8**; v7→v8 adds empty `constitutionalRuntime` (including 
 - Archive developer tools only in development builds
 - Mobile campaign panel ordered above the map below 900px
 
-Save schema **10**. 20-year synthetic kernel hash: `93c4b3726b91848aff9ea96a07cb9e92`. **Phase 11 not started.**
+Save schema **10**. 20-year synthetic kernel hash: `6c6170bc892a0f43ca20690a2f6b16f5`. **Phase 11 not started.**
 
 ## 19. Phase 10 — foreign affairs
 

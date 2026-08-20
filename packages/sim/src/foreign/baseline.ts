@@ -3,6 +3,7 @@ import type { KernelWorld, SimState } from "../types.js";
 import {
   TERENA_WORLD_ID,
   type BilateralRelation,
+  type CanonicalWorldCountry,
   type ForeignCountryRuntime,
   type InternationalCrisis,
   type TreatyRecord,
@@ -22,6 +23,37 @@ const CANONICAL_TERENA_RELATIONS: Record<string, number> = {
   W37: 65,
 };
 
+function clamp01(n: number): number {
+  return Math.max(0, Math.min(1, n));
+}
+
+function deriveGovernmentStability(country: CanonicalWorldCountry): number {
+  const gov = country.government.toLowerCase();
+  if (/democracy|republic|constitutional|federal|parliamentary/.test(gov)) return 0.72;
+  if (/monarchy|managed/.test(gov)) return 0.58;
+  if (/theocracy|empire|autocracy/.test(gov)) return 0.45;
+  return 0.55;
+}
+
+function deriveEconomicCapacity(country: CanonicalWorldCountry): number {
+  const tier = country.powerTier.toLowerCase();
+  const tierMap: Record<string, number> = {
+    superpower: 0.92,
+    "great power": 0.82,
+    "major power": 0.68,
+    "middle power": 0.52,
+    "small power": 0.35,
+  };
+  return clamp01(tierMap[tier] ?? 0.45);
+}
+
+function deriveDomesticPressure(country: CanonicalWorldCountry): number {
+  const gov = country.government.toLowerCase();
+  if (/managed|theocracy|empire/.test(gov)) return 0.55;
+  if (/democracy|republic/.test(gov)) return 0.35;
+  return 0.42;
+}
+
 function assertCanonicalTerenaRelations(runtime: ForeignAffairsRuntimeShape): void {
   for (const [countryId, expected] of Object.entries(CANONICAL_TERENA_RELATIONS)) {
     const key = bilateralKey(TERENA_WORLD_ID, countryId);
@@ -36,36 +68,47 @@ function assertCanonicalTerenaRelations(runtime: ForeignAffairsRuntimeShape): vo
 
 type ForeignAffairsRuntimeShape = SimState["foreignAffairsRuntime"];
 
+function buildCountryRuntime(
+  canonical: CanonicalWorldCountry,
+  leaderId: string | null,
+  countries: Record<string, CanonicalWorldCountry>,
+): ForeignCountryRuntime {
+  const isTerena = canonical.id === TERENA_WORLD_ID;
+  return {
+    countryId: canonical.id,
+    leaderId,
+    posture: canonical.id === "W40" ? "heightened" : "normal",
+    capabilities: deriveCapabilities(canonical),
+    tradeExposure: deriveTradeExposure(canonical, countries),
+    strategicGoals: deriveStrategicGoals(canonical),
+    institutionIds: isTerena ? ["INT_DC"] : [...canonical.alignmentIds],
+    activeSanctionIds: [],
+    governmentStability: deriveGovernmentStability(canonical),
+    economicCapacity: deriveEconomicCapacity(canonical),
+    economicTrend: 0,
+    domesticPressure: deriveDomesticPressure(canonical),
+    metadata: {},
+  };
+}
+
 export function seedForeignAffairsRuntime(world: KernelWorld, state: SimState): void {
   const runtime = state.foreignAffairsRuntime;
   const countries = world.worldCountries;
   if (Object.keys(countries).length === 0) return;
 
-  const leaderByCountry = new Map(
-    Object.entries(world.worldLeadersByCountryId).map(([countryId, leaderId]) => [
-      countryId,
-      leaderId,
-    ] as const),
-  );
+  const leaderByCountry = new Map<string, string>();
+  for (const [countryId, leaderId] of Object.entries(world.worldLeadersByCountryId)) {
+    leaderByCountry.set(countryId, leaderId);
+  }
   for (const [leaderId, leader] of Object.entries(world.worldLeaders)) {
     leaderByCountry.set(leader.countryId, leaderId);
   }
 
   for (const canonical of Object.values(countries)) {
-    const leaderId = leaderByCountry.get(canonical.id);
-    if (!leaderId) continue;
-    const rec: ForeignCountryRuntime = {
-      countryId: canonical.id,
-      leaderId,
-      posture: canonical.id === "W40" ? "heightened" : "normal",
-      capabilities: deriveCapabilities(canonical),
-      tradeExposure: deriveTradeExposure(canonical, countries),
-      strategicGoals: deriveStrategicGoals(canonical),
-      institutionIds: [...canonical.alignmentIds],
-      activeSanctionIds: [],
-      metadata: {},
-    };
-    runtime.countries[canonical.id] = rec;
+    const isTerena = canonical.id === TERENA_WORLD_ID;
+    const leaderId = isTerena ? null : (leaderByCountry.get(canonical.id) ?? null);
+    if (!isTerena && !leaderId) continue;
+    runtime.countries[canonical.id] = buildCountryRuntime(canonical, leaderId, countries);
   }
 
   const ids = Object.keys(countries).sort();
@@ -93,6 +136,7 @@ export function seedForeignAffairsRuntime(world: KernelWorld, state: SimState): 
       status: "active",
       ratificationStatus: "not_required",
       ratificationVoteId: null,
+      counterpartyResponses: {},
       metadata: { institutionId: "INT_DC", preexisting: true },
     };
     runtime.treaties[treatyId] = treaty;

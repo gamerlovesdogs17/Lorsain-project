@@ -1,6 +1,6 @@
-# Foreign Affairs System (Phase 10)
+# Foreign Affairs System (Phase 10 / 10.1)
 
-Phase 10 adds a persistent, deterministic 48-state foreign-policy layer to `@lorsain/sim`. It consumes Terena's existing presidency, Assembly, economy, media, and constitutional war-powers machinery rather than duplicating domestic authority.
+Phase 10 adds a persistent, deterministic 48-state foreign-policy layer to `@lorsain/sim`. Phase **10.1** completes reachable behavior (Terena runtime, AI, crises/conflicts, treaty consent, war powers, UI). It consumes Terena's existing presidency, Assembly, economy, media, and constitutional war-powers machinery rather than duplicating domestic authority.
 
 Save **schemaVersion 10** introduces `foreignAffairsRuntime`. v9 saves migrate to an empty foreign runtime and receive the January 2028 baseline on first load — no fabricated prior diplomatic history.
 
@@ -44,13 +44,24 @@ Capabilities include outreach, treaty proposals, sanctions, posture changes, exe
 
 ## Crisis lifecycle
 
-Stages: `latent` → `incident` → `active` → `deescalating` / `conflict` → `settled`.
+Explicit state machine (no ordinal stage arithmetic). Stages: `latent` → `incident` → `active` → `deescalating` / `conflict` → `settled`.
+
+- **Latent** = background strategic tension (not counted as an active public crisis on Home).
+- **Incident+** = public international crisis with structured events (`FOREIGN_CRISIS_*`, `INTERNATIONAL_CONFLICT_*`).
+- Entering **conflict** creates an `InternationalConflict` record and emits `INTERNATIONAL_CONFLICT_STARTED`.
+- New crises emerge monthly from bilateral tension, posture, sanctions, geography, treaties, and goals (`crisis-emergence.ts`).
 
 January 2028 baseline includes a **latent** Vaskara–Terena (`W40`–`W41`) tension crisis (`meridian_basin_tension`). Outcomes vary by seed; war is not scripted.
 
+## Terena (W41) runtime
+
+All **48** countries have `foreignAffairsRuntime.countries` entries. Terena uses `leaderId: null`; the current President resolves from domestic office terms via `resolveCountryLeaderId` / `resolveCountryLeaderDisplay`. No duplicate `FLD_W41` foreign leader.
+
 ## Treaties and ratification
 
-Treaty kinds include collective security, bilateral defense, trade, non-aggression, basing, arms limitation, economic cooperation. Pre-existing Democratic Concord collective security is seeded as active with `ratificationStatus: not_required`.
+Treaty lifecycle: `proposed` → `counterparty_pending` → (`accepted` / `rejected`) → `ratification_pending` (when required) → `active`. Counterparties evaluate acceptance from relations, goals, crises, and treaty kind — hostile countries may reject defense pacts.
+
+Treaty kinds include collective security, bilateral defense, trade, non-aggression, basing, arms limitation, economic cooperation. Pre-existing Democratic Concord collective security is seeded as active with `ratificationStatus: not_required`. Active treaties alter AI incentives (deterrence, crisis pressure, trade).
 
 New Terena treaties requiring ratification create a public record and an Assembly vote (`CAST_TREATY_RATIFICATION_VOTE`). Player MPs choose explicitly; missing votes are abstentions, not fabricated yes votes.
 
@@ -97,17 +108,19 @@ Foreign economic consequences enter as **lagged effects** for subsequent months.
 
 ```bash
 pnpm calibrate:foreign
+# optional: FOREIGN_CAL_SEEDS=100 FOREIGN_CAL_YEARS=50 pnpm calibrate:foreign
 ```
 
-Runs 20 seeds × intended 15 years on TERENA_2028. Hands-off advancement auto-resolves the 2028 presidential election but stops at `ASSEMBLY_ELECTION_DUE` (~28 months) until that domain is wired — documented honestly in script output.
+Runs **20 seeds × 15 years** (180 months) on TERENA_2028 using `Simulation.advanceForeignCalibrationMonths` — a **calibration-only** driver that advances foreign affairs without unresolved domestic election interrupts. Never used in normal gameplay.
 
-Tracks crises, sanctions, treaties, wars, leadership changes, crisis duration, elevated posture signals.
+Reports crises created/settled, conflicts started/ended (ever, not just at horizon), Terena/Vaskara wars, sanctions imposed/lifted, treaties proposed/rejected/activated, AI actions toward Terena, leadership changes, posture signals.
+
+Example 5×15-year smoke (Aug 2026): ~250 emergent crises per run, ~1–3 conflicts ever, ~30% runs with Terena involvement, sanctions sometimes lifted, foreign AI toward Terena on every run.
 
 ## Tests
 
-- `packages/sim/src/foreign.test.ts` — baseline, determinism, migration, player autonomy, information boundaries
+- `packages/sim/src/foreign.test.ts` — baseline (48 countries incl. W41), determinism, migration, player autonomy, Phase 10.1 regressions (sanctions, posture, crisis machine, treaty rejection, war trigger, leader display)
 - `packages/sim/src/foreign.determinism.test.ts` — RNG stream isolation
-- 20-year synthetic kernel hash (schema 10): `93c4b3726b91848aff9ea96a07cb9e92`
 
 ## UI
 

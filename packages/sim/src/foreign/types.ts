@@ -68,6 +68,20 @@ export const TREATY_RATIFICATION_STATUSES = [
 ] as const;
 export type TreatyRatificationStatus = (typeof TREATY_RATIFICATION_STATUSES)[number];
 
+export const TREATY_STATUSES = [
+  "proposed",
+  "counterparty_pending",
+  "ratification_pending",
+  "active",
+  "rejected",
+  "terminated",
+  "suspended",
+] as const;
+export type TreatyStatus = (typeof TREATY_STATUSES)[number];
+
+export const SANCTION_SCOPES = ["targeted", "sectoral", "broad"] as const;
+export type SanctionScope = (typeof SANCTION_SCOPES)[number];
+
 export type BilateralRelation = {
   general: number;
   trust: number;
@@ -78,13 +92,17 @@ export type BilateralRelation = {
 
 export type ForeignCountryRuntime = {
   countryId: string;
-  leaderId: string;
+  leaderId: string | null;
   posture: MilitaryPostureLevel;
   capabilities: CapabilityVector;
   tradeExposure: number;
   strategicGoals: StrategicGoalId[];
   institutionIds: string[];
   activeSanctionIds: string[];
+  governmentStability: number;
+  economicCapacity: number;
+  economicTrend: number;
+  domesticPressure: number;
   metadata: JsonObject;
 };
 
@@ -95,9 +113,10 @@ export type TreatyRecord = {
   proposerId: string;
   memberIds: string[];
   signedDate: IsoDate | null;
-  status: "proposed" | "active" | "suspended" | "terminated";
+  status: TreatyStatus;
   ratificationStatus: TreatyRatificationStatus;
   ratificationVoteId: string | null;
+  counterpartyResponses: Record<string, "pending" | "accepted" | "rejected">;
   metadata: JsonObject;
 };
 
@@ -109,6 +128,7 @@ export type SanctionRecord = {
   liftedDate: IsoDate | null;
   severity: number;
   economicWeight: number;
+  scope: SanctionScope;
   active: boolean;
   metadata: JsonObject;
 };
@@ -127,10 +147,17 @@ export type InternationalCrisis = {
 export type InternationalConflict = {
   id: string;
   belligerentIds: string[];
+  aggressorId: string | null;
   startedDate: IsoDate;
   endedDate: IsoDate | null;
   intensity: number;
   crisisId: string | null;
+  objectives: string[];
+  balance: number;
+  politicalCost: number;
+  outcome: string | null;
+  ceasefireDate: IsoDate | null;
+  warPowerId: string | null;
   metadata: JsonObject;
 };
 
@@ -173,6 +200,18 @@ export type PendingPresidentialForeignAction = {
   metadata: JsonObject;
 };
 
+export type PendingIncomingDiplomacy = {
+  id: string;
+  kind: "treaty_proposal" | "summit_invite";
+  actorCountryId: string;
+  targetCountryId: string;
+  treatyId: string | null;
+  treatyKind: TreatyKind | null;
+  title: string | null;
+  date: IsoDate;
+  metadata: JsonObject;
+};
+
 export type ForeignAffairsRuntime = {
   countries: Record<string, ForeignCountryRuntime>;
   bilateralRelations: Record<string, BilateralRelation>;
@@ -183,9 +222,11 @@ export type ForeignAffairsRuntime = {
   diplomaticActions: Record<string, DiplomaticActionRecord>;
   treatyRatifications: Record<string, TreatyRatificationState>;
   pendingPresidentialActions: PendingPresidentialForeignAction[];
+  pendingIncomingDiplomacy: PendingIncomingDiplomacy[];
   pendingPlayerTreatyVotes: Record<string, { treatyId: string; choice: "yes" | "no" | "abstain" | null }>;
   diplomaticActionsThisMonth: number;
   lastMonthProcessed: IsoDate | null;
+  warTriggerArmedByConflictId: string | null;
 };
 
 export type CanonicalWorldCountry = {
@@ -251,9 +292,11 @@ export function emptyForeignAffairsRuntime(): ForeignAffairsRuntime {
     diplomaticActions: {},
     treatyRatifications: {},
     pendingPresidentialActions: [],
+    pendingIncomingDiplomacy: [],
     pendingPlayerTreatyVotes: {},
     diplomaticActionsThisMonth: 0,
     lastMonthProcessed: null,
+    warTriggerArmedByConflictId: null,
   };
 }
 
@@ -271,6 +314,18 @@ export function isTreatyKind(v: string): v is TreatyKind {
 
 export function isCrisisStage(v: string): v is CrisisStage {
   return (CRISIS_STAGES as readonly string[]).includes(v);
+}
+
+export function isTreatyStatus(v: string): v is TreatyStatus {
+  return (TREATY_STATUSES as readonly string[]).includes(v);
+}
+
+export function isSanctionScope(v: string): v is SanctionScope {
+  return (SANCTION_SCOPES as readonly string[]).includes(v);
+}
+
+export function isPublicCrisisStage(stage: CrisisStage): boolean {
+  return stage !== "latent" && stage !== "settled";
 }
 
 export const MAX_DIPLOMATIC_ACTIONS_PER_MONTH = 2;

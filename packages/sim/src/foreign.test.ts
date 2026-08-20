@@ -11,7 +11,19 @@ import { SAVE_SCHEMA_VERSION, type Command, type KernelWorld, type SimState } fr
 import { CANONICAL_TERENA_RELATIONS } from "./foreign/baseline.js";
 import { bilateralKey } from "./foreign/state.js";
 import { TERENA_WORLD_ID } from "./foreign/types.js";
-import { proposeTreaty } from "./foreign/treaties.js";
+import { proposeTreaty, evaluateCounterpartyAcceptance } from "./foreign/treaties.js";
+import { imposeSanctions, liftSanctions } from "./foreign/sanctions.js";
+import {
+  escalateCrisis,
+  transitionActive,
+  publicActiveCrises,
+  processCrisisLifecycle,
+} from "./foreign/crises.js";
+import { checkCrisisEmergence } from "./foreign/crisis-emergence.js";
+import { beginConflictFromCrisisWithWarTrigger } from "./foreign/conflicts.js";
+import { resolveCountryLeaderDisplay } from "./foreign/leaders.js";
+import { resolveWarTriggerConflictId } from "./foreign/war-powers-bridge.js";
+import { createRngService } from "./rng.js";
 import { collectPlayerActionableDecisions } from "./player-decisions.js";
 import { currentPresidentialAuthorityId } from "./executive/state.js";
 
@@ -148,8 +160,11 @@ describe("Phase 10 foreign affairs", () => {
     const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR-BASE" });
     const runtime = sim.getSnapshot().foreignAffairsRuntime;
     expect(Object.keys(world.worldCountries)).toHaveLength(48);
-    expect(Object.keys(runtime.countries)).toHaveLength(47);
-    expect(runtime.countries.W41).toBeUndefined();
+    expect(Object.keys(runtime.countries)).toHaveLength(48);
+    expect(runtime.countries.W41).toBeDefined();
+    expect(runtime.countries.W41?.leaderId).toBeNull();
+    expect(runtime.countries.W41?.posture).toBe("normal");
+    expect(runtime.countries.W41?.institutionIds).toContain("INT_DC");
     for (const [countryId, expected] of Object.entries(CANONICAL_TERENA_RELATIONS)) {
       expect(terenaRelation(sim.getSnapshot(), countryId)).toBe(expected);
       expect(runtime.bilateralRelations[bilateralKey(TERENA_WORLD_ID, countryId)]?.general).toBe(
@@ -220,8 +235,10 @@ describe("Phase 10 foreign affairs", () => {
           treatyRatifications: {},
           pendingPresidentialActions: [],
           pendingPlayerTreatyVotes: {},
+          pendingIncomingDiplomacy: [],
           diplomaticActionsThisMonth: 0,
           lastMonthProcessed: null,
+          warTriggerArmedByConflictId: null,
         },
       },
     };
@@ -234,7 +251,7 @@ describe("Phase 10 foreign affairs", () => {
     expect(
       Object.keys(restoredA.getSnapshot().foreignAffairsRuntime.diplomaticActions),
     ).toHaveLength(0);
-    expect(Object.keys(restoredA.getSnapshot().foreignAffairsRuntime.countries)).toHaveLength(47);
+    expect(Object.keys(restoredA.getSnapshot().foreignAffairsRuntime.countries)).toHaveLength(48);
     const restoredB = restoreSimulation(parsed.save, world);
     for (const [countryId, expected] of Object.entries(CANONICAL_TERENA_RELATIONS)) {
       expect(terenaRelation(restoredA.getSnapshot(), countryId)).toBe(expected);
@@ -278,7 +295,20 @@ describe("Phase 10 foreign affairs", () => {
       },
       null,
     );
-    expect(events.some((e) => e.type === "TREATY_RATIFICATION_PENDING")).toBe(true);
+    expect(events.some((e) => e.type === "TREATY_PROPOSED")).toBe(true);
+    treaty.status = "ratification_pending";
+    treaty.ratificationStatus = "pending";
+    treaty.counterpartyResponses.W13 = "accepted";
+    const voteId = "LV00001";
+    treaty.ratificationVoteId = voteId;
+    snap.foreignAffairsRuntime.treatyRatifications["TRV00001"] = {
+      treatyId: treaty.id,
+      voteId,
+      introducedDate: snap.currentDate,
+      status: "pending",
+    };
+    snap.counters.nextTreatyRatificationId = 2;
+    snap.counters.nextLegislativeVoteId = 2;
     snap.foreignAffairsRuntime.pendingPlayerTreatyVotes[treaty.id] = {
       treatyId: treaty.id,
       choice: null,
@@ -301,19 +331,24 @@ describe("Phase 10 foreign affairs", () => {
     const sim = createSimulation({ world, playerPoliticianId: "NPC001", seed: "FOR-PRES" });
     expect(currentPresidentialAuthorityId(world, sim.getSnapshot())).toBe("NPC001");
     advanceHandsOff(sim, MONTHS_BEFORE_ASSEMBLY);
-    const runtime = sim.getSnapshot().foreignAffairsRuntime;
+    const snap = sim.getSnapshot();
+    const runtime = snap.foreignAffairsRuntime;
     expect(runtime.pendingPresidentialActions).toHaveLength(0);
     expect(Object.values(runtime.diplomaticActions).every((a) => a.initiator !== "player")).toBe(
       true,
     );
-    expect(
-      Object.values(runtime.sanctions).every((s) => s.imposerId !== TERENA_WORLD_ID),
-    ).toBe(true);
-    expect(
-      Object.values(runtime.treaties).every(
-        (t) => t.metadata.preexisting === true || t.proposerId !== TERENA_WORLD_ID,
-      ),
-    ).toBe(true);
+    const playerStillPresident =
+      currentPresidentialAuthorityId(world, snap) === "NPC001";
+    if (playerStillPresident) {
+      expect(
+        Object.values(runtime.sanctions).every((s) => s.imposerId !== TERENA_WORLD_ID),
+      ).toBe(true);
+      expect(
+        Object.values(runtime.treaties).every(
+          (t) => t.metadata.preexisting === true || t.proposerId !== TERENA_WORLD_ID,
+        ),
+      ).toBe(true);
+    }
   });
 
   it("keeps strategic goals out of public history and player decision surfaces", () => {
@@ -329,5 +364,223 @@ describe("Phase 10 foreign affairs", () => {
      * Runtime shape: `foreignAffairsRuntime.countries[id].strategicGoals` is sim-internal AI
      * state. UI layers must not surface it without dedicated intelligence mechanics.
      */
+  });
+});
+
+describe("Phase 10.1 foreign affairs functional completion", () => {
+  it("allows President Mara Velic to impose sanctions on W40", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC001", seed: "FOR101-SANC" });
+    expect(currentPresidentialAuthorityId(world, sim.getSnapshot())).toBe("NPC001");
+    const r = sim.executeCommand({
+      type: "IMPOSE_SANCTIONS",
+      actorId: "NPC001",
+      targetCountryId: "W40",
+      severity: 0.45,
+    });
+    expect(r.ok).toBe(true);
+    const snap = sim.getSnapshot();
+    const sanction = Object.values(snap.foreignAffairsRuntime.sanctions).find(
+      (s) => s.imposerId === TERENA_WORLD_ID && s.targetId === "W40" && s.active,
+    );
+    expect(sanction).toBeTruthy();
+    expect(snap.history.some((e) => e.type === "SANCTIONS_IMPOSED")).toBe(true);
+    expect(snap.foreignAffairsRuntime.diplomaticActionsThisMonth).toBe(1);
+  });
+
+  it("allows President Mara Velic to adjust Terena military posture", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC001", seed: "FOR101-POST" });
+    const heightened = sim.executeCommand({
+      type: "ADJUST_MILITARY_POSTURE",
+      actorId: "NPC001",
+      posture: "heightened",
+    });
+    expect(heightened.ok).toBe(true);
+    expect(sim.getSnapshot().foreignAffairsRuntime.countries.W41?.posture).toBe("heightened");
+    const normal = sim.executeCommand({
+      type: "ADJUST_MILITARY_POSTURE",
+      actorId: "NPC001",
+      posture: "normal",
+    });
+    expect(normal.ok).toBe(true);
+    expect(sim.getSnapshot().foreignAffairsRuntime.countries.W41?.posture).toBe("normal");
+  });
+
+  it("does not settle a crisis when escalating from active", () => {
+    const crisis = {
+      id: "ICR00099",
+      stage: "active" as const,
+      participantIds: ["W40", TERENA_WORLD_ID],
+      focalPairKey: bilateralKey("W40", TERENA_WORLD_ID),
+      startedDate: "2028-01-01" as const,
+      lastStageChange: "2028-01-01" as const,
+      intensity: 0.7,
+      metadata: {},
+    };
+    escalateCrisis(crisis, "2028-02-01");
+    expect(crisis.stage).not.toBe("settled");
+    expect(["conflict", "deescalating"]).toContain(crisis.stage);
+    transitionActive(crisis, "2028-03-01", "conflict");
+    expect(crisis.stage).toBe("conflict");
+  });
+
+  it("emits structured events for consequential crisis stage changes", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR101-CRIS-EV" });
+    const base = jsonClone(sim.getSnapshot());
+    let found = false;
+    for (let i = 0; i < 64 && !found; i += 1) {
+      const snap = jsonClone(base);
+      snap.foreignAffairsRuntime.crises["ICR00099"] = {
+        id: "ICR00099",
+        stage: "incident",
+        participantIds: ["W05", "W06"],
+        focalPairKey: bilateralKey("W05", "W06"),
+        startedDate: snap.currentDate,
+        lastStageChange: snap.currentDate,
+        intensity: 0.45,
+        metadata: { test: true },
+      };
+      const rng = createRngService(`FOR101-CRIS-EV-${i}`);
+      const events = processCrisisLifecycle(world, snap, rng, snap.currentDate, "CMD00001");
+      found = events.some((e) => e.type.startsWith("FOREIGN_CRISIS_"));
+    }
+    expect(found).toBe(true);
+  });
+
+  it("can allocate a new crisis from high-tension conditions", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR101-EMERGE" });
+    const snap = jsonClone(sim.getSnapshot());
+    const key = bilateralKey("W05", "W06");
+    const rel = snap.foreignAffairsRuntime.bilateralRelations[key];
+    expect(rel).toBeTruthy();
+    rel!.securityTension = 0.95;
+    rel!.general = -60;
+    snap.foreignAffairsRuntime.countries.W05!.posture = "mobilized";
+    snap.foreignAffairsRuntime.countries.W06!.posture = "heightened";
+    const before = Object.keys(snap.foreignAffairsRuntime.crises).length;
+    const rng = createRngService("FOR101-EMERGE-LOCAL");
+    for (let i = 0; i < 48; i += 1) {
+      const emerged = checkCrisisEmergence(world, snap, rng, snap.currentDate);
+      if (emerged.length > 0) break;
+    }
+    expect(Object.keys(snap.foreignAffairsRuntime.crises).length).toBeGreaterThan(before);
+  });
+
+  it("rejects hostile mutual-defense treaties without counterparty consent", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC001", seed: "FOR101-TREATY" });
+    const snap = jsonClone(sim.getSnapshot());
+    const { treaty } = proposeTreaty(
+      snap,
+      {
+        proposerId: TERENA_WORLD_ID,
+        kind: "mutual_defense",
+        title: "Terena–Vaskara Defense Pact",
+        memberIds: [TERENA_WORLD_ID, "W40"],
+        requiresRatification: true,
+      },
+      null,
+    );
+    expect(treaty.status).toBe("counterparty_pending");
+    expect(treaty.ratificationStatus).not.toBe("pending");
+    let rejected = false;
+    for (let i = 0; i < 24 && !rejected; i += 1) {
+      const rng = createRngService(`FOR101-TREATY-REJ-${i}`);
+      const decision = evaluateCounterpartyAcceptance(world, snap, treaty, "W40", rng);
+      if (decision === "rejected") rejected = true;
+    }
+    expect(rejected).toBe(true);
+  });
+
+  it("records foreign AI diplomatic actions toward Terena over 27 months", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC001", seed: "FOR101-AI-W41" });
+    advanceHandsOff(sim, MONTHS_BEFORE_ASSEMBLY);
+    const towardTerena = Object.values(sim.getSnapshot().foreignAffairsRuntime.diplomaticActions).filter(
+      (a) =>
+        a.initiator === "ai" &&
+        (a.targetCountryId === TERENA_WORLD_ID || a.actorCountryId === TERENA_WORLD_ID),
+    );
+    expect(towardTerena.length).toBeGreaterThan(0);
+    expect(
+      towardTerena.every(
+        (a) => !(a.actorCountryId === TERENA_WORLD_ID && a.metadata.npcPresident !== true),
+      ),
+    ).toBe(true);
+  });
+
+  it("can begin conflict from severe crisis and arm Terena war trigger for player President", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC001", seed: "FOR101-WAR" });
+    const snap = jsonClone(sim.getSnapshot());
+    const crisis = {
+      id: "ICR00098",
+      stage: "active" as const,
+      participantIds: ["W40", TERENA_WORLD_ID],
+      focalPairKey: bilateralKey("W40", TERENA_WORLD_ID),
+      startedDate: snap.currentDate,
+      lastStageChange: snap.currentDate,
+      intensity: 0.85,
+      metadata: { aggressorId: "W40" },
+    };
+    snap.foreignAffairsRuntime.crises[crisis.id] = crisis;
+    const { conflict, events } = beginConflictFromCrisisWithWarTrigger(
+      world,
+      snap,
+      crisis,
+      snap.currentDate,
+      "CMD00001",
+      "W40",
+    );
+    expect(conflict.belligerentIds).toContain(TERENA_WORLD_ID);
+    expect(events.some((e) => e.type === "INTERNATIONAL_CONFLICT_STARTED")).toBe(true);
+    expect(resolveWarTriggerConflictId(snap)).toBe(conflict.id);
+    expect(snap.executiveRuntime.warTrigger).toBe(true);
+    expect(collectPlayerActionableDecisions(world, snap).some((d) => d.kind === "war_powers")).toBe(
+      true,
+    );
+  });
+
+  it("resolves runtime leader display after foreign leadership change", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR101-LEAD-UI" });
+    const snap = jsonClone(sim.getSnapshot());
+    const runtime = snap.foreignAffairsRuntime.countries.W05!;
+    runtime.metadata.activeLeader = { name: "Test Leader", title: "President" };
+    runtime.leaderId = "FLD_W05_REPLACEMENT";
+    const display = resolveCountryLeaderDisplay(world, snap, "W05");
+    expect(display?.name).toBe("Test Leader");
+    const terenaDisplay = resolveCountryLeaderDisplay(world, snap, TERENA_WORLD_ID);
+    expect(terenaDisplay?.title).toBe("President");
+  });
+
+  it("excludes latent crises from public active crisis counts", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR101-LATENT" });
+    const runtime = sim.getSnapshot().foreignAffairsRuntime;
+    const latent = Object.values(runtime.crises).filter((c) => c.stage === "latent");
+    expect(latent.length).toBeGreaterThan(0);
+    expect(publicActiveCrises(runtime).every((c) => c.stage !== "latent")).toBe(true);
+  });
+
+  it("allows AI sanctions to be lifted when relations improve", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR101-LIFT" });
+    const snap = jsonClone(sim.getSnapshot());
+    imposeSanctions(
+      snap,
+      { imposerId: "W13", targetId: "W05", severity: 0.4 },
+      "CMD00001",
+    );
+    const rel = snap.foreignAffairsRuntime.bilateralRelations[bilateralKey("W13", "W05")]!;
+    rel.general = 25;
+    const out = liftSanctions(snap, { imposerId: "W13", targetId: "W05" }, "CMD00002");
+    expect("events" in out).toBe(true);
+    if ("events" in out) {
+      expect(out.events.some((e) => e.type === "SANCTIONS_LIFTED")).toBe(true);
+    }
   });
 });

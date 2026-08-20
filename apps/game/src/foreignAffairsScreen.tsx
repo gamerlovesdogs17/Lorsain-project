@@ -3,6 +3,7 @@ import type { ContentBundle } from "@lorsain/content-loader";
 import {
   TERENA_WORLD_ID,
   bilateralKey,
+  type Command,
   type CommandResult,
   type KernelWorld,
   type SimState,
@@ -11,13 +12,20 @@ import {
 import { isPresident } from "./format.js";
 import {
   countryDisplayName,
+  countryRecentEvents,
   crisisStageLabel,
   diplomaticActionLabel,
   eventDisplay,
+  foreignPresidentialActionLabel,
   institutionDisplayName,
+  latentStrategicTensions,
   militaryPostureLabel,
   powerTierLabel,
+  publicActiveCrises,
+  publicSeverityLabel,
+  resolveCountryLeaderDisplay,
   terenaBilateralRelationLabel,
+  treatyStatusLabel,
   treatyTypeLabel,
   type PresentationCatalog,
 } from "./presentation.js";
@@ -58,22 +66,8 @@ type DrawerKind =
   | "posture"
   | "mediation"
   | "warning"
+  | "incoming_diplomacy"
   | null;
-
-function activeCrises(state: SimState) {
-  return Object.values(state.foreignAffairsRuntime.crises).filter((c) => c.stage !== "settled");
-}
-
-function countryRecentEvents(state: SimState, countryId: string, limit = 6) {
-  return state.history
-    .filter((e) => {
-      if (e.type === "TURN_COMPLETED") return false;
-      if (e.entityIds.includes(countryId)) return true;
-      return e.payload.targetCountryId === countryId;
-    })
-    .slice(-limit)
-    .reverse();
-}
 
 function terenaSanctionsOn(state: SimState, targetId: string): boolean {
   return Object.values(state.foreignAffairsRuntime.sanctions).some(
@@ -108,14 +102,20 @@ export function ForeignAffairsPage(props: {
   const [institutionId, setInstitutionId] = useState("INT_DC");
   const [crisisId, setCrisisId] = useState("");
 
+  const [incomingActionIndex, setIncomingActionIndex] = useState(0);
+
   const runtime = snap.foreignAffairsRuntime;
   const capacityUsed = runtime.diplomaticActionsThisMonth;
   const capacityLeft = MAX_DIPLOMATIC_ACTIONS_PER_MONTH - capacityUsed;
-  const crises = useMemo(() => activeCrises(snap), [snap]);
+  const publicCrises = useMemo(() => publicActiveCrises(snap), [snap]);
+  const latentTensions = useMemo(() => latentStrategicTensions(snap), [snap]);
+  const warTrigger = snap.executiveRuntime.warTrigger;
+  const incomingDiplomacy = runtime.pendingPresidentialActions;
   const selectedCanonical = selectedId ? world.worldCountries[selectedId] : undefined;
   const selectedRuntime = selectedId ? runtime.countries[selectedId] : undefined;
-  const selectedLeaderId = selectedId ? world.worldLeadersByCountryId[selectedId] : undefined;
-  const selectedLeader = selectedLeaderId ? world.worldLeaders[selectedLeaderId] : undefined;
+  const selectedLeader = selectedId
+    ? resolveCountryLeaderDisplay(world, snap, selectedId, catalog)
+    : undefined;
   const relationKey =
     selectedId && selectedId !== TERENA_WORLD_ID
       ? bilateralKey(TERENA_WORLD_ID, selectedId)
@@ -126,9 +126,13 @@ export function ForeignAffairsPage(props: {
     selectedId && selectedId !== TERENA_WORLD_ID && !!runtime.countries[selectedId];
   const terenaRuntime = runtime.countries[TERENA_WORLD_ID];
   const terenaInstitutions = terenaRuntime?.institutionIds ?? ["INT_DC"];
-  const activeCrisisOptions = crises.filter(
+  const activeCrisisOptions = publicCrises.filter(
     (c) => c.stage === "active" || c.stage === "incident" || c.stage === "deescalating",
   );
+  const selectedRecentEvents = selectedId ? countryRecentEvents(snap, selectedId) : [];
+  const selectedCountryCrises = selectedId
+    ? [...publicCrises, ...latentTensions].filter((c) => c.participantIds.includes(selectedId))
+    : [];
 
   const diplomaticFeed = useMemo(
     () =>
@@ -178,13 +182,59 @@ export function ForeignAffairsPage(props: {
         }
       />
 
+      {president && warTrigger ? (
+        <div className="briefing-urgent alert foreign-war-urgent">
+          <strong>War powers required</strong>
+          <p>
+            International developments require a presidential war-powers decision. Seek Assembly
+            authorization if unilateral authority expires.
+          </p>
+          <button
+            type="button"
+            className="btn"
+            onClick={() =>
+              props.askConfirm({
+                title: "Begin war powers",
+                body: "Invoke presidential war powers in response to the international crisis?",
+                confirmLabel: "Begin war powers",
+                action: () => run({ type: "BEGIN_WAR_POWERS" }),
+              })
+            }
+          >
+            Begin war powers
+          </button>
+        </div>
+      ) : null}
+
+      {president && incomingDiplomacy.length > 0 ? (
+        <div className="briefing-urgent alert foreign-incoming-diplomacy">
+          <strong>Incoming diplomacy</strong>
+          <p>{foreignPresidentialActionLabel(world, snap, incomingDiplomacy[0]!)}</p>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setIncomingActionIndex(0);
+              setDrawer("incoming_diplomacy");
+            }}
+          >
+            Respond
+          </button>
+        </div>
+      ) : null}
+
       <MetricStrip>
         <StatCard
           label="Diplomatic capacity"
           value={president ? `${capacityUsed}/${MAX_DIPLOMATIC_ACTIONS_PER_MONTH}` : "—"}
           hint={president ? `${capacityLeft} remaining this month` : "Presidential prerogative"}
         />
-        <StatCard label="Active crises" value={String(crises.length)} hint="Unsettled internationally" />
+        <StatCard label="Active crises" value={String(publicCrises.length)} hint="Public international crises" />
+        <StatCard
+          label="Strategic tension"
+          value={String(latentTensions.length)}
+          hint="Background tensions not yet public crises"
+        />
         <StatCard
           label="Active treaties"
           value={String(Object.values(runtime.treaties).filter((t) => t.status === "active").length)}
@@ -286,7 +336,7 @@ export function ForeignAffairsPage(props: {
                         .slice(0, 6)
                         .map((t) => (
                           <div key={t.id} className="muted">
-                            {t.title} · {treatyTypeLabel(t.kind)} · {t.status}
+                            {t.title} · {treatyTypeLabel(t.kind)} · {treatyStatusLabel(t)}
                           </div>
                         ))}
                       {Object.values(runtime.treaties).every((t) => !t.memberIds.includes(selectedId)) ? (
@@ -310,29 +360,27 @@ export function ForeignAffairsPage(props: {
                       ) : null}
                     </div>
                     <div style={{ marginTop: "0.65rem" }}>
-                      <span className="kicker">Crises</span>
-                      {crises
-                        .filter((c) => c.participantIds.includes(selectedId))
-                        .map((c) => (
-                          <div key={c.id} className="muted">
-                            {crisisStageLabel(c.stage)} · intensity{" "}
-                            {formatPublicPercent(c.intensity)}
-                          </div>
-                        ))}
-                      {crises.every((c) => !c.participantIds.includes(selectedId)) ? (
-                        <div className="muted">Not party to an active crisis.</div>
+                      <span className="kicker">Crises & tension</span>
+                      {selectedCountryCrises.map((c) => (
+                        <div key={c.id} className="muted">
+                          {c.stage === "latent" ? "Strategic tension" : crisisStageLabel(c.stage)} ·{" "}
+                          {publicSeverityLabel(c.intensity, c.stage)}
+                        </div>
+                      ))}
+                      {selectedCountryCrises.length === 0 ? (
+                        <div className="muted">No active crises or strategic tension.</div>
                       ) : null}
                     </div>
                     <div style={{ marginTop: "0.65rem" }}>
                       <span className="kicker">Recent developments</span>
-                      {countryRecentEvents(snap, selectedId).map((e) => (
+                      {selectedRecentEvents.map((e) => (
                         <ActivityFeedItem
                           key={e.id}
                           date={e.date}
                           text={eventDisplay(catalog, world, snap, e)}
                         />
                       ))}
-                      {countryRecentEvents(snap, selectedId).length === 0 ? (
+                      {selectedRecentEvents.length === 0 ? (
                         <div className="muted">No recent public events.</div>
                       ) : null}
                     </div>
@@ -474,8 +522,10 @@ export function ForeignAffairsPage(props: {
 
       <div className="foreign-global-panels">
         <SectionCard title="Active crises">
-          {crises.length === 0 ? <EmptyState>No active international crises.</EmptyState> : null}
-          {crises.map((c) => (
+          {publicCrises.length === 0 ? (
+            <EmptyState>No active international crises.</EmptyState>
+          ) : null}
+          {publicCrises.map((c) => (
             <div key={c.id} className="foreign-crisis-row">
               <StatusBadge tone={c.stage === "conflict" ? "warn" : "idle"}>
                 {crisisStageLabel(c.stage)}
@@ -484,7 +534,24 @@ export function ForeignAffairsPage(props: {
                 {c.participantIds.map((id) => countryDisplayName(world, id)).join(" · ")}
               </div>
               <div className="muted">
-                Since {c.startedDate} · intensity {formatPublicPercent(c.intensity)}
+                Since {c.startedDate} · {publicSeverityLabel(c.intensity, c.stage)}
+              </div>
+            </div>
+          ))}
+        </SectionCard>
+
+        <SectionCard title="Strategic tension">
+          {latentTensions.length === 0 ? (
+            <EmptyState>No background strategic tensions on record.</EmptyState>
+          ) : null}
+          {latentTensions.map((c) => (
+            <div key={c.id} className="foreign-crisis-row foreign-tension-row">
+              <StatusBadge tone="idle">Strategic tension</StatusBadge>
+              <div>
+                {c.participantIds.map((id) => countryDisplayName(world, id)).join(" · ")}
+              </div>
+              <div className="muted">
+                Since {c.startedDate} · {publicSeverityLabel(c.intensity, c.stage)}
               </div>
             </div>
           ))}
@@ -531,10 +598,15 @@ export function ForeignAffairsPage(props: {
 
       {president && drawer ? (
         <div className="action-drawer-backdrop" onClick={() => setDrawer(null)}>
-          <div className="action-drawer" onClick={(e) => e.stopPropagation()}>
+          <div
+            className={`action-drawer${drawer === "incoming_diplomacy" ? " incoming-diplomacy-drawer" : ""}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="action-drawer-head">
               <h3>
-                {drawer === "outreach"
+                {drawer === "incoming_diplomacy"
+                  ? "Respond to incoming diplomacy"
+                  : drawer === "outreach"
                   ? "Diplomatic outreach"
                   : drawer === "summit"
                     ? "Summit"
@@ -563,6 +635,61 @@ export function ForeignAffairsPage(props: {
                 <p>
                   Target: <strong>{countryDisplayName(world, selectedId)}</strong>
                 </p>
+              ) : null}
+              {drawer === "incoming_diplomacy" && incomingDiplomacy[incomingActionIndex] ? (
+                <>
+                  <p>
+                    {foreignPresidentialActionLabel(
+                      world,
+                      snap,
+                      incomingDiplomacy[incomingActionIndex]!,
+                    )}
+                  </p>
+                  {incomingDiplomacy.length > 1 ? (
+                    <select
+                      value={String(incomingActionIndex)}
+                      onChange={(e) => setIncomingActionIndex(Number(e.target.value))}
+                    >
+                      {incomingDiplomacy.map((action, idx) => (
+                        <option key={`${action.kind}-${action.targetCountryId ?? idx}`} value={idx}>
+                          {foreignPresidentialActionLabel(world, snap, action)}
+                        </option>
+                      ))}
+                    </select>
+                  ) : null}
+                  <div className="incoming-diplomacy-actions">
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => {
+                        const action = incomingDiplomacy[incomingActionIndex]!;
+                        run({
+                          type: "RESPOND_INCOMING_DIPLOMACY",
+                          accept: true,
+                          kind: action.kind,
+                          targetCountryId: action.targetCountryId ?? undefined,
+                        } as unknown as Command);
+                      }}
+                    >
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      onClick={() => {
+                        const action = incomingDiplomacy[incomingActionIndex]!;
+                        run({
+                          type: "RESPOND_INCOMING_DIPLOMACY",
+                          accept: false,
+                          kind: action.kind,
+                          targetCountryId: action.targetCountryId ?? undefined,
+                        } as unknown as Command);
+                      }}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </>
               ) : null}
               {drawer === "treaty" ? (
                 <>
@@ -622,6 +749,7 @@ export function ForeignAffairsPage(props: {
                   ))}
                 </select>
               ) : null}
+              {drawer !== "incoming_diplomacy" ? (
               <button
                 type="button"
                 className="btn"
@@ -653,7 +781,7 @@ export function ForeignAffairsPage(props: {
                   if (drawer === "treaty" && selectedId) {
                     props.askConfirm({
                       title: "Propose treaty",
-                      body: `Propose a ${treatyTypeLabel(treatyKind)} with ${countryDisplayName(world, selectedId)}?`,
+                      body: `Propose a ${treatyTypeLabel(treatyKind)} with ${countryDisplayName(world, selectedId)}? The counterparty must accept before the agreement can take effect${treatyKind !== "trade" ? ", and the Assembly must ratify it" : ""}.`,
                       confirmLabel: "Propose",
                       action: () =>
                         run({
@@ -712,6 +840,7 @@ export function ForeignAffairsPage(props: {
               >
                 Confirm action
               </button>
+              ) : null}
             </div>
           </div>
         </div>

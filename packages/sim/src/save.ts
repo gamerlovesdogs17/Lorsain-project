@@ -401,9 +401,14 @@ function parseCounters(raw: unknown): Counters | string {
     "nextForeignLeaderId",
     "nextDiplomaticActionId",
     "nextTreatyRatificationId",
+    "nextIncomingDiplomacyId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
+    if (k === "nextIncomingDiplomacyId") {
+      out[k] = isInt(raw[k]) && (raw[k] as number) >= 1 ? (raw[k] as number) : 1;
+      continue;
+    }
     if (!isInt(raw[k]) || (raw[k] as number) < 1) return `counters.${k} must be a positive integer`;
     out[k] = raw[k] as number;
   }
@@ -1158,6 +1163,9 @@ export function migrateSaveV9ToV10(raw: unknown): unknown {
         : 1,
       nextTreatyRatificationId: isInt(sim.counters.nextTreatyRatificationId)
         ? sim.counters.nextTreatyRatificationId
+        : 1,
+      nextIncomingDiplomacyId: isInt(sim.counters.nextIncomingDiplomacyId)
+        ? sim.counters.nextIncomingDiplomacyId
         : 1,
     };
   }

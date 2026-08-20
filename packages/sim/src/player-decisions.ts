@@ -18,7 +18,10 @@ export type PlayerDecisionKind =
   | "impeachment_vote"
   | "recall_vote"
   | "treaty_ratification_vote"
-  | "foreign_presidential_action";
+  | "foreign_presidential_action"
+  | "incoming_treaty"
+  | "incoming_summit"
+  | "war_powers";
 
 export type PlayerActionableDecision = {
   key: string;
@@ -33,6 +36,7 @@ export type PlayerActionableDecision = {
   stage?: LegislativeVoteStage;
   treatyId?: string;
   targetCountryId?: string;
+  pendingId?: string;
 };
 
 function playerHasCastLegislative(

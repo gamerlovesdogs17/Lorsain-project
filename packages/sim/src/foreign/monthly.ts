@@ -5,11 +5,16 @@ import { pushHistory } from "../scheduler.js";
 import { seedForeignAffairsRuntime } from "./baseline.js";
 import { processForeignAiMonth } from "./ai.js";
 import { processCrisisLifecycle } from "./crises.js";
+import { checkCrisisEmergence } from "./crisis-emergence.js";
 import { processConflictMonth } from "./conflicts.js";
 import { processLeadershipChanges } from "./leaders.js";
-import { processTreatyRatificationVotes } from "./treaties.js";
+import { processTreatyRatificationVotes, processCounterpartyTreatyResponses } from "./treaties.js";
+import { applyActiveTreatyEffects } from "./treaty-effects.js";
+import { processInstitutionsMonth } from "./institutions.js";
+import { processNpcTerenaDiplomacy } from "./terena-diplomacy.js";
 import { refreshTradeSectorFromForeign } from "./economy-bridge.js";
 import { needsForeignAffairsSeed } from "./state.js";
+import { publicActiveCrises } from "./crises.js";
 
 export function processForeignAffairsMonth(
   state: SimState,
@@ -24,10 +29,36 @@ export function processForeignAffairsMonth(
   state.foreignAffairsRuntime.diplomaticActionsThisMonth = 0;
   const events: SimEvent[] = [];
 
-  processCrisisLifecycle(state, rng, state.currentDate);
+  const emerged = checkCrisisEmergence(world, state, rng, state.currentDate);
+  for (const crisis of emerged) {
+    events.push(
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "FOREIGN_CRISIS_INCIDENT",
+        importance: 0.5,
+        visibility: "system",
+        actorIds: crisis.participantIds,
+        entityIds: [crisis.id],
+        payload: {
+          crisisId: crisis.id,
+          cause: crisis.metadata.cause ?? "emergence",
+          stage: crisis.stage,
+        },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    );
+  }
+
+  events.push(...processCrisisLifecycle(world, state, rng, state.currentDate, commandId));
   events.push(...processForeignAiMonth(world, state, rng, commandId));
+  events.push(...processCounterpartyTreatyResponses(world, state, rng, commandId));
   events.push(...processTreatyRatificationVotes(world, state, rng, commandId));
-  processConflictMonth(state, state.currentDate);
+  events.push(...processInstitutionsMonth(world, state, rng, commandId));
+  events.push(...processNpcTerenaDiplomacy(world, state, rng, commandId));
+  events.push(...processConflictMonth(state, state.currentDate, commandId));
+  applyActiveTreatyEffects(state, state.currentDate);
+
   const leaders = processLeadershipChanges(world, state, rng, state.currentDate);
   for (const leader of leaders) {
     events.push(
@@ -56,12 +87,11 @@ export function processForeignAffairsMonth(
       actorIds: [],
       entityIds: [],
       payload: {
-        activeCrises: Object.values(state.foreignAffairsRuntime.crises).filter(
-          (c) => c.stage !== "settled",
-        ).length,
+        activeCrises: publicActiveCrises(state.foreignAffairsRuntime).length,
         activeConflicts: Object.values(state.foreignAffairsRuntime.conflicts).filter(
           (c) => c.endedDate == null,
         ).length,
+        pendingIncoming: state.foreignAffairsRuntime.pendingIncomingDiplomacy.length,
       },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,
