@@ -852,11 +852,15 @@ Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate 
 
 ## 18. Phase 9 — economy, organizations, media, UI v2, map
 
-**COMPLETE.** Political macroeconomy (`packages/sim/src/economy/`), autonomous canonical organizations (`packages/sim/src/organizations/`), structured media (`packages/sim/src/media/`), UI System V2 (`apps/game/src/ui/`, `docs/UI_SYSTEM_V2.md`), derived interactive map (`@lorsain/map`, `<TerenaMap />`). Save schemaVersion **9**; v8→v9 initializes economy baseline indices (Jan 2028 = 100) and empty org/media history. 20-year synthetic kernel hash (schema 9): `6b3dea55f2279a6216bb676c8fa1175b`. `contentVersion` remains `0.3.1-predev`.
+**COMPLETE.** Political macroeconomy (`packages/sim/src/economy/`), autonomous canonical organizations (`packages/sim/src/organizations/`), structured media (`packages/sim/src/media/`), UI System V2 (`apps/game/src/ui/`, `docs/UI_SYSTEM_V2.md`), derived interactive map (`@lorsain/map`, `<TerenaMap />`). Save schemaVersion **9**; v8→v9 initializes economy baseline indices (Jan 2028 = 100) and empty org/media history. 20-year synthetic kernel hash at Phase 9.5 close (schema 9): `6b3dea55f2279a6216bb676c8fa1175b`. Phase 9.6 Trade baseline fix: `86952783749897096b223e06992f8e8c`. `contentVersion` remains `0.3.1-predev`.
 
 ## 18.5. Phase 9.5 — UI System V3 playtest UX
 
-**COMPLETE.** UI/UX V3 pass documented in `docs/UI_SYSTEM_V3.md`: grouped nav, briefing Home, campaign command center, player-safe interrupt/vote formatters, map polish, responsive shell. No Phase 10 work included.
+**COMPLETE.** UI/UX V3 shell documented in `docs/UI_SYSTEM_V3.md`: grouped nav, briefing Home, campaign command center, player-safe interrupt/vote formatters, map polish, responsive shell. Screen-depth items that were overstated are completed in Phase 9.6. No Phase 10 work included.
+
+## 18.6. Phase 9.6 — UI System V3.1
+
+**COMPLETE.** Map fill/plurality, Trade baseline, presidential command screen, and remaining V3 screen depth. See `docs/UI_SYSTEM_V3_1.md`. Hash `86952783749897096b223e06992f8e8c`. Phase 10 not started.
 
 ## 19. Phase 10 — foreign affairs
 

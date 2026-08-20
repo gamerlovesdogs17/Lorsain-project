@@ -3,18 +3,76 @@ import { partyColor } from "../presentation.js";
 import type { PreparedPath } from "@lorsain/map";
 import type { MapMode } from "./TerenaMap.js";
 
-/** Sitting MP party is public office occupancy — never latent voter support. */
+/** Neutral fill for exact sitting-seat ties. Sitting representation only — not voter support. */
+export const CONSTITUENCY_TIE_FILL = "#cfc9bd";
+
+export type ConstituencySeatShare = {
+  partyId: string | null;
+  seats: number;
+};
+
+function sittingAssemblyTermsForConstituency(
+  world: KernelWorld,
+  snap: SimState,
+  constituencyId: string,
+): Array<{ holderId: string; partyId: string | null }> {
+  const out: Array<{ holderId: string; partyId: string | null }> = [];
+  for (const term of Object.values(snap.officeTerms)) {
+    if (term.status !== "active" && term.status !== "suspended") continue;
+    const office = world.offices[term.officeId];
+    if (office?.kind !== "assembly_member") continue;
+    if (office.constituencyId !== constituencyId) continue;
+    const pol = snap.politicians[term.holderId];
+    if (!pol?.alive || pol.retired) continue;
+    out.push({ holderId: term.holderId, partyId: pol.partyId ?? null });
+  }
+  out.sort((a, b) => a.holderId.localeCompare(b.holderId));
+  return out;
+}
+
+/** Public sitting-seat counts by party within a multi-member constituency. */
+export function constituencySittingSeatBreakdown(
+  world: KernelWorld,
+  snap: SimState,
+  constituencyId: string,
+): ConstituencySeatShare[] {
+  const counts = new Map<string, number>();
+  for (const row of sittingAssemblyTermsForConstituency(world, snap, constituencyId)) {
+    const key = row.partyId ?? "none";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([key, seats]) => ({ partyId: key === "none" ? null : key, seats }))
+    .sort((a, b) => {
+      if (b.seats !== a.seats) return b.seats - a.seats;
+      return (a.partyId ?? "").localeCompare(b.partyId ?? "");
+    });
+}
+
+/**
+ * Plurality sitting party for map coloring.
+ * Exact ties return `"tie"` so the map uses a neutral fill rather than an arbitrary first MP.
+ */
+export function constituencySittingPluralityPartyId(
+  world: KernelWorld,
+  snap: SimState,
+  constituencyId: string,
+): string | null | "tie" {
+  const rows = constituencySittingSeatBreakdown(world, snap, constituencyId);
+  if (rows.length === 0) return null;
+  if (rows.length >= 2 && rows[0]!.seats === rows[1]!.seats) return "tie";
+  return rows[0]!.partyId;
+}
+
+/** Sitting MP plurality party is public office occupancy — never latent voter support. */
 export function constituencySittingPartyId(
   world: KernelWorld,
   snap: SimState,
   constituencyId: string,
 ): string | null {
-  for (const term of Object.values(snap.officeTerms)) {
-    if (term.status !== "active" && term.status !== "suspended") continue;
-    if (world.offices[term.officeId]?.constituencyId !== constituencyId) continue;
-    return snap.politicians[term.holderId]?.partyId ?? null;
-  }
-  return null;
+  const plurality = constituencySittingPluralityPartyId(world, snap, constituencyId);
+  if (plurality === "tie") return null;
+  return plurality;
 }
 
 export function latestPublicPoll(snap: SimState): (typeof snap.polls)[string] | undefined {
@@ -43,10 +101,12 @@ export function mapFillFor(
     return `rgba(31, 58, 95, ${0.08 + t * 0.45})`;
   }
   if ((mode === "political" || mode === "election") && kind === "constituency") {
-    return partyColor(world, constituencySittingPartyId(world, snap, feature.id));
+    const plurality = constituencySittingPluralityPartyId(world, snap, feature.id);
+    if (plurality === "tie") return CONSTITUENCY_TIE_FILL;
+    return partyColor(world, plurality);
   }
   if (mode === "organizations" && kind === "province") {
     return "#e8eee8";
   }
-  return kind === "province" ? "#e7efe6" : "transparent";
+  return kind === "province" ? "#e7efe6" : "none";
 }

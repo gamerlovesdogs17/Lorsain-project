@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decisionDisplayLabel,
   formatPublicNumber,
+  formatIndexDelta,
   interruptDisplay,
   looksLikeInternalCode,
   relationshipPublicLabel,
@@ -16,6 +17,15 @@ describe("formatPublicNumber", () => {
   it("formats plain numbers", () => {
     expect(formatPublicNumber(6205093)).toBe("6,205,093");
     expect(formatPublicNumber(100.5)).toBe("100.5");
+  });
+});
+
+describe("formatIndexDelta", () => {
+  it("treats a rounded-zero change as unchanged", () => {
+    expect(formatIndexDelta(0)).toBe("— 0.0");
+    expect(formatIndexDelta(0.04)).toBe("— 0.0");
+    expect(formatIndexDelta(0.16)).toBe("▲ 0.2");
+    expect(formatIndexDelta(-0.2)).toBe("▼ 0.2");
   });
 });
 

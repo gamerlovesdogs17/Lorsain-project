@@ -1,10 +1,10 @@
-# Lorsain Political Simulator — Phase 9 Economy + Organizations + Media (IMPLEMENTED, PENDING REVIEW)
+# Lorsain Political Simulator — Phase 9.6 UI System V3.1
 
 This repository holds the **canonical content foundation**, TypeScript simulation kernel, and playable React game for a single-player political simulation set in Lorsain / Terena.
 
 ## Status
 
-**Phase 0–8 COMPLETE. Phase 7.1 First Playtest UX COMPLETE at `670b38b`. Phase 8 Courts + Constitutional System COMPLETE at `72733d4`. Phase 9 Economy + Organizations + Media + UI System V2 + derived Terena map is IMPLEMENTED in the working tree and pending one blocker-focused review (UNCOMMITTED). Blockers vs backlog: `docs/KNOWN_ISSUES.md`.**
+**Phase 0–9 COMPLETE. Phase 9.5 UI System V3 shell COMPLETE at `887b500`. Phase 9.6 UI System V3.1 completion + playtest regression fixes COMPLETE. Phase 10 (foreign affairs) is not started.** Current UI truth: `docs/UI_SYSTEM_V3_1.md`. Blockers vs backlog: `docs/KNOWN_ISSUES.md`.
 
 ## Canonical lock
 
@@ -32,7 +32,7 @@ pnpm game:build                 # production build of apps/game
 pnpm --filter @lorsain/game dev # same as pnpm game
 ```
 
-New Game → choose a politician (search/party filters; public office/biography only) → January 2028 dashboard → End Turn. All gameplay mutations go through `@lorsain/sim` commands. Browser saves use IndexedDB; Export/Import uses the same schema/migration path as Node. Canonical `data/` and `maps/` load through a browser-safe Vite glob — not Node `fs` and not a second copy of canon.
+New Game → featured careers or search/filter the full 530 roster (public office/biography only) → January 2028 dashboard → End Turn. All gameplay mutations go through `@lorsain/sim` commands. Browser saves use IndexedDB; Export/Import uses the same schema/migration path as Node. Canonical `data/` and `maps/` load through a browser-safe Vite glob — not Node `fs` and not a second copy of canon.
 
 ## Repository layout
 

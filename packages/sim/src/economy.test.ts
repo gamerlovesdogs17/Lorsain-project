@@ -5,6 +5,8 @@ import { SAVE_SCHEMA_VERSION, type KernelWorld } from "./types.js";
 import { legislativeHarnessWorld } from "./legislature/harness.js";
 import { parseSaveFile } from "./save.js";
 import { INDEX_CEIL, INDEX_FLOOR, MAX_MONTHLY_INDEX_MOVE, policyIndexDelta } from "./economy/policy.js";
+import { BASELINE_INDICES } from "./economy/types.js";
+import { sectorIndicesFromNational } from "./economy/monthly.js";
 import type { EnactedLawRecord } from "./legislature/types.js";
 import type { NationalEconomyIndices } from "./economy/types.js";
 
@@ -73,6 +75,26 @@ function withOperativeLaw(sim: Simulation, world: KernelWorld, issueId: string, 
 }
 
 describe("Phase 9 economy", () => {
+  it("keeps every sector near the January 2028 = 100 baseline on a no-policy February", () => {
+    expect(sectorIndicesFromNational(BASELINE_INDICES).trade.conditionsIndex).toBe(100);
+    for (const [id, sector] of Object.entries(sectorIndicesFromNational(BASELINE_INDICES))) {
+      expect(sector.conditionsIndex, id).toBe(100);
+    }
+    const world = legislativeHarnessWorld("ECON-TRADE");
+    const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "ECON-TRADE" });
+    const jan = sim.getSnapshot().economyRuntime.sectors.trade?.conditionsIndex;
+    expect(jan).toBe(100);
+    advance(sim, 1);
+    const feb = sim.getSnapshot().economyRuntime.sectors;
+    for (const [id, sector] of Object.entries(feb)) {
+      expect(Number.isFinite(sector.conditionsIndex), id).toBe(true);
+      expect(sector.conditionsIndex).toBeGreaterThanOrEqual(INDEX_FLOOR);
+      expect(sector.conditionsIndex).toBeLessThanOrEqual(INDEX_CEIL);
+      expect(Math.abs(sector.conditionsIndex - 100), id).toBeLessThan(5);
+    }
+    expect(Math.abs((feb.trade?.conditionsIndex ?? 0) - 100)).toBeLessThan(5);
+  });
+
   it("keeps indices finite and bounded over 36 routine months", () => {
     const world = legislativeHarnessWorld("ECON-36");
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "ECON-36" });

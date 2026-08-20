@@ -40,6 +40,15 @@ export function formatPublicPercent(share: number | undefined | null, digits = 1
   return `${(share * 100).toFixed(digits)}%`;
 }
 
+/** Presentation-only index movement. Zero after rounding is shown as unchanged. */
+export function formatIndexDelta(delta: number, digits = 1): string {
+  if (!Number.isFinite(delta)) return "—";
+  const rounded = Number(delta.toFixed(digits));
+  if (rounded === 0) return `— ${Math.abs(rounded).toFixed(digits)}`;
+  const arrow = rounded > 0 ? "▲" : "▼";
+  return `${arrow} ${Math.abs(rounded).toFixed(digits)}`;
+}
+
 const INTERRUPT_LABELS: Record<string, (date?: string) => string> = {
   PRESIDENTIAL_ELECTION_DUE: (date) => {
     const year = date?.slice(0, 4);

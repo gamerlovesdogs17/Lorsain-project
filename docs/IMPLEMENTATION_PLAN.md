@@ -110,7 +110,8 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 7.1** — **COMPLETE (`670b38b`)** — first-playtest UX: no silently omitted player decisions, campaign/policy forms, human-readable presentation, Home briefing, canonical party colors, command feedback.
 - **Phase 8** — **COMPLETE (`72733d4`)** — Constitutional Court, nomination/252 confirmation, judicial review, nonrenewable 12-year terms, impeachment 280 + Court judgment requiring a structured public basis, recall referral 252 + national vote.
 - **Phase 9** — **COMPLETE** — political macroeconomy, canonical organizations/media, UI System V2, derived GeoJSON Terena map, schemaVersion 9.
-- **Phase 9.5** — **COMPLETE** — UI System V3 playtest UX pass: grouped navigation, campaign command center, player-safe labels, map hover/click fix, responsive shell. See `docs/UI_SYSTEM_V3.md`.
+- **Phase 9.5** — **COMPLETE** — UI System V3 shell: grouped navigation, campaign command center, player-safe labels, map hover/click fix, responsive shell. Several screen-depth items were documented as done but incomplete; see Phase 9.6.
+- **Phase 9.6** — **COMPLETE** — UI System V3.1: map fill/plurality blockers, Trade baseline, presidential/party/courts/news/assembly/new-game/economy depth. See `docs/UI_SYSTEM_V3_1.md`. **Phase 10 not started.**
 
 Deliverables:
 
@@ -245,11 +246,26 @@ Save **schemaVersion 8**; v7→v8 adds empty `constitutionalRuntime` (including 
 
 ## 18. Phase 9 — economy, organizations, media, UI v2, map
 
-**COMPLETE.** Normalized economy indices (Jan 2028 = 100), lagged policy effects, regional variation from voter-bloc archetypes. Ten canonical organizations from `terena_organizations.json`; seven media outlets from `terena_media.json`. Stories from real public events only. Month order: economy → organizations → campaign/legislature/executive/courts → scheduled → media. UI System V2 + `<TerenaMap />` from GeoJSON (no runtime `terena_svg` injection). Save **schemaVersion 9**; v8→v9 baseline economy, empty org/media history. 20-year synthetic hash: `6b3dea55f2279a6216bb676c8fa1175b`. See `docs/UI_SYSTEM_V2.md`.
+**COMPLETE.** Normalized economy indices (Jan 2028 = 100), lagged policy effects, regional variation from voter-bloc archetypes. Ten canonical organizations from `terena_organizations.json`; seven media outlets from `terena_media.json`. Stories from real public events only. Month order: economy → organizations → campaign/legislature/executive/courts → scheduled → media. UI System V2 + `<TerenaMap />` from GeoJSON (no runtime `terena_svg` injection). Save **schemaVersion 9**; v8→v9 baseline economy, empty org/media history. 20-year synthetic hash at Phase 9.5 close: `6b3dea55f2279a6216bb676c8fa1175b`. Phase 9.6 Trade-formula fix changes the 20-year synthetic hash to `86952783749897096b223e06992f8e8c`. See `docs/UI_SYSTEM_V2.md`.
 
 ## 18.5. Phase 9.5 — UI System V3 playtest UX
 
-**COMPLETE.** UI-only pass (no simulation rule changes): grouped navigation + responsive drawer, End Turn–first top bar, political briefing Home, politician cards/profile, campaign command center with action drawers, election vote formatting, map legend + lighter selection stroke + hover-vs-click fix, assembly bill progress track, archive filters, organizations relationship labels. Player-safe presentation in `apps/game/src/presentation/display.ts` with regression tests. See `docs/UI_SYSTEM_V3.md`. **Phase 10 not started.**
+**COMPLETE.** UI-only pass (no simulation rule changes): grouped navigation + responsive drawer, End Turn–first top bar, political briefing Home, politician cards/profile, campaign command center with action drawers, election vote formatting, map legend + lighter selection stroke + hover-vs-click fix, assembly bill progress track, archive filters, organizations relationship labels. Player-safe presentation in `apps/game/src/presentation/display.ts` with regression tests. See `docs/UI_SYSTEM_V3.md`. Several screens were still admin-dense after this pass; Phase 9.6 completes them. **Phase 10 not started.**
+
+## 18.6. Phase 9.6 — UI System V3.1 completion + playtest regressions
+
+**COMPLETE.** Fixes and screen depth recorded in `docs/UI_SYSTEM_V3_1.md`:
+
+- Constituency map fills no longer overridden by `fill: transparent`
+- Multi-member constituencies colored by sitting-seat plurality (ties neutral)
+- Presidential election tab is national, not an Assembly geography map
+- Trade sector stays near 100 at a no-policy February (baseline-weighted formula)
+- Home Employment index label; `formatIndexDelta` dash at ~0
+- Presidential command screen, party dashboard, career-select hierarchy, assembly composition bar, courts bench cards, grouped news, economy SVG chart
+- Archive developer tools only in development builds
+- Mobile campaign panel ordered above the map below 900px
+
+Save schema remains **9**. 20-year synthetic kernel hash: `86952783749897096b223e06992f8e8c`. **Phase 10 not started.**
 
 ## 19. Phase 10 — foreign affairs
 

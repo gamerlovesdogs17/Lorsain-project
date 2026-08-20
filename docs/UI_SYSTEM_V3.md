@@ -68,17 +68,19 @@ V2 components retained. V3 additions:
 - Selection stroke ~0.5 (not 0.9); province strokes stronger than constituency
 - `MapLegend` — per-mode legend (`apps/game/src/ui/mapLegend.tsx`)
 
-## Screen notes
+## Screen notes (Phase 9.5 — several of these were incomplete)
 
-| Screen | V3 focus |
+Phase 9.5 documented cabinet cards, a New Game card grid, and Archive “dev tools collapsed” as if they were finished. A later playtest showed they were not. **Phase 9.6 (`docs/UI_SYSTEM_V3_1.md`) is the honest completion record.** Do not treat the table below as the current running UI.
+
+| Screen | V3 intent in 9.5 |
 | --- | --- |
 | Home | Political briefing: profile, lead story, urgent actions, situation metrics, activity feed |
-| New Game | Politician card grid (not database rows) |
-| Campaign | Command center: ~60% map + side panel; actions open drawer (not permanent mega-form) |
-| Elections | Tabs, candidate cards, formatted votes, RCV round list |
-| Assembly | Bill progress track on selected legislation |
-| Executive | Presidential profile + cabinet minister cards |
-| Archive | Filter tabs; dev tools in collapsed panel only |
+| New Game | Politician card grid (not database rows) — still rendered the full 530-card wall |
+| Campaign | Command center: ~60% map + side panel; actions open drawer |
+| Elections | Tabs, candidate cards, formatted votes, RCV round list — presidential tab still used Assembly geography |
+| Assembly | Bill progress track on selected legislation — overview was still a 420-square matrix |
+| Executive | Intended presidential profile + cabinet cards — still a minister table with giant Dismiss buttons |
+| Archive | Filter tabs; dev tools were still visible (collapsed) in ordinary play |
 | Organizations | Human relationship labels (Neutral, Cordial, Hostile, …) |
 
 ## Tokens (CSS)
@@ -93,3 +95,6 @@ Defined in `apps/game/src/styles.css`:
 ## Phase boundary
 
 Phase 9.5 is **UI/UX only**. Simulation rules, save schema v9, determinism, and information boundaries are unchanged. Phase 10 (foreign affairs) is out of scope.
+
+**Superseded for current UI truth by Phase 9.6:** `docs/UI_SYSTEM_V3_1.md`.
+

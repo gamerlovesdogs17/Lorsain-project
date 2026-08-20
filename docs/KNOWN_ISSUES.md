@@ -95,7 +95,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 
 ## Phase 7.1 notes
 
-**Phase 7.1 First Playtest UX is COMPLETE (`670b38b`). Phase 8 Courts + Constitutional System is COMPLETE (`72733d4`). Phase 9 Economy/Organizations/Media is COMPLETE. Phase 9.5 UI System V3 is COMPLETE.**
+**Phase 7.1 First Playtest UX is COMPLETE (`670b38b`). Phase 8 Courts + Constitutional System is COMPLETE (`72733d4`). Phase 9 Economy/Organizations/Media is COMPLETE. Phase 9.5 UI System V3 shell is COMPLETE (`887b500`). Phase 9.6 UI System V3.1 is COMPLETE.**
 
 | ID | Severity | Issue |
 | --- | --- | --- |
@@ -103,13 +103,19 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P95-VOTE-FORMAT | **FIXED in Phase 9.5** | Election results use `formatPublicNumber()` â€” no `6205093/1` rational leak. |
 | P95-CAMPAIGN-ACTIONS | **FIXED in Phase 9.5** | Campaign action buttons disable at 0 actions with visible `0 / N` counter. |
 | P95-MAP-HOVER | **FIXED in Phase 9.5** | Map hover no longer calls persistent `onSelect`. |
+| P96-MAP-FILL-CSS | **FIXED in Phase 9.6** | Constituency SVG `fill` attributes are no longer overridden by `fill: transparent`. |
+| P96-MAP-PLURALITY | **FIXED in Phase 9.6** | Multi-member constituencies use sitting-seat plurality; exact ties are a neutral fill. |
+| P96-TRADE-BASELINE | **FIXED in Phase 9.6** | Neutral Trade sector no longer collapses 100â†’70 on the first processed month. |
+| P96-EMPLOYMENT-LABEL | **FIXED in Phase 9.6** | Home shows Employment index for `employmentIndex`. |
+| P96-PRES-MAP | **FIXED in Phase 9.6** | Presidential election tab no longer paints Assembly incumbency as presidential geography. |
 | P9-BUNDLE-SIZE | NONBLOCKING | Production game bundle ~10.5MB (GeoJSON in client). Code-split or server-side map prep in Phase 11. |
 | P9-CITY-PLACEMENT | NONBLOCKING | Canonical city JSON uses authoring x/y; runtime map places cities at province centroids + offset. Documented in `@lorsain/map`. |
 | P9-FORMAT-CRLF | NONBLOCKING | Repo-wide `format:check` may fail on pre-existing CRLF files; format only Phase 9 touched files when committing. |
 | P9-PYTHON | NONBLOCKING | `python scripts/validate_content.py` may exit 9009 on Windows Store stub. |
-| P9-UI-POLISH | NONBLOCKING | Phase 9.5 establishes game-facing UI V3; charting and animation deferred to Phase 11. |
-| P95-COURTS-POLISH | NONBLOCKING | Courts bench cards and docket presentation can be refined further in Phase 11. |
-| P95-CHAMBER-VIZ | NONBLOCKING | Assembly seat grid remains functional; semicircle/chamber art deferred. |
+| P9-UI-POLISH | NONBLOCKING | Phase 9.6 completes V3.1 game-facing screens; chamber animation and generated newspaper copy wait for Phase 11. |
+| P96-CHAMBER-SEMICIRCLE | NONBLOCKING | Assembly overview uses a composition bar and grouped seat blocks, not a physical semicircle. |
+| P96-NEWS-PROSE | NONBLOCKING | News groups outlet treatments under public events; it does not write original newspaper copy. |
+| P96-EXEC-DEPTH | NONBLOCKING | Presidential desk uses cards/drawers; appointment search is still a compact list, not a full personnel UI. |
 | P95-SCREENSHOTS | NONBLOCKING | Automated visual regression / screenshot CI not yet wired. |
 
 | ID | Severity | Issue |

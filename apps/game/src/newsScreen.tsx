@@ -1,6 +1,12 @@
-import { storiesChronological, type KernelWorld, type MediaStory, type SimState } from "@lorsain/sim";
+import {
+  storiesChronological,
+  type KernelWorld,
+  type MediaStory,
+  type SimState,
+} from "@lorsain/sim";
 import { useMemo, useState } from "react";
-import { EmptyState, NewsItem, PageHeader, TabBar, LeadStory } from "./ui/kit.js";
+import { EmptyState, PageHeader, TabBar } from "./ui/kit.js";
+import { eventDisplay, type PresentationCatalog } from "./presentation.js";
 
 const TABS = [
   "all",
@@ -12,12 +18,36 @@ const TABS = [
   "organizations",
 ] as const;
 
-export function NewsPage(props: { world: KernelWorld; snap: SimState }) {
+function eventKey(story: MediaStory): string {
+  const source = story.sourceEventIds[0];
+  if (source) return source;
+  return `${story.date}:${story.factEventType}:${story.subjectIds.join(",")}`;
+}
+
+export function NewsPage(props: {
+  world: KernelWorld;
+  snap: SimState;
+  catalog: PresentationCatalog;
+}) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("all");
-  const stories = useMemo(() => {
-    const all = storiesChronological(props.snap);
-    if (tab === "all") return all;
-    return all.filter((s) => s.category === tab);
+  const groups = useMemo(() => {
+    const all = storiesChronological(props.snap).filter((s) =>
+      tab === "all" ? true : s.category === tab,
+    );
+    const map = new Map<string, { stories: MediaStory[]; importance: number }>();
+    for (const s of all) {
+      const key = eventKey(s);
+      const cur = map.get(key) ?? { stories: [], importance: 0 };
+      cur.stories.push(s);
+      cur.importance = Math.max(cur.importance, s.importance);
+      map.set(key, cur);
+    }
+    return [...map.values()].sort((a, b) => {
+      if (b.importance !== a.importance) return b.importance - a.importance;
+      const ad = a.stories[0]?.date ?? "";
+      const bd = b.stories[0]?.date ?? "";
+      return bd < ad ? -1 : bd > ad ? 1 : 0;
+    });
   }, [props.snap, tab]);
 
   return (
@@ -28,24 +58,36 @@ export function NewsPage(props: { world: KernelWorld; snap: SimState }) {
         subtitle="Coverage is selected from public events. Outlets may frame, not invent."
       />
       <TabBar tabs={TABS.map((id) => ({ id, label: id }))} value={tab} onChange={setTab} />
-      {stories.length === 0 ? <EmptyState>No stories this month yet.</EmptyState> : null}
-      {stories[0] ? (
-        <LeadStory
-          kicker={props.world.mediaOutlets[stories[0].outletId]?.name ?? stories[0].outletId}
-          headline={stories[0].headlineKey}
-          date={stories[0].date}
-        />
-      ) : null}
-      {stories.slice(1).map((s: MediaStory) => (
-        <NewsItem
-          key={s.id}
-          headline={s.headlineKey}
-          outlet={props.world.mediaOutlets[s.outletId]?.name ?? s.outletId}
-          date={s.date}
-          category={s.category}
-          summary={`${s.factEventType.replace(/_/g, " ")} · ${s.framing} framing`}
-        />
-      ))}
+      {groups.length === 0 ? <EmptyState>No stories this month yet.</EmptyState> : null}
+      {groups.map((group, i) => {
+        const lead = group.stories[0]!;
+        const sourceId = lead.sourceEventIds[0];
+        const sourceEvent = sourceId
+          ? props.snap.history.find((e) => e.id === sourceId)
+          : undefined;
+        const headline = sourceEvent
+          ? eventDisplay(props.catalog, props.world, props.snap, sourceEvent)
+          : lead.headlineKey;
+        return (
+          <article key={`${eventKey(lead)}-${i}`} className={`news-event${i === 0 ? " lead" : ""}`}>
+            <div className="news-event-lead">
+              <div className="kicker">
+                {lead.category} · {lead.date}
+              </div>
+              <h3 className="serif-head">{headline}</h3>
+            </div>
+            <div className="outlet-treatments">
+              {group.stories.map((s) => (
+                <div key={s.id} className="outlet-treatment">
+                  <strong>{props.world.mediaOutlets[s.outletId]?.name ?? s.outletId}</strong>
+                  <span>{s.headlineKey}</span>
+                  <span className="muted">{s.framing}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }

@@ -35,7 +35,7 @@ export function AssemblyPage(props: {
   onDone: () => void;
   report: (r: CommandResult) => boolean;
 }) {
-  const [tab, setTab] = useState<AssemblyTab>("overview");
+  const [tab, setTab] = useState<AssemblyTab>("bills");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [issueId, setIssueId] = useState(props.world.issueIds[0] ?? "");
@@ -77,50 +77,58 @@ export function AssemblyPage(props: {
       />
       {tab === "overview" ? (
         <div className="card">
-          <h3>Assembly overview</h3>
+          <h3>Chamber composition</h3>
           <p>
             {mps.length} sitting of {props.world.legislativeConstitution.assemblySeatCount}{" "}
-            authorized seats.
+            authorized seats. Majority at{" "}
+            {Math.floor(props.world.legislativeConstitution.assemblySeatCount / 2) + 1}.
           </p>
-          <div className="chamber">
-            {Array.from(
-              { length: props.world.legislativeConstitution.assemblySeatCount },
-              (_, i) => {
-                const id = mps[i];
-                const party = id ? (props.snap.politicians[id]?.partyId ?? null) : null;
-                return (
-                  <span
-                    key={i}
-                    className={`seat ${id ? "" : "vacant"}`}
-                    style={{ background: id ? partyColor(props.world, party) : undefined }}
-                    title={
-                      id
-                        ? `${politicianDisplayName(props.catalog, id)} · ${partyDisplayName(props.world, party, props.snap)}`
-                        : "vacant"
-                    }
-                  />
-                );
-              },
-            )}
-          </div>
-          <table className="table">
-            <tbody>
-              {[...counts.entries()].map(([party, n]) => (
-                <tr key={party}>
-                  <td>
-                    <span
-                      className="swatch"
-                      style={{
-                        background: partyColor(props.world, party === "none" ? null : party),
-                      }}
-                    />{" "}
-                    {partyDisplayName(props.world, party === "none" ? null : party, props.snap)}
-                  </td>
-                  <td>{n}</td>
-                </tr>
+          <div className="composition-bar" aria-label="Party composition">
+            {[...counts.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([party, n]) => (
+                <div
+                  key={party}
+                  className="composition-seg"
+                  style={{
+                    width: `${(n / props.world.legislativeConstitution.assemblySeatCount) * 100}%`,
+                    background: partyColor(props.world, party === "none" ? null : party),
+                  }}
+                  title={`${partyDisplayName(props.world, party === "none" ? null : party, props.snap)} ${n}`}
+                />
               ))}
-            </tbody>
-          </table>
+          </div>
+          <p className="majority-note muted">
+            Player party highlighted below. This is sitting membership, not a vote forecast.
+          </p>
+          <div className="chamber-blocks">
+            {[...counts.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([party, n]) => {
+                const playerParty =
+                  props.snap.politicians[props.snap.playerPoliticianId]?.partyId ?? "none";
+                return (
+                  <div
+                    key={party}
+                    className={`chamber-block${party === playerParty ? " player-party" : ""}`}
+                  >
+                    {Array.from({ length: n }, (_, i) => (
+                      <span
+                        key={i}
+                        className="seat"
+                        style={{
+                          background: partyColor(props.world, party === "none" ? null : party),
+                        }}
+                      />
+                    ))}
+                    <div className="muted" style={{ flexBasis: "100%", marginTop: "0.25rem" }}>
+                      {partyDisplayName(props.world, party === "none" ? null : party, props.snap)} ·{" "}
+                      {n}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
         </div>
       ) : null}
       {tab === "committees" ? (
@@ -170,7 +178,7 @@ export function AssemblyPage(props: {
           </table>
         </div>
       ) : null}
-      {tab === "bills" || tab === "overview" ? (
+      {tab === "bills" ? (
         <>
           {mp ? (
             <div className="card" style={{ margin: "0.8rem 0" }}>

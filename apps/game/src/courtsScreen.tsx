@@ -3,7 +3,6 @@ import {
   confirmationYesNeeded,
   currentPresidentialAuthorityId,
   deriveCourtBench,
-  impeachmentYesNeeded,
   judicialEligibilityError,
   vacantCourtSeatIds,
   caseTitle,
@@ -16,7 +15,7 @@ import {
 } from "@lorsain/sim";
 import { useMemo, useState } from "react";
 import { politicianDisplayName, type PresentationCatalog } from "./presentation.js";
-import { PageHeader } from "./ui/kit.js";
+import { PageHeader, SectionCard } from "./ui/kit.js";
 
 export function CourtsPage(props: {
   world: KernelWorld;
@@ -82,35 +81,27 @@ export function CourtsPage(props: {
         title="Constitutional Court"
         subtitle="Nine-seat bench · vacancies, docket, and recent decisions."
       />
-      <div className="grid">
-      <div className="card">
-        <h3>Bench</h3>
+      <div className="courts-layout">
+      <SectionCard title="Bench">
         <p className="muted">
           Nine judges · 12-year nonrenewable terms · confirmation {confirmationYesNeeded(world)} yes
-          of {world.legislativeConstitution.assemblySeatCount} authorized seats · impeachment{" "}
-          {impeachmentYesNeeded(world)} yes plus Court judgment.
+          of {world.legislativeConstitution.assemblySeatCount} authorized seats.
         </p>
-        <div className="bench-grid">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Seat</th>
-              <th>Judge</th>
-              <th>Term ends</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bench.map((s) => (
-              <tr key={s.officeId}>
-                <td>{s.title}</td>
-                <td>{s.holderId ? politicianDisplayName(catalog, s.holderId) : "Vacant"}</td>
-                <td>{s.termEndDate ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="bench-cards">
+          {bench.map((s) => {
+            const chief = /chief/i.test(s.title);
+            return (
+              <div key={s.officeId} className={`judge-card${chief ? " chief" : ""}`}>
+                <div className="kicker">{chief ? "Chief Justice" : s.title}</div>
+                <strong>
+                  {s.holderId ? politicianDisplayName(catalog, s.holderId) : "Vacant"}
+                </strong>
+                <div className="muted">Term ends {s.termEndDate ?? "—"}</div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      </SectionCard>
       {president && vacancies.length > 0 ? (
         <div className="card">
           <h3>Nominate a judge</h3>
@@ -151,9 +142,9 @@ export function CourtsPage(props: {
           </button>
         </div>
       ) : null}
+      {awaiting.length > 0 ? (
       <div className="card">
         <h3>Nominations</h3>
-        {awaiting.length === 0 ? <p className="muted">No pending nominations.</p> : null}
         {awaiting.map((n) => (
           <div key={n.id}>
             {world.offices[n.seatOfficeId]?.title ?? n.seatOfficeId} · {n.status.replace(/_/g, " ")}
@@ -197,6 +188,7 @@ export function CourtsPage(props: {
           </div>
         ))}
       </div>
+      ) : null}
       {mp ? (
         <div className="card">
           <h3>Assembly constitutional actions</h3>
@@ -341,7 +333,7 @@ export function CourtsPage(props: {
         </div>
       ) : null}
       <div className="card">
-        <h3>Active cases</h3>
+        <h3>Docket</h3>
         {pendingCases.length === 0 ? <p className="muted">No active cases.</p> : null}
         {pendingCases.map((c) => (
           <div key={c.id}>

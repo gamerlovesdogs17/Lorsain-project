@@ -154,6 +154,25 @@ function titleCaseEvent(type: string): string {
     .join(" ");
 }
 
+function publicBillTitle(
+  catalog: PresentationCatalog,
+  state: SimState,
+  event: SimEvent,
+): string | null {
+  const billId = typeof event.payload.billId === "string" ? event.payload.billId : null;
+  const lawId = typeof event.payload.lawId === "string" ? event.payload.lawId : null;
+  const rec =
+    (lawId ? state.legislatureRuntime.enactedLaws[lawId] : undefined) ??
+    (billId ? state.legislatureRuntime.bills[billId] : undefined);
+  const title = rec?.title?.trim();
+  if (!title) return null;
+  const issueId = rec?.policyItems?.[0]?.issueId ?? title.match(/ISS_[A-Z0-9_]+/)?.[0];
+  if (issueId && /ISS_/.test(title)) {
+    return `the ${issueDisplayName(catalog, issueId)} Act`;
+  }
+  return title;
+}
+
 export function eventDisplay(
   catalog: PresentationCatalog,
   world: KernelWorld,
@@ -194,23 +213,37 @@ export function eventDisplay(
     case "ENDORSEMENT_WITHDRAWN":
       return `An endorsement is withdrawn`;
     case "BILL_INTRODUCED":
-      return `${lead ?? "An MP"} introduces a bill`;
+      return publicBillTitle(catalog, state, event)
+        ? `${lead ?? "An MP"} introduces ${publicBillTitle(catalog, state, event)}`
+        : `${lead ?? "An MP"} introduces a bill`;
     case "BILL_COSPONSORED":
       return `${lead ?? "An MP"} cosponsors a bill`;
     case "AMENDMENT_PROPOSED":
       return `${lead ?? "An MP"} proposes an amendment`;
     case "BILL_PASSED":
     case "FLOOR_PASSED":
-      return `The Assembly passes a bill`;
+    case "BILL_FLOOR_PASSED":
+      return publicBillTitle(catalog, state, event)
+        ? `The Assembly passes ${publicBillTitle(catalog, state, event)}`
+        : `The Assembly passes a bill`;
     case "BILL_FAILED":
     case "FLOOR_FAILED":
-      return `The Assembly rejects a bill`;
+    case "BILL_FLOOR_FAILED":
+      return publicBillTitle(catalog, state, event)
+        ? `The Assembly rejects ${publicBillTitle(catalog, state, event)}`
+        : `The Assembly rejects a bill`;
     case "BILL_SIGNED":
-      return `The President signs a bill`;
+      return publicBillTitle(catalog, state, event)
+        ? `The President signs ${publicBillTitle(catalog, state, event)}`
+        : `The President signs a bill`;
     case "BILL_RETURNED":
-      return `The President returns a bill to the Assembly`;
+      return publicBillTitle(catalog, state, event)
+        ? `The President returns ${publicBillTitle(catalog, state, event)} to the Assembly`
+        : `The President returns a bill to the Assembly`;
     case "LAW_ENACTED":
-      return `A law is enacted`;
+      return publicBillTitle(catalog, state, event)
+        ? `${publicBillTitle(catalog, state, event)} becomes law`
+        : `A law is enacted`;
     case "MINISTER_APPOINTED":
       return `${lead ?? "The President"} appoints ${second ?? "a minister"}`;
     case "MINISTER_DISMISSED":

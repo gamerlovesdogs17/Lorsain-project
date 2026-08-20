@@ -42,6 +42,9 @@ export default function App() {
   const [saves, setSaves] = useState<SavedGameRow[]>([]);
   const [query, setQuery] = useState("");
   const [partyFilter, setPartyFilter] = useState("all");
+  const [officeFilter, setOfficeFilter] = useState("all");
+  const [provinceFilter, setProvinceFilter] = useState("all");
+  const [browsePage, setBrowsePage] = useState(0);
   const [selectedBill, setSelectedBill] = useState<string | null>(null);
   const [mapHover, setMapHover] = useState<string | null>(null);
   const [debug, setDebug] = useState(false);
@@ -219,35 +222,89 @@ export default function App() {
     );
   }
   if (mode === "select") {
-    const list = (bundle.content.starting_figures.figures as Figure[])
+    const figuresList = bundle.content.starting_figures.figures as Figure[];
+    function officeKind(f: Figure): string {
+      const o = (f.office ?? "").toLowerCase();
+      if (o.includes("president of")) return "president";
+      if (o.includes("governor")) return "governor";
+      if (o.includes("minister")) return "minister";
+      if (o.includes("leader of") || o.includes("speaker")) return "leader";
+      if (o.includes("assembly") || o.includes("mp") || o.includes("committee")) return "assembly";
+      if (o.includes("justice") || o.includes("judge")) return "courts";
+      return "other";
+    }
+    function careerRank(f: Figure): number {
+      const o = (f.office ?? "").toLowerCase();
+      if (o.includes("president of")) return 0;
+      if (o.includes("speaker")) return 1;
+      if (o.includes("leader of")) return 2;
+      if (o.includes("minister")) return 3;
+      if (o.includes("governor")) return 4;
+      if (o.includes("chief justice")) return 5;
+      if (f.presidential_status === "frontrunner") return 6;
+      if (o.includes("chair")) return 7;
+      if (f.presidential_status === "likely") return 8;
+      return 99;
+    }
+    const filtered = figuresList
       .filter((f) => {
         const q = query.trim().toLowerCase();
         const hay = `${f.name} ${f.office} ${f.party} ${f.home} ${f.notes ?? ""}`.toLowerCase();
         if (q && !hay.includes(q)) return false;
         if (partyFilter !== "all" && f.party_id !== partyFilter) return false;
+        if (officeFilter !== "all" && officeKind(f) !== officeFilter) return false;
+        if (provinceFilter !== "all" && (f.home ?? "") !== provinceFilter) return false;
         return true;
       })
       .sort((a, b) => {
-        const rank = (f: Figure) =>
-          f.office?.toLowerCase().includes("president")
-            ? 0
-            : f.presidential_status === "frontrunner"
-              ? 1
-              : f.presidential_status === "likely"
-                ? 2
-                : f.presidential_status
-                  ? 3
-                  : 4;
-        const d = rank(a) - rank(b);
+        const d = careerRank(a) - careerRank(b);
         return d !== 0 ? d : a.name.localeCompare(b.name);
       });
+    const searching =
+      query.trim().length > 0 ||
+      partyFilter !== "all" ||
+      officeFilter !== "all" ||
+      provinceFilter !== "all";
+    const provinces = [
+      ...new Set(figuresList.map((f) => f.home).filter((h): h is string => Boolean(h))),
+    ].sort((a, b) => a.localeCompare(b));
+    const featured = figuresList
+      .filter((f) => careerRank(f) < 99)
+      .sort((a, b) => careerRank(a) - careerRank(b) || a.name.localeCompare(b.name))
+      .slice(0, 18);
+    const pageSize = 18;
+    const browse = searching ? filtered : filtered.filter((f) => careerRank(f) === 99);
+    const pageCount = Math.max(1, Math.ceil(browse.length / pageSize));
+    const page = Math.min(browsePage, pageCount - 1);
+    const pageRows = browse.slice(page * pageSize, page * pageSize + pageSize);
     const tempCatalog = catalogFromBundle(bundle, figures);
+    const card = (f: Figure) => (
+      <PoliticianCard
+        key={f.id}
+        catalog={tempCatalog}
+        world={world}
+        politicianId={f.id}
+        name={f.name}
+        partyLabel={f.party ?? "Independent"}
+        partyId={f.party_id ?? null}
+        {...(f.office ? { office: f.office } : {})}
+        {...(f.home ? { home: f.home } : {})}
+        {...((f.notes ?? f.display_summary)
+          ? { descriptor: f.notes ?? f.display_summary }
+          : {})}
+        action={
+          <button className="btn" onClick={() => startGame(f.id)}>
+            Play
+          </button>
+        }
+      />
+    );
     return (
       <div className="page new-game-page">
         <div className="new-game-header">
           <h2 className="serif-head">Choose your career</h2>
           <p className="muted">
-            Select a politician to begin. Public offices and biographies only — hidden traits are
+            Begin as a notable officeholder, or search the full public roster. Hidden traits are
             never shown.
           </p>
         </div>
@@ -256,9 +313,18 @@ export default function App() {
             className="search"
             placeholder="Search by name, office, party, or home"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setBrowsePage(0);
+            }}
           />
-          <select value={partyFilter} onChange={(e) => setPartyFilter(e.target.value)}>
+          <select
+            value={partyFilter}
+            onChange={(e) => {
+              setPartyFilter(e.target.value);
+              setBrowsePage(0);
+            }}
+          >
             <option value="all">All parties</option>
             {Object.values(world.partyDefinitions).map((p) => (
               <option key={p.partyId} value={p.partyId}>
@@ -266,31 +332,71 @@ export default function App() {
               </option>
             ))}
           </select>
+          <select
+            value={officeFilter}
+            onChange={(e) => {
+              setOfficeFilter(e.target.value);
+              setBrowsePage(0);
+            }}
+          >
+            <option value="all">All offices</option>
+            <option value="president">President</option>
+            <option value="governor">Governors</option>
+            <option value="minister">Ministers</option>
+            <option value="leader">Party leaders</option>
+            <option value="assembly">Assembly</option>
+            <option value="courts">Courts</option>
+          </select>
+          <select
+            value={provinceFilter}
+            onChange={(e) => {
+              setProvinceFilter(e.target.value);
+              setBrowsePage(0);
+            }}
+          >
+            <option value="all">All provinces</option>
+            {provinces.map((home) => (
+              <option key={home} value={home}>
+                {home}
+              </option>
+            ))}
+          </select>
           <button className="btn secondary" onClick={() => setMode("title")}>
             Back
           </button>
         </div>
-        <div className="politician-card-grid">
-          {list.slice(0, 60).map((f) => (
-            <PoliticianCard
-              key={f.id}
-              catalog={tempCatalog}
-              world={world}
-              politicianId={f.id}
-              name={f.name}
-              partyLabel={f.party ?? "Independent"}
-              partyId={f.party_id ?? null}
-              {...(f.office ? { office: f.office } : {})}
-              {...(f.home ? { home: f.home } : {})}
-              {...((f.notes ?? f.display_summary) ? { descriptor: f.notes ?? f.display_summary } : {})}
-              action={
-                <button className="btn" onClick={() => startGame(f.id)}>
-                  Play
-                </button>
-              }
-            />
-          ))}
-        </div>
+        {!searching ? (
+          <>
+            <h3>Featured careers</h3>
+            <div className="featured-grid">{featured.map(card)}</div>
+            <h3 style={{ marginTop: "1.25rem" }}>Find another politician</h3>
+            <p className="muted">Ordinary MPs and other public figures — {browse.length} remaining.</p>
+          </>
+        ) : (
+          <p className="muted">{filtered.length} matching politicians</p>
+        )}
+        <div className="featured-grid">{pageRows.map(card)}</div>
+        {pageCount > 1 ? (
+          <div className="row" style={{ marginTop: "0.75rem" }}>
+            <button
+              className="btn secondary"
+              disabled={page <= 0}
+              onClick={() => setBrowsePage((p) => Math.max(0, p - 1))}
+            >
+              Previous
+            </button>
+            <span className="muted">
+              Page {page + 1} of {pageCount}
+            </span>
+            <button
+              className="btn secondary"
+              disabled={page >= pageCount - 1}
+              onClick={() => setBrowsePage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   }

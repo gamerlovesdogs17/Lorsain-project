@@ -15,7 +15,7 @@ import {
   clampIndex,
   clampFiscal,
 } from "./policy.js";
-import type { EconomyLagKind, RegionalEconomyIndices } from "./types.js";
+import type { EconomyLagKind, NationalEconomyIndices, RegionalEconomyIndices } from "./types.js";
 
 function event(
   state: SimState,
@@ -217,13 +217,25 @@ function updateRegions(world: KernelWorld, state: SimState): void {
     );
     state.economyRuntime.provinces[provinceId] = rec;
   }
-  const s = state.economyRuntime.sectors;
-  s.labor = { conditionsIndex: clampIndex((n.employmentIndex + n.realWageIndex) / 2) };
-  s.manufacturing = { conditionsIndex: clampIndex(n.outputIndex * 0.7 + n.employmentIndex * 0.3) };
-  s.agriculture = { conditionsIndex: clampIndex(n.outputIndex * 0.6 + n.confidenceIndex * 0.4) };
-  s.services = { conditionsIndex: clampIndex(n.confidenceIndex * 0.6 + n.outputIndex * 0.4) };
-  s.housing = { conditionsIndex: n.housingIndex };
-  s.trade = { conditionsIndex: clampIndex(n.outputIndex * 0.5 + (200 - n.priceIndex) * 0.2) };
+  Object.assign(state.economyRuntime.sectors, sectorIndicesFromNational(n));
+}
+
+/** Sector composites stay at 100 when every national index is at the January 2028 baseline. */
+export function sectorIndicesFromNational(
+  n: NationalEconomyIndices,
+): Record<string, { conditionsIndex: number }> {
+  return {
+    labor: { conditionsIndex: clampIndex((n.employmentIndex + n.realWageIndex) / 2) },
+    manufacturing: { conditionsIndex: clampIndex(n.outputIndex * 0.7 + n.employmentIndex * 0.3) },
+    agriculture: { conditionsIndex: clampIndex(n.outputIndex * 0.6 + n.confidenceIndex * 0.4) },
+    services: { conditionsIndex: clampIndex(n.confidenceIndex * 0.6 + n.outputIndex * 0.4) },
+    housing: { conditionsIndex: clampIndex(n.housingIndex) },
+    trade: {
+      conditionsIndex: clampIndex(
+        n.outputIndex * 0.6 + n.confidenceIndex * 0.2 + (200 - n.priceIndex) * 0.2,
+      ),
+    },
+  };
 }
 
 function bumpIssueClimate(

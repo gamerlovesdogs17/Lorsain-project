@@ -1,4 +1,4 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useEffect, useMemo, useState } from "react";
 import { collectPlayerActionableDecisions, createSimulation, parseSaveFile, restoreSimulation, } from "@lorsain/sim";
 import { loadBrowserContentBundle } from "./content/browserReader.js";
@@ -24,6 +24,9 @@ export default function App() {
     const [saves, setSaves] = useState([]);
     const [query, setQuery] = useState("");
     const [partyFilter, setPartyFilter] = useState("all");
+    const [officeFilter, setOfficeFilter] = useState("all");
+    const [provinceFilter, setProvinceFilter] = useState("all");
+    const [browsePage, setBrowsePage] = useState(0);
     const [selectedBill, setSelectedBill] = useState(null);
     const [mapHover, setMapHover] = useState(null);
     const [debug, setDebug] = useState(false);
@@ -127,7 +130,46 @@ export default function App() {
                                     } })] })] }), _jsx("div", { className: "list", style: { marginTop: "1rem" }, children: saves.map((s) => (_jsxs("div", { className: "pick", children: [_jsxs("div", { children: [_jsx("strong", { children: s.name }), _jsxs("div", { className: "muted", children: [s.playerName, " \u00B7 ", s.date] })] }), _jsx("button", { className: "btn", onClick: () => void getSave(s.id).then((row) => row && loadFile(row.save)), children: "Load" })] }, s.id))) })] }));
     }
     if (mode === "select") {
-        const list = bundle.content.starting_figures.figures
+        const figuresList = bundle.content.starting_figures.figures;
+        function officeKind(f) {
+            const o = (f.office ?? "").toLowerCase();
+            if (o.includes("president of"))
+                return "president";
+            if (o.includes("governor"))
+                return "governor";
+            if (o.includes("minister"))
+                return "minister";
+            if (o.includes("leader of") || o.includes("speaker"))
+                return "leader";
+            if (o.includes("assembly") || o.includes("mp") || o.includes("committee"))
+                return "assembly";
+            if (o.includes("justice") || o.includes("judge"))
+                return "courts";
+            return "other";
+        }
+        function careerRank(f) {
+            const o = (f.office ?? "").toLowerCase();
+            if (o.includes("president of"))
+                return 0;
+            if (o.includes("speaker"))
+                return 1;
+            if (o.includes("leader of"))
+                return 2;
+            if (o.includes("minister"))
+                return 3;
+            if (o.includes("governor"))
+                return 4;
+            if (o.includes("chief justice"))
+                return 5;
+            if (f.presidential_status === "frontrunner")
+                return 6;
+            if (o.includes("chair"))
+                return 7;
+            if (f.presidential_status === "likely")
+                return 8;
+            return 99;
+        }
+        const filtered = figuresList
             .filter((f) => {
             const q = query.trim().toLowerCase();
             const hay = `${f.name} ${f.office} ${f.party} ${f.home} ${f.notes ?? ""}`.toLowerCase();
@@ -135,23 +177,49 @@ export default function App() {
                 return false;
             if (partyFilter !== "all" && f.party_id !== partyFilter)
                 return false;
+            if (officeFilter !== "all" && officeKind(f) !== officeFilter)
+                return false;
+            if (provinceFilter !== "all" && (f.home ?? "") !== provinceFilter)
+                return false;
             return true;
         })
             .sort((a, b) => {
-            const rank = (f) => f.office?.toLowerCase().includes("president")
-                ? 0
-                : f.presidential_status === "frontrunner"
-                    ? 1
-                    : f.presidential_status === "likely"
-                        ? 2
-                        : f.presidential_status
-                            ? 3
-                            : 4;
-            const d = rank(a) - rank(b);
+            const d = careerRank(a) - careerRank(b);
             return d !== 0 ? d : a.name.localeCompare(b.name);
         });
+        const searching = query.trim().length > 0 ||
+            partyFilter !== "all" ||
+            officeFilter !== "all" ||
+            provinceFilter !== "all";
+        const provinces = [
+            ...new Set(figuresList.map((f) => f.home).filter((h) => Boolean(h))),
+        ].sort((a, b) => a.localeCompare(b));
+        const featured = figuresList
+            .filter((f) => careerRank(f) < 99)
+            .sort((a, b) => careerRank(a) - careerRank(b) || a.name.localeCompare(b.name))
+            .slice(0, 18);
+        const pageSize = 18;
+        const browse = searching ? filtered : filtered.filter((f) => careerRank(f) === 99);
+        const pageCount = Math.max(1, Math.ceil(browse.length / pageSize));
+        const page = Math.min(browsePage, pageCount - 1);
+        const pageRows = browse.slice(page * pageSize, page * pageSize + pageSize);
         const tempCatalog = catalogFromBundle(bundle, figures);
-        return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: "Choose your career" }), _jsx("p", { className: "muted", children: "Select a politician to begin. Public offices and biographies only \u2014 hidden traits are never shown." })] }), _jsxs("div", { className: "row new-game-filters", children: [_jsx("input", { className: "search", placeholder: "Search by name, office, party, or home", value: query, onChange: (e) => setQuery(e.target.value) }), _jsxs("select", { value: partyFilter, onChange: (e) => setPartyFilter(e.target.value), children: [_jsx("option", { value: "all", children: "All parties" }), Object.values(world.partyDefinitions).map((p) => (_jsx("option", { value: p.partyId, children: p.name }, p.partyId)))] }), _jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" })] }), _jsx("div", { className: "politician-card-grid", children: list.slice(0, 60).map((f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), ...((f.notes ?? f.display_summary) ? { descriptor: f.notes ?? f.display_summary } : {}), action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id))) })] }));
+        const card = (f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), ...((f.notes ?? f.display_summary)
+                ? { descriptor: f.notes ?? f.display_summary }
+                : {}), action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id));
+        return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: "Choose your career" }), _jsx("p", { className: "muted", children: "Begin as a notable officeholder, or search the full public roster. Hidden traits are never shown." })] }), _jsxs("div", { className: "row new-game-filters", children: [_jsx("input", { className: "search", placeholder: "Search by name, office, party, or home", value: query, onChange: (e) => {
+                                setQuery(e.target.value);
+                                setBrowsePage(0);
+                            } }), _jsxs("select", { value: partyFilter, onChange: (e) => {
+                                setPartyFilter(e.target.value);
+                                setBrowsePage(0);
+                            }, children: [_jsx("option", { value: "all", children: "All parties" }), Object.values(world.partyDefinitions).map((p) => (_jsx("option", { value: p.partyId, children: p.name }, p.partyId)))] }), _jsxs("select", { value: officeFilter, onChange: (e) => {
+                                setOfficeFilter(e.target.value);
+                                setBrowsePage(0);
+                            }, children: [_jsx("option", { value: "all", children: "All offices" }), _jsx("option", { value: "president", children: "President" }), _jsx("option", { value: "governor", children: "Governors" }), _jsx("option", { value: "minister", children: "Ministers" }), _jsx("option", { value: "leader", children: "Party leaders" }), _jsx("option", { value: "assembly", children: "Assembly" }), _jsx("option", { value: "courts", children: "Courts" })] }), _jsxs("select", { value: provinceFilter, onChange: (e) => {
+                                setProvinceFilter(e.target.value);
+                                setBrowsePage(0);
+                            }, children: [_jsx("option", { value: "all", children: "All provinces" }), provinces.map((home) => (_jsx("option", { value: home, children: home }, home)))] }), _jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" })] }), !searching ? (_jsxs(_Fragment, { children: [_jsx("h3", { children: "Featured careers" }), _jsx("div", { className: "featured-grid", children: featured.map(card) }), _jsx("h3", { style: { marginTop: "1.25rem" }, children: "Find another politician" }), _jsxs("p", { className: "muted", children: ["Ordinary MPs and other public figures \u2014 ", browse.length, " remaining."] })] })) : (_jsxs("p", { className: "muted", children: [filtered.length, " matching politicians"] })), _jsx("div", { className: "featured-grid", children: pageRows.map(card) }), pageCount > 1 ? (_jsxs("div", { className: "row", style: { marginTop: "0.75rem" }, children: [_jsx("button", { className: "btn secondary", disabled: page <= 0, onClick: () => setBrowsePage((p) => Math.max(0, p - 1)), children: "Previous" }), _jsxs("span", { className: "muted", children: ["Page ", page + 1, " of ", pageCount] }), _jsx("button", { className: "btn secondary", disabled: page >= pageCount - 1, onClick: () => setBrowsePage((p) => p + 1), children: "Next" })] })) : null] }));
     }
     if (!sim || !snap || !catalog)
         return null;

@@ -7,7 +7,7 @@ import {
   type SimState,
   type Simulation,
 } from "@lorsain/sim";
-import { cabinet, isMp, isPresident, playerOffices } from "./format.js";
+import { cabinet, isMp, isPresident, playerOffices, qualitativeStanding } from "./format.js";
 import {
   issueDisplayName,
   partyDisplayName,
@@ -15,7 +15,7 @@ import {
   politicianDisplayName,
   type PresentationCatalog,
 } from "./presentation.js";
-import { PageHeader, SectionCard } from "./ui/kit.js";
+import { EmptyState, PageHeader, SectionCard } from "./ui/kit.js";
 import { PoliticianCard, PoliticianProfile } from "./ui/politician.js";
 
 export function ExecutivePage(props: {
@@ -46,6 +46,7 @@ export function ExecutivePage(props: {
   const [regMag, setRegMag] = useState(0.3);
   const [regMajor, setRegMajor] = useState(false);
   const [allocations, setAllocations] = useState<Record<string, string>>({});
+  const [panel, setPanel] = useState<null | "regulation" | "budget">(null);
   const selectedOfficeId = vacantMinistries.some((m) => m.officeId === appointOfficeId)
     ? appointOfficeId
     : (vacantMinistries[0]?.officeId ?? "");
@@ -80,9 +81,22 @@ export function ExecutivePage(props: {
       .slice(0, 60);
   }, [appointQuery, props.catalog, props.snap, props.world, selectedOfficeId]);
 
+  const pendingBills = Object.values(props.snap.legislatureRuntime.bills).filter(
+    (b) => b.status === "sent_to_president",
+  );
+  const standing = presidentId ? props.snap.candidateStanding[presidentId] : undefined;
+
   return (
-    <div>
-      <PageHeader kicker="Government" title="Executive" subtitle="President, cabinet, budget, and regulations." />
+    <div className={president ? "presidential-desk" : ""}>
+      <PageHeader
+        kicker={president ? "Presidential command" : "Government"}
+        title="Executive"
+        subtitle={
+          president
+            ? "The administration is yours to direct."
+            : "President, cabinet, budget, and regulations."
+        }
+      />
       {presidentId ? (
         <PoliticianProfile
           catalog={props.catalog}
@@ -95,7 +109,50 @@ export function ExecutivePage(props: {
             props.snap.politicians[presidentId]?.partyId ?? null,
             props.snap,
           )}
+          standing={`Public standing: ${qualitativeStanding(standing?.favorability)}`}
         />
+      ) : (
+        <EmptyState>The presidency is vacant.</EmptyState>
+      )}
+      {president ? (
+        <SectionCard title="Immediate business">
+          {pendingBills.length === 0 && vacantMinistries.length === 0 ? (
+            <EmptyState>No bills or vacancies awaiting you.</EmptyState>
+          ) : null}
+          {pendingBills.map((b) => (
+            <div key={b.id} className="row" style={{ marginTop: "0.4rem" }}>
+              <span>Awaiting signature: {b.title}</span>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  props.report(props.sim.executeCommand({ type: "SIGN_BILL", billId: b.id }));
+                  props.onDone();
+                }}
+              >
+                Sign
+              </button>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => {
+                  props.report(props.sim.executeCommand({ type: "RETURN_BILL", billId: b.id }));
+                  props.onDone();
+                }}
+              >
+                Return
+              </button>
+            </div>
+          ))}
+          {vacantMinistries.length > 0 ? (
+            <p className="muted">{vacantMinistries.length} cabinet post{vacantMinistries.length === 1 ? "" : "s"} vacant.</p>
+          ) : null}
+          {Object.values(props.snap.executiveRuntime.emergencies).map((e) => (
+            <div key={e.id} className="badge warn">
+              Emergency {e.status} · expires {e.expiresDate}
+            </div>
+          ))}
+        </SectionCard>
       ) : null}
       <SectionCard title="Cabinet">
         <div className="politician-card-grid">
@@ -110,28 +167,34 @@ export function ExecutivePage(props: {
                 office={m.title}
                 action={
                   president ? (
-                    <button
-                      type="button"
-                      className="btn quiet"
-                      onClick={() =>
-                        props.askConfirm({
-                          title: "Dismiss minister",
-                          body: `Dismiss ${politicianDisplayName(props.catalog, m.holderId!)} as ${m.title}?`,
-                          confirmLabel: "Dismiss",
-                          action: () => {
-                            props.report(
-                              props.sim.executeCommand({
-                                type: "DISMISS_MINISTER",
-                                officeId: m.officeId,
-                              }),
-                            );
-                            props.onDone();
-                          },
-                        })
-                      }
-                    >
-                      Dismiss
-                    </button>
+                    <details className="card-menu">
+                      <summary className="btn quiet" aria-label="Minister actions">
+                        ⋯
+                      </summary>
+                      <div className="card-menu-pop">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            props.askConfirm({
+                              title: "Dismiss minister",
+                              body: `Dismiss ${politicianDisplayName(props.catalog, m.holderId!)} as ${m.title}?`,
+                              confirmLabel: "Dismiss",
+                              action: () => {
+                                props.report(
+                                  props.sim.executeCommand({
+                                    type: "DISMISS_MINISTER",
+                                    officeId: m.officeId,
+                                  }),
+                                );
+                                props.onDone();
+                              },
+                            })
+                          }
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    </details>
                   ) : null
                 }
               />
@@ -223,9 +286,26 @@ export function ExecutivePage(props: {
       ) : null}
 
       {president ? (
-        <div className="card" style={{ marginTop: "0.8rem" }}>
-          <h3>Issue regulation</h3>
-          <div className="row">
+        <div className="row">
+          <button type="button" className="btn secondary" onClick={() => setPanel("regulation")}>
+            Issue regulation
+          </button>
+          <button type="button" className="btn secondary" onClick={() => setPanel("budget")}>
+            Propose budget
+          </button>
+        </div>
+      ) : null}
+
+      {president && panel === "regulation" ? (
+        <div className="action-drawer-backdrop" onClick={() => setPanel(null)}>
+          <div className="action-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="action-drawer-head">
+              <h3>Issue regulation</h3>
+              <button type="button" className="btn quiet" onClick={() => setPanel(null)}>
+                Close
+              </button>
+            </div>
+        <div className="form-stack">
             <select value={regOffice} onChange={(e) => setRegOffice(e.target.value)}>
               <option value="">Choose ministry</option>
               {cab.map((m) => (
@@ -289,104 +369,140 @@ export function ExecutivePage(props: {
                   }),
                 );
                 props.onDone();
+                setPanel(null);
               }}
             >
               Issue regulation
             </button>
           </div>
+          </div>
         </div>
       ) : null}
 
-      <h3>Budget</h3>
-      {Object.values(props.snap.executiveRuntime.budgets).map((b) => (
-        <div key={b.id}>
-          FY {b.fiscalYear} · {b.status}
-          <div className="muted">
-            {Object.entries(b.allocations)
-              .map(([officeId, n]) => {
-                const title = cab.find((m) => m.officeId === officeId)?.title ?? officeId;
-                return `${title} ${n}`;
-              })
-              .join(" · ")}
-          </div>
-          {mp && b.status === "proposed" ? (
+      <SectionCard title="Budget">
+        {Object.values(props.snap.executiveRuntime.budgets).length === 0 ? (
+          <EmptyState>No budget has been proposed this cycle.</EmptyState>
+        ) : null}
+        {Object.values(props.snap.executiveRuntime.budgets).map((b) => {
+          const total = Object.values(b.allocations).reduce((s, n) => s + n, 0);
+          return (
+            <div key={b.id}>
+              FY {b.fiscalYear} · {b.status} · total {total.toLocaleString()}
+              <div className="muted">
+                {Object.entries(b.allocations)
+                  .map(([officeId, n]) => {
+                    const title = cab.find((m) => m.officeId === officeId)?.title ?? officeId;
+                    return `${title} ${n}`;
+                  })
+                  .join(" · ")}
+              </div>
+              {mp && b.status === "proposed" ? (
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => {
+                    props.report(
+                      props.sim.executeCommand({
+                        type: "INTRODUCE_MOTION",
+                        kind: "budget_approval",
+                        targetId: b.id,
+                      }),
+                    );
+                    props.onDone();
+                  }}
+                >
+                  Move to approve
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+      </SectionCard>
+
+      {president && panel === "budget" ? (
+        <div className="action-drawer-backdrop" onClick={() => setPanel(null)}>
+          <div className="action-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="action-drawer-head">
+              <h3>Propose budget</h3>
+              <button type="button" className="btn quiet" onClick={() => setPanel(null)}>
+                Close
+              </button>
+            </div>
+            <p className="muted">Set each ministry envelope. Nothing is auto-equalized.</p>
+            <table className="table budget-editor">
+              <thead>
+                <tr>
+                  <th>Ministry</th>
+                  <th>Envelope</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cab.map((m) => (
+                  <tr key={m.officeId}>
+                    <td>{m.title}</td>
+                    <td>
+                      <input
+                        className="search"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={allocations[m.officeId] ?? ""}
+                        placeholder="0"
+                        onChange={(e) =>
+                          setAllocations((prev) => ({ ...prev, [m.officeId]: e.target.value }))
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p>
+              Total{" "}
+              {cab
+                .reduce((s, m) => s + (Number(allocations[m.officeId] ?? 0) || 0), 0)
+                .toLocaleString()}
+            </p>
             <button
               type="button"
-              className="btn secondary"
+              className="btn"
+              style={{ marginTop: "0.5rem" }}
               onClick={() => {
-                props.report(
-                  props.sim.executeCommand({
-                    type: "INTRODUCE_MOTION",
-                    kind: "budget_approval",
-                    targetId: b.id,
-                  }),
-                );
-                props.onDone();
-              }}
-            >
-              Move to approve
-            </button>
-          ) : null}
-        </div>
-      ))}
-      {president ? (
-        <div className="card" style={{ marginTop: "0.6rem" }}>
-          <h3>Propose budget</h3>
-          <p className="muted">Set each ministry envelope. Nothing is auto-equalized.</p>
-          {cab.map((m) => (
-            <label key={m.officeId} className="row" style={{ marginTop: "0.3rem" }}>
-              <span style={{ minWidth: "12rem" }}>{m.title}</span>
-              <input
-                className="search"
-                type="number"
-                min={0}
-                step={1}
-                value={allocations[m.officeId] ?? ""}
-                placeholder="0"
-                onChange={(e) =>
-                  setAllocations((prev) => ({ ...prev, [m.officeId]: e.target.value }))
+                const next: Record<string, number> = {};
+                let sum = 0;
+                for (const m of cab) {
+                  const n = Number(allocations[m.officeId] ?? 0);
+                  if (!Number.isFinite(n) || n < 0) {
+                    props.report({
+                      ok: false,
+                      error: {
+                        code: "INVALID_BUDGET",
+                        message: "Allocations must be zero or positive numbers.",
+                      },
+                    });
+                    return;
+                  }
+                  next[m.officeId] = n;
+                  sum += n;
                 }
-              />
-            </label>
-          ))}
-          <button
-            type="button"
-            className="btn"
-            style={{ marginTop: "0.5rem" }}
-            onClick={() => {
-              const next: Record<string, number> = {};
-              let sum = 0;
-              for (const m of cab) {
-                const n = Number(allocations[m.officeId] ?? 0);
-                if (!Number.isFinite(n) || n < 0) {
+                if (sum <= 0) {
                   props.report({
                     ok: false,
                     error: {
                       code: "INVALID_BUDGET",
-                      message: "Allocations must be zero or positive numbers.",
+                      message: "Set at least one ministry allocation before proposing a budget.",
                     },
                   });
                   return;
                 }
-                next[m.officeId] = n;
-                sum += n;
-              }
-              if (sum <= 0) {
-                props.report({
-                  ok: false,
-                  error: {
-                    code: "INVALID_BUDGET",
-                    message: "Set at least one ministry allocation before proposing a budget.",
-                  },
-                });
-                return;
-              }
-              props.report(props.sim.executeCommand({ type: "PROPOSE_BUDGET", allocations: next }));
-              props.onDone();
-            }}
-          >
-            Propose budget
-          </button>
+                props.report(props.sim.executeCommand({ type: "PROPOSE_BUDGET", allocations: next }));
+                setPanel(null);
+                props.onDone();
+              }}
+            >
+              Propose budget
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -414,41 +530,48 @@ export function ExecutivePage(props: {
               </button>
             ))
         : null}
-      <h3>Regulations</h3>
-      {Object.values(props.snap.executiveRuntime.regulations).map((r) => (
-        <div key={r.id}>
-          {r.status} ·{" "}
-          {cab.find((m) => m.officeId === r.ministryOfficeId)?.title ?? r.ministryOfficeId} ·{" "}
-          {r.policyItems.map((p) => policyItemDisplay(props.catalog, p)).join("; ")}
-          {mp && r.major && r.status === "active" ? (
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={() => {
-                props.report(
-                  props.sim.executeCommand({
-                    type: "INTRODUCE_MOTION",
-                    kind: "regulation_annulment",
-                    targetId: r.id,
-                  }),
-                );
-                props.onDone();
-              }}
-            >
-              Move to annul
-            </button>
-          ) : null}
-        </div>
-      ))}
-      <h3>Emergency / war</h3>
-      {Object.values(props.snap.executiveRuntime.emergencies).map((e) => (
-        <div key={e.id}>
-          Emergency {e.status} · expires {e.expiresDate}
-        </div>
-      ))}
-      {Object.values(props.snap.executiveRuntime.warPowers).map((w) => (
-        <div key={w.id}>War powers {w.status}</div>
-      ))}
+      {Object.values(props.snap.executiveRuntime.regulations).length > 0 ? (
+        <SectionCard title="Regulations">
+          {Object.values(props.snap.executiveRuntime.regulations).map((r) => (
+            <div key={r.id}>
+              {r.status} ·{" "}
+              {cab.find((m) => m.officeId === r.ministryOfficeId)?.title ?? r.ministryOfficeId} ·{" "}
+              {r.policyItems.map((p) => policyItemDisplay(props.catalog, p)).join("; ")}
+              {mp && r.major && r.status === "active" ? (
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => {
+                    props.report(
+                      props.sim.executeCommand({
+                        type: "INTRODUCE_MOTION",
+                        kind: "regulation_annulment",
+                        targetId: r.id,
+                      }),
+                    );
+                    props.onDone();
+                  }}
+                >
+                  Move to annul
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </SectionCard>
+      ) : null}
+      {Object.values(props.snap.executiveRuntime.emergencies).length > 0 ||
+      Object.values(props.snap.executiveRuntime.warPowers).length > 0 ? (
+        <SectionCard title="Emergency / war">
+          {Object.values(props.snap.executiveRuntime.emergencies).map((e) => (
+            <div key={e.id}>
+              Emergency {e.status} · expires {e.expiresDate}
+            </div>
+          ))}
+          {Object.values(props.snap.executiveRuntime.warPowers).map((w) => (
+            <div key={w.id}>War powers {w.status}</div>
+          ))}
+        </SectionCard>
+      ) : null}
     </div>
   );
 }
