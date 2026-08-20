@@ -60,6 +60,20 @@ export function terenaPartyFields(args: {
   return fields;
 }
 
+export function terenaWorldFieldsFromBundle(bundle: {
+  content: {
+    world_countries: { countries: NonNullable<TerenaKernelInput["worldCountries"]> };
+    world_institutions: { institutions: NonNullable<TerenaKernelInput["worldInstitutions"]> };
+    world_leaders: { leaders: NonNullable<TerenaKernelInput["worldLeaders"]> };
+  };
+}): Pick<TerenaKernelInput, "worldCountries" | "worldInstitutions" | "worldLeaders"> {
+  return {
+    worldCountries: bundle.content.world_countries.countries ?? [],
+    worldInstitutions: bundle.content.world_institutions.institutions ?? [],
+    worldLeaders: bundle.content.world_leaders.leaders ?? [],
+  };
+}
+
 export function terenaElectoralFromBundle(bundle: {
   voterBlocs: { constituencies: VoterBlocConstituencyInput[] };
   pollsters: { pollsters: PollsterInput[] };

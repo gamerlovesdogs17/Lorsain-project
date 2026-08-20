@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 9 working tree uses `schemaVersion: 9` and `contentVersion: 0.3.1-predev`. Phase 8 saves (`schemaVersion: 8`) migrate to v9 with baseline economy and empty org/media history.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 9 working tree uses `schemaVersion: 10` and `contentVersion: 0.3.1-predev`. Phase 9 saves (`schemaVersion: 9`) migrate to v10 with empty foreign runtime then baseline seed at load.
 
 ## 3. Core static schemas
 
@@ -258,20 +258,31 @@ Key series: real GDP, productivity, employment, unemployment, CPI, wages, dispos
 
 ## 12. Foreign state model
 
+Phase 10 runtime: `SimState.foreignAffairsRuntime` (see `docs/FOREIGN_AFFAIRS_SYSTEM.md`).
+
 ```ts
-interface ForeignCountryState {
+interface ForeignCountryRuntime {
   countryId: string;
-  leaderId?: string;
-  governmentStability: number;
-  economy: ForeignEconomyState;
-  military: CapabilityVector;
-  relations: Record<CountryId, BilateralRelation>;
-  strategicGoals: StrategicGoal[];
-  treatyIds: string[];
+  leaderId: string;
+  posture: MilitaryPostureLevel;
+  capabilities: CapabilityVector;
+  tradeExposure: Record<string, number>;
+  strategicGoals: StrategicGoalId[]; // internal AI — not normal UI
+  institutionIds: string[];
+  activeSanctionIds: string[];
+  metadata: JsonObject;
+}
+
+interface BilateralRelation {
+  general: number;        // -100..100
+  trust: number;
+  securityTension: number; // 0..100
+  economicTies: number;    // 0..100
+  lastUpdated: IsoDate;
 }
 ```
 
-Foreign domestic politics may use a lighter politician model until a foreign state becomes high-salience.
+Static canon: `KernelWorld.worldCountries`, `worldInstitutions`, `worldLeaders`. Canonical starting relations with Terena use `relation_with_terena` as a diplomatic prior only.
 
 ## 13. Event log
 

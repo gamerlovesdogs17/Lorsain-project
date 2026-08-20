@@ -45,6 +45,24 @@ export const WorldInstitutionsFileSchema = z
   })
   .passthrough();
 
+export const WorldLeaderSchema = z
+  .object({
+    id: z.string(),
+    country_id: z.string(),
+    name: z.string(),
+    title: z.string(),
+    since_year: z.number().int(),
+    government_form: z.string(),
+  })
+  .passthrough();
+
+export const WorldLeadersFileSchema = z
+  .object({
+    leaders: z.array(WorldLeaderSchema),
+    content_version: z.string().optional(),
+  })
+  .passthrough();
+
 export const PartyFactionSchema = z
   .object({
     id: z.string(),
@@ -578,6 +596,8 @@ export const OfficesFileSchema = z
 export type Manifest = z.infer<typeof ManifestSchema>;
 export type WorldCountriesFile = z.infer<typeof WorldCountriesFileSchema>;
 export type WorldInstitutionsFile = z.infer<typeof WorldInstitutionsFileSchema>;
+export type WorldLeader = z.infer<typeof WorldLeaderSchema>;
+export type WorldLeadersFile = z.infer<typeof WorldLeadersFileSchema>;
 export type PartiesFile = z.infer<typeof PartiesFileSchema>;
 export type NominationRulesFile = z.infer<typeof NominationRulesFileSchema>;
 export type ConstitutionFile = z.infer<typeof ConstitutionFileSchema>;

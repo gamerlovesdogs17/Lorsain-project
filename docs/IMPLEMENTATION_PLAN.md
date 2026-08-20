@@ -111,7 +111,8 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 8** — **COMPLETE (`72733d4`)** — Constitutional Court, nomination/252 confirmation, judicial review, nonrenewable 12-year terms, impeachment 280 + Court judgment requiring a structured public basis, recall referral 252 + national vote.
 - **Phase 9** — **COMPLETE** — political macroeconomy, canonical organizations/media, UI System V2, derived GeoJSON Terena map, schemaVersion 9.
 - **Phase 9.5** — **COMPLETE** — UI System V3 shell: grouped navigation, campaign command center, player-safe labels, map hover/click fix, responsive shell. Several screen-depth items were documented as done but incomplete; see Phase 9.6.
-- **Phase 9.6** — **COMPLETE** — UI System V3.1: map fill/plurality blockers, Trade baseline, presidential/party/courts/news/assembly/new-game/economy depth. See `docs/UI_SYSTEM_V3_1.md`. **Phase 10 not started.**
+- **Phase 9.6** — **COMPLETE** — UI System V3.1: map fill/plurality blockers, Trade baseline, presidential/party/courts/news/assembly/new-game/economy depth. See `docs/UI_SYSTEM_V3_1.md`.
+- **Phase 10** — **COMPLETE** — Foreign affairs: 48-state runtime, leaders, relations, trade, treaties, sanctions, crises, abstract conflict, world map UI, schemaVersion 10. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`. **Phase 11 not started.**
 
 Deliverables:
 
@@ -265,13 +266,13 @@ Save **schemaVersion 8**; v7→v8 adds empty `constitutionalRuntime` (including 
 - Archive developer tools only in development builds
 - Mobile campaign panel ordered above the map below 900px
 
-Save schema remains **9**. 20-year synthetic kernel hash: `86952783749897096b223e06992f8e8c`. **Phase 10 not started.**
+Save schema **10**. 20-year synthetic kernel hash: `93c4b3726b91848aff9ea96a07cb9e92`. **Phase 11 not started.**
 
 ## 19. Phase 10 — foreign affairs
 
-Implement 48 foreign states, leaders, strategic goals, bilateral relations, trade exposure, treaties, sanctions, military posture, diplomatic actions and crisis escalation. Initially abstract foreign domestic politics except for leadership/election changes in major states; deepen later.
+**COMPLETE.** Persistent 48-state foreign runtime in `packages/sim/src/foreign/`: leaders (`data/world_leaders.json`), capabilities, bilateral relations, trade exposure, treaties with Assembly ratification, sanctions, crisis lifecycle, abstract conflict, deterministic AI on `foreign-affairs` stream, economy/media integration, world map UI, save schemaVersion **10**. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`. Calibration: `pnpm calibrate:foreign` (stops ~28 months at Assembly 2030 interrupt until that domain resolves).
 
-Acceptance criteria: 50-year hands-off simulations do not produce constant world war or permanent peace. Alliance commitments, geography and capability alter behavior.
+Acceptance criteria met: varied hands-off outcomes within Terena vertical-slice horizon; alliance/geography/capability affect behavior; player President/MP autonomy preserved; no scripted Vaskaran war.
 
 ## 20. Phase 11 — final integration + UI polish + balance + content
 

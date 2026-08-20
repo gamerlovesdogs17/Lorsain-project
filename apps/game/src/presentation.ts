@@ -1,6 +1,6 @@
 import type { ContentBundle } from "@lorsain/content-loader";
 import type { KernelWorld, SimEvent, SimState } from "@lorsain/sim";
-import { COMMITTEE_NAMES } from "@lorsain/sim";
+import { COMMITTEE_NAMES, TERENA_WORLD_ID, bilateralKey } from "@lorsain/sim";
 import type { PolicyItem } from "@lorsain/sim";
 
 export type FigureName = { id: string; name: string };
@@ -110,6 +110,97 @@ export function issueDisplayName(catalog: PresentationCatalog, issueId: string):
 export function committeeDisplayName(id: string | null | undefined): string {
   if (!id) return "Unassigned";
   return COMMITTEE_NAMES[id as keyof typeof COMMITTEE_NAMES] ?? id;
+}
+
+export function countryDisplayName(world: KernelWorld, countryId: string | null | undefined): string {
+  if (!countryId) return "Unknown country";
+  if (countryId === TERENA_WORLD_ID) return world.worldCountries[countryId]?.name ?? "Terena";
+  return world.worldCountries[countryId]?.name ?? "Unknown country";
+}
+
+export function institutionDisplayName(
+  world: KernelWorld,
+  institutionId: string | null | undefined,
+): string {
+  if (!institutionId) return "No institution";
+  return world.worldInstitutions[institutionId]?.name ?? "International organization";
+}
+
+export function powerTierLabel(tier: string | null | undefined): string {
+  if (!tier) return "Unknown";
+  return tier
+    .split(/\s+/)
+    .map((w) => (w ? w[0]!.toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+export function relationPublicLabel(general: number | null | undefined): string {
+  if (general == null) return "No recorded relations";
+  if (general >= 60) return "Close partner";
+  if (general >= 25) return "Friendly";
+  if (general >= 5) return "Cordial";
+  if (general >= -5) return "Neutral";
+  if (general >= -25) return "Cool";
+  if (general >= -60) return "Strained";
+  return "Hostile";
+}
+
+export function militaryPostureLabel(posture: string | null | undefined): string {
+  if (!posture) return "Unknown";
+  if (posture === "normal") return "Normal readiness";
+  if (posture === "heightened") return "Heightened readiness";
+  if (posture === "mobilized") return "Mobilized";
+  if (posture === "crisis_deployment") return "Crisis deployment";
+  return posture.replace(/_/g, " ");
+}
+
+export function treatyTypeLabel(kind: string | null | undefined): string {
+  if (!kind) return "Treaty";
+  if (kind === "collective_security") return "Collective security pact";
+  if (kind === "trade") return "Trade agreement";
+  if (kind === "non_aggression") return "Non-aggression pact";
+  if (kind === "mutual_defense") return "Mutual defense treaty";
+  if (kind === "sanctions_coordination") return "Sanctions coordination";
+  return kind.replace(/_/g, " ");
+}
+
+export function crisisStageLabel(stage: string | null | undefined): string {
+  if (!stage) return "Unknown";
+  if (stage === "latent") return "Latent tension";
+  if (stage === "incident") return "Diplomatic incident";
+  if (stage === "active") return "Active crisis";
+  if (stage === "deescalating") return "De-escalating";
+  if (stage === "settled") return "Settled";
+  if (stage === "conflict") return "Armed conflict";
+  return stage.replace(/_/g, " ");
+}
+
+export function diplomaticActionLabel(kind: string | null | undefined): string {
+  if (!kind) return "Diplomatic action";
+  if (kind === "outreach") return "Diplomatic outreach";
+  if (kind === "summit") return "Summit";
+  if (kind === "sanctions") return "Sanctions imposed";
+  if (kind === "lift_sanctions") return "Sanctions lifted";
+  if (kind === "posture_change") return "Military posture change";
+  if (kind === "treaty_proposal") return "Treaty proposal";
+  if (kind === "warning") return "Diplomatic warning";
+  if (kind === "mediation") return "Crisis mediation";
+  if (kind === "trade_negotiation") return "Trade negotiation";
+  if (kind === "alliance_consultation") return "Alliance consultation";
+  return kind.replace(/_/g, " ");
+}
+
+function countryFromEvent(
+  world: KernelWorld,
+  state: SimState,
+  event: SimEvent,
+): string | null {
+  const payloadTarget =
+    typeof event.payload.targetCountryId === "string" ? event.payload.targetCountryId : null;
+  if (payloadTarget) return countryDisplayName(world, payloadTarget);
+  const entity = event.entityIds.find((id) => world.worldCountries[id]);
+  if (entity) return countryDisplayName(world, entity);
+  return null;
 }
 
 export function electionDisplayName(id: string): string {
@@ -290,10 +381,60 @@ export function eventDisplay(
       return `Month completed`;
     case "POLL_PUBLISHED":
       return `A poll is published`;
+    case "DIPLOMATIC_OUTREACH":
+      return `Terena extends diplomatic outreach to ${countryFromEvent(world, state, event) ?? "a foreign government"}`;
+    case "DIPLOMATIC_SUMMIT":
+      return `${lead ?? "The President"} holds a summit with ${countryFromEvent(world, state, event) ?? "a foreign leader"}`;
+    case "DIPLOMATIC_WARNING":
+      return `Terena issues a diplomatic warning to ${countryFromEvent(world, state, event) ?? "a foreign government"}`;
+    case "SANCTIONS_IMPOSED":
+      return `Sanctions are imposed on ${countryFromEvent(world, state, event) ?? "a foreign state"}`;
+    case "SANCTIONS_LIFTED":
+      return `Sanctions are lifted against ${countryFromEvent(world, state, event) ?? "a foreign state"}`;
+    case "TREATY_PROPOSED":
+      return `A new treaty is proposed with ${countryFromEvent(world, state, event) ?? "foreign partners"}`;
+    case "TREATY_RATIFICATION_PENDING":
+      return `The Assembly must ratify a proposed treaty`;
+    case "TREATY_RATIFIED":
+      return `The Assembly ratifies a treaty`;
+    case "TREATY_REJECTED":
+      return `The Assembly rejects a proposed treaty`;
+    case "TRADE_NEGOTIATION":
+      return `Terena opens trade negotiations with ${countryFromEvent(world, state, event) ?? "a trading partner"}`;
+    case "ALLIANCE_CONSULTATION":
+      return `${lead ?? "The President"} consults ${institutionDisplayName(world, event.entityIds[0])}`;
+    case "CRISIS_MEDIATION":
+      return `${lead ?? "Terena"} offers mediation in an international crisis`;
+    case "TERENA_POSTURE_CHANGED":
+      return `Terena adjusts military posture to ${militaryPostureLabel(String(event.payload.posture ?? ""))}`;
+    case "MILITARY_POSTURE_CHANGED":
+      return `${countryFromEvent(world, state, event) ?? "A foreign power"} changes military posture`;
+    case "FOREIGN_OUTREACH":
+      return `${countryFromEvent(world, state, event) ?? "A foreign government"} reaches out diplomatically`;
+    case "FOREIGN_LEADERSHIP_CHANGE":
+      return `Leadership changes in ${countryFromEvent(world, state, event) ?? "a foreign state"}`;
+    case "INTERNATIONAL_CONFLICT_STARTED":
+      return `An international conflict erupts involving ${countryFromEvent(world, state, event) ?? "foreign belligerents"}`;
+    case "FOREIGN_AFFAIRS_MONTH":
+      return `Foreign affairs briefing: ${String(event.payload.activeCrises ?? 0)} active crises internationally`;
     default:
+      if (event.type.startsWith("FOREIGN_CRISIS_")) {
+        return `International crisis develops involving ${countryFromEvent(world, state, event) ?? "foreign powers"}`;
+      }
       if (lead) return `${lead}: ${titleCaseEvent(event.type)}`;
       return titleCaseEvent(event.type);
   }
+}
+
+export function terenaBilateralRelationLabel(
+  world: KernelWorld,
+  state: SimState,
+  countryId: string,
+): string {
+  const key = bilateralKey(TERENA_WORLD_ID, countryId);
+  const rel = state.foreignAffairsRuntime.bilateralRelations[key];
+  if (!rel) return relationPublicLabel(null);
+  return relationPublicLabel(rel.general);
 }
 
 export function pollShareLine(

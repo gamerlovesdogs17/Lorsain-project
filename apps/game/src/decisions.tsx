@@ -148,6 +148,21 @@ export function DecisionPanel(props: {
               />
             );
           }
+          if (d.kind === "treaty_ratification_vote") {
+            return (
+              <VoteRow
+                key={d.key}
+                label={d.label}
+                onCast={(choice) =>
+                  run({
+                    type: "CAST_TREATY_RATIFICATION_VOTE",
+                    treatyId: d.treatyId!,
+                    choice,
+                  })
+                }
+              />
+            );
+          }
           if (d.kind === "judicial_vote") {
             return (
               <div key={d.key} className="row" style={{ marginTop: "0.4rem" }}>

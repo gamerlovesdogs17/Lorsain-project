@@ -435,6 +435,105 @@ button {
   stroke-width: 0.28;
   filter: brightness(0.94);
 }
+
+.world-map-panel {
+  background: #dce8f2;
+}
+.world-map {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.map-country {
+  stroke: rgba(90, 107, 90, 0.42);
+  stroke-width: 0.26;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: filter 0.12s ease, stroke 0.12s ease;
+}
+.map-country:hover {
+  filter: brightness(0.96);
+}
+.map-country.is-selected {
+  stroke: rgba(31, 58, 95, 0.52);
+  stroke-width: 0.34;
+  filter: brightness(0.93);
+}
+.map-country.is-home {
+  stroke: rgba(31, 58, 95, 0.65);
+  stroke-width: 0.36;
+}
+.map-country-label {
+  font-size: 7px;
+  fill: rgba(28, 36, 48, 0.55);
+  text-anchor: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+.foreign-affairs-page .foreign-affairs-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+.foreign-affairs-page .foreign-global-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.foreign-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+  margin-top: 0.65rem;
+}
+.foreign-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.foreign-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+}
+.foreign-crisis-row {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.foreign-crisis-row:last-child {
+  border-bottom: none;
+}
+@media (max-width: 900px) {
+  .foreign-affairs-page .foreign-affairs-layout {
+    grid-template-columns: 1fr;
+  }
+  .foreign-affairs-page .foreign-detail-panel {
+    order: 1;
+  }
+  .foreign-affairs-page .foreign-actions-panel {
+    order: 2;
+  }
+  .foreign-affairs-page .foreign-map-panel {
+    order: 3;
+  }
+  .foreign-affairs-page .foreign-global-panels {
+    grid-template-columns: 1fr;
+  }
+}
+@media (min-width: 901px) {
+  .foreign-affairs-page .foreign-affairs-layout {
+    grid-template-areas: "map map" "detail actions";
+  }
+  .foreign-affairs-page .foreign-map-panel {
+    grid-column: 1 / -1;
+  }
+}
+
 .map-city circle {
   fill: #1f3a5f;
   stroke: #fff;

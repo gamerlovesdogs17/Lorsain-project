@@ -17,6 +17,7 @@ export const MEDIA_CATEGORIES = [
   "economy",
   "courts",
   "organizations",
+  "foreign",
 ] as const;
 export type MediaCategory = (typeof MEDIA_CATEGORIES)[number];
 

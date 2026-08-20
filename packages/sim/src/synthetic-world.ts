@@ -163,6 +163,11 @@ export function syntheticWorld(seed = "KERNEL-SYN-01"): KernelWorld {
     },
     interestOrganizations: {},
     mediaOutlets: {},
+    worldCountries: {},
+    worldInstitutions: {},
+    worldLeaders: {},
+    worldLeadersByCountryId: {},
+    terenaWorldCountryId: "W41",
   };
   applyInstitutionalPublicIdeology(world);
   return world;

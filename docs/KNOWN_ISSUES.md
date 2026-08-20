@@ -118,6 +118,19 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P96-EXEC-DEPTH | NONBLOCKING | Presidential desk uses cards/drawers; appointment search is still a compact list, not a full personnel UI. |
 | P95-SCREENSHOTS | NONBLOCKING | Automated visual regression / screenshot CI not yet wired. |
 
+## Phase 10 notes
+
+**Phase 10 Foreign Affairs is COMPLETE.** No Phase 10 **BLOCKING** items for the 2028 vertical slice.
+
+| ID | Severity | Issue |
+| --- | --- | --- |
+| P10-CAL-HORIZON | NONBLOCKING | `pnpm calibrate:foreign` stops at `ASSEMBLY_ELECTION_DUE` (~28 months) until 2030 Assembly resolution is wired. Long-horizon war/crisis distributions require that domain or a synthetic harness. |
+| P10-FOREIGN-PARLIAMENTS | NONBLOCKING | Foreign domestic politics remain abstract (leader turnover only). No foreign election campaigns. |
+| P10-WA-SIM | NONBLOCKING | World Assembly / LTO / CSC institutions affect diplomacy abstractly; not full UN-style simulators. |
+| P10-FOREIGN-TEST-SLOW | NONBLOCKING | Foreign integration tests advance many months per case (~3â€“8 min total in full suite). Acceptable for CI; consider splitting in Phase 11. |
+| P10-VITEST-TIMEOUT | NONBLOCKING | Full `pnpm test` may report a Vitest worker timeout after all 430 tests pass on slow hosts. |
+| P10-WORLD-BUNDLE | NONBLOCKING | World SVG embedded in client bundle increases size; same code-split opportunity as P9-BUNDLE-SIZE. |
+
 | ID | Severity | Issue |
 | --- | --- | --- |
 | P8-DOCTRINE | NONBLOCKING | No full written opinions, standing doctrine, interlocutory appeals, or lower courts. |

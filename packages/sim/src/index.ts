@@ -54,12 +54,13 @@ export {
   migrateSaveV6ToV7,
   migrateSaveV7ToV8,
   migrateSaveV8ToV9,
+  migrateSaveV9ToV10,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
 export { SAVE_SCHEMA_VERSION } from "./types.js";
 export { buildTerenaKernelWorld, KernelContentError, type TerenaKernelInput } from "./world.js";
-export { terenaElectoralFromBundle, terenaPartyFields } from "./terena-party-input.js";
+export { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
 export {
   currentAssemblyMemberIds,
   currentSpeakerId,
@@ -183,6 +184,19 @@ export {
 export type { OrganizationRuntime, CanonicalInterestOrganization } from "./organizations/types.js";
 export { processMediaMonth, storiesChronological, emptyMediaRuntime } from "./media/index.js";
 export type { MediaRuntime, MediaStory, CanonicalMediaOutlet } from "./media/types.js";
+export {
+  processForeignAffairsMonth,
+  seedForeignAffairsRuntime,
+  emptyForeignAffairsRuntime,
+  TERENA_WORLD_ID,
+  bilateralKey,
+} from "./foreign/index.js";
+export type {
+  ForeignAffairsRuntime,
+  CanonicalWorldCountry,
+  TreatyRecord,
+  InternationalCrisis,
+} from "./foreign/types.js";
 export type {
   Command,
   CommandResult,

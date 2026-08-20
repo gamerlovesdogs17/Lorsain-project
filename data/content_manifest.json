@@ -4,6 +4,7 @@
   "authoritative": {
     "world_countries": "data/world_countries.json",
     "world_institutions": "data/world_institutions.json",
+    "world_leaders": "data/world_leaders.json",
     "terena_constitution": "data/terena_constitution.json",
     "terena_parties": "data/terena_parties.json",
     "terena_nomination_rules": "data/terena_nomination_rules.json",

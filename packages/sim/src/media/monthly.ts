@@ -28,6 +28,22 @@ const EVENT_CATEGORY: Record<string, MediaCategory> = {
   ECONOMIC_SHOCK: "economy",
   MINISTER_APPOINTED: "government",
   CABINET_CHANGE: "government",
+  DIPLOMATIC_OUTREACH: "foreign",
+  DIPLOMATIC_SUMMIT: "foreign",
+  DIPLOMATIC_WARNING: "foreign",
+  SANCTIONS_IMPOSED: "foreign",
+  SANCTIONS_LIFTED: "foreign",
+  TREATY_PROPOSED: "foreign",
+  TREATY_RATIFIED: "foreign",
+  TREATY_REJECTED: "foreign",
+  INTERNATIONAL_CONFLICT_STARTED: "foreign",
+  CRISIS_MEDIATION: "foreign",
+  MILITARY_POSTURE_CHANGED: "foreign",
+  TERENA_POSTURE_CHANGED: "foreign",
+  FOREIGN_OUTREACH: "foreign",
+  FOREIGN_LEADERSHIP_CHANGE: "foreign",
+  TRADE_NEGOTIATION: "foreign",
+  ALLIANCE_CONSULTATION: "foreign",
 };
 
 function categoryOf(type: string): MediaCategory {
@@ -36,6 +52,18 @@ function categoryOf(type: string): MediaCategory {
   if (type.includes("COURT") || type.includes("JUDGE") || type.includes("IMPEACH")) return "courts";
   if (type.includes("ORG")) return "organizations";
   if (type.includes("ECON")) return "economy";
+  if (
+    type.includes("DIPLOMATIC") ||
+    type.includes("SANCTION") ||
+    type.includes("TREATY") ||
+    type.includes("CRISIS") ||
+    type.includes("FOREIGN") ||
+    type.includes("INTERNATIONAL") ||
+    type.includes("POSTURE") ||
+    type.includes("ALLIANCE")
+  ) {
+    return "foreign";
+  }
   return "politics";
 }
 

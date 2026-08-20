@@ -15,12 +15,15 @@ import { CampaignPage } from "./campaignScreen.js";
 import { CourtsPage } from "./courtsScreen.js";
 import { ExecutivePage } from "./executiveScreen.js";
 import { EconomyPage } from "./economyScreen.js";
+import { ForeignAffairsPage } from "./foreignAffairsScreen.js";
 import { OrganizationsPage } from "./organizationsScreen.js";
 import { NewsPage } from "./newsScreen.js";
 import { isMp, playerCampaign, qualitativeStanding } from "./format.js";
 import {
   contestDisplayName,
   campaignTypeLabel,
+  countryDisplayName,
+  crisisStageLabel,
   electionDisplayName,
   eventDisplay,
   factionDisplayName,
@@ -28,6 +31,7 @@ import {
   partyDisplayName,
   politicianDisplayName,
   pollShareLine,
+  treatyTypeLabel,
   type PresentationCatalog,
 } from "./presentation.js";
 import {
@@ -68,6 +72,7 @@ export type Screen =
   | "economy"
   | "organizations"
   | "news"
+  | "foreign"
   | "terena"
   | "archive";
 
@@ -126,6 +131,7 @@ export function GamePages(props: PageProps) {
   if (screen === "economy") return <EconomyPage {...props} />;
   if (screen === "organizations") return <OrganizationsPage {...props} />;
   if (screen === "news") return <NewsPage {...props} />;
+  if (screen === "foreign") return <ForeignAffairsPage {...props} />;
   if (screen === "terena") return <Terena {...props} />;
   return <Archive {...props} />;
 }
@@ -140,6 +146,9 @@ function Home(props: PageProps) {
   const lead =
     [...monthEvents].sort((a, b) => b.importance - a.importance)[0] ??
     props.snap.history.filter((e) => e.type !== "TURN_COMPLETED").slice(-1)[0];
+  const terenaCrisis = Object.values(props.snap.foreignAffairsRuntime.crises).find(
+    (c) => c.stage !== "settled" && c.participantIds.includes("W41"),
+  );
   const feed = monthEvents.slice(-12).reverse();
   const stories = storiesChronological(props.snap).slice(0, 5);
   const polls = Object.values(props.snap.polls).slice(-2);
@@ -195,6 +204,21 @@ function Home(props: PageProps) {
       ) : (
         <EmptyState>No major developments this month.</EmptyState>
       )}
+
+      {terenaCrisis ? (
+        <div className="briefing-urgent alert">
+          <strong>International crisis</strong>
+          <p>
+            Terena is involved in an active international crisis (
+            {crisisStageLabel(terenaCrisis.stage)}). See{" "}
+            {terenaCrisis.participantIds
+              .filter((id) => id !== "W41")
+              .map((id) => countryDisplayName(props.world, id))
+              .join(", ") || "foreign partners"}{" "}
+            on the Foreign Affairs map.
+          </p>
+        </div>
+      ) : null}
 
       <DashboardLayout
         main={
@@ -800,12 +824,32 @@ function Terena(props: PageProps) {
 
 function Archive(props: PageProps) {
   const [filter, setFilter] = useState<
-    "all" | "elections" | "laws" | "events" | "leadership"
+    "all" | "elections" | "laws" | "events" | "leadership" | "foreign"
   >("all");
   const laws = Object.values(props.snap.legislatureRuntime.enactedLaws);
   const elections = Object.values(props.snap.elections).filter((e) => e.status === "resolved");
   const leadership = Object.values(props.snap.partyContests).filter((c) => c.winnerId);
   const events = props.snap.history.filter((e) => e.type !== "TURN_COMPLETED").slice(-40).reverse();
+  const foreign = props.snap.foreignAffairsRuntime;
+  const foreignEvents = props.snap.history
+    .filter((e) => {
+      if (e.type === "TURN_COMPLETED") return false;
+      return /DIPLOMATIC|SANCTION|TREATY|FOREIGN|CRISIS|TRADE|POSTURE|CONFLICT|ALLIANCE/i.test(
+        e.type,
+      );
+    })
+    .slice(-30)
+    .reverse();
+  const treaties = Object.values(foreign.treaties).sort((a, b) =>
+    (b.signedDate ?? "") < (a.signedDate ?? "") ? -1 : 1,
+  );
+  const crises = Object.values(foreign.crises);
+  const sanctions = Object.values(foreign.sanctions);
+  const conflicts = Object.values(foreign.conflicts);
+  const foreignLeadership = props.snap.history
+    .filter((e) => e.type === "FOREIGN_LEADERSHIP_CHANGE")
+    .slice(-20)
+    .reverse();
 
   return (
     <div>
@@ -816,6 +860,7 @@ function Archive(props: PageProps) {
           { id: "elections", label: "Elections" },
           { id: "laws", label: "Laws" },
           { id: "leadership", label: "Leadership" },
+          { id: "foreign", label: "Foreign" },
           { id: "events", label: "Events" },
         ]}
         value={filter}
@@ -849,6 +894,86 @@ function Archive(props: PageProps) {
             </div>
           ))}
         </SectionCard>
+      ) : null}
+      {(filter === "all" || filter === "foreign") ? (
+        <>
+          {treaties.length > 0 ? (
+            <SectionCard title="Treaties">
+              {treaties.map((t) => (
+                <div key={t.id}>
+                  {t.title} · {treatyTypeLabel(t.kind)} · {t.status}
+                  {t.signedDate ? ` · ${t.signedDate}` : ""}
+                </div>
+              ))}
+            </SectionCard>
+          ) : filter === "foreign" ? (
+            <SectionCard title="Treaties">
+              <EmptyState>No treaties on record.</EmptyState>
+            </SectionCard>
+          ) : null}
+          {crises.length > 0 ? (
+            <SectionCard title="International crises">
+              {crises.map((c) => (
+                <div key={c.id}>
+                  {c.participantIds.map((id) => countryDisplayName(props.world, id)).join(" · ")} ·{" "}
+                  {crisisStageLabel(c.stage)} · since {c.startedDate}
+                </div>
+              ))}
+            </SectionCard>
+          ) : filter === "foreign" ? (
+            <SectionCard title="International crises">
+              <EmptyState>No crises on record.</EmptyState>
+            </SectionCard>
+          ) : null}
+          {conflicts.length > 0 ? (
+            <SectionCard title="Conflicts">
+              {conflicts.map((c) => (
+                <div key={c.id}>
+                  {c.belligerentIds.map((id) => countryDisplayName(props.world, id)).join(" vs ")} ·
+                  intensity {Math.round(c.intensity * 100)}%
+                  {c.endedDate ? ` · ended ${c.endedDate}` : " · ongoing"}
+                </div>
+              ))}
+            </SectionCard>
+          ) : null}
+          {sanctions.length > 0 ? (
+            <SectionCard title="Sanctions">
+              {sanctions.map((s) => (
+                <div key={s.id}>
+                  {countryDisplayName(props.world, s.imposerId)} →{" "}
+                  {countryDisplayName(props.world, s.targetId)} · {s.active ? "active" : "lifted"} ·{" "}
+                  {s.imposedDate}
+                </div>
+              ))}
+            </SectionCard>
+          ) : null}
+          {foreignLeadership.length > 0 ? (
+            <SectionCard title="Foreign leadership changes">
+              {foreignLeadership.map((e) => (
+                <ActivityFeedItem
+                  key={e.id}
+                  date={e.date}
+                  text={eventDisplay(props.catalog, props.world, props.snap, e)}
+                />
+              ))}
+            </SectionCard>
+          ) : null}
+          {foreignEvents.length > 0 ? (
+            <SectionCard title="Diplomatic events">
+              {foreignEvents.map((e) => (
+                <ActivityFeedItem
+                  key={e.id}
+                  date={e.date}
+                  text={eventDisplay(props.catalog, props.world, props.snap, e)}
+                />
+              ))}
+            </SectionCard>
+          ) : filter === "foreign" ? (
+            <SectionCard title="Diplomatic events">
+              <EmptyState>No diplomatic events recorded.</EmptyState>
+            </SectionCard>
+          ) : null}
+        </>
       ) : null}
       {(filter === "all" || filter === "events") ? (
         <SectionCard title="Public events">

@@ -3,6 +3,7 @@ import { currentAssemblyMemberIds } from "./legislature/state.js";
 import { pendingVoteKey, type LegislativeVoteStage } from "./legislature/types.js";
 import { currentPresidentialAuthorityId } from "./executive/state.js";
 import { currentCourtJudgeIds } from "./courts/state.js";
+import { collectForeignPlayerDecisions } from "./foreign/decisions.js";
 
 export type PlayerDecisionKind =
   | "interrupt"
@@ -15,7 +16,9 @@ export type PlayerDecisionKind =
   | "judicial_vote"
   | "confirmation_vote"
   | "impeachment_vote"
-  | "recall_vote";
+  | "recall_vote"
+  | "treaty_ratification_vote"
+  | "foreign_presidential_action";
 
 export type PlayerActionableDecision = {
   key: string;
@@ -28,6 +31,8 @@ export type PlayerActionableDecision = {
   nominationId?: string;
   proceedingId?: string;
   stage?: LegislativeVoteStage;
+  treatyId?: string;
+  targetCountryId?: string;
 };
 
 function playerHasCastLegislative(
@@ -220,6 +225,8 @@ export function collectPlayerActionableDecisions(
       });
     }
   }
+
+  out.push(...collectForeignPlayerDecisions(world, state));
 
   return out;
 }

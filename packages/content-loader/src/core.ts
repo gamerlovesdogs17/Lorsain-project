@@ -24,6 +24,7 @@ import {
   VoterBlocsFileSchema,
   WorldCountriesFileSchema,
   WorldInstitutionsFileSchema,
+  WorldLeadersFileSchema,
   type CitiesFile,
   type ConstitutionFile,
   type CrosswalkFile,
@@ -42,6 +43,7 @@ import {
   type StartingFiguresFile,
   type WorldCountriesFile,
   type WorldInstitutionsFile,
+  type WorldLeadersFile,
 } from "@lorsain/content-schema";
 
 export type ValidationIssue = { level: "error" | "warning"; message: string };
@@ -63,6 +65,7 @@ export type ContentIndex = {
   hasFigureId(id: string): boolean;
   hasIssueId(id: string): boolean;
   hasInstitutionId(id: string): boolean;
+  hasWorldLeaderId(id: string): boolean;
   worldCountryIds(): readonly string[];
   provinceIds(): readonly string[];
   constituencyIds(): readonly string[];
@@ -75,6 +78,7 @@ export type ContentIndex = {
 export type ParsedAuthoritativeContent = {
   world_countries: WorldCountriesFile;
   world_institutions: WorldInstitutionsFile;
+  world_leaders: WorldLeadersFile;
   terena_constitution: ConstitutionFile;
   terena_parties: PartiesFile;
   terena_nomination_rules: NominationRulesFile;
@@ -139,6 +143,7 @@ function createIndex(sets: {
   figures: readonly string[];
   issues: readonly string[];
   institutions: readonly string[];
+  worldLeaders: readonly string[];
 }): ContentIndex {
   const world = new Set(sets.world);
   const provinces = new Set(sets.provinces);
@@ -149,6 +154,7 @@ function createIndex(sets: {
   const figures = new Set(sets.figures);
   const issues = new Set(sets.issues);
   const institutions = new Set(sets.institutions);
+  const worldLeaders = new Set(sets.worldLeaders);
 
   const freezeList = <T>(xs: readonly T[]): readonly T[] => Object.freeze([...xs]);
 
@@ -162,6 +168,7 @@ function createIndex(sets: {
     hasFigureId: (id: string) => figures.has(id),
     hasIssueId: (id: string) => issues.has(id),
     hasInstitutionId: (id: string) => institutions.has(id),
+    hasWorldLeaderId: (id: string) => worldLeaders.has(id),
     worldCountryIds: () => freezeList(sets.world),
     provinceIds: () => freezeList(sets.provinces),
     constituencyIds: () => freezeList(sets.constituencies),
@@ -232,6 +239,7 @@ export function validateAndLoadContent(
   const requiredAuth = [
     "world_countries",
     "world_institutions",
+    "world_leaders",
     "terena_constitution",
     "terena_parties",
     "terena_nomination_rules",
@@ -294,6 +302,7 @@ export function validateAndLoadContent(
 
   let world: WorldCountriesFile;
   let institutions: WorldInstitutionsFile;
+  let worldLeaders: WorldLeadersFile;
   let constitution: ConstitutionFile;
   let parties: PartiesFile;
   let noms: NominationRulesFile;
@@ -320,6 +329,7 @@ export function validateAndLoadContent(
   try {
     world = WorldCountriesFileSchema.parse(readAuthJson("world_countries"));
     institutions = WorldInstitutionsFileSchema.parse(readAuthJson("world_institutions"));
+    worldLeaders = WorldLeadersFileSchema.parse(readAuthJson("world_leaders"));
     constitution = ConstitutionFileSchema.parse(readAuthJson("terena_constitution"));
     parties = PartiesFileSchema.parse(readAuthJson("terena_parties"));
     noms = NominationRulesFileSchema.parse(readAuthJson("terena_nomination_rules"));
@@ -372,6 +382,7 @@ export function validateAndLoadContent(
 
     checkVersion("world_countries", world.content_version);
     checkVersion("world_institutions", institutions.content_version);
+    checkVersion("world_leaders", worldLeaders.content_version);
     checkVersion("terena_constitution", constitution.content_version);
     checkVersion("terena_parties", parties.content_version);
     checkVersion("terena_nomination_rules", noms.content_version);
@@ -459,6 +470,11 @@ export function validateAndLoadContent(
     error,
   );
   uniqueIds(
+    worldLeaders.leaders.map((l) => l.id),
+    "world leader",
+    error,
+  );
+  uniqueIds(
     parties.parties.map((p) => p.id),
     "party",
     error,
@@ -534,6 +550,44 @@ export function validateAndLoadContent(
       if (other && !other.neighbor_ids.includes(c.id)) {
         error(`neighbor relation asymmetric: ${c.id} -> ${n}`);
       }
+    }
+  }
+
+  const foreignCountryIds = world.countries.filter((c) => c.id !== "W41").map((c) => c.id);
+  if (worldLeaders.leaders.length !== foreignCountryIds.length) {
+    error(
+      `expected ${foreignCountryIds.length} foreign leaders (excluding W41), got ${worldLeaders.leaders.length}`,
+    );
+  }
+  const leaderByCountry = new Map<string, string>();
+  for (const leader of worldLeaders.leaders) {
+    const expectedId = `FLD_${leader.country_id}`;
+    if (leader.id !== expectedId) {
+      error(`${leader.id}: id must be ${expectedId}`);
+    }
+    if (leader.country_id === "W41") {
+      error(`${leader.id}: Terena (W41) must not have a foreign leader entry`);
+    }
+    if (!worldIds.has(leader.country_id)) {
+      error(`${leader.id}: unknown country_id ${leader.country_id}`);
+    }
+    const country = byWorld.get(leader.country_id);
+    if (country && leader.government_form !== country.government) {
+      error(
+        `${leader.id}: government_form "${leader.government_form}" != country "${country.government}"`,
+      );
+    }
+    if (leader.since_year >= 2028) {
+      error(`${leader.id}: since_year must be before scenario start (2028)`);
+    }
+    if (leaderByCountry.has(leader.country_id)) {
+      error(`${leader.country_id}: duplicate foreign leader`);
+    }
+    leaderByCountry.set(leader.country_id, leader.id);
+  }
+  for (const countryId of foreignCountryIds) {
+    if (!leaderByCountry.has(countryId)) {
+      error(`missing foreign leader for ${countryId}`);
     }
   }
 
@@ -1284,6 +1338,7 @@ export function validateAndLoadContent(
     figures: figures.figures.map((f) => f.id),
     issues: issuesFile.issues.map((i) => i.id),
     institutions: institutions.institutions.map((i) => i.id),
+    worldLeaders: worldLeaders.leaders.map((l) => l.id),
   });
 
   const errors = issues.filter((i) => i.level === "error");
@@ -1300,6 +1355,7 @@ export function validateAndLoadContent(
   const content: ParsedAuthoritativeContent = deepFreeze({
     world_countries: world,
     world_institutions: institutions,
+    world_leaders: worldLeaders,
     terena_constitution: constitution,
     terena_parties: parties,
     terena_nomination_rules: noms,

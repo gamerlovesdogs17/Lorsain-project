@@ -7,7 +7,7 @@ import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields } from "./terena-party-input.js";
+import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
 import { MAX_ORG_MEETINGS_PER_MONTH, organizationPressureForBill } from "./organizations/index.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
@@ -78,6 +78,7 @@ function loadTerenaWorld(): KernelWorld {
     }),
     presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     ...terenaElectoralFromBundle(bundle),
+    ...terenaWorldFieldsFromBundle(bundle),
     organizations: bundle.content.terena_organizations.organizations,
     mediaOutlets: bundle.content.terena_media.outlets,
   } satisfies TerenaKernelInput;

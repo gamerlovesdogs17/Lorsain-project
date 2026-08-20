@@ -9,7 +9,7 @@ import { hashCanonical, jsonClone } from "./hash.js";
 import { regularElectionDate } from "./calendar.js";
 import { occupyingTerms } from "./offices.js";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields } from "./terena-party-input.js";
+import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
 import { CANONICAL_PRESIDENTIAL_ELECTION_ID } from "./elections/types.js";
 import { replayElectionCount } from "./elections/replay.js";
 import type { Command, KernelWorld } from "./types.js";
@@ -37,6 +37,7 @@ function loadTerenaWorld(): KernelWorld {
     }),
     presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     ...terenaElectoralFromBundle(bundle),
+    ...terenaWorldFieldsFromBundle(bundle),
   } satisfies TerenaKernelInput;
   return buildTerenaKernelWorld(input);
 }

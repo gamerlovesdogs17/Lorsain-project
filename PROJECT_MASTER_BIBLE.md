@@ -860,11 +860,11 @@ Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate 
 
 ## 18.6. Phase 9.6 — UI System V3.1
 
-**COMPLETE.** Map fill/plurality, Trade baseline, presidential command screen, and remaining V3 screen depth. See `docs/UI_SYSTEM_V3_1.md`. Hash `86952783749897096b223e06992f8e8c`. Phase 10 not started.
+**COMPLETE.** Map fill/plurality, Trade baseline, presidential command screen, and remaining V3 screen depth. See `docs/UI_SYSTEM_V3_1.md`. Hash `86952783749897096b223e06992f8e8c`.
 
 ## 19. Phase 10 — foreign affairs
 
-Implement 48 foreign states, leaders, strategic goals, bilateral relations, trade exposure, treaties, sanctions, military posture, diplomatic actions and crisis escalation.
+**COMPLETE.** Runtime foreign affairs in `packages/sim/src/foreign/` as `SimState.foreignAffairsRuntime`. 48 countries from canonical content; 47 foreign leaders; bilateral relations; trade exposure; treaties (with Assembly ratification); sanctions; crisis lifecycle; abstract conflict; deterministic AI on `foreign-affairs` stream; economy lag + media integration; Terena war-powers respected. World map + Foreign Affairs UI. Save schemaVersion **10**; v9→v10 empty foreign runtime then baseline seed. 20-year synthetic kernel hash: `93c4b3726b91848aff9ea96a07cb9e92`. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`. **Phase 11 not started.**
 
 ## 20. Phase 11 — final integration + UI polish + balance + content
 

@@ -1,17 +1,18 @@
-# Lorsain Political Simulator — Phase 9.6 UI System V3.1
+# Lorsain Political Simulator — Phase 10 Foreign Affairs
 
 This repository holds the **canonical content foundation**, TypeScript simulation kernel, and playable React game for a single-player political simulation set in Lorsain / Terena.
 
 ## Status
 
-**Phase 0–9 COMPLETE. Phase 9.5 UI System V3 shell COMPLETE at `887b500`. Phase 9.6 UI System V3.1 completion + playtest regression fixes COMPLETE. Phase 10 (foreign affairs) is not started.** Current UI truth: `docs/UI_SYSTEM_V3_1.md`. Blockers vs backlog: `docs/KNOWN_ISSUES.md`.
+**Phase 0–9.6 COMPLETE. Phase 10 Foreign Affairs COMPLETE.** Current UI truth: `docs/UI_SYSTEM_V3_1.md`. Foreign affairs design: `docs/FOREIGN_AFFAIRS_SYSTEM.md`. Blockers vs backlog: `docs/KNOWN_ISSUES.md`.
 
 ## Canonical lock
 
-- Content version: **0.3.1-predev** (canonical political content unchanged in Phase 9)
-- Save schema version: **9** (v1→…→v8→v9 migrate; Phase 9 adds economy, organization, and media runtime)
+- Content version: **0.3.1-predev**
+- Save schema version: **10** (v1→…→v9→v10 migrate; Phase 10 adds `foreignAffairsRuntime`)
 - Scenario: **TERENA_2028** (1 January 2028)
 - Country: **Republic of Terena** (`TER` / world `W41` / SVG `TERENA`)
+- Foreign leaders: **47** canonical starting leaders (`data/world_leaders.json`, stable `FLD_Wxx` IDs)
 - RNG: **xoshiro128**** with cyrb128 stream seeding (no host PRNG in sim)
 - Counting: **`@lorsain/election-math`** (exact rationals, IRV, STV Droop+WIG)
 - Starting roster: **530** politicians including **420** Assembly MPs

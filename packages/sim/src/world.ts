@@ -188,6 +188,33 @@ export type TerenaKernelInput = {
     factual_reputation: number;
     audience?: string;
   }>;
+  worldCountries?: Array<{
+    id: string;
+    name: string;
+    map_path_id: string;
+    neighbor_ids: string[];
+    alignment_ids: string[];
+    population?: number;
+    government?: string;
+    region?: string;
+    power_tier?: string;
+    relation_with_terena?: number;
+    alignment?: string;
+  }>;
+  worldInstitutions?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    founded?: number;
+  }>;
+  worldLeaders?: Array<{
+    id: string;
+    country_id: string;
+    name: string;
+    title: string;
+    since_year: number;
+    government_form: string;
+  }>;
 };
 
 export class KernelContentError extends Error {
@@ -648,7 +675,85 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
         },
       ]),
     ),
+    worldCountries: Object.fromEntries(
+      (input.worldCountries ?? []).map((c) => [
+        c.id,
+        {
+          id: c.id,
+          name: c.name,
+          region: c.region ?? "",
+          government: c.government ?? "",
+          population: typeof c.population === "number" ? c.population : 0,
+          powerTier: c.power_tier ?? "",
+          alignment: typeof c.alignment === "string" ? c.alignment : "",
+          alignmentIds: [...c.alignment_ids],
+          neighborIds: [...c.neighbor_ids],
+          relationWithTerena:
+            typeof c.relation_with_terena === "number" ? c.relation_with_terena : 0,
+          mapPathId: c.map_path_id,
+        },
+      ]),
+    ),
+    worldInstitutions: Object.fromEntries(
+      (input.worldInstitutions ?? []).map((i) => [
+        i.id,
+        {
+          id: i.id,
+          name: i.name,
+          type: i.type,
+          founded: typeof i.founded === "number" ? i.founded : null,
+        },
+      ]),
+    ),
+    worldLeaders: Object.fromEntries(
+      (input.worldLeaders ?? []).map((l) => [
+        l.id,
+        {
+          id: l.id,
+          countryId: l.country_id,
+          name: l.name,
+          title: l.title,
+          sinceYear: l.since_year,
+          governmentForm: l.government_form,
+        },
+      ]),
+    ),
+    worldLeadersByCountryId: Object.fromEntries(
+      (input.worldLeaders ?? []).map((l) => [l.country_id, l.id]),
+    ),
+    terenaWorldCountryId: "W41",
   };
+  if (Object.keys(world.worldCountries).length > 0 && Object.keys(world.worldLeaders).length === 0) {
+    synthesizeWorldLeaders(world, input.scenario.date.slice(0, 4));
+  }
   applyInstitutionalPublicIdeology(world);
   return world;
+}
+
+function leaderTitleForGovernment(government: string): string {
+  const g = government.toLowerCase();
+  if (g.includes("monarchy") || g.includes("duchy") || g.includes("kingdom")) return "Head of Government";
+  if (g.includes("president")) return "President";
+  if (g.includes("federal")) return "Federal President";
+  return "Head of State";
+}
+
+function synthesizeWorldLeaders(world: KernelWorld, startYear: string): void {
+  const year = parseInt(startYear, 10) || 2028;
+  let seq = 1;
+  for (const country of Object.values(world.worldCountries).sort((a, b) =>
+    a.id < b.id ? -1 : 1,
+  )) {
+    const id = `WLD${String(seq++).padStart(4, "0")}`;
+    const leader = {
+      id,
+      countryId: country.id,
+      name: `${country.name.split(" ").slice(-1)[0] ?? country.id} Executive`,
+      title: leaderTitleForGovernment(country.government),
+      sinceYear: Math.max(1990, year - 3),
+      governmentForm: country.government,
+    };
+    world.worldLeaders[id] = leader;
+    world.worldLeadersByCountryId[country.id] = id;
+  }
 }

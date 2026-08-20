@@ -15,6 +15,7 @@ import {
   compactAssemblyElectionFromRaw,
   terenaElectoralFromBundle,
   terenaPartyFields,
+  terenaWorldFieldsFromBundle,
 } from "./terena-party-input.js";
 import {
   assemblyCaucus,
@@ -69,6 +70,7 @@ function loadTerenaWorld(withElection = false) {
     }),
     presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     ...terenaElectoralFromBundle(bundle),
+    ...terenaWorldFieldsFromBundle(bundle),
   } satisfies TerenaKernelInput;
   return buildTerenaKernelWorld(input);
 }

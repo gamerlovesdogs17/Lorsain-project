@@ -1,6 +1,9 @@
 import type { PendingInterrupt } from "@lorsain/sim";
 import type { PlayerActionableDecision } from "@lorsain/sim";
 
+/** Bilateral relation label on the −100…100 diplomatic scale (not politician affinity). */
+export { relationPublicLabel } from "../presentation.js";
+
 /** Player-facing number formatting — never expose exact rational strings like 6205093/1. */
 export function formatPublicNumber(value: unknown): string {
   if (value == null) return "—";

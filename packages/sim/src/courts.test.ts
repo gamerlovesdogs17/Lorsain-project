@@ -9,7 +9,7 @@ import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields } from "./terena-party-input.js";
+import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
 import { occupyingTerms, officesOfKind, endTerm } from "./offices.js";
 import { parseSaveFile } from "./save.js";
 import {
@@ -211,6 +211,7 @@ function loadTerenaWorld(): KernelWorld {
     }),
     presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     ...terenaElectoralFromBundle(bundle),
+    ...terenaWorldFieldsFromBundle(bundle),
   } satisfies TerenaKernelInput;
   return buildTerenaKernelWorld(input);
 }
@@ -221,7 +222,7 @@ describe("Phase 8 courts kernel", () => {
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "P8-EMPTY" });
     const snap = sim.getSnapshot();
     expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(snap.schemaVersion).toBe(9);
+    expect(snap.schemaVersion).toBe(10);
     expect(snap.constitutionalRuntime).toEqual(emptyConstitutionalRuntime());
     expect(deriveCourtBench(world, snap)).toHaveLength(9);
     expect(deriveCourtBench(world, snap).every((s) => s.holderId != null)).toBe(true);
@@ -245,7 +246,7 @@ describe("Phase 8 courts kernel", () => {
     const parsed = parseSaveFile(save);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(9);
+    expect(parsed.save.schemaVersion).toBe(10);
     expect(parsed.save.simulation.constitutionalRuntime.courtCases).toEqual({});
     expect(
       restoreSimulation(parsed.save, world).getSnapshot().constitutionalRuntime.courtCases,

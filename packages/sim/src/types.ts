@@ -46,8 +46,16 @@ import type {
   OrganizationRuntime,
 } from "./organizations/types.js";
 import type { CanonicalMediaOutlet, MediaRuntime } from "./media/types.js";
+import type {
+  CanonicalWorldCountry,
+  CanonicalWorldInstitution,
+  CanonicalWorldLeader,
+  ForeignAffairsRuntime,
+} from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 9 as const;
+export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
+
+export const SAVE_SCHEMA_VERSION = 10 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -156,6 +164,13 @@ export type Counters = {
   nextEconomicShockId: number;
   nextOrgActionId: number;
   nextMediaStoryId: number;
+  nextTreatyId: number;
+  nextSanctionId: number;
+  nextCrisisId: number;
+  nextConflictId: number;
+  nextForeignLeaderId: number;
+  nextDiplomaticActionId: number;
+  nextTreatyRatificationId: number;
 };
 
 export type PresidentialRuntime = {
@@ -204,6 +219,7 @@ export type SimState = {
   economyRuntime: EconomyRuntime;
   organizationRuntime: OrganizationRuntime;
   mediaRuntime: MediaRuntime;
+  foreignAffairsRuntime: ForeignAffairsRuntime;
 };
 
 export type Command =
@@ -477,6 +493,21 @@ export type Command =
       constitutionalRule: string;
       meritsLean?: number;
       expedited?: boolean;
+    }
+  | { type: "DIPLOMATIC_OUTREACH"; targetCountryId: string }
+  | { type: "DIPLOMATIC_SUMMIT"; targetCountryId: string }
+  | { type: "PROPOSE_TREATY"; targetCountryId: string; kind: string; title?: string }
+  | { type: "NEGOTIATE_TRADE"; targetCountryId: string }
+  | { type: "IMPOSE_SANCTIONS"; targetCountryId: string; severity?: number }
+  | { type: "LIFT_SANCTIONS"; targetCountryId: string }
+  | { type: "ALLIANCE_CONSULTATION"; institutionId?: string }
+  | { type: "ADJUST_MILITARY_POSTURE"; posture: string }
+  | { type: "MEDIATE_CRISIS"; crisisId: string }
+  | { type: "ISSUE_DIPLOMATIC_WARNING"; targetCountryId: string }
+  | {
+      type: "CAST_TREATY_RATIFICATION_VOTE";
+      treatyId: string;
+      choice: "yes" | "no" | "abstain";
     };
 
 export type CommandError = { code: string; message: string };
@@ -597,6 +628,11 @@ export type KernelWorld = {
   };
   interestOrganizations: Record<string, CanonicalInterestOrganization>;
   mediaOutlets: Record<string, CanonicalMediaOutlet>;
+  worldCountries: Record<string, CanonicalWorldCountry>;
+  worldInstitutions: Record<string, CanonicalWorldInstitution>;
+  worldLeaders: Record<string, CanonicalWorldLeader>;
+  worldLeadersByCountryId: Record<string, string>;
+  terenaWorldCountryId: string;
 };
 
 export type CreateSimulationOptions = {

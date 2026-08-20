@@ -7,7 +7,7 @@ import { createSimulation, restoreSimulation, type Simulation } from "./engine.j
 import { jsonClone, hashCanonical } from "./hash.js";
 import { occupyingTerms, officesOfKind, endTerm } from "./offices.js";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields } from "./terena-party-input.js";
+import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
 import { CANONICAL_PRESIDENTIAL_ELECTION_ID } from "./elections/types.js";
 import { currentAssemblyMemberIds } from "./legislature/state.js";
 import { whipEstimate } from "./legislature/whip.js";
@@ -37,6 +37,7 @@ function loadTerenaWorld(): KernelWorld {
     }),
     presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     ...terenaElectoralFromBundle(bundle),
+    ...terenaWorldFieldsFromBundle(bundle),
   } satisfies TerenaKernelInput;
   return buildTerenaKernelWorld(input);
 }

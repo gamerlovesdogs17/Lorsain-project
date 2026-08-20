@@ -14,6 +14,7 @@ import { parseConstitutionalRuntime, constitutionalCounterError } from "./courts
 import { parseEconomyRuntime, economyCounterError } from "./economy/validation.js";
 import { parseOrganizationRuntime, organizationCounterError } from "./organizations/validation.js";
 import { parseMediaRuntime, mediaCounterError } from "./media/validation.js";
+import { parseForeignAffairsRuntime, foreignCounterError } from "./foreign/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -393,6 +394,13 @@ function parseCounters(raw: unknown): Counters | string {
     "nextEconomicShockId",
     "nextOrgActionId",
     "nextMediaStoryId",
+    "nextTreatyId",
+    "nextSanctionId",
+    "nextCrisisId",
+    "nextConflictId",
+    "nextForeignLeaderId",
+    "nextDiplomaticActionId",
+    "nextTreatyRatificationId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
@@ -583,6 +591,10 @@ function parseSimulation(
   if (typeof media === "string") return media;
   const mediaCountErr = mediaCounterError(media, counters);
   if (mediaCountErr) return mediaCountErr;
+  const foreign = parseForeignAffairsRuntime(raw.foreignAffairsRuntime);
+  if (typeof foreign === "string") return foreign;
+  const foreignCountErr = foreignCounterError(foreign, counters);
+  if (foreignCountErr) return foreignCountErr;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -695,6 +707,7 @@ function parseSimulation(
     economyRuntime: economy,
     organizationRuntime: organizations,
     mediaRuntime: media,
+    foreignAffairsRuntime: foreign,
   };
 }
 
@@ -1103,3 +1116,53 @@ export function migrateSaveV8ToV9(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 8, toSchema: 9, migrate: migrateSaveV8ToV9 });
+
+/**
+ * Phase 9 saves begin Phase 10 foreign-affairs state at migration.
+ * No fabricated treaties, crises, or diplomatic history are written.
+ * restoreSimulation seeds canonical foreign baseline when countries are empty.
+ */
+export function migrateSaveV9ToV10(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 10 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 10 };
+  sim.foreignAffairsRuntime = isRecord(sim.foreignAffairsRuntime)
+    ? sim.foreignAffairsRuntime
+    : {
+        countries: {},
+        bilateralRelations: {},
+        treaties: {},
+        sanctions: {},
+        crises: {},
+        conflicts: {},
+        diplomaticActions: {},
+        treatyRatifications: {},
+        pendingPresidentialActions: [],
+        pendingPlayerTreatyVotes: {},
+        diplomaticActionsThisMonth: 0,
+        lastMonthProcessed: null,
+      };
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextTreatyId: isInt(sim.counters.nextTreatyId) ? sim.counters.nextTreatyId : 1,
+      nextSanctionId: isInt(sim.counters.nextSanctionId) ? sim.counters.nextSanctionId : 1,
+      nextCrisisId: isInt(sim.counters.nextCrisisId) ? sim.counters.nextCrisisId : 1,
+      nextConflictId: isInt(sim.counters.nextConflictId) ? sim.counters.nextConflictId : 1,
+      nextForeignLeaderId: isInt(sim.counters.nextForeignLeaderId)
+        ? sim.counters.nextForeignLeaderId
+        : 1,
+      nextDiplomaticActionId: isInt(sim.counters.nextDiplomaticActionId)
+        ? sim.counters.nextDiplomaticActionId
+        : 1,
+      nextTreatyRatificationId: isInt(sim.counters.nextTreatyRatificationId)
+        ? sim.counters.nextTreatyRatificationId
+        : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 9, toSchema: 10, migrate: migrateSaveV9ToV10 });

@@ -48,7 +48,25 @@ Run policy-neutral baselines and shock scenarios. Economic series should remain 
 
 ## 12. Foreign-affairs calibration
 
-In 100 fifty-year simulations, record wars, sanctions, alliance changes and crises. Desired behavior is a broad distribution: many saves have no great-power war, some have serious regional wars, and only a small minority escalate into system-wide conflict. Vaskara/Terena tension should raise risk without making war inevitable.
+Run the batch calibrator after foreign-affairs changes:
+
+```bash
+pnpm calibrate:foreign
+```
+
+Default batch: **20 seeds × 15 years** (180 monthly turns), hands-off MP (`NPC030`), no player diplomatic commands. The script prints per-seed totals and distribution summaries for:
+
+- non-preexisting crises
+- sanctions imposed
+- treaties signed (excluding seeded DC collective-security)
+- active wars at horizon
+- foreign leadership changes
+- average crisis duration (months)
+- elevated-posture signals (including Vaskara baseline)
+
+**Unit tests** (`packages/sim/src/foreign.test.ts`, `foreign.determinism.test.ts`) cover baseline seeding (48 countries, canonical Terena relations), Vaskara heightened posture + latent crisis, determinism, save/reload, v9→v10 migration (no fabricated history), player autonomy (MP treaty votes, President sanctions/treaties), and information boundaries (`strategicGoals` stay out of public history/decisions).
+
+**Desired long-run behavior** (extend batch to 100×50 years when tuning): a broad distribution where many saves have no great-power war, some have serious regional wars, and only a small minority escalate into system-wide conflict. Vaskara/Terena tension should raise risk without making war inevitable.
 
 ## 13. Performance benchmarks
 

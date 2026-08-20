@@ -37,11 +37,15 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: "Reference",
+    title: "World",
     items: [
-      { id: "terena", label: "Map", icon: "🗺" },
-      { id: "archive", label: "Archive", icon: "▤" },
+      { id: "foreign", label: "Foreign Affairs", icon: "🌐" },
+      { id: "terena", label: "Terena Map", icon: "🗺" },
     ],
+  },
+  {
+    title: "Reference",
+    items: [{ id: "archive", label: "Archive", icon: "▤" }],
   },
 ];
 
