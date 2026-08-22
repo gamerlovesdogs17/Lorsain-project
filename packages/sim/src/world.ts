@@ -206,6 +206,8 @@ export type TerenaKernelInput = {
     name: string;
     type: string;
     founded?: number;
+    member_country_ids?: string[];
+    security_council_veto_ids?: string[];
   }>;
   worldLeaders?: Array<{
     id: string;
@@ -702,6 +704,12 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
           name: i.name,
           type: i.type,
           founded: typeof i.founded === "number" ? i.founded : null,
+          memberCountryIds: Array.isArray(i.member_country_ids)
+            ? [...i.member_country_ids].sort()
+            : [],
+          securityCouncilVetoIds: Array.isArray(i.security_council_veto_ids)
+            ? [...i.security_council_veto_ids].sort()
+            : [],
         },
       ]),
     ),

@@ -553,6 +553,43 @@ export function validateAndLoadContent(
     }
   }
 
+  const byInstitution = new Map(institutions.institutions.map((i) => [i.id, i]));
+  const wa = byInstitution.get("INT_WA");
+  const lto = byInstitution.get("INT_LTO");
+  if (!wa || !Array.isArray(wa.member_country_ids) || wa.member_country_ids.length !== 48) {
+    error(`INT_WA must list exactly 48 member_country_ids (got ${wa?.member_country_ids?.length ?? 0})`);
+  }
+  if (!lto || !Array.isArray(lto.member_country_ids) || lto.member_country_ids.length !== 43) {
+    error(`INT_LTO must list exactly 43 member_country_ids (got ${lto?.member_country_ids?.length ?? 0})`);
+  }
+  if (lto && Array.isArray(lto.member_country_ids)) {
+    if (!lto.member_country_ids.includes("W40")) error("INT_LTO must include W40 (Vaskara)");
+    if (!lto.member_country_ids.includes("W24")) error("INT_LTO must include W24 (Elzesh)");
+  }
+  const veto = wa && Array.isArray(wa.security_council_veto_ids) ? wa.security_council_veto_ids : [];
+  for (const id of ["W24", "W28", "W37", "W40"]) {
+    if (!veto.includes(id)) error(`INT_WA security_council_veto_ids missing ${id}`);
+  }
+  if (veto.includes("W13")) error("INT_WA must not give middle-power W13 a Security Council veto");
+  for (const inst of institutions.institutions) {
+    if (!Array.isArray(inst.member_country_ids)) continue;
+    for (const mid of inst.member_country_ids) {
+      if (!worldIds.has(mid)) error(`${inst.id}: unknown member_country_id ${mid}`);
+    }
+  }
+  const dc = byInstitution.get("INT_DC");
+  const csc = byInstitution.get("INT_CSC");
+  const naf = byInstitution.get("INT_NAF");
+  if (dc && Array.isArray(dc.member_country_ids) && dc.member_country_ids.length !== 13) {
+    error(`INT_DC membership must be 13 (got ${dc.member_country_ids.length})`);
+  }
+  if (csc && Array.isArray(csc.member_country_ids) && csc.member_country_ids.length !== 5) {
+    error(`INT_CSC membership must be 5 (got ${csc.member_country_ids.length})`);
+  }
+  if (naf && Array.isArray(naf.member_country_ids) && naf.member_country_ids.length !== 20) {
+    error(`INT_NAF membership must be 20 (got ${naf.member_country_ids.length})`);
+  }
+
   const foreignCountryIds = world.countries.filter((c) => c.id !== "W41").map((c) => c.id);
   if (worldLeaders.leaders.length !== foreignCountryIds.length) {
     error(

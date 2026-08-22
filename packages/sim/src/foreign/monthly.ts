@@ -12,6 +12,9 @@ import { processTreatyRatificationVotes, processCounterpartyTreatyResponses } fr
 import { applyActiveTreatyEffects } from "./treaty-effects.js";
 import { processInstitutionsMonth } from "./institutions.js";
 import { processNpcTerenaDiplomacy } from "./terena-diplomacy.js";
+import { processNpcTerenaWarPowers } from "./npc-war-powers.js";
+import { processForeignDomesticStateMonth } from "./foreign-domestic-state.js";
+import { processTreatyLifecycleMonth } from "./treaty-lifecycle.js";
 import { refreshTradeSectorFromForeign } from "./economy-bridge.js";
 import { needsForeignAffairsSeed } from "./state.js";
 import { publicActiveCrises } from "./crises.js";
@@ -34,8 +37,8 @@ export function processForeignAffairsMonth(
     events.push(
       pushHistory(state, {
         date: state.currentDate,
-        type: "FOREIGN_CRISIS_INCIDENT",
-        importance: 0.5,
+        type: "FOREIGN_CRISIS_TENSION_CREATED",
+        importance: 0.35,
         visibility: "system",
         actorIds: crisis.participantIds,
         entityIds: [crisis.id],
@@ -54,9 +57,12 @@ export function processForeignAffairsMonth(
   events.push(...processForeignAiMonth(world, state, rng, commandId));
   events.push(...processCounterpartyTreatyResponses(world, state, rng, commandId));
   events.push(...processTreatyRatificationVotes(world, state, rng, commandId));
+  events.push(...processTreatyLifecycleMonth(world, state, state.currentDate, commandId));
   events.push(...processInstitutionsMonth(world, state, rng, commandId));
   events.push(...processNpcTerenaDiplomacy(world, state, rng, commandId));
-  events.push(...processConflictMonth(state, state.currentDate, commandId));
+  events.push(...processConflictMonth(state, world, state.currentDate, commandId));
+  events.push(...processNpcTerenaWarPowers(world, state, rng, commandId));
+  processForeignDomesticStateMonth(world, state, state.currentDate);
   applyActiveTreatyEffects(state, state.currentDate);
 
   const leaders = processLeadershipChanges(world, state, rng, state.currentDate);

@@ -63,7 +63,31 @@ Treaty lifecycle: `proposed` → `counterparty_pending` → (`accepted` / `rejec
 
 Treaty kinds include collective security, bilateral defense, trade, non-aggression, basing, arms limitation, economic cooperation. Pre-existing Democratic Concord collective security is seeded as active with `ratificationStatus: not_required`. Active treaties alter AI incentives (deterrence, crisis pressure, trade).
 
-New Terena treaties requiring ratification create a public record and an Assembly vote (`CAST_TREATY_RATIFICATION_VOTE`). Player MPs choose explicitly; missing votes are abstentions, not fabricated yes votes.
+New Terena treaties requiring ratification create a public record and an Assembly vote (`CAST_TREATY_RATIFICATION_VOTE`). Player MPs choose explicitly; missing votes are abstentions, not fabricated yes votes. Tally uses **`simple_majority_cast`** (yes > no among cast votes), matching ordinary Assembly motion semantics. NPC choices use the DecisionContract with **empty `targetIds`** (treaty/country context stays in signals/metadata) so foreign country IDs never violate politician public-facts.
+
+Duplicate active treaties for the same pair/kind are blocked by proposal cooldowns and identity checks. Lifecycle can terminate trade/non-aggression under bilateral breakdown and can terminate hard alliances only after prolonged collapse + long tenure; mutual defense/collective security may suspend during war between members.
+
+## Institutions (Phase 10.2)
+
+Canonical membership lives in `data/world_institutions.json` (`member_country_ids`, and for WA `security_council_veto_ids`):
+
+| Institution | Members | Notes |
+| --- | --- | --- |
+| INT_WA | 48/48 | Universal. SC veto powers: W24, W28, W37, W40 (not W13). |
+| INT_LTO | 43 | Includes W40 Vaskara and W24 Elzesh. Non-members: W02, W10, W14, W25, W42 (documented in file). |
+| INT_DC | 13 | Aligns with country `alignment_ids`. |
+| INT_CSC | 5 | Aligns with country `alignment_ids`. |
+| INT_NAF | 20 | Aligns with country `alignment_ids`. |
+
+Runtime `institutionIds` are seeded from these lists. Bounded monthly consequences: WA mediation/condemnation/veto, LTO dispute progression, CSC bloc coordination, NAF mediation, DC Article 6 consultation.
+
+## War powers
+
+Unilateral `BEGIN_WAR_POWERS` (player or NPC President) schedules an Assembly **war_authorization** referral with the Speaker as institutional procedural sponsor (`constitutionalReferral` metadata). The President is never treated as an MP. Pending authorization prevents premature same-tick `WAR_POWERS_EXPIRED` when the 30-day unilateral window crosses a monthly boundary.
+
+## Leadership
+
+Foreign leadership schedules derive from canonical `since_year`, title, and government form, with a deterministic per-country month phase so democracies do not all turn over on the same January. Monarch titles (King/Queen/Emperor/Duke/Prince/…) use long dynastic intervals; incumbents who remain in office do not emit fake same-name “replacements.”
 
 ## Sanctions
 
@@ -113,13 +137,13 @@ pnpm calibrate:foreign
 
 Runs **20 seeds × 15 years** (180 months) on TERENA_2028 using `Simulation.advanceForeignCalibrationMonths` — a **calibration-only** driver that advances foreign affairs without unresolved domestic election interrupts. Never used in normal gameplay.
 
-Reports crises created/settled, conflicts started/ended (ever, not just at horizon), Terena/Vaskara wars, sanctions imposed/lifted, treaties proposed/rejected/activated, AI actions toward Terena, leadership changes, posture signals.
+Reports crises, conflicts, sanctions, treaty uniqueness/duplicates/terminations, leadership distribution/same-name, WA/LTO/CSC/NAF/DC institution counters, war-power/Assembly authorization signals, AI toward Terena, posture.
 
 Example 5×15-year smoke (Aug 2026): ~250 emergent crises per run, ~1–3 conflicts ever, ~30% runs with Terena involvement, sanctions sometimes lifted, foreign AI toward Terena on every run.
 
 ## Tests
 
-- `packages/sim/src/foreign.test.ts` — baseline (48 countries incl. W41), determinism, migration, player autonomy, Phase 10.1 regressions (sanctions, posture, crisis machine, treaty rejection, war trigger, leader display)
+- `packages/sim/src/foreign.test.ts` — baseline (48 countries incl. W41), determinism, migration, player autonomy, Phase 10.1/10.2 regressions (ratification E2E, war-auth referral, WA/LTO membership + veto, LTO disputes, leadership schedule/names)
 - `packages/sim/src/foreign.determinism.test.ts` — RNG stream isolation
 
 ## UI

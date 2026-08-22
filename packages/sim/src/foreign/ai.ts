@@ -254,6 +254,7 @@ function aiTreatyToTerena(
     },
     commandId,
   );
+  if ("error" in out) return [];
   queueIncomingForPlayerPresident(world, state, {
     kind: "treaty_proposal",
     actorCountryId: actorId,
@@ -353,6 +354,7 @@ export function processForeignAiMonth(
           },
           commandId,
         );
+        if ("error" in out) continue;
         events.push(...out.events);
       }
     } else if (roll < 0.35 && rel.securityTension > 0.45) {

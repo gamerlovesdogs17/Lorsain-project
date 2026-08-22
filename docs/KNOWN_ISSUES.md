@@ -118,20 +118,22 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title �
 | P96-EXEC-DEPTH | NONBLOCKING | Presidential desk uses cards/drawers; appointment search is still a compact list, not a full personnel UI. |
 | P95-SCREENSHOTS | NONBLOCKING | Automated visual regression / screenshot CI not yet wired. |
 
-## Phase 10 / 10.1 notes
+## Phase 10 / 10.1 / 10.2 notes
 
-**Phase 10.1 Foreign Affairs functional completion is COMPLETE** (builds on Phase 10 at `9b3bda7`). All independent-review **BLOCKING** items addressed: 48-state runtime including Terena (W41), President sanctions/posture, foreign AI toward Terena, crisis emergence/state machine/events, conflict reachability, war-powers bridge, treaty counterparty consent, UI leader/crisis fixes, long-horizon calibration harness. **Phase 11 not started.**
+**Phase 10.1 Foreign Affairs functional completion is COMPLETE** (builds on Phase 10 at `9b3bda7`). **Phase 10.2 institutional deepening** closes treaty ratification DecisionContract crash, Assembly war-authorization referral, canonical WA/LTO membership, Security Council veto canon, leadership schedule/name/monarchy fixes, and bounded institution consequences. **Phase 11 not started.**
 
 | ID | Severity | Issue |
 | --- | --- | --- |
 | P10-CAL-HORIZON | RESOLVED (10.1) | `pnpm calibrate:foreign` uses a calibration-only foreign month driver (`advanceForeignCalibrationMonths`) and completes full 15-year horizons without domestic election interrupts. |
 | P10-FOREIGN-PARLIAMENTS | NONBLOCKING | Foreign domestic politics remain abstract (leader turnover only). No foreign election campaigns. |
-| P10-WA-SIM | NONBLOCKING | World Assembly / LTO / CSC institutions affect diplomacy abstractly; not full UN-style simulators. |
+| P10-WA-SIM | RESOLVED (10.2) | Canonical membership in `world_institutions.json` (WA 48, LTO 43, DC 13, CSC 5, NAF 20). Great-power SC vetoes W24/W28/W37/W40 (not W13). Bounded WA/LTO/CSC/NAF consequences. Not a full UN simulator. |
 | P10-FOREIGN-TEST-SLOW | NONBLOCKING | Foreign integration tests advance many months per case (~4–9 min total in full suite). Acceptable for CI; consider splitting in Phase 11. |
 | P10-VITEST-TIMEOUT | NONBLOCKING | Full `pnpm test` may report a Vitest worker timeout after all tests pass on slow hosts. |
 | P10-WORLD-BUNDLE | NONBLOCKING | World SVG embedded in client bundle increases size; same code-split opportunity as P9-BUNDLE-SIZE. |
 | P101-VASK-WAR-RATE | NONBLOCKING | Vaskara–Terena armed conflict is possible but rare in 15-year calibration (latent tension + deterrence); not guaranteed by design. |
-| P101-TREATY-LEG-VOTE | NONBLOCKING | Treaty ratification uses foreign-runtime vote tallies with party/faction context; not yet a full `legislativeVotes` record in Assembly UI for every ratification. |
+| P101-TREATY-LEG-VOTE | RESOLVED (10.2) | Ripe ratification no longer crashes DecisionContract (empty targetIds). Threshold is `simple_majority_cast` (yes > no). Real `legislativeVotes` + Assembly display title. |
+| P102-INST-DEPTH | NONBLOCKING | Institutions remain light-touch: mediation/condemnation/bloc effects are bounded, not a full multilateral negotiation sim. |
+| P102-ALLIANCE-EXIT | NONBLOCKING | Hard alliances can terminate after prolonged bilateral collapse + long tenure; still not a rich withdrawal-politics model. |
 
 | ID | Severity | Issue |
 | --- | --- | --- |

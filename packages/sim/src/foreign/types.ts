@@ -188,6 +188,8 @@ export type TreatyRatificationState = {
   treatyId: string;
   voteId: string;
   introducedDate: IsoDate;
+  /** Vote cannot be tallied until the month after introduction (stage-ready). */
+  voteReadyDate: IsoDate;
   status: "pending" | "passed" | "failed";
 };
 
@@ -212,6 +214,23 @@ export type PendingIncomingDiplomacy = {
   metadata: JsonObject;
 };
 
+export type InstitutionRuntimeState = {
+  waActions: number;
+  ltoDisputes: Record<
+    string,
+    {
+      id: string;
+      partyA: string;
+      partyB: string;
+      stage: "filed" | "consultation" | "ruling" | "failed" | "settled";
+      startedDate: IsoDate;
+      lastUpdate: IsoDate;
+    }
+  >;
+  cscActions: number;
+  nafMediations: number;
+};
+
 export type ForeignAffairsRuntime = {
   countries: Record<string, ForeignCountryRuntime>;
   bilateralRelations: Record<string, BilateralRelation>;
@@ -224,9 +243,15 @@ export type ForeignAffairsRuntime = {
   pendingPresidentialActions: PendingPresidentialForeignAction[];
   pendingIncomingDiplomacy: PendingIncomingDiplomacy[];
   pendingPlayerTreatyVotes: Record<string, { treatyId: string; choice: "yes" | "no" | "abstain" | null }>;
+  /** treatyIdentityKey → earliest date an identical proposal may be reintroduced */
+  treatyProposalCooldowns: Record<string, IsoDate>;
+  institutionRuntime: InstitutionRuntimeState;
   diplomaticActionsThisMonth: number;
   lastMonthProcessed: IsoDate | null;
   warTriggerArmedByConflictId: string | null;
+  /** Prevents duplicate treaty economic effects within the same month. */
+  treatyEffectsAppliedMonth: IsoDate | null;
+  treatyEffectsAppliedKeys: Record<string, true>;
 };
 
 export type CanonicalWorldCountry = {
@@ -248,6 +273,8 @@ export type CanonicalWorldInstitution = {
   name: string;
   type: string;
   founded: number | null;
+  memberCountryIds: string[];
+  securityCouncilVetoIds: string[];
 };
 
 export type CanonicalWorldLeader = {
@@ -281,6 +308,10 @@ export function emptyBilateralRelation(): BilateralRelation {
   };
 }
 
+export function emptyInstitutionRuntime(): InstitutionRuntimeState {
+  return { waActions: 0, ltoDisputes: {}, cscActions: 0, nafMediations: 0 };
+}
+
 export function emptyForeignAffairsRuntime(): ForeignAffairsRuntime {
   return {
     countries: {},
@@ -294,9 +325,13 @@ export function emptyForeignAffairsRuntime(): ForeignAffairsRuntime {
     pendingPresidentialActions: [],
     pendingIncomingDiplomacy: [],
     pendingPlayerTreatyVotes: {},
+    treatyProposalCooldowns: {},
+    institutionRuntime: emptyInstitutionRuntime(),
     diplomaticActionsThisMonth: 0,
     lastMonthProcessed: null,
     warTriggerArmedByConflictId: null,
+    treatyEffectsAppliedMonth: null,
+    treatyEffectsAppliedKeys: {},
   };
 }
 

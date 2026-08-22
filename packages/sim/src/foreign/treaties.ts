@@ -1,17 +1,18 @@
 import type { IsoDate } from "../calendar.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { pushHistory } from "../scheduler.js";
-import { currentAssemblyMemberIds } from "../legislature/state.js";
 import { currentPresidentialAuthorityId } from "../executive/state.js";
-import type { LegislativeVoteChoice } from "../legislature/types.js";
 import type { RngService } from "../rng.js";
 import {
   allocateTreatyId,
-  allocateTreatyRatificationId,
   allocateIncomingDiplomacyId,
   getBilateralRelation,
 } from "./state.js";
-import { padId } from "../scheduler.js";
+import { canProposeTreaty, recordTreatyRejectionCooldown } from "./treaty-identity.js";
+import {
+  advanceTreatyAfterCounterpartyAcceptance,
+  processTreatyRatificationVotes,
+} from "./treaty-ratification.js";
 import {
   TERENA_WORLD_ID,
   type PendingIncomingDiplomacy,
@@ -19,12 +20,7 @@ import {
   type TreatyRecord,
 } from "./types.js";
 import { isTreatyKind } from "./types.js";
-import { isTerenaTreatyMember, terenaTreatyRequiresAssembly } from "./treaty-effects.js";
 import { publicActiveCrises } from "./crises.js";
-
-function simpleMajorityNeeded(total: number): number {
-  return Math.floor(total / 2) + 1;
-}
 
 export function evaluateCounterpartyAcceptance(
   world: KernelWorld,
@@ -102,9 +98,14 @@ export function proposeTreaty(
     memberIds: string[];
     requiresRatification: boolean;
     skipCounterparty?: boolean;
+    skipDuplicateCheck?: boolean;
   },
   commandId: string | null,
-): { treaty: TreatyRecord; events: SimEvent[] } {
+): { treaty: TreatyRecord; events: SimEvent[] } | { error: { code: string; message: string } } {
+  if (!args.skipDuplicateCheck) {
+    const gate = canProposeTreaty(state.foreignAffairsRuntime, args.kind, args.memberIds, state.currentDate);
+    if (!gate.ok) return { error: { code: "DUPLICATE_TREATY", message: gate.reason } };
+  }
   const id = allocateTreatyId(state);
   const treaty: TreatyRecord = {
     id,
@@ -146,61 +147,6 @@ export function proposeTreaty(
   return { treaty, events };
 }
 
-export function advanceTreatyAfterCounterpartyAcceptance(
-  state: SimState,
-  treaty: TreatyRecord,
-  commandId: string | null,
-): SimEvent[] {
-  const events: SimEvent[] = [];
-  const needsAssembly =
-    isTerenaTreatyMember(treaty.memberIds) && terenaTreatyRequiresAssembly(treaty.kind);
-
-  if (needsAssembly) {
-    treaty.status = "ratification_pending";
-    treaty.ratificationStatus = "pending";
-    const voteId = padId("LV", state.counters.nextLegislativeVoteId++);
-    const ratId = allocateTreatyRatificationId(state);
-    treaty.ratificationVoteId = voteId;
-    state.foreignAffairsRuntime.treatyRatifications[ratId] = {
-      treatyId: treaty.id,
-      voteId,
-      introducedDate: state.currentDate,
-      status: "pending",
-    };
-    events.push(
-      pushHistory(state, {
-        date: state.currentDate,
-        type: "TREATY_RATIFICATION_PENDING",
-        importance: 0.7,
-        visibility: "public",
-        actorIds: [treaty.proposerId],
-        entityIds: [treaty.id, voteId],
-        payload: { treatyId: treaty.id, voteId },
-        sourceScheduledEventId: null,
-        sourceCommandId: commandId,
-      }),
-    );
-  } else {
-    treaty.status = "active";
-    treaty.signedDate = state.currentDate;
-    treaty.ratificationStatus = "not_required";
-    events.push(
-      pushHistory(state, {
-        date: state.currentDate,
-        type: "TREATY_RATIFIED",
-        importance: 0.72,
-        visibility: "public",
-        actorIds: treaty.memberIds,
-        entityIds: [treaty.id],
-        payload: { treatyId: treaty.id },
-        sourceScheduledEventId: null,
-        sourceCommandId: commandId,
-      }),
-    );
-  }
-  return events;
-}
-
 export function processCounterpartyTreatyResponses(
   world: KernelWorld,
   state: SimState,
@@ -232,6 +178,7 @@ export function processCounterpartyTreatyResponses(
       treaty.counterpartyResponses[memberId] = decision;
       if (decision === "rejected") {
         treaty.status = "rejected";
+        recordTreatyRejectionCooldown(state.foreignAffairsRuntime, treaty, state.currentDate);
         events.push(
           pushHistory(state, {
             date: state.currentDate,
@@ -297,6 +244,7 @@ export function rejectIncomingTreaty(
   if (!treaty) return { error: { code: "INVALID_TREATY", message: pending.treatyId } };
   treaty.status = "rejected";
   treaty.counterpartyResponses[TERENA_WORLD_ID] = "rejected";
+  recordTreatyRejectionCooldown(state.foreignAffairsRuntime, treaty, state.currentDate);
   state.foreignAffairsRuntime.pendingIncomingDiplomacy.splice(idx, 1);
   return {
     events: [
@@ -323,71 +271,7 @@ export function activateTreaty(state: SimState, treatyId: string, date: IsoDate)
   treaty.ratificationStatus = "ratified";
 }
 
-export function processTreatyRatificationVotes(
-  world: KernelWorld,
-  state: SimState,
-  rng: RngService,
-  commandId: string,
-): SimEvent[] {
-  const events: SimEvent[] = [];
-  const mps = currentAssemblyMemberIds(world, state);
-  for (const rat of Object.values(state.foreignAffairsRuntime.treatyRatifications)) {
-    if (rat.status !== "pending") continue;
-    const treaty = state.foreignAffairsRuntime.treaties[rat.treatyId];
-    if (!treaty || treaty.status !== "ratification_pending") continue;
-    let yes = 0;
-    let no = 0;
-    for (const mp of mps) {
-      if (mp === state.playerPoliticianId) {
-        const pending = state.foreignAffairsRuntime.pendingPlayerTreatyVotes[rat.treatyId];
-        if (!pending?.choice) continue;
-        if (pending.choice === "yes") yes += 1;
-        else if (pending.choice === "no") no += 1;
-        continue;
-      }
-      const roll = rng.float01("foreign-affairs");
-      const vote: LegislativeVoteChoice = roll < 0.58 ? "yes" : roll < 0.88 ? "no" : "abstain";
-      if (vote === "yes") yes += 1;
-      else if (vote === "no") no += 1;
-    }
-    const needed = simpleMajorityNeeded(mps.length);
-    if (yes >= needed) {
-      rat.status = "passed";
-      activateTreaty(state, treaty.id, state.currentDate);
-      events.push(
-        pushHistory(state, {
-          date: state.currentDate,
-          type: "TREATY_RATIFIED",
-          importance: 0.75,
-          visibility: "public",
-          actorIds: [],
-          entityIds: [treaty.id],
-          payload: { treatyId: treaty.id, yes, no },
-          sourceScheduledEventId: null,
-          sourceCommandId: commandId,
-        }),
-      );
-    } else if (no > mps.length - needed) {
-      rat.status = "failed";
-      treaty.status = "rejected";
-      treaty.ratificationStatus = "rejected";
-      events.push(
-        pushHistory(state, {
-          date: state.currentDate,
-          type: "TREATY_REJECTED",
-          importance: 0.7,
-          visibility: "public",
-          actorIds: [],
-          entityIds: [treaty.id],
-          payload: { treatyId: treaty.id, yes, no },
-          sourceScheduledEventId: null,
-          sourceCommandId: commandId,
-        }),
-      );
-    }
-  }
-  return events;
-}
+export { processTreatyRatificationVotes, advanceTreatyAfterCounterpartyAcceptance };
 
 export function parseTreatyKindInput(kind: string): TreatyKind | null {
   return isTreatyKind(kind) ? kind : null;

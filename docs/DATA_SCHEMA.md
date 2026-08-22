@@ -284,6 +284,13 @@ interface BilateralRelation {
 
 Static canon: `KernelWorld.worldCountries`, `worldInstitutions`, `worldLeaders`. Canonical starting relations with Terena use `relation_with_terena` as a diplomatic prior only.
 
+`world_institutions.json` institutions may include:
+
+- `member_country_ids: string[]` — persistent membership (WA 48, LTO 43, DC 13, CSC 5, NAF 20)
+- `security_council_veto_ids: string[]` — WA only (W24, W28, W37, W40)
+
+Runtime `ForeignCountryRuntime.institutionIds` are seeded from these lists (not only `alignment_ids`).
+
 ## 13. Event log
 
 All consequential state changes produce structured events.

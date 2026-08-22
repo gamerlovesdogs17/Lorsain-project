@@ -13,6 +13,7 @@ import { deriveCapabilities } from "./capabilities.js";
 import { deriveStrategicGoals } from "./goals.js";
 import { deriveInitialBilateralRelation } from "./relations.js";
 import { deriveTradeExposure } from "./trade.js";
+import { seedCountryLeadershipOnBaseline } from "./leaders.js";
 
 const CANONICAL_TERENA_RELATIONS: Record<string, number> = {
   W40: -40,
@@ -68,12 +69,28 @@ function assertCanonicalTerenaRelations(runtime: ForeignAffairsRuntimeShape): vo
 
 type ForeignAffairsRuntimeShape = SimState["foreignAffairsRuntime"];
 
+function resolveInstitutionIds(
+  world: KernelWorld,
+  countryId: string,
+  alignmentIds: string[],
+): string[] {
+  const ids = new Set<string>();
+  for (const inst of Object.values(world.worldInstitutions)) {
+    if (inst.memberCountryIds.includes(countryId)) ids.add(inst.id);
+  }
+  // Preserve alignment membership if institution lists are empty (legacy saves / synthetic worlds).
+  if (ids.size === 0) {
+    for (const a of alignmentIds) ids.add(a);
+  }
+  return [...ids].sort();
+}
+
 function buildCountryRuntime(
+  world: KernelWorld,
   canonical: CanonicalWorldCountry,
   leaderId: string | null,
   countries: Record<string, CanonicalWorldCountry>,
 ): ForeignCountryRuntime {
-  const isTerena = canonical.id === TERENA_WORLD_ID;
   return {
     countryId: canonical.id,
     leaderId,
@@ -81,7 +98,7 @@ function buildCountryRuntime(
     capabilities: deriveCapabilities(canonical),
     tradeExposure: deriveTradeExposure(canonical, countries),
     strategicGoals: deriveStrategicGoals(canonical),
-    institutionIds: isTerena ? ["INT_DC"] : [...canonical.alignmentIds],
+    institutionIds: resolveInstitutionIds(world, canonical.id, canonical.alignmentIds),
     activeSanctionIds: [],
     governmentStability: deriveGovernmentStability(canonical),
     economicCapacity: deriveEconomicCapacity(canonical),
@@ -108,7 +125,15 @@ export function seedForeignAffairsRuntime(world: KernelWorld, state: SimState): 
     const isTerena = canonical.id === TERENA_WORLD_ID;
     const leaderId = isTerena ? null : (leaderByCountry.get(canonical.id) ?? null);
     if (!isTerena && !leaderId) continue;
-    runtime.countries[canonical.id] = buildCountryRuntime(canonical, leaderId, countries);
+    runtime.countries[canonical.id] = buildCountryRuntime(world, canonical, leaderId, countries);
+    if (!isTerena) {
+      seedCountryLeadershipOnBaseline(
+        world,
+        runtime.countries[canonical.id]!,
+        canonical.id,
+        world.scenarioStartDate,
+      );
+    }
   }
 
   const ids = Object.keys(countries).sort();

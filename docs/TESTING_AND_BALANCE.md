@@ -59,15 +59,17 @@ Default batch: **20 seeds × 15 years** (180 monthly turns), hands-off MP (`NPC0
 The script prints per-seed totals and distribution summaries for:
 
 - emergent crises created and settled
-- conflicts started and ended (**ever**, not only active at horizon)
+- conflicts started/ended/active at horizon
 - Terena and Vaskara–Terena wars
 - sanctions imposed and lifted
-- treaties proposed, rejected, and activated (excluding seeded DC collective-security)
+- treaties: total/active/unique/duplicate/max-duplicate/terminated/suspended/proposed/rejected/activated
+- foreign leadership changes, same-name replacements, max transitions on one date
+- WA actions/vetoes, LTO disputes filed/settled/failed, DC consultations, CSC actions, NAF mediations
+- war-power begun and Assembly war-authorization motions
 - foreign AI actions toward Terena
-- foreign leadership changes
 - elevated-posture signals
 
-**Unit tests** (`packages/sim/src/foreign.test.ts`, `foreign.determinism.test.ts`) cover baseline seeding (48 countries including W41 with domestic President, canonical Terena relations), Vaskara heightened posture + **latent** (not public active) crisis, determinism, save/reload, v9→v10 migration (no fabricated history), player autonomy (MP treaty votes, President sanctions/treaties/posture), Phase 10.1 regressions (crisis machine, treaty counterparty, war-powers trigger, leader display), and information boundaries.
+**Unit tests** (`packages/sim/src/foreign.test.ts`, `foreign.determinism.test.ts`) cover baseline seeding (48 countries including W41 with domestic President, canonical Terena relations), Vaskara heightened posture + **latent** (not public active) crisis, determinism, save/reload, v9→v10 migration (no fabricated history), player autonomy (MP treaty votes, President sanctions/treaties/posture), Phase 10.1/10.2 regressions (ratification E2E, war-authorization referral, WA/LTO membership + veto, LTO disputes, leadership schedule/names), and information boundaries.
 
 **Desired long-run behavior** (extend batch to 100×50 years when tuning): a broad distribution where many saves have no great-power war, some have serious regional wars, and only a small minority escalate into system-wide conflict. Vaskara/Terena tension should raise risk without making war inevitable.
 

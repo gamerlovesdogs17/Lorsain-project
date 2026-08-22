@@ -1145,6 +1145,9 @@ export function migrateSaveV9ToV10(raw: unknown): unknown {
         treatyRatifications: {},
         pendingPresidentialActions: [],
         pendingPlayerTreatyVotes: {},
+        treatyProposalCooldowns: {},
+        institutionRuntime: { waActions: 0, ltoDisputes: {}, cscActions: 0, nafMediations: 0 },
+        warTriggerArmedByConflictId: null,
         diplomaticActionsThisMonth: 0,
         lastMonthProcessed: null,
       };

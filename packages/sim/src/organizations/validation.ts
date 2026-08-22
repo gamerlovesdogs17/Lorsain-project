@@ -17,6 +17,9 @@ export function parseOrganizationRuntime(raw: unknown): OrganizationRuntime | st
     runtime.lastMonthProcessed = raw.lastMonthProcessed;
   }
   if (typeof raw.meetingsThisMonth === "number") runtime.meetingsThisMonth = raw.meetingsThisMonth;
+  if (isRecord(raw.metadata)) {
+    runtime.metadata = { ...raw.metadata } as OrganizationRuntime["metadata"];
+  }
   if (isRecord(raw.actors)) {
     for (const [id, rec] of Object.entries(raw.actors)) {
       if (!isRecord(rec) || rec.id !== id) continue;

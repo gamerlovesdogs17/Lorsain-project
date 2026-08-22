@@ -122,6 +122,7 @@ import {
   introduceMotion,
   issueRegulation,
   proposeBudget,
+  scheduleWarAuthorizationReferral,
 } from "./executive/procedure.js";
 import { seedMinistriesIfNeeded } from "./executive/state.js";
 import {
@@ -144,6 +145,7 @@ import { processMediaMonth } from "./media/monthly.js";
 import { emptyMediaRuntime } from "./media/types.js";
 import { emptyForeignAffairsRuntime } from "./foreign/types.js";
 import { processForeignAffairsMonth } from "./foreign/monthly.js";
+import { processOrganizationForeignReactions } from "./foreign/organization-foreign-bridge.js";
 import { advanceForeignCalibrationMonths as advanceForeignCalibrationMonthsHarness } from "./foreign/calibration-harness.js";
 import { seedForeignAffairsRuntime } from "./foreign/baseline.js";
 import { needsForeignAffairsSeed } from "./foreign/state.js";
@@ -444,7 +446,9 @@ function runTowardTarget(
     events.push(...out.events);
     if (out.interrupt) return { events, interrupt: out.interrupt };
   }
-  events.push(...processForeignAffairsMonth(state, world, rng, commandId));
+  const foreignEvents = processForeignAffairsMonth(state, world, rng, commandId);
+  events.push(...foreignEvents);
+  events.push(...processOrganizationForeignReactions(state, world, commandId, foreignEvents));
   events.push(...processMediaMonth(state, world, rng, commandId));
   state.currentDate = target;
   state.completedTurns += 1;
@@ -2070,7 +2074,8 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       const commandId = nextCommandId();
       const out = beginWarPowers(world, state, { actorId: state.playerPoliticianId }, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
-      const warEvent = out.events.find((e) => e.type === "WAR_POWERS_BEGUN");
+      const events = [...out.events];
+      const warEvent = events.find((e) => e.type === "WAR_POWERS_BEGUN");
       const warPowerId =
         warEvent && typeof warEvent.payload.warPowerId === "string"
           ? warEvent.payload.warPowerId
@@ -2079,7 +2084,11 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       if (warPowerId && conflictId) {
         linkWarPowerToConflict(state, conflictId, warPowerId);
       }
-      return { ok: true, commandId, events: out.events, interrupt: null };
+      if (warPowerId) {
+        const motionOut = scheduleWarAuthorizationReferral(world, state, warPowerId, commandId);
+        if (!("error" in motionOut)) events.push(...motionOut.events);
+      }
+      return { ok: true, commandId, events, interrupt: null };
     }
 
     if (command.type === "NOMINATE_CONSTITUTIONAL_JUDGE") {

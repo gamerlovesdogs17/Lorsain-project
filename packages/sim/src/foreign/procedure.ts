@@ -190,6 +190,7 @@ export function playerProposeTreaty(
     },
     commandId,
   );
+  if ("error" in out) return { error: reject("DUPLICATE_TREATY", out.error.message) };
   recordPlayerAction(state, {
     actorCountryId: TERENA_WORLD_ID,
     targetCountryId: args.targetCountryId,

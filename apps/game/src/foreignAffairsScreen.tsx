@@ -324,6 +324,13 @@ export function ForeignAffairsPage(props: {
                         <StatusBadge key={id}>{institutionDisplayName(world, id)}</StatusBadge>
                       ))}
                     </div>
+                    <div className="muted" style={{ marginTop: "0.35rem" }}>
+                      World Assembly:{" "}
+                      {selectedRuntime.institutionIds.includes("INT_WA") ? "member" : "not a member"}
+                      {" · "}
+                      Lorsain Trade Organization:{" "}
+                      {selectedRuntime.institutionIds.includes("INT_LTO") ? "member" : "not a member"}
+                    </div>
                   </div>
                 ) : null}
 

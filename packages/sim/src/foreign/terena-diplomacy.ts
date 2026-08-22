@@ -106,8 +106,10 @@ export function processNpcTerenaDiplomacy(
       },
       commandId,
     );
-    recordNpcAction(state, { targetCountryId: targetId, kind: "treaty_proposal", commandId });
-    events.push(...out.events);
+    if (!("error" in out)) {
+      recordNpcAction(state, { targetCountryId: targetId, kind: "treaty_proposal", commandId });
+      events.push(...out.events);
+    }
   } else if (rel.securityTension > 0.45) {
     adjustRelation(rel, { general: -3, securityTension: 0.05 });
     rel.lastUpdated = state.currentDate;

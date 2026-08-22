@@ -5,7 +5,7 @@ import { pushHistory } from "../scheduler.js";
 import { adjustRelation } from "./relations.js";
 import type { CrisisStage, InternationalCrisis } from "./types.js";
 import { isPublicCrisisStage } from "./types.js";
-import { beginConflictFromCrisisWithWarTrigger } from "./conflicts.js";
+import { beginConflictFromCrisisWithWarTrigger, crisisConflictProbability } from "./conflicts.js";
 
 export function transitionLatent(
   crisis: InternationalCrisis,
@@ -182,7 +182,8 @@ export function processCrisisLifecycle(
       else if (drift > 0.96) transitionIncident(crisis, date, "settled");
     } else if (crisis.stage === "active") {
       if (drift < 0.06) {
-        if (rng.float01("foreign-affairs") < 0.15) {
+        const conflictP = crisisConflictProbability(world, state, crisis);
+        if (rng.float01("foreign-affairs") < conflictP) {
           transitionActive(crisis, date, "conflict");
         } else {
           transitionActive(crisis, date, "deescalating");

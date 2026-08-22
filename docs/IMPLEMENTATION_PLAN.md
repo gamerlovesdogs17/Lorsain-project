@@ -113,7 +113,8 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 9.5** — **COMPLETE** — UI System V3 shell: grouped navigation, campaign command center, player-safe labels, map hover/click fix, responsive shell. Several screen-depth items were documented as done but incomplete; see Phase 9.6.
 - **Phase 9.6** — **COMPLETE** — UI System V3.1: map fill/plurality blockers, Trade baseline, presidential/party/courts/news/assembly/new-game/economy depth. See `docs/UI_SYSTEM_V3_1.md`.
 - **Phase 10** — **COMPLETE (`9b3bda7`)** — Foreign affairs architecture: 48-state runtime, leaders, relations, trade, treaties, sanctions, crises, abstract conflict, world map UI, schemaVersion 10. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`.
-- **Phase 10.1** — **COMPLETE** — Foreign affairs functional completion: Terena runtime, AI toward Terena, crisis/conflict reachability, war powers, treaty consent, UI/presentation fixes, regression tests, long-horizon calibration. **Phase 11 not started.**
+- **Phase 10.1** — **COMPLETE** — Foreign affairs functional completion: Terena runtime, AI toward Terena, crisis/conflict reachability, war powers, treaty consent, UI/presentation fixes, regression tests, long-horizon calibration.
+- **Phase 10.2** — **COMPLETE** — Institutional deepening: treaty identity/lifecycle/ratification DecisionContract fix, Assembly war-authorization referral, canonical WA/LTO membership + SC vetoes, bounded institution consequences, leadership schedule/name/monarchy fixes, expanded calibration metrics. **Phase 11 not started.**
 
 Deliverables:
 

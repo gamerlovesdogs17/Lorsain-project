@@ -163,10 +163,20 @@ export function AssemblyPage(props: {
             <tbody>
               {votes.slice(0, 30).map((v) => {
                 const parent = props.snap.legislatureRuntime.bills[v.billId];
+                const metaTitle =
+                  typeof v.metadata?.displayTitle === "string"
+                    ? v.metadata.displayTitle
+                    : typeof v.metadata?.title === "string" && v.metadata?.kind === "treaty_ratification"
+                      ? `Treaty ratification: ${v.metadata.title}`
+                      : null;
+                const stageLabel =
+                  v.metadata?.kind === "treaty_ratification"
+                    ? "Treaty ratification"
+                    : v.stage;
                 return (
                   <tr key={v.id}>
-                    <td>{parent?.title ?? v.billId}</td>
-                    <td>{v.stage}</td>
+                    <td>{parent?.title ?? metaTitle ?? v.billId}</td>
+                    <td>{stageLabel}</td>
                     <td>
                       {v.passed ? "Passed" : "Failed"} · Yes {v.yes} / No {v.no} / Abstain{" "}
                       {v.abstain}

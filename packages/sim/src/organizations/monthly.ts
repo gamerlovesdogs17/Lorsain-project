@@ -171,29 +171,9 @@ export function processOrganizationsMonth(
     }
   }
 
-  const foreignEvents = state.history.filter(
-    (e) =>
-      e.date === state.currentDate &&
-      e.visibility === "public" &&
-      (e.type.includes("SANCTION") ||
-        e.type.includes("INTERNATIONAL_CONFLICT") ||
-        e.type === "FOREIGN_CRISIS_ESCALATED"),
-  );
-  for (const ev of foreignEvents.slice(0, 2)) {
-    for (const [orgId, actor] of Object.entries(state.organizationRuntime.actors)) {
-      const canon = world.interestOrganizations[orgId];
-      if (!canon) continue;
-      const type = canon.type.toLowerCase();
-      if (!type.includes("advocacy") && !type.includes("business") && !type.includes("maritime")) {
-        continue;
-      }
-      if (ev.type.includes("SANCTION") && type.includes("business")) {
-        note(actor, state.currentDate, "foreign", "Business groups warn on sanctions fallout");
-      } else if (ev.type.includes("CONFLICT") && type.includes("advocacy")) {
-        note(actor, state.currentDate, "foreign", "Advocates call for de-escalation abroad");
-      }
-    }
-  }
+  // Same-month foreign reactions are applied after foreign affairs via
+  // processOrganizationForeignReactions. Do not scan history here — foreign events
+  // have not been generated yet in the turn order.
 
   state.organizationRuntime.lastMonthProcessed = month;
   return events;

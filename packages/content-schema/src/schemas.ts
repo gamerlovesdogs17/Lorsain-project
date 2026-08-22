@@ -35,6 +35,8 @@ export const WorldInstitutionSchema = z
     name: z.string(),
     type: z.string(),
     founded: z.number().int().optional(),
+    member_country_ids: z.array(z.string()).optional(),
+    security_council_veto_ids: z.array(z.string()).optional(),
   })
   .passthrough();
 

@@ -47,6 +47,14 @@ function expireClerical(state: SimState, commandId: string): SimEvent[] {
   }
   for (const war of Object.values(state.executiveRuntime.warPowers)) {
     if (war.status === "unilateral" && war.unilateralUntil < state.currentDate && !war.authorized) {
+      const pendingAuth = Object.values(state.executiveRuntime.motions).some(
+        (m) =>
+          m.kind === "war_authorization" &&
+          m.targetId === war.id &&
+          (m.status === "scheduled" || m.status === "introduced"),
+      );
+      // Do not expire while a legitimate Assembly authorization referral is pending.
+      if (pendingAuth) continue;
       war.status = "expired";
       events.push(
         pushHistory(state, {

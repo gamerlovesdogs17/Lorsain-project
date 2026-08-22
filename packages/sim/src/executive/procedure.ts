@@ -4,7 +4,7 @@ import { addDays } from "../calendar.js";
 import { monthStart } from "../campaigns/effects.js";
 import { pushHistory } from "../scheduler.js";
 import { assumeOffice, endTerm, occupyingTerms } from "../offices.js";
-import { currentAssemblyMemberIds } from "../legislature/state.js";
+import { currentAssemblyMemberIds, currentSpeakerId } from "../legislature/state.js";
 import type { LegislativeVoteChoice, PolicyItem } from "../legislature/types.js";
 import {
   allocateBudgetId,
@@ -212,7 +212,12 @@ export function issueRegulation(
 export function introduceMotion(
   world: KernelWorld,
   state: SimState,
-  args: { sponsorId: string; kind: MotionKind; targetId: string },
+  args: {
+    sponsorId: string;
+    kind: MotionKind;
+    targetId: string;
+    metadata?: JsonObject;
+  },
   commandId: string | null,
 ): { motion: AssemblyMotion; events: SimEvent[] } | { error: CommandError } {
   const mps = new Set(currentAssemblyMemberIds(world, state));
@@ -273,7 +278,7 @@ export function introduceMotion(
     fraction,
     result: null,
     stageReadyDate: state.currentDate,
-    metadata: {},
+    metadata: { ...(args.metadata ?? {}) },
   };
   state.executiveRuntime.motions[motion.id] = motion;
   return {
@@ -284,12 +289,75 @@ export function introduceMotion(
         "ASSEMBLY_MOTION_INTRODUCED",
         [args.sponsorId],
         [motion.id, args.targetId],
-        { motionId: motion.id, kind: args.kind, targetId: args.targetId },
+        {
+          motionId: motion.id,
+          kind: args.kind,
+          targetId: args.targetId,
+          constitutionalReferral: args.metadata?.constitutionalReferral === true,
+        },
         commandId,
         0.65,
       ),
     ],
   };
+}
+
+/**
+ * After unilateral war powers begin, the Assembly must consider authorization.
+ * The Speaker is the institutional procedural sponsor — not the President (who is not an MP)
+ * and not a discretionary private MP action. If the player is Speaker, metadata marks this
+ * as a constitutional referral so it is not treated as their personal political initiative.
+ */
+export function scheduleWarAuthorizationReferral(
+  world: KernelWorld,
+  state: SimState,
+  warPowerId: string,
+  commandId: string | null,
+): { motion: AssemblyMotion; events: SimEvent[] } | { error: CommandError } {
+  const war = state.executiveRuntime.warPowers[warPowerId];
+  if (!war) return { error: reject("UNKNOWN_WAR_POWER", warPowerId) };
+  const existing = Object.values(state.executiveRuntime.motions).find(
+    (m) =>
+      m.kind === "war_authorization" &&
+      m.targetId === warPowerId &&
+      (m.status === "scheduled" || m.status === "introduced"),
+  );
+  if (existing) {
+    return { motion: existing, events: [] };
+  }
+  const mps = currentAssemblyMemberIds(world, state);
+  if (mps.length === 0) return { error: reject("NO_ASSEMBLY", "no sitting Assembly members") };
+  const speaker = currentSpeakerId(world, state);
+  const sponsorId =
+    speaker && mps.includes(speaker) ? speaker : mps[0]!;
+  return introduceMotion(
+    world,
+    state,
+    {
+      sponsorId,
+      kind: "war_authorization",
+      targetId: warPowerId,
+      metadata: {
+        constitutionalReferral: true,
+        proceduralSponsorOffice: speaker === sponsorId ? "speaker" : "assembly_fallback",
+      },
+    },
+    commandId,
+  );
+}
+
+export function pendingWarAuthorizationMotion(
+  state: SimState,
+  warPowerId: string,
+): AssemblyMotion | null {
+  return (
+    Object.values(state.executiveRuntime.motions).find(
+      (m) =>
+        m.kind === "war_authorization" &&
+        m.targetId === warPowerId &&
+        (m.status === "scheduled" || m.status === "introduced"),
+    ) ?? null
+  );
 }
 
 export function castMotionVote(

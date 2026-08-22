@@ -868,7 +868,11 @@ Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate 
 
 ## 19.1 Phase 10.1 — foreign affairs functional completion
 
-**COMPLETE.** Fixes independent-review blockers without replacing Phase 10 architecture: all **48** runtime countries (W41 with `leaderId: null`, domestic President resolver); President sanctions/posture; foreign AI toward Terena + NPC Terena diplomacy when player ≠ President; crisis emergence + explicit state machine + structured events; conflict records when crises enter conflict; war-powers bridge (`armExecutiveTrigger("war")`); treaty counterparty consent lifecycle; latent vs public crisis labeling; runtime leader display; long-horizon calibration harness. 20-year synthetic kernel hash: `6c6170bc892a0f43ca20690a2f6b16f5`. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`. **Phase 11 not started.**
+**COMPLETE.** Fixes independent-review blockers without replacing Phase 10 architecture: all **48** runtime countries (W41 with `leaderId: null`, domestic President resolver); President sanctions/posture; foreign AI toward Terena + NPC Terena diplomacy when player ≠ President; crisis emergence + explicit state machine + structured events; conflict records when crises enter conflict; war-powers bridge (`armExecutiveTrigger("war")`); treaty counterparty consent lifecycle; latent vs public crisis labeling; runtime leader display; long-horizon calibration harness. 20-year synthetic kernel hash: `8a5c6852538273d76509ab3cbcd7b0b9`. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`.
+
+## 19.2 Phase 10.2 — institutional deepening
+
+**COMPLETE.** Treaty identity/lifecycle; ratification DecisionContract fix (`simple_majority_cast`); NPC/player war powers schedule Assembly authorization via Speaker constitutional referral; canonical WA/LTO/DC/CSC/NAF membership in `world_institutions.json` (WA 48, LTO 43 incl. W40/W24; SC vetoes W24/W28/W37/W40); bounded institution consequences; leadership schedules from canonical `since_year` with monarch-title handling and no same-name fake replacements; expanded foreign calibration metrics. **Phase 11 not started.**
 
 ## 20. Phase 11 — final integration + UI polish + balance + content
 

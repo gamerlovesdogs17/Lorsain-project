@@ -77,6 +77,17 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
     raw.warTriggerArmedByConflictId != null && typeof raw.warTriggerArmedByConflictId === "string"
       ? raw.warTriggerArmedByConflictId
       : null;
+  runtime.treatyEffectsAppliedMonth =
+    raw.treatyEffectsAppliedMonth != null &&
+    typeof raw.treatyEffectsAppliedMonth === "string" &&
+    isIsoDate(raw.treatyEffectsAppliedMonth)
+      ? raw.treatyEffectsAppliedMonth
+      : null;
+  if (isRecord(raw.treatyEffectsAppliedKeys)) {
+    for (const [key, val] of Object.entries(raw.treatyEffectsAppliedKeys)) {
+      if (val === true) runtime.treatyEffectsAppliedKeys[key] = true;
+    }
+  }
   if (isRecord(raw.countries)) {
     for (const [id, rec] of Object.entries(raw.countries)) {
       if (!isRecord(rec)) continue;
@@ -304,8 +315,53 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
           typeof rec.introducedDate === "string" && isIsoDate(rec.introducedDate)
             ? rec.introducedDate
             : "2000-01-01",
+        voteReadyDate:
+          typeof rec.voteReadyDate === "string" && isIsoDate(rec.voteReadyDate)
+            ? rec.voteReadyDate
+            : typeof rec.introducedDate === "string" && isIsoDate(rec.introducedDate)
+              ? rec.introducedDate
+              : "2000-01-01",
         status: rec.status === "passed" || rec.status === "failed" ? rec.status : "pending",
       };
+    }
+  }
+  if (isRecord(raw.treatyProposalCooldowns)) {
+    for (const [key, until] of Object.entries(raw.treatyProposalCooldowns)) {
+      if (typeof until === "string" && isIsoDate(until)) {
+        runtime.treatyProposalCooldowns[key] = until;
+      }
+    }
+  }
+  if (isRecord(raw.institutionRuntime)) {
+    const ir = raw.institutionRuntime;
+    runtime.institutionRuntime.waActions = typeof ir.waActions === "number" ? ir.waActions : 0;
+    runtime.institutionRuntime.cscActions = typeof ir.cscActions === "number" ? ir.cscActions : 0;
+    runtime.institutionRuntime.nafMediations =
+      typeof ir.nafMediations === "number" ? ir.nafMediations : 0;
+    if (isRecord(ir.ltoDisputes)) {
+      for (const [id, rec] of Object.entries(ir.ltoDisputes)) {
+        if (!isRecord(rec)) continue;
+        runtime.institutionRuntime.ltoDisputes[id] = {
+          id,
+          partyA: typeof rec.partyA === "string" ? rec.partyA : "",
+          partyB: typeof rec.partyB === "string" ? rec.partyB : "",
+          stage:
+            rec.stage === "consultation" ||
+            rec.stage === "ruling" ||
+            rec.stage === "failed" ||
+            rec.stage === "settled"
+              ? rec.stage
+              : "filed",
+          startedDate:
+            typeof rec.startedDate === "string" && isIsoDate(rec.startedDate)
+              ? rec.startedDate
+              : "2000-01-01",
+          lastUpdate:
+            typeof rec.lastUpdate === "string" && isIsoDate(rec.lastUpdate)
+              ? rec.lastUpdate
+              : "2000-01-01",
+        };
+      }
     }
   }
   if (isRecord(raw.pendingPlayerTreatyVotes)) {

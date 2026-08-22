@@ -1,11 +1,26 @@
 import type { SimState } from "../types.js";
+import { monthStart } from "../campaigns/effects.js";
+import type { IsoDate } from "../calendar.js";
 import { TERENA_WORLD_ID } from "./types.js";
+import { treatyIdentityKey } from "./treaty-identity.js";
 import { getBilateralRelation } from "./state.js";
 import { applyTradeToRelation } from "./trade.js";
 
 export function applyActiveTreatyEffects(state: SimState, date: string): void {
-  for (const treaty of Object.values(state.foreignAffairsRuntime.treaties)) {
+  const month = monthStart(date as IsoDate);
+  if (state.foreignAffairsRuntime.treatyEffectsAppliedMonth !== month) {
+    state.foreignAffairsRuntime.treatyEffectsAppliedMonth = month;
+    state.foreignAffairsRuntime.treatyEffectsAppliedKeys = {};
+  }
+  const applied = state.foreignAffairsRuntime.treatyEffectsAppliedKeys;
+  for (const treaty of Object.values(state.foreignAffairsRuntime.treaties).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  )) {
     if (treaty.status !== "active") continue;
+    const identity = treatyIdentityKey(treaty.kind, treaty.memberIds);
+    if (applied[identity]) continue;
+    applied[identity] = true;
+
     if (treaty.kind === "trade" && treaty.memberIds.length >= 2) {
       for (let i = 0; i < treaty.memberIds.length; i += 1) {
         for (let j = i + 1; j < treaty.memberIds.length; j += 1) {
