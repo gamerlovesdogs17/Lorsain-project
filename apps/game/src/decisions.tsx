@@ -77,6 +77,17 @@ export function DecisionPanel(props: {
             >
               Resolve presidential election
             </button>
+          ) : interrupt.code === "ASSEMBLY_ELECTION_DUE" ? (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                run({ type: "RESOLVE_ASSEMBLY_ELECTION" });
+                run({ type: "RESUME_TURN" });
+              }}
+            >
+              Resolve Assembly election
+            </button>
           ) : interrupt.requiresResolution ? (
             <p className="muted">This event cannot be skipped. Use the legal action above.</p>
           ) : (

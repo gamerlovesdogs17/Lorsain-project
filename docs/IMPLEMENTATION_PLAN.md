@@ -114,7 +114,8 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 9.6** — **COMPLETE** — UI System V3.1: map fill/plurality blockers, Trade baseline, presidential/party/courts/news/assembly/new-game/economy depth. See `docs/UI_SYSTEM_V3_1.md`.
 - **Phase 10** — **COMPLETE (`9b3bda7`)** — Foreign affairs architecture: 48-state runtime, leaders, relations, trade, treaties, sanctions, crises, abstract conflict, world map UI, schemaVersion 10. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`.
 - **Phase 10.1** — **COMPLETE** — Foreign affairs functional completion: Terena runtime, AI toward Terena, crisis/conflict reachability, war powers, treaty consent, UI/presentation fixes, regression tests, long-horizon calibration.
-- **Phase 10.2** — **COMPLETE** — Institutional deepening: treaty identity/lifecycle/ratification DecisionContract fix, Assembly war-authorization referral, canonical WA/LTO membership + SC vetoes, bounded institution consequences, leadership schedule/name/monarchy fixes, expanded calibration metrics. **Phase 11 not started.**
+- **Phase 10.2** — **COMPLETE** — Institutional deepening: treaty identity/lifecycle/ratification DecisionContract fix, Assembly war-authorization referral, canonical WA/LTO membership + SC vetoes, bounded institution consequences, leadership schedule/name/monarchy fixes, expanded calibration metrics.
+- **Phase 11.1** — **COMPLETE** — Full-game integration: multi-year harness, catastrophic invariants, Assembly 2030 resolver, career continuity after leaving office, performance/worker decision. See `docs/PHASE_11_1_RESULTS.md`. **Phase 11.2 not started.**
 
 Deliverables:
 
@@ -268,17 +269,21 @@ Save **schemaVersion 8**; v7→v8 adds empty `constitutionalRuntime` (including 
 - Archive developer tools only in development builds
 - Mobile campaign panel ordered above the map below 900px
 
-Save schema **10**. 20-year synthetic kernel hash: `6c6170bc892a0f43ca20690a2f6b16f5`. **Phase 11 not started.**
+Save schema **10**. 20-year synthetic kernel hash: `6c6170bc892a0f43ca20690a2f6b16f5`.
 
 ## 19. Phase 10 — foreign affairs
 
-**COMPLETE.** Persistent 48-state foreign runtime in `packages/sim/src/foreign/`: leaders (`data/world_leaders.json`), capabilities, bilateral relations, trade exposure, treaties with Assembly ratification, sanctions, crisis lifecycle, abstract conflict, deterministic AI on `foreign-affairs` stream, economy/media integration, world map UI, save schemaVersion **10**. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`. Calibration: `pnpm calibrate:foreign` (stops ~28 months at Assembly 2030 interrupt until that domain resolves).
+**COMPLETE.** Persistent 48-state foreign runtime in `packages/sim/src/foreign/`: leaders (`data/world_leaders.json`), capabilities, bilateral relations, trade exposure, treaties with Assembly ratification, sanctions, crisis lifecycle, abstract conflict, deterministic AI on `foreign-affairs` stream, economy/media integration, world map UI, save schemaVersion **10**. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`. Calibration: `pnpm calibrate:foreign` (domestic Assembly 2030 now resolvable via Phase 11.1).
 
 Acceptance criteria met: varied hands-off outcomes within Terena vertical-slice horizon; alliance/geography/capability affect behavior; player President/MP autonomy preserved; no scripted Vaskaran war.
 
 ## 20. Phase 11 — final integration + UI polish + balance + content
 
-Polish the playable UI, add remaining screens (courts, organizations/media depth, economy dashboard, historical wiki), calibrate coefficients, and run large-batch balance. This absorbs the old Phase 12 full UI and Phase 13 balance/content tasks.
+### Phase 11.1 — full-game integration (**COMPLETE**)
+
+Integrated Terena multi-year harness with scripted interrupt resolution (presidential + Assembly), catastrophic invariants, and continuous-vs-reload hash checks. Assembly 2030 is no longer a dead-end interrupt. Performance measured; Web Worker deferred. Docs: `PHASE_11_INTEGRATION_TEST_PLAN.md`, `PHASE_11_1_RESULTS.md`. **Phase 11.2 not started.**
+
+Later 11.x: UI polish (11.2), balance (11.3), content/prose (11.4).
 
 ## 21. First playable vertical slice
 

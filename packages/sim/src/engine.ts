@@ -71,6 +71,10 @@ import {
   createDomainResolution,
   payloadElectionId,
 } from "./elections/resolution.js";
+import {
+  applyAssemblyAssumption,
+  resolveAssemblyElection,
+} from "./elections/assembly-national.js";
 import { emptyIdeology } from "./agents/profile.js";
 import { IDEOLOGY_AXES } from "./agents/types.js";
 import { emptyCampaignRuntime } from "./campaigns/types.js";
@@ -389,6 +393,34 @@ function applyScheduled(
           visibility: "public",
           actorIds: [],
           entityIds: [presidentOfficeId(world)],
+          payload: { code: out.error.code, message: out.error.message },
+          sourceScheduledEventId: ev.id,
+          sourceCommandId: commandId,
+        }),
+      );
+      const interrupt = makeInterrupt(ev);
+      interrupt.message = out.error.message;
+      state.pendingInterrupt = interrupt;
+      return { events, interrupt };
+    }
+    events.push(...out.events);
+    return { events, interrupt: null };
+  }
+  if (ev.eventType === "ASSEMBLY_ASSUMPTION_DUE") {
+    const out = applyAssemblyAssumption(state, world, {
+      date: ev.dueDate,
+      scheduledEventId: ev.id,
+      commandId,
+    });
+    if ("error" in out) {
+      events.push(
+        pushHistory(state, {
+          date: ev.dueDate,
+          type: "ASSEMBLY_ASSUMPTION_FAILED",
+          importance: 1,
+          visibility: "public",
+          actorIds: [],
+          entityIds: [],
           payload: { code: out.error.code, message: out.error.message },
           sourceScheduledEventId: ev.id,
           sourceCommandId: commandId,
@@ -1328,6 +1360,51 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       });
       pending.resolutionStatus = "resolved";
       closeGeneralCampaigns(state, electionId, out.election.winnerIds[0] ?? "");
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: pending };
+    }
+
+    if (command.type === "RESOLVE_ASSEMBLY_ELECTION") {
+      const pending = state.pendingInterrupt;
+      if (!pending || pending.code !== "ASSEMBLY_ELECTION_DUE") {
+        return fail(
+          "DOMAIN_RESOLUTION_REQUIRED",
+          "pending interrupt is not ASSEMBLY_ELECTION_DUE",
+        );
+      }
+      const src = state.scheduler.events.find((e) => e.id === pending.scheduledEventId);
+      const fromEvent = payloadElectionId(src?.payload);
+      if (!fromEvent) {
+        return fail("MISSING_ELECTION_ID", "ASSEMBLY_ELECTION_DUE lacks payload.electionId");
+      }
+      if (command.electionId && command.electionId !== fromEvent) {
+        return fail("ELECTION_ID_MISMATCH", `${command.electionId} != ${fromEvent}`);
+      }
+      const electionId = fromEvent;
+      const previewRng = restoreRngService(state.rng);
+      const preview = resolveAssemblyElection(jsonClone(state), world, previewRng, {
+        electionId,
+        scheduledEventId: pending.scheduledEventId,
+        commandId: "CMD000000",
+      });
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = resolveAssemblyElection(state, world, rng, {
+        electionId,
+        scheduledEventId: pending.scheduledEventId,
+        commandId,
+      });
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      createDomainResolution(state, {
+        sourceScheduledEventId: pending.scheduledEventId,
+        domainType: "assembly_election",
+        date: state.currentDate,
+        electionId,
+        resultEventId: out.events[0]!.id,
+        archiveElectionId: electionId,
+        metadata: { phase: "count" },
+      });
+      pending.resolutionStatus = "resolved";
       syncRng(state, rng);
       return { ok: true, commandId, events: out.events, interrupt: pending };
     }

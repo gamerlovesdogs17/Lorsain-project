@@ -567,6 +567,7 @@ function Party(props: PageProps) {
 function Elections(props: PageProps) {
   const elections = Object.values(props.snap.elections);
   const due = props.snap.pendingInterrupt?.code === "PRESIDENTIAL_ELECTION_DUE";
+  const assemblyDue = props.snap.pendingInterrupt?.code === "ASSEMBLY_ELECTION_DUE";
   const contests = Object.values(props.snap.partyContests).filter(
     (c) => c.type === "presidential_nomination",
   );
@@ -646,7 +647,7 @@ function Elections(props: PageProps) {
             );
           })}
         </div>
-        {due && el.id === "ELEC_PRES_2028" && el.status !== "resolved" ? (
+        {due && el.type === "presidential" && el.status !== "resolved" ? (
           <button
             type="button"
             className="btn"
@@ -660,6 +661,22 @@ function Elections(props: PageProps) {
             }}
           >
             Resolve election
+          </button>
+        ) : null}
+        {assemblyDue && el.type === "assembly" && el.geographyKind === "national" && el.status !== "resolved" ? (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              const resolved = props.sim.executeCommand({ type: "RESOLVE_ASSEMBLY_ELECTION" });
+              props.report(resolved);
+              if (resolved.ok) {
+                props.sim.executeCommand({ type: "RESUME_TURN" });
+              }
+              props.onDone();
+            }}
+          >
+            Resolve Assembly election
           </button>
         ) : null}
         {rounds.length > 0 ? (

@@ -53,6 +53,11 @@ function advanceHandsOff(sim: Simulation, n: number): void {
       expectOk(sim, { type: "RESUME_TURN" });
       continue;
     }
+    if (r.interrupt.code === "ASSEMBLY_ELECTION_DUE") {
+      expectOk(sim, { type: "RESOLVE_ASSEMBLY_ELECTION" });
+      expectOk(sim, { type: "RESUME_TURN" });
+      continue;
+    }
     if (!r.interrupt.requiresResolution) {
       expectOk(sim, { type: "ACKNOWLEDGE_INTERRUPT" });
       expectOk(sim, { type: "RESUME_TURN" });

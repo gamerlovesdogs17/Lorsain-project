@@ -1,7 +1,7 @@
 import { parseRational } from "@lorsain/election-math";
 import { compareIsoDate, isIsoDate } from "../calendar.js";
 import { parseCanonicalAllocatedId } from "../ids.js";
-import { isJsonObject } from "../json.js";
+import { isJsonObject, type JsonObject } from "../json.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import { IDEOLOGY_AXES } from "../agents/types.js";
 import { ENVIRONMENT_SHIFT, isRecognizedPollMethod, SHARE_SUM_TOLERANCE } from "./policy.js";
@@ -229,10 +229,38 @@ function parseElection(id: string, raw: unknown): ElectionState | string {
   const winnerIds = Array.isArray(raw.winnerIds) ? (raw.winnerIds as string[]) : [];
   if (raw.status === "resolved") {
     if (!raw.fieldFinalized) return `elections.${id} resolved election not finalized`;
-    if (!raw.turnout || !raw.countInput || !raw.countArchive) {
-      return `elections.${id} resolved election missing archive`;
+    const nationalAssemblyParent =
+      raw.type === "assembly" &&
+      raw.geographyKind === "national" &&
+      isJsonObject(raw.metadata) &&
+      raw.metadata.certifiedForAssumption === true &&
+      isRecord(raw.metadata.constituencyWinners);
+    if (!nationalAssemblyParent) {
+      if (!raw.turnout || !raw.countInput || !raw.countArchive) {
+        return `elections.${id} resolved election missing archive`;
+      }
     }
     if (!raw.resultEventId) return `elections.${id} resolved election missing resultEventId`;
+    if (nationalAssemblyParent) {
+      return {
+        id,
+        type: raw.type,
+        date: raw.date,
+        status: raw.status,
+        geographyKind: raw.geographyKind,
+        constituencyId: raw.constituencyId == null ? null : raw.constituencyId,
+        seats: Number(raw.seats),
+        fieldFinalized: true,
+        candidates,
+        partiesWithoutNominee: raw.partiesWithoutNominee as string[],
+        turnout: null,
+        countInput: null,
+        countArchive: null,
+        winnerIds,
+        resultEventId: raw.resultEventId as string,
+        metadata: raw.metadata as JsonObject,
+      };
+    }
     const turnout = parseTurnout(raw.turnout);
     if (typeof turnout === "string") return `elections.${id} ${turnout}`;
     const countInput = parseCountInput(raw.countInput, turnout.validVoteValue);
@@ -574,7 +602,9 @@ export function domainResolutionEvidenceError(
         ? "ASSEMBLY_ELECTION_DUE"
         : rec.domainType === "presidential_assumption"
           ? "PRESIDENTIAL_ASSUMPTION_DUE"
-          : null;
+          : rec.domainType === "assembly_assumption"
+            ? "ASSEMBLY_ASSUMPTION_DUE"
+            : null;
   if (!expectedType || src.eventType !== expectedType) {
     return `DRES ${rec.id} domainType/source event mismatch`;
   }
@@ -614,6 +644,12 @@ export function domainResolutionEvidenceError(
       if (result.type !== "PRESIDENTIAL_ASSUMPTION") return `DRES ${rec.id} result event type`;
       if (result.date !== rec.date) return `DRES ${rec.id} result event date`;
     }
+    if (rec.domainType === "assembly_assumption") {
+      if (election.status !== "resolved") return `DRES ${rec.id} assumption source not resolved`;
+      if (rec.archiveElectionId !== election.id) return `DRES ${rec.id} archiveElectionId`;
+      if (result.type !== "ASSEMBLY_ASSUMPTION") return `DRES ${rec.id} result event type`;
+      if (result.date !== rec.date) return `DRES ${rec.id} result event date`;
+    }
   }
   return null;
 }
@@ -645,6 +681,60 @@ function resolvedElectionWorldError(
         message: `election ${election.id} candidate ${c.politicianId} filed after election date`,
       };
     }
+  }
+  if (
+    election.type === "assembly" &&
+    election.geographyKind === "national" &&
+    election.metadata.certifiedForAssumption === true &&
+    isRecord(election.metadata.constituencyWinners)
+  ) {
+    if (!election.resultEventId) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} missing resolved artifacts`,
+      };
+    }
+    if (election.winnerIds.length !== election.seats) {
+      return { code: "INVALID_SAVE_WORLD", message: `election ${election.id} wrong seat count` };
+    }
+    if (new Set(election.winnerIds).size !== election.winnerIds.length) {
+      return { code: "INVALID_SAVE_WORLD", message: `election ${election.id} duplicate winners` };
+    }
+    const winnersMeta = election.metadata.constituencyWinners as Record<string, unknown>;
+    const flat: string[] = [];
+    for (const cid of Object.keys(winnersMeta).sort()) {
+      const row = winnersMeta[cid];
+      if (!Array.isArray(row) || row.some((x) => typeof x !== "string")) {
+        return {
+          code: "INVALID_SAVE_WORLD",
+          message: `election ${election.id} constituencyWinners`,
+        };
+      }
+      flat.push(...(row as string[]));
+    }
+    if (flat.length !== election.winnerIds.length || flat.some((id) => !election.winnerIds.includes(id))) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} constituencyWinners mismatch`,
+      };
+    }
+    const result = historyEvent(state, election.resultEventId);
+    if (!result) {
+      return { code: "INVALID_SAVE_WORLD", message: `election ${election.id} result event missing` };
+    }
+    if (result.type !== "ASSEMBLY_ELECTION_RESULT" || result.date !== election.date) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} result event type/date`,
+      };
+    }
+    if (payloadElectionId(result.payload) !== election.id) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} result event payload`,
+      };
+    }
+    return null;
   }
   if (
     !election.countInput ||

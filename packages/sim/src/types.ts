@@ -341,6 +341,10 @@ export type Command =
       electionId?: string;
     }
   | {
+      type: "RESOLVE_ASSEMBLY_ELECTION";
+      electionId?: string;
+    }
+  | {
       type: "FINALIZE_ELECTION_FIELD";
       electionId: string;
     }

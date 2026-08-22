@@ -872,11 +872,13 @@ Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate 
 
 ## 19.2 Phase 10.2 — institutional deepening
 
-**COMPLETE.** Treaty identity/lifecycle; ratification DecisionContract fix (`simple_majority_cast`); NPC/player war powers schedule Assembly authorization via Speaker constitutional referral; canonical WA/LTO/DC/CSC/NAF membership in `world_institutions.json` (WA 48, LTO 43 incl. W40/W24; SC vetoes W24/W28/W37/W40); bounded institution consequences; leadership schedules from canonical `since_year` with monarch-title handling and no same-name fake replacements; expanded foreign calibration metrics. **Phase 11 not started.**
+**COMPLETE.** Treaty identity/lifecycle; ratification DecisionContract fix (`simple_majority_cast`); NPC/player war powers schedule Assembly authorization via Speaker constitutional referral; canonical WA/LTO/DC/CSC/NAF membership in `world_institutions.json` (WA 48, LTO 43 incl. W40/W24; SC vetoes W24/W28/W37/W40); bounded institution consequences; leadership schedules from canonical `since_year` with monarch-title handling and no same-name fake replacements; expanded foreign calibration metrics.
 
 ## 20. Phase 11 — final integration + UI polish + balance + content
 
-Polish the playable UI, remaining screens, coefficients, and large-batch balance. Absorbs the old Phase 12 full UI and Phase 13 balance/content tasks.
+### Phase 11.1 — full-game integration (**COMPLETE**)
+
+Integration harness + catastrophic invariants + multi-year determinism (`packages/sim/src/phase11.integration.test.ts`, `packages/sim/src/integration/harness.ts`). Minimal **2030 Assembly election** domain (`RESOLVE_ASSEMBLY_ELECTION` + June 1 assumption). Career continuity after leaving office verified for Mara Velic. Web Worker not required from measurements. See `docs/PHASE_11_1_RESULTS.md`. **Phase 11.2+ not started.**
 
 ## 23. First playable vertical slice
 

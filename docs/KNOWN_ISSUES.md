@@ -38,7 +38,7 @@ These were accepted as **not blockers** to Phase 5 unless Phase 5 directly touch
 | P4-POLL-SNAP | NONBLOCKING | Historical PollRecord snapshot/cross-reference strictness can still be tighter for impossible hand-edited records. |
 | P4-FUTURE-CYCLE | NONBLOCKING | Future presidential-cycle integrity beyond the first vertical slice (2033+ Terena playthrough with Assembly 2030 still unresolved). |
 | P4-PRES-STATUS | **FIXED in Phase 5** | `presidentialStatus` is now scenario-start metadata only. `seedStartingPublicStanding()` materializes it once; later `candidateStandingOrDefault()` / `ensureCandidateStanding()` do not reapply frontrunner/likely/possible/exploring. |
-| P4-ASM-2030 | NONBLOCKING | Incomplete actual 2030 Assembly candidate-generation domain. Synthetic STV resolver exists; Terena 2030 field is not yet a full campaign/candidate pipeline. |
+| P4-ASM-2030 | **FIXED in Phase 11.1** | National Assembly election resolves via `RESOLVE_ASSEMBLY_ELECTION` (incumbent + membership-party STV fields) and June 1 assumption seats 420 members; next Assembly election is scheduled. Full Assembly campaign/nomination pipeline remains light (NONBLOCKING depth). |
 | P4-SPECIAL | NONBLOCKING | Special presidential-election integration is not a full domain (regular 2028 cycle is the vertical slice). |
 | P4-REGIONAL-POLL | NONBLOCKING | Regional/specialist pollsters are rejected until geographic coverage is modeled. |
 | P4-IND-PETITION | NONBLOCKING | Independent qualification is an explicit evidence hook; petitions/signatures are deferred. |
@@ -90,7 +90,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P7-MINISTRY-DEPTH | NONBLOCKING | Ministries only store administrativeCapacity / currentPriorities. Deep cabinet politics and Phase 9 economic effects are deferred. |
 | P7-BUDGET-ECON | NONBLOCKING | Budget is indexed envelopes and continuity, not a macroeconomy. |
 | P7-UI-POLISH | NONBLOCKING | First playable UI is information-dense and unpolished. Charts, chamber animation, map analytics, and typography wait for Phase 11. |
-| P7-WORKER | NONBLOCKING | Turns run on the main thread with a processing indicator. Web Worker integration is deferred to Phase 11. |
+| P7-WORKER | NONBLOCKING | Turns run on the main thread with a processing indicator. Phase 11.1 measured ordinary months ~0.7s median and Assembly resolve ~12s on the integration host; Web Worker still deferred (not required to unblock play). |
 | P7-REG-ANNUL-DEFAULT | NONBLOCKING | Regulation annulment uses simple majority of votes cast (tie fails). That is a Phase-7 procedural default, not a quoted constitutional rule. |
 
 ## Phase 7.1 notes
@@ -120,7 +120,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 
 ## Phase 10 / 10.1 / 10.2 notes
 
-**Phase 10.1 Foreign Affairs functional completion is COMPLETE** (builds on Phase 10 at `9b3bda7`). **Phase 10.2 institutional deepening** closes treaty ratification DecisionContract crash, Assembly war-authorization referral, canonical WA/LTO membership, Security Council veto canon, leadership schedule/name/monarchy fixes, and bounded institution consequences. **Phase 11 not started.**
+**Phase 10.1 Foreign Affairs functional completion is COMPLETE** (builds on Phase 10 at `9b3bda7`). **Phase 10.2 institutional deepening** closes treaty ratification DecisionContract crash, Assembly war-authorization referral, canonical WA/LTO membership, Security Council veto canon, leadership schedule/name/monarchy fixes, and bounded institution consequences. **Phase 11.1 integration COMPLETE** (see below).
 
 | ID | Severity | Issue |
 | --- | --- | --- |
@@ -134,6 +134,22 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P101-TREATY-LEG-VOTE | RESOLVED (10.2) | Ripe ratification no longer crashes DecisionContract (empty targetIds). Threshold is `simple_majority_cast` (yes > no). Real `legislativeVotes` + Assembly display title. |
 | P102-INST-DEPTH | NONBLOCKING | Institutions remain light-touch: mediation/condemnation/bloc effects are bounded, not a full multilateral negotiation sim. |
 | P102-ALLIANCE-EXIT | NONBLOCKING | Hard alliances can terminate after prolonged bilateral collapse + long tenure; still not a rich withdrawal-politics model. |
+
+## Phase 11.1 notes
+
+**Phase 11.1 Full-game integration is COMPLETE.** See `docs/PHASE_11_1_RESULTS.md` and `docs/PHASE_11_INTEGRATION_TEST_PLAN.md`.
+
+| ID | Severity | Issue |
+| --- | --- | --- |
+| P111-ASM-2030 | **FIXED** | Assembly election domain resolver + assumption + UI resolve control. |
+| P111-PERF | NONBLOCKING | Ordinary months exceed aspirational 250ms on measured host (~734ms median); still playable. Assembly national STV ~12s. |
+| P111-WORKER | NONBLOCKING | Same as P7-WORKER â€” no worker shipped in 11.1. |
+| P111-BUNDLE | NONBLOCKING | Same as P9-BUNDLE-SIZE â€” ~10.5MB client bundle. |
+| P111-ASM-CAMPAIGN | NONBLOCKING | Assembly resolver does not yet run a full nomination/campaign season before STV. |
+| P111-SCREENSHOTS | NONBLOCKING | Populated visual QA screenshots deferred to 11.2. |
+| P111-MIGRATION-FIXTURES | NONBLOCKING | On-disk historic save fixtures still not checked in. |
+
+## Phase 8 leftovers
 
 | ID | Severity | Issue |
 | --- | --- | --- |

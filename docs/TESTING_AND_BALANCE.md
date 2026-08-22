@@ -4,6 +4,12 @@
 
 Every CI run loads `TERENA_2028`, executes a fixed command script for 240 turns and compares a state hash. Save/reload at multiple points must produce the identical final hash. No gameplay system may call `Math.random()`.
 
+**Phase 11.1:** `packages/sim/src/phase11.integration.test.ts` runs a 36-month integrated MP scenario with checkpoint save/reload hash equality and catastrophic invariants. Use:
+
+```bash
+pnpm exec vitest run packages/sim/src/phase11.integration.test.ts
+```
+
 ## 2. Hands-off autonomy test
 
 Run at least 100 saves for 600 monthly turns with a player who takes no political actions. Fail the build or balance candidate if a material share of runs show deadlocked election calendars, empty party leadership, permanent unfilled offices, impossible seat counts, runaway negative money, no legislation for years, constant civil war, or every party converging to identical ideology.

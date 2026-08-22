@@ -23,6 +23,7 @@ export const DOMAIN_RESOLUTION_TYPES = [
   "presidential_election",
   "assembly_election",
   "presidential_assumption",
+  "assembly_assumption",
 ] as const;
 export type DomainResolutionType = (typeof DOMAIN_RESOLUTION_TYPES)[number];
 

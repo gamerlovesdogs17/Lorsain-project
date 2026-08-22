@@ -26,7 +26,10 @@ export function DecisionPanel(props) {
     return (_jsxs("div", { className: "alert", children: [_jsx("strong", { children: "Required decisions" }), _jsxs("p", { className: "muted", children: [decisions.length, " item", decisions.length === 1 ? "" : "s", " need your action before the month can close without abstention."] }), interrupt ? (_jsxs("div", { children: [_jsx("div", { children: interruptDisplay(interrupt) }), interrupt.code === "PRESIDENTIAL_ELECTION_DUE" ? (_jsx("button", { type: "button", className: "btn", onClick: () => {
                             run({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
                             run({ type: "RESUME_TURN" });
-                        }, children: "Resolve presidential election" })) : interrupt.requiresResolution ? (_jsx("p", { className: "muted", children: "This event cannot be skipped. Use the legal action above." })) : (_jsx("button", { type: "button", className: "btn", onClick: () => {
+                        }, children: "Resolve presidential election" })) : interrupt.code === "ASSEMBLY_ELECTION_DUE" ? (_jsx("button", { type: "button", className: "btn", onClick: () => {
+                            run({ type: "RESOLVE_ASSEMBLY_ELECTION" });
+                            run({ type: "RESUME_TURN" });
+                        }, children: "Resolve Assembly election" })) : interrupt.requiresResolution ? (_jsx("p", { className: "muted", children: "This event cannot be skipped. Use the legal action above." })) : (_jsx("button", { type: "button", className: "btn", onClick: () => {
                             run({ type: "ACKNOWLEDGE_INTERRUPT" });
                             run({ type: "RESUME_TURN" });
                         }, children: "Continue" }))] })) : null, president && warTrigger ? (_jsxs("div", { className: "row", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: "International crisis requires war powers authorization" }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "BEGIN_WAR_POWERS" }), children: "Begin war powers" })] })) : null, incomingDiplomacy.map((d) => {
