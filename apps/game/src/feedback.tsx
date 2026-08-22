@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { CommandResult } from "@lorsain/sim";
 
 export function friendlyCommandError(error: { code: string; message: string }): string {
@@ -40,13 +40,27 @@ export function ConfirmDialog(props: {
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") props.onCancel();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [props.onCancel]);
+
   return (
-    <div className="modal-backdrop">
-      <div className="modal card">
-        <h3>{props.title}</h3>
+    <div className="modal-backdrop" role="presentation" onClick={props.onCancel}>
+      <div
+        className="modal card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id="confirm-dialog-title">{props.title}</h3>
         <p>{props.body}</p>
         <div className="row">
-          <button type="button" className="btn danger" onClick={props.onConfirm}>
+          <button type="button" className="btn danger" onClick={props.onConfirm} autoFocus>
             {props.confirmLabel ?? "Confirm"}
           </button>
           <button type="button" className="btn secondary" onClick={props.onCancel}>

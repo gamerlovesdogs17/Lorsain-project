@@ -418,7 +418,6 @@ export default function App() {
       onSave={() => void saveGame()}
       onExport={() => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`)}
     >
-      {feedback.overlay()}
       <DecisionPanel
         world={world}
         snap={snap}
@@ -447,6 +446,7 @@ export default function App() {
         report={feedback.report}
         askConfirm={feedback.askConfirm}
       />
+      {feedback.overlay()}
     </GameShell>
   );
 }

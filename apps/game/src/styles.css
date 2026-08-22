@@ -11,6 +11,15 @@
   --sans: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --serif: Georgia, "Times New Roman", serif;
   font-family: var(--sans);
+  /* Overlay stacking: content < chrome menus < drawers < confirm/modals < urgent */
+  --z-sticky: 5;
+  --z-nav-toggle: 10;
+  --z-menu-backdrop: 15;
+  --z-menu: 20;
+  --z-mobile-nav: 25;
+  --z-drawer: 30;
+  --z-modal: 40;
+  --z-urgent: 50;
 }
 
 * {
@@ -210,7 +219,7 @@ button {
   background: rgba(28, 36, 48, 0.35);
   display: grid;
   place-items: center;
-  z-index: 20;
+  z-index: var(--z-modal);
 }
 .modal {
   max-width: 28rem;
@@ -636,7 +645,7 @@ button {
 .topbar.v3 {
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: var(--z-sticky);
   box-shadow: 0 1px 0 var(--line);
 }
 .topbar-primary {
@@ -673,7 +682,7 @@ button {
   inset: 0;
   background: rgba(28, 36, 48, 0.35);
   border: 0;
-  z-index: 15;
+  z-index: var(--z-menu-backdrop);
 }
 .utility-dropdown {
   position: absolute;
@@ -683,7 +692,7 @@ button {
   border: 1px solid var(--line);
   box-shadow: 0 4px 16px rgba(28, 36, 48, 0.12);
   min-width: 10rem;
-  z-index: 20;
+  z-index: var(--z-menu);
 }
 .utility-dropdown button {
   display: block;
@@ -850,7 +859,7 @@ button {
   position: fixed;
   inset: 0;
   background: rgba(28, 36, 48, 0.35);
-  z-index: 30;
+  z-index: var(--z-drawer);
   display: flex;
   justify-content: flex-end;
 }
@@ -1185,7 +1194,7 @@ button {
     top: 0;
     bottom: 0;
     width: 15rem;
-    z-index: 25;
+    z-index: var(--z-mobile-nav);
     transform: translateX(-105%);
     transition: transform 0.2s ease;
   }
@@ -1197,7 +1206,7 @@ button {
     position: fixed;
     top: 0.55rem;
     left: 0.55rem;
-    z-index: 10;
+    z-index: var(--z-nav-toggle);
     background: var(--navy);
     color: #fff;
     border: 0;
