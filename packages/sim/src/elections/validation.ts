@@ -1,7 +1,7 @@
 import { parseRational } from "@lorsain/election-math";
 import { compareIsoDate, isIsoDate } from "../calendar.js";
 import { parseCanonicalAllocatedId } from "../ids.js";
-import { isJsonObject } from "../json.js";
+import { isJsonObject, type JsonObject } from "../json.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import { IDEOLOGY_AXES } from "../agents/types.js";
 import { ENVIRONMENT_SHIFT, isRecognizedPollMethod, SHARE_SUM_TOLERANCE } from "./policy.js";
@@ -10,10 +10,13 @@ import { payloadElectionId, resolutionForScheduledEvent } from "./resolution.js"
 import { isElectoralAggregatePartyId } from "./support.js";
 import { integerBallotWeightSum } from "./ballots.js";
 import {
+  isAssemblyCandidacyStatus,
+  isAssemblyFilingStatus,
   isDomainResolutionType,
   isElectionGeographyKind,
   isElectionStatus,
   isElectionType,
+  type AssemblyElectionCycle,
   type BallotGroupArchive,
   type CandidateStanding,
   type DomainResolutionRecord,
@@ -127,6 +130,166 @@ function parseTurnout(raw: unknown): TurnoutRecord | string {
   };
 }
 
+function parseNonNegativeIntegerRecord(
+  raw: unknown,
+  field: string,
+): Record<string, number> | string {
+  if (!isRecord(raw)) return field;
+  const out: Record<string, number> = {};
+  for (const [id, value] of Object.entries(raw)) {
+    if (!isInt(value) || value < 0) return `${field}.${id}`;
+    out[id] = value;
+  }
+  return out;
+}
+
+function parseAssemblyCycle(raw: unknown): AssemblyElectionCycle | null | string {
+  if (raw == null) return null;
+  if (!isRecord(raw)) return "assembly";
+  if (typeof raw.filingStatus !== "string" || !isAssemblyFilingStatus(raw.filingStatus)) {
+    return "assembly.filingStatus";
+  }
+  if (!isIsoDate(raw.filingOpenDate) || !isIsoDate(raw.filingDeadlineDate)) {
+    return "assembly filing dates";
+  }
+  if (compareIsoDate(raw.filingOpenDate, raw.filingDeadlineDate) > 0) {
+    return "assembly filing dates out of order";
+  }
+  if (!isRecord(raw.decisions) || !isRecord(raw.candidacies)) {
+    return "assembly decisions/candidacies";
+  }
+  const decisions: AssemblyElectionCycle["decisions"] = {};
+  for (const [pid, value] of Object.entries(raw.decisions)) {
+    if (
+      !isRecord(value) ||
+      value.politicianId !== pid ||
+      (value.decision !== "filed" && value.decision !== "declined") ||
+      !isIsoDate(value.decidedDate)
+    ) {
+      return `assembly.decisions.${pid}`;
+    }
+    decisions[pid] = {
+      politicianId: pid,
+      decision: value.decision,
+      decidedDate: value.decidedDate,
+    };
+  }
+  const candidacies: AssemblyElectionCycle["candidacies"] = {};
+  for (const [pid, value] of Object.entries(raw.candidacies)) {
+    if (
+      !isRecord(value) ||
+      value.politicianId !== pid ||
+      typeof value.constituencyId !== "string" ||
+      (value.partyId != null && typeof value.partyId !== "string") ||
+      !isIsoDate(value.filedDate) ||
+      (value.source !== "player" && value.source !== "npc" && value.source !== "generated") ||
+      typeof value.incumbent !== "boolean" ||
+      typeof value.status !== "string" ||
+      !isAssemblyCandidacyStatus(value.status)
+    ) {
+      return `assembly.candidacies.${pid}`;
+    }
+    candidacies[pid] = {
+      politicianId: pid,
+      constituencyId: value.constituencyId,
+      partyId: value.partyId == null ? null : value.partyId,
+      filedDate: value.filedDate,
+      source: value.source,
+      incumbent: value.incumbent,
+      status: value.status,
+    };
+  }
+  if (!isRecord(raw.constituencyFields) || !isRecord(raw.constituencyResults)) {
+    return "assembly constituency fields/results";
+  }
+  const constituencyFields: AssemblyElectionCycle["constituencyFields"] = {};
+  for (const [cid, value] of Object.entries(raw.constituencyFields)) {
+    if (
+      !isRecord(value) ||
+      value.constituencyId !== cid ||
+      !isInt(value.magnitude) ||
+      value.magnitude < 1 ||
+      !Array.isArray(value.candidateIds) ||
+      value.candidateIds.some((id) => typeof id !== "string") ||
+      new Set(value.candidateIds).size !== value.candidateIds.length ||
+      (value.finalizedDate != null && !isIsoDate(value.finalizedDate))
+    ) {
+      return `assembly.constituencyFields.${cid}`;
+    }
+    constituencyFields[cid] = {
+      constituencyId: cid,
+      magnitude: value.magnitude,
+      candidateIds: value.candidateIds as string[],
+      finalizedDate: value.finalizedDate == null ? null : value.finalizedDate,
+    };
+  }
+  const constituencyResults: AssemblyElectionCycle["constituencyResults"] = {};
+  for (const [cid, value] of Object.entries(raw.constituencyResults)) {
+    if (
+      !isRecord(value) ||
+      value.constituencyId !== cid ||
+      typeof value.constituencyElectionId !== "string" ||
+      !isInt(value.magnitude) ||
+      value.magnitude < 1 ||
+      !Array.isArray(value.candidateIds) ||
+      value.candidateIds.some((id) => typeof id !== "string") ||
+      new Set(value.candidateIds).size !== value.candidateIds.length ||
+      !Array.isArray(value.electedIds) ||
+      value.electedIds.some((id) => typeof id !== "string") ||
+      !isRecord(value.partyByCandidate) ||
+      Object.values(value.partyByCandidate).some(
+        (partyId) => partyId != null && typeof partyId !== "string",
+      ) ||
+      !isRecord(value.firstPreferences) ||
+      Object.values(value.firstPreferences).some((pref) => typeof pref !== "string") ||
+      (value.archiveCompleteness !== "full" && value.archiveCompleteness !== "legacy_summary")
+    ) {
+      return `assembly.constituencyResults.${cid}`;
+    }
+    const turnout = parseTurnout(value.turnout);
+    if (typeof turnout === "string") return `assembly.constituencyResults.${cid}.${turnout}`;
+    if (
+      value.countArchive != null &&
+      (!isRecord(value.countArchive) || value.countArchive.method !== "stv")
+    ) {
+      return `assembly.constituencyResults.${cid}.countArchive`;
+    }
+    constituencyResults[cid] = {
+      constituencyId: cid,
+      constituencyElectionId: value.constituencyElectionId,
+      magnitude: value.magnitude,
+      candidateIds: value.candidateIds as string[],
+      partyByCandidate: value.partyByCandidate as Record<string, string | null>,
+      firstPreferences: value.firstPreferences as Record<string, string>,
+      electedIds: value.electedIds as string[],
+      turnout,
+      countArchive: value.countArchive as AssemblyElectionCycle["constituencyResults"][string]["countArchive"],
+      archiveCompleteness: value.archiveCompleteness,
+    };
+  }
+  const previousPartySeatTotals = parseNonNegativeIntegerRecord(
+    raw.previousPartySeatTotals,
+    "assembly.previousPartySeatTotals",
+  );
+  if (typeof previousPartySeatTotals === "string") return previousPartySeatTotals;
+  const partySeatTotals = parseNonNegativeIntegerRecord(
+    raw.partySeatTotals,
+    "assembly.partySeatTotals",
+  );
+  if (typeof partySeatTotals === "string") return partySeatTotals;
+  return {
+    filingStatus: raw.filingStatus,
+    filingOpenDate: raw.filingOpenDate,
+    filingDeadlineDate: raw.filingDeadlineDate,
+    decisions,
+    candidacies,
+    constituencyFields,
+    constituencyResults,
+    previousPartySeatTotals,
+    partySeatTotals,
+  };
+}
+
 function parseCountInput(raw: unknown, validVoteValue: number | null): ElectionCountInput | string {
   if (!isRecord(raw)) return "countInput";
   if (
@@ -226,13 +389,49 @@ function parseElection(id: string, raw: unknown): ElectionState | string {
     return `elections.${id} resultEventId`;
   }
   if (!isJsonObject(raw.metadata)) return `elections.${id} metadata`;
+  const assembly = parseAssemblyCycle(raw.assembly);
+  if (typeof assembly === "string") return `elections.${id} ${assembly}`;
+  if (raw.type === "presidential" && assembly != null) {
+    return `elections.${id} presidential election has assembly cycle`;
+  }
   const winnerIds = Array.isArray(raw.winnerIds) ? (raw.winnerIds as string[]) : [];
   if (raw.status === "resolved") {
     if (!raw.fieldFinalized) return `elections.${id} resolved election not finalized`;
-    if (!raw.turnout || !raw.countInput || !raw.countArchive) {
-      return `elections.${id} resolved election missing archive`;
+    const nationalAssemblyParent =
+      raw.type === "assembly" &&
+      raw.geographyKind === "national" &&
+      isJsonObject(raw.metadata) &&
+      raw.metadata.certifiedForAssumption === true &&
+      isRecord(raw.metadata.constituencyWinners);
+    if (!nationalAssemblyParent) {
+      if (!raw.turnout || !raw.countInput || !raw.countArchive) {
+        return `elections.${id} resolved election missing archive`;
+      }
     }
     if (!raw.resultEventId) return `elections.${id} resolved election missing resultEventId`;
+    if (nationalAssemblyParent) {
+      const nationalTurnout = raw.turnout == null ? null : parseTurnout(raw.turnout);
+      if (typeof nationalTurnout === "string") return `elections.${id} ${nationalTurnout}`;
+      return {
+        id,
+        type: raw.type,
+        date: raw.date,
+        status: raw.status,
+        geographyKind: raw.geographyKind,
+        constituencyId: raw.constituencyId == null ? null : raw.constituencyId,
+        seats: Number(raw.seats),
+        fieldFinalized: true,
+        candidates,
+        partiesWithoutNominee: raw.partiesWithoutNominee as string[],
+        turnout: nationalTurnout,
+        countInput: null,
+        countArchive: null,
+        winnerIds,
+        resultEventId: raw.resultEventId as string,
+        assembly,
+        metadata: raw.metadata as JsonObject,
+      };
+    }
     const turnout = parseTurnout(raw.turnout);
     if (typeof turnout === "string") return `elections.${id} ${turnout}`;
     const countInput = parseCountInput(raw.countInput, turnout.validVoteValue);
@@ -256,6 +455,7 @@ function parseElection(id: string, raw: unknown): ElectionState | string {
       countArchive: raw.countArchive as ElectionState["countArchive"],
       winnerIds,
       resultEventId: raw.resultEventId,
+      assembly,
       metadata: raw.metadata,
     };
   }
@@ -286,6 +486,7 @@ function parseElection(id: string, raw: unknown): ElectionState | string {
     countArchive: null,
     winnerIds: [],
     resultEventId: null,
+    assembly,
     metadata: raw.metadata,
   };
 }
@@ -574,7 +775,9 @@ export function domainResolutionEvidenceError(
         ? "ASSEMBLY_ELECTION_DUE"
         : rec.domainType === "presidential_assumption"
           ? "PRESIDENTIAL_ASSUMPTION_DUE"
-          : null;
+          : rec.domainType === "assembly_assumption"
+            ? "ASSEMBLY_ASSUMPTION_DUE"
+            : null;
   if (!expectedType || src.eventType !== expectedType) {
     return `DRES ${rec.id} domainType/source event mismatch`;
   }
@@ -614,6 +817,12 @@ export function domainResolutionEvidenceError(
       if (result.type !== "PRESIDENTIAL_ASSUMPTION") return `DRES ${rec.id} result event type`;
       if (result.date !== rec.date) return `DRES ${rec.id} result event date`;
     }
+    if (rec.domainType === "assembly_assumption") {
+      if (election.status !== "resolved") return `DRES ${rec.id} assumption source not resolved`;
+      if (rec.archiveElectionId !== election.id) return `DRES ${rec.id} archiveElectionId`;
+      if (result.type !== "ASSEMBLY_ASSUMPTION") return `DRES ${rec.id} result event type`;
+      if (result.date !== rec.date) return `DRES ${rec.id} result event date`;
+    }
   }
   return null;
 }
@@ -645,6 +854,127 @@ function resolvedElectionWorldError(
         message: `election ${election.id} candidate ${c.politicianId} filed after election date`,
       };
     }
+  }
+  if (
+    election.type === "assembly" &&
+    election.geographyKind === "national" &&
+    election.metadata.certifiedForAssumption === true &&
+    isRecord(election.metadata.constituencyWinners)
+  ) {
+    if (!election.resultEventId) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} missing resolved artifacts`,
+      };
+    }
+    if (election.winnerIds.length !== election.seats) {
+      return { code: "INVALID_SAVE_WORLD", message: `election ${election.id} wrong seat count` };
+    }
+    if (new Set(election.winnerIds).size !== election.winnerIds.length) {
+      return { code: "INVALID_SAVE_WORLD", message: `election ${election.id} duplicate winners` };
+    }
+    const cycle = election.assembly;
+    if (!cycle || cycle.filingStatus !== "closed") {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} missing closed Assembly cycle`,
+      };
+    }
+    const expectedConstituencies = Object.keys(world.constituencyElectorate).sort();
+    const fieldConstituencies = Object.keys(cycle.constituencyFields).sort();
+    const resultConstituencies = Object.keys(cycle.constituencyResults).sort();
+    if (
+      expectedConstituencies.join("|") !== fieldConstituencies.join("|") ||
+      expectedConstituencies.join("|") !== resultConstituencies.join("|")
+    ) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} incomplete constituency archive`,
+      };
+    }
+    const allocatedCandidates = new Set<string>();
+    for (const cid of expectedConstituencies) {
+      const field = cycle.constituencyFields[cid]!;
+      const result = cycle.constituencyResults[cid]!;
+      const magnitude = world.constituencyElectorate[cid]!.seats;
+      if (field.magnitude !== magnitude || result.magnitude !== magnitude) {
+        return {
+          code: "INVALID_SAVE_WORLD",
+          message: `election ${election.id} ${cid} magnitude mismatch`,
+        };
+      }
+      if (field.candidateIds.length < magnitude || result.electedIds.length !== magnitude) {
+        return {
+          code: "INVALID_SAVE_WORLD",
+          message: `election ${election.id} ${cid} invalid field or winners`,
+        };
+      }
+      for (const politicianId of field.candidateIds) {
+        if (!election.candidates[politicianId] || allocatedCandidates.has(politicianId)) {
+          return {
+            code: "INVALID_SAVE_WORLD",
+            message: `election ${election.id} invalid Assembly allocation ${politicianId}`,
+          };
+        }
+        allocatedCandidates.add(politicianId);
+      }
+      if (result.archiveCompleteness === "full") {
+        const archive = result.countArchive;
+        if (
+          !archive ||
+          archive.method !== "stv" ||
+          archive.seats !== magnitude ||
+          archive.candidateIds.join("|") !== result.candidateIds.join("|") ||
+          new Set(archive.elected).size !== result.electedIds.length ||
+          result.electedIds.some((id) => !archive.elected.includes(id))
+        ) {
+          return {
+            code: "INVALID_SAVE_WORLD",
+            message: `election ${election.id} ${cid} invalid STV archive`,
+          };
+        }
+      } else if (result.countArchive != null) {
+        return {
+          code: "INVALID_SAVE_WORLD",
+          message: `election ${election.id} ${cid} legacy archive fabricated a count`,
+        };
+      }
+    }
+    const winnersMeta = election.metadata.constituencyWinners as Record<string, unknown>;
+    const flat: string[] = [];
+    for (const cid of Object.keys(winnersMeta).sort()) {
+      const row = winnersMeta[cid];
+      if (!Array.isArray(row) || row.some((x) => typeof x !== "string")) {
+        return {
+          code: "INVALID_SAVE_WORLD",
+          message: `election ${election.id} constituencyWinners`,
+        };
+      }
+      flat.push(...(row as string[]));
+    }
+    if (flat.length !== election.winnerIds.length || flat.some((id) => !election.winnerIds.includes(id))) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} constituencyWinners mismatch`,
+      };
+    }
+    const result = historyEvent(state, election.resultEventId);
+    if (!result) {
+      return { code: "INVALID_SAVE_WORLD", message: `election ${election.id} result event missing` };
+    }
+    if (result.type !== "ASSEMBLY_ELECTION_RESULT" || result.date !== election.date) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} result event type/date`,
+      };
+    }
+    if (payloadElectionId(result.payload) !== election.id) {
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} result event payload`,
+      };
+    }
+    return null;
   }
   if (
     !election.countInput ||

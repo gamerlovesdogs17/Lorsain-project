@@ -22,7 +22,7 @@ export const MOTION_STATUSES = [
 ] as const;
 export type MotionStatus = (typeof MOTION_STATUSES)[number];
 
-export const REGULATION_STATUSES = ["active", "annulled", "expired"] as const;
+export const REGULATION_STATUSES = ["active", "annulled", "expired", "invalidated"] as const;
 export type RegulationStatus = (typeof REGULATION_STATUSES)[number];
 
 export const BUDGET_STATUSES = ["proposed", "approved", "continuing"] as const;

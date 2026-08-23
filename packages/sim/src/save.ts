@@ -10,6 +10,12 @@ import { parseElectoralRuntime, electoralCounterError } from "./elections/valida
 import { parseCampaignRuntime, campaignCounterError } from "./campaigns/validation.js";
 import { parseLegislatureRuntime, legislatureCounterError } from "./legislature/validation.js";
 import { parseExecutiveRuntime, executiveCounterError } from "./executive/validation.js";
+import { parseConstitutionalRuntime, constitutionalCounterError } from "./courts/validation.js";
+import { parseEconomyRuntime, economyCounterError } from "./economy/validation.js";
+import { parseOrganizationRuntime, organizationCounterError } from "./organizations/validation.js";
+import { parseMediaRuntime, mediaCounterError } from "./media/validation.js";
+import { parseForeignAffairsRuntime, foreignCounterError } from "./foreign/validation.js";
+import { parseProvincialRuntime } from "./provinces/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -379,9 +385,31 @@ function parseCounters(raw: unknown): Counters | string {
     "nextEmergencyId",
     "nextWarPowerId",
     "nextBudgetId",
+    "nextCaseId",
+    "nextCourtNominationId",
+    "nextCourtDecisionId",
+    "nextImpeachmentId",
+    "nextRecallId",
+    "nextConstitutionalGroundsId",
+    "nextLaggedEffectId",
+    "nextEconomicShockId",
+    "nextOrgActionId",
+    "nextMediaStoryId",
+    "nextTreatyId",
+    "nextSanctionId",
+    "nextCrisisId",
+    "nextConflictId",
+    "nextForeignLeaderId",
+    "nextDiplomaticActionId",
+    "nextTreatyRatificationId",
+    "nextIncomingDiplomacyId",
   ] as const;
   const out = {} as Counters;
   for (const k of keys) {
+    if (k === "nextIncomingDiplomacyId") {
+      out[k] = isInt(raw[k]) && (raw[k] as number) >= 1 ? (raw[k] as number) : 1;
+      continue;
+    }
     if (!isInt(raw[k]) || (raw[k] as number) < 1) return `counters.${k} must be a positive integer`;
     out[k] = raw[k] as number;
   }
@@ -553,6 +581,28 @@ function parseSimulation(
   if (typeof executive === "string") return executive;
   const executiveCountErr = executiveCounterError(executive, counters);
   if (executiveCountErr) return executiveCountErr;
+  const constitutional = parseConstitutionalRuntime(raw.constitutionalRuntime);
+  if (typeof constitutional === "string") return constitutional;
+  const constitutionalCountErr = constitutionalCounterError(constitutional, counters);
+  if (constitutionalCountErr) return constitutionalCountErr;
+  const economy = parseEconomyRuntime(raw.economyRuntime);
+  if (typeof economy === "string") return economy;
+  const economyCountErr = economyCounterError(economy, counters);
+  if (economyCountErr) return economyCountErr;
+  const provincial = parseProvincialRuntime(raw.provincialRuntime);
+  if (typeof provincial === "string") return provincial;
+  const organizations = parseOrganizationRuntime(raw.organizationRuntime);
+  if (typeof organizations === "string") return organizations;
+  const orgCountErr = organizationCounterError(organizations, counters);
+  if (orgCountErr) return orgCountErr;
+  const media = parseMediaRuntime(raw.mediaRuntime);
+  if (typeof media === "string") return media;
+  const mediaCountErr = mediaCounterError(media, counters);
+  if (mediaCountErr) return mediaCountErr;
+  const foreign = parseForeignAffairsRuntime(raw.foreignAffairsRuntime);
+  if (typeof foreign === "string") return foreign;
+  const foreignCountErr = foreignCounterError(foreign, counters);
+  if (foreignCountErr) return foreignCountErr;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -661,6 +711,12 @@ function parseSimulation(
     campaignRuntime: campaigns,
     legislatureRuntime: legislature,
     executiveRuntime: executive,
+    constitutionalRuntime: constitutional,
+    economyRuntime: economy,
+    provincialRuntime: provincial,
+    organizationRuntime: organizations,
+    mediaRuntime: media,
+    foreignAffairsRuntime: foreign,
   };
 }
 
@@ -949,3 +1005,397 @@ export function migrateSaveV6ToV7(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 6, toSchema: 7, migrate: migrateSaveV6ToV7 });
+
+/**
+ * Phase 7 saves begin Phase 8 constitutional-court state at migration/load.
+ * No fabricated cases, nominations, or impeachments are written.
+ */
+export function migrateSaveV7ToV8(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 8 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 8 };
+  sim.constitutionalRuntime = isRecord(sim.constitutionalRuntime)
+    ? sim.constitutionalRuntime
+    : {
+        courtCases: {},
+        courtDecisions: {},
+        nominations: {},
+        impeachments: {},
+        recalls: {},
+        precedents: {},
+        grounds: {},
+        pendingPlayerVotes: {},
+        lastMonthProcessed: null,
+      };
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextCaseId: isInt(sim.counters.nextCaseId) ? sim.counters.nextCaseId : 1,
+      nextCourtNominationId: isInt(sim.counters.nextCourtNominationId)
+        ? sim.counters.nextCourtNominationId
+        : 1,
+      nextCourtDecisionId: isInt(sim.counters.nextCourtDecisionId)
+        ? sim.counters.nextCourtDecisionId
+        : 1,
+      nextImpeachmentId: isInt(sim.counters.nextImpeachmentId) ? sim.counters.nextImpeachmentId : 1,
+      nextRecallId: isInt(sim.counters.nextRecallId) ? sim.counters.nextRecallId : 1,
+      nextConstitutionalGroundsId: isInt(sim.counters.nextConstitutionalGroundsId)
+        ? sim.counters.nextConstitutionalGroundsId
+        : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 7, toSchema: 8, migrate: migrateSaveV7ToV8 });
+
+/**
+ * Phase 8 saves begin Phase 9 economy / organization / media state at migration.
+ * No fabricated prior media stories or organization actions. Economy starts at
+ * Legacy schema-8 saves used a reference-100 economic baseline.
+ */
+export function migrateSaveV8ToV9(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 9 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 9 };
+  const start =
+    typeof sim.scenarioStartDate === "string" ? sim.scenarioStartDate : "2028-01-01";
+  sim.economyRuntime = isRecord(sim.economyRuntime)
+    ? sim.economyRuntime
+    : {
+        national: {
+          outputIndex: 100,
+          employmentIndex: 100,
+          priceIndex: 100,
+          realWageIndex: 100,
+          housingIndex: 100,
+          confidenceIndex: 100,
+          fiscalPressure: 0.35,
+        },
+        history: [
+          {
+            date: start,
+            outputIndex: 100,
+            employmentIndex: 100,
+            priceIndex: 100,
+            realWageIndex: 100,
+            housingIndex: 100,
+            confidenceIndex: 100,
+            fiscalPressure: 0.35,
+          },
+        ],
+        provinces: {},
+        sectors: {
+          labor: { conditionsIndex: 100 },
+          manufacturing: { conditionsIndex: 100 },
+          agriculture: { conditionsIndex: 100 },
+          services: { conditionsIndex: 100 },
+          housing: { conditionsIndex: 100 },
+          trade: { conditionsIndex: 100 },
+        },
+        laggedEffects: [],
+        shocks: [],
+        appliedPolicySources: {},
+        lastMonthProcessed: null,
+      };
+  sim.organizationRuntime = isRecord(sim.organizationRuntime)
+    ? sim.organizationRuntime
+    : { actors: {}, meetingsThisMonth: 0, lastMonthProcessed: null, metadata: {} };
+  sim.mediaRuntime = isRecord(sim.mediaRuntime)
+    ? sim.mediaRuntime
+    : { stories: {}, lingering: [], lastMonthProcessed: null };
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextLaggedEffectId: isInt(sim.counters.nextLaggedEffectId)
+        ? sim.counters.nextLaggedEffectId
+        : 1,
+      nextEconomicShockId: isInt(sim.counters.nextEconomicShockId)
+        ? sim.counters.nextEconomicShockId
+        : 1,
+      nextOrgActionId: isInt(sim.counters.nextOrgActionId) ? sim.counters.nextOrgActionId : 1,
+      nextMediaStoryId: isInt(sim.counters.nextMediaStoryId) ? sim.counters.nextMediaStoryId : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 8, toSchema: 9, migrate: migrateSaveV8ToV9 });
+
+/**
+ * Phase 9 saves begin Phase 10 foreign-affairs state at migration.
+ * No fabricated treaties, crises, or diplomatic history are written.
+ * restoreSimulation seeds canonical foreign baseline when countries are empty.
+ */
+export function migrateSaveV9ToV10(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 10 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 10 };
+  sim.foreignAffairsRuntime = isRecord(sim.foreignAffairsRuntime)
+    ? sim.foreignAffairsRuntime
+    : {
+        countries: {},
+        bilateralRelations: {},
+        treaties: {},
+        sanctions: {},
+        crises: {},
+        conflicts: {},
+        diplomaticActions: {},
+        treatyRatifications: {},
+        pendingPresidentialActions: [],
+        pendingPlayerTreatyVotes: {},
+        treatyProposalCooldowns: {},
+        institutionRuntime: { waActions: 0, ltoDisputes: {}, cscActions: 0, nafMediations: 0 },
+        warTriggerArmedByConflictId: null,
+        diplomaticActionsThisMonth: 0,
+        lastMonthProcessed: null,
+      };
+  if (isRecord(sim.counters)) {
+    sim.counters = {
+      ...sim.counters,
+      nextTreatyId: isInt(sim.counters.nextTreatyId) ? sim.counters.nextTreatyId : 1,
+      nextSanctionId: isInt(sim.counters.nextSanctionId) ? sim.counters.nextSanctionId : 1,
+      nextCrisisId: isInt(sim.counters.nextCrisisId) ? sim.counters.nextCrisisId : 1,
+      nextConflictId: isInt(sim.counters.nextConflictId) ? sim.counters.nextConflictId : 1,
+      nextForeignLeaderId: isInt(sim.counters.nextForeignLeaderId)
+        ? sim.counters.nextForeignLeaderId
+        : 1,
+      nextDiplomaticActionId: isInt(sim.counters.nextDiplomaticActionId)
+        ? sim.counters.nextDiplomaticActionId
+        : 1,
+      nextTreatyRatificationId: isInt(sim.counters.nextTreatyRatificationId)
+        ? sim.counters.nextTreatyRatificationId
+        : 1,
+      nextIncomingDiplomacyId: isInt(sim.counters.nextIncomingDiplomacyId)
+        ? sim.counters.nextIncomingDiplomacyId
+        : 1,
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 9, toSchema: 10, migrate: migrateSaveV9ToV10 });
+
+function migrationMonthStart(date: string, months: number): string {
+  return `${addMonths(date, months).slice(0, 7)}-01`;
+}
+
+/**
+ * Phase 10 saves lacked persistent Assembly filing/field/result structures and
+ * nomination contests were not explicitly tied to their presidential cycle.
+ * Legacy Assembly outcomes are retained as summary archives; no missing STV
+ * rounds or ballots are fabricated.
+ */
+export function migrateSaveV10ToV11(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 11 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 11 };
+  const elections = isRecord(sim.elections) ? { ...sim.elections } : {};
+  const presidentialElections: Array<{ id: string; date: string }> = [];
+  for (const [id, value] of Object.entries(elections).sort(([a], [b]) => a.localeCompare(b))) {
+    if (!isRecord(value)) continue;
+    const election: Record<string, unknown> = { ...value };
+    if (
+      election.type === "presidential" &&
+      typeof election.date === "string" &&
+      election.status !== "cancelled"
+    ) {
+      presidentialElections.push({ id, date: election.date });
+    }
+    election.assembly = isRecord(election.assembly) ? election.assembly : null;
+    if (
+      election.type === "assembly" &&
+      election.geographyKind === "national" &&
+      election.status === "resolved" &&
+      election.assembly == null &&
+      typeof election.date === "string"
+    ) {
+      const metadata = isRecord(election.metadata) ? election.metadata : {};
+      const winners = isRecord(metadata.constituencyWinners)
+        ? metadata.constituencyWinners
+        : {};
+      const constituencyElectionIds = isRecord(metadata.constituencyElectionIds)
+        ? metadata.constituencyElectionIds
+        : {};
+      const candidates = isRecord(election.candidates) ? election.candidates : {};
+      const candidacies: Record<string, unknown> = {};
+      const fields: Record<string, unknown> = {};
+      const results: Record<string, unknown> = {};
+      const partySeatTotals: Record<string, number> = {};
+      for (const [cid, rawWinnerIds] of Object.entries(winners).sort(([a], [b]) =>
+        a.localeCompare(b),
+      )) {
+        if (!Array.isArray(rawWinnerIds) || rawWinnerIds.some((pid) => typeof pid !== "string")) {
+          continue;
+        }
+        const electedIds = rawWinnerIds as string[];
+        const partyByCandidate: Record<string, string | null> = {};
+        for (const pid of electedIds) {
+          const candidate = isRecord(candidates[pid]) ? candidates[pid] : null;
+          const partyId = candidate && typeof candidate.partyId === "string" ? candidate.partyId : null;
+          partyByCandidate[pid] = partyId;
+          partySeatTotals[partyId ?? "independent"] =
+            (partySeatTotals[partyId ?? "independent"] ?? 0) + 1;
+          candidacies[pid] = {
+            politicianId: pid,
+            constituencyId: cid,
+            partyId,
+            filedDate:
+              candidate && typeof candidate.filedDate === "string"
+                ? candidate.filedDate
+                : election.date,
+            source: "npc",
+            incumbent: false,
+            status: "filed",
+          };
+        }
+        fields[cid] = {
+          constituencyId: cid,
+          magnitude: electedIds.length,
+          candidateIds: electedIds,
+          finalizedDate: migrationMonthStart(election.date, -1),
+        };
+        results[cid] = {
+          constituencyId: cid,
+          constituencyElectionId:
+            typeof constituencyElectionIds[cid] === "string"
+              ? constituencyElectionIds[cid]
+              : `${id}_${cid}`,
+          magnitude: electedIds.length,
+          candidateIds: electedIds,
+          partyByCandidate,
+          firstPreferences: {},
+          electedIds,
+          turnout: {
+            registeredElectorate: 0,
+            ballotsCast: 0,
+            invalidOrBlank: 0,
+            validVoteValue: 0,
+            turnoutRate: 0,
+          },
+          countArchive: null,
+          archiveCompleteness: "legacy_summary",
+        };
+      }
+      election.assembly = {
+        filingStatus: "closed",
+        filingOpenDate: migrationMonthStart(election.date, -6),
+        filingDeadlineDate: migrationMonthStart(election.date, -1),
+        decisions: {},
+        candidacies,
+        constituencyFields: fields,
+        constituencyResults: results,
+        previousPartySeatTotals: {},
+        partySeatTotals,
+      };
+    }
+    elections[id] = election;
+  }
+  sim.elections = elections;
+
+  presidentialElections.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  if (isRecord(sim.partyContests) && presidentialElections.length > 0) {
+    const contests = { ...sim.partyContests };
+    for (const [id, value] of Object.entries(contests)) {
+      if (!isRecord(value) || value.type !== "presidential_nomination") continue;
+      const contest: Record<string, unknown> = { ...value };
+      const metadata = isRecord(contest.metadata) ? { ...contest.metadata } : {};
+      if (typeof metadata.electionId !== "string") {
+        const anchorDate =
+          typeof contest.resolvedDate === "string"
+            ? contest.resolvedDate
+            : typeof contest.openedDate === "string"
+              ? contest.openedDate
+              : typeof contest.createdDate === "string"
+                ? contest.createdDate
+                : "";
+        const linked =
+          presidentialElections.find((election) => election.date >= anchorDate) ??
+          presidentialElections[presidentialElections.length - 1]!;
+        metadata.electionId = linked.id;
+        metadata.electionDate = linked.date;
+        metadata.cycleYear = Number(linked.date.slice(0, 4));
+        metadata.cycle = linked.date.slice(0, 4);
+        metadata.partyId = typeof contest.partyId === "string" ? contest.partyId : "";
+        metadata.candidateSource =
+          linked.id === "ELEC_PRES_2028" ? "scenario_start" : "runtime_politics";
+      }
+      contest.metadata = metadata;
+      contests[id] = contest;
+    }
+    sim.partyContests = contests;
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 10, toSchema: 11, migrate: migrateSaveV10ToV11 });
+
+/**
+ * Phase 11.2 adds provincial governance/elections and province-level campaign
+ * organization. Existing political history is preserved; the new provincial
+ * layer is seeded deterministically from live offices after restore.
+ */
+export function migrateSaveV11ToV12(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 12 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 12 };
+  sim.provincialRuntime = isRecord(sim.provincialRuntime)
+    ? sim.provincialRuntime
+    : { provinces: {}, elections: {}, actions: {}, pressures: {}, lastMonthProcessed: null };
+  if (isRecord(sim.campaignRuntime) && isRecord(sim.campaignRuntime.campaigns)) {
+    const campaigns: Record<string, unknown> = {};
+    for (const [id, value] of Object.entries(sim.campaignRuntime.campaigns)) {
+      campaigns[id] = isRecord(value) ? { ...value, organizationByProvince: {} } : value;
+    }
+    sim.campaignRuntime = { ...sim.campaignRuntime, campaigns };
+  }
+  if (isRecord(sim.partyContests)) {
+    const contests: Record<string, unknown> = {};
+    for (const [id, value] of Object.entries(sim.partyContests)) {
+      if (!isRecord(value)) {
+        contests[id] = value;
+        continue;
+      }
+      const metadata = isRecord(value.metadata) ? value.metadata : {};
+      const futureShell =
+        value.type === "presidential_nomination" &&
+        value.status === "planned" &&
+        metadata.candidateSource === "runtime_politics";
+      contests[id] = futureShell ? { ...value, entries: {} } : value;
+    }
+    sim.partyContests = contests;
+  }
+  if (isRecord(sim.economyRuntime)) {
+    sim.economyRuntime = {
+      ...sim.economyRuntime,
+      provinceHistory: isRecord(sim.economyRuntime.provinceHistory)
+        ? sim.economyRuntime.provinceHistory
+        : {},
+      sectorHistory: isRecord(sim.economyRuntime.sectorHistory)
+        ? sim.economyRuntime.sectorHistory
+        : {},
+      cycle: isRecord(sim.economyRuntime.cycle)
+        ? sim.economyRuntime.cycle
+        : {
+            phase: 0.35,
+            outputMomentum: 0,
+            inflationMomentum: 0,
+            housingMomentum: 0,
+            monthsElapsed: 0,
+          },
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 11, toSchema: 12, migrate: migrateSaveV11ToV12 });

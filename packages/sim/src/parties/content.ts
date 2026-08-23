@@ -15,6 +15,7 @@ export type PartyContentInput = {
     id: string;
     name: string;
     short?: string;
+    color?: string | null;
     organization_type?: string;
     nomination_rule_id: string;
     factions: Array<{ id: string; name: string; share: number; party_id?: string }>;
@@ -107,6 +108,7 @@ export function buildPartyKernelSlice(
       nominationRuleId: p.nomination_rule_id,
       factionIds,
       canonicalFactionShares: shares,
+      color: typeof p.color === "string" && p.color.trim() ? p.color.trim() : null,
     };
   }
   const nominationRules: Record<string, NominationRuleDefinition> = {};

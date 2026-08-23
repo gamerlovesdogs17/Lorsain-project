@@ -3,6 +3,7 @@ import type { RngService } from "../rng.js";
 import { parseIsoDate } from "../calendar.js";
 import { createPoll } from "../elections/polls.js";
 import { activeElectionCandidateIds } from "../elections/field.js";
+import { processAssemblyFilingCalendar } from "../elections/assembly-cycle.js";
 import { decayMomentum, monthStart } from "./effects.js";
 import { activeCampaigns, ensureActionPoints } from "./state.js";
 import {
@@ -21,7 +22,9 @@ import {
 import { chooseCampaignAction, chooseDeclare, shouldConsiderWithdraw } from "./decisions.js";
 import { holdDebate, shouldHoldDebate } from "./debates.js";
 import { openDueNominationContests, processNominationCalendar } from "./timeline.js";
-import type { CampaignGeography, CampaignMessageType } from "./types.js";
+import { currentPresidentialElection } from "./timeline.js";
+import { presidentialNominationContestsForElection } from "../parties/state.js";
+import type { CampaignGeography, CampaignMessageType, CampaignState } from "./types.js";
 
 export function processCampaignMonth(
   state: SimState,
@@ -33,10 +36,12 @@ export function processCampaignMonth(
   if (state.campaignRuntime.lastMonthProcessed === month) return [];
   const events: SimEvent[] = [];
 
-  events.push(...openDueNominationContests(state, commandId));
+  events.push(...processAssemblyFilingCalendar(state, world, commandId));
+  events.push(...openDueNominationContests(state, world, commandId));
   events.push(...npcDeclarations(state, world, rng, commandId));
 
   for (const campaign of activeCampaigns(state)) {
+    applyOrganizationMaintenance(campaign);
     decayMomentum(world, state, campaign.politicianId);
     ensureActionPoints(world, state, campaign);
     if (campaign.politicianId === state.playerPoliticianId) continue;
@@ -82,6 +87,16 @@ export function processCampaignMonth(
   return events;
 }
 
+export function applyOrganizationMaintenance(campaign: CampaignState): void {
+  campaign.fieldOrganization = Math.max(0.05, campaign.fieldOrganization * 0.992);
+  for (const [provinceId, value] of Object.entries(campaign.organizationByProvince)) {
+    campaign.organizationByProvince[provinceId] = Math.max(0.015, value * 0.985);
+  }
+  for (const [constituencyId, value] of Object.entries(campaign.organizationByConstituency)) {
+    campaign.organizationByConstituency[constituencyId] = Math.max(0.008, value * 0.97);
+  }
+}
+
 function npcDeclarations(
   state: SimState,
   world: KernelWorld,
@@ -89,12 +104,12 @@ function npcDeclarations(
   commandId: string,
 ): SimEvent[] {
   const events: SimEvent[] = [];
-  const contests = Object.values(state.partyContests)
-    .filter(
-      (c) =>
-        c.type === "presidential_nomination" && (c.status === "planned" || c.status === "open"),
-    )
-    .sort((a, b) => (a.id < b.id ? -1 : 1));
+  const election = currentPresidentialElection(state);
+  const contests = election
+    ? presidentialNominationContestsForElection(state, election.id).filter(
+        (contest) => contest.status === "open" || contest.status === "qualification",
+      )
+    : [];
   for (const contest of contests) {
     const ids = Object.keys(contest.entries).sort();
     for (const politicianId of ids) {
@@ -140,12 +155,9 @@ function applyChosenAction(
       return campaignVisit(world, state, rng, { campaignId, geography, actorId }, commandId);
     }
     case "CAMPAIGN_ORGANIZE": {
-      const constituencyId =
-        typeof meta.constituencyId === "string"
-          ? meta.constituencyId
-          : Object.keys(world.constituencyElectorate).sort()[0];
-      if (!constituencyId) return null;
-      return campaignOrganize(world, state, { campaignId, constituencyId, actorId }, commandId);
+      const geography = isCampaignGeography(meta.geography) ? meta.geography : null;
+      if (!geography) return null;
+      return campaignOrganize(world, state, { campaignId, geography, actorId }, commandId);
     }
     case "CAMPAIGN_ADVERTISE": {
       const spend = typeof meta.spend === "number" ? Math.floor(meta.spend) : 0;
@@ -202,6 +214,14 @@ function applyChosenAction(
   }
 }
 
+function isCampaignGeography(value: unknown): value is CampaignGeography {
+  if (value == null || typeof value !== "object") return false;
+  const raw = value as { kind?: unknown; id?: unknown };
+  return (
+    (raw.kind === "province" || raw.kind === "constituency") && typeof raw.id === "string"
+  );
+}
+
 function maybeDebates(
   state: SimState,
   world: KernelWorld,
@@ -209,12 +229,12 @@ function maybeDebates(
   commandId: string,
 ): SimEvent[] {
   const events: SimEvent[] = [];
-  const contests = Object.values(state.partyContests)
-    .filter(
-      (c) =>
-        c.type === "presidential_nomination" && (c.status === "planned" || c.status === "open"),
-    )
-    .sort((a, b) => (a.id < b.id ? -1 : 1));
+  const election = currentPresidentialElection(state);
+  const contests = election
+    ? presidentialNominationContestsForElection(state, election.id).filter(
+        (contest) => contest.status === "open" || contest.status === "qualification",
+      )
+    : [];
   if (shouldHoldDebate(state.currentDate, "presidential_nomination")) {
     for (const contest of contests) {
       const already = Object.values(state.campaignRuntime.debates).some(
@@ -293,9 +313,12 @@ function maybePublicPolls(
     if (cadence === "quarterly") return month % 3 === 1;
     return month % 2 === 1;
   };
-  const contests = Object.values(state.partyContests).filter(
-    (c) => c.type === "presidential_nomination" && (c.status === "planned" || c.status === "open"),
-  );
+  const currentElection = currentPresidentialElection(state);
+  const contests = currentElection
+    ? presidentialNominationContestsForElection(state, currentElection.id).filter(
+        (contest) => contest.status === "open" || contest.status === "qualification",
+      )
+    : [];
   const eligibleContests = contests
     .map((contest) => ({
       contest,

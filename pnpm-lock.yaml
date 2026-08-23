@@ -35,6 +35,9 @@ importers:
       '@lorsain/content-loader':
         specifier: workspace:*
         version: link:../../packages/content-loader
+      '@lorsain/map':
+        specifier: workspace:*
+        version: link:../../packages/map
       '@lorsain/sim':
         specifier: workspace:*
         version: link:../../packages/sim

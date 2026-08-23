@@ -1,0 +1,185 @@
+{
+  "content_version": "0.3.1-predev",
+  "scenario_id": "TERENA_2028",
+  "as_of": "2028-01-01",
+  "reference_note": "Index reference = 100. January 2028 values describe the scenario and are not the reference definition.",
+  "national": {
+    "output_index": 98.7,
+    "employment_index": 99.3,
+    "price_index": 103.8,
+    "real_wage_index": 97.6,
+    "housing_index": 96.4,
+    "confidence_index": 94.8,
+    "fiscal_pressure": 0.41
+  },
+  "national_annual_trend": {
+    "output": 0.45,
+    "employment": 0.12,
+    "prices": 0.8,
+    "real_wages": 0.3,
+    "housing": 0.18
+  },
+  "sectors": {
+    "labor": { "conditions_index": 98.6, "cyclical_sensitivity": 0.8, "annual_structural_trend": 0.1 },
+    "manufacturing": { "conditions_index": 94.2, "cyclical_sensitivity": 1.35, "annual_structural_trend": -0.35 },
+    "agriculture": { "conditions_index": 102.7, "cyclical_sensitivity": 0.7, "annual_structural_trend": 0.05 },
+    "services": { "conditions_index": 101.4, "cyclical_sensitivity": 0.9, "annual_structural_trend": 0.4 },
+    "housing": { "conditions_index": 92.8, "cyclical_sensitivity": 1.15, "annual_structural_trend": 0.12 },
+    "trade": { "conditions_index": 99.1, "cyclical_sensitivity": 1.2, "annual_structural_trend": 0.22 }
+  },
+  "provinces": [
+    {
+      "province_id": "FDV", "conditions_index": 101.6, "employment_index": 102.1, "housing_index": 91.8,
+      "sector_exposure": { "labor": 0.15, "manufacturing": 0.03, "agriculture": 0.01, "services": 0.55, "housing": 0.16, "trade": 0.1 },
+      "sensitivity": { "growth": 0.85, "inflation": 1.15, "housing": 1.35, "trade": 0.6 },
+      "annual_structural_trend": { "conditions": 0.35, "employment": 0.25, "housing": -0.2 },
+      "character": "National administration, universities, media, and a very tight capital housing market."
+    },
+    {
+      "province_id": "P01", "conditions_index": 100.9, "employment_index": 100.2, "housing_index": 96.5,
+      "sector_exposure": { "labor": 0.14, "manufacturing": 0.1, "agriculture": 0.03, "services": 0.27, "housing": 0.08, "trade": 0.38 },
+      "sensitivity": { "growth": 1.05, "inflation": 0.9, "housing": 0.9, "trade": 1.35 },
+      "annual_structural_trend": { "conditions": 0.25, "employment": 0.18, "housing": 0.05 },
+      "character": "Large coastal port economy with logistics, services, and maritime trade."
+    },
+    {
+      "province_id": "P02", "conditions_index": 103.1, "employment_index": 102.8, "housing_index": 94.2,
+      "sector_exposure": { "labor": 0.12, "manufacturing": 0.08, "agriculture": 0.02, "services": 0.51, "housing": 0.12, "trade": 0.15 },
+      "sensitivity": { "growth": 0.95, "inflation": 1.0, "housing": 1.2, "trade": 0.75 },
+      "annual_structural_trend": { "conditions": 0.48, "employment": 0.4, "housing": -0.05 },
+      "character": "Administrative, university, and technology center with strong skilled employment."
+    },
+    {
+      "province_id": "P03", "conditions_index": 99.4, "employment_index": 99.1, "housing_index": 97.8,
+      "sector_exposure": { "labor": 0.17, "manufacturing": 0.21, "agriculture": 0.13, "services": 0.27, "housing": 0.08, "trade": 0.14 },
+      "sensitivity": { "growth": 1.0, "inflation": 0.9, "housing": 0.85, "trade": 0.9 },
+      "annual_structural_trend": { "conditions": 0.12, "employment": 0.08, "housing": 0.12 },
+      "character": "A balanced, politically competitive economy without one dominant sector."
+    },
+    {
+      "province_id": "P04", "conditions_index": 101.2, "employment_index": 100.8, "housing_index": 99.1,
+      "sector_exposure": { "labor": 0.13, "manufacturing": 0.18, "agriculture": 0.34, "services": 0.18, "housing": 0.06, "trade": 0.11 },
+      "sensitivity": { "growth": 0.9, "inflation": 0.8, "housing": 0.65, "trade": 0.95 },
+      "annual_structural_trend": { "conditions": 0.3, "employment": 0.22, "housing": 0.2 },
+      "character": "Growing agricultural and light-industrial province with food-processing strength."
+    },
+    {
+      "province_id": "P05", "conditions_index": 100.4, "employment_index": 99.8, "housing_index": 101.7,
+      "sector_exposure": { "labor": 0.12, "manufacturing": 0.12, "agriculture": 0.46, "services": 0.13, "housing": 0.05, "trade": 0.12 },
+      "sensitivity": { "growth": 0.75, "inflation": 0.75, "housing": 0.55, "trade": 0.9 },
+      "annual_structural_trend": { "conditions": 0.08, "employment": 0.02, "housing": 0.15 },
+      "character": "The agricultural heartland, led by farming and food processing."
+    },
+    {
+      "province_id": "P06", "conditions_index": 102.5, "employment_index": 102.2, "housing_index": 89.6,
+      "sector_exposure": { "labor": 0.13, "manufacturing": 0.03, "agriculture": 0.01, "services": 0.5, "housing": 0.23, "trade": 0.1 },
+      "sensitivity": { "growth": 0.9, "inflation": 1.2, "housing": 1.5, "trade": 0.65 },
+      "annual_structural_trend": { "conditions": 0.4, "employment": 0.3, "housing": -0.35 },
+      "character": "Capital-region growth, transport congestion, and the country's sharpest housing pressure."
+    },
+    {
+      "province_id": "P07", "conditions_index": 102.2, "employment_index": 101.9, "housing_index": 93.2,
+      "sector_exposure": { "labor": 0.13, "manufacturing": 0.07, "agriculture": 0.02, "services": 0.48, "housing": 0.2, "trade": 0.1 },
+      "sensitivity": { "growth": 0.88, "inflation": 1.1, "housing": 1.35, "trade": 0.6 },
+      "annual_structural_trend": { "conditions": 0.32, "employment": 0.22, "housing": -0.18 },
+      "character": "Professional commuter suburbs with strong employment and constrained housing."
+    },
+    {
+      "province_id": "P08", "conditions_index": 104.1, "employment_index": 103.7, "housing_index": 94.6,
+      "sector_exposure": { "labor": 0.1, "manufacturing": 0.07, "agriculture": 0.01, "services": 0.35, "housing": 0.12, "trade": 0.35 },
+      "sensitivity": { "growth": 1.05, "inflation": 1.0, "housing": 1.15, "trade": 1.4 },
+      "annual_structural_trend": { "conditions": 0.42, "employment": 0.32, "housing": -0.08 },
+      "character": "Wealthy coastal ports, naval activity, and high-value trade services."
+    },
+    {
+      "province_id": "P09", "conditions_index": 92.8, "employment_index": 92.1, "housing_index": 98.4,
+      "sector_exposure": { "labor": 0.24, "manufacturing": 0.43, "agriculture": 0.04, "services": 0.14, "housing": 0.05, "trade": 0.1 },
+      "sensitivity": { "growth": 1.35, "inflation": 0.8, "housing": 0.65, "trade": 1.0 },
+      "annual_structural_trend": { "conditions": -0.45, "employment": -0.5, "housing": 0.05 },
+      "character": "The largest old-industrial province, with strong unions and continuing deindustrialization."
+    },
+    {
+      "province_id": "P10", "conditions_index": 100.2, "employment_index": 99.9, "housing_index": 97.1,
+      "sector_exposure": { "labor": 0.13, "manufacturing": 0.19, "agriculture": 0.05, "services": 0.2, "housing": 0.06, "trade": 0.37 },
+      "sensitivity": { "growth": 1.0, "inflation": 0.9, "housing": 0.8, "trade": 1.5 },
+      "annual_structural_trend": { "conditions": 0.18, "employment": 0.12, "housing": 0.1 },
+      "character": "Eastern trade routes, security employment, and export exposure."
+    },
+    {
+      "province_id": "P11", "conditions_index": 105.2, "employment_index": 104.4, "housing_index": 90.8,
+      "sector_exposure": { "labor": 0.09, "manufacturing": 0.03, "agriculture": 0.01, "services": 0.5, "housing": 0.14, "trade": 0.23 },
+      "sensitivity": { "growth": 1.1, "inflation": 1.2, "housing": 1.45, "trade": 1.25 },
+      "annual_structural_trend": { "conditions": 0.55, "employment": 0.45, "housing": -0.3 },
+      "character": "Finance, shipping, and liberal urban growth alongside severe housing scarcity."
+    },
+    {
+      "province_id": "P12", "conditions_index": 95.1, "employment_index": 94.4, "housing_index": 98.2,
+      "sector_exposure": { "labor": 0.22, "manufacturing": 0.4, "agriculture": 0.04, "services": 0.13, "housing": 0.05, "trade": 0.16 },
+      "sensitivity": { "growth": 1.3, "inflation": 0.8, "housing": 0.65, "trade": 1.1 },
+      "annual_structural_trend": { "conditions": -0.25, "employment": -0.28, "housing": 0.08 },
+      "character": "Manufacturing and logistics base with union strength and weak recent employment."
+    },
+    {
+      "province_id": "P13", "conditions_index": 96.8, "employment_index": 96.1, "housing_index": 99.0,
+      "sector_exposure": { "labor": 0.2, "manufacturing": 0.34, "agriculture": 0.07, "services": 0.13, "housing": 0.05, "trade": 0.21 },
+      "sensitivity": { "growth": 1.2, "inflation": 0.8, "housing": 0.65, "trade": 1.25 },
+      "annual_structural_trend": { "conditions": -0.12, "employment": -0.18, "housing": 0.08 },
+      "character": "Border manufacturing economy exposed to cross-border trade and industrial cycles."
+    },
+    {
+      "province_id": "P14", "conditions_index": 103.8, "employment_index": 103.1, "housing_index": 94.9,
+      "sector_exposure": { "labor": 0.1, "manufacturing": 0.08, "agriculture": 0.02, "services": 0.57, "housing": 0.13, "trade": 0.1 },
+      "sensitivity": { "growth": 0.85, "inflation": 1.0, "housing": 1.15, "trade": 0.6 },
+      "annual_structural_trend": { "conditions": 0.62, "employment": 0.5, "housing": -0.02 },
+      "character": "University and research center with fast skilled-sector growth."
+    },
+    {
+      "province_id": "P15", "conditions_index": 98.4, "employment_index": 98.0, "housing_index": 96.7,
+      "sector_exposure": { "labor": 0.18, "manufacturing": 0.27, "agriculture": 0.05, "services": 0.27, "housing": 0.09, "trade": 0.14 },
+      "sensitivity": { "growth": 1.05, "inflation": 0.9, "housing": 0.9, "trade": 0.9 },
+      "annual_structural_trend": { "conditions": 0.08, "employment": 0.04, "housing": 0.04 },
+      "character": "Mixed industry and commuter communities caught between old and new growth."
+    },
+    {
+      "province_id": "P16", "conditions_index": 99.2, "employment_index": 98.6, "housing_index": 97.4,
+      "sector_exposure": { "labor": 0.14, "manufacturing": 0.08, "agriculture": 0.04, "services": 0.2, "housing": 0.07, "trade": 0.47 },
+      "sensitivity": { "growth": 0.95, "inflation": 0.9, "housing": 0.8, "trade": 1.55 },
+      "annual_structural_trend": { "conditions": 0.02, "employment": -0.02, "housing": 0.08 },
+      "character": "Island maritime economy dependent on shipping, fisheries, and external demand."
+    },
+    {
+      "province_id": "P17", "conditions_index": 91.9, "employment_index": 91.2, "housing_index": 101.0,
+      "sector_exposure": { "labor": 0.25, "manufacturing": 0.4, "agriculture": 0.08, "services": 0.12, "housing": 0.04, "trade": 0.11 },
+      "sensitivity": { "growth": 1.4, "inflation": 0.7, "housing": 0.55, "trade": 0.85 },
+      "annual_structural_trend": { "conditions": -0.58, "employment": -0.62, "housing": 0.02 },
+      "character": "Highland communities coping with mine closures and long-run job loss."
+    },
+    {
+      "province_id": "P18", "conditions_index": 97.3, "employment_index": 96.7, "housing_index": 99.6,
+      "sector_exposure": { "labor": 0.18, "manufacturing": 0.19, "agriculture": 0.19, "services": 0.12, "housing": 0.04, "trade": 0.28 },
+      "sensitivity": { "growth": 1.0, "inflation": 0.75, "housing": 0.6, "trade": 1.25 },
+      "annual_structural_trend": { "conditions": -0.05, "employment": -0.08, "housing": 0.05 },
+      "character": "Northern frontier economy built on defense, forestry, and cross-border trade."
+    },
+    {
+      "province_id": "P19", "conditions_index": 98.1, "employment_index": 97.5, "housing_index": 100.4,
+      "sector_exposure": { "labor": 0.16, "manufacturing": 0.05, "agriculture": 0.12, "services": 0.14, "housing": 0.05, "trade": 0.48 },
+      "sensitivity": { "growth": 0.85, "inflation": 0.75, "housing": 0.55, "trade": 1.5 },
+      "annual_structural_trend": { "conditions": -0.08, "employment": -0.12, "housing": 0.02 },
+      "character": "Small fisheries economy with strong local identity and maritime exposure."
+    },
+    {
+      "province_id": "P20", "conditions_index": 96.6, "employment_index": 96.0, "housing_index": 98.9,
+      "sector_exposure": { "labor": 0.15, "manufacturing": 0.03, "agriculture": 0.08, "services": 0.16, "housing": 0.05, "trade": 0.53 },
+      "sensitivity": { "growth": 0.8, "inflation": 0.8, "housing": 0.55, "trade": 1.65 },
+      "annual_structural_trend": { "conditions": -0.15, "employment": -0.18, "housing": 0.0 },
+      "character": "Tiny island economy with high transport costs and dependence on maritime links."
+    }
+  ],
+  "provenance": [
+    "PROJECT_MASTER_BIBLE.md provincial economic descriptions and national sector geography",
+    "data/terena_geography.json population and urban geography",
+    "data/terena_voter_blocs_2028.json constituency archetypes",
+    "data/terena_cities.json ports and major-city locations"
+  ]
+}

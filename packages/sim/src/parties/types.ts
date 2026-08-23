@@ -116,6 +116,8 @@ export type PartyDefinition = {
   nominationRuleId: string;
   factionIds: string[];
   canonicalFactionShares: Record<string, number>;
+  /** Canonical party color from content; omitted in synthetic harnesses. */
+  color?: string | null;
 };
 
 export type FactionDefinition = {

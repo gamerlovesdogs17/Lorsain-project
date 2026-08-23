@@ -11,7 +11,7 @@ import { createRngService } from "./rng.js";
 import { regularElectionDate } from "./calendar.js";
 import { activeTermsForPolitician, occupyingTerms } from "./offices.js";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields } from "./terena-party-input.js";
+import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
 import { SAVE_SCHEMA_VERSION, type Command, type KernelWorld, type SaveFile } from "./types.js";
 import { CANONICAL_PRESIDENTIAL_ELECTION_ID } from "./elections/types.js";
 import { aggregateSupport, blocSupportShares, publicCandidateFacts } from "./elections/support.js";
@@ -59,6 +59,7 @@ function loadTerenaWorld(): KernelWorld {
     pollsters: electoral.pollsters,
     constituencyGeo: electoral.constituencyGeo,
     turnout2026: electoral.turnout2026,
+    ...terenaWorldFieldsFromBundle(bundle),
   } satisfies TerenaKernelInput;
   return buildTerenaKernelWorld(input);
 }
@@ -915,7 +916,7 @@ describe("Phase 4 explicit 2028–2029 test path", () => {
     expect(restoreSimulation(sim.serializeSave(), world).hashState()).toBe(afterElectionHash);
     console.log(
       JSON.stringify({
-        presidentialReplay: replayHash,
+        presidentialReplayHash: hashCanonical(resolved.countArchive),
         afterElectionStateHash: afterElectionHash,
         domainResolutions: dresCount,
         winnerId,

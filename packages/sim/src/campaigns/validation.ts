@@ -75,6 +75,14 @@ function parseCampaign(id: string, raw: unknown): CampaignState | string {
   if (!isInt(raw.actionPointsMax) || raw.actionPointsMax < 1)
     return `campaigns.${id} actionPointsMax`;
   const org: Record<string, number> = {};
+  const provinceOrg: Record<string, number> = {};
+  if (raw.organizationByProvince != null) {
+    if (!isRecord(raw.organizationByProvince)) return `campaigns.${id} province organization`;
+    for (const [k, v] of Object.entries(raw.organizationByProvince)) {
+      if (!finite01(v)) return `campaigns.${id} province organization.${k}`;
+      provinceOrg[k] = v;
+    }
+  }
   if (raw.organizationByConstituency != null) {
     if (!isRecord(raw.organizationByConstituency)) return `campaigns.${id} organization`;
     for (const [k, v] of Object.entries(raw.organizationByConstituency)) {
@@ -114,6 +122,7 @@ function parseCampaign(id: string, raw: unknown): CampaignState | string {
     fundraisingCapacity: raw.fundraisingCapacity,
     fieldOrganization: raw.fieldOrganization,
     mediaCapacity: raw.mediaCapacity,
+    organizationByProvince: provinceOrg,
     organizationByConstituency: org,
     recentEffects: effects,
     debatePrep: finite01(raw.debatePrep) ? raw.debatePrep : 0,
@@ -195,7 +204,11 @@ export function validateCampaignsAgainstWorld(
     if (c.contestId && !state.partyContests[c.contestId]) {
       return { code: "INVALID_CONTEST", message: `campaign ${c.id} contest` };
     }
-    if (c.electionId && !state.elections[c.electionId]) {
+    if (
+      c.electionId &&
+      !state.elections[c.electionId] &&
+      !state.provincialRuntime.elections[c.electionId]
+    ) {
       return { code: "INVALID_ELECTION", message: `campaign ${c.id} election` };
     }
   }

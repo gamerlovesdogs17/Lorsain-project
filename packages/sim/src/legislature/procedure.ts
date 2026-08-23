@@ -14,6 +14,7 @@ import type {
   PolicyItem,
 } from "./types.js";
 import { pendingVoteKey } from "./types.js";
+import { concretePolicyItem, naturalBillCopy } from "./provisions.js";
 import { absoluteMajorityNeeded, committeeForDimension, LEGISLATURE } from "./policy.js";
 import {
   allocateAmendmentId,
@@ -66,6 +67,7 @@ function normalizePolicyItems(
   items: readonly PolicyItem[],
 ): PolicyItem[] | { error: CommandError } {
   if (items.length < 1) return { error: reject("INVALID_BILL", "bill needs a policy item") };
+  if (items.length > 3) return { error: reject("INVALID_BILL", "a bill may contain at most three provisions") };
   const out: PolicyItem[] = [];
   for (const item of items) {
     if (!world.issueIds.includes(item.issueId) && Object.keys(world.issueDimensions).length > 0) {
@@ -75,12 +77,19 @@ function normalizePolicyItems(
     }
     const direction = item.direction < 0 ? -1 : item.direction > 0 ? 1 : 0;
     const magnitude = Math.max(0, Math.min(1, item.magnitude));
+    const concrete = concretePolicyItem(item);
     out.push({
       issueId: item.issueId,
+      ...(concrete.provisionId ? { provisionId: concrete.provisionId } : {}),
+      ...(concrete.optionId ? { optionId: concrete.optionId } : {}),
       direction,
       magnitude,
       fiscalImpact: item.fiscalImpact == null ? null : item.fiscalImpact,
     });
+  }
+  const provisionIds = out.flatMap((item) => item.provisionId ? [item.provisionId] : []);
+  if (new Set(provisionIds).size !== provisionIds.length) {
+    return { error: reject("INVALID_BILL", "a policy category may appear only once in a bill") };
   }
   return out;
 }
@@ -122,13 +131,14 @@ export function introduceBill(
   const cos = [...new Set(args.cosponsorIds ?? [])]
     .filter((id) => id !== args.sponsorId && mps.has(id))
     .sort();
+  const copy = naturalBillCopy(state, items);
   const bill: BillState = {
     id: allocateBillId(state),
     sponsorId: args.sponsorId,
     cosponsorIds: cos,
     introducedDate: state.currentDate,
-    title: args.title ?? `Bill on ${items[0]!.issueId}`,
-    summary: args.summary ?? "",
+    title: args.title?.trim() || copy.title,
+    summary: args.summary?.trim() || copy.summary,
     policyItems: items,
     assignedCommitteeId: null,
     status: "committee",
@@ -505,6 +515,8 @@ function enactLaw(state: SimState, bill: BillState, commandId: string | null): S
     enactedDate: state.currentDate,
     sponsorId: bill.sponsorId,
     eventIds: [],
+    operative: true,
+    invalidatedByDecisionId: null,
     metadata: {},
   };
   const ev = event(

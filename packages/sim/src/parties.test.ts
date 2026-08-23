@@ -15,6 +15,7 @@ import {
   compactAssemblyElectionFromRaw,
   terenaElectoralFromBundle,
   terenaPartyFields,
+  terenaWorldFieldsFromBundle,
 } from "./terena-party-input.js";
 import {
   assemblyCaucus,
@@ -69,6 +70,7 @@ function loadTerenaWorld(withElection = false) {
     }),
     presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     ...terenaElectoralFromBundle(bundle),
+    ...terenaWorldFieldsFromBundle(bundle),
   } satisfies TerenaKernelInput;
   return buildTerenaKernelWorld(input);
 }
@@ -531,6 +533,44 @@ describe("endorsements", () => {
     const save = sim.serializeSave();
     expect(restoreSimulation(save, sim.world()).hashState()).toBe(hash);
   });
+
+  it("rejects endorsement by an active same-race rival and allows it after withdrawal", () => {
+    const sim = simFor();
+    const contestId = createdContestId(sim, "PARTY_LAB");
+    expectOk(sim, {
+      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      contestId,
+      politicianId: "P3",
+    });
+    expectOk(sim, {
+      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      contestId,
+      politicianId: "P4",
+    });
+    const blocked = sim.executeCommand({
+      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      contestId,
+      endorserId: "P3",
+      targetId: "P4",
+    });
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.error.code).toBe("ACTIVE_RIVAL");
+    expectOk(sim, {
+      type: "WITHDRAW_PARTY_CONTEST_CANDIDACY",
+      contestId,
+      politicianId: "P3",
+    });
+    expectOk(sim, {
+      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      contestId,
+      endorserId: "P3",
+      targetId: "P4",
+    });
+    const rec = Object.values(sim.getSnapshot().endorsements).find(
+      (e) => e.endorserId === "P3" && e.status === "active",
+    );
+    expect(rec?.targetId).toBe("P4");
+  });
 });
 
 function nominate(
@@ -831,12 +871,9 @@ describe("leadership contests, splits, knowledge, player, save", () => {
   it("does not auto-declare, withdraw, endorse, or defect the player", () => {
     const world = partyMiniWorld();
     const sim = createSimulation({ world, playerPoliticianId: "P3" });
-    const contest = Object.values(sim.getSnapshot().partyContests).find(
-      (c) => c.partyId === "PARTY_LAB" && c.type === "presidential_nomination",
-    )!;
-    expect(
-      contest.entries.P3?.status === "potential" || contest.entries.P3?.status === "exploring",
-    ).toBe(true);
+    const contestId = createdContestId(sim, "PARTY_LAB");
+    const contest = sim.getSnapshot().partyContests[contestId]!;
+    expect(contest.entries.P3).toBeUndefined();
     const before = contest.entries.P3?.status;
     for (let i = 0; i < 6; i++) {
       const r = sim.executeCommand({ type: "ADVANCE_TURN" });
@@ -1297,6 +1334,7 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
 
   it("rejects malformed saves for parties, factions, selectors, archives, and evidence", () => {
     const sim = simFor();
+    const contestId = createdContestId(sim, "PARTY_LAB");
     const base = jsonClone(sim.serializeSave()) as unknown as {
       simulation: Record<string, unknown>;
     };
@@ -1367,7 +1405,6 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
     expect(dynParsed.ok).toBe(true);
     if (dynParsed.ok) expect(() => restoreSimulation(dynParsed.save, sim.world())).toThrow();
 
-    const contestId = Object.keys(sim.getSnapshot().partyContests)[0]!;
     const banana = simRec();
     const contests = banana.simulation.partyContests as Record<string, Record<string, unknown>>;
     contests[contestId]!.selectorSummary = [
@@ -1917,7 +1954,7 @@ describe("Phase 3 preflight A1–A4", () => {
       (c) => c.type === "party_leadership",
     )!.id;
     expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P19" });
+    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
     expectOk(sim, {
       type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,

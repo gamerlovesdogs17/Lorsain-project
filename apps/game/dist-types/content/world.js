@@ -1,4 +1,4 @@
-import { buildTerenaKernelWorld, terenaElectoralFromBundle, terenaPartyFields, } from "@lorsain/sim";
+import { buildTerenaKernelWorld, terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle, } from "@lorsain/sim";
 export function kernelWorldFromBundle(bundle) {
     return buildTerenaKernelWorld({
         contentVersion: bundle.manifest.content_version,
@@ -9,6 +9,7 @@ export function kernelWorldFromBundle(bundle) {
             dimension: i.dimension,
         })),
         offices: bundle.content.terena_offices.offices,
+        economy2028: bundle.content.terena_economy_2028,
         constitution: bundle.content.terena_constitution,
         administrations: bundle.content.terena_presidential_administrations.administrations,
         ...terenaPartyFields({
@@ -19,6 +20,9 @@ export function kernelWorldFromBundle(bundle) {
         }),
         presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
         ...terenaElectoralFromBundle(bundle),
+        ...terenaWorldFieldsFromBundle(bundle),
+        organizations: bundle.content.terena_organizations.organizations,
+        mediaOutlets: bundle.content.terena_media.outlets,
     });
 }
 //# sourceMappingURL=world.js.map

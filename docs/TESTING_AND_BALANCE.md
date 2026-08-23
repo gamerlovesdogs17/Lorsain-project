@@ -4,13 +4,31 @@
 
 Every CI run loads `TERENA_2028`, executes a fixed command script for 240 turns and compares a state hash. Save/reload at multiple points must produce the identical final hash. No gameplay system may call `Math.random()`.
 
+**Phase 11.1 closeout:** `packages/sim/src/phase11.integration.test.ts` runs the natural 2028→2034 presidential horizon, Assembly filing/count/assumption paths, player/observer scenarios, checkpoint save/reload hash equality, and catastrophic invariants. `phase11.closeout.test.ts` covers allocation, player filing autonomy, bounded campaign influence, typed archives, and v10→v11 migration. Use:
+
+```bash
+pnpm exec vitest run packages/sim/src/phase11.integration.test.ts
+pnpm exec vitest run packages/sim/src/phase11.closeout.test.ts
+```
+
+**Phase 11.2:** `phase11_2.governor.test.ts` covers provincial authority, explicit filing, recurring 21-race scheduling and save/reload. `phase11_2.systems.test.ts` covers canonical uneven economy starts, four-year persistence/determinism, trade-exposure response, campaign geographic distribution/decay, concrete bills and cross-role permission rejection. Campaign map fills retain component regression tests. Use:
+
+```bash
+pnpm exec vitest run packages/sim/src/phase11_2.governor.test.ts
+pnpm exec vitest run packages/sim/src/phase11_2.systems.test.ts
+pnpm calibrate:economy
+pnpm calibrate:campaign-geography
+```
+
+The systems regression also advances across the canonical 2029-06-01 Court vacancy date to ensure an automatic nonblocking event due exactly on a turn target is processed before the state date advances. Minister and Mayor permission checks assert one bounded role action per month and reject direct calls from every other role.
+
 ## 2. Hands-off autonomy test
 
 Run at least 100 saves for 600 monthly turns with a player who takes no political actions. Fail the build or balance candidate if a material share of runs show deadlocked election calendars, empty party leadership, permanent unfilled offices, impossible seat counts, runaway negative money, no legislation for years, constant civil war, or every party converging to identical ideology.
 
 ## 3. Election invariants
 
-Presidential RCV tests must guarantee one valid winner, consistent transfer arithmetic and no creation/loss of non-exhausted ballots. STV tests must guarantee exactly 420 Assembly seats and exactly the constituency seat magnitude in each district.
+Presidential RCV tests must guarantee one valid winner, consistent transfer arithmetic and no creation/loss of non-exhausted ballots. STV tests must guarantee exactly 420 Assembly seats and exactly the constituency seat magnitude in each district. Recurring-cycle tests also assert: field finalization precedes resolution; every winner is a finalized candidate; no politician appears in two Assembly constituencies; declined players are absent; campaign status agrees with the result; assumption dates begin winner terms; historical elections are not overwritten; and the next regular date advances.
 
 Property tests should verify that materially increasing a candidate's support, holding everything else fixed, does not systematically lower their win probability.
 
@@ -46,17 +64,54 @@ Track public scandals per politician-year. They should be rare enough that a sca
 
 Run policy-neutral baselines and shock scenarios. Economic series should remain bounded and exhibit realistic inertia. A tax or spending change should not transform GDP instantly. Provincial shocks should diffuse over time rather than teleport nationally in one turn.
 
+The Phase 11.2 calibrator runs 12 deterministic seeds for 48 months and reports canonical starting national values, province/sector ranges, one-year and four-year output movement, maximum province spread, shock frequency, bound hits, average monthly movement and direction changes. Acceptance requires a non-flat start, persistent regional spread, both short/long movement, no bound collapse, and reproducibility. The trade regression separately compares a highly exposed island province with the sheltered federal district under an identical trade disruption.
+
 ## 12. Foreign-affairs calibration
 
-In 100 fifty-year simulations, record wars, sanctions, alliance changes and crises. Desired behavior is a broad distribution: many saves have no great-power war, some have serious regional wars, and only a small minority escalate into system-wide conflict. Vaskara/Terena tension should raise risk without making war inevitable.
+Run the batch calibrator after foreign-affairs changes:
+
+```bash
+pnpm calibrate:foreign
+```
+
+Default batch: **20 seeds × 15 years** (180 monthly turns), hands-off MP (`NPC030`), no player diplomatic commands. Uses the **calibration-only** foreign month driver (`advanceForeignCalibrationMonths`) so domestic election interrupts do not truncate the horizon.
+
+The script prints per-seed totals and distribution summaries for:
+
+- emergent crises created and settled
+- conflicts started/ended/active at horizon
+- Terena and Vaskara–Terena wars
+- sanctions imposed and lifted
+- treaties: total/active/unique/duplicate/max-duplicate/terminated/suspended/proposed/rejected/activated
+- foreign leadership changes, same-name replacements, max transitions on one date
+- WA actions/vetoes, LTO disputes filed/settled/failed, DC consultations, CSC actions, NAF mediations
+- war-power begun and Assembly war-authorization motions
+- foreign AI actions toward Terena
+- elevated-posture signals
+
+**Unit tests** (`packages/sim/src/foreign.test.ts`, `foreign.determinism.test.ts`) cover baseline seeding (48 countries including W41 with domestic President, canonical Terena relations), Vaskara heightened posture + **latent** (not public active) crisis, determinism, save/reload, v9→v10 migration (no fabricated history), player autonomy (MP treaty votes, President sanctions/treaties/posture), Phase 10.1/10.2 regressions (ratification E2E, war-authorization referral, WA/LTO membership + veto, LTO disputes, leadership schedule/names), and information boundaries.
+
+**Desired long-run behavior** (extend batch to 100×50 years when tuning): a broad distribution where many saves have no great-power war, some have serious regional wars, and only a small minority escalate into system-wide conflict. Vaskara/Terena tension should raise risk without making war inevitable.
 
 ## 13. Performance benchmarks
 
 Benchmark 1,000 active NPCs, 10,000 sparse relationship edges, a full Assembly, 48 constituencies and 48 foreign states. Monthly non-election turns should target <250 ms engine time on a mid-range desktop. Use profiling before adding micro-optimizations.
 
+Assembly calibration is a required 20-seed batch:
+
+```bash
+pnpm calibrate:assembly
+```
+
+Record candidate count and candidates/seat, uncontested constituencies, incumbent candidates/winners/reelection, challenger wins, party seat change, turnout, represented parties, field-generation time, one-constituency STV time, full-resolution time, and archive-serialization time. The closeout browser check separately records worker click-return time and total count time; an indeterminate count state is required because the engine does not cheaply expose honest progress percentages.
+
+Phase 11.2 browser measurements on the development host: normal End Turn 1.152s total / 282ms click return, 2028 nomination month 6.157s / 431ms, 2033 nomination month 15.140s / 325ms, and 2030 Assembly count 14.242s / 277ms. Click return includes browser-control overhead and is therefore a conservative observed main-thread upper bound. The isolated integration harness recorded ordinary-turn median 799ms, maximum 976ms, Assembly resolution 12.282s, and 2033 presidential resolution 1.133s.
+
 ## 14. UI correctness
 
-Playwright covers new game, character creation/selection, end turn, save, load, map interaction, election count, bill vote, relationship inspection and history pages. Tooltips must pull names/data from content rather than duplicate hardcoded strings.
+Browser QA covers new game, character selection, end turn, save/load behavior, map interaction, election count, bill vote, relationship inspection, and history pages. Phase 11.1 requires actual Adrian run/decline, eligible non-incumbent Assembly, 2033 player contender, and 2033 observer workflows at 1440, 900, 600, and 390 pixels. Filing controls, Assembly campaign actions, indeterminate count state, national/constituency results, nomination controls, transitions, and horizontal overflow are inspected. Tooltips and result cards must use public names/data rather than raw IDs.
+
+Phase 11.2 additionally requires President, MP, Governor, non-incumbent, former officeholder and justice role passes, plus limited-role checks for Minister/Mayor. Inspect Home/Office/Career, province actions, gubernatorial filing/campaign/result, concrete bill composition, each truthful domestic map mode, world-map modes, hover/leave/click/tap/keyboard behavior, and populated News/Archive states. Responsive widths are 1440, 1200, 900, 600 and 390 pixels. Evidence screenshots live under `docs/qa/phase11_2/`.
 
 ## 15. Long-save migration
 

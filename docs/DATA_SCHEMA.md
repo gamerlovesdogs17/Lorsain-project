@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 7 saves use `schemaVersion: 7` and `contentVersion: 0.3.1-predev`. Phase 6 `schemaVersion: 6` saves migrate to v7 with empty executive runtime. Phase 5 `schemaVersion: 5` saves migrate v5→v6→v7. Phase 4 `schemaVersion: 4` saves migrate v4→v5→v6→v7. Phase 3 `schemaVersion: 3` saves migrate v3→v4→v5→v6→v7. Phase 2 `schemaVersion: 2` saves migrate v2→v3→v4→v5→v6→v7. Phase 1 `schemaVersion: 1` saves migrate v1→v2→v3→v4→v5→v6→v7.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 11.2 uses `schemaVersion: 12` and `contentVersion: 0.3.1-predev`. Phase 11 saves migrate to v12 by adding provincial runtime, campaign province organization, economy history/cycle fields, and clearing only illegitimately pre-populated planned future presidential fields; no past election, office, action or economic event is fabricated.
 
 ## 3. Core static schemas
 
@@ -191,7 +191,7 @@ Presidential vacancy: Speaker → Justice Minister → Finance Minister → Fore
 
 Normal turn = one calendar month. Target date is `scenarioStartDate + (completedTurns + 1) months`, not “currentDate plus one month”. Mid-month blocking events pause at the exact date; resume continues to the original month target (e.g. pause 2028-10-14, resume to 2028-11-01).
 
-Unimplemented domain events (2028 presidential election, 2030 Assembly election) produce a typed `BLOCKING_DOMAIN` interrupt with `requiresResolution: true`. `RESUME_TURN` / `ACKNOWLEDGE_INTERRUPT` cannot bypass them (`DOMAIN_RESOLUTION_REQUIRED`). Presentation pauses (`requiresResolution: false`) must be acknowledged, then resumed to the original month target (e.g. pause 2028-10-14, resume to 2028-11-01).
+Regular presidential and Assembly election days produce a typed `BLOCKING_DOMAIN` interrupt with `requiresResolution: true`. `RESUME_TURN` / `ACKNOWLEDGE_INTERRUPT` cannot bypass them (`DOMAIN_RESOLUTION_REQUIRED`). After the election domain records its immutable resolution, `RESUME_TURN` continues to the original month target and applies assumption events that fall on that target (for example the 2030-06-01 Assembly assumption). Presentation pauses (`requiresResolution: false`) must be acknowledged, then resumed normally.
 
 Court terms with `expirationPolicy: auto_vacate` end automatically. Presidential and Assembly terms require the relevant election/succession domain; an unresolved regular-election interrupt therefore cannot silently carry expired elected holders forward.
 
@@ -204,16 +204,47 @@ Store elections as persistent historical objects. A campaign references an elect
 ```ts
 interface ElectionState {
   id: string;
-  electionType: 'president'|'assembly'|'governor'|'mayor'|'party_leader'|'faction_leader'|'recall';
+  type: 'presidential' | 'assembly';
   date: ISODate;
-  jurisdictionId: string;
-  candidateIds: string[];
-  status: 'scheduled'|'campaigning'|'counting'|'complete';
-  result?: ElectionResult;
+  status: 'planned' | 'field_open' | 'field_finalized' | 'voting' | 'resolved' | 'cancelled';
+  geographyKind: 'national' | 'constituency';
+  seats: number;
+  fieldFinalized: boolean;
+  candidates: Record<PoliticianId, ElectionCandidate>;
+  turnout: TurnoutRecord | null;
+  countInput: ElectionCountInput | null;
+  countArchive: IrvResult | StvResult | null;
+  winnerIds: PoliticianId[];
+  assembly: AssemblyElectionCycle | null;
+}
+
+interface AssemblyElectionCycle {
+  filingStatus: 'planned' | 'open' | 'closed';
+  filingOpenDate: ISODate;
+  filingDeadlineDate: ISODate;
+  decisions: Record<PoliticianId, AssemblyFilingDecision>;
+  candidacies: Record<PoliticianId, AssemblyCandidacy>;
+  constituencyFields: Record<ConstituencyId, AssemblyConstituencyField>;
+  constituencyResults: Record<ConstituencyId, AssemblyConstituencyResult>;
+  previousPartySeatTotals: Record<PartyId, number>;
+  partySeatTotals: Record<PartyId, number>;
+}
+
+interface AssemblyConstituencyResult {
+  constituencyId: ConstituencyId;
+  constituencyElectionId: string;
+  magnitude: number;
+  candidateIds: PoliticianId[];
+  partyByCandidate: Record<PoliticianId, PartyId | null>;
+  firstPreferences: Record<PoliticianId, string>; // exact integer strings
+  electedIds: PoliticianId[];
+  turnout: TurnoutRecord;
+  countArchive: StvResult | null;
+  archiveCompleteness: 'full' | 'legacy_summary';
 }
 ```
 
-For RCV/STV, `ElectionResult` stores every count round, transfers, exhausted ballots and elected/eliminated status.
+Future Assembly ballot groups are not duplicated in the national parent object: the typed constituency result retains first preferences and the complete STV round/transfer/exhaustion/lot archive. A migrated legacy result is explicitly marked `legacy_summary` instead of fabricating missing rounds.
 
 ## 9. Voter blocs
 
@@ -258,20 +289,38 @@ Key series: real GDP, productivity, employment, unemployment, CPI, wages, dispos
 
 ## 12. Foreign state model
 
+Phase 10 runtime: `SimState.foreignAffairsRuntime` (see `docs/FOREIGN_AFFAIRS_SYSTEM.md`).
+
 ```ts
-interface ForeignCountryState {
+interface ForeignCountryRuntime {
   countryId: string;
-  leaderId?: string;
-  governmentStability: number;
-  economy: ForeignEconomyState;
-  military: CapabilityVector;
-  relations: Record<CountryId, BilateralRelation>;
-  strategicGoals: StrategicGoal[];
-  treatyIds: string[];
+  leaderId: string;
+  posture: MilitaryPostureLevel;
+  capabilities: CapabilityVector;
+  tradeExposure: Record<string, number>;
+  strategicGoals: StrategicGoalId[]; // internal AI — not normal UI
+  institutionIds: string[];
+  activeSanctionIds: string[];
+  metadata: JsonObject;
+}
+
+interface BilateralRelation {
+  general: number;        // -100..100
+  trust: number;
+  securityTension: number; // 0..100
+  economicTies: number;    // 0..100
+  lastUpdated: IsoDate;
 }
 ```
 
-Foreign domestic politics may use a lighter politician model until a foreign state becomes high-salience.
+Static canon: `KernelWorld.worldCountries`, `worldInstitutions`, `worldLeaders`. Canonical starting relations with Terena use `relation_with_terena` as a diplomatic prior only.
+
+`world_institutions.json` institutions may include:
+
+- `member_country_ids: string[]` — persistent membership (WA 48, LTO 43, DC 13, CSC 5, NAF 20)
+- `security_council_veto_ids: string[]` — WA only (W24, W28, W37, W40)
+
+Runtime `ForeignCountryRuntime.institutionIds` are seeded from these lists (not only `alignment_ids`).
 
 ## 13. Event log
 
@@ -295,11 +344,11 @@ News and history pages consume events; they do not invent a separate reality.
 
 ## 14. Save root
 
-Phase 7 save envelope (`schemaVersion: 7`):
+Current save envelope (`schemaVersion: 12`):
 
 ```ts
 interface SaveFile {
-  schemaVersion: 7;
+  schemaVersion: 12;
   contentVersion: string;
   scenarioId: string;
   simulation: SimState;
@@ -308,11 +357,10 @@ interface SaveFile {
   // agentProfileOverrides, partyStates, factionStates, endorsements,
   // partyContests, dynamicParties,
   // elections, candidateStanding, electoralEnvironment, polls, domainResolutions,
-  // campaignRuntime (campaigns, debates, lastMonthProcessed),
-  // legislatureRuntime (committees, bills, amendments, legislativeVotes,
-  // enactedLaws, recommendations, floorQueue, pendingPlayerVotes, lastMonthProcessed),
-  // executiveRuntime (ministries, regulations, budgets, emergencies, warPowers,
-  // motions, pendingPlayerMotionVotes, lastMonthProcessed, emergencyTrigger, warTrigger)
+  // campaignRuntime, provincialRuntime, legislatureRuntime, executiveRuntime,
+  // economyRuntime, organizationRuntime, mediaRuntime, foreignAffairsRuntime,
+  // constitutionalRuntime (courtCases, courtDecisions, nominations, impeachments,
+  // recalls, precedents, grounds, pendingPlayerVotes, lastMonthProcessed)
 }
 ```
 
@@ -332,7 +380,17 @@ Loaded saves are untrusted `unknown` and are fully structurally validated. Conte
 
 **v6 → v7:** Phase 6 saves had no executive runtime. Migration initializes empty `executiveRuntime` and adds `nextRegulationId` / `nextMotionId` / `nextEmergencyId` / `nextWarPowerId` / `nextBudgetId`. No fabricated cabinet actions, regulations, motions, emergencies, or budgets are written. `restoreSimulation` seeds ministry admin stubs from current minister offices when ministries are empty.
 
-Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`, `CAMP`, `DEBATE`, `BILL`, `AMD`, `LVOTE`, `LAW`, `REG`, `MOT`, `EMG`, `WAR`, `BUD`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
+**v7 → v8:** Phase 7 saves had no constitutional runtime. Migration initializes empty `constitutionalRuntime` (including `grounds: {}`) and adds `nextCaseId` / `nextCourtNominationId` / `nextCourtDecisionId` / `nextImpeachmentId` / `nextRecallId` / `nextConstitutionalGroundsId`. No fabricated historical cases, nominations, impeachments, or grounds records are written. Membership is derived from existing Constitutional Court `OfficeTerm`s.
+
+**v8 → v9:** Phase 8 saves had no economy, organization, or media runtime. Migration initializes the Phase 9 baselines and empty histories.
+
+**v9 → v10:** Phase 9 saves had no foreign-affairs runtime. Migration initializes empty foreign state; restore seeds the canonical 48-country baseline without fabricated foreign history.
+
+**v10 → v11:** Phase 10 saves had no typed Assembly filing/candidacy lifecycle or constituency STV result archive. Migration initializes recurring Assembly cycle state. If a resolved Assembly election has only the old metadata summary, that result is retained as `legacy_summary`; missing first-preference and round detail remains explicitly unavailable. No player candidacy, campaign action, or detailed count history is fabricated.
+
+**v11 → v12:** Phase 11 saves had no provincial gameplay/election runtime, province-level campaign organization, or provincial/sector economic history and medium-term cycle state. Migration adds these structures deterministically. Restore derives province office state from current office terms and schedules the first v1 gubernatorial cycle. Existing national/province/sector economic values remain authoritative; missing histories begin at the migrated save date and do not backfill invented past points. Planned future presidential nomination contests whose metadata marks runtime politics lose prematurely stored entries, while open/resolved and historical contests remain immutable.
+
+Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`, `CAMP`, `DEBATE`, `BILL`, `AMD`, `LVOTE`, `LAW`, `REG`, `MOT`, `EMG`, `WAR`, `BUD`, `CASE`, `CNOM`, `CDEC`, `IMPEACH`, `RECALL`, `CGND`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
 
 ### 14.1 Agent state (Phase 2)
 
@@ -349,7 +407,7 @@ Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed
 - **Derived queries:** `partyMembers`, `factionMembers`, `assemblyCaucus`, `factionAssemblyCaucus`. No persisted member arrays.
 - **Runtime leadership:** `PartyState.leaderId` and `FactionState.chairId`. `AgentProfile.roleTypes` and office terms are not the live leadership source. Public facts expose `partyLeaderOf` / `factionChairOf` / `contestCandidacies`.
 - **Endorsements:** `END…` records. One active endorsement per endorser per single-winner contest (politician, institutional faction, or provincial organization). Same-target repeats reject (`ALREADY_ENDORSED_CANDIDATE`) without mutation. A later different-target endorsement supersedes. Politician endorsements write one Phase 2 memory and a small relationship delta once. Institutional faction endorsements must belong to the contest party. Provincial-organization endorsements must resolve to `PORG:{partyId}:{provinceId}`.
-- **PartyContest:** planned → open → voting → resolved. Starting 2028 presidential contests seed as **planned** and are not auto-resolved on monthly turns. Qualification uses numeric canon gates where present (NU 0.15 of **current** caucus; PM 4 **distinct legitimate** provincial-org endorsements). Labour/Green/RL boolean flags remain qualification evidence, not invented percentages. Civic `supporter_registration_required` is selectorate composition, not a candidate filing gate. Generic leadership/faction-chair contests require an explicit `selectorMethod` and must not inherit presidential nomination rules. Counts always go through `countIrv`. Formal archives store exact `countInput` ballots (id/weight/rankings) plus the IRV result; lots replay from archived draws. Selector preference noise uses the `campaigns` stream; politician caucus rankings use Phase 2 `npc-decisions`; lots use `elections`.
+- **PartyContest:** planned → open → voting → resolved. Presidential nomination contests carry `electionId`, `electionDate`, `cycleYear`, `partyId`, and `candidateSource` metadata. Starting 2028 contests use scenario-start labels once; future cycles use current runtime politics and are tied to the exact unresolved/upcoming presidential election. Historical contests remain immutable. Qualification uses numeric canon gates where present (NU 0.15 of **current** caucus; PM 4 **distinct legitimate** provincial-org endorsements). Labour/Green/RL boolean flags remain qualification evidence, not invented percentages. Civic `supporter_registration_required` is selectorate composition, not a candidate filing gate. Generic leadership/faction-chair contests require an explicit `selectorMethod` and must not inherit presidential nomination rules. Counts always go through `countIrv`. Formal archives store exact `countInput` ballots (id/weight/rankings) plus the IRV result; lots replay from archived draws.
 - **Selectorates:** compact heterogeneous weighted groups (faction × tendency × member-home region for members/supporters/convention; geography for RL), not citizen entities and not one bloc per faction. Outsider groups that rank two same-faction candidates 1–2 transfer to a cross-faction candidate before the faction rival. Member/supporter/convention faction weights blend canonical shares with current roster composition (`CURRENT_FACTION_BLEND = 0.22`). Mass selectorates use public/institutional facts only. RL provincial weights combine 2026 first-preference × `province_population_shares` with a 0.012 floor.
 - **Provincial party organizations:** `PORG:{partyId}:{provinceId}` — one active unit per membership party × canonical province. Not Phase 9 interest groups.
 - **Splits:** `DEV_SPLIT_FACTION` creates a `DPARTY…` dynamic party, moves listed faction members, and leaves the new party `leadership_vacant` with `PARTY_LEADERSHIP_CONTEST_REQUIRED`. It does not silently appoint `movers[0]` as leader.
@@ -363,24 +421,24 @@ PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolve
 - **Support:** bloc utility combines party habit, issue-salience-weighted public ideological fit (salience grouped by ideology axis then normalized so issue-ID cardinality does not overweight an axis), regional/home connection, incumbency/office/leadership, public standing, and sparse national/constituency/issue environment. Softmax with temperature `SUPPORT_SOFTMAX_TEMPERATURE` yields nonnegative shares summing to 1. Exact latent support is simulation truth, not NPC omniscience; `DecisionActorContext` does not receive it. Selectorates may use a small public standing/poll signal only.
 - **Turnout:** aggregated, no voter entities. `registered_2028 = round(population_now × registered_2026 / population_2026)`. Rate mixes canonical `turnout_propensity`, 2026 turnout, election importance, mean enthusiasm, and bounded `campaigns`-stream noise, then clamps. Invalid/blank uses the 2026 rate plus bounded noise. `ballotsCast = invalidOrBlank + validVoteValue` exactly. Valid ballot-group weights are integers from largest remainder and sum to `validVoteValue`.
 - **Polls:** `POLL…` historical records. House effects are centered party vote-share-point offsets, split among same-party candidates, then renormalized. Sample size is explicit or drawn in the pollster range. Quality lowers model-error variance; it never reveals exact latent support. Published polls are not rewritten when candidates later die, switch party, or withdraw. IDs are counters, not RNG.
-- **ElectionState:** separate from `PartyContest`. Statuses: `planned` → `field_open` → `field_finalized` → `voting` → `resolved` / `cancelled`. Canonical 2028 presidential election `ELEC_PRES_2028` starts unfinalized with no nominees. Nomination winners sync into the general-election field without mutating contest archives. Presidential counts call `countIrv`; Assembly constituency counts call `countStv`. Resolved archives replay from stored ballots and lot draws. Current eligibility is checked only for unresolved fields.
+- **ElectionState:** separate from `PartyContest`. Statuses: `planned` → `field_open` → `field_finalized` → `voting` → `resolved` / `cancelled`. Canonical 2028 presidential election `ELEC_PRES_2028` starts unfinalized with no nominees. Current-cycle helpers choose the earliest unresolved/upcoming election rather than a canonical ID. Nomination winners sync into their metadata-linked general-election field without mutating contest archives. Presidential counts call `countIrv`; Assembly constituency counts call `countStv`. Resolved archives replay from stored ballots and lot draws. Current eligibility is checked only for unresolved fields.
 - **DomainResolutionRecord:** `DRES…` evidence for a processed `requiresResolution` event (election or presidential assumption). `RESOLVE_PRESIDENTIAL_ELECTION` is transactional: failure leaves hash, counters, and RNG unchanged when validation can run before draws.
 - **Presidential transition:** a regular election winner is immediately `certifiedPresidentElectId` and that victory counts as an elected term. Assumption is 20 January following. Incompatible prior offices (MP/governor/minister) end with structured reasons; vacancies are not auto-filled. The next regular presidential date is calculated from canonical calendar rules, never hardcoded as 2033. If the president-elect cannot assume, the engine raises a typed constitutional block rather than inventing a successor.
 
 ### 14.4 Campaigns (Phase 5)
 
-- **Separate runtime:** `campaignRuntime.campaigns` / `debates` / `lastMonthProcessed`. Not a second politician object. Types: `presidential_nomination` | `presidential_general` | `assembly`. Statuses: `exploring` | `active` | `withdrawn` | `won` | `lost` | `ended`.
-- **Resources:** integer `cashOnHand` / `totalRaised` / `totalSpent` (no negatives, no debt). Capacities in `[0,1]`. Sparse `organizationByConstituency`. Compact `recentEffects` for diminishing returns. Monthly action points (base 2, max 3 with office bonus).
+- **Separate runtime:** `campaignRuntime.campaigns` / `debates` / `lastMonthProcessed`. Not a second politician object. Types: `presidential_nomination` | `presidential_general` | `assembly` | `gubernatorial`. Statuses: `exploring` | `active` | `withdrawn` | `won` | `lost` | `ended`.
+- **Resources:** integer `cashOnHand` / `totalRaised` / `totalSpent` (no negatives, no debt). Capacities in `[0,1]`. `fieldOrganization` is national infrastructure; sparse `organizationByProvince` and `organizationByConstituency` are geographic layers. Compact `recentEffects` supports diminishing returns and recent-presence UI. Monthly maintenance preserves part of infrastructure while slowly decaying unattended province/constituency organization.
 - **Actions:** player commands only for `playerPoliticianId` (`CAMPAIGN_SEEK_NOMINATION_SUPPORT` is the Labour/Green/Regional League qualification milestone). NPCs get Phase 2 `DecisionOption`s from public polls, standing, endorsements, resources, and own hidden skills/traits. Opponent hidden truth is not an input. Effects clamp per action (`STANDING_DELTA.maxPerAction` / `PUBLIC_EFFECT_CLAMP`) and decay momentum monthly. Attacks, contrast ads, and negative ads require a living rival in the same race (`contestId` for nominations, `electionId` for presidential generals, constituency/election for assembly).
-- **Nomination calendar:** operational offsets from the presidential election date (`packages/sim/src/campaigns/timeline.ts`): open −9 months, qualification/resolution −2 months, field finalize −1 month. Institutional `openPartyContest` / `applyQualification` / `resolvePartyContest` / `finalizePresidentialField` — not player or DEV commands. Failed remaining declared candidacies close; zero qualified candidates cancel the contest; one qualified candidate may win. NU uses real caucus endorsements (NPC outreach may batch a few MPs, each via Phase 2 `chooseEndorsement`). PM seeks `PORG:{partyId}:{provinceId}` endorsements. Civic Reform has no candidate supporter-registration gate.
-- **Integration:** an active nomination campaign must match a `PartyContest` entry; a general campaign must match an `ElectionCandidate`. Withdrawal reconciles both. Nomination winners inherit cash/org into a linked general campaign. Field organization multiplies that candidate's realized constituency shares by `1 + FIELD.turnoutScale * org[cid]` then renormalizes; it does not raise every candidate's turnout. Phase 5 schedules lightweight public nomination polls (`electionId: null`, `metadata.contestId`); `createPoll()` remains Phase 4. Selectorate electability uses standing plus that contest's poll average, never latent support and never another party's polls.
+- **Nomination calendar:** operational offsets are computed from each linked presidential election date (`packages/sim/src/campaigns/timeline.ts`): open −9 months, qualification/resolution −2 months, field finalize −1 month. `ensurePresidentialNominationContests` creates one fresh contest per membership party for the future cycle. Future NPC interest derives from current eligibility, office/career state, standing, leadership, history, term limits, and strategic context; the player is never added by NPC logic. Institutional `openPartyContest` / `applyQualification` / `resolvePartyContest` / `finalizePresidentialField` operate on the linked cycle, not a 2028 constant.
+- **Integration:** an active nomination campaign must match a `PartyContest` entry; a general campaign must match an `ElectionCandidate`; an Assembly campaign must match one filed candidacy in one constituency. Withdrawal reconciles the owning field. Nomination winners inherit cash/org into a linked general campaign. Field organization multiplies that candidate's realized constituency shares by a bounded factor and renormalizes; it does not edit totals or expose latent support. Assembly results close active campaigns as won/lost while preserving withdrawn records.
 - **Start:** TERENA_2028 has zero campaigns until declare. Canonical `presidentialStatus` seeds public standing once at init and is not reapplied by `candidateStandingOrDefault`.
 
 ### 14.5 Legislature (Phase 6)
 
 - **Separate runtime:** `legislatureRuntime` on `SimState`. Assembly membership is derived from current active/suspended `assembly_member` terms; it is never a copied politician array.
 - **Committees:** five functional bodies (`COMMITTEE_ECONOMIC`, `COMMITTEE_SOCIAL_ECONOMIC`, `COMMITTEE_SOCIAL`, `COMMITTEE_INSTITUTIONAL`, `COMMITTEE_FOREIGN`) mapped from issue dimensions. Deterministic proportional membership from current MPs, including factions and the player if they sit. Not canonical content committees.
-- **Bills:** `BILL…` structured `PolicyItem`s (`issueId`, `direction`, `magnitude`, `fiscalImpact`). Lifecycle: introduce (status `committee`, `stageReadyDate` = that month) → next month or later committee vote → next month or later floor vote if passed → president sign/return → returned bills wait a month before repassage → `LAW…` archive. A bill is visible before any vote involving the player is tallied. Amendments are `AMD…` policy replacements, not bribery. A proposed amendment is adopted or rejected (ordinary majority of votes cast, tie fails) before the parent bill leaves that stage; adopted amendments replace the bill's `PolicyItem`s.
+- **Bills:** `BILL…` stores one to three structured `PolicyItem`s (`issueId`, `direction`, `magnitude`, `fiscalImpact`, optional `provisionId` / `optionId`). A Phase 11.2 provision registry maps concrete legal categories and named options to those simulation effects, current-law copy, change copy and estimated public index effects. Lifecycle: introduce (status `committee`, `stageReadyDate` = that month) → next month or later committee vote → next month or later floor vote if passed → president sign/return → returned bills wait a month before repassage → `LAW…` archive. A bill is visible before any vote involving the player is tallied. Amendments are `AMD…` policy replacements, not bribery. A proposed amendment is adopted or rejected (ordinary majority of votes cast, tie fails) before the parent bill leaves that stage; adopted amendments replace the bill's `PolicyItem`s.
 - **Votes:** `LVOTE…`. `CAST_LEGISLATIVE_VOTE` targets `{ billId, stage, choice, amendmentId? }` where `stage` is `committee` | `floor` | `repassage`. Pending player choices cannot cross stages. Ordinary committee/floor: simple majority of yes vs no among votes cast; tie fails (implementation default). After suspensive return: yes ≥ world `legislativeConstitution.assemblyAbsoluteMajority` (Terena: **211** from authorized 420 seats in `terena_constitution.json`, not current attendance/vacancies). NPC ballots are individual Phase 2 decisions; party/faction recommendations are pressure only. Uncast player votes are `ABSTAIN`.
 - **President:** NPC uses Phase 2 `SIGN_BILL` / `RETURN_BILL`. Player president is never auto-decided; the bill stays `sent_to_president` until those commands.
 - **Speaker:** current `speaker` office holder. NPC Speaker may reorder the floor queue by party. Player Speaker does not receive autonomous political scheduling; clerical FIFO continues. `SCHEDULE_BILL` / `DELAY_BILL` are explicit player commands.
@@ -394,12 +452,32 @@ PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolve
 - **Commands:** `APPOINT_MINISTER` / `DISMISS_MINISTER` (current presidential authority, including Acting President); `ISSUE_REGULATION` (structured `PolicyItem`s; major regulations carry a review deadline); `INTRODUCE_MOTION` / `CAST_MOTION_VOTE`; `PROPOSE_BUDGET`; `DECLARE_EMERGENCY` / `BEGIN_WAR_POWERS` only when a legitimate domain/test trigger is set. Player President is never auto-decided.
 - **Motions:** `MOT…` with `stageReadyDate`. Tally next month or later. Player pending vote cannot be skipped into a later motion. Uncast = abstain. Censure: yes ≥ ceil(authorized seats × 0.55). Other Phase-7 motions: simple majority of votes cast, tie fails (documented default).
 - **Budget:** calendar-year fiscal cycle. If a new proposal is not approved, the previous lawful budget continues. No shutdown.
-- **Emergency / war:** structured state only. No random generation. Phase 8/10 add court review and actual wars.
+- **Emergency / war:** structured state only. No random generation. Phase 8 adds constitutional court review of emergencies; actual wars wait for Phase 10.
 - **IDs:** `REG…`, `MOT…`, `EMG…`, `WAR…`, `BUD…`.
 
 ### 14.7 Game UI (Phase 7)
 
-`apps/game` is a React 19 + Vite host. It never mutates `SimState` entities directly. Browser content loading uses Vite `import.meta.glob` of canonical `data/` and `maps/` through `@lorsain/content-loader` (not `/node`). Saves persist serialized `SaveFile`s in IndexedDB (Dexie) and round-trip through `parseSaveFile` / `restoreSimulation`. Normal UI shows public facts, polls, and qualitative labels — not hidden traits, skills, private goals, or latent support. Developer/debug mode may expose numbers separately.
+`apps/game` is a React 19 + Vite host. It never mutates `SimState` entities directly. Browser content loading uses Vite `import.meta.glob` of canonical `data/` and `maps/` through `@lorsain/content-loader` (not `/node`). Saves persist serialized `SaveFile`s in IndexedDB (Dexie) and round-trip through `parseSaveFile` / `restoreSimulation`. Normal UI shows public facts, polls, and qualitative labels — not hidden traits, skills, private goals, or latent support. Developer/debug mode may expose numbers separately. Phase 8 adds a role-aware Courts screen.
+
+### 14.8 Constitutional Court (Phase 8)
+
+- **Separate runtime:** `constitutionalRuntime` on `SimState`. The nine-judge bench is **derived** from active `constitutional_court_justice` `OfficeTerm`s. Do not store an authoritative parallel roster.
+- **Constitutional parameters:** `KernelWorld.courtConstitution` from `terena_constitution.json` (9 judges, 12-year terms, `renewable` boolean — false for Terena, confirmation fraction 0.6 → **252** of 420 authorized seats, recall referral 0.6 → **252**). When `renewable === false`, a politician who has ever held a substantive Constitutional Court `OfficeTerm` (any seat, including ended terms) cannot be nominated again (`COURT_TERM_NONRENEWABLE`). Impeachment uses `ceil(seats * 2 / 3)` → **280**, not the rounded 0.6666667 percent helper. Vacancies do not shrink the Assembly denominator.
+- **Nomination:** vacancy → `awaiting_nomination` → `NOMINATE_CONSTITUTIONAL_JUDGE` (player President only; NPC President via Phase 2). Assembly confirmation next month. Player MP is never auto-voted; missed vote is `ABSTAIN`.
+- **Cases:** `CASE…` with structured `caseType`, petitioner/respondent, challenged entity, constitutional question/rule, meritsLean, participating judges, votes, disposition. Types: `LAW_REVIEW`, `REGULATION_REVIEW`, `EXECUTIVE_ACTION_REVIEW`, `EMERGENCY_REVIEW`, `ELECTION_CONSTITUTIONAL_DISPUTE`, `IMPEACHMENT_JUDGMENT`. Active caseload capped at 3 except impeachment judgments.
+- **Decisions:** `CDEC…`. `UPHOLD` / `INVALIDATE`. Player judge never auto-votes; missed deadline is `nonparticipation`. Invalidated laws stay archived with `operative: false`. Regulations may be `active`, `annulled`, `invalidated`, or `expired`. Lightweight `PrecedentRecord`s influence later similar cases.
+- **Grounds:** `CGND…` `ConstitutionalGroundsRecord`s (`id`, `targetPoliticianId`, `grounds`, `sourceKind`, `sourceId`, `createdDate`, `evidenceStrength`, `severity`, `public`, `status`, `metadata`). Phase 8 may create them from serious Court invalidations of presidential emergencies, major regulations, executive actions, or war powers. Future corruption/treason/scandal systems may add more. Normal 2028 play may have none.
+- **Impeachment:** `IMPEACH…`. Command is `INTRODUCE_IMPEACHMENT { basisId }`. Target and grounds derive from an available public basis against the current President. Assembly 280 YES then Court `IMPEACHMENT_JUDGMENT` using copied `evidenceStrength` / `severity`, not the grounds label as fake evidence. Only a Court INVALIDATE creates a presidential vacancy through existing Phase 1 succession.
+- **Recall:** `RECALL…`. Assembly 252 YES refers a national YES/NO vote (60-day window) using Phase 4 blocs/public standing. Success uses existing succession. Recall is political; impeachment is constitutional.
+- **IDs:** `CASE…`, `CNOM…`, `CDEC…`, `IMPEACH…`, `RECALL…`, `CGND…`.
+
+### 14.9 Economy and provincial government (Phases 9 / 11.2)
+
+- **Canonical start:** `terena_economy_2028.json` contains scenario date, six national indices plus fiscal pressure, six sector profiles, and 21 province profiles. Province profiles contain starting conditions/employment/housing, six normalized sector exposures, growth/inflation/housing/trade sensitivities, bounded annual structural trends, and a short public character description.
+- **Economy runtime:** `national`, `sectors`, `provinces`, national `history`, `sectorHistory`, `provinceHistory`, lagged policy effects, shocks, applied policy sources, cycle phase/momentum/month count, and last processed month. History is bounded to 120 monthly points.
+- **Provincial runtime:** `provinces`, `pressures`, `actions`, `elections`, and last processed month. Province state stores administrative priority, investment emphasis/momentum, political capital, public standing, federal relationship, two monthly action points, and an optional active pressure.
+- **Gubernatorial election:** stable ID `ELEC_GOV_<province>_<year>`; status `planned | filing_open | field_finalized | resolved | assumed`; province, election/filing/assumption dates, incumbent, candidate records, optional winner, vote shares/total, and public result metadata. Each politician can occur once in a race; the player enters only through an explicit command.
+- **Authority:** Governor commands validate a current substantive governorship for the target province. Minister and Mayor bounded commands validate their corresponding current office. UI visibility is never authority.
 
 ## 15. Map contract
 

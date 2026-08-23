@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  collectPlayerActionableDecisions,
+  addMonths,
   createSimulation,
+  nominationCalendarDates,
   parseSaveFile,
   restoreSimulation,
   type KernelWorld,
@@ -20,17 +23,13 @@ import {
   readImportedSave,
   type SavedGameRow,
 } from "./saves.js";
-import {
-  isMp,
-  isPresident,
-  isSpeaker,
-  partyName,
-  playerCampaign,
-  playerOffices,
-  politicianName,
-} from "./format.js";
+import { playerCampaign, playerOffices, politicianName } from "./format.js";
 import { GamePages, type Figure, type Screen } from "./pages.js";
 import { DecisionPanel } from "./decisions.js";
+import { useCommandFeedback } from "./feedback.js";
+import { catalogFromBundle, partyDisplayName, politicianDisplayName } from "./presentation.js";
+import { GameShell } from "./ui/shell.js";
+import { PoliticianCard } from "./ui/politician.js";
 
 export default function App() {
   const [bundle, setBundle] = useState<ContentBundle | null>(null);
@@ -41,13 +40,20 @@ export default function App() {
   const [snap, setSnap] = useState<SimState | null>(null);
   const [screen, setScreen] = useState<Screen>("home");
   const [busy, setBusy] = useState(false);
+  const [busyLabel, setBusyLabel] = useState("Processing…");
+  const busyRef = useRef(false);
+  const [countingElection, setCountingElection] = useState(false);
   const [turnEvents, setTurnEvents] = useState<SimEvent[]>([]);
   const [saves, setSaves] = useState<SavedGameRow[]>([]);
   const [query, setQuery] = useState("");
   const [partyFilter, setPartyFilter] = useState("all");
+  const [officeFilter, setOfficeFilter] = useState("all");
+  const [provinceFilter, setProvinceFilter] = useState("all");
+  const [browsePage, setBrowsePage] = useState(0);
   const [selectedBill, setSelectedBill] = useState<string | null>(null);
   const [mapHover, setMapHover] = useState<string | null>(null);
   const [debug, setDebug] = useState(false);
+  const feedback = useCommandFeedback();
 
   useEffect(() => {
     try {
@@ -64,6 +70,10 @@ export default function App() {
     for (const f of (bundle?.content.starting_figures.figures ?? []) as Figure[]) map.set(f.id, f);
     return map;
   }, [bundle]);
+  const catalog = useMemo(
+    () => (bundle ? catalogFromBundle(bundle, figures) : null),
+    [bundle, figures],
+  );
 
   function refresh(next: Simulation) {
     setSim(next);
@@ -110,21 +120,87 @@ export default function App() {
     refresh(restored);
   }
 
-  function endTurn() {
-    if (!sim) return;
-    setBusy(true);
-    window.setTimeout(() => {
-      const before = sim.getSnapshot().history.length;
-      let result = sim.executeCommand({ type: "ADVANCE_TURN" });
-      if (result.ok && result.interrupt && !result.interrupt.requiresResolution) {
-        sim.executeCommand({ type: "ACKNOWLEDGE_INTERRUPT" });
-        result = sim.executeCommand({ type: "RESUME_TURN" });
+  function replaceSimulation(save: SaveFile) {
+    if (!world) return;
+    const restored = restoreSimulation(save, world);
+    refresh(restored);
+  }
+
+  function resolveAssemblyElection() {
+    if (!sim || !world || busy || countingElection) return;
+    setCountingElection(true);
+    const worker = new Worker(new URL("./electionWorker.ts", import.meta.url), { type: "module" });
+    worker.onmessage = (event: MessageEvent<
+      | { ok: true; save: SaveFile; result: ReturnType<Simulation["executeCommand"]> }
+      | { ok: false; message: string }
+    >) => {
+      worker.terminate();
+      try {
+        if (event.data.ok) {
+          feedback.report(event.data.result);
+          if (event.data.result.ok) replaceSimulation(event.data.save);
+        } else {
+          feedback.setNotice(event.data.message);
+        }
+      } catch (error) {
+        feedback.setNotice(
+          error instanceof Error ? error.message : "The Assembly count could not be restored.",
+        );
+      } finally {
+        setCountingElection(false);
       }
-      setTurnEvents(sim.getSnapshot().history.slice(before));
-      refresh(sim);
+    };
+    worker.onerror = (event) => {
+      worker.terminate();
+      feedback.setNotice(event.message || "The Assembly count could not be completed.");
+      setCountingElection(false);
+    };
+    worker.postMessage({ save: sim.serializeSave(), world });
+  }
+
+  function endTurn() {
+    if (!sim || !world || busyRef.current || countingElection) return;
+    busyRef.current = true;
+    const before = sim.getSnapshot().history.length;
+    const nextMonth = addMonths(snap?.currentDate ?? sim.getSnapshot().currentDate, 1);
+    const nominationDue = Object.values(sim.getSnapshot().partyContests).some((contest) => {
+      if (contest.type !== "presidential_nomination") return false;
+      if (contest.status === "resolved" || contest.status === "cancelled") return false;
+      const electionDate = contest.metadata.electionDate;
+      if (typeof electionDate !== "string") return false;
+      return nominationCalendarDates(electionDate).resolve <= nextMonth;
+    });
+    setBusyLabel(nominationDue ? "Counting nominations…" : "Processing…");
+    setBusy(true);
+    const worker = new Worker(new URL("./turnWorker.ts", import.meta.url), { type: "module" });
+    worker.onmessage = (event: MessageEvent<
+      | { ok: true; save: SaveFile; result: ReturnType<Simulation["executeCommand"]> }
+      | { ok: false; message: string }
+    >) => {
+      worker.terminate();
+      try {
+        if (event.data.ok) {
+          const restored = restoreSimulation(event.data.save, world);
+          setTurnEvents(restored.getSnapshot().history.slice(before));
+          refresh(restored);
+          if (!event.data.result.ok) feedback.setNotice(event.data.result.error.message);
+        } else {
+          feedback.setNotice(event.data.message);
+        }
+      } catch (error) {
+        feedback.setNotice(error instanceof Error ? error.message : "The turn could not be restored.");
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
+    };
+    worker.onerror = (event) => {
+      worker.terminate();
+      feedback.setNotice(event.message || "The turn could not be completed.");
+      busyRef.current = false;
       setBusy(false);
-      if (!result.ok) setError(result.error.message);
-    }, 20);
+    };
+    worker.postMessage({ save: sim.serializeSave(), world });
   }
 
   if (error) {
@@ -217,40 +293,116 @@ export default function App() {
     );
   }
   if (mode === "select") {
-    const list = (bundle.content.starting_figures.figures as Figure[])
+    const figuresList = bundle.content.starting_figures.figures as Figure[];
+    function officeKind(f: Figure): string {
+      const o = (f.office ?? "").toLowerCase();
+      if (o.includes("president of")) return "president";
+      if (o.includes("governor")) return "governor";
+      if (o.includes("minister")) return "minister";
+      if (o.includes("leader of") || o.includes("speaker")) return "leader";
+      if (o.includes("assembly") || o.includes("mp") || o.includes("committee")) return "assembly";
+      if (o.includes("justice") || o.includes("judge")) return "courts";
+      return "other";
+    }
+    function careerRank(f: Figure): number {
+      const o = (f.office ?? "").toLowerCase();
+      if (o.includes("president of")) return 0;
+      if (o.includes("speaker")) return 1;
+      if (o.includes("leader of")) return 2;
+      if (o.includes("governor")) return 3;
+      if (o.includes("chief justice")) return 4;
+      if (f.presidential_status === "frontrunner") return 5;
+      if (o.includes("assembly") || o.includes("mp")) return 6;
+      return 99;
+    }
+    function roleDescription(f: Figure): string {
+      const kind = officeKind(f);
+      if (kind === "president") return "Run the national executive and foreign policy.";
+      if (kind === "governor") return "Lead provincial administration and build toward reelection or national office.";
+      if (kind === "assembly") return "Legislate, vote and build a political career.";
+      if (kind === "courts") return "Hear constitutional cases and shape public precedent.";
+      if (kind === "leader") return "Manage party politics alongside the powers of any elected office held.";
+      if (kind === "minister") return "Limited role: advise the President and pursue a broader political career.";
+      if ((f.office ?? "").toLowerCase().includes("mayor")) return "Limited role: set a civic priority and pursue future office.";
+      return "Continue a political career and seek a legitimate electoral opportunity.";
+    }
+    const filtered = figuresList
       .filter((f) => {
         const q = query.trim().toLowerCase();
         const hay = `${f.name} ${f.office} ${f.party} ${f.home} ${f.notes ?? ""}`.toLowerCase();
         if (q && !hay.includes(q)) return false;
         if (partyFilter !== "all" && f.party_id !== partyFilter) return false;
+        if (officeFilter !== "all" && officeKind(f) !== officeFilter) return false;
+        if (provinceFilter !== "all" && (f.home ?? "") !== provinceFilter) return false;
         return true;
       })
       .sort((a, b) => {
-        const rank = (f: Figure) =>
-          f.office?.toLowerCase().includes("president")
-            ? 0
-            : f.presidential_status === "frontrunner"
-              ? 1
-              : f.presidential_status === "likely"
-                ? 2
-                : f.presidential_status
-                  ? 3
-                  : 4;
-        const d = rank(a) - rank(b);
+        const d = careerRank(a) - careerRank(b);
         return d !== 0 ? d : a.name.localeCompare(b.name);
       });
+    const searching =
+      query.trim().length > 0 ||
+      partyFilter !== "all" ||
+      officeFilter !== "all" ||
+      provinceFilter !== "all";
+    const provinces = [
+      ...new Set(figuresList.map((f) => f.home).filter((h): h is string => Boolean(h))),
+    ].sort((a, b) => a.localeCompare(b));
+    const featured = figuresList
+      .filter((f) => careerRank(f) < 99)
+      .sort((a, b) => careerRank(a) - careerRank(b) || a.name.localeCompare(b.name))
+      .slice(0, 18);
+    const pageSize = 18;
+    const browse = searching ? filtered : filtered.filter((f) => careerRank(f) === 99);
+    const pageCount = Math.max(1, Math.ceil(browse.length / pageSize));
+    const page = Math.min(browsePage, pageCount - 1);
+    const pageRows = browse.slice(page * pageSize, page * pageSize + pageSize);
+    const tempCatalog = catalogFromBundle(bundle, figures);
+    const card = (f: Figure) => (
+      <PoliticianCard
+        key={f.id}
+        catalog={tempCatalog}
+        world={world}
+        politicianId={f.id}
+        name={f.name}
+        partyLabel={f.party ?? "Independent"}
+        partyId={f.party_id ?? null}
+        {...(f.office ? { office: f.office } : {})}
+        {...(f.home ? { home: f.home } : {})}
+        descriptor={`${roleDescription(f)}${f.notes ?? f.display_summary ? ` ${f.notes ?? f.display_summary}` : ""}`}
+        action={
+          <button className="btn" onClick={() => startGame(f.id)}>
+            Play
+          </button>
+        }
+      />
+    );
     return (
-      <div className="page">
-        <h2>Choose a politician</h2>
-        <p className="muted">Public offices and biographies only. Hidden traits are not shown.</p>
-        <div className="row">
+      <div className="page new-game-page">
+        <div className="new-game-header">
+          <h2 className="serif-head">Choose your career</h2>
+          <p className="muted">
+            Begin as a notable officeholder, or search the full public roster. Hidden traits are
+            never shown.
+          </p>
+        </div>
+        <div className="row new-game-filters">
           <input
             className="search"
-            placeholder="Search"
+            placeholder="Search by name, office, party, or home"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setBrowsePage(0);
+            }}
           />
-          <select value={partyFilter} onChange={(e) => setPartyFilter(e.target.value)}>
+          <select
+            value={partyFilter}
+            onChange={(e) => {
+              setPartyFilter(e.target.value);
+              setBrowsePage(0);
+            }}
+          >
             <option value="all">All parties</option>
             {Object.values(world.partyDefinitions).map((p) => (
               <option key={p.partyId} value={p.partyId}>
@@ -258,116 +410,132 @@ export default function App() {
               </option>
             ))}
           </select>
+          <select
+            value={officeFilter}
+            onChange={(e) => {
+              setOfficeFilter(e.target.value);
+              setBrowsePage(0);
+            }}
+          >
+            <option value="all">All offices</option>
+            <option value="president">President</option>
+            <option value="governor">Governors</option>
+            <option value="minister">Ministers</option>
+            <option value="leader">Party leaders</option>
+            <option value="assembly">Assembly</option>
+            <option value="courts">Courts</option>
+          </select>
+          <select
+            value={provinceFilter}
+            onChange={(e) => {
+              setProvinceFilter(e.target.value);
+              setBrowsePage(0);
+            }}
+          >
+            <option value="all">All provinces</option>
+            {provinces.map((home) => (
+              <option key={home} value={home}>
+                {home}
+              </option>
+            ))}
+          </select>
           <button className="btn secondary" onClick={() => setMode("title")}>
             Back
           </button>
         </div>
-        <div className="list" style={{ marginTop: "1rem" }}>
-          {list.slice(0, 80).map((f) => (
-            <div className="pick" key={f.id}>
-              <div>
-                <strong>{f.name}</strong>
-                <div className="muted">
-                  {f.office ?? "Private citizen"} · {f.party ?? "Independent"}
-                  {f.faction ? ` / ${f.faction}` : ""} · {f.home}
-                </div>
-                <div className="muted">{f.notes ?? f.display_summary}</div>
-              </div>
-              <button className="btn" onClick={() => startGame(f.id)}>
-                Play
-              </button>
-            </div>
-          ))}
-        </div>
+        {!searching ? (
+          <>
+            <h3>Featured careers</h3>
+            <div className="featured-grid">{featured.map(card)}</div>
+            <h3 style={{ marginTop: "1.25rem" }}>Find another politician</h3>
+            <p className="muted">Ordinary MPs and other public figures — {browse.length} remaining.</p>
+          </>
+        ) : (
+          <p className="muted">{filtered.length} matching politicians</p>
+        )}
+        <div className="featured-grid">{pageRows.map(card)}</div>
+        {pageCount > 1 ? (
+          <div className="row" style={{ marginTop: "0.75rem" }}>
+            <button
+              className="btn secondary"
+              disabled={page <= 0}
+              onClick={() => setBrowsePage((p) => Math.max(0, p - 1))}
+            >
+              Previous
+            </button>
+            <span className="muted">
+              Page {page + 1} of {pageCount}
+            </span>
+            <button
+              className="btn secondary"
+              disabled={page >= pageCount - 1}
+              onClick={() => setBrowsePage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   }
-  if (!sim || !snap) return null;
+  if (!sim || !snap || !catalog) return null;
   const player = snap.politicians[snap.playerPoliticianId]!;
   const offices = playerOffices(world, snap, snap.playerPoliticianId);
+  const roleKind = Object.values(snap.officeTerms)
+    .filter((term) => term.holderId === snap.playerPoliticianId && (term.status === "active" || term.status === "suspended"))
+    .map((term) => world.offices[term.officeId]?.kind)
+    .find(Boolean) ?? "private_citizen";
   const interrupt = snap.pendingInterrupt;
+  const decisionCount = collectPlayerActionableDecisions(world, snap).length;
   return (
-    <div className={`shell ${busy ? "busy" : ""}`}>
-      <nav className="nav">
-        <h2>Lorsain</h2>
-        {(
-          [
-            ["home", "Home"],
-            ["career", "Career"],
-            ["assembly", "Assembly"],
-            ["party", "Party"],
-            ["campaign", "Campaign"],
-            ["elections", "Elections"],
-            ["executive", "Executive"],
-            ["terena", "Terena"],
-            ["archive", "Archive"],
-          ] as const
-        ).map(([id, label]) => (
-          <button key={id} className={screen === id ? "active" : ""} onClick={() => setScreen(id)}>
-            {label}
-          </button>
-        ))}
-      </nav>
-      <div className="main">
-        <header className="topbar">
-          <div>
-            <strong>{snap.currentDate}</strong>
-            <div className="muted">
-              {politicianName(figures, snap.playerPoliticianId)} · {offices[0] ?? "No office"} ·{" "}
-              {partyName(world, player.partyId)}
-            </div>
-          </div>
-          <div className="row">
-            {busy ? <span className="muted">Processing…</span> : null}
-            <button className="btn secondary" onClick={() => void saveGame()}>
-              Save
-            </button>
-            <button
-              className="btn secondary"
-              onClick={() => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`)}
-            >
-              Export
-            </button>
-            <button
-              className="btn"
-              onClick={endTurn}
-              disabled={busy || Boolean(interrupt?.requiresResolution)}
-            >
-              End Turn
-            </button>
-          </div>
-        </header>
-        <div className="page">
-          <DecisionPanel
-            world={world}
-            snap={snap}
-            sim={sim}
-            interrupt={interrupt}
-            mp={isMp(world, snap, snap.playerPoliticianId)}
-            president={isPresident(world, snap, snap.playerPoliticianId)}
-            speaker={isSpeaker(world, snap, snap.playerPoliticianId)}
-            onDone={() => refresh(sim)}
-          />
-          <GamePages
-            screen={screen}
-            world={world}
-            snap={snap}
-            sim={sim}
-            bundle={bundle}
-            figures={figures}
-            offices={offices}
-            events={turnEvents}
-            campaign={playerCampaign(snap)}
-            selectedBill={selectedBill}
-            setSelectedBill={setSelectedBill}
-            mapHover={mapHover}
-            setMapHover={setMapHover}
-            debug={debug}
-            setDebug={setDebug}
-            onDone={() => refresh(sim)}
-          />
-        </div>
-      </div>
-    </div>
+    <GameShell
+      screen={screen}
+      onNavigate={setScreen}
+      date={snap.currentDate}
+      playerLine={`${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`}
+      decisionCount={decisionCount}
+      roleKind={roleKind}
+      campaignActive={Boolean(playerCampaign(snap))}
+      busy={busy || countingElection}
+      busyLabel={countingElection ? "Counting Assembly ballots…" : busyLabel}
+      endTurnDisabled={Boolean(interrupt?.requiresResolution)}
+      onEndTurn={endTurn}
+      onSave={() => void saveGame()}
+      onExport={() => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`)}
+    >
+      <DecisionPanel
+        world={world}
+        snap={snap}
+        sim={sim}
+        onDone={() => refresh(sim)}
+        report={feedback.report}
+        countingElection={countingElection}
+        onResolveAssembly={resolveAssemblyElection}
+      />
+      <GamePages
+        screen={screen}
+        world={world}
+        snap={snap}
+        sim={sim}
+        bundle={bundle}
+        catalog={catalog}
+        figures={figures}
+        offices={offices}
+        events={turnEvents}
+        campaign={playerCampaign(snap)}
+        selectedBill={selectedBill}
+        setSelectedBill={setSelectedBill}
+        mapHover={mapHover}
+        setMapHover={setMapHover}
+        debug={debug}
+        setDebug={setDebug}
+        onDone={() => refresh(sim)}
+        report={feedback.report}
+        countingElection={countingElection}
+        onResolveAssembly={resolveAssemblyElection}
+        askConfirm={feedback.askConfirm}
+      />
+      {feedback.overlay()}
+    </GameShell>
   );
 }

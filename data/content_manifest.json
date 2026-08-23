@@ -4,6 +4,7 @@
   "authoritative": {
     "world_countries": "data/world_countries.json",
     "world_institutions": "data/world_institutions.json",
+    "world_leaders": "data/world_leaders.json",
     "terena_constitution": "data/terena_constitution.json",
     "terena_parties": "data/terena_parties.json",
     "terena_nomination_rules": "data/terena_nomination_rules.json",
@@ -24,6 +25,7 @@
     "terena_historical_candidates_2026": "data/terena_historical_candidates_2026.json",
     "terena_voter_blocs_2028": "data/terena_voter_blocs_2028.json",
     "terena_pollsters": "data/terena_pollsters.json",
+    "terena_economy_2028": "data/terena_economy_2028.json",
     "world_svg": "maps/world_political.svg",
     "terena_svg": "maps/terena_game_map.svg"
   },

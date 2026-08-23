@@ -37,7 +37,7 @@ export function activeCampaignFor(
         (c.status === "active" || c.status === "exploring") &&
         (type ? c.type === type : true),
     )
-    .sort((a, b) => (a.id < b.id ? -1 : 1))[0];
+    .sort((a, b) => b.launchedDate.localeCompare(a.launchedDate) || b.id.localeCompare(a.id))[0];
 }
 
 export function allocateCampaignId(state: SimState): string {
@@ -72,6 +72,7 @@ export function createCampaignRecord(
     fundraisingCapacity: partial.fundraisingCapacity ?? 0.2,
     fieldOrganization: partial.fieldOrganization ?? 0.12,
     mediaCapacity: partial.mediaCapacity ?? 0.12,
+    organizationByProvince: { ...(partial.organizationByProvince ?? {}) },
     organizationByConstituency: { ...(partial.organizationByConstituency ?? {}) },
     recentEffects: [...(partial.recentEffects ?? [])],
     debatePrep: partial.debatePrep ?? 0,

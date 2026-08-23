@@ -6,6 +6,7 @@ import {
   ConstituencyPropertiesSchema,
   CrosswalkFileSchema,
   ElectoralCountingSchema,
+  Economy2028FileSchema,
   HistoricalCandidates2026Schema,
   IssuesFileSchema,
   ManifestSchema,
@@ -24,10 +25,12 @@ import {
   VoterBlocsFileSchema,
   WorldCountriesFileSchema,
   WorldInstitutionsFileSchema,
+  WorldLeadersFileSchema,
   type CitiesFile,
   type ConstitutionFile,
   type CrosswalkFile,
   type ElectoralCountingFile,
+  type Economy2028File,
   type GeoJsonFeatureCollection,
   type IssuesFile,
   type Manifest,
@@ -42,6 +45,7 @@ import {
   type StartingFiguresFile,
   type WorldCountriesFile,
   type WorldInstitutionsFile,
+  type WorldLeadersFile,
 } from "@lorsain/content-schema";
 
 export type ValidationIssue = { level: "error" | "warning"; message: string };
@@ -63,6 +67,7 @@ export type ContentIndex = {
   hasFigureId(id: string): boolean;
   hasIssueId(id: string): boolean;
   hasInstitutionId(id: string): boolean;
+  hasWorldLeaderId(id: string): boolean;
   worldCountryIds(): readonly string[];
   provinceIds(): readonly string[];
   constituencyIds(): readonly string[];
@@ -75,6 +80,7 @@ export type ContentIndex = {
 export type ParsedAuthoritativeContent = {
   world_countries: WorldCountriesFile;
   world_institutions: WorldInstitutionsFile;
+  world_leaders: WorldLeadersFile;
   terena_constitution: ConstitutionFile;
   terena_parties: PartiesFile;
   terena_nomination_rules: NominationRulesFile;
@@ -90,6 +96,7 @@ export type ParsedAuthoritativeContent = {
   terena_electoral_counting: ElectoralCountingFile;
   terena_offices: OfficesFile;
   terena_presidential_administrations: PresidentialAdministrationsFile;
+  terena_economy_2028: Economy2028File;
   world_svg: string;
   terena_svg: string;
 };
@@ -139,6 +146,7 @@ function createIndex(sets: {
   figures: readonly string[];
   issues: readonly string[];
   institutions: readonly string[];
+  worldLeaders: readonly string[];
 }): ContentIndex {
   const world = new Set(sets.world);
   const provinces = new Set(sets.provinces);
@@ -149,6 +157,7 @@ function createIndex(sets: {
   const figures = new Set(sets.figures);
   const issues = new Set(sets.issues);
   const institutions = new Set(sets.institutions);
+  const worldLeaders = new Set(sets.worldLeaders);
 
   const freezeList = <T>(xs: readonly T[]): readonly T[] => Object.freeze([...xs]);
 
@@ -162,6 +171,7 @@ function createIndex(sets: {
     hasFigureId: (id: string) => figures.has(id),
     hasIssueId: (id: string) => issues.has(id),
     hasInstitutionId: (id: string) => institutions.has(id),
+    hasWorldLeaderId: (id: string) => worldLeaders.has(id),
     worldCountryIds: () => freezeList(sets.world),
     provinceIds: () => freezeList(sets.provinces),
     constituencyIds: () => freezeList(sets.constituencies),
@@ -232,6 +242,7 @@ export function validateAndLoadContent(
   const requiredAuth = [
     "world_countries",
     "world_institutions",
+    "world_leaders",
     "terena_constitution",
     "terena_parties",
     "terena_nomination_rules",
@@ -252,6 +263,7 @@ export function validateAndLoadContent(
     "terena_historical_candidates_2026",
     "terena_voter_blocs_2028",
     "terena_pollsters",
+    "terena_economy_2028",
     "world_svg",
     "terena_svg",
   ] as const;
@@ -294,6 +306,7 @@ export function validateAndLoadContent(
 
   let world: WorldCountriesFile;
   let institutions: WorldInstitutionsFile;
+  let worldLeaders: WorldLeadersFile;
   let constitution: ConstitutionFile;
   let parties: PartiesFile;
   let noms: NominationRulesFile;
@@ -316,10 +329,12 @@ export function validateAndLoadContent(
   let pollsters: ReturnType<typeof PollstersFileSchema.parse>;
   let administrations: PresidentialAdministrationsFile;
   let officesFile: OfficesFile;
+  let economy2028: Economy2028File;
 
   try {
     world = WorldCountriesFileSchema.parse(readAuthJson("world_countries"));
     institutions = WorldInstitutionsFileSchema.parse(readAuthJson("world_institutions"));
+    worldLeaders = WorldLeadersFileSchema.parse(readAuthJson("world_leaders"));
     constitution = ConstitutionFileSchema.parse(readAuthJson("terena_constitution"));
     parties = PartiesFileSchema.parse(readAuthJson("terena_parties"));
     noms = NominationRulesFileSchema.parse(readAuthJson("terena_nomination_rules"));
@@ -367,11 +382,13 @@ export function validateAndLoadContent(
       readAuthJson("terena_presidential_administrations"),
     );
     officesFile = OfficesFileSchema.parse(readAuthJson("terena_offices"));
+    economy2028 = Economy2028FileSchema.parse(readAuthJson("terena_economy_2028"));
     worldSvg = reader.readText(manifest.authoritative.world_svg!);
     terenaSvg = reader.readText(manifest.authoritative.terena_svg!);
 
     checkVersion("world_countries", world.content_version);
     checkVersion("world_institutions", institutions.content_version);
+    checkVersion("world_leaders", worldLeaders.content_version);
     checkVersion("terena_constitution", constitution.content_version);
     checkVersion("terena_parties", parties.content_version);
     checkVersion("terena_nomination_rules", noms.content_version);
@@ -380,6 +397,7 @@ export function validateAndLoadContent(
     checkVersion("terena_organizations", orgs.content_version);
     checkVersion("terena_media", media.content_version);
     checkVersion("starting_figures", figures.content_version);
+    checkVersion("terena_economy_2028", economy2028.content_version);
     checkVersion("scenario", scenario.content_version);
     checkVersion("canonical_crosswalk", crosswalk.content_version);
     checkVersion("terena_electoral_counting", counting.content_version);
@@ -459,6 +477,11 @@ export function validateAndLoadContent(
     error,
   );
   uniqueIds(
+    worldLeaders.leaders.map((l) => l.id),
+    "world leader",
+    error,
+  );
+  uniqueIds(
     parties.parties.map((p) => p.id),
     "party",
     error,
@@ -534,6 +557,81 @@ export function validateAndLoadContent(
       if (other && !other.neighbor_ids.includes(c.id)) {
         error(`neighbor relation asymmetric: ${c.id} -> ${n}`);
       }
+    }
+  }
+
+  const byInstitution = new Map(institutions.institutions.map((i) => [i.id, i]));
+  const wa = byInstitution.get("INT_WA");
+  const lto = byInstitution.get("INT_LTO");
+  if (!wa || !Array.isArray(wa.member_country_ids) || wa.member_country_ids.length !== 48) {
+    error(`INT_WA must list exactly 48 member_country_ids (got ${wa?.member_country_ids?.length ?? 0})`);
+  }
+  if (!lto || !Array.isArray(lto.member_country_ids) || lto.member_country_ids.length !== 43) {
+    error(`INT_LTO must list exactly 43 member_country_ids (got ${lto?.member_country_ids?.length ?? 0})`);
+  }
+  if (lto && Array.isArray(lto.member_country_ids)) {
+    if (!lto.member_country_ids.includes("W40")) error("INT_LTO must include W40 (Vaskara)");
+    if (!lto.member_country_ids.includes("W24")) error("INT_LTO must include W24 (Elzesh)");
+  }
+  const veto = wa && Array.isArray(wa.security_council_veto_ids) ? wa.security_council_veto_ids : [];
+  for (const id of ["W24", "W28", "W37", "W40"]) {
+    if (!veto.includes(id)) error(`INT_WA security_council_veto_ids missing ${id}`);
+  }
+  if (veto.includes("W13")) error("INT_WA must not give middle-power W13 a Security Council veto");
+  for (const inst of institutions.institutions) {
+    if (!Array.isArray(inst.member_country_ids)) continue;
+    for (const mid of inst.member_country_ids) {
+      if (!worldIds.has(mid)) error(`${inst.id}: unknown member_country_id ${mid}`);
+    }
+  }
+  const dc = byInstitution.get("INT_DC");
+  const csc = byInstitution.get("INT_CSC");
+  const naf = byInstitution.get("INT_NAF");
+  if (dc && Array.isArray(dc.member_country_ids) && dc.member_country_ids.length !== 13) {
+    error(`INT_DC membership must be 13 (got ${dc.member_country_ids.length})`);
+  }
+  if (csc && Array.isArray(csc.member_country_ids) && csc.member_country_ids.length !== 5) {
+    error(`INT_CSC membership must be 5 (got ${csc.member_country_ids.length})`);
+  }
+  if (naf && Array.isArray(naf.member_country_ids) && naf.member_country_ids.length !== 20) {
+    error(`INT_NAF membership must be 20 (got ${naf.member_country_ids.length})`);
+  }
+
+  const foreignCountryIds = world.countries.filter((c) => c.id !== "W41").map((c) => c.id);
+  if (worldLeaders.leaders.length !== foreignCountryIds.length) {
+    error(
+      `expected ${foreignCountryIds.length} foreign leaders (excluding W41), got ${worldLeaders.leaders.length}`,
+    );
+  }
+  const leaderByCountry = new Map<string, string>();
+  for (const leader of worldLeaders.leaders) {
+    const expectedId = `FLD_${leader.country_id}`;
+    if (leader.id !== expectedId) {
+      error(`${leader.id}: id must be ${expectedId}`);
+    }
+    if (leader.country_id === "W41") {
+      error(`${leader.id}: Terena (W41) must not have a foreign leader entry`);
+    }
+    if (!worldIds.has(leader.country_id)) {
+      error(`${leader.id}: unknown country_id ${leader.country_id}`);
+    }
+    const country = byWorld.get(leader.country_id);
+    if (country && leader.government_form !== country.government) {
+      error(
+        `${leader.id}: government_form "${leader.government_form}" != country "${country.government}"`,
+      );
+    }
+    if (leader.since_year >= 2028) {
+      error(`${leader.id}: since_year must be before scenario start (2028)`);
+    }
+    if (leaderByCountry.has(leader.country_id)) {
+      error(`${leader.country_id}: duplicate foreign leader`);
+    }
+    leaderByCountry.set(leader.country_id, leader.id);
+  }
+  for (const countryId of foreignCountryIds) {
+    if (!leaderByCountry.has(countryId)) {
+      error(`missing foreign leader for ${countryId}`);
     }
   }
 
@@ -1284,6 +1382,7 @@ export function validateAndLoadContent(
     figures: figures.figures.map((f) => f.id),
     issues: issuesFile.issues.map((i) => i.id),
     institutions: institutions.institutions.map((i) => i.id),
+    worldLeaders: worldLeaders.leaders.map((l) => l.id),
   });
 
   const errors = issues.filter((i) => i.level === "error");
@@ -1300,6 +1399,7 @@ export function validateAndLoadContent(
   const content: ParsedAuthoritativeContent = deepFreeze({
     world_countries: world,
     world_institutions: institutions,
+    world_leaders: worldLeaders,
     terena_constitution: constitution,
     terena_parties: parties,
     terena_nomination_rules: noms,
@@ -1315,6 +1415,7 @@ export function validateAndLoadContent(
     terena_electoral_counting: counting,
     terena_offices: officesFile,
     terena_presidential_administrations: administrations,
+    terena_economy_2028: economy2028,
     world_svg: worldSvg,
     terena_svg: terenaSvg,
   });

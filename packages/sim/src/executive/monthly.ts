@@ -47,6 +47,14 @@ function expireClerical(state: SimState, commandId: string): SimEvent[] {
   }
   for (const war of Object.values(state.executiveRuntime.warPowers)) {
     if (war.status === "unilateral" && war.unilateralUntil < state.currentDate && !war.authorized) {
+      const pendingAuth = Object.values(state.executiveRuntime.motions).some(
+        (m) =>
+          m.kind === "war_authorization" &&
+          m.targetId === war.id &&
+          (m.status === "scheduled" || m.status === "introduced"),
+      );
+      // Do not expire while a legitimate Assembly authorization referral is pending.
+      if (pendingAuth) continue;
       war.status = "expired";
       events.push(
         pushHistory(state, {
@@ -111,7 +119,8 @@ function npcPresidentWork(
     (id) => currentMinisterHolderId(world, state, id) == null,
   );
   if (vacant.length > 0) {
-    const officeId = vacant.sort()[0]!;
+    const orderedVacancies = vacant.sort();
+    const officeId = orderedVacancies[Math.floor(rng.float01("legislature") * orderedVacancies.length)]!;
     const pick = chooseMinisterAppointment(world, state, president, officeId, rng);
     if (pick) {
       const out = appointMinister(

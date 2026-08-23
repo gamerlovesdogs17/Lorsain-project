@@ -52,17 +52,28 @@ export {
   migrateSaveV4ToV5,
   migrateSaveV5ToV6,
   migrateSaveV6ToV7,
+  migrateSaveV7ToV8,
+  migrateSaveV8ToV9,
+  migrateSaveV9ToV10,
+  migrateSaveV10ToV11,
+  migrateSaveV11ToV12,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
 export { SAVE_SCHEMA_VERSION } from "./types.js";
 export { buildTerenaKernelWorld, KernelContentError, type TerenaKernelInput } from "./world.js";
-export { terenaElectoralFromBundle, terenaPartyFields } from "./terena-party-input.js";
+export { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
 export {
   currentAssemblyMemberIds,
   currentSpeakerId,
   currentPresidentId,
 } from "./legislature/state.js";
+export {
+  currentAssemblyElectionForFiling,
+  assemblyCandidateEligibilityError,
+  incumbentAssemblyConstituency,
+} from "./elections/assembly-cycle.js";
+export { evaluatePresidentialEligibility } from "./parties/eligibility.js";
 export {
   occupyingTerms,
   currentHolderIds,
@@ -112,16 +123,39 @@ export {
 } from "./parties/index.js";
 export {
   processCampaignMonth,
+  nominationCalendarDates,
   emptyCampaignRuntime,
   campaignDecisionOptions,
   chooseCampaignAction,
 } from "./campaigns/index.js";
 export type { CampaignState, CampaignRuntime, DebateState } from "./campaigns/types.js";
 export {
+  currentGovernorId,
+  governedProvinceId,
+  currentGubernatorialOpportunity,
+  gubernatorialEligibilityError,
+  PROVINCIAL_PRIORITIES,
+  PROVINCIAL_INVESTMENTS,
+} from "./provinces/index.js";
+export type {
+  ProvincialRuntime,
+  ProvinceGovernanceState,
+  GubernatorialElection,
+} from "./provinces/types.js";
+export {
   processLegislatureMonth,
   emptyLegislatureRuntime,
   whipEstimate,
   absoluteMajorityNeeded,
+  COMMITTEE_NAMES,
+  LEGISLATIVE_PROVISIONS,
+  legislativeProvision,
+  legislativeProvisionOption,
+  policyItemForProvision,
+  provisionForPolicyItem,
+  optionForPolicyItem,
+  currentProvisionOption,
+  estimatedProvisionEffects,
 } from "./legislature/index.js";
 export type {
   LegislatureRuntime,
@@ -129,6 +163,10 @@ export type {
   CommitteeState,
   PolicyItem,
 } from "./legislature/types.js";
+export type {
+  LegislativeProvisionDefinition,
+  LegislativeProvisionOption,
+} from "./legislature/provisions.js";
 export {
   processExecutiveMonth,
   emptyExecutiveRuntime,
@@ -136,6 +174,63 @@ export {
   deriveCabinet,
 } from "./executive/index.js";
 export type { ExecutiveRuntime, AssemblyMotion, RegulationState } from "./executive/types.js";
+export {
+  processCourtsMonth,
+  emptyConstitutionalRuntime,
+  deriveCourtBench,
+  currentCourtJudgeIds,
+  confirmationYesNeeded,
+  impeachmentYesNeeded,
+  recallReferralYesNeeded,
+  vacantCourtSeatIds,
+  recordConfirmationVote,
+  recordImpeachmentVote,
+  recordRecallReferralVote,
+  recordJudicialDecision,
+  tallyJudicialDisposition,
+  fileConstitutionalCase,
+  nationalRecallYesShare,
+  caseTitle,
+  judicialEligibilityError,
+  createConstitutionalGrounds,
+  availableImpeachmentBases,
+} from "./courts/index.js";
+export type {
+  ConstitutionalRuntime,
+  ConstitutionalGroundsRecord,
+  CourtCase,
+  CourtDecision,
+  CourtNomination,
+} from "./courts/types.js";
+export { IMPEACHMENT_GROUNDS } from "./courts/types.js";
+export {
+  processEconomyMonth,
+  emptyEconomyRuntime,
+  baselineEconomyRuntime,
+} from "./economy/index.js";
+export type { EconomyRuntime, NationalEconomyIndices } from "./economy/types.js";
+export {
+  processOrganizationsMonth,
+  meetOrganization,
+  organizationPressureForBill,
+  MAX_ORG_MEETINGS_PER_MONTH,
+} from "./organizations/index.js";
+export type { OrganizationRuntime, CanonicalInterestOrganization } from "./organizations/types.js";
+export { processMediaMonth, storiesChronological, emptyMediaRuntime } from "./media/index.js";
+export type { MediaRuntime, MediaStory, CanonicalMediaOutlet } from "./media/types.js";
+export {
+  processForeignAffairsMonth,
+  seedForeignAffairsRuntime,
+  emptyForeignAffairsRuntime,
+  TERENA_WORLD_ID,
+  bilateralKey,
+} from "./foreign/index.js";
+export type {
+  ForeignAffairsRuntime,
+  CanonicalWorldCountry,
+  TreatyRecord,
+  InternationalCrisis,
+} from "./foreign/types.js";
 export type {
   Command,
   CommandResult,
@@ -150,4 +245,17 @@ export type {
   ScheduledEvent,
   CreateSimulationOptions,
 } from "./types.js";
-export type { HostToWorkerMessage, WorkerToHostMessage } from "./worker-protocol.js";
+export {
+  collectPlayerActionableDecisions,
+  type PlayerActionableDecision,
+  type PlayerDecisionKind,
+} from "./player-decisions.js";
+export {
+  activeRaceCampaigns,
+  isAliveRaceRival,
+  politiciansAreActiveRaceRivals,
+  sameCampaignRace,
+} from "./campaigns/race.js";
+export { shouldHoldDebate } from "./campaigns/debates.js";
+export { isDeclaredContestCandidate } from "./parties/lifecycle.js";
+export { partyStance, factionStance } from "./legislature/recommendations.js";

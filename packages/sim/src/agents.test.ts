@@ -1387,7 +1387,9 @@ describe("Phase 2 final: mutation chronology", () => {
 
     advance(sim, 1);
     const withEvent = jsonClone(sim.getSnapshot()) as SimState;
-    const event = withEvent.history.find((e) => e.type !== "RELATIONSHIP_CHANGED");
+    const event = [...withEvent.history]
+      .reverse()
+      .find((e) => e.type !== "RELATIONSHIP_CHANGED" && e.date > withEvent.scenarioStartDate);
     expect(event).toBeDefined();
     expect(event!.date > "2000-01-01").toBe(true);
     const eventCounter = withEvent.counters.nextMemoryId;

@@ -50,11 +50,11 @@ export function isPresident(world: KernelWorld, state: SimState, id: string): bo
 }
 
 export function playerCampaign(state: SimState) {
-  return Object.values(state.campaignRuntime.campaigns).find(
+  return Object.values(state.campaignRuntime.campaigns).filter(
     (c) =>
       c.politicianId === state.playerPoliticianId &&
       (c.status === "active" || c.status === "exploring"),
-  );
+  ).sort((a, b) => b.launchedDate.localeCompare(a.launchedDate) || b.id.localeCompare(a.id))[0];
 }
 
 export function cabinet(world: KernelWorld, state: SimState) {

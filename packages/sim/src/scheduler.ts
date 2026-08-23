@@ -74,11 +74,16 @@ export function enqueueScheduled(
   return ev;
 }
 
-export function nextPendingBefore(state: SimState, target: IsoDate): ScheduledEvent | null {
+export function nextPendingBefore(
+  state: SimState,
+  target: IsoDate,
+  includeTarget = false,
+): ScheduledEvent | null {
   for (const ev of state.scheduler.events) {
     if (ev.status !== "pending") continue;
     if (compareIsoDate(ev.dueDate, state.currentDate) < 0) continue;
-    if (compareIsoDate(ev.dueDate, target) >= 0) continue;
+    const relativeToTarget = compareIsoDate(ev.dueDate, target);
+    if (relativeToTarget > 0 || (!includeTarget && relativeToTarget === 0)) continue;
     return ev;
   }
   return null;

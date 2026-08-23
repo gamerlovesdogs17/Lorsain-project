@@ -19,6 +19,8 @@ describe("canonical content validation", () => {
     expect(bundle.content.canonical_crosswalk.terena.world_country_id).toBe("W41");
     expect(bundle.index.hasPartyId("PARTY_LAB")).toBe(true);
     expect(bundle.index.hasWorldCountryId("W41")).toBe(true);
+    expect(bundle.index.hasWorldLeaderId("FLD_W40")).toBe(true);
+    expect(bundle.content.world_leaders.leaders).toHaveLength(47);
     expect(Object.isFrozen(bundle)).toBe(true);
     expect(Object.isFrozen(bundle.content)).toBe(true);
     // Index must not expose mutable Set surfaces.

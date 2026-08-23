@@ -44,8 +44,8 @@ export function isPresident(world, state, id) {
     return currentPresidentialAuthorityId(world, state) === id;
 }
 export function playerCampaign(state) {
-    return Object.values(state.campaignRuntime.campaigns).find((c) => c.politicianId === state.playerPoliticianId &&
-        (c.status === "active" || c.status === "exploring"));
+    return Object.values(state.campaignRuntime.campaigns).filter((c) => c.politicianId === state.playerPoliticianId &&
+        (c.status === "active" || c.status === "exploring")).sort((a, b) => b.launchedDate.localeCompare(a.launchedDate) || b.id.localeCompare(a.id))[0];
 }
 export function cabinet(world, state) {
     return deriveCabinet(world, state);

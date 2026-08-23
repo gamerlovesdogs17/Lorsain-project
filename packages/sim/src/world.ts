@@ -98,6 +98,41 @@ export type TerenaKernelInput = {
   figures: FigureIn[];
   offices: OfficeIn[];
   issues?: Array<{ id: string; dimension?: string }>;
+  economy2028?: {
+    as_of: string;
+    reference_note: string;
+    national: {
+      output_index: number;
+      employment_index: number;
+      price_index: number;
+      real_wage_index: number;
+      housing_index: number;
+      confidence_index: number;
+      fiscal_pressure: number;
+    };
+    national_annual_trend: {
+      output: number;
+      employment: number;
+      prices: number;
+      real_wages: number;
+      housing: number;
+    };
+    sectors: Record<
+      string,
+      { conditions_index: number; cyclical_sensitivity: number; annual_structural_trend: number }
+    >;
+    provinces: Array<{
+      province_id: string;
+      conditions_index: number;
+      employment_index: number;
+      housing_index: number;
+      sector_exposure: Record<string, number>;
+      sensitivity: { growth: number; inflation: number; housing: number; trade: number };
+      annual_structural_trend: { conditions: number; employment: number; housing: number };
+      character: string;
+    }>;
+    provenance: string[];
+  };
   constitution: {
     calendars?: Record<string, ContentCalendar>;
     assembly?: { seats?: number; absolute_majority?: number };
@@ -106,6 +141,13 @@ export type TerenaKernelInput = {
     regulation_review?: { review_days?: number };
     war_powers?: { unilateral_days?: number };
     emergency?: { initial_days?: number; extension_days?: number };
+    recall?: { assembly_referral_fraction?: number };
+    constitutional_court?: {
+      judges?: number;
+      term_years?: number;
+      renewable?: boolean;
+      confirmation_fraction?: number;
+    };
     presidential_vacancy?: {
       acting_succession_office_ids?: string[];
       special_election?: {
@@ -164,6 +206,52 @@ export type TerenaKernelInput = {
   pollsters?: PollsterInput[];
   constituencyGeo?: ConstituencyGeoInput[];
   turnout2026?: Record<string, TurnoutBaseline2026>;
+  organizations?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    lean?: string;
+    strength?: number;
+    issues: string[];
+    lean_party_ids?: string[];
+  }>;
+  mediaOutlets?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    ideology: number;
+    factual_reputation: number;
+    audience?: string;
+  }>;
+  worldCountries?: Array<{
+    id: string;
+    name: string;
+    map_path_id: string;
+    neighbor_ids: string[];
+    alignment_ids: string[];
+    population?: number;
+    government?: string;
+    region?: string;
+    power_tier?: string;
+    relation_with_terena?: number;
+    alignment?: string;
+  }>;
+  worldInstitutions?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    founded?: number;
+    member_country_ids?: string[];
+    security_council_veto_ids?: string[];
+  }>;
+  worldLeaders?: Array<{
+    id: string;
+    country_id: string;
+    name: string;
+    title: string;
+    since_year: number;
+    government_form: string;
+  }>;
 };
 
 export class KernelContentError extends Error {
@@ -567,6 +655,58 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     issueIds: catalog.length
       ? catalog
       : [...new Set(input.figures.flatMap((f) => Object.keys(f.issue_salience ?? {})))].sort(),
+    ...(input.economy2028
+      ? {
+          economyScenario: {
+            asOf: input.economy2028.as_of as IsoDate,
+            referenceNote: input.economy2028.reference_note,
+            national: {
+              outputIndex: input.economy2028.national.output_index,
+              employmentIndex: input.economy2028.national.employment_index,
+              priceIndex: input.economy2028.national.price_index,
+              realWageIndex: input.economy2028.national.real_wage_index,
+              housingIndex: input.economy2028.national.housing_index,
+              confidenceIndex: input.economy2028.national.confidence_index,
+              fiscalPressure: input.economy2028.national.fiscal_pressure,
+            },
+            nationalAnnualTrend: {
+              output: input.economy2028.national_annual_trend.output,
+              employment: input.economy2028.national_annual_trend.employment,
+              prices: input.economy2028.national_annual_trend.prices,
+              realWages: input.economy2028.national_annual_trend.real_wages,
+              housing: input.economy2028.national_annual_trend.housing,
+            },
+            sectors: Object.fromEntries(
+              Object.entries(input.economy2028.sectors).map(([id, sector]) => [
+                id,
+                {
+                  conditionsIndex: sector.conditions_index,
+                  cyclicalSensitivity: sector.cyclical_sensitivity,
+                  annualStructuralTrend: sector.annual_structural_trend,
+                },
+              ]),
+            ) as NonNullable<KernelWorld["economyScenario"]>["sectors"],
+            provinces: Object.fromEntries(
+              input.economy2028.provinces.map((province) => [
+                province.province_id,
+                {
+                  provinceId: province.province_id,
+                  starting: {
+                    conditionsIndex: province.conditions_index,
+                    employmentIndex: province.employment_index,
+                    housingIndex: province.housing_index,
+                  },
+                  sectorExposure: province.sector_exposure,
+                  sensitivity: province.sensitivity,
+                  annualStructuralTrend: province.annual_structural_trend,
+                  character: province.character,
+                },
+              ]),
+            ),
+            provenance: [...input.economy2028.provenance],
+          },
+        }
+      : {}),
     ...partySlice,
     ...(input.presidentialEligibility
       ? {
@@ -589,7 +729,126 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
       emergencyExtensionDays: input.constitution.emergency?.extension_days ?? 30,
       warUnilateralDays: input.constitution.war_powers?.unilateral_days ?? 30,
     },
+    courtConstitution: {
+      judges: input.constitution.constitutional_court?.judges ?? 9,
+      termYears: input.constitution.constitutional_court?.term_years ?? 12,
+      renewable: input.constitution.constitutional_court?.renewable === true,
+      confirmationFraction: input.constitution.constitutional_court?.confirmation_fraction ?? 0.6,
+      recallReferralFraction: input.constitution.recall?.assembly_referral_fraction ?? 0.6,
+      recallVoteDays: 60,
+    },
+    interestOrganizations: Object.fromEntries(
+      (input.organizations ?? []).map((o) => [
+        o.id,
+        {
+          id: o.id,
+          name: o.name,
+          type: o.type,
+          lean: o.lean ?? "",
+          strength: typeof o.strength === "number" ? o.strength : 0.5,
+          issues: [...o.issues],
+          leanPartyIds: [...(o.lean_party_ids ?? [])],
+        },
+      ]),
+    ),
+    mediaOutlets: Object.fromEntries(
+      (input.mediaOutlets ?? []).map((o) => [
+        o.id,
+        {
+          id: o.id,
+          name: o.name,
+          type: o.type,
+          ideology: o.ideology,
+          factualReputation: o.factual_reputation,
+          audience: o.audience ?? "national",
+        },
+      ]),
+    ),
+    worldCountries: Object.fromEntries(
+      (input.worldCountries ?? []).map((c) => [
+        c.id,
+        {
+          id: c.id,
+          name: c.name,
+          region: c.region ?? "",
+          government: c.government ?? "",
+          population: typeof c.population === "number" ? c.population : 0,
+          powerTier: c.power_tier ?? "",
+          alignment: typeof c.alignment === "string" ? c.alignment : "",
+          alignmentIds: [...c.alignment_ids],
+          neighborIds: [...c.neighbor_ids],
+          relationWithTerena:
+            typeof c.relation_with_terena === "number" ? c.relation_with_terena : 0,
+          mapPathId: c.map_path_id,
+        },
+      ]),
+    ),
+    worldInstitutions: Object.fromEntries(
+      (input.worldInstitutions ?? []).map((i) => [
+        i.id,
+        {
+          id: i.id,
+          name: i.name,
+          type: i.type,
+          founded: typeof i.founded === "number" ? i.founded : null,
+          memberCountryIds: Array.isArray(i.member_country_ids)
+            ? [...i.member_country_ids].sort()
+            : [],
+          securityCouncilVetoIds: Array.isArray(i.security_council_veto_ids)
+            ? [...i.security_council_veto_ids].sort()
+            : [],
+        },
+      ]),
+    ),
+    worldLeaders: Object.fromEntries(
+      (input.worldLeaders ?? []).map((l) => [
+        l.id,
+        {
+          id: l.id,
+          countryId: l.country_id,
+          name: l.name,
+          title: l.title,
+          sinceYear: l.since_year,
+          governmentForm: l.government_form,
+        },
+      ]),
+    ),
+    worldLeadersByCountryId: Object.fromEntries(
+      (input.worldLeaders ?? []).map((l) => [l.country_id, l.id]),
+    ),
+    terenaWorldCountryId: "W41",
   };
+  if (Object.keys(world.worldCountries).length > 0 && Object.keys(world.worldLeaders).length === 0) {
+    synthesizeWorldLeaders(world, input.scenario.date.slice(0, 4));
+  }
   applyInstitutionalPublicIdeology(world);
   return world;
+}
+
+function leaderTitleForGovernment(government: string): string {
+  const g = government.toLowerCase();
+  if (g.includes("monarchy") || g.includes("duchy") || g.includes("kingdom")) return "Head of Government";
+  if (g.includes("president")) return "President";
+  if (g.includes("federal")) return "Federal President";
+  return "Head of State";
+}
+
+function synthesizeWorldLeaders(world: KernelWorld, startYear: string): void {
+  const year = parseInt(startYear, 10) || 2028;
+  let seq = 1;
+  for (const country of Object.values(world.worldCountries).sort((a, b) =>
+    a.id < b.id ? -1 : 1,
+  )) {
+    const id = `WLD${String(seq++).padStart(4, "0")}`;
+    const leader = {
+      id,
+      countryId: country.id,
+      name: `${country.name.split(" ").slice(-1)[0] ?? country.id} Executive`,
+      title: leaderTitleForGovernment(country.government),
+      sinceYear: Math.max(1990, year - 3),
+      governmentForm: country.government,
+    };
+    world.worldLeaders[id] = leader;
+    world.worldLeadersByCountryId[country.id] = id;
+  }
 }

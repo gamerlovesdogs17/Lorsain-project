@@ -23,6 +23,7 @@ export const DOMAIN_RESOLUTION_TYPES = [
   "presidential_election",
   "assembly_election",
   "presidential_assumption",
+  "assembly_assumption",
 ] as const;
 export type DomainResolutionType = (typeof DOMAIN_RESOLUTION_TYPES)[number];
 
@@ -122,6 +123,65 @@ export type TurnoutRecord = {
   turnoutRate: number;
 };
 
+export const ASSEMBLY_FILING_STATUSES = ["planned", "open", "closed"] as const;
+export type AssemblyFilingStatus = (typeof ASSEMBLY_FILING_STATUSES)[number];
+
+export const ASSEMBLY_CANDIDACY_STATUSES = ["filed", "withdrawn"] as const;
+export type AssemblyCandidacyStatus = (typeof ASSEMBLY_CANDIDACY_STATUSES)[number];
+
+export type AssemblyFilingDecision = {
+  politicianId: string;
+  decision: "filed" | "declined";
+  decidedDate: IsoDate;
+};
+
+export type AssemblyCandidacy = {
+  politicianId: string;
+  constituencyId: string;
+  partyId: string | null;
+  filedDate: IsoDate;
+  source: "player" | "npc" | "generated";
+  incumbent: boolean;
+  status: AssemblyCandidacyStatus;
+};
+
+export type AssemblyConstituencyField = {
+  constituencyId: string;
+  magnitude: number;
+  candidateIds: string[];
+  finalizedDate: IsoDate | null;
+};
+
+/**
+ * Persisted constituency STV archive for a national Assembly election.
+ * Ballot groups are intentionally omitted here: the count archive already
+ * preserves first preferences, every round/transfer, exhaustion and legal lots.
+ */
+export type AssemblyConstituencyResult = {
+  constituencyId: string;
+  constituencyElectionId: string;
+  magnitude: number;
+  candidateIds: string[];
+  partyByCandidate: Record<string, string | null>;
+  firstPreferences: Record<string, string>;
+  electedIds: string[];
+  turnout: TurnoutRecord;
+  countArchive: StvResult | null;
+  archiveCompleteness: "full" | "legacy_summary";
+};
+
+export type AssemblyElectionCycle = {
+  filingStatus: AssemblyFilingStatus;
+  filingOpenDate: IsoDate;
+  filingDeadlineDate: IsoDate;
+  decisions: Record<string, AssemblyFilingDecision>;
+  candidacies: Record<string, AssemblyCandidacy>;
+  constituencyFields: Record<string, AssemblyConstituencyField>;
+  constituencyResults: Record<string, AssemblyConstituencyResult>;
+  previousPartySeatTotals: Record<string, number>;
+  partySeatTotals: Record<string, number>;
+};
+
 export type ElectionState = {
   id: string;
   type: ElectionType;
@@ -138,6 +198,8 @@ export type ElectionState = {
   countArchive: IrvResult | StvResult | null;
   winnerIds: string[];
   resultEventId: string | null;
+  /** Present for recurring national Assembly cycles; null for presidential elections. */
+  assembly: AssemblyElectionCycle | null;
   metadata: JsonObject;
 };
 
@@ -235,4 +297,12 @@ export function isDomainResolutionType(v: string): v is DomainResolutionType {
 
 export function isElectionGeographyKind(v: string): v is ElectionGeographyKind {
   return (ELECTION_GEOGRAPHIES as readonly string[]).includes(v);
+}
+
+export function isAssemblyFilingStatus(v: string): v is AssemblyFilingStatus {
+  return (ASSEMBLY_FILING_STATUSES as readonly string[]).includes(v);
+}
+
+export function isAssemblyCandidacyStatus(v: string): v is AssemblyCandidacyStatus {
+  return (ASSEMBLY_CANDIDACY_STATUSES as readonly string[]).includes(v);
 }

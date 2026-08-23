@@ -79,7 +79,10 @@ export function parseExecutiveRuntime(raw: unknown): ExecutiveRuntime | string {
           typeof rec.reviewDeadline === "string" && isIsoDate(rec.reviewDeadline)
             ? rec.reviewDeadline
             : "2000-01-01",
-        status: rec.status === "annulled" || rec.status === "expired" ? rec.status : "active",
+        status:
+          rec.status === "annulled" || rec.status === "expired" || rec.status === "invalidated"
+            ? rec.status
+            : "active",
         metadata: isRecord(rec.metadata) ? (rec.metadata as RegulationState["metadata"]) : {},
       };
       runtime.regulations[id] = regulation;

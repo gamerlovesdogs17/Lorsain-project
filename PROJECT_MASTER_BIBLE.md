@@ -840,25 +840,51 @@ Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate 
 
 ## 16. Phase 7 — executive + playable UI
 
-**COMPLETE.** Runtime executive in `packages/sim/src/executive/` as `SimState.executiveRuntime`. Cabinet is derived from minister `OfficeTerm`s (12 canonical portfolios). Commands: appoint/dismiss minister, issue regulation, Assembly motions (censure 231/420, regulation annulment, budget, emergency, war authorization), propose budget with continuing appropriation, emergency 14+30 and war-power 30-day frameworks. Acting President uses the same presidential authority helper. Player President is never auto-decided. Save schemaVersion **7**; v6→v7 initializes empty executive runtime. 20-year synthetic kernel hash: `58c049dad4ca4b020941da51854bd889`. Playable React+Vite UI in `apps/game` (`pnpm game` / `start-game.bat`). Browser-safe canonical content load, IndexedDB save/load, role-aware screens. Phase 8 courts have **not started**. The old Phase 12/13 roadmap is superseded; Phase 11 absorbs polish/balance.
+**COMPLETE.** Runtime executive in `packages/sim/src/executive/` as `SimState.executiveRuntime`. Cabinet is derived from minister `OfficeTerm`s (12 canonical portfolios). Commands: appoint/dismiss minister, issue regulation, Assembly motions (censure 231/420, regulation annulment, budget, emergency, war authorization), propose budget with continuing appropriation, emergency 14+30 and war-power 30-day frameworks. Acting President uses the same presidential authority helper. Player President is never auto-decided. Save schemaVersion **7**; v6→v7 initializes empty executive runtime. 20-year synthetic kernel hash: `58c049dad4ca4b020941da51854bd889`. Playable React+Vite UI in `apps/game` (`pnpm game` / `start-game.bat`). Browser-safe canonical content load, IndexedDB save/load, role-aware screens. The old Phase 12/13 roadmap is superseded; Phase 11 absorbs polish/balance.
+
+## 16.1 Phase 7.1 — first playtest UX
+
+**COMPLETE (`670b38b`).** Player decisions are never silently omitted (`collectPlayerActionableDecisions`). Active same-race rivals cannot endorse each other. Campaign/policy commands use valid-choice forms. Monthly campaign action points refresh on turn advance. Home/Assembly/Elections/Map use human-readable names from canon. Command rejection uses an in-game notice. Developer numbers live under Archive.
 
 ## 17. Phase 8 — courts and constitution
 
-Implement Constitutional Court membership, appointments, case pipeline, doctrine/precedent flags, emergency review, election litigation and constitutional remedies.
+**Phase 8 COMPLETE at `72733d4`.** Runtime Court in `packages/sim/src/courts/` as `SimState.constitutionalRuntime`. … Save schemaVersion **8** at close; v7→v8 empty court runtime including `grounds` and `nextConstitutionalGroundsId`. 20-year synthetic kernel hash at Phase 8 close: `9e72db0735b48e9b02fa8110a93cd48c` (schema 8).
 
-Acceptance criteria: unconstitutional actions can be challenged; judge philosophy and precedent affect outcomes; court composition changes only through valid appointments/vacancies.
+## 18. Phase 9 — economy, organizations, media, UI v2, map
 
-## 18. Phase 9 — economy, organizations, and media
+**COMPLETE.** Political macroeconomy (`packages/sim/src/economy/`), autonomous canonical organizations (`packages/sim/src/organizations/`), structured media (`packages/sim/src/media/`), UI System V2 (`apps/game/src/ui/`, `docs/UI_SYSTEM_V2.md`), derived interactive map (`@lorsain/map`, `<TerenaMap />`). Save schemaVersion **9**; v8→v9 originally initialized a legacy reference-100 economy and empty org/media history. Phase 11.2 replaces the flat scenario start with canonical economic geography. 20-year synthetic kernel hash at Phase 9.5 close (schema 9): `6b3dea55f2279a6216bb676c8fa1175b`. Phase 9.6 Trade baseline fix: `86952783749897096b223e06992f8e8c`. `contentVersion` remains `0.3.1-predev`.
 
-Implement national/provincial economic indicators and major sectors. Add unions, business groups, farm groups, advocacy organizations, endorsements and lobbying. Implement outlets, audience/reputation, structured article generation, and polling presentation.
+## 18.5. Phase 9.5 — UI System V3 playtest UX
+
+**COMPLETE.** UI/UX V3 shell documented in `docs/UI_SYSTEM_V3.md`: grouped nav, briefing Home, campaign command center, player-safe interrupt/vote formatters, map polish, responsive shell. Screen-depth items that were overstated are completed in Phase 9.6. No Phase 10 work included.
+
+## 18.6. Phase 9.6 — UI System V3.1
+
+**COMPLETE.** Map fill/plurality, Trade baseline, presidential command screen, and remaining V3 screen depth. See `docs/UI_SYSTEM_V3_1.md`. Hash `86952783749897096b223e06992f8e8c`.
 
 ## 19. Phase 10 — foreign affairs
 
-Implement 48 foreign states, leaders, strategic goals, bilateral relations, trade exposure, treaties, sanctions, military posture, diplomatic actions and crisis escalation.
+**COMPLETE (`9b3bda7`).** Runtime foreign affairs in `packages/sim/src/foreign/` as `SimState.foreignAffairsRuntime`. Architecture: 48 canonical countries, 47 foreign leaders + Terena President from domestic offices, bilateral relations, trade exposure, treaties, sanctions, crisis lifecycle, abstract conflict, deterministic AI on `foreign-affairs` stream, economy lag + media integration, world map + Foreign Affairs UI. Save schemaVersion **10**.
+
+## 19.1 Phase 10.1 — foreign affairs functional completion
+
+**COMPLETE.** Fixes independent-review blockers without replacing Phase 10 architecture: all **48** runtime countries (W41 with `leaderId: null`, domestic President resolver); President sanctions/posture; foreign AI toward Terena + NPC Terena diplomacy when player ≠ President; crisis emergence + explicit state machine + structured events; conflict records when crises enter conflict; war-powers bridge (`armExecutiveTrigger("war")`); treaty counterparty consent lifecycle; latent vs public crisis labeling; runtime leader display; long-horizon calibration harness. 20-year synthetic kernel hash: `8a5c6852538273d76509ab3cbcd7b0b9`. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`.
+
+## 19.2 Phase 10.2 — institutional deepening
+
+**COMPLETE.** Treaty identity/lifecycle; ratification DecisionContract fix (`simple_majority_cast`); NPC/player war powers schedule Assembly authorization via Speaker constitutional referral; canonical WA/LTO/DC/CSC/NAF membership in `world_institutions.json` (WA 48, LTO 43 incl. W40/W24; SC vetoes W24/W28/W37/W40); bounded institution consequences; leadership schedules from canonical `since_year` with monarch-title handling and no same-name fake replacements; expanded foreign calibration metrics.
 
 ## 20. Phase 11 — final integration + UI polish + balance + content
 
-Polish the playable UI, remaining screens, coefficients, and large-batch balance. Absorbs the old Phase 12 full UI and Phase 13 balance/content tasks.
+### Phase 11.1 — full-game integration (**COMPLETE**)
+
+Integration harness + catastrophic invariants + multi-year determinism (`packages/sim/src/phase11.integration.test.ts`, `packages/sim/src/integration/harness.ts`). The **2030 Assembly election** has a persisted filing/candidacy phase, explicit player run/decline, autonomous incumbents and challengers, deterministic national allocation, real constituency campaigns, bounded organization effects, 48 typed STV archives, Assembly-specific results, June 1 seating, and 2034 scheduling. Heavy national STV counting runs once in a Web Worker with an indeterminate UI. The **2033 presidential cycle** creates cycle-specific party contests from current runtime politics, never auto-enters the player, finalizes and resolves naturally, assumes office in January 2034, preserves 2028 history, and schedules 2038. Career continuity is verified after defeat, decline, term limit, and voluntary exit without fabricated appointments. Save schemaVersion **11**. See `docs/PHASE_11_1_RESULTS.md`.
+
+### Phase 11.2 — integration closeout, role gameplay, economic geography and UI V4 (**COMPLETE**)
+
+Phase 11.2 closes three integration defects: future presidential contest shells remain unpopulated until the legitimate exploration window; presidential nomination resolution runs through a deterministic turn Worker; and filed Assembly candidates retain their constituency when the player files or declines. Governors now have bounded provincial authority, public pressures, province-focused Office gameplay, and recurring 21-province plurality elections with explicit player filing and four-year scheduling. Minister and Mayor starts have deliberately limited advice/civic-priority loops and are labeled accordingly.
+
+Career now begins with legitimate Political Opportunities and public-fact geography selection. Campaign organization has national, provincial and constituency layers with maintenance/decay; national action reaches all geography without ID-order bias. Canonical `terena_economy_2028.json` supplies non-flat national, sector and province conditions plus structural exposure/sensitivity and persistent history. Bills contain one to three concrete legal provisions with named options, current law, estimated effects, and deterministic public prose. UI System V4 adds a role-aware Office, role briefing, type-specific election views, truthful map modes, real hover/click/tap tooltips, lightweight map navigation, and denser responsive layouts. Save schemaVersion is **12** with a v11→v12 migration that seeds only new runtime fields and fabricates no history. See `docs/PHASE_11_2_UX_GAMEPLAY_AUDIT.md`, `docs/UI_SYSTEM_V4.md`, and `docs/PHASE_11_2_RESULTS.md`.
 
 ## 23. First playable vertical slice
 

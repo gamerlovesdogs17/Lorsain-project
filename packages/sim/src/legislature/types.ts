@@ -55,6 +55,8 @@ export type PresidentialDisposition = (typeof PRESIDENTIAL_DISPOSITIONS)[number]
 
 export type PolicyItem = {
   issueId: string;
+  provisionId?: string;
+  optionId?: string;
   direction: number;
   magnitude: number;
   fiscalImpact: number | null;
@@ -126,6 +128,8 @@ export type EnactedLawRecord = {
   enactedDate: IsoDate;
   sponsorId: string;
   eventIds: string[];
+  operative: boolean;
+  invalidatedByDecisionId: string | null;
   metadata: JsonObject;
 };
 

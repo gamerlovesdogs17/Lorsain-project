@@ -8,5 +8,9 @@
     "types": ["vite/client"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "references": [{ "path": "../../packages/sim" }, { "path": "../../packages/content-loader" }]
+  "references": [
+    { "path": "../../packages/sim" },
+    { "path": "../../packages/content-loader" },
+    { "path": "../../packages/map" }
+  ]
 }

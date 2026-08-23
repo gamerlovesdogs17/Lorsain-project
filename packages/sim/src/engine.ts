@@ -1,4 +1,4 @@
-import { addMonths, isIsoDate, type IsoDate } from "./calendar.js";
+import { addMonths, compareIsoDate, isIsoDate, type IsoDate } from "./calendar.js";
 import { emptyAgentRuntime } from "./agents/validation.js";
 import { recordObservation } from "./agents/beliefs.js";
 import { needsInitialGoals, reviewGoals, seedInitialGoals } from "./agents/goals.js";
@@ -71,6 +71,14 @@ import {
   createDomainResolution,
   payloadElectionId,
 } from "./elections/resolution.js";
+import {
+  applyAssemblyAssumption,
+  resolveAssemblyElection,
+} from "./elections/assembly-national.js";
+import {
+  declineAssemblyCandidacy,
+  fileAssemblyCandidacy,
+} from "./elections/assembly-cycle.js";
 import { emptyIdeology } from "./agents/profile.js";
 import { IDEOLOGY_AXES } from "./agents/types.js";
 import { emptyCampaignRuntime } from "./campaigns/types.js";
@@ -84,6 +92,7 @@ import {
   campaignSeekEndorsement,
   campaignSeekNominationSupport,
   campaignVisit,
+  closeAssemblyCampaigns,
   closeGeneralCampaigns,
   declareCampaign,
   ensureCampaignForDeclaredCandidacy,
@@ -92,6 +101,7 @@ import {
   withdrawCampaign,
 } from "./campaigns/actions.js";
 import { processCampaignMonth } from "./campaigns/monthly.js";
+import { ensureActionPoints } from "./campaigns/state.js";
 import {
   emptyLegislatureRuntime,
   isLegislativeVoteChoice,
@@ -121,8 +131,74 @@ import {
   introduceMotion,
   issueRegulation,
   proposeBudget,
+  scheduleWarAuthorizationReferral,
 } from "./executive/procedure.js";
 import { seedMinistriesIfNeeded } from "./executive/state.js";
+import {
+  emptyConstitutionalRuntime,
+  isCourtCaseType,
+  isJudicialVoteChoice,
+} from "./courts/types.js";
+import { processCourtsMonth } from "./courts/monthly.js";
+import { processEconomyMonth } from "./economy/monthly.js";
+import { baselineEconomyRuntime, economyRuntimeFromScenario } from "./economy/types.js";
+import { processProvincialMonth } from "./provinces/monthly.js";
+import { seedProvincialRuntime } from "./provinces/state.js";
+import { emptyProvincialRuntime } from "./provinces/types.js";
+import {
+  declineGubernatorialCandidacy,
+  fileGubernatorialCandidacy,
+} from "./provinces/elections.js";
+import {
+  adviseMinistryPriority,
+  directProvincialInvestment,
+  respondProvincialPressure,
+  setMayorCivicPriority,
+  setProvincialPriority,
+  takeProvincialFederalPosition,
+} from "./provinces/procedure.js";
+import { processOrganizationsMonth } from "./organizations/monthly.js";
+import {
+  askOrganizationBillSupport,
+  discussOrganizationPolicy,
+  meetOrganization,
+  seekOrganizationEndorsement,
+} from "./organizations/procedure.js";
+import { seedOrganizationRuntime } from "./organizations/types.js";
+import { processMediaMonth } from "./media/monthly.js";
+import { emptyMediaRuntime } from "./media/types.js";
+import { emptyForeignAffairsRuntime } from "./foreign/types.js";
+import { processForeignAffairsMonth } from "./foreign/monthly.js";
+import { processOrganizationForeignReactions } from "./foreign/organization-foreign-bridge.js";
+import { advanceForeignCalibrationMonths as advanceForeignCalibrationMonthsHarness } from "./foreign/calibration-harness.js";
+import { seedForeignAffairsRuntime } from "./foreign/baseline.js";
+import { needsForeignAffairsSeed } from "./foreign/state.js";
+import {
+  adjustMilitaryPosture,
+  allianceConsultation,
+  castTreatyRatificationVote,
+  diplomaticOutreach,
+  diplomaticSummit,
+  issueDiplomaticWarning,
+  mediateCrisis,
+  negotiateTrade,
+  playerImposeSanctions,
+  playerLiftSanctions,
+  playerProposeTreaty,
+  respondIncomingDiplomacy,
+} from "./foreign/procedure.js";
+import { linkWarPowerToConflict, resolveWarTriggerConflictId } from "./foreign/war-powers-bridge.js";
+import { isMilitaryPostureLevel, isTreatyKind } from "./foreign/types.js";
+import {
+  castConfirmationVote,
+  castImpeachmentVote,
+  castJudicialVote,
+  castRecallReferralVote,
+  fileConstitutionalCase,
+  introduceImpeachment,
+  introduceRecallReferral,
+  nominateConstitutionalJudge,
+} from "./courts/procedure.js";
 import {
   SAVE_SCHEMA_VERSION,
   type Command,
@@ -147,6 +223,8 @@ export type Simulation = {
   getSnapshot(): SimState;
   hashState(): string;
   world(): KernelWorld;
+  /** Calibration-only foreign month driver; bypasses domestic scheduled interrupts. */
+  advanceForeignCalibrationMonths(months: number): number;
 };
 
 function freezeWorld(world: KernelWorld): KernelWorld {
@@ -204,6 +282,24 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       nextEmergencyId: 1,
       nextWarPowerId: 1,
       nextBudgetId: 1,
+      nextCaseId: 1,
+      nextCourtNominationId: 1,
+      nextCourtDecisionId: 1,
+      nextImpeachmentId: 1,
+      nextRecallId: 1,
+      nextConstitutionalGroundsId: 1,
+      nextLaggedEffectId: 1,
+      nextEconomicShockId: 1,
+      nextOrgActionId: 1,
+      nextMediaStoryId: 1,
+      nextTreatyId: 1,
+      nextSanctionId: 1,
+      nextCrisisId: 1,
+      nextConflictId: 1,
+      nextForeignLeaderId: 1,
+      nextDiplomaticActionId: 1,
+      nextTreatyRatificationId: 1,
+      nextIncomingDiplomacyId: 1,
     },
     presidential: {
       nextRegularElectionDate: world.nextRegularPresidentialElectionDate,
@@ -216,23 +312,33 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     campaignRuntime: emptyCampaignRuntime(),
     legislatureRuntime: emptyLegislatureRuntime(),
     executiveRuntime: emptyExecutiveRuntime(),
+    constitutionalRuntime: emptyConstitutionalRuntime(),
+    economyRuntime: world.economyScenario
+      ? economyRuntimeFromScenario(world.economyScenario)
+      : baselineEconomyRuntime(world.provinceIds, world.scenarioStartDate),
+    provincialRuntime: emptyProvincialRuntime(),
+    organizationRuntime: seedOrganizationRuntime(world.interestOrganizations),
+    mediaRuntime: emptyMediaRuntime(),
+    foreignAffairsRuntime: emptyForeignAffairsRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
     state.officeTerms[id] = { ...t, id };
   }
+  state.provincialRuntime = seedProvincialRuntime(world, state);
   for (const ev of world.initialScheduled) {
     const queued = enqueueScheduled(state, ev);
     if (!isScheduled(queued)) {
       throw new Error(queued.error.message);
     }
   }
-  seedPartyInstitutions(state, world);
   seedCanonicalElections(state, world);
+  seedPartyInstitutions(state, world);
   seedStartingPublicStanding(world, state);
   seedInitialGoals(state, world);
   seedCommitteesIfNeeded(world, state);
   seedMinistriesIfNeeded(world, state);
+  seedForeignAffairsRuntime(world, state);
   return state;
 }
 
@@ -324,6 +430,34 @@ function applyScheduled(
     events.push(...out.events);
     return { events, interrupt: null };
   }
+  if (ev.eventType === "ASSEMBLY_ASSUMPTION_DUE") {
+    const out = applyAssemblyAssumption(state, world, {
+      date: ev.dueDate,
+      scheduledEventId: ev.id,
+      commandId,
+    });
+    if ("error" in out) {
+      events.push(
+        pushHistory(state, {
+          date: ev.dueDate,
+          type: "ASSEMBLY_ASSUMPTION_FAILED",
+          importance: 1,
+          visibility: "public",
+          actorIds: [],
+          entityIds: [],
+          payload: { code: out.error.code, message: out.error.message },
+          sourceScheduledEventId: ev.id,
+          sourceCommandId: commandId,
+        }),
+      );
+      const interrupt = makeInterrupt(ev);
+      interrupt.message = out.error.message;
+      state.pendingInterrupt = interrupt;
+      return { events, interrupt };
+    }
+    events.push(...out.events);
+    return { events, interrupt: null };
+  }
   events.push(
     pushHistory(state, {
       date: ev.dueDate,
@@ -345,29 +479,55 @@ function applyScheduled(
   return { events, interrupt: null };
 }
 
+/** Month order: economy lags → organizations → campaign/legislature/executive/courts → scheduled events → media last. */
 function runTowardTarget(
   state: SimState,
   world: KernelWorld,
   rng: RngService,
   target: IsoDate,
   commandId: string,
+  includeTargetEvents = false,
 ): { events: SimEvent[]; interrupt: PendingInterrupt | null } {
   const events: SimEvent[] = [];
+  events.push(...processEconomyMonth(state, world, rng, commandId));
+  events.push(...processProvincialMonth(state, world, rng, commandId));
+  events.push(...processOrganizationsMonth(state, world, rng, commandId));
   events.push(...processCampaignMonth(state, world, rng, commandId));
   events.push(...processLegislatureMonth(state, world, rng, commandId));
   events.push(...processExecutiveMonth(state, world, rng, commandId));
+  events.push(...processCourtsMonth(state, world, rng, commandId));
   sortScheduler(state);
   while (true) {
-    const next = nextPendingBefore(state, target);
+    // Non-blocking events become effective on their due date.  In particular,
+    // an auto-vacating office term cannot be carried into a save stamped with
+    // that same date and only cleaned up on the following turn.  Blocking
+    // events retain the existing stop-on-date/resume behavior.
+    const next = nextPendingBefore(state, target, true);
     if (!next) break;
+    if (
+      !includeTargetEvents &&
+      next.blocking &&
+      compareIsoDate(next.dueDate, target) === 0
+    ) {
+      break;
+    }
     const out = applyScheduled(state, world, rng, next, commandId);
     events.push(...out.events);
     if (out.interrupt) return { events, interrupt: out.interrupt };
   }
+  const foreignEvents = processForeignAffairsMonth(state, world, rng, commandId);
+  events.push(...foreignEvents);
+  events.push(...processOrganizationForeignReactions(state, world, commandId, foreignEvents));
+  events.push(...processMediaMonth(state, world, rng, commandId));
   state.currentDate = target;
   state.completedTurns += 1;
   state.activeTurnTarget = null;
   state.pendingInterrupt = null;
+  for (const campaign of Object.values(state.campaignRuntime.campaigns)) {
+    if (campaign.status === "active" || campaign.status === "exploring") {
+      ensureActionPoints(world, state, campaign);
+    }
+  }
   events.push(
     pushHistory(state, {
       date: target,
@@ -431,14 +591,26 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   const rng = restoreRngService(parsed.save.simulation.rng);
   const state = jsonClone(parsed.save.simulation);
   state.rng = rng.serialize();
-  if (needsPartyInstitutionSeed(state, frozen)) seedPartyInstitutions(state, frozen);
   if (needsElectoralSeed(state, frozen)) seedCanonicalElections(state, frozen);
+  if (needsPartyInstitutionSeed(state, frozen)) seedPartyInstitutions(state, frozen);
   if (Object.keys(state.candidateStanding).length === 0) {
     seedStartingPublicStanding(frozen, state);
   }
   if (needsInitialGoals(state)) seedInitialGoals(state, frozen);
   seedCommitteesIfNeeded(frozen, state);
   seedMinistriesIfNeeded(frozen, state);
+  if (Object.keys(state.organizationRuntime.actors).length === 0) {
+    state.organizationRuntime.actors = seedOrganizationRuntime(frozen.interestOrganizations).actors;
+  }
+  if (Object.keys(state.economyRuntime.provinces).length === 0) {
+    const seeded = frozen.economyScenario
+      ? economyRuntimeFromScenario(frozen.economyScenario)
+      : baselineEconomyRuntime(frozen.provinceIds, state.currentDate);
+    state.economyRuntime.provinces = seeded.provinces;
+    state.economyRuntime.provinceHistory = seeded.provinceHistory;
+  }
+  state.provincialRuntime = seedProvincialRuntime(frozen, state, state.provincialRuntime);
+  if (needsForeignAffairsSeed(state)) seedForeignAffairsRuntime(frozen, state);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
@@ -504,7 +676,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       }
       const target = state.activeTurnTarget ?? turnTarget(state);
       state.activeTurnTarget = target;
-      const out = runTowardTarget(state, world, rng, target, commandId);
+      const out = runTowardTarget(state, world, rng, target, commandId, true);
       syncRng(state, rng);
       return { ok: true, commandId, events: out.events, interrupt: out.interrupt };
     }
@@ -1228,6 +1400,52 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: out.events, interrupt: pending };
     }
 
+    if (command.type === "RESOLVE_ASSEMBLY_ELECTION") {
+      const pending = state.pendingInterrupt;
+      if (!pending || pending.code !== "ASSEMBLY_ELECTION_DUE") {
+        return fail(
+          "DOMAIN_RESOLUTION_REQUIRED",
+          "pending interrupt is not ASSEMBLY_ELECTION_DUE",
+        );
+      }
+      const src = state.scheduler.events.find((e) => e.id === pending.scheduledEventId);
+      const fromEvent = payloadElectionId(src?.payload);
+      if (!fromEvent) {
+        return fail("MISSING_ELECTION_ID", "ASSEMBLY_ELECTION_DUE lacks payload.electionId");
+      }
+      if (command.electionId && command.electionId !== fromEvent) {
+        return fail("ELECTION_ID_MISMATCH", `${command.electionId} != ${fromEvent}`);
+      }
+      const electionId = fromEvent;
+      const previewRng = restoreRngService(state.rng);
+      const preview = resolveAssemblyElection(jsonClone(state), world, previewRng, {
+        electionId,
+        scheduledEventId: pending.scheduledEventId,
+        commandId: "CMD000000",
+      });
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = resolveAssemblyElection(state, world, rng, {
+        electionId,
+        scheduledEventId: pending.scheduledEventId,
+        commandId,
+      });
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      createDomainResolution(state, {
+        sourceScheduledEventId: pending.scheduledEventId,
+        domainType: "assembly_election",
+        date: state.currentDate,
+        electionId,
+        resultEventId: out.events[0]!.id,
+        archiveElectionId: electionId,
+        metadata: { phase: "count" },
+      });
+      pending.resolutionStatus = "resolved";
+      closeAssemblyCampaigns(state, electionId, out.election.winnerIds);
+      syncRng(state, rng);
+      return { ok: true, commandId, events: out.events, interrupt: pending };
+    }
+
     if (command.type === "RESOLVE_PRESIDENTIAL_ASSUMPTION") {
       const pending = state.pendingInterrupt;
       if (!pending || pending.code !== "PRESIDENTIAL_ASSUMPTION_DUE") {
@@ -1340,6 +1558,86 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: [], interrupt: null };
     }
 
+    if (command.type === "FILE_ASSEMBLY_CANDIDACY") {
+      const previewState = jsonClone(state);
+      const previewFiled = fileAssemblyCandidacy(
+        previewState,
+        world,
+        {
+          electionId: command.electionId,
+          politicianId: state.playerPoliticianId,
+          constituencyId: command.constituencyId,
+        },
+        null,
+      );
+      if ("error" in previewFiled) {
+        return fail(previewFiled.error.code, previewFiled.error.message);
+      }
+      const previewCampaign = declareCampaign(
+        previewState,
+        world,
+        {
+          politicianId: state.playerPoliticianId,
+          type: "assembly",
+          electionId: command.electionId,
+          constituencyId: command.constituencyId,
+        },
+        null,
+      );
+      if ("error" in previewCampaign) {
+        return fail(previewCampaign.error.code, previewCampaign.error.message);
+      }
+      const commandId = nextCommandId();
+      const filed = fileAssemblyCandidacy(
+        state,
+        world,
+        {
+          electionId: command.electionId,
+          politicianId: state.playerPoliticianId,
+          constituencyId: command.constituencyId,
+        },
+        commandId,
+      );
+      if ("error" in filed) return fail(filed.error.code, filed.error.message);
+      const campaign = declareCampaign(
+        state,
+        world,
+        {
+          politicianId: state.playerPoliticianId,
+          type: "assembly",
+          electionId: command.electionId,
+          constituencyId: command.constituencyId,
+        },
+        commandId,
+      );
+      if ("error" in campaign) return fail(campaign.error.code, campaign.error.message);
+      return {
+        ok: true,
+        commandId,
+        events: [...filed.events, ...campaign.events],
+        interrupt: null,
+      };
+    }
+
+    if (command.type === "DECLINE_ASSEMBLY_CANDIDACY") {
+      const preview = declineAssemblyCandidacy(
+        jsonClone(state),
+        world,
+        { electionId: command.electionId, politicianId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = declineAssemblyCandidacy(
+        state,
+        world,
+        { electionId: command.electionId, politicianId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
     if (command.type === "DECLARE_CAMPAIGN") {
       if (command.politicianId !== state.playerPoliticianId) {
         return fail("PLAYER_AUTONOMY", "player may only declare their own campaign");
@@ -1436,7 +1734,15 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         jsonClone(state),
         {
           campaignId: command.campaignId,
-          constituencyId: command.constituencyId,
+          ...(command.constituencyId ? { constituencyId: command.constituencyId } : {}),
+          ...(command.geographyKind
+            ? {
+                geography: {
+                  kind: command.geographyKind,
+                  id: command.geographyId ?? command.constituencyId ?? null,
+                },
+              }
+            : {}),
           actorId: state.playerPoliticianId,
         },
         null,
@@ -1448,7 +1754,15 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         state,
         {
           campaignId: command.campaignId,
-          constituencyId: command.constituencyId,
+          ...(command.constituencyId ? { constituencyId: command.constituencyId } : {}),
+          ...(command.geographyKind
+            ? {
+                geography: {
+                  kind: command.geographyKind,
+                  id: command.geographyId ?? command.constituencyId ?? null,
+                },
+              }
+            : {}),
           actorId: state.playerPoliticianId,
         },
         commandId,
@@ -1526,6 +1840,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         {
           campaignId: command.campaignId,
           targetPoliticianId: command.targetPoliticianId,
+          issueId: command.issueId ?? null,
           actorId: state.playerPoliticianId,
         },
         null,
@@ -1539,6 +1854,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         {
           campaignId: command.campaignId,
           targetPoliticianId: command.targetPoliticianId,
+          issueId: command.issueId ?? null,
           actorId: state.playerPoliticianId,
         },
         commandId,
@@ -1644,6 +1960,108 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         { campaignId: command.campaignId, actorId: state.playerPoliticianId },
         commandId,
       );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "FILE_GUBERNATORIAL_CANDIDACY") {
+      const args = {
+        politicianId: state.playerPoliticianId,
+        electionId: command.electionId,
+        provinceId: command.provinceId,
+      };
+      const preview = fileGubernatorialCandidacy(jsonClone(state), world, args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = fileGubernatorialCandidacy(state, world, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DECLINE_GUBERNATORIAL_CANDIDACY") {
+      const args = { politicianId: state.playerPoliticianId, electionId: command.electionId };
+      const preview = declineGubernatorialCandidacy(jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = declineGubernatorialCandidacy(state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "GOVERNOR_SET_PRIORITY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        provinceId: command.provinceId,
+        priority: command.priority,
+      };
+      const preview = setProvincialPriority(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = setProvincialPriority(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "GOVERNOR_DIRECT_INVESTMENT") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        provinceId: command.provinceId,
+        focus: command.focus,
+      };
+      const preview = directProvincialInvestment(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = directProvincialInvestment(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "GOVERNOR_TAKE_FEDERAL_POSITION") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        provinceId: command.provinceId,
+        issueId: command.issueId,
+        direction: command.direction,
+      };
+      const preview = takeProvincialFederalPosition(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = takeProvincialFederalPosition(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "GOVERNOR_RESPOND_TO_PRESSURE") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        provinceId: command.provinceId,
+        pressureId: command.pressureId,
+        response: command.response,
+      };
+      const preview = respondProvincialPressure(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = respondProvincialPressure(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "MINISTER_ADVISE_PRIORITY") {
+      const args = { actorId: state.playerPoliticianId, issueId: command.issueId };
+      const preview = adviseMinistryPriority(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = adviseMinistryPriority(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "MAYOR_SET_CIVIC_PRIORITY") {
+      const args = { actorId: state.playerPoliticianId, priority: command.priority };
+      const preview = setMayorCivicPriority(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = setMayorCivicPriority(world, state, args, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
@@ -1968,6 +2386,477 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       const commandId = nextCommandId();
       const out = beginWarPowers(world, state, { actorId: state.playerPoliticianId }, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
+      const events = [...out.events];
+      const warEvent = events.find((e) => e.type === "WAR_POWERS_BEGUN");
+      const warPowerId =
+        warEvent && typeof warEvent.payload.warPowerId === "string"
+          ? warEvent.payload.warPowerId
+          : null;
+      const conflictId = resolveWarTriggerConflictId(state);
+      if (warPowerId && conflictId) {
+        linkWarPowerToConflict(state, conflictId, warPowerId);
+      }
+      if (warPowerId) {
+        const motionOut = scheduleWarAuthorizationReferral(world, state, warPowerId, commandId);
+        if (!("error" in motionOut)) events.push(...motionOut.events);
+      }
+      return { ok: true, commandId, events, interrupt: null };
+    }
+
+    if (command.type === "NOMINATE_CONSTITUTIONAL_JUDGE") {
+      const preview = nominateConstitutionalJudge(
+        world,
+        jsonClone(state),
+        {
+          actorId: state.playerPoliticianId,
+          nomineeId: command.nomineeId,
+          seatOfficeId: command.seatOfficeId,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = nominateConstitutionalJudge(
+        world,
+        state,
+        {
+          actorId: state.playerPoliticianId,
+          nomineeId: command.nomineeId,
+          seatOfficeId: command.seatOfficeId,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_CONFIRMATION_VOTE") {
+      if (!isLegislativeVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      const preview = castConfirmationVote(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        nominationId: command.nominationId,
+        choice: command.choice,
+      });
+      if (preview.error) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castConfirmationVote(world, state, {
+        actorId: state.playerPoliticianId,
+        nominationId: command.nominationId,
+        choice: command.choice,
+      });
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "CAST_JUDICIAL_VOTE") {
+      if (!isJudicialVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      const preview = castJudicialVote(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        caseId: command.caseId,
+        choice: command.choice,
+      });
+      if (preview.error) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castJudicialVote(world, state, {
+        actorId: state.playerPoliticianId,
+        caseId: command.caseId,
+        choice: command.choice,
+      });
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "INTRODUCE_IMPEACHMENT") {
+      const preview = introduceImpeachment(
+        world,
+        jsonClone(state),
+        {
+          actorId: state.playerPoliticianId,
+          basisId: command.basisId,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = introduceImpeachment(
+        world,
+        state,
+        {
+          actorId: state.playerPoliticianId,
+          basisId: command.basisId,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_IMPEACHMENT_VOTE") {
+      if (!isLegislativeVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      const preview = castImpeachmentVote(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        proceedingId: command.proceedingId,
+        choice: command.choice,
+      });
+      if (preview.error) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castImpeachmentVote(world, state, {
+        actorId: state.playerPoliticianId,
+        proceedingId: command.proceedingId,
+        choice: command.choice,
+      });
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "INTRODUCE_RECALL_REFERRAL") {
+      const recallArgs = { actorId: state.playerPoliticianId };
+      const preview = introduceRecallReferral(world, jsonClone(state), recallArgs, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = introduceRecallReferral(world, state, recallArgs, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_RECALL_REFERRAL_VOTE") {
+      if (!isLegislativeVoteChoice(command.choice)) {
+        return fail("INVALID_VOTE", command.choice);
+      }
+      const preview = castRecallReferralVote(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        proceedingId: command.proceedingId,
+        choice: command.choice,
+      });
+      if (preview.error) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castRecallReferralVote(world, state, {
+        actorId: state.playerPoliticianId,
+        proceedingId: command.proceedingId,
+        choice: command.choice,
+      });
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "FILE_CONSTITUTIONAL_CASE") {
+      if (!isCourtCaseType(command.caseType)) {
+        return fail("INVALID_CASE_TYPE", command.caseType);
+      }
+      const preview = fileConstitutionalCase(
+        world,
+        jsonClone(state),
+        {
+          actorId: state.playerPoliticianId,
+          caseType: command.caseType,
+          challengedKind: command.challengedKind ?? "law",
+          challengedId: command.challengedId,
+          respondentId: command.respondentId ?? state.playerPoliticianId,
+          constitutionalQuestion: command.constitutionalQuestion,
+          constitutionalRule: command.constitutionalRule,
+          meritsLean: command.meritsLean ?? 0,
+          expedited: command.expedited === true,
+        },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = fileConstitutionalCase(
+        world,
+        state,
+        {
+          actorId: state.playerPoliticianId,
+          caseType: command.caseType,
+          challengedKind: command.challengedKind ?? "law",
+          challengedId: command.challengedId,
+          respondentId: command.respondentId ?? state.playerPoliticianId,
+          constitutionalQuestion: command.constitutionalQuestion,
+          constitutionalRule: command.constitutionalRule,
+          meritsLean: command.meritsLean ?? 0,
+          expedited: command.expedited === true,
+        },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "MEET_ORGANIZATION") {
+      const preview = meetOrganization(
+        world,
+        jsonClone(state),
+        { actorId: state.playerPoliticianId, organizationId: command.organizationId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = meetOrganization(
+        world,
+        state,
+        { actorId: state.playerPoliticianId, organizationId: command.organizationId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "SEEK_ORGANIZATION_ENDORSEMENT") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        organizationId: command.organizationId,
+        campaignId: command.campaignId,
+      };
+      const preview = seekOrganizationEndorsement(world, jsonClone(state), args, null, 0);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const roll = rng.float01("npc-decisions");
+      const commandId = nextCommandId();
+      const out = seekOrganizationEndorsement(world, state, args, commandId, roll);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "ASK_ORGANIZATION_BILL_SUPPORT") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        organizationId: command.organizationId,
+        billId: command.billId,
+      };
+      const preview = askOrganizationBillSupport(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = askOrganizationBillSupport(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DISCUSS_ORGANIZATION_POLICY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        organizationId: command.organizationId,
+        issueId: command.issueId,
+        direction: command.direction,
+      };
+      const preview = discussOrganizationPolicy(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = discussOrganizationPolicy(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DIPLOMATIC_OUTREACH") {
+      const preview = diplomaticOutreach(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = diplomaticOutreach(world, state, {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DIPLOMATIC_SUMMIT") {
+      const preview = diplomaticSummit(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = diplomaticSummit(world, state, {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "PROPOSE_TREATY") {
+      if (!isTreatyKind(command.kind)) return fail("INVALID_TREATY", command.kind);
+      const treatyArgs = {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+        kind: command.kind,
+        ...(command.title != null ? { title: command.title } : {}),
+      };
+      const preview = playerProposeTreaty(world, jsonClone(state), treatyArgs, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = playerProposeTreaty(world, state, treatyArgs, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "NEGOTIATE_TRADE") {
+      const preview = negotiateTrade(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = negotiateTrade(world, state, {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "IMPOSE_SANCTIONS") {
+      const sanctionArgs = {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+        ...(command.severity != null ? { severity: command.severity } : {}),
+      };
+      const preview = playerImposeSanctions(world, jsonClone(state), sanctionArgs, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = playerImposeSanctions(world, state, sanctionArgs, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "LIFT_SANCTIONS") {
+      const preview = playerLiftSanctions(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = playerLiftSanctions(world, state, {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "ALLIANCE_CONSULTATION") {
+      const consultArgs = {
+        actorId: state.playerPoliticianId,
+        ...(command.institutionId != null ? { institutionId: command.institutionId } : {}),
+      };
+      const preview = allianceConsultation(world, jsonClone(state), consultArgs, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = allianceConsultation(world, state, consultArgs, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "ADJUST_MILITARY_POSTURE") {
+      if (!isMilitaryPostureLevel(command.posture)) {
+        return fail("INVALID_POSTURE", command.posture);
+      }
+      const preview = adjustMilitaryPosture(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        posture: command.posture,
+      }, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = adjustMilitaryPosture(world, state, {
+        actorId: state.playerPoliticianId,
+        posture: command.posture,
+      }, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "MEDIATE_CRISIS") {
+      const preview = mediateCrisis(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        crisisId: command.crisisId,
+      }, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = mediateCrisis(world, state, {
+        actorId: state.playerPoliticianId,
+        crisisId: command.crisisId,
+      }, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "ISSUE_DIPLOMATIC_WARNING") {
+      const preview = issueDiplomaticWarning(world, jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = issueDiplomaticWarning(world, state, {
+        actorId: state.playerPoliticianId,
+        targetCountryId: command.targetCountryId,
+      }, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_TREATY_RATIFICATION_VOTE") {
+      const preview = castTreatyRatificationVote(jsonClone(state), {
+        actorId: state.playerPoliticianId,
+        treatyId: command.treatyId,
+        choice: command.choice,
+      });
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castTreatyRatificationVote(state, {
+        actorId: state.playerPoliticianId,
+        treatyId: command.treatyId,
+        choice: command.choice,
+      });
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "RESPOND_INCOMING_DIPLOMACY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        pendingId: command.pendingId,
+        response: command.response,
+      };
+      const preview = respondIncomingDiplomacy(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = respondIncomingDiplomacy(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "ACCEPT_INCOMING_TREATY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        pendingId: command.pendingId,
+        response: "accept" as const,
+      };
+      const preview = respondIncomingDiplomacy(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = respondIncomingDiplomacy(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "REJECT_INCOMING_TREATY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        pendingId: command.pendingId,
+        response: "reject" as const,
+      };
+      const preview = respondIncomingDiplomacy(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = respondIncomingDiplomacy(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
@@ -1995,6 +2884,11 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
     },
     world(): KernelWorld {
       return world;
+    },
+    advanceForeignCalibrationMonths(months: number): number {
+      const count = advanceForeignCalibrationMonthsHarness(state, world, rng, months);
+      syncRng(state, rng);
+      return count;
     },
   };
 }

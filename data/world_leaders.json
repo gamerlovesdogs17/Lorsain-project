@@ -1,0 +1,383 @@
+{
+  "world": "Lorsain",
+  "start_year": 2028,
+  "leaders": [
+    {
+      "id": "FLD_W01",
+      "country_id": "W01",
+      "name": "Farid al-Khuldi",
+      "title": "Prime Minister",
+      "since_year": 2019,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W02",
+      "country_id": "W02",
+      "name": "Samir Mazgar",
+      "title": "President",
+      "since_year": 2018,
+      "government_form": "presidential republic"
+    },
+    {
+      "id": "FLD_W03",
+      "country_id": "W03",
+      "name": "Elara II",
+      "title": "Queen",
+      "since_year": 2012,
+      "government_form": "constitutional monarchy"
+    },
+    {
+      "id": "FLD_W04",
+      "country_id": "W04",
+      "name": "Dren Chalka",
+      "title": "President",
+      "since_year": 2020,
+      "government_form": "presidential republic"
+    },
+    {
+      "id": "FLD_W05",
+      "country_id": "W05",
+      "name": "Priya Bharesh",
+      "title": "Prime Minister",
+      "since_year": 2023,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W06",
+      "country_id": "W06",
+      "name": "Tomas Kudren",
+      "title": "President",
+      "since_year": 2017,
+      "government_form": "federal republic"
+    },
+    {
+      "id": "FLD_W07",
+      "country_id": "W07",
+      "name": "Ingrid Kraker",
+      "title": "Prime Minister",
+      "since_year": 2021,
+      "government_form": "confederal parliamentary republic"
+    },
+    {
+      "id": "FLD_W08",
+      "country_id": "W08",
+      "name": "Harald VI",
+      "title": "King",
+      "since_year": 2008,
+      "government_form": "constitutional monarchy"
+    },
+    {
+      "id": "FLD_W09",
+      "country_id": "W09",
+      "name": "Maeve Capresh",
+      "title": "Prime Minister",
+      "since_year": 2020,
+      "government_form": "parliamentary commonwealth"
+    },
+    {
+      "id": "FLD_W10",
+      "country_id": "W10",
+      "name": "Luca Chaz",
+      "title": "Chief Magistrate",
+      "since_year": 2015,
+      "government_form": "city-state republic"
+    },
+    {
+      "id": "FLD_W11",
+      "country_id": "W11",
+      "name": "Stefan II",
+      "title": "Grand Duke",
+      "since_year": 2011,
+      "government_form": "constitutional grand duchy"
+    },
+    {
+      "id": "FLD_W12",
+      "country_id": "W12",
+      "name": "Edmund IV",
+      "title": "King",
+      "since_year": 2016,
+      "government_form": "constitutional monarchy"
+    },
+    {
+      "id": "FLD_W13",
+      "country_id": "W13",
+      "name": "Helena Graev",
+      "title": "Prime Minister",
+      "since_year": 2022,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W14",
+      "country_id": "W14",
+      "name": "Tovan III",
+      "title": "Prince",
+      "since_year": 2009,
+      "government_form": "constitutional island principality"
+    },
+    {
+      "id": "FLD_W15",
+      "country_id": "W15",
+      "name": "Anya Ris",
+      "title": "Prime Minister",
+      "since_year": 2022,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W16",
+      "country_id": "W16",
+      "name": "Claire Sythre",
+      "title": "President",
+      "since_year": 2019,
+      "government_form": "semi-presidential republic"
+    },
+    {
+      "id": "FLD_W17",
+      "country_id": "W17",
+      "name": "Leofric II",
+      "title": "Prince",
+      "since_year": 2013,
+      "government_form": "constitutional principality"
+    },
+    {
+      "id": "FLD_W18",
+      "country_id": "W18",
+      "name": "Jonas Krapje",
+      "title": "Prime Minister",
+      "since_year": 2024,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W19",
+      "country_id": "W19",
+      "name": "Erik Dieric",
+      "title": "Prime Minister",
+      "since_year": 2018,
+      "government_form": "federal parliamentary republic"
+    },
+    {
+      "id": "FLD_W20",
+      "country_id": "W20",
+      "name": "Roland V",
+      "title": "King",
+      "since_year": 2006,
+      "government_form": "constitutional monarchy"
+    },
+    {
+      "id": "FLD_W21",
+      "country_id": "W21",
+      "name": "Omar Gneaban",
+      "title": "President",
+      "since_year": 2021,
+      "government_form": "presidential republic"
+    },
+    {
+      "id": "FLD_W22",
+      "country_id": "W22",
+      "name": "Sultan Mehran",
+      "title": "President",
+      "since_year": 2012,
+      "government_form": "dominant-party republic"
+    },
+    {
+      "id": "FLD_W23",
+      "country_id": "W23",
+      "name": "Casimir III",
+      "title": "King",
+      "since_year": 2010,
+      "government_form": "constitutional monarchy"
+    },
+    {
+      "id": "FLD_W24",
+      "country_id": "W24",
+      "name": "Valen Elzesh",
+      "title": "General Secretary",
+      "since_year": 2014,
+      "government_form": "centralized one-party republic"
+    },
+    {
+      "id": "FLD_W25",
+      "country_id": "W25",
+      "name": "Lina Butiarm",
+      "title": "Prime Minister",
+      "since_year": 2020,
+      "government_form": "parliamentary island republic"
+    },
+    {
+      "id": "FLD_W26",
+      "country_id": "W26",
+      "name": "Dev Risan",
+      "title": "Prime Minister",
+      "since_year": 2019,
+      "government_form": "parliamentary commonwealth"
+    },
+    {
+      "id": "FLD_W27",
+      "country_id": "W27",
+      "name": "Petro Ugol",
+      "title": "President",
+      "since_year": 2023,
+      "government_form": "presidential republic"
+    },
+    {
+      "id": "FLD_W28",
+      "country_id": "W28",
+      "name": "Cassian Siram",
+      "title": "Prime Minister",
+      "since_year": 2021,
+      "government_form": "federal parliamentary commonwealth"
+    },
+    {
+      "id": "FLD_W29",
+      "country_id": "W29",
+      "name": "Amelie Redcham",
+      "title": "President",
+      "since_year": 2017,
+      "government_form": "semi-presidential republic"
+    },
+    {
+      "id": "FLD_W30",
+      "country_id": "W30",
+      "name": "Osric II",
+      "title": "King",
+      "since_year": 2014,
+      "government_form": "constitutional monarchy"
+    },
+    {
+      "id": "FLD_W31",
+      "country_id": "W31",
+      "name": "Tia Kopjaj",
+      "title": "Prime Minister",
+      "since_year": 2022,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W32",
+      "country_id": "W32",
+      "name": "Helene II",
+      "title": "Grand Duchess",
+      "since_year": 2007,
+      "government_form": "constitutional grand duchy"
+    },
+    {
+      "id": "FLD_W33",
+      "country_id": "W33",
+      "name": "Rafael Irdraco",
+      "title": "Prime Minister",
+      "since_year": 2021,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W34",
+      "country_id": "W34",
+      "name": "Sora Arurd",
+      "title": "Prime Minister",
+      "since_year": 2020,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W35",
+      "country_id": "W35",
+      "name": "Zara Zarhar",
+      "title": "President",
+      "since_year": 2019,
+      "government_form": "presidential republic"
+    },
+    {
+      "id": "FLD_W36",
+      "country_id": "W36",
+      "name": "Solander IV",
+      "title": "King",
+      "since_year": 2015,
+      "government_form": "constitutional monarchy"
+    },
+    {
+      "id": "FLD_W37",
+      "country_id": "W37",
+      "name": "Miran Soburis",
+      "title": "President",
+      "since_year": 2020,
+      "government_form": "federal presidential republic"
+    },
+    {
+      "id": "FLD_W38",
+      "country_id": "W38",
+      "name": "Merrick III",
+      "title": "King",
+      "since_year": 2011,
+      "government_form": "constitutional monarchy"
+    },
+    {
+      "id": "FLD_W39",
+      "country_id": "W39",
+      "name": "Dara Sholed",
+      "title": "Prime Minister",
+      "since_year": 2023,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W40",
+      "country_id": "W40",
+      "name": "Korvin Strakhov",
+      "title": "Supreme President",
+      "since_year": 2016,
+      "government_form": "managed federal presidential republic"
+    },
+    {
+      "id": "FLD_W42",
+      "country_id": "W42",
+      "name": "Galen II",
+      "title": "Duke",
+      "since_year": 2016,
+      "government_form": "constitutional duchy"
+    },
+    {
+      "id": "FLD_W43",
+      "country_id": "W43",
+      "name": "Ivana Skuzha",
+      "title": "Prime Minister",
+      "since_year": 2022,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W44",
+      "country_id": "W44",
+      "name": "Hakan Shurush",
+      "title": "Prime Minister",
+      "since_year": 2021,
+      "government_form": "parliamentary republic"
+    },
+    {
+      "id": "FLD_W45",
+      "country_id": "W45",
+      "name": "Borin I",
+      "title": "Grand Duke",
+      "since_year": 2009,
+      "government_form": "constitutional grand duchy"
+    },
+    {
+      "id": "FLD_W46",
+      "country_id": "W46",
+      "name": "Aris Sidbur",
+      "title": "President",
+      "since_year": 2018,
+      "government_form": "military-influenced presidential republic"
+    },
+    {
+      "id": "FLD_W47",
+      "country_id": "W47",
+      "name": "Joram V",
+      "title": "King",
+      "since_year": 2013,
+      "government_form": "constitutional monarchy"
+    },
+    {
+      "id": "FLD_W48",
+      "country_id": "W48",
+      "name": "Aldric III",
+      "title": "King",
+      "since_year": 2004,
+      "government_form": "constitutional monarchy"
+    }
+  ],
+  "content_version": "0.3.1-predev"
+}

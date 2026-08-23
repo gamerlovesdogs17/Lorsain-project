@@ -11,7 +11,7 @@ import { nthWeekdayOfMonth, presidentialAssumptionDate } from "./calendar.js";
 import type { KernelWorld } from "./types.js";
 import { countRelationshipEdges } from "./agents/relationships.js";
 import { SAVE_SCHEMA_VERSION } from "./types.js";
-import { terenaElectoralFromBundle, terenaPartyFields } from "./terena-party-input.js";
+import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 
@@ -58,6 +58,7 @@ function loadTerenaInput() {
       }),
       presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
       ...terenaElectoralFromBundle(bundle),
+      ...terenaWorldFieldsFromBundle(bundle),
     } satisfies TerenaKernelInput,
   };
 }

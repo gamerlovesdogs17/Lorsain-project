@@ -7,6 +7,7 @@ import type { RngService } from "../rng.js";
 import type { BillState, LegislativeVoteChoice, PolicyItem } from "./types.js";
 import { billPolicyFit, factionStance, partyStance } from "./recommendations.js";
 import { mpConstituencyId } from "./state.js";
+import { organizationPressureForBill } from "../organizations/monthly.js";
 
 function goalImpacts(state: SimState, actorId: string, n: number): Record<string, number> {
   const out: Record<string, number> = {};
@@ -72,6 +73,7 @@ export function chooseLegislativeVote(
   const pragmatism = profile?.traits.pragmatism ?? 0.5;
   const district = constituencyFit(world, state, politicianId, bill);
   const rel = 0;
+  const orgPressure = organizationPressureForBill(world, state, politicianId, bill.id);
   const partyPush = party === "support" ? 1 : party === "oppose" ? -1 : 0;
   const factionPush = faction === "support" ? 1 : faction === "oppose" ? -1 : 0;
   const options: DecisionOption[] = [
@@ -86,7 +88,7 @@ export function chooseLegislativeVote(
         factionAlignment: factionPush * factionLoyalty,
         pragmaticEffectiveness: district * 0.5 + pragmatism * 0.1,
         institutionalAlignment: institutionalism * 0.2,
-        relationshipConsequence: rel,
+        relationshipConsequence: rel + orgPressure,
         careerBenefit: 0.15,
         risk: 0.1,
       }),
@@ -104,6 +106,7 @@ export function chooseLegislativeVote(
         factionAlignment: -factionPush * factionLoyalty,
         pragmaticEffectiveness: -district * 0.5 + pragmatism * 0.1,
         institutionalAlignment: institutionalism * 0.15,
+        relationshipConsequence: -orgPressure,
         careerBenefit: 0.1,
         risk: 0.12,
       }),
