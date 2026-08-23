@@ -11,6 +11,17 @@ pnpm exec vitest run packages/sim/src/phase11.integration.test.ts
 pnpm exec vitest run packages/sim/src/phase11.closeout.test.ts
 ```
 
+**Phase 11.2:** `phase11_2.governor.test.ts` covers provincial authority, explicit filing, recurring 21-race scheduling and save/reload. `phase11_2.systems.test.ts` covers canonical uneven economy starts, four-year persistence/determinism, trade-exposure response, campaign geographic distribution/decay, concrete bills and cross-role permission rejection. Campaign map fills retain component regression tests. Use:
+
+```bash
+pnpm exec vitest run packages/sim/src/phase11_2.governor.test.ts
+pnpm exec vitest run packages/sim/src/phase11_2.systems.test.ts
+pnpm calibrate:economy
+pnpm calibrate:campaign-geography
+```
+
+The systems regression also advances across the canonical 2029-06-01 Court vacancy date to ensure an automatic nonblocking event due exactly on a turn target is processed before the state date advances. Minister and Mayor permission checks assert one bounded role action per month and reject direct calls from every other role.
+
 ## 2. Hands-off autonomy test
 
 Run at least 100 saves for 600 monthly turns with a player who takes no political actions. Fail the build or balance candidate if a material share of runs show deadlocked election calendars, empty party leadership, permanent unfilled offices, impossible seat counts, runaway negative money, no legislation for years, constant civil war, or every party converging to identical ideology.
@@ -53,6 +64,8 @@ Track public scandals per politician-year. They should be rare enough that a sca
 
 Run policy-neutral baselines and shock scenarios. Economic series should remain bounded and exhibit realistic inertia. A tax or spending change should not transform GDP instantly. Provincial shocks should diffuse over time rather than teleport nationally in one turn.
 
+The Phase 11.2 calibrator runs 12 deterministic seeds for 48 months and reports canonical starting national values, province/sector ranges, one-year and four-year output movement, maximum province spread, shock frequency, bound hits, average monthly movement and direction changes. Acceptance requires a non-flat start, persistent regional spread, both short/long movement, no bound collapse, and reproducibility. The trade regression separately compares a highly exposed island province with the sheltered federal district under an identical trade disruption.
+
 ## 12. Foreign-affairs calibration
 
 Run the batch calibrator after foreign-affairs changes:
@@ -92,9 +105,13 @@ pnpm calibrate:assembly
 
 Record candidate count and candidates/seat, uncontested constituencies, incumbent candidates/winners/reelection, challenger wins, party seat change, turnout, represented parties, field-generation time, one-constituency STV time, full-resolution time, and archive-serialization time. The closeout browser check separately records worker click-return time and total count time; an indeterminate count state is required because the engine does not cheaply expose honest progress percentages.
 
+Phase 11.2 browser measurements on the development host: normal End Turn 1.152s total / 282ms click return, 2028 nomination month 6.157s / 431ms, 2033 nomination month 15.140s / 325ms, and 2030 Assembly count 14.242s / 277ms. Click return includes browser-control overhead and is therefore a conservative observed main-thread upper bound. The isolated integration harness recorded ordinary-turn median 799ms, maximum 976ms, Assembly resolution 12.282s, and 2033 presidential resolution 1.133s.
+
 ## 14. UI correctness
 
 Browser QA covers new game, character selection, end turn, save/load behavior, map interaction, election count, bill vote, relationship inspection, and history pages. Phase 11.1 requires actual Adrian run/decline, eligible non-incumbent Assembly, 2033 player contender, and 2033 observer workflows at 1440, 900, 600, and 390 pixels. Filing controls, Assembly campaign actions, indeterminate count state, national/constituency results, nomination controls, transitions, and horizontal overflow are inspected. Tooltips and result cards must use public names/data rather than raw IDs.
+
+Phase 11.2 additionally requires President, MP, Governor, non-incumbent, former officeholder and justice role passes, plus limited-role checks for Minister/Mayor. Inspect Home/Office/Career, province actions, gubernatorial filing/campaign/result, concrete bill composition, each truthful domestic map mode, world-map modes, hover/leave/click/tap/keyboard behavior, and populated News/Archive states. Responsive widths are 1440, 1200, 900, 600 and 390 pixels. Evidence screenshots live under `docs/qa/phase11_2/`.
 
 ## 15. Long-save migration
 

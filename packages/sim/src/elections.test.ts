@@ -916,7 +916,7 @@ describe("Phase 4 explicit 2028–2029 test path", () => {
     expect(restoreSimulation(sim.serializeSave(), world).hashState()).toBe(afterElectionHash);
     console.log(
       JSON.stringify({
-        presidentialReplay: replayHash,
+        presidentialReplayHash: hashCanonical(resolved.countArchive),
         afterElectionStateHash: afterElectionHash,
         domainResolutions: dresCount,
         winnerId,

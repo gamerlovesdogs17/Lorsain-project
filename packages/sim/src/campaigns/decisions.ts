@@ -1,6 +1,7 @@
 import { buildDecisionActorContext } from "../agents/context.js";
 import { chooseDecision, emptySignals, type DecisionOption } from "../agents/decisions.js";
 import { goalsOwnedBy } from "../agents/goals.js";
+import { getAgentProfile } from "../agents/profile.js";
 import type { KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import { pollAverage } from "../elections/polls.js";
@@ -37,8 +38,17 @@ export function campaignDecisionOptions(
   const id = campaign.politicianId;
   const home = world.politicianHomeProvince[id] ?? null;
   const homeConst = home
-    ? constituenciesInProvince(world, home)[0]
-    : Object.keys(world.constituencyElectorate).sort()[0];
+    ? constituenciesInProvince(world, home)
+        .slice()
+        .sort((a, b) => {
+          const ae = world.constituencyElectorate[a]!;
+          const be = world.constituencyElectorate[b]!;
+          const as = ae.provincePopulationShares.find((row) => row.provinceId === home)?.share ?? 0;
+          const bs = be.provincePopulationShares.find((row) => row.provinceId === home)?.share ?? 0;
+          return be.population * bs - ae.population * as || a.localeCompare(b);
+        })[0]
+    : Object.entries(world.constituencyElectorate)
+        .sort(([, a], [, b]) => b.population - a.population)[0]?.[0];
   const rivals = activeRaceCampaigns(state, campaign);
   const leader = rivals.slice().sort((a, b) => {
     const sa = standingPublicScore(world, state, b.politicianId);
@@ -46,7 +56,10 @@ export function campaignDecisionOptions(
     if (sa !== sb) return sa - sb;
     return a.politicianId < b.politicianId ? -1 : 1;
   })[0]?.politicianId;
-  const issueId = world.issueIds.slice().sort()[0] ?? null;
+  const issueSalience = getAgentProfile(world, state, id)?.issueSalience ?? {};
+  const issueId = world.issueIds
+    .slice()
+    .sort((a, b) => (issueSalience[b] ?? 0) - (issueSalience[a] ?? 0) || a.localeCompare(b))[0] ?? null;
   const opts: DecisionOption[] = [
     {
       optionId: "FUNDRAISE",
@@ -87,7 +100,12 @@ export function campaignDecisionOptions(
       uncertainty: 0.18,
       signals: emptySignals({ careerBenefit: 0.22, pragmaticEffectiveness: 0.4, risk: 0.08 }),
       goalImpacts: goalImpacts(state, id, 0.2),
-      metadata: { campaignId: campaign.id, constituencyId: homeConst ?? null },
+      metadata: {
+        campaignId: campaign.id,
+        geography: home
+          ? { kind: "province", id: home }
+          : { kind: "constituency", id: homeConst ?? null },
+      },
     },
     {
       optionId: "AD_POSITIVE",

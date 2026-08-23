@@ -512,6 +512,22 @@ export function ForeignAffairsPage(props: {
             selectedId={selectedId}
             fillFor={(id) => worldFillFor(mode, world, snap, id)}
             onSelect={setSelectedId}
+            tooltipFor={(id) => {
+              const country = world.worldCountries[id];
+              const countryRuntime = runtime.countries[id];
+              const activeCountryCrises = publicCrises.filter((crisis) => crisis.participantIds.includes(id));
+              const countrySanctions = activeSanctions.filter((sanction) => sanction.targetId === id);
+              const detail = mode === "relation"
+                ? id === TERENA_WORLD_ID ? "Home country" : terenaBilateralRelationLabel(world, snap, id)
+                : mode === "alliance"
+                  ? countryRuntime?.institutionIds.map((institution) => institutionDisplayName(world, institution)).join(" · ") || country?.alignment || "Independent"
+                  : mode === "crisis"
+                    ? activeCountryCrises.length ? `${activeCountryCrises.length} active public crisis${activeCountryCrises.length === 1 ? "" : "es"}` : "No active public crisis"
+                    : mode === "sanctions"
+                      ? countrySanctions.length ? `${countrySanctions.length} active sanction${countrySanctions.length === 1 ? "" : "s"}` : "No active sanctions"
+                      : militaryPostureLabel(countryRuntime?.posture ?? "normal");
+              return <><strong>{countryDisplayName(world, id)}</strong><span>{detail}</span></>;
+            }}
           />
           <div className="map-legend">
             <div className="kicker">Legend</div>

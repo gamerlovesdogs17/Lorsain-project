@@ -2,7 +2,7 @@ import type { ContentBundle } from "@lorsain/content-loader";
 import { type CommandResult, type KernelWorld, type SimEvent, type SimState, type Simulation } from "@lorsain/sim";
 import { playerCampaign } from "./format.js";
 import { type PresentationCatalog } from "./presentation.js";
-export type Screen = "home" | "career" | "assembly" | "party" | "campaign" | "elections" | "executive" | "courts" | "economy" | "organizations" | "news" | "foreign" | "terena" | "archive";
+export type Screen = "home" | "career" | "office" | "assembly" | "party" | "campaign" | "elections" | "executive" | "courts" | "economy" | "organizations" | "news" | "foreign" | "terena" | "archive";
 export type Figure = {
     id: string;
     name: string;

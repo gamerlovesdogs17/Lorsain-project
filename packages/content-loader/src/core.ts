@@ -6,6 +6,7 @@ import {
   ConstituencyPropertiesSchema,
   CrosswalkFileSchema,
   ElectoralCountingSchema,
+  Economy2028FileSchema,
   HistoricalCandidates2026Schema,
   IssuesFileSchema,
   ManifestSchema,
@@ -29,6 +30,7 @@ import {
   type ConstitutionFile,
   type CrosswalkFile,
   type ElectoralCountingFile,
+  type Economy2028File,
   type GeoJsonFeatureCollection,
   type IssuesFile,
   type Manifest,
@@ -94,6 +96,7 @@ export type ParsedAuthoritativeContent = {
   terena_electoral_counting: ElectoralCountingFile;
   terena_offices: OfficesFile;
   terena_presidential_administrations: PresidentialAdministrationsFile;
+  terena_economy_2028: Economy2028File;
   world_svg: string;
   terena_svg: string;
 };
@@ -260,6 +263,7 @@ export function validateAndLoadContent(
     "terena_historical_candidates_2026",
     "terena_voter_blocs_2028",
     "terena_pollsters",
+    "terena_economy_2028",
     "world_svg",
     "terena_svg",
   ] as const;
@@ -325,6 +329,7 @@ export function validateAndLoadContent(
   let pollsters: ReturnType<typeof PollstersFileSchema.parse>;
   let administrations: PresidentialAdministrationsFile;
   let officesFile: OfficesFile;
+  let economy2028: Economy2028File;
 
   try {
     world = WorldCountriesFileSchema.parse(readAuthJson("world_countries"));
@@ -377,6 +382,7 @@ export function validateAndLoadContent(
       readAuthJson("terena_presidential_administrations"),
     );
     officesFile = OfficesFileSchema.parse(readAuthJson("terena_offices"));
+    economy2028 = Economy2028FileSchema.parse(readAuthJson("terena_economy_2028"));
     worldSvg = reader.readText(manifest.authoritative.world_svg!);
     terenaSvg = reader.readText(manifest.authoritative.terena_svg!);
 
@@ -391,6 +397,7 @@ export function validateAndLoadContent(
     checkVersion("terena_organizations", orgs.content_version);
     checkVersion("terena_media", media.content_version);
     checkVersion("starting_figures", figures.content_version);
+    checkVersion("terena_economy_2028", economy2028.content_version);
     checkVersion("scenario", scenario.content_version);
     checkVersion("canonical_crosswalk", crosswalk.content_version);
     checkVersion("terena_electoral_counting", counting.content_version);
@@ -1408,6 +1415,7 @@ export function validateAndLoadContent(
     terena_electoral_counting: counting,
     terena_offices: officesFile,
     terena_presidential_administrations: administrations,
+    terena_economy_2028: economy2028,
     world_svg: worldSvg,
     terena_svg: terenaSvg,
   });

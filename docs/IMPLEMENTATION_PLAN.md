@@ -115,7 +115,8 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 10** — **COMPLETE (`9b3bda7`)** — Foreign affairs architecture: 48-state runtime, leaders, relations, trade, treaties, sanctions, crises, abstract conflict, world map UI, schemaVersion 10. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`.
 - **Phase 10.1** — **COMPLETE** — Foreign affairs functional completion: Terena runtime, AI toward Terena, crisis/conflict reachability, war powers, treaty consent, UI/presentation fixes, regression tests, long-horizon calibration.
 - **Phase 10.2** — **COMPLETE** — Institutional deepening: treaty identity/lifecycle/ratification DecisionContract fix, Assembly war-authorization referral, canonical WA/LTO membership + SC vetoes, bounded institution consequences, leadership schedule/name/monarchy fixes, expanded calibration metrics.
-- **Phase 11.1** — **COMPLETE** — Full recurring-election closeout: multi-year harness, natural 2033 presidential cycle, explicit/persisted Assembly filing and campaigns, order-independent national allocation, 48 typed STV archives, Assembly-specific UI, count Worker, save schema v11, and career continuity after leaving office. See `docs/PHASE_11_1_RESULTS.md`. **Phase 11.2 not started.**
+- **Phase 11.1** — **COMPLETE** — Full recurring-election closeout: multi-year harness, natural 2033 presidential cycle, explicit/persisted Assembly filing and campaigns, order-independent national allocation, 48 typed STV archives, Assembly-specific UI, count Worker, save schema v11, and career continuity after leaving office. See `docs/PHASE_11_1_RESULTS.md`.
+- **Phase 11.2** — **COMPLETE** — Integration closeout, Governor gameplay/elections, Political Opportunities, canonical economic geography, geographic campaign organization, concrete legislation and UI System V4. Save schema v12. See `docs/PHASE_11_2_RESULTS.md`.
 
 Deliverables:
 
@@ -250,7 +251,7 @@ Save **schemaVersion 8**; v7→v8 adds empty `constitutionalRuntime` (including 
 
 ## 18. Phase 9 — economy, organizations, media, UI v2, map
 
-**COMPLETE.** Normalized economy indices (Jan 2028 = 100), lagged policy effects, regional variation from voter-bloc archetypes. Ten canonical organizations from `terena_organizations.json`; seven media outlets from `terena_media.json`. Stories from real public events only. Month order: economy → organizations → campaign/legislature/executive/courts → scheduled → media. UI System V2 + `<TerenaMap />` from GeoJSON (no runtime `terena_svg` injection). Save **schemaVersion 9**; v8→v9 baseline economy, empty org/media history. 20-year synthetic hash at Phase 9.5 close: `6b3dea55f2279a6216bb676c8fa1175b`. Phase 9.6 Trade-formula fix changes the 20-year synthetic hash to `86952783749897096b223e06992f8e8c`. See `docs/UI_SYSTEM_V2.md`.
+**COMPLETE.** Normalized reference-100 economy indices, lagged policy effects and the original voter-bloc regional derivation. Ten canonical organizations from `terena_organizations.json`; seven media outlets from `terena_media.json`. Stories from real public events only. Month order: economy → organizations → campaign/legislature/executive/courts → scheduled → media. UI System V2 + `<TerenaMap />` from GeoJSON (no runtime `terena_svg` injection). Save **schemaVersion 9**; v8→v9 used the legacy flat economy later replaced by Phase 11.2 canonical economic geography. 20-year synthetic hash at Phase 9.5 close: `6b3dea55f2279a6216bb676c8fa1175b`. Phase 9.6 Trade-formula fix changes the 20-year synthetic hash to `86952783749897096b223e06992f8e8c`. See `docs/UI_SYSTEM_V2.md`.
 
 ## 18.5. Phase 9.5 — UI System V3 playtest UX
 
@@ -281,9 +282,22 @@ Acceptance criteria met: varied hands-off outcomes within Terena vertical-slice 
 
 ### Phase 11.1 — full-game integration (**COMPLETE**)
 
-Integrated Terena multi-year harness with scripted interrupt resolution, catastrophic invariants, and continuous-vs-reload hash checks. Assembly 2030 now has a real pre-election filing/campaign lifecycle, nationally allocated candidate fields, typed constituency STV archives, an Assembly-specific result UI, June seating, and a dedicated count Worker. The 2033 presidential cycle creates fresh nomination contests from runtime politics, finalizes naturally, transitions in January 2034, and schedules 2038 without changing 2028 history. Player defeat, decline, and term completion preserve the politician and remove only office powers. Save schema is v11. Docs: `PHASE_11_INTEGRATION_TEST_PLAN.md`, `PHASE_11_1_RESULTS.md`. **Phase 11.2 not started.**
+Integrated Terena multi-year harness with scripted interrupt resolution, catastrophic invariants, and continuous-vs-reload hash checks. Assembly 2030 now has a real pre-election filing/campaign lifecycle, nationally allocated candidate fields, typed constituency STV archives, an Assembly-specific result UI, June seating, and a dedicated count Worker. The 2033 presidential cycle creates fresh nomination contests from runtime politics, finalizes naturally, transitions in January 2034, and schedules 2038 without changing 2028 history. Player defeat, decline, and term completion preserve the politician and remove only office powers. Save schema is v11. Docs: `PHASE_11_INTEGRATION_TEST_PLAN.md`, `PHASE_11_1_RESULTS.md`.
 
-Later 11.x: UI polish (11.2), balance (11.3), content/prose (11.4).
+### Phase 11.2 — integration closeout, role gameplay, economic geography and UI V4 (**COMPLETE**)
+
+- Future presidential NPC interest is evaluated from near-cycle runtime politics; historic fields become immutable after filing.
+- The turn Worker handles multi-second presidential nomination counts while the existing Assembly Worker remains intact.
+- Filed Assembly candidates are pinned geographically; player filing allocates around them.
+- Bounded provincial governance, pressures and 21 recurring gubernatorial races make Governor a complete v1 role; Minister and Mayor loops remain deliberately limited.
+- Career Opportunities owns eligible-race discovery, public geography comparison and explicit filing/decline. Campaign owns execution.
+- Canonical January 2028 economy data replaces the flat 100 start; province and sector structure persists and reacts differently to cycles, trade and housing.
+- Campaign organization uses national/province/constituency layers plus restrained decay; national effects are population-distributed across all geography.
+- Bills use one to three concrete legal provisions and natural deterministic names/summaries.
+- UI System V4 adds role-aware Home/Office, type-specific elections, truthful map layers/tooltips, responsive density and long-save-aware presentation.
+- Save schema is v12; docs and evidence are in `PHASE_11_2_UX_GAMEPLAY_AUDIT.md`, `UI_SYSTEM_V4.md`, and `PHASE_11_2_RESULTS.md`.
+
+Later 11.x: numerical balance (11.3), content/prose depth (11.4), release audit (11.5).
 
 ## 21. First playable vertical slice
 

@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import { useEffect, useMemo, useState } from "react";
-import { collectPlayerActionableDecisions, createSimulation, parseSaveFile, restoreSimulation, } from "@lorsain/sim";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { collectPlayerActionableDecisions, addMonths, createSimulation, nominationCalendarDates, parseSaveFile, restoreSimulation, } from "@lorsain/sim";
 import { loadBrowserContentBundle } from "./content/browserReader.js";
 import { kernelWorldFromBundle } from "./content/world.js";
 import { downloadSave, getSave, listSaves, putSave, readImportedSave, } from "./saves.js";
@@ -20,6 +20,8 @@ export default function App() {
     const [snap, setSnap] = useState(null);
     const [screen, setScreen] = useState("home");
     const [busy, setBusy] = useState(false);
+    const [busyLabel, setBusyLabel] = useState("Processing…");
+    const busyRef = useRef(false);
     const [countingElection, setCountingElection] = useState(false);
     const [turnEvents, setTurnEvents] = useState([]);
     const [saves, setSaves] = useState([]);
@@ -131,22 +133,53 @@ export default function App() {
         worker.postMessage({ save: sim.serializeSave(), world });
     }
     function endTurn() {
-        if (!sim)
+        if (!sim || !world || busyRef.current || countingElection)
             return;
+        busyRef.current = true;
+        const before = sim.getSnapshot().history.length;
+        const nextMonth = addMonths(snap?.currentDate ?? sim.getSnapshot().currentDate, 1);
+        const nominationDue = Object.values(sim.getSnapshot().partyContests).some((contest) => {
+            if (contest.type !== "presidential_nomination")
+                return false;
+            if (contest.status === "resolved" || contest.status === "cancelled")
+                return false;
+            const electionDate = contest.metadata.electionDate;
+            if (typeof electionDate !== "string")
+                return false;
+            return nominationCalendarDates(electionDate).resolve <= nextMonth;
+        });
+        setBusyLabel(nominationDue ? "Counting nominations…" : "Processing…");
         setBusy(true);
-        window.setTimeout(() => {
-            const before = sim.getSnapshot().history.length;
-            let result = sim.executeCommand({ type: "ADVANCE_TURN" });
-            if (result.ok && result.interrupt && !result.interrupt.requiresResolution) {
-                sim.executeCommand({ type: "ACKNOWLEDGE_INTERRUPT" });
-                result = sim.executeCommand({ type: "RESUME_TURN" });
+        const worker = new Worker(new URL("./turnWorker.ts", import.meta.url), { type: "module" });
+        worker.onmessage = (event) => {
+            worker.terminate();
+            try {
+                if (event.data.ok) {
+                    const restored = restoreSimulation(event.data.save, world);
+                    setTurnEvents(restored.getSnapshot().history.slice(before));
+                    refresh(restored);
+                    if (!event.data.result.ok)
+                        feedback.setNotice(event.data.result.error.message);
+                }
+                else {
+                    feedback.setNotice(event.data.message);
+                }
             }
-            setTurnEvents(sim.getSnapshot().history.slice(before));
-            refresh(sim);
+            catch (error) {
+                feedback.setNotice(error instanceof Error ? error.message : "The turn could not be restored.");
+            }
+            finally {
+                busyRef.current = false;
+                setBusy(false);
+            }
+        };
+        worker.onerror = (event) => {
+            worker.terminate();
+            feedback.setNotice(event.message || "The turn could not be completed.");
+            busyRef.current = false;
             setBusy(false);
-            if (!result.ok)
-                feedback.setNotice(result.error.message);
-        }, 20);
+        };
+        worker.postMessage({ save: sim.serializeSave(), world });
     }
     if (error) {
         return (_jsx("div", { className: "app-title", children: _jsxs("div", { className: "title-card", children: [_jsx("h1", { children: "Lorsain" }), _jsx("p", { children: error }), _jsx("button", { className: "btn", onClick: () => setError(null), children: "Back" })] }) }));
@@ -193,19 +226,33 @@ export default function App() {
                 return 1;
             if (o.includes("leader of"))
                 return 2;
-            if (o.includes("minister"))
-                return 3;
             if (o.includes("governor"))
-                return 4;
+                return 3;
             if (o.includes("chief justice"))
-                return 5;
+                return 4;
             if (f.presidential_status === "frontrunner")
+                return 5;
+            if (o.includes("assembly") || o.includes("mp"))
                 return 6;
-            if (o.includes("chair"))
-                return 7;
-            if (f.presidential_status === "likely")
-                return 8;
             return 99;
+        }
+        function roleDescription(f) {
+            const kind = officeKind(f);
+            if (kind === "president")
+                return "Run the national executive and foreign policy.";
+            if (kind === "governor")
+                return "Lead provincial administration and build toward reelection or national office.";
+            if (kind === "assembly")
+                return "Legislate, vote and build a political career.";
+            if (kind === "courts")
+                return "Hear constitutional cases and shape public precedent.";
+            if (kind === "leader")
+                return "Manage party politics alongside the powers of any elected office held.";
+            if (kind === "minister")
+                return "Limited role: advise the President and pursue a broader political career.";
+            if ((f.office ?? "").toLowerCase().includes("mayor"))
+                return "Limited role: set a civic priority and pursue future office.";
+            return "Continue a political career and seek a legitimate electoral opportunity.";
         }
         const filtered = figuresList
             .filter((f) => {
@@ -242,9 +289,7 @@ export default function App() {
         const page = Math.min(browsePage, pageCount - 1);
         const pageRows = browse.slice(page * pageSize, page * pageSize + pageSize);
         const tempCatalog = catalogFromBundle(bundle, figures);
-        const card = (f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), ...((f.notes ?? f.display_summary)
-                ? { descriptor: f.notes ?? f.display_summary }
-                : {}), action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id));
+        const card = (f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), descriptor: `${roleDescription(f)}${f.notes ?? f.display_summary ? ` ${f.notes ?? f.display_summary}` : ""}`, action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id));
         return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: "Choose your career" }), _jsx("p", { className: "muted", children: "Begin as a notable officeholder, or search the full public roster. Hidden traits are never shown." })] }), _jsxs("div", { className: "row new-game-filters", children: [_jsx("input", { className: "search", placeholder: "Search by name, office, party, or home", value: query, onChange: (e) => {
                                 setQuery(e.target.value);
                                 setBrowsePage(0);
@@ -263,8 +308,12 @@ export default function App() {
         return null;
     const player = snap.politicians[snap.playerPoliticianId];
     const offices = playerOffices(world, snap, snap.playerPoliticianId);
+    const roleKind = Object.values(snap.officeTerms)
+        .filter((term) => term.holderId === snap.playerPoliticianId && (term.status === "active" || term.status === "suspended"))
+        .map((term) => world.offices[term.officeId]?.kind)
+        .find(Boolean) ?? "private_citizen";
     const interrupt = snap.pendingInterrupt;
     const decisionCount = collectPlayerActionableDecisions(world, snap).length;
-    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, busy: busy || countingElection, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, askConfirm: feedback.askConfirm }), feedback.overlay()] }));
+    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, askConfirm: feedback.askConfirm }), feedback.overlay()] }));
 }
 //# sourceMappingURL=App.js.map

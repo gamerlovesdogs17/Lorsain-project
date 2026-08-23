@@ -79,7 +79,8 @@ export function CampaignPage(props: {
   const [activeAction, setActiveAction] = useState<ActionKind>(null);
   const [visitKind, setVisitKind] = useState<"national" | "province" | "constituency">("national");
   const [visitId, setVisitId] = useState("");
-  const [orgId, setOrgId] = useState(Object.keys(props.world.constituencyElectorate)[0] ?? "");
+  const [orgKind, setOrgKind] = useState<"province" | "constituency">("province");
+  const [orgId, setOrgId] = useState(props.world.provinceIds[0] ?? "");
   const [adType, setAdType] = useState<"positive" | "contrast" | "negative">("positive");
   const [adIssue, setAdIssue] = useState(props.world.issueIds[0] ?? "");
   const [adGeo, setAdGeo] = useState<"national" | "province" | "constituency">("national");
@@ -93,6 +94,7 @@ export function CampaignPage(props: {
   const [endorserId, setEndorserId] = useState<string | null>(null);
   const [mapSel, setMapSel] = useState<MapSelection | null>(null);
   const [hoverSel, setHoverSel] = useState<MapSelection | null>(null);
+  const [mapScale, setMapScale] = useState<"province" | "constituency">("province");
   const contest = c?.contestId ? props.snap.partyContests[c.contestId] : null;
   const assemblyIncompatible = Object.values(props.snap.officeTerms).some((term) => {
     if (
@@ -139,6 +141,7 @@ export function CampaignPage(props: {
   useEffect(() => {
     if (c?.type !== "assembly" || !c.constituencyId) return;
     setVisitKind("constituency");
+    setOrgKind("constituency");
     setVisitId(c.constituencyId);
     setOrgId(c.constituencyId);
     setAdGeo("constituency");
@@ -301,7 +304,20 @@ export function CampaignPage(props: {
   const playerPol = props.snap.politicians[props.snap.playerPoliticianId];
   const campaignElectionDate =
     (c.electionId ? props.snap.elections[c.electionId]?.date : null) ??
+    (c.electionId ? props.snap.provincialRuntime.elections[c.electionId]?.date : null) ??
     (typeof contest?.metadata.electionDate === "string" ? contest.metadata.electionDate : null);
+  const gubernatorialRace = c.electionId
+    ? props.snap.provincialRuntime.elections[c.electionId]
+    : null;
+  const raceDescription = c.type === "presidential_nomination"
+    ? `${partyDisplayName(props.world, playerPol?.partyId ?? null, props.snap)} nomination · National`
+    : c.type === "presidential_general"
+      ? "President of Terena · National"
+      : c.type === "assembly" && c.constituencyId
+        ? `National Assembly · ${constituencyDisplayName(props.catalog, c.constituencyId)}`
+        : c.type === "gubernatorial" && gubernatorialRace
+          ? `Governor · ${props.catalog.places.get(gubernatorialRace.provinceId)?.name ?? gubernatorialRace.provinceId}`
+          : "Political campaign";
 
   function geoOptions(kind: "national" | "province" | "constituency") {
     if (kind === "national") return [] as string[];
@@ -330,24 +346,43 @@ export function CampaignPage(props: {
     <div className="campaign-page">
       <PageHeader
         kicker="Command center"
-        title={campaignTypeLabel(c.type)}
-        subtitle={
-          c.type === "assembly" && c.constituencyId
-            ? `${constituencyDisplayName(props.catalog, c.constituencyId)} · Election ${campaignElectionDate ?? "upcoming"}`
-            : `Election ${campaignElectionDate ?? "upcoming"}`
-        }
+        title={campaignTypeLabel(c.type).replace(/^./, (letter) => letter.toUpperCase())}
+        subtitle={`${raceDescription} · Election ${campaignElectionDate ?? "upcoming"}`}
       />
       <div className="campaign-command">
         <div className="campaign-map-pane">
+          <div className="map-scale-switch" aria-label="Campaign map scale">
+            <button type="button" className={mapScale === "province" ? "active" : ""} onClick={() => { setMapScale("province"); setMapSel(null); }}>Provinces</button>
+            <button type="button" className={mapScale === "constituency" ? "active" : ""} onClick={() => { setMapScale("constituency"); setMapSel(null); }}>Constituencies</button>
+          </div>
           <TerenaMap
             bundle={props.bundle}
             mode="campaign"
             selectedId={mapSel?.id ?? null}
+            showConstituencies={mapScale === "constituency"}
             fillFor={(f, kind) =>
-              mapFillFor("campaign", props.world, props.snap, f, kind, c.organizationByConstituency)
+              mapFillFor(
+                "campaign",
+                props.world,
+                props.snap,
+                f,
+                kind,
+                c.organizationByConstituency,
+                c.organizationByProvince,
+              )
             }
             onSelect={setMapSel}
             onHover={setHoverSel}
+            tooltipFor={(selection) => (
+              <>
+                <strong>{selection.name}</strong>
+                <span>{selection.kind === "province"
+                  ? `Provincial organization ${(c.organizationByProvince[selection.id] ?? 0).toFixed(2)}`
+                  : selection.kind === "constituency"
+                    ? `Constituency organization ${(c.organizationByConstituency[selection.id] ?? 0).toFixed(2)}`
+                    : "Campaign location"}</span>
+              </>
+            )}
           />
           <MapLegend mode="campaign" world={props.world} />
           {(mapSel ?? hoverSel) ? (
@@ -355,7 +390,9 @@ export function CampaignPage(props: {
               {(mapSel ?? hoverSel)!.name}
               {(mapSel ?? hoverSel)!.kind === "constituency"
                 ? ` · org ${(c.organizationByConstituency[(mapSel ?? hoverSel)!.id] ?? 0).toFixed(2)}`
-                : ""}
+                : (mapSel ?? hoverSel)!.kind === "province"
+                  ? ` · provincial org ${(c.organizationByProvince[(mapSel ?? hoverSel)!.id] ?? 0).toFixed(2)}`
+                  : ""}
             </p>
           ) : (
             <EmptyState>Field organization you control — not latent voter support.</EmptyState>
@@ -546,9 +583,20 @@ export function CampaignPage(props: {
         <ActionDrawer title="Field organization" onClose={() => setActiveAction(null)}>
           <div className="form-stack">
             <label>
-              Constituency
+              Organizing level
+              <select value={orgKind} disabled={c.type === "assembly"} onChange={(event) => {
+                const kind = event.target.value as typeof orgKind;
+                setOrgKind(kind);
+                setOrgId(kind === "province" ? (provinces[0] ?? "") : (constituencies[0] ?? ""));
+              }}>
+                {c.type !== "assembly" ? <option value="province">Province operation</option> : null}
+                <option value="constituency">Constituency operation</option>
+              </select>
+            </label>
+            <label>
+              {orgKind === "province" ? "Province" : "Constituency"}
               <select value={orgId} onChange={(e) => setOrgId(e.target.value)}>
-                {constituencies.map((id) => (
+                {(orgKind === "province" ? provinces : constituencies).map((id) => (
                   <option key={id} value={id}>
                     {constituencyDisplayName(props.catalog, id)}
                   </option>
@@ -562,7 +610,7 @@ export function CampaignPage(props: {
               onClick={() => {
                 run(
                   props.sim,
-                  { type: "CAMPAIGN_ORGANIZE", campaignId: c.id, constituencyId: orgId },
+                  { type: "CAMPAIGN_ORGANIZE", campaignId: c.id, geographyKind: orgKind, geographyId: orgId },
                   props.report,
                   props.onDone,
                 );

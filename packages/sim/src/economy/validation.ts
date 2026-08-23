@@ -48,6 +48,32 @@ export function parseEconomyRuntime(raw: unknown): EconomyRuntime | string {
       runtime.history.push({ date: row.date, ...parseNational(row) });
     }
   }
+  if (isRecord(raw.provinceHistory)) {
+    for (const [id, rows] of Object.entries(raw.provinceHistory)) {
+      if (!Array.isArray(rows)) continue;
+      runtime.provinceHistory[id] = rows.flatMap((row) => {
+        if (!isRecord(row) || typeof row.date !== "string" || !isIsoDate(row.date)) return [];
+        return [{
+          date: row.date,
+          conditionsIndex: typeof row.conditionsIndex === "number" ? clampIndex(row.conditionsIndex) : 100,
+          employmentIndex: typeof row.employmentIndex === "number" ? clampIndex(row.employmentIndex) : 100,
+          housingIndex: typeof row.housingIndex === "number" ? clampIndex(row.housingIndex) : 100,
+        }];
+      });
+    }
+  }
+  if (isRecord(raw.sectorHistory)) {
+    for (const [id, rows] of Object.entries(raw.sectorHistory)) {
+      if (!Array.isArray(rows)) continue;
+      runtime.sectorHistory[id] = rows.flatMap((row) => {
+        if (!isRecord(row) || typeof row.date !== "string" || !isIsoDate(row.date)) return [];
+        return [{
+          date: row.date,
+          conditionsIndex: typeof row.conditionsIndex === "number" ? clampIndex(row.conditionsIndex) : 100,
+        }];
+      });
+    }
+  }
   if (isRecord(raw.provinces)) {
     for (const [id, rec] of Object.entries(raw.provinces)) {
       if (!isRecord(rec)) continue;
@@ -107,6 +133,33 @@ export function parseEconomyRuntime(raw: unknown): EconomyRuntime | string {
   if (isRecord(raw.appliedPolicySources)) {
     for (const [k, v] of Object.entries(raw.appliedPolicySources)) {
       if (typeof v === "string") runtime.appliedPolicySources[k] = v;
+    }
+  }
+  if (isRecord(raw.cycle)) {
+    const cycleRaw = raw.cycle;
+    const finite = (key: string, fallback: number) =>
+      typeof cycleRaw[key] === "number" && Number.isFinite(cycleRaw[key])
+        ? (cycleRaw[key] as number)
+        : fallback;
+    runtime.cycle = {
+      phase: finite("phase", 0.35),
+      outputMomentum: Math.max(-1, Math.min(1, finite("outputMomentum", 0))),
+      inflationMomentum: Math.max(-1, Math.min(1, finite("inflationMomentum", 0))),
+      housingMomentum: Math.max(-1, Math.min(1, finite("housingMomentum", 0))),
+      monthsElapsed: Math.max(0, Math.trunc(finite("monthsElapsed", runtime.history.length - 1))),
+    };
+  }
+  const fallbackDate = runtime.lastMonthProcessed ?? runtime.history.at(-1)?.date;
+  if (fallbackDate) {
+    for (const [id, province] of Object.entries(runtime.provinces)) {
+      if (!runtime.provinceHistory[id]?.length) {
+        runtime.provinceHistory[id] = [{ date: fallbackDate, ...province }];
+      }
+    }
+    for (const [id, sector] of Object.entries(runtime.sectors)) {
+      if (!runtime.sectorHistory[id]?.length) {
+        runtime.sectorHistory[id] = [{ date: fallbackDate, ...sector }];
+      }
     }
   }
   return runtime;

@@ -155,6 +155,31 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P111-SCREENSHOTS | **FIXED** | Actual 1440/900/600/390 QA screenshots are stored in `docs/qa/`. |
 | P111-MIGRATION-FIXTURES | NONBLOCKING | On-disk historic save fixtures still not checked in. |
 
+## Phase 11.2 notes
+
+**Phase 11.2 integration closeout, Governor gameplay, economic geography, campaign geography, concrete legislation and UI System V4 are COMPLETE.** See `docs/PHASE_11_2_RESULTS.md`.
+
+| ID | Severity | Issue |
+| --- | --- | --- |
+| P112-PRES-FIELD | **FIXED** | Planned future presidential nomination contests are empty shells; NPC interest is generated from runtime eligibility, office, leadership, standing, history and term-limit state when the exploration window opens. |
+| P112-NOM-WORKER | **FIXED** | End Turn uses the deterministic turn Worker for nomination-resolution months, disables repeat execution, and displays an indeterminate truthful counting state. |
+| P112-ASM-FILED-GEO | **FIXED** | Legitimately filed NPC candidates remain pinned to their constituency through player file/decline and save/reload. |
+| P112-GOVERNOR | **FIXED** | Governors have bounded provincial priorities, investment emphasis, federal positions, pressure responses, public standing and recurring elections. |
+| P112-GOV-RULES | NONBLOCKING | Exact detailed provincial election procedure was canonically deferred. v1 uses documented four-year, province-wide plurality contests; a later canon pass may replace procedure without broadening provincial powers. |
+| P112-MINISTER-MAYOR | NONBLOCKING | Minister and Mayor have one bounded role action and are labeled `Limited`; full portfolio politics and municipal government remain intentionally outside v1 scope. |
+| P112-PARTY-LEADER | NONBLOCKING | Party/faction leadership affects contests and politics but is not a standalone management game. Office-based gameplay remains the main loop. |
+| P112-ECONOMY-START | **FIXED** | Canonical January 2028 national, sector and province data is non-flat; structural exposures, trends and sensitivities persist across monthly cycles and shocks. |
+| P112-CAMPAIGN-GEO | **FIXED** | National actions reach every province/constituency deterministically; province and constituency organization respond locally and decay gradually. |
+| P112-MAP-MODES | **FIXED** | Election and Campaign modes use their named public data; Economy uses real regional differences; the fake Organizations map mode was removed pending canonical public geography. |
+| P112-WORLD-MAP | **FIXED** | The World map now uses public mode-specific tooltips plus consistent hover/leave/click/tap/keyboard selection instead of relying on SVG title text. |
+| P112-EXACT-EXPIRY | **FIXED** | A nonblocking office expiry due exactly on a turn target is processed before the save receives that date; the June 2029 Court vacancy no longer stalls a browser run. |
+| P112-FIRST-ORDER | **FIXED** | Final smell review removed first-ID political choices from NPC campaign issues, cabinet vacancy order, Assembly geographic eligibility, Minister advice and Court proceeding order. Stable IDs remain only final tie-breakers. |
+| P112-ORG-MAP | NONBLOCKING | No canonical public province-level organization presence dataset exists. Organizations remains a master/detail page; a geographic mode should return only with validated public data. |
+| P112-BILLS | **FIXED** | Bills use one to three concrete provisions with named legal options, current law, effects and deterministic public titles/summaries. |
+| P112-BUNDLE | NONBLOCKING | The production client remains about 10.9 MB before gzip because canonical map/content data is bundled. Code splitting is deferred release engineering, not a gameplay blocker. |
+| P112-BALANCE | DEFERRED TO 11.3 | Incumbency, competitiveness and coefficient tuning require deeper multi-seed balance work after this structural phase. |
+| P112-CONTENT | DEFERRED TO 11.4 | More biographies, flavor prose, tutorials and content variety remain a content pass, not a missing mechanic. |
+
 ## Phase 8 leftovers
 
 | ID | Severity | Issue |
@@ -162,5 +187,5 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P8-DOCTRINE | NONBLOCKING | No full written opinions, standing doctrine, interlocutory appeals, or lower courts. |
 | P8-CASELAW-UI | NONBLOCKING | Precedent summary is a short list, not a case-law search system. |
 | P8-PARTIAL-INVALIDATION | NONBLOCKING | Phase 8 uses whole-law disposition rather than item-level invalidation. |
-| P71-UI-POLISH | NONBLOCKING | Presentation is functional, not final. Charts, animation, map analytics, and typography wait for Phase 11. |
+| P71-UI-POLISH | **FIXED in Phase 11.2** | UI System V4 supplies role-aware workspaces, responsive density, map analytics/tooltips, trend history and revised typography. |
 | P71-NEWS | NONBLOCKING | Home briefing uses structured events, not generated newspaper copy (Phase 9). |

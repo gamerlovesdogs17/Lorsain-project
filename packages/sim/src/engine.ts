@@ -1,4 +1,4 @@
-import { addMonths, isIsoDate, type IsoDate } from "./calendar.js";
+import { addMonths, compareIsoDate, isIsoDate, type IsoDate } from "./calendar.js";
 import { emptyAgentRuntime } from "./agents/validation.js";
 import { recordObservation } from "./agents/beliefs.js";
 import { needsInitialGoals, reviewGoals, seedInitialGoals } from "./agents/goals.js";
@@ -141,7 +141,22 @@ import {
 } from "./courts/types.js";
 import { processCourtsMonth } from "./courts/monthly.js";
 import { processEconomyMonth } from "./economy/monthly.js";
-import { baselineEconomyRuntime } from "./economy/types.js";
+import { baselineEconomyRuntime, economyRuntimeFromScenario } from "./economy/types.js";
+import { processProvincialMonth } from "./provinces/monthly.js";
+import { seedProvincialRuntime } from "./provinces/state.js";
+import { emptyProvincialRuntime } from "./provinces/types.js";
+import {
+  declineGubernatorialCandidacy,
+  fileGubernatorialCandidacy,
+} from "./provinces/elections.js";
+import {
+  adviseMinistryPriority,
+  directProvincialInvestment,
+  respondProvincialPressure,
+  setMayorCivicPriority,
+  setProvincialPriority,
+  takeProvincialFederalPosition,
+} from "./provinces/procedure.js";
 import { processOrganizationsMonth } from "./organizations/monthly.js";
 import {
   askOrganizationBillSupport,
@@ -298,7 +313,10 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     legislatureRuntime: emptyLegislatureRuntime(),
     executiveRuntime: emptyExecutiveRuntime(),
     constitutionalRuntime: emptyConstitutionalRuntime(),
-    economyRuntime: baselineEconomyRuntime(world.provinceIds, world.scenarioStartDate),
+    economyRuntime: world.economyScenario
+      ? economyRuntimeFromScenario(world.economyScenario)
+      : baselineEconomyRuntime(world.provinceIds, world.scenarioStartDate),
+    provincialRuntime: emptyProvincialRuntime(),
     organizationRuntime: seedOrganizationRuntime(world.interestOrganizations),
     mediaRuntime: emptyMediaRuntime(),
     foreignAffairsRuntime: emptyForeignAffairsRuntime(),
@@ -307,6 +325,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     const id = padId("TERM", state.counters.nextTermId++);
     state.officeTerms[id] = { ...t, id };
   }
+  state.provincialRuntime = seedProvincialRuntime(world, state);
   for (const ev of world.initialScheduled) {
     const queued = enqueueScheduled(state, ev);
     if (!isScheduled(queued)) {
@@ -471,6 +490,7 @@ function runTowardTarget(
 ): { events: SimEvent[]; interrupt: PendingInterrupt | null } {
   const events: SimEvent[] = [];
   events.push(...processEconomyMonth(state, world, rng, commandId));
+  events.push(...processProvincialMonth(state, world, rng, commandId));
   events.push(...processOrganizationsMonth(state, world, rng, commandId));
   events.push(...processCampaignMonth(state, world, rng, commandId));
   events.push(...processLegislatureMonth(state, world, rng, commandId));
@@ -478,8 +498,19 @@ function runTowardTarget(
   events.push(...processCourtsMonth(state, world, rng, commandId));
   sortScheduler(state);
   while (true) {
-    const next = nextPendingBefore(state, target, includeTargetEvents);
+    // Non-blocking events become effective on their due date.  In particular,
+    // an auto-vacating office term cannot be carried into a save stamped with
+    // that same date and only cleaned up on the following turn.  Blocking
+    // events retain the existing stop-on-date/resume behavior.
+    const next = nextPendingBefore(state, target, true);
     if (!next) break;
+    if (
+      !includeTargetEvents &&
+      next.blocking &&
+      compareIsoDate(next.dueDate, target) === 0
+    ) {
+      break;
+    }
     const out = applyScheduled(state, world, rng, next, commandId);
     events.push(...out.events);
     if (out.interrupt) return { events, interrupt: out.interrupt };
@@ -572,14 +603,13 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
     state.organizationRuntime.actors = seedOrganizationRuntime(frozen.interestOrganizations).actors;
   }
   if (Object.keys(state.economyRuntime.provinces).length === 0) {
-    for (const id of frozen.provinceIds) {
-      state.economyRuntime.provinces[id] = {
-        conditionsIndex: 100,
-        employmentIndex: 100,
-        housingIndex: 100,
-      };
-    }
+    const seeded = frozen.economyScenario
+      ? economyRuntimeFromScenario(frozen.economyScenario)
+      : baselineEconomyRuntime(frozen.provinceIds, state.currentDate);
+    state.economyRuntime.provinces = seeded.provinces;
+    state.economyRuntime.provinceHistory = seeded.provinceHistory;
   }
+  state.provincialRuntime = seedProvincialRuntime(frozen, state, state.provincialRuntime);
   if (needsForeignAffairsSeed(state)) seedForeignAffairsRuntime(frozen, state);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
@@ -1704,7 +1734,15 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         jsonClone(state),
         {
           campaignId: command.campaignId,
-          constituencyId: command.constituencyId,
+          ...(command.constituencyId ? { constituencyId: command.constituencyId } : {}),
+          ...(command.geographyKind
+            ? {
+                geography: {
+                  kind: command.geographyKind,
+                  id: command.geographyId ?? command.constituencyId ?? null,
+                },
+              }
+            : {}),
           actorId: state.playerPoliticianId,
         },
         null,
@@ -1716,7 +1754,15 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         state,
         {
           campaignId: command.campaignId,
-          constituencyId: command.constituencyId,
+          ...(command.constituencyId ? { constituencyId: command.constituencyId } : {}),
+          ...(command.geographyKind
+            ? {
+                geography: {
+                  kind: command.geographyKind,
+                  id: command.geographyId ?? command.constituencyId ?? null,
+                },
+              }
+            : {}),
           actorId: state.playerPoliticianId,
         },
         commandId,
@@ -1914,6 +1960,108 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         { campaignId: command.campaignId, actorId: state.playerPoliticianId },
         commandId,
       );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "FILE_GUBERNATORIAL_CANDIDACY") {
+      const args = {
+        politicianId: state.playerPoliticianId,
+        electionId: command.electionId,
+        provinceId: command.provinceId,
+      };
+      const preview = fileGubernatorialCandidacy(jsonClone(state), world, args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = fileGubernatorialCandidacy(state, world, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DECLINE_GUBERNATORIAL_CANDIDACY") {
+      const args = { politicianId: state.playerPoliticianId, electionId: command.electionId };
+      const preview = declineGubernatorialCandidacy(jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = declineGubernatorialCandidacy(state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "GOVERNOR_SET_PRIORITY") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        provinceId: command.provinceId,
+        priority: command.priority,
+      };
+      const preview = setProvincialPriority(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = setProvincialPriority(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "GOVERNOR_DIRECT_INVESTMENT") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        provinceId: command.provinceId,
+        focus: command.focus,
+      };
+      const preview = directProvincialInvestment(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = directProvincialInvestment(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "GOVERNOR_TAKE_FEDERAL_POSITION") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        provinceId: command.provinceId,
+        issueId: command.issueId,
+        direction: command.direction,
+      };
+      const preview = takeProvincialFederalPosition(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = takeProvincialFederalPosition(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "GOVERNOR_RESPOND_TO_PRESSURE") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        provinceId: command.provinceId,
+        pressureId: command.pressureId,
+        response: command.response,
+      };
+      const preview = respondProvincialPressure(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = respondProvincialPressure(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "MINISTER_ADVISE_PRIORITY") {
+      const args = { actorId: state.playerPoliticianId, issueId: command.issueId };
+      const preview = adviseMinistryPriority(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = adviseMinistryPriority(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "MAYOR_SET_CIVIC_PRIORITY") {
+      const args = { actorId: state.playerPoliticianId, priority: command.priority };
+      const preview = setMayorCivicPriority(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = setMayorCivicPriority(world, state, args, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }

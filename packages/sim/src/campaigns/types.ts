@@ -5,6 +5,7 @@ export const CAMPAIGN_TYPES = [
   "presidential_nomination",
   "presidential_general",
   "assembly",
+  "gubernatorial",
 ] as const;
 export type CampaignType = (typeof CAMPAIGN_TYPES)[number];
 
@@ -54,6 +55,7 @@ export type CampaignState = {
   fundraisingCapacity: number;
   fieldOrganization: number;
   mediaCapacity: number;
+  organizationByProvince: Record<string, number>;
   organizationByConstituency: Record<string, number>;
   recentEffects: CampaignEffect[];
   debatePrep: number;

@@ -26,6 +26,7 @@ import type {
   LegislativeVoteChoice,
   LegislativeVoteStage,
 } from "./types.js";
+import { concretePolicyItem } from "./provisions.js";
 
 function activeBillCount(state: SimState): number {
   return Object.values(state.legislatureRuntime.bills).filter((b) =>
@@ -133,7 +134,7 @@ function npcIntroductions(
     const out = introduceBill(
       world,
       state,
-      { sponsorId: id, policyItems: [item], title: `${id} ${item.issueId}` },
+      { sponsorId: id, policyItems: [concretePolicyItem(item)] },
       commandId,
     );
     if ("error" in out) continue;

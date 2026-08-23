@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   collectPlayerActionableDecisions,
+  addMonths,
   createSimulation,
+  nominationCalendarDates,
   parseSaveFile,
   restoreSimulation,
   type KernelWorld,
@@ -38,6 +40,8 @@ export default function App() {
   const [snap, setSnap] = useState<SimState | null>(null);
   const [screen, setScreen] = useState<Screen>("home");
   const [busy, setBusy] = useState(false);
+  const [busyLabel, setBusyLabel] = useState("Processing…");
+  const busyRef = useRef(false);
   const [countingElection, setCountingElection] = useState(false);
   const [turnEvents, setTurnEvents] = useState<SimEvent[]>([]);
   const [saves, setSaves] = useState<SavedGameRow[]>([]);
@@ -155,20 +159,48 @@ export default function App() {
   }
 
   function endTurn() {
-    if (!sim) return;
+    if (!sim || !world || busyRef.current || countingElection) return;
+    busyRef.current = true;
+    const before = sim.getSnapshot().history.length;
+    const nextMonth = addMonths(snap?.currentDate ?? sim.getSnapshot().currentDate, 1);
+    const nominationDue = Object.values(sim.getSnapshot().partyContests).some((contest) => {
+      if (contest.type !== "presidential_nomination") return false;
+      if (contest.status === "resolved" || contest.status === "cancelled") return false;
+      const electionDate = contest.metadata.electionDate;
+      if (typeof electionDate !== "string") return false;
+      return nominationCalendarDates(electionDate).resolve <= nextMonth;
+    });
+    setBusyLabel(nominationDue ? "Counting nominations…" : "Processing…");
     setBusy(true);
-    window.setTimeout(() => {
-      const before = sim.getSnapshot().history.length;
-      let result = sim.executeCommand({ type: "ADVANCE_TURN" });
-      if (result.ok && result.interrupt && !result.interrupt.requiresResolution) {
-        sim.executeCommand({ type: "ACKNOWLEDGE_INTERRUPT" });
-        result = sim.executeCommand({ type: "RESUME_TURN" });
+    const worker = new Worker(new URL("./turnWorker.ts", import.meta.url), { type: "module" });
+    worker.onmessage = (event: MessageEvent<
+      | { ok: true; save: SaveFile; result: ReturnType<Simulation["executeCommand"]> }
+      | { ok: false; message: string }
+    >) => {
+      worker.terminate();
+      try {
+        if (event.data.ok) {
+          const restored = restoreSimulation(event.data.save, world);
+          setTurnEvents(restored.getSnapshot().history.slice(before));
+          refresh(restored);
+          if (!event.data.result.ok) feedback.setNotice(event.data.result.error.message);
+        } else {
+          feedback.setNotice(event.data.message);
+        }
+      } catch (error) {
+        feedback.setNotice(error instanceof Error ? error.message : "The turn could not be restored.");
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
       }
-      setTurnEvents(sim.getSnapshot().history.slice(before));
-      refresh(sim);
+    };
+    worker.onerror = (event) => {
+      worker.terminate();
+      feedback.setNotice(event.message || "The turn could not be completed.");
+      busyRef.current = false;
       setBusy(false);
-      if (!result.ok) feedback.setNotice(result.error.message);
-    }, 20);
+    };
+    worker.postMessage({ save: sim.serializeSave(), world });
   }
 
   if (error) {
@@ -277,13 +309,22 @@ export default function App() {
       if (o.includes("president of")) return 0;
       if (o.includes("speaker")) return 1;
       if (o.includes("leader of")) return 2;
-      if (o.includes("minister")) return 3;
-      if (o.includes("governor")) return 4;
-      if (o.includes("chief justice")) return 5;
-      if (f.presidential_status === "frontrunner") return 6;
-      if (o.includes("chair")) return 7;
-      if (f.presidential_status === "likely") return 8;
+      if (o.includes("governor")) return 3;
+      if (o.includes("chief justice")) return 4;
+      if (f.presidential_status === "frontrunner") return 5;
+      if (o.includes("assembly") || o.includes("mp")) return 6;
       return 99;
+    }
+    function roleDescription(f: Figure): string {
+      const kind = officeKind(f);
+      if (kind === "president") return "Run the national executive and foreign policy.";
+      if (kind === "governor") return "Lead provincial administration and build toward reelection or national office.";
+      if (kind === "assembly") return "Legislate, vote and build a political career.";
+      if (kind === "courts") return "Hear constitutional cases and shape public precedent.";
+      if (kind === "leader") return "Manage party politics alongside the powers of any elected office held.";
+      if (kind === "minister") return "Limited role: advise the President and pursue a broader political career.";
+      if ((f.office ?? "").toLowerCase().includes("mayor")) return "Limited role: set a civic priority and pursue future office.";
+      return "Continue a political career and seek a legitimate electoral opportunity.";
     }
     const filtered = figuresList
       .filter((f) => {
@@ -328,9 +369,7 @@ export default function App() {
         partyId={f.party_id ?? null}
         {...(f.office ? { office: f.office } : {})}
         {...(f.home ? { home: f.home } : {})}
-        {...((f.notes ?? f.display_summary)
-          ? { descriptor: f.notes ?? f.display_summary }
-          : {})}
+        descriptor={`${roleDescription(f)}${f.notes ?? f.display_summary ? ` ${f.notes ?? f.display_summary}` : ""}`}
         action={
           <button className="btn" onClick={() => startGame(f.id)}>
             Play
@@ -442,6 +481,10 @@ export default function App() {
   if (!sim || !snap || !catalog) return null;
   const player = snap.politicians[snap.playerPoliticianId]!;
   const offices = playerOffices(world, snap, snap.playerPoliticianId);
+  const roleKind = Object.values(snap.officeTerms)
+    .filter((term) => term.holderId === snap.playerPoliticianId && (term.status === "active" || term.status === "suspended"))
+    .map((term) => world.offices[term.officeId]?.kind)
+    .find(Boolean) ?? "private_citizen";
   const interrupt = snap.pendingInterrupt;
   const decisionCount = collectPlayerActionableDecisions(world, snap).length;
   return (
@@ -451,7 +494,10 @@ export default function App() {
       date={snap.currentDate}
       playerLine={`${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`}
       decisionCount={decisionCount}
+      roleKind={roleKind}
+      campaignActive={Boolean(playerCampaign(snap))}
       busy={busy || countingElection}
+      busyLabel={countingElection ? "Counting Assembly ballots…" : busyLabel}
       endTurnDisabled={Boolean(interrupt?.requiresResolution)}
       onEndTurn={endTurn}
       onSave={() => void saveGame()}

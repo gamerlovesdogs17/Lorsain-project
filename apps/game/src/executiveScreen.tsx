@@ -509,7 +509,6 @@ export function ExecutivePage(props: {
       {mp
         ? cab
             .filter((m) => m.holderId)
-            .slice(0, 1)
             .map((m) => (
               <button
                 key={`censure-${m.officeId}`}

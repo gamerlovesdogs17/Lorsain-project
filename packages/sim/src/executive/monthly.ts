@@ -119,7 +119,8 @@ function npcPresidentWork(
     (id) => currentMinisterHolderId(world, state, id) == null,
   );
   if (vacant.length > 0) {
-    const officeId = vacant.sort()[0]!;
+    const orderedVacancies = vacant.sort();
+    const officeId = orderedVacancies[Math.floor(rng.float01("legislature") * orderedVacancies.length)]!;
     const pick = chooseMinisterAppointment(world, state, president, officeId, rng);
     if (pick) {
       const out = appointMinister(

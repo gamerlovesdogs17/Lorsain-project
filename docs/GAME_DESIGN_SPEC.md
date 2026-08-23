@@ -18,6 +18,8 @@ The player creates or selects one politician. The player may begin as a municipa
 
 Losing an election does not automatically end the game. An out-of-office politician can seek party work, media roles, advocacy positions, appointments or a later comeback. Retirement or death normally produces a career-summary ending. An optional **Continue World** button allows the player to select another existing politician and continue the same simulation, while the former character remains part of history.
 
+Career discovery is a distinct gameplay step. The player sees legitimate Political Opportunities with public dates, incumbent/field information, compatibility and geography before explicitly choosing to run or decline. The Campaign screen begins after exploration or filing; it is not the only place where opportunities appear.
+
 ## 4. Information philosophy
 
 Neither the player nor NPCs should have omniscient access to simulation truth. Polls, whip counts, rumors, fundraising estimates, intelligence reports and relationship descriptions are observations with error. Staff quality and political relationships improve information quality.
@@ -69,9 +71,15 @@ NPC candidates independently fundraise, advertise, travel, debate, seek endorsem
 ### RCV and STV
 Implement real count logic. Presidential RCV must preserve ballots/transfers. Assembly STV must rank individual candidates, apply quota and transfer rules, and allow same-party candidates to compete. Assembly electoral regions are population-balanced national districts and are **not required to follow province boundaries**; the map data records each district’s plurality province and cross-province population shares.
 
+### Gubernatorial elections
+
+The detailed constitutional procedure remains canonically deferred. The v1 gameplay assumption is a direct province-wide plurality election every four years, using one shared campaign/election abstraction rather than 21 separate engines. Incumbents and challengers decide from near-cycle runtime state; the player must explicitly file. Winning ends incompatible offices on the assumption date, records public history, and schedules the next cycle. This is a procedural implementation assumption, not invented constitutional lore.
+
 ## 10. Legislature
 
 Bills are entities with sponsors, policy effects, text/summary metadata, committees, amendments, procedural state and vote history. NPCs introduce legislation based on ideology, issue salience, electoral incentives and party strategy.
+
+A proposal contains **one to three concrete provisions**. Each provision represents one legal category and one named rule option, with current law, proposed change, and a restrained public estimate of metric effects. The simulation may translate the provision into issue direction/magnitude internally, but normal play never asks the player to author a raw policy vector. Deterministic titles and summaries describe the legal change; IDs and generic ideology phrases are not public bill copy.
 
 Committees control hearings and reports. The Speaker controls floor scheduling under rules that limit permanent burial of presidential Priority Bills. Party and caucus leaders whip votes, but individual members decide.
 
@@ -94,6 +102,14 @@ Precedents should be stored as simplified doctrine flags/weights so prior cases 
 The economy should be politically deep but computationally lighter than a grand-strategy economic simulator. Track GDP, productivity, unemployment, inflation, wages, inequality, debt, interest rates, housing costs, energy prices and major sectors nationally and by province.
 
 Policy changes should have lags, uncertainty and distributional effects. Do not implement a one-variable "GDP down = government loses" rule. Voter groups care about different outcomes.
+
+`100` is a long-run/reference center, not the January 2028 definition. The canonical scenario begins with deliberately unequal national, sector and provincial values. Province character persists through sector exposure, growth/inflation/housing/trade sensitivity and bounded structural trends. Monthly noise and shocks operate inside medium-term cycles and momentum; slow anchors prevent a pure random walk without forcing every series back to exactly 100. Provincial policy investment persists but decays, so one action cannot permanently ratchet every index upward.
+
+## 13.1 Provincial government
+
+Governors exercise bounded gameplay-level authority consistent with canonical provincial responsibility for local transport, land use, school administration, public hospitals, policing frameworks and delegated taxation. A governor sets an administrative priority, directs a limited investment emphasis, takes a public position on a relevant federal initiative, and responds to province-specific pressure. These actions consume provincial action points/political capital and affect regional conditions or standing. Governors do not gain federal regulation, budget, treaty, war, court or Assembly power, and no simulated provincial legislature is implied.
+
+Ministers may advise a portfolio priority without acquiring presidential regulation power. Mayors have one bounded civic-priority action and are explicitly a limited v1 role; municipal grand strategy is not modeled.
 
 ## 14. Organizations
 

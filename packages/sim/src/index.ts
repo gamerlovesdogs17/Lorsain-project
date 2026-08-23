@@ -56,6 +56,7 @@ export {
   migrateSaveV8ToV9,
   migrateSaveV9ToV10,
   migrateSaveV10ToV11,
+  migrateSaveV11ToV12,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -67,6 +68,12 @@ export {
   currentSpeakerId,
   currentPresidentId,
 } from "./legislature/state.js";
+export {
+  currentAssemblyElectionForFiling,
+  assemblyCandidateEligibilityError,
+  incumbentAssemblyConstituency,
+} from "./elections/assembly-cycle.js";
+export { evaluatePresidentialEligibility } from "./parties/eligibility.js";
 export {
   occupyingTerms,
   currentHolderIds,
@@ -116,17 +123,39 @@ export {
 } from "./parties/index.js";
 export {
   processCampaignMonth,
+  nominationCalendarDates,
   emptyCampaignRuntime,
   campaignDecisionOptions,
   chooseCampaignAction,
 } from "./campaigns/index.js";
 export type { CampaignState, CampaignRuntime, DebateState } from "./campaigns/types.js";
 export {
+  currentGovernorId,
+  governedProvinceId,
+  currentGubernatorialOpportunity,
+  gubernatorialEligibilityError,
+  PROVINCIAL_PRIORITIES,
+  PROVINCIAL_INVESTMENTS,
+} from "./provinces/index.js";
+export type {
+  ProvincialRuntime,
+  ProvinceGovernanceState,
+  GubernatorialElection,
+} from "./provinces/types.js";
+export {
   processLegislatureMonth,
   emptyLegislatureRuntime,
   whipEstimate,
   absoluteMajorityNeeded,
   COMMITTEE_NAMES,
+  LEGISLATIVE_PROVISIONS,
+  legislativeProvision,
+  legislativeProvisionOption,
+  policyItemForProvision,
+  provisionForPolicyItem,
+  optionForPolicyItem,
+  currentProvisionOption,
+  estimatedProvisionEffects,
 } from "./legislature/index.js";
 export type {
   LegislatureRuntime,
@@ -134,6 +163,10 @@ export type {
   CommitteeState,
   PolicyItem,
 } from "./legislature/types.js";
+export type {
+  LegislativeProvisionDefinition,
+  LegislativeProvisionOption,
+} from "./legislature/provisions.js";
 export {
   processExecutiveMonth,
   emptyExecutiveRuntime,

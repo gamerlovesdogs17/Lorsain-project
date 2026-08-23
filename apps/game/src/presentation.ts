@@ -5,6 +5,8 @@ import {
   TERENA_WORLD_ID,
   bilateralKey,
   currentPresidentId,
+  optionForPolicyItem,
+  provisionForPolicyItem,
 } from "@lorsain/sim";
 import type { PolicyItem } from "@lorsain/sim";
 
@@ -383,6 +385,7 @@ export function electionDisplayName(id: string): string {
   if (id === "ELEC_ASM_2030") return "2030 Assembly election";
   if (id.startsWith("ELEC_PRES_")) return `Presidential election ${id.slice(10)}`;
   if (id.startsWith("ELEC_ASM_")) return `Assembly election ${id.slice(9)}`;
+  if (id.startsWith("ELEC_GOV_")) return `Gubernatorial election ${id.slice(-4)}`;
   return id;
 }
 
@@ -399,6 +402,9 @@ export function contestDisplayName(state: SimState, world: KernelWorld, contestI
 }
 
 export function policyItemDisplay(catalog: PresentationCatalog, item: PolicyItem): string {
+  const provision = provisionForPolicyItem(item);
+  const option = optionForPolicyItem(item);
+  if (provision && option) return `${provision.category}: ${option.label}`;
   const issue = issueDisplayName(catalog, item.issueId);
   const dir = item.direction > 0 ? "for" : item.direction < 0 ? "against" : "neutral on";
   const mag = item.magnitude >= 0.75 ? "strong" : item.magnitude >= 0.4 ? "moderate" : "limited";
@@ -409,6 +415,7 @@ export function campaignTypeLabel(type: string): string {
   if (type === "presidential_nomination") return "presidential nomination campaign";
   if (type === "presidential_general") return "presidential general-election campaign";
   if (type === "assembly") return "Assembly campaign";
+  if (type === "gubernatorial") return "gubernatorial campaign";
   return type.replace(/_/g, " ");
 }
 

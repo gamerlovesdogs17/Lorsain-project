@@ -51,9 +51,11 @@ export function EconomyPage(props: {
   const region = sel?.kind === "province" ? props.snap.economyRuntime.provinces[sel.id] : null;
   const history = props.snap.economyRuntime.history;
   const prev = history.length >= 2 ? history[history.length - 2]! : null;
+  const yearAgo = history.length >= 13 ? history[history.length - 13]! : null;
+  const start = history[0] ?? null;
   const deltaHint = (key: IndicatorId) => {
-    if (!prev) return "Jan 2028 = 100";
-    return `${formatIndexDelta(n[key] - prev[key])} vs prior month`;
+    if (!prev) return "Index reference = 100";
+    return `${formatIndexDelta(n[key] - prev[key])} month · ${yearAgo ? formatIndexDelta(n[key] - yearAgo[key]) : "—"} 12m`;
   };
   const series = history.map((h) => ({ date: h.date, value: h[indicator] }));
   const chart = chartPath(series);
@@ -63,13 +65,18 @@ export function EconomyPage(props: {
   );
   const current = n[indicator];
   const currentDelta = prev ? current - prev[indicator] : 0;
+  const longDelta = start ? current - start[indicator] : 0;
+  const regionSeries = sel?.kind === "province"
+    ? (props.snap.economyRuntime.provinceHistory[sel.id] ?? []).map((point) => ({ date: point.date, value: point.conditionsIndex }))
+    : [];
+  const regionChart = chartPath(regionSeries);
 
   return (
     <div>
       <PageHeader
         kicker="Political economy"
         title="Economy"
-        subtitle="Normalized public indices. January 2028 = 100. Not invented GDP statistics."
+        subtitle="Public scenario indices with a long-run reference level of 100. January 2028 is a real, uneven starting economy."
       />
       <MetricStrip>
         {INDICATORS.map((ind) => (
@@ -114,7 +121,7 @@ export function EconomyPage(props: {
           )}
           <p>
             {INDICATORS.find((i) => i.id === indicator)?.label}: {current.toFixed(1)}{" "}
-            <span className="muted">{formatIndexDelta(currentDelta)} vs prior month</span>
+            <span className="muted">{formatIndexDelta(currentDelta)} month · {yearAgo ? formatIndexDelta(current - yearAgo[indicator]) : "—"} 12 months · {formatIndexDelta(longDelta)} since scenario start</span>
           </p>
           <p className="muted">
             Fiscal pressure {n.fiscalPressure.toFixed(2)} · lagged policy effects{" "}
@@ -135,13 +142,18 @@ export function EconomyPage(props: {
             onSelect={(s) => {
               if (s.kind === "province") setSel(s);
             }}
+            tooltipFor={(selection) => {
+              const data = props.snap.economyRuntime.provinces[selection.id];
+              return <><strong>{selection.name}</strong><span>{data ? `Conditions ${data.conditionsIndex.toFixed(1)} · employment ${data.employmentIndex.toFixed(1)} · housing ${data.housingIndex.toFixed(1)}` : "No regional data"}</span></>;
+            }}
           />
           <MapLegend mode="economy" world={props.world} />
           {region && sel ? (
-            <p>
-              {sel.name} · conditions {region.conditionsIndex.toFixed(1)} · employment{" "}
-              {region.employmentIndex.toFixed(1)} · housing {region.housingIndex.toFixed(1)}
-            </p>
+            <div className="regional-economy-detail">
+              <p>{sel.name} · conditions {region.conditionsIndex.toFixed(1)} · employment {region.employmentIndex.toFixed(1)} · housing {region.housingIndex.toFixed(1)}</p>
+              <p className="muted">{props.world.economyScenario?.provinces[sel.id]?.character ?? "Regional conditions respond to national and sector changes."}</p>
+              {regionChart.d ? <svg className="econ-chart compact" viewBox="0 0 640 180" role="img" aria-label={`${sel.name} conditions trend`}><path d={regionChart.d} fill="none" stroke="#8a4b2b" strokeWidth="2" /></svg> : null}
+            </div>
           ) : (
             <EmptyState>Select a province.</EmptyState>
           )}
@@ -150,6 +162,9 @@ export function EconomyPage(props: {
       <SectionCard title="Sectors">
         {Object.entries(props.snap.economyRuntime.sectors).map(([id, s]) => {
           const t = Math.max(0, Math.min(1, (s.conditionsIndex - 80) / 40));
+          const sectorHistory = props.snap.economyRuntime.sectorHistory[id] ?? [];
+          const sectorStart = sectorHistory[0]?.conditionsIndex ?? s.conditionsIndex;
+          const sectorYear = sectorHistory.length >= 13 ? sectorHistory[sectorHistory.length - 13]!.conditionsIndex : null;
           return (
             <div key={id} className="sector-row">
               <span style={{ textTransform: "capitalize" }}>{id}</span>
@@ -157,10 +172,15 @@ export function EconomyPage(props: {
               <div className="sector-bar">
                 <span style={{ width: `${t * 100}%` }} />
               </div>
-              <span className="muted">{formatIndexDelta(s.conditionsIndex - 100)} vs 100</span>
+              <span className="muted">{sectorYear == null ? "—" : formatIndexDelta(s.conditionsIndex - sectorYear)} 12m · {formatIndexDelta(s.conditionsIndex - sectorStart)} since start</span>
             </div>
           );
         })}
+      </SectionCard>
+      <SectionCard title="Shocks and policy effects">
+        {props.snap.economyRuntime.shocks.length === 0 && props.snap.economyRuntime.laggedEffects.length === 0 ? <EmptyState>No exceptional shock or enacted policy effect is currently moving through the economy.</EmptyState> : null}
+        {props.snap.economyRuntime.shocks.slice(-8).reverse().map((shock) => <div key={shock.id} className="economy-cause"><strong>{shock.kind.replace(/_/g, " ")}</strong><span>{shock.date} · {shock.remainingMonths} months of visible effect remain</span></div>)}
+        {props.snap.economyRuntime.laggedEffects.slice(-8).reverse().map((effect) => <div key={effect.id} className="economy-cause"><strong>Enacted policy</strong><span>{effect.lagKind} adjustment · {effect.remainingMonths} months remain</span></div>)}
       </SectionCard>
       <SectionCard title="Recent economic coverage">
         {stories.length === 0 ? <EmptyState>No economic stories yet.</EmptyState> : null}

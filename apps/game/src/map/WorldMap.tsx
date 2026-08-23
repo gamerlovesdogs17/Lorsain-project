@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import { TERENA_WORLD_ID } from "@lorsain/sim";
 
@@ -59,12 +59,26 @@ export function WorldMap(props: {
   onSelect?: (countryId: string) => void;
   onHover?: (countryId: string | null) => void;
   showLabels?: boolean;
+  tooltipFor?: (countryId: string) => ReactNode;
 }) {
   const paths = useWorldMapPaths(props.bundle);
   const showLabels = props.showLabels ?? false;
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [tip, setTip] = useState({ x: 0, y: 0 });
+  const showHover = (countryId: string, event: PointerEvent<SVGPathElement>) => {
+    const bounds = panelRef.current?.getBoundingClientRect();
+    if (bounds) setTip({ x: event.clientX - bounds.left + 12, y: event.clientY - bounds.top + 12 });
+    setHoveredId(countryId);
+    props.onHover?.(countryId);
+  };
+  const clearHover = () => {
+    setHoveredId(null);
+    props.onHover?.(null);
+  };
 
   return (
-    <div className="map-panel world-map-panel">
+    <div className="map-panel world-map-panel" ref={panelRef}>
       <svg
         className="world-map"
         viewBox={WORLD_VIEWBOX}
@@ -82,11 +96,16 @@ export function WorldMap(props: {
             data-id={p.id}
             fill={props.fillFor?.(p.id) ?? "#e3e8e0"}
             onClick={() => props.onSelect?.(p.id)}
-            onMouseEnter={() => props.onHover?.(p.id)}
-            onMouseLeave={() => props.onHover?.(null)}
-          >
-            <title>{p.name ?? p.id}</title>
-          </path>
+            tabIndex={0}
+            role="button"
+            aria-label={p.name ?? p.id}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") props.onSelect?.(p.id);
+            }}
+            onPointerEnter={(event) => showHover(p.id, event)}
+            onPointerMove={(event) => showHover(p.id, event)}
+            onPointerLeave={clearHover}
+          />
         ))}
         {showLabels
           ? paths.map((p) =>
@@ -104,6 +123,11 @@ export function WorldMap(props: {
             )
           : null}
       </svg>
+      {hoveredId ? (
+        <div className="map-tooltip" role="status" style={{ left: tip.x, top: tip.y }}>
+          {props.tooltipFor?.(hoveredId) ?? <strong>{paths.find((path) => path.id === hoveredId)?.name ?? hoveredId}</strong>}
+        </div>
+      ) : null}
     </div>
   );
 }

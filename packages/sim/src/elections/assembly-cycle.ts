@@ -213,11 +213,14 @@ function eligibleNpcChallengers(
   incumbentIds: ReadonlySet<string>,
 ): string[] {
   const constituencyIds = Object.keys(world.constituencyElectorate).sort();
-  const fallback = constituencyIds[0];
-  if (!fallback) return [];
+  if (constituencyIds.length === 0) return [];
   return Object.keys(state.politicians)
     .filter((id) => id !== state.playerPoliticianId && !incumbentIds.has(id))
-    .filter((id) => !assemblyCandidateEligibilityError(state, world, id, fallback))
+    .filter((id) =>
+      constituencyIds.some(
+        (constituencyId) => !assemblyCandidateEligibilityError(state, world, id, constituencyId),
+      ),
+    )
     .sort((a, b) => a.localeCompare(b));
 }
 
@@ -259,13 +262,23 @@ export function allocateAssemblyCandidateFields(
   }
 
   const candidacies: Record<string, AssemblyCandidacy> = {};
-  const pinnedPlayer = cycle.candidacies[state.playerPoliticianId];
-  if (pinnedPlayer?.status === "filed") candidacies[pinnedPlayer.politicianId] = { ...pinnedPlayer };
+  // A filed candidacy is a public legal fact, not an allocation suggestion.
+  // Preserve every valid filed geography and allocate only around it.
+  for (const existing of Object.values(cycle.candidacies).sort((a, b) =>
+    a.politicianId.localeCompare(b.politicianId),
+  )) {
+    if (existing.status !== "filed") continue;
+    if (assemblyCandidateEligibilityError(state, world, existing.politicianId, existing.constituencyId)) {
+      continue;
+    }
+    candidacies[existing.politicianId] = { ...existing };
+  }
 
   for (const [politicianId, constituencyId] of [...incumbentById.entries()].sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
     if (politicianId === state.playerPoliticianId) continue;
+    if (candidacies[politicianId]) continue;
     if (assemblyCandidateEligibilityError(state, world, politicianId, constituencyId)) continue;
     if (!npcIncumbentRuns(state, world, politicianId, election.date)) continue;
     candidacies[politicianId] = candidacyFor(
@@ -284,7 +297,9 @@ export function allocateAssemblyCandidateFields(
     byConstituency.get(candidacy.constituencyId)?.push(candidacy.politicianId);
   }
 
-  const challengerPool = eligibleNpcChallengers(state, world, new Set(incumbentById.keys()));
+  const challengerPool = eligibleNpcChallengers(state, world, new Set(incumbentById.keys())).filter(
+    (politicianId) => !candidacies[politicianId],
+  );
   const unassigned = new Set(challengerPool);
   const candidateMetrics = new Map<
     string,
@@ -349,7 +364,9 @@ export function allocateAssemblyCandidateFields(
   }
 
   while (unassigned.size > 0) {
-    const politicianId = [...unassigned].sort()[0]!;
+    const politicianId = [...unassigned].sort(
+      (a, b) => stableHash(`${election.id}:fallback:${a}`) - stableHash(`${election.id}:fallback:${b}`),
+    )[0]!;
     const constituencyId = constituencyIds
       .slice()
       .sort((a, b) => {
@@ -568,8 +585,8 @@ export function declineAssemblyCandidacy(
     decidedDate: state.currentDate,
   };
   delete cycle.candidacies[args.politicianId];
-  const err = rebuildAssemblyAllocation(state, world, election);
-  if (err) return { error: err };
+  // Declining changes only the player's decision. Existing filed candidates
+  // must not be passed through a fresh national allocation.
   return {
     events: [
       pushHistory(state, {

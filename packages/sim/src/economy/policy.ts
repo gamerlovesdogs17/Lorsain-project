@@ -3,7 +3,7 @@ import type { EconomyLagKind, NationalEconomyIndices } from "./types.js";
 
 export const INDEX_FLOOR = 40;
 export const INDEX_CEIL = 160;
-export const HISTORY_MONTHS = 24;
+export const HISTORY_MONTHS = 120;
 export const MAX_MONTHLY_INDEX_MOVE = 1.8;
 
 export function clampIndex(n: number): number {

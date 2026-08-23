@@ -9,6 +9,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Overview",
     items: [
       { id: "home", label: "Home", icon: "⌂" },
+      { id: "office", label: "Office", icon: "▰" },
       { id: "career", label: "Career", icon: "◉" },
     ],
   },
@@ -40,7 +41,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "World",
     items: [
       { id: "foreign", label: "Foreign Affairs", icon: "🌐" },
-      { id: "terena", label: "Terena Map", icon: "🗺" },
+      { id: "terena", label: "Maps", icon: "🗺" },
     ],
   },
   {
@@ -55,7 +56,10 @@ export function GameShell(props: {
   date: string;
   playerLine: string;
   decisionCount: number;
+  roleKind: string;
+  campaignActive: boolean;
   busy: boolean;
+  busyLabel: string;
   endTurnDisabled: boolean;
   onEndTurn: () => void;
   onSave: () => void;
@@ -64,6 +68,19 @@ export function GameShell(props: {
 }) {
   const [navOpen, setNavOpen] = useState(false);
   const [utilOpen, setUtilOpen] = useState(false);
+  const officeLabel =
+    props.roleKind === "governor" ? "Province"
+      : props.roleKind === "president" ? "Presidency"
+        : props.roleKind === "constitutional_court_justice" ? "Judicial office"
+          : props.roleKind === "assembly_member" || props.roleKind === "speaker" ? "Member's office"
+            : "Office";
+  const contextual = (id: Screen) =>
+    (id === "office" && props.roleKind !== "private_citizen") ||
+    (id === "executive" && props.roleKind === "president") ||
+    (id === "assembly" && (props.roleKind === "assembly_member" || props.roleKind === "speaker")) ||
+    (id === "courts" && props.roleKind === "constitutional_court_justice") ||
+    (id === "campaign" && props.campaignActive) ||
+    (id === "career" && props.roleKind === "private_citizen");
 
   return (
     <div className={`shell v3${props.busy ? " busy" : ""}`}>
@@ -97,14 +114,14 @@ export function GameShell(props: {
               <button
                 key={item.id}
                 type="button"
-                className={props.screen === item.id ? "active" : ""}
+                className={`${props.screen === item.id ? "active" : ""}${contextual(item.id) ? " contextual" : ""}`}
                 onClick={() => {
                   props.onNavigate(item.id);
                   setNavOpen(false);
                 }}
               >
                 {item.icon ? <span className="nav-icon">{item.icon}</span> : null}
-                {item.label}
+                {item.id === "office" ? officeLabel : item.label}
               </button>
             ))}
           </div>
@@ -122,7 +139,11 @@ export function GameShell(props: {
             ) : null}
           </div>
           <div className="topbar-actions">
-            {props.busy ? <span className="muted">Processing…</span> : null}
+            {props.busy ? (
+              <span className="muted" role="status" aria-live="polite">
+                {props.busyLabel}
+              </span>
+            ) : null}
             <button
               type="button"
               className="btn btn-end-turn"

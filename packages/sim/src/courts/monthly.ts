@@ -143,7 +143,7 @@ function assemblyProceedings(
   const mps = currentAssemblyMemberIds(world, state);
   const impeach = Object.values(state.constitutionalRuntime.impeachments)
     .filter((p) => p.status === "assembly_pending" && courtStageRipe(state, p.stageReadyDate))
-    .sort((a, b) => (a.id < b.id ? -1 : 1))[0];
+    .sort((a, b) => a.stageReadyDate.localeCompare(b.stageReadyDate) || a.introducedDate.localeCompare(b.introducedDate) || a.id.localeCompare(b.id))[0];
   if (impeach && mps.length > 0) {
     const pending = mps.includes(state.playerPoliticianId)
       ? takePendingCourtVote(state, "impeachment", impeach.id)
@@ -156,7 +156,7 @@ function assemblyProceedings(
   }
   const recall = Object.values(state.constitutionalRuntime.recalls)
     .filter((p) => p.status === "referral_pending" && courtStageRipe(state, p.stageReadyDate))
-    .sort((a, b) => (a.id < b.id ? -1 : 1))[0];
+    .sort((a, b) => a.stageReadyDate.localeCompare(b.stageReadyDate) || a.introducedDate.localeCompare(b.introducedDate) || a.id.localeCompare(b.id))[0];
   if (recall && mps.length > 0) {
     const pending = mps.includes(state.playerPoliticianId)
       ? takePendingCourtVote(state, "recall", recall.id)
@@ -226,7 +226,9 @@ function generateCases(
   const mps = currentAssemblyMemberIds(world, state).filter(
     (id) => id !== state.playerPoliticianId,
   );
-  const petitioner = mps.sort()[0];
+  const petitioner = mps.length > 0
+    ? mps[rng.uint32("npc-decisions") % mps.length]
+    : undefined;
   if (law && petitioner && npcShouldFileLawReview(world, state, petitioner, rng)) {
     const already = Object.values(state.constitutionalRuntime.courtCases).some(
       (c) => c.challengedKind === "law" && c.challengedId === law.id,

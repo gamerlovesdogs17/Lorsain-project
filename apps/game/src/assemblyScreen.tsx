@@ -1,8 +1,13 @@
 import { useState } from "react";
 import {
   currentAssemblyMemberIds,
+  currentProvisionOption,
+  estimatedProvisionEffects,
   partyStance,
   factionStance,
+  LEGISLATIVE_PROVISIONS,
+  legislativeProvision,
+  policyItemForProvision,
   whipEstimate,
   type CommandResult,
   type KernelWorld,
@@ -38,9 +43,9 @@ export function AssemblyPage(props: {
   const [tab, setTab] = useState<AssemblyTab>("bills");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const [issueId, setIssueId] = useState(props.world.issueIds[0] ?? "");
-  const [direction, setDirection] = useState<1 | -1>(1);
-  const [magnitude, setMagnitude] = useState(0.4);
+  const [draftProvisions, setDraftProvisions] = useState<Array<{ provisionId: string; optionId: string }>>([
+    { provisionId: LEGISLATIVE_PROVISIONS[0]?.id ?? "", optionId: "high" },
+  ]);
   const [amendIssue, setAmendIssue] = useState("");
   const [amendDir, setAmendDir] = useState<1 | -1>(1);
   const [amendMag, setAmendMag] = useState(0.4);
@@ -57,6 +62,10 @@ export function AssemblyPage(props: {
   const votes = Object.values(props.snap.legislatureRuntime.legislativeVotes).sort((a, b) =>
     a.id < b.id ? 1 : -1,
   );
+  const draftItems = draftProvisions.flatMap((draft) => {
+    const item = policyItemForProvision(draft.provisionId, draft.optionId);
+    return item ? [item] : [];
+  });
 
   return (
     <div>
@@ -191,59 +200,111 @@ export function AssemblyPage(props: {
       {tab === "bills" ? (
         <>
           {mp ? (
-            <div className="card" style={{ margin: "0.8rem 0" }}>
-              <h3>Introduce a bill</h3>
-              <div className="row">
+            <div className="card bill-builder" style={{ margin: "0.8rem 0" }}>
+              <div className="section-heading-row">
+                <div>
+                  <h3>Draft legislation</h3>
+                  <p className="muted">Choose one required provision and up to two related provisions.</p>
+                </div>
+                <span className="badge">{draftProvisions.length}/3 provisions</span>
+              </div>
+              <div className="bill-builder-provisions">
+                {draftProvisions.map((draft, index) => {
+                  const definition = legislativeProvision(draft.provisionId) ?? LEGISLATIVE_PROVISIONS[0]!;
+                  const option = definition.options.find((candidate) => candidate.id === draft.optionId) ?? definition.options[1]!;
+                  const current = currentProvisionOption(props.snap, definition.id);
+                  const item = policyItemForProvision(definition.id, option.id);
+                  const effects = item ? estimatedProvisionEffects(item) : {};
+                  const effectRows = Object.entries(effects).filter(([, value]) => typeof value === "number" && Math.abs(value) >= 0.01);
+                  return (
+                    <div className="bill-provision" key={`${index}-${draft.provisionId}`}>
+                      <div className="bill-provision-controls">
+                        <label>
+                          Policy category
+                          <select
+                            value={definition.id}
+                            onChange={(event) => {
+                              const nextId = event.target.value;
+                              setDraftProvisions((rows) => rows.map((row, rowIndex) =>
+                                rowIndex === index ? { provisionId: nextId, optionId: "high" } : row,
+                              ));
+                            }}
+                          >
+                            {LEGISLATIVE_PROVISIONS.map((candidate) => (
+                              <option key={candidate.id} value={candidate.id}>{candidate.category}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Proposed rule
+                          <select
+                            value={option.id}
+                            onChange={(event) => setDraftProvisions((rows) => rows.map((row, rowIndex) =>
+                              rowIndex === index ? { ...row, optionId: event.target.value } : row,
+                            ))}
+                          >
+                            {definition.options.map((candidate) => (
+                              <option key={candidate.id} value={candidate.id}>{candidate.label}</option>
+                            ))}
+                          </select>
+                        </label>
+                        {draftProvisions.length > 1 ? (
+                          <button className="btn ghost" type="button" onClick={() =>
+                            setDraftProvisions((rows) => rows.filter((_, rowIndex) => rowIndex !== index))
+                          }>Remove</button>
+                        ) : null}
+                      </div>
+                      <div className="bill-provision-brief">
+                        <div><span>Current</span><strong>{current?.label ?? definition.currentLawLabel}</strong></div>
+                        <div><span>Change</span><strong>{option.change}</strong></div>
+                        <div>
+                          <span>Estimated national effect</span>
+                          <strong>{effectRows.length ? effectRows.map(([key, value]) =>
+                            `${key.replace("Index", "").replace(/([A-Z])/g, " $1").toLowerCase()} ${(value as number) > 0 ? "+" : ""}${(value as number).toFixed(2)}`,
+                          ).join(" · ") : "No material direct index effect"}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {draftProvisions.length < 3 ? (
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => {
+                    const next = LEGISLATIVE_PROVISIONS.find((definition) =>
+                      !draftProvisions.some((row) => row.provisionId === definition.id),
+                    );
+                    if (next) setDraftProvisions((rows) => [...rows, { provisionId: next.id, optionId: "high" }]);
+                  }}
+                >Add provision</button>
+              ) : null}
+              <div className="bill-copy-fields">
                 <input
                   className="search"
-                  placeholder="Title"
+                  placeholder="Optional title — a formal title will be generated"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
-                <select value={issueId} onChange={(e) => setIssueId(e.target.value)}>
-                  {props.world.issueIds.map((id) => (
-                    <option key={id} value={id}>
-                      {issueDisplayName(props.catalog, id)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={String(direction)}
-                  onChange={(e) => setDirection(Number(e.target.value) as 1 | -1)}
-                >
-                  <option value="1">For</option>
-                  <option value="-1">Against</option>
-                </select>
-                <label>
-                  Intensity {magnitude.toFixed(2)}
-                  <input
-                    type="range"
-                    min={0.1}
-                    max={1}
-                    step={0.05}
-                    value={magnitude}
-                    onChange={(e) => setMagnitude(Number(e.target.value))}
-                  />
-                </label>
+                <input
+                  className="search"
+                  placeholder="Optional sponsor statement"
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                />
               </div>
-              <input
-                className="search"
-                style={{ marginTop: "0.4rem" }}
-                placeholder="Optional summary"
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-              />
               <button
                 type="button"
                 className="btn"
                 style={{ marginTop: "0.5rem" }}
-                disabled={!title.trim() || !issueId}
+                disabled={draftItems.length < 1 || new Set(draftProvisions.map((row) => row.provisionId)).size !== draftProvisions.length}
                 onClick={() => {
                   const r = props.sim.executeCommand({
                     type: "INTRODUCE_BILL",
                     title: title.trim(),
                     summary: summary.trim(),
-                    policyItems: [{ issueId, direction, magnitude, fiscalImpact: null }],
+                    policyItems: draftItems,
                   });
                   if (props.report(r) && r.ok) {
                     setTitle("");

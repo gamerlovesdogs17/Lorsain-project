@@ -98,6 +98,14 @@ export function processOrganizationsMonth(
     if (rng.float01("npc-decisions") > 0.42 + canon.strength * 0.2) continue;
     const relevant = activeBills
       .filter((b) => b.policyItems.some((i) => canon.issues.includes(i.issueId)))
+      .sort((a, b) => {
+        const priority = (status: string) => status === "sent_to_president" ? 3 : status === "floor_scheduled" ? 2 : 1;
+        const fit = (bill: typeof a) => Math.max(...bill.policyItems
+          .filter((item) => canon.issues.includes(item.issueId))
+          .map((item) => Math.abs(orgIssueFit(world, orgId, item.issueId) * item.direction)), 0);
+        return priority(b.status) - priority(a.status) || fit(b) - fit(a) ||
+          (b.introducedDate ?? "").localeCompare(a.introducedDate ?? "") || a.id.localeCompare(b.id);
+      })
       .slice(0, 4);
     if (relevant.length > 0) {
       const bill = relevant[0]!;

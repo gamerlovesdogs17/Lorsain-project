@@ -28,6 +28,7 @@ export function loadTerenaWorld(): KernelWorld {
       dimension: i.dimension,
     })),
     offices: bundle.content.terena_offices.offices,
+    economy2028: jsonClone(bundle.content.terena_economy_2028),
     constitution: jsonClone(bundle.content.terena_constitution),
     administrations: bundle.content.terena_presidential_administrations.administrations,
     ...terenaPartyFields({

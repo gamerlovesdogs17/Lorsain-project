@@ -6,7 +6,10 @@ import {
   syncNominationWinnerToElection,
 } from "../elections/presidential.js";
 import { applyQualification, countableCandidateIds } from "../parties/nominations.js";
-import { presidentialNominationContestsForElection } from "../parties/state.js";
+import {
+  populateRuntimePresidentialCandidateFields,
+  presidentialNominationContestsForElection,
+} from "../parties/state.js";
 import {
   cancelPartyContest,
   openPartyContest,
@@ -109,12 +112,17 @@ function allNominationProcessesTerminal(state: SimState, electionId: string): bo
   );
 }
 
-export function openDueNominationContests(state: SimState, commandId: string): SimEvent[] {
+export function openDueNominationContests(
+  state: SimState,
+  world: KernelWorld,
+  commandId: string,
+): SimEvent[] {
   const electionDate = presidentialElectionDate(state);
   const election = currentPresidentialElection(state);
   if (!electionDate || !election) return [];
   const cal = nominationCalendarDates(electionDate);
   if (!monthReached(state.currentDate, cal.open)) return [];
+  populateRuntimePresidentialCandidateFields(state, world, election);
   const events: SimEvent[] = [];
   for (const contest of nominationContests(state, election.id)) {
     if (contest.status !== "planned") continue;

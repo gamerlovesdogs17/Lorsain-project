@@ -15,6 +15,7 @@ import { parseEconomyRuntime, economyCounterError } from "./economy/validation.j
 import { parseOrganizationRuntime, organizationCounterError } from "./organizations/validation.js";
 import { parseMediaRuntime, mediaCounterError } from "./media/validation.js";
 import { parseForeignAffairsRuntime, foreignCounterError } from "./foreign/validation.js";
+import { parseProvincialRuntime } from "./provinces/validation.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -588,6 +589,8 @@ function parseSimulation(
   if (typeof economy === "string") return economy;
   const economyCountErr = economyCounterError(economy, counters);
   if (economyCountErr) return economyCountErr;
+  const provincial = parseProvincialRuntime(raw.provincialRuntime);
+  if (typeof provincial === "string") return provincial;
   const organizations = parseOrganizationRuntime(raw.organizationRuntime);
   if (typeof organizations === "string") return organizations;
   const orgCountErr = organizationCounterError(organizations, counters);
@@ -710,6 +713,7 @@ function parseSimulation(
     executiveRuntime: executive,
     constitutionalRuntime: constitutional,
     economyRuntime: economy,
+    provincialRuntime: provincial,
     organizationRuntime: organizations,
     mediaRuntime: media,
     foreignAffairsRuntime: foreign,
@@ -1050,7 +1054,7 @@ SCHEMA_MIGRATIONS.push({ fromSchema: 7, toSchema: 8, migrate: migrateSaveV7ToV8 
 /**
  * Phase 8 saves begin Phase 9 economy / organization / media state at migration.
  * No fabricated prior media stories or organization actions. Economy starts at
- * January 2028 = 100 baseline indices.
+ * Legacy schema-8 saves used a reference-100 economic baseline.
  */
 export function migrateSaveV8ToV9(raw: unknown): unknown {
   if (!isRecord(raw)) return raw;
@@ -1333,3 +1337,65 @@ export function migrateSaveV10ToV11(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 10, toSchema: 11, migrate: migrateSaveV10ToV11 });
+
+/**
+ * Phase 11.2 adds provincial governance/elections and province-level campaign
+ * organization. Existing political history is preserved; the new provincial
+ * layer is seeded deterministically from live offices after restore.
+ */
+export function migrateSaveV11ToV12(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 12 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 12 };
+  sim.provincialRuntime = isRecord(sim.provincialRuntime)
+    ? sim.provincialRuntime
+    : { provinces: {}, elections: {}, actions: {}, pressures: {}, lastMonthProcessed: null };
+  if (isRecord(sim.campaignRuntime) && isRecord(sim.campaignRuntime.campaigns)) {
+    const campaigns: Record<string, unknown> = {};
+    for (const [id, value] of Object.entries(sim.campaignRuntime.campaigns)) {
+      campaigns[id] = isRecord(value) ? { ...value, organizationByProvince: {} } : value;
+    }
+    sim.campaignRuntime = { ...sim.campaignRuntime, campaigns };
+  }
+  if (isRecord(sim.partyContests)) {
+    const contests: Record<string, unknown> = {};
+    for (const [id, value] of Object.entries(sim.partyContests)) {
+      if (!isRecord(value)) {
+        contests[id] = value;
+        continue;
+      }
+      const metadata = isRecord(value.metadata) ? value.metadata : {};
+      const futureShell =
+        value.type === "presidential_nomination" &&
+        value.status === "planned" &&
+        metadata.candidateSource === "runtime_politics";
+      contests[id] = futureShell ? { ...value, entries: {} } : value;
+    }
+    sim.partyContests = contests;
+  }
+  if (isRecord(sim.economyRuntime)) {
+    sim.economyRuntime = {
+      ...sim.economyRuntime,
+      provinceHistory: isRecord(sim.economyRuntime.provinceHistory)
+        ? sim.economyRuntime.provinceHistory
+        : {},
+      sectorHistory: isRecord(sim.economyRuntime.sectorHistory)
+        ? sim.economyRuntime.sectorHistory
+        : {},
+      cycle: isRecord(sim.economyRuntime.cycle)
+        ? sim.economyRuntime.cycle
+        : {
+            phase: 0.35,
+            outputMomentum: 0,
+            inflationMomentum: 0,
+            housingMomentum: 0,
+            monthsElapsed: 0,
+          },
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 11, toSchema: 12, migrate: migrateSaveV11ToV12 });

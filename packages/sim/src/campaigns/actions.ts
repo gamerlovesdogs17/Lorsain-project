@@ -201,6 +201,50 @@ export function declareCampaign(
     };
   }
 
+  if (args.type === "gubernatorial") {
+    const election = args.electionId
+      ? state.provincialRuntime.elections[args.electionId]
+      : Object.values(state.provincialRuntime.elections)
+          .filter(
+            (candidate) =>
+              candidate.candidates[args.politicianId] &&
+              candidate.status !== "resolved" &&
+              candidate.status !== "assumed",
+          )
+          .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+    if (!election) return { error: reject("INVALID_ELECTION", String(args.electionId ?? "governor")) };
+    const candidacy = election.candidates[args.politicianId];
+    if (!candidacy || candidacy.withdrawn) {
+      return { error: reject("NOT_A_CANDIDATE", args.politicianId) };
+    }
+    const campaign = createCampaignRecord(state, world, {
+      politicianId: args.politicianId,
+      type: "gubernatorial",
+      electionId: election.id,
+      status: "active",
+      metadata: { provinceId: election.provinceId },
+    });
+    return {
+      campaign,
+      events: [
+        event(
+          state,
+          "CAMPAIGN_LAUNCHED",
+          [args.politicianId],
+          [campaign.id, election.id, election.provinceId],
+          {
+            campaignId: campaign.id,
+            type: "gubernatorial",
+            electionId: election.id,
+            provinceId: election.provinceId,
+          },
+          commandId,
+          0.62,
+        ),
+      ],
+    };
+  }
+
   const election = args.electionId
     ? state.elections[args.electionId]
     : Object.values(state.elections)
@@ -388,7 +432,37 @@ function resolveVisitTargets(world: KernelWorld, geo: CampaignGeography): string
     return [geo.id];
   }
   if (geo.kind === "province" && geo.id) return constituenciesInProvince(world, geo.id);
-  return Object.keys(world.constituencyElectorate).sort().slice(0, 4);
+  return Object.keys(world.constituencyElectorate).sort();
+}
+
+function provincePopulation(world: KernelWorld, provinceId: string): number {
+  return Object.values(world.constituencyElectorate).reduce((sum, electorate) => {
+    const share =
+      electorate.provincePopulationShares.find((row) => row.provinceId === provinceId)?.share ?? 0;
+    return sum + electorate.population * share;
+  }, 0);
+}
+
+function provinceShare(world: KernelWorld, constituencyId: string, provinceId: string): number {
+  return (
+    world.constituencyElectorate[constituencyId]?.provincePopulationShares.find(
+      (row) => row.provinceId === provinceId,
+    )?.share ?? 0
+  );
+}
+
+function addProvinceOrganization(campaign: CampaignState, provinceId: string, gain: number): void {
+  const previous = campaign.organizationByProvince[provinceId] ?? 0;
+  campaign.organizationByProvince[provinceId] = Math.min(1, previous + gain);
+}
+
+function addConstituencyOrganization(
+  campaign: CampaignState,
+  constituencyId: string,
+  gain: number,
+): void {
+  const previous = campaign.organizationByConstituency[constituencyId] ?? 0;
+  campaign.organizationByConstituency[constituencyId] = Math.min(1, previous + gain);
 }
 
 export function campaignVisit(
@@ -425,10 +499,41 @@ export function campaignVisit(
     favorability: mag * 0.35,
     momentum: STANDING_DELTA.momentumFromAction * dim,
   });
-  for (const cid of targets) {
-    const local = args.geography.kind === "province" && home === args.geography.id ? 1.15 : 1;
-    const prev = campaign.organizationByConstituency[cid] ?? 0;
-    campaign.organizationByConstituency[cid] = Math.min(1, prev + FIELD.visitOrgGain * local * dim);
+  const constituencyPopulations = targets.map(
+    (cid) => world.constituencyElectorate[cid]?.population ?? 0,
+  );
+  const maxPopulation = Math.max(1, ...constituencyPopulations);
+  if (args.geography.kind === "national") {
+    const provincePops = world.provinceIds.map((provinceId) => provincePopulation(world, provinceId));
+    const maxProvincePopulation = Math.max(1, ...provincePops);
+    for (const provinceId of world.provinceIds) {
+      const reach = Math.sqrt(provincePopulation(world, provinceId) / maxProvincePopulation);
+      addProvinceOrganization(campaign, provinceId, FIELD.visitOrgGain * dim * (0.12 + reach * 0.1));
+    }
+    for (const cid of targets) {
+      const reach = Math.sqrt((world.constituencyElectorate[cid]?.population ?? 0) / maxPopulation);
+      addConstituencyOrganization(campaign, cid, FIELD.visitOrgGain * dim * (0.035 + reach * 0.035));
+    }
+  } else if (args.geography.kind === "province" && args.geography.id) {
+    const provinceId = args.geography.id;
+    const local = home === provinceId ? 1.15 : 1;
+    addProvinceOrganization(campaign, provinceId, FIELD.visitOrgGain * dim * 0.8 * local);
+    for (const cid of targets) {
+      const share = provinceShare(world, cid, provinceId);
+      const reach = Math.sqrt((world.constituencyElectorate[cid]?.population ?? 0) / maxPopulation);
+      addConstituencyOrganization(
+        campaign,
+        cid,
+        FIELD.visitOrgGain * local * dim * share * (0.4 + reach * 0.35),
+      );
+    }
+  } else {
+    for (const cid of targets) {
+      addConstituencyOrganization(campaign, cid, FIELD.visitOrgGain * dim);
+      for (const row of world.constituencyElectorate[cid]?.provincePopulationShares ?? []) {
+        addProvinceOrganization(campaign, row.provinceId, FIELD.visitOrgGain * dim * row.share * 0.25);
+      }
+    }
   }
   campaign.fieldOrganization = Math.min(1, campaign.fieldOrganization + 0.03 * dim);
   pushEffect(campaign, {
@@ -459,24 +564,50 @@ export function campaignVisit(
 export function campaignOrganize(
   world: KernelWorld,
   state: SimState,
-  args: { campaignId: string; constituencyId: string; actorId?: string },
+  args: {
+    campaignId: string;
+    constituencyId?: string;
+    geography?: CampaignGeography;
+    actorId?: string;
+  },
   commandId: string | null,
 ): { events: SimEvent[] } | { error: CommandError } {
   const existing = requireActiveCampaign(state, args.campaignId);
   if ("error" in existing) return existing;
   const actorErr = requireActor(state, existing, args.actorId);
   if (actorErr) return { error: actorErr };
-  if (!world.constituencyElectorate[args.constituencyId]) {
-    return { error: reject("INVALID_GEOGRAPHY", args.constituencyId) };
+  const geography: CampaignGeography = args.geography ?? {
+    kind: "constituency",
+    id: args.constituencyId ?? null,
+  };
+  const geoErr = campaignGeographyError(world, geography);
+  if (geoErr || geography.kind === "national") {
+    return { error: geoErr ?? reject("INVALID_GEOGRAPHY", "organizing requires a province or constituency") };
   }
   const campaign = beginAction(world, state, args.campaignId, args.actorId);
   if ("error" in campaign) return campaign;
-  const key = `organize:${args.constituencyId}`;
+  const key = `organize:${geography.kind}:${geography.id}`;
   const dim = diminishingScale(campaign, key, state.currentDate);
   const skill = ownSkill(world, state, campaign.politicianId, "campaigning");
   const gain = FIELD.organizeGain * (0.5 + skill * 0.5) * dim;
-  const prev = campaign.organizationByConstituency[args.constituencyId] ?? 0;
-  campaign.organizationByConstituency[args.constituencyId] = Math.min(1, prev + gain);
+  if (geography.kind === "province" && geography.id) {
+    addProvinceOrganization(campaign, geography.id, gain);
+    const targets = constituenciesInProvince(world, geography.id);
+    const maxPopulation = Math.max(
+      1,
+      ...targets.map((cid) => world.constituencyElectorate[cid]?.population ?? 0),
+    );
+    for (const cid of targets) {
+      const share = provinceShare(world, cid, geography.id);
+      const reach = Math.sqrt((world.constituencyElectorate[cid]?.population ?? 0) / maxPopulation);
+      addConstituencyOrganization(campaign, cid, gain * share * (0.22 + reach * 0.23));
+    }
+  } else if (geography.id) {
+    addConstituencyOrganization(campaign, geography.id, gain);
+    for (const row of world.constituencyElectorate[geography.id]?.provincePopulationShares ?? []) {
+      addProvinceOrganization(campaign, row.provinceId, gain * row.share * 0.22);
+    }
+  }
   campaign.fieldOrganization = Math.min(1, campaign.fieldOrganization + gain * 0.35);
   applyStandingDelta(world, state, campaign.politicianId, {
     enthusiasm: STANDING_DELTA.organize * dim,
@@ -484,7 +615,7 @@ export function campaignOrganize(
   pushEffect(campaign, {
     date: state.currentDate,
     kind: key,
-    geographyId: args.constituencyId,
+    geographyId: geography.id,
     targetId: null,
     magnitude: gain,
   });
@@ -495,7 +626,7 @@ export function campaignOrganize(
         "FIELD_ORGANIZED",
         [campaign.politicianId],
         [campaign.id],
-        { campaignId: campaign.id, constituencyId: args.constituencyId, gain },
+        { campaignId: campaign.id, geography, gain },
         commandId,
         0.3,
       ),
@@ -1008,6 +1139,13 @@ export function withdrawCampaign(
       }
     }
   }
+  if (campaign.type === "gubernatorial" && campaign.electionId) {
+    const election = state.provincialRuntime.elections[campaign.electionId];
+    const candidacy = election?.candidates[campaign.politicianId];
+    if (candidacy && election?.status !== "resolved" && election?.status !== "assumed") {
+      candidacy.withdrawn = true;
+    }
+  }
   events.push(
     event(
       state,
@@ -1081,6 +1219,9 @@ export function transitionNominationToGeneral(
         fieldOrganization: campaign.fieldOrganization,
         mediaCapacity: campaign.mediaCapacity,
         organizationByConstituency: { ...campaign.organizationByConstituency },
+        organizationByProvince: Object.fromEntries(
+          Object.entries(campaign.organizationByProvince).map(([id, value]) => [id, value * 0.72]),
+        ),
         status: "active",
       });
       events.push(

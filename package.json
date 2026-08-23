@@ -19,7 +19,9 @@
     "game": "pnpm --filter @lorsain/game dev",
     "game:build": "pnpm --filter @lorsain/game build",
     "calibrate:foreign": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/foreign-calibration.ts",
-    "calibrate:assembly": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/assembly-calibration.ts"
+    "calibrate:assembly": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/assembly-calibration.ts",
+    "calibrate:economy": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/economy-calibration.ts",
+    "calibrate:campaign-geography": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/campaign-geography-calibration.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

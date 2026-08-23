@@ -9,6 +9,7 @@ export function kernelWorldFromBundle(bundle) {
             dimension: i.dimension,
         })),
         offices: bundle.content.terena_offices.offices,
+        economy2028: bundle.content.terena_economy_2028,
         constitution: bundle.content.terena_constitution,
         administrations: bundle.content.terena_presidential_administrations.administrations,
         ...terenaPartyFields({

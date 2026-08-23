@@ -103,7 +103,7 @@ export function OrganizationsPage(props: {
               </SectionCard>
               <SectionCard title="Positions and support">
                 {actor?.billPressure.length ? (
-                  actor.billPressure.map((p) => <div key={p.billId}>{p.billId} · {p.stance}</div>)
+                  actor.billPressure.map((p) => <div key={p.billId}>{props.snap.legislatureRuntime.bills[p.billId]?.title ?? "Public bill"} · {p.stance}</div>)
                 ) : (
                   <EmptyState>No current bill positions.</EmptyState>
                 )}

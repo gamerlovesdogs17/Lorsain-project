@@ -89,6 +89,8 @@ export function mapFillFor(
   feature: PreparedPath,
   kind: "province" | "constituency",
   campaignOrg?: Record<string, number>,
+  campaignProvinceOrg?: Record<string, number>,
+  electionId?: string | null,
 ): string {
   if (mode === "economy" && kind === "province") {
     const idx = snap.economyRuntime.provinces[feature.id]?.conditionsIndex ?? 100;
@@ -100,10 +102,48 @@ export function mapFillFor(
     const t = Math.max(0, Math.min(1, org));
     return `rgba(31, 58, 95, ${0.08 + t * 0.45})`;
   }
-  if ((mode === "political" || mode === "election") && kind === "constituency") {
+  if (mode === "campaign" && kind === "province" && campaignProvinceOrg) {
+    const org = campaignProvinceOrg[feature.id] ?? 0;
+    const t = Math.max(0, Math.min(1, org));
+    return `hsl(216, 34%, ${91 - t * 35}%)`;
+  }
+  if (mode === "political" && kind === "constituency") {
     const plurality = constituencySittingPluralityPartyId(world, snap, feature.id);
     if (plurality === "tie") return CONSTITUENCY_TIE_FILL;
     return partyColor(world, plurality);
+  }
+  if (mode === "election") {
+    const provincial = electionId ? snap.provincialRuntime.elections[electionId] : null;
+    if (kind === "province" && provincial?.provinceId === feature.id) {
+      const winner = provincial.winnerId;
+      return winner ? partyColor(world, provincial.candidates[winner]?.partyId ?? null) : "#dedbd3";
+    }
+    if (kind === "constituency") {
+      const selected = electionId ? snap.elections[electionId] : undefined;
+      const election = selected ?? Object.values(snap.elections)
+        .filter((candidate) => candidate.type === "assembly" && candidate.geographyKind === "national")
+        .sort((a, b) => b.date.localeCompare(a.date))[0];
+      const result = election?.assembly?.constituencyResults[feature.id];
+      if (result) {
+        const seats = new Map<string, number>();
+        for (const winnerId of result.electedIds) {
+          const partyId = result.partyByCandidate[winnerId] ?? "none";
+          seats.set(partyId, (seats.get(partyId) ?? 0) + 1);
+        }
+        const ranked = [...seats.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        if (ranked.length > 1 && ranked[0]![1] === ranked[1]![1]) return CONSTITUENCY_TIE_FILL;
+        return partyColor(world, ranked[0]?.[0] === "none" ? null : ranked[0]?.[0] ?? null);
+      }
+      const polls = Object.values(snap.polls)
+        .filter((poll) => poll.electionId === election?.id && poll.constituencyId === feature.id)
+        .sort((a, b) => b.publicationDate.localeCompare(a.publicationDate));
+      const leaders = polls[0]?.firstPreference.slice().sort((a, b) => b.share - a.share);
+      if (leaders?.length) {
+        if (leaders.length > 1 && Math.abs(leaders[0]!.share - leaders[1]!.share) < 0.000001) return CONSTITUENCY_TIE_FILL;
+        return partyColor(world, leaders[0]!.partyId);
+      }
+      return "#dedbd3";
+    }
   }
   if (mode === "organizations" && kind === "province") {
     return "#e8eee8";

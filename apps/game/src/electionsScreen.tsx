@@ -17,7 +17,7 @@ import {
   type PresentationCatalog,
 } from "./presentation.js";
 import { formatPublicNumber, formatPublicPercent } from "./presentation/display.js";
-import { latestPublicPoll } from "./map/fills.js";
+import { latestPublicPoll, mapFillFor } from "./map/fills.js";
 import { TerenaMap, type MapSelection } from "./map/TerenaMap.js";
 import { EmptyState, PageHeader, SectionCard, StatusBadge, TabBar } from "./ui/kit.js";
 import { PoliticianCard } from "./ui/politician.js";
@@ -55,7 +55,7 @@ export function ElectionsPage(props: Props) {
   const assemblyDue = props.snap.pendingInterrupt?.code === "ASSEMBLY_ELECTION_DUE";
   const poll = latestPublicPoll(props.snap);
   const [selection, setSelection] = useState<MapSelection | null>(null);
-  const [tab, setTab] = useState<"presidential" | "assembly" | "nominations">("presidential");
+  const [tab, setTab] = useState<"presidential" | "assembly" | "gubernatorial" | "nominations">("presidential");
 
   const electionOrder = (a: (typeof elections)[number], b: (typeof elections)[number]) => {
     const aCurrent = a.status !== "resolved" && a.status !== "cancelled";
@@ -76,6 +76,17 @@ export function ElectionsPage(props: Props) {
     });
   const [assemblyId, setAssemblyId] = useState(assembly[0]?.id ?? "");
   const selectedAssembly = assembly.find((e) => e.id === assemblyId) ?? assembly[0] ?? null;
+  const gubernatorial = Object.values(props.snap.provincialRuntime.elections).sort((a, b) => {
+    const aa = a.status !== "resolved" && a.status !== "assumed" ? 1 : 0;
+    const ba = b.status !== "resolved" && b.status !== "assumed" ? 1 : 0;
+    return ba - aa || (aa ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)) || a.provinceId.localeCompare(b.provinceId);
+  });
+  const homeProvince = props.world.politicianHomeProvince[props.snap.playerPoliticianId];
+  const [governorElectionId, setGovernorElectionId] = useState("");
+  const selectedGovernorRace = gubernatorial.find((race) => race.id === governorElectionId)
+    ?? gubernatorial.find((race) => race.provinceId === homeProvince)
+    ?? gubernatorial[0]
+    ?? null;
 
   function resolvePresidential() {
     const result = props.sim.executeCommand({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
@@ -410,6 +421,7 @@ export function ElectionsPage(props: Props) {
         tabs={[
           { id: "presidential", label: "Presidential" },
           { id: "assembly", label: "Assembly" },
+          { id: "gubernatorial", label: "Governors" },
           { id: "nominations", label: "Nominations" },
         ]}
         value={tab}
@@ -447,6 +459,56 @@ export function ElectionsPage(props: Props) {
           ) : (
             <EmptyState>No Assembly election is scheduled.</EmptyState>
           )}
+        </div>
+      ) : null}
+      {tab === "gubernatorial" ? (
+        <div className="governor-election-view">
+          {selectedGovernorRace ? <>
+            <label className="election-cycle-picker">Province
+              <select value={selectedGovernorRace.id} onChange={(event) => setGovernorElectionId(event.target.value)}>
+                {gubernatorial.map((race) => <option key={race.id} value={race.id}>{props.catalog.places.get(race.provinceId)?.name ?? race.provinceId} · {race.date.slice(0, 4)} · {statusLabel(race.status)}</option>)}
+              </select>
+            </label>
+            <div className="dash dash-2">
+              <SectionCard title="Provincial election map">
+                <TerenaMap
+                  bundle={props.bundle}
+                  mode="election"
+                  selectedId={selectedGovernorRace.provinceId}
+                  showConstituencies={false}
+                  fillFor={(feature, kind) => mapFillFor("election", props.world, props.snap, feature, kind, undefined, undefined, selectedGovernorRace.id)}
+                  onSelect={(selected) => {
+                    if (selected.kind !== "province") return;
+                    const race = gubernatorial.find((candidate) => candidate.provinceId === selected.id && candidate.date.slice(0, 4) === selectedGovernorRace.date.slice(0, 4));
+                    if (race) setGovernorElectionId(race.id);
+                  }}
+                  tooltipFor={(selected) => {
+                    const race = gubernatorial.find((candidate) => candidate.provinceId === selected.id && candidate.date.slice(0, 4) === selectedGovernorRace.date.slice(0, 4));
+                    return <><strong>{selected.name}</strong><span>{race?.winnerId ? `Winner ${politicianDisplayName(props.catalog, race.winnerId)}` : race ? `${statusLabel(race.status)} · ${Object.keys(race.candidates).length} candidates` : "No race in this cycle"}</span></>;
+                  }}
+                />
+                <p className="muted">Province-wide certified winners are colored by party. Unresolved races remain neutral.</p>
+              </SectionCard>
+              <SectionCard title={`${props.catalog.places.get(selectedGovernorRace.provinceId)?.name ?? selectedGovernorRace.provinceId} governor`}>
+                <p className="muted">{selectedGovernorRace.date} · {statusLabel(selectedGovernorRace.status)}{selectedGovernorRace.turnoutRate != null ? ` · turnout ${formatPublicPercent(selectedGovernorRace.turnoutRate)}` : ""}</p>
+                {Object.values(selectedGovernorRace.candidates)
+                  .filter((candidate) => !candidate.withdrawn)
+                  .sort((a, b) => (selectedGovernorRace.voteShares[b.politicianId] ?? 0) - (selectedGovernorRace.voteShares[a.politicianId] ?? 0))
+                  .map((candidate) => <PoliticianCard
+                    key={candidate.politicianId}
+                    catalog={props.catalog}
+                    world={props.world}
+                    state={props.snap}
+                    politicianId={candidate.politicianId}
+                    office={candidate.incumbent ? "Incumbent governor" : "Candidate for governor"}
+                    compact
+                    selected={selectedGovernorRace.winnerId === candidate.politicianId}
+                    action={<span className="election-votes">{selectedGovernorRace.winnerId === candidate.politicianId ? "Winner" : selectedGovernorRace.status === "resolved" || selectedGovernorRace.status === "assumed" ? "Not elected" : "Filed"}{selectedGovernorRace.voteShares[candidate.politicianId] != null ? ` · ${formatPublicPercent(selectedGovernorRace.voteShares[candidate.politicianId])}` : ""}</span>}
+                  />)}
+                {Object.keys(selectedGovernorRace.candidates).length === 0 ? <EmptyState>The candidate field will form when filing opens.</EmptyState> : null}
+              </SectionCard>
+            </div>
+          </> : <EmptyState>No gubernatorial election is scheduled.</EmptyState>}
         </div>
       ) : null}
       {tab === "nominations" ? (

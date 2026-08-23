@@ -40,7 +40,7 @@ import type {
 } from "./legislature/types.js";
 import type { ExecutiveRuntime, MotionKind } from "./executive/types.js";
 import type { ConstitutionalRuntime, CourtCaseType, JudicialVoteChoice } from "./courts/types.js";
-import type { EconomyRuntime } from "./economy/types.js";
+import type { CanonicalEconomyScenario, EconomyRuntime } from "./economy/types.js";
 import type {
   CanonicalInterestOrganization,
   OrganizationRuntime,
@@ -52,10 +52,15 @@ import type {
   CanonicalWorldLeader,
   ForeignAffairsRuntime,
 } from "./foreign/types.js";
+import type {
+  ProvincialInvestment,
+  ProvincialPriority,
+  ProvincialRuntime,
+} from "./provinces/types.js";
 
 export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 11 as const;
+export const SAVE_SCHEMA_VERSION = 12 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -218,6 +223,7 @@ export type SimState = {
   executiveRuntime: ExecutiveRuntime;
   constitutionalRuntime: ConstitutionalRuntime;
   economyRuntime: EconomyRuntime;
+  provincialRuntime: ProvincialRuntime;
   organizationRuntime: OrganizationRuntime;
   mediaRuntime: MediaRuntime;
   foreignAffairsRuntime: ForeignAffairsRuntime;
@@ -394,7 +400,11 @@ export type Command =
   | {
       type: "DECLARE_CAMPAIGN";
       politicianId: string;
-      campaignType: "presidential_nomination" | "presidential_general" | "assembly";
+      campaignType:
+        | "presidential_nomination"
+        | "presidential_general"
+        | "assembly"
+        | "gubernatorial";
       contestId?: string | null;
       electionId?: string | null;
       constituencyId?: string | null;
@@ -406,7 +416,13 @@ export type Command =
       geographyKind: "national" | "province" | "constituency";
       geographyId?: string | null;
     }
-  | { type: "CAMPAIGN_ORGANIZE"; campaignId: string; constituencyId: string }
+  | {
+      type: "CAMPAIGN_ORGANIZE";
+      campaignId: string;
+      constituencyId?: string;
+      geographyKind?: "province" | "constituency";
+      geographyId?: string;
+    }
   | {
       type: "CAMPAIGN_ADVERTISE";
       campaignId: string;
@@ -428,6 +444,36 @@ export type Command =
   | { type: "CAMPAIGN_SEEK_NOMINATION_SUPPORT"; campaignId: string }
   | { type: "CAMPAIGN_PREPARE_DEBATE"; campaignId: string }
   | { type: "WITHDRAW_CAMPAIGN"; campaignId: string }
+  | {
+      type: "FILE_GUBERNATORIAL_CANDIDACY";
+      electionId: string;
+      provinceId: string;
+    }
+  | { type: "DECLINE_GUBERNATORIAL_CANDIDACY"; electionId: string }
+  | {
+      type: "GOVERNOR_SET_PRIORITY";
+      provinceId: string;
+      priority: ProvincialPriority;
+    }
+  | {
+      type: "GOVERNOR_DIRECT_INVESTMENT";
+      provinceId: string;
+      focus: ProvincialInvestment;
+    }
+  | {
+      type: "GOVERNOR_TAKE_FEDERAL_POSITION";
+      provinceId: string;
+      issueId: string;
+      direction: -1 | 1;
+    }
+  | {
+      type: "GOVERNOR_RESPOND_TO_PRESSURE";
+      provinceId: string;
+      pressureId: string;
+      response: "mobilize" | "coordinate" | "request_federal_support";
+    }
+  | { type: "MINISTER_ADVISE_PRIORITY"; issueId: string }
+  | { type: "MAYOR_SET_CIVIC_PRIORITY"; priority: "housing" | "transport" | "services" }
   | {
       type: "INTRODUCE_BILL";
       policyItems: PolicyItem[];
@@ -622,6 +668,7 @@ export type KernelWorld = {
   constituencyElectorate: Record<string, ConstituencyElectorate>;
   pollsters: Record<string, PollsterDefinition>;
   issueDimensions: Record<string, string>;
+  economyScenario?: CanonicalEconomyScenario;
   /**
    * Immutable public party ideology baselines, established at scenario construction.
    * Runtime voter support must not live-average hidden AgentProfile ideology.

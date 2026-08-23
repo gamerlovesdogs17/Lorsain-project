@@ -23,9 +23,39 @@ import type { ElectionCandidate, ElectionState, TurnoutRecord } from "./types.js
 import { mergeTurnout } from "./turnout.js";
 import { FIELD } from "../campaigns/policy.js";
 import { ensureAssemblyElectionCycle } from "./assembly-cycle.js";
+import { candidateStandingOrDefault } from "./standing.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
+}
+
+function stableHash(text: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function selectPostElectionSpeaker(
+  state: SimState,
+  world: KernelWorld,
+  winnerIds: readonly string[],
+  electionId: string,
+): string | null {
+  const seatTotals = state.elections[electionId]?.assembly?.partySeatTotals ?? {};
+  return winnerIds.slice().sort((a, b) => {
+    const score = (id: string) => {
+      const politician = state.politicians[id];
+      const standing = candidateStandingOrDefault(world, state, id);
+      const partySeats = seatTotals[politician?.partyId ?? "independent"] ?? 0;
+      const partyLeader = politician?.partyId && state.partyStates[politician.partyId]?.leaderId === id ? 1 : 0;
+      return partySeats / Math.max(1, world.legislativeConstitution.assemblySeatCount) * 1.8 +
+        standing.nameRecognition * 0.35 + standing.favorability * 0.2 + partyLeader * 0.3;
+    };
+    return score(b) - score(a) || stableHash(`${electionId}:speaker:${a}`) - stableHash(`${electionId}:speaker:${b}`);
+  })[0] ?? null;
 }
 
 export function assemblyElectionIdForDate(date: IsoDate): string {
@@ -404,7 +434,7 @@ export function applyAssemblyAssumption(
       }
     }
     if (occupyingTerms(state, "OFFICE_SPEAKER").length === 0) {
-      const fallback = [...winnerSet].sort()[0];
+      const fallback = selectPostElectionSpeaker(state, world, [...winnerSet], electionId);
       if (fallback) {
         const assumed = assumeOffice(state, world, {
           officeId: "OFFICE_SPEAKER",

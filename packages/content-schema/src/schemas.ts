@@ -528,6 +528,73 @@ export const OfficeKindSchema = z.enum([
   "mayor",
 ]);
 
+const EconomyNationalSchema = z.object({
+  output_index: z.number(),
+  employment_index: z.number(),
+  price_index: z.number(),
+  real_wage_index: z.number(),
+  housing_index: z.number(),
+  confidence_index: z.number(),
+  fiscal_pressure: z.number().min(0).max(1),
+});
+
+const EconomySectorIdSchema = z.enum([
+  "labor",
+  "manufacturing",
+  "agriculture",
+  "services",
+  "housing",
+  "trade",
+]);
+
+const SectorExposureSchema = z.record(EconomySectorIdSchema, z.number().min(0).max(1));
+
+export const Economy2028FileSchema = z.object({
+  content_version: z.string(),
+  scenario_id: z.string(),
+  as_of: z.string(),
+  reference_note: z.string(),
+  national: EconomyNationalSchema,
+  national_annual_trend: z.object({
+    output: z.number(),
+    employment: z.number(),
+    prices: z.number(),
+    real_wages: z.number(),
+    housing: z.number(),
+  }),
+  sectors: z.record(
+    EconomySectorIdSchema,
+    z.object({
+      conditions_index: z.number(),
+      cyclical_sensitivity: z.number(),
+      annual_structural_trend: z.number(),
+    }),
+  ),
+  provinces: z.array(
+    z.object({
+      province_id: z.string(),
+      conditions_index: z.number(),
+      employment_index: z.number(),
+      housing_index: z.number(),
+      sector_exposure: SectorExposureSchema,
+      sensitivity: z.object({
+        growth: z.number(),
+        inflation: z.number(),
+        housing: z.number(),
+        trade: z.number(),
+      }),
+      annual_structural_trend: z.object({
+        conditions: z.number(),
+        employment: z.number(),
+        housing: z.number(),
+      }),
+      character: z.string(),
+    }),
+  ),
+  provenance: z.array(z.string()).min(1),
+});
+export type Economy2028File = z.infer<typeof Economy2028FileSchema>;
+
 export const OfficeDefinitionSchema = z
   .object({
     id: z.string().min(1),

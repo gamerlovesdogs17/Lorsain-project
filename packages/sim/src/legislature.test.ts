@@ -49,7 +49,7 @@ describe("Phase 6 legislature kernel", () => {
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "P6-SEED" });
     const snap = sim.getSnapshot();
     expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(SAVE_SCHEMA_VERSION).toBe(11);
+    expect(SAVE_SCHEMA_VERSION).toBe(12);
     expect(currentAssemblyMemberIds(world, snap)).toHaveLength(36);
     expect(Object.keys(snap.legislatureRuntime.committees).sort()).toEqual([
       "COMMITTEE_ECONOMIC",

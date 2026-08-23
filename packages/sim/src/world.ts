@@ -98,6 +98,41 @@ export type TerenaKernelInput = {
   figures: FigureIn[];
   offices: OfficeIn[];
   issues?: Array<{ id: string; dimension?: string }>;
+  economy2028?: {
+    as_of: string;
+    reference_note: string;
+    national: {
+      output_index: number;
+      employment_index: number;
+      price_index: number;
+      real_wage_index: number;
+      housing_index: number;
+      confidence_index: number;
+      fiscal_pressure: number;
+    };
+    national_annual_trend: {
+      output: number;
+      employment: number;
+      prices: number;
+      real_wages: number;
+      housing: number;
+    };
+    sectors: Record<
+      string,
+      { conditions_index: number; cyclical_sensitivity: number; annual_structural_trend: number }
+    >;
+    provinces: Array<{
+      province_id: string;
+      conditions_index: number;
+      employment_index: number;
+      housing_index: number;
+      sector_exposure: Record<string, number>;
+      sensitivity: { growth: number; inflation: number; housing: number; trade: number };
+      annual_structural_trend: { conditions: number; employment: number; housing: number };
+      character: string;
+    }>;
+    provenance: string[];
+  };
   constitution: {
     calendars?: Record<string, ContentCalendar>;
     assembly?: { seats?: number; absolute_majority?: number };
@@ -620,6 +655,58 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     issueIds: catalog.length
       ? catalog
       : [...new Set(input.figures.flatMap((f) => Object.keys(f.issue_salience ?? {})))].sort(),
+    ...(input.economy2028
+      ? {
+          economyScenario: {
+            asOf: input.economy2028.as_of as IsoDate,
+            referenceNote: input.economy2028.reference_note,
+            national: {
+              outputIndex: input.economy2028.national.output_index,
+              employmentIndex: input.economy2028.national.employment_index,
+              priceIndex: input.economy2028.national.price_index,
+              realWageIndex: input.economy2028.national.real_wage_index,
+              housingIndex: input.economy2028.national.housing_index,
+              confidenceIndex: input.economy2028.national.confidence_index,
+              fiscalPressure: input.economy2028.national.fiscal_pressure,
+            },
+            nationalAnnualTrend: {
+              output: input.economy2028.national_annual_trend.output,
+              employment: input.economy2028.national_annual_trend.employment,
+              prices: input.economy2028.national_annual_trend.prices,
+              realWages: input.economy2028.national_annual_trend.real_wages,
+              housing: input.economy2028.national_annual_trend.housing,
+            },
+            sectors: Object.fromEntries(
+              Object.entries(input.economy2028.sectors).map(([id, sector]) => [
+                id,
+                {
+                  conditionsIndex: sector.conditions_index,
+                  cyclicalSensitivity: sector.cyclical_sensitivity,
+                  annualStructuralTrend: sector.annual_structural_trend,
+                },
+              ]),
+            ) as NonNullable<KernelWorld["economyScenario"]>["sectors"],
+            provinces: Object.fromEntries(
+              input.economy2028.provinces.map((province) => [
+                province.province_id,
+                {
+                  provinceId: province.province_id,
+                  starting: {
+                    conditionsIndex: province.conditions_index,
+                    employmentIndex: province.employment_index,
+                    housingIndex: province.housing_index,
+                  },
+                  sectorExposure: province.sector_exposure,
+                  sensitivity: province.sensitivity,
+                  annualStructuralTrend: province.annual_structural_trend,
+                  character: province.character,
+                },
+              ]),
+            ),
+            provenance: [...input.economy2028.provenance],
+          },
+        }
+      : {}),
     ...partySlice,
     ...(input.presidentialEligibility
       ? {

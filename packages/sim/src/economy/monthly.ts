@@ -15,7 +15,8 @@ import {
   clampIndex,
   clampFiscal,
 } from "./policy.js";
-import type { EconomyLagKind, NationalEconomyIndices, RegionalEconomyIndices } from "./types.js";
+import { baselineEconomyRuntime, economyRuntimeFromScenario } from "./types.js";
+import type { EconomyLagKind, EconomySectorId, NationalEconomyIndices } from "./types.js";
 
 function event(
   state: SimState,
@@ -89,29 +90,75 @@ function applyLags(state: SimState): void {
   state.economyRuntime.laggedEffects = next;
 }
 
-function applyMomentumAndBudget(state: SimState, rng: RngService): void {
+function moveToward(current: number, target: number, rate: number, impulse = 0): number {
+  return clampIndex(current + (target - current) * rate + impulse);
+}
+
+function applyMomentumAndBudget(state: SimState, world: KernelWorld, rng: RngService): void {
   const n = state.economyRuntime.national;
-  const prev = state.economyRuntime.history[state.economyRuntime.history.length - 1];
-  const keys = [
-    "outputIndex",
-    "employmentIndex",
-    "priceIndex",
-    "realWageIndex",
-    "housingIndex",
-    "confidenceIndex",
-  ] as const;
-  for (const key of keys) {
-    const last = prev?.[key] ?? 100;
-    const delta = n[key] - last;
-    const revert = (100 - n[key]) * 0.02;
-    n[key] = clampIndex(n[key] + delta * 0.28 + revert);
-  }
+  const cycle = state.economyRuntime.cycle;
+  cycle.monthsElapsed += 1;
+  cycle.phase = (cycle.phase + (Math.PI * 2) / 78) % (Math.PI * 2);
+  const wave = Math.sin(cycle.phase);
+  const noise = () => (rng.float01("economy") - 0.5) * 0.18;
+  cycle.outputMomentum = Math.max(
+    -0.42,
+    Math.min(0.42, cycle.outputMomentum * 0.72 + wave * 0.055 + noise()),
+  );
+  cycle.inflationMomentum = Math.max(
+    -0.3,
+    Math.min(0.3, cycle.inflationMomentum * 0.76 - wave * 0.025 + noise() * 0.45),
+  );
+  cycle.housingMomentum = Math.max(
+    -0.34,
+    Math.min(0.34, cycle.housingMomentum * 0.8 + Math.sin(cycle.phase - 0.8) * 0.035 + noise() * 0.5),
+  );
+  const scenario = world.economyScenario;
+  const start = scenario?.national ?? {
+    outputIndex: 100,
+    employmentIndex: 100,
+    priceIndex: 100,
+    realWageIndex: 100,
+    housingIndex: 100,
+    confidenceIndex: 100,
+    fiscalPressure: 0.35,
+  };
+  const trend = scenario?.nationalAnnualTrend ?? {
+    output: 0.35,
+    employment: 0.2,
+    prices: 0.5,
+    realWages: 0.2,
+    housing: 0.15,
+  };
+  const years = cycle.monthsElapsed / 12;
+  const outputTarget = start.outputIndex + trend.output * years + wave * 1.35;
+  n.outputIndex = moveToward(n.outputIndex, outputTarget, 0.035, cycle.outputMomentum);
+  const employmentTarget =
+    start.employmentIndex + trend.employment * years + (n.outputIndex - start.outputIndex) * 0.42;
+  n.employmentIndex = moveToward(
+    n.employmentIndex,
+    employmentTarget,
+    0.045,
+    cycle.outputMomentum * 0.32 + noise() * 0.25,
+  );
+  const priceTarget = start.priceIndex + trend.prices * years - wave * 0.5;
+  n.priceIndex = moveToward(n.priceIndex, priceTarget, 0.025, cycle.inflationMomentum);
+  const wageTarget =
+    start.realWageIndex + trend.realWages * years +
+    (n.employmentIndex - start.employmentIndex) * 0.24 -
+    (n.priceIndex - start.priceIndex) * 0.12;
+  n.realWageIndex = moveToward(n.realWageIndex, wageTarget, 0.035, noise() * 0.18);
+  const housingTarget = start.housingIndex + trend.housing * years + Math.sin(cycle.phase - 0.8) * 1.1;
+  n.housingIndex = moveToward(n.housingIndex, housingTarget, 0.028, cycle.housingMomentum);
+  const confidenceTarget =
+    start.confidenceIndex + (n.outputIndex - start.outputIndex) * 0.6 -
+    (n.priceIndex - start.priceIndex) * 0.22 - (n.fiscalPressure - start.fiscalPressure) * 4;
+  n.confidenceIndex = moveToward(n.confidenceIndex, confidenceTarget, 0.08, noise() * 0.45);
   const budgets = Object.values(state.executiveRuntime.budgets);
   const latest = budgets.sort((a, b) => (a.fiscalYear < b.fiscalYear ? 1 : -1))[0];
   if (latest?.status === "approved") n.fiscalPressure = clampFiscal(n.fiscalPressure - 0.01);
   else if (latest?.status === "continuing") n.fiscalPressure = clampFiscal(n.fiscalPressure + 0.008);
   n.confidenceIndex = clampIndex(n.confidenceIndex - (n.fiscalPressure - 0.35) * 0.4);
-  void rng;
 }
 
 function applyShock(state: SimState, world: KernelWorld, rng: RngService, commandId: string): SimEvent[] {
@@ -157,70 +204,98 @@ function applyShock(state: SimState, world: KernelWorld, rng: RngService, comman
   return events;
 }
 
-function archetypeWeight(archetype: string): {
-  employment: number;
-  housing: number;
-  trade: number;
-  labor: number;
-} {
-  const a = archetype.toLowerCase();
-  return {
-    employment: /industrial|union|working/.test(a) ? 1 : /public-sector|public sector/.test(a) ? 0.6 : 0.3,
-    housing: /renter|urban|young/.test(a) ? 1 : /professional/.test(a) ? 0.5 : 0.25,
-    trade: /maritime|trade|agriculture|farm/.test(a) ? 1 : /business/.test(a) ? 0.6 : 0.2,
-    labor: /union|working|public/.test(a) ? 1 : 0.25,
-  };
-}
-
 function updateRegions(world: KernelWorld, state: SimState): void {
   const n = state.economyRuntime.national;
-  for (const provinceId of world.provinceIds) {
-    let emp = 0;
-    let house = 0;
-    let trade = 0;
-    let labor = 0;
-    let w = 0;
-    for (const [cid, shares] of Object.entries(world.constituencyProvinceShares)) {
-      const share = shares.find((s) => s.provinceId === provinceId)?.share ?? 0;
-      if (share <= 0) continue;
-      const pop = world.constituencyElectorate[cid]?.population ?? 1;
-      for (const blocId of world.voterBlocIdsByConstituency[cid] ?? []) {
-        const bloc = world.voterBlocs[blocId];
-        if (!bloc) continue;
-        const aw = archetypeWeight(bloc.archetype);
-        const wt = share * pop * bloc.weight;
-        emp += aw.employment * wt;
-        house += aw.housing * wt;
-        trade += aw.trade * wt;
-        labor += aw.labor * wt;
-        w += wt;
-      }
+  const scenario = world.economyScenario;
+  const startNational = scenario?.national ?? {
+    outputIndex: 100,
+    employmentIndex: 100,
+    priceIndex: 100,
+    realWageIndex: 100,
+    housingIndex: 100,
+    confidenceIndex: 100,
+    fiscalPressure: 0.35,
+  };
+  const years = state.economyRuntime.cycle.monthsElapsed / 12;
+  for (const [sectorId, current] of Object.entries(state.economyRuntime.sectors)) {
+    const profile = scenario?.sectors[sectorId as keyof typeof scenario.sectors];
+    if (!profile) continue;
+    let nationalSignal = n.outputIndex - startNational.outputIndex;
+    if (sectorId === "labor") {
+      nationalSignal = ((n.employmentIndex - startNational.employmentIndex) +
+        (n.realWageIndex - startNational.realWageIndex)) / 2;
+    } else if (sectorId === "housing") {
+      nationalSignal = n.housingIndex - startNational.housingIndex;
+    } else if (sectorId === "trade") {
+      nationalSignal =
+        (n.outputIndex - startNational.outputIndex) * 0.65 -
+        (n.priceIndex - startNational.priceIndex) * 0.25;
+    } else if (sectorId === "services") {
+      nationalSignal =
+        (n.outputIndex - startNational.outputIndex) * 0.45 +
+        (n.confidenceIndex - startNational.confidenceIndex) * 0.55;
     }
-    const mix = w > 0 ? { emp: emp / w, house: house / w, trade: trade / w, labor: labor / w } : {
-      emp: 0.4,
-      house: 0.4,
-      trade: 0.4,
-      labor: 0.4,
-    };
-    const rec: RegionalEconomyIndices = {
-      conditionsIndex: clampIndex(
-        n.outputIndex * 0.55 +
-          n.confidenceIndex * 0.25 +
-          (n.employmentIndex - 100) * mix.emp * 0.2 +
-          100 * (1 - 0.55 - 0.25),
-      ),
-      employmentIndex: clampIndex(n.employmentIndex + (n.realWageIndex - 100) * mix.labor * 0.15),
-      housingIndex: clampIndex(n.housingIndex + (100 - n.priceIndex) * mix.house * 0.08),
-    };
-    rec.conditionsIndex = clampIndex(
-      rec.conditionsIndex + (n.outputIndex - 100) * mix.trade * 0.12,
-    );
-    state.economyRuntime.provinces[provinceId] = rec;
+    const target =
+      profile.conditionsIndex + nationalSignal * profile.cyclicalSensitivity +
+      profile.annualStructuralTrend * years;
+    current.conditionsIndex = moveToward(current.conditionsIndex, target, 0.12);
   }
-  Object.assign(state.economyRuntime.sectors, sectorIndicesFromNational(n));
+  for (const provinceId of world.provinceIds) {
+    const profile = scenario?.provinces[provinceId];
+    const current = state.economyRuntime.provinces[provinceId] ?? {
+      conditionsIndex: profile?.starting.conditionsIndex ?? 100,
+      employmentIndex: profile?.starting.employmentIndex ?? 100,
+      housingIndex: profile?.starting.housingIndex ?? 100,
+    };
+    if (!profile) {
+      current.conditionsIndex = moveToward(current.conditionsIndex, n.outputIndex, 0.08);
+      current.employmentIndex = moveToward(current.employmentIndex, n.employmentIndex, 0.08);
+      current.housingIndex = moveToward(current.housingIndex, n.housingIndex, 0.08);
+      state.economyRuntime.provinces[provinceId] = current;
+      continue;
+    }
+    const sectorSignal = Object.entries(profile.sectorExposure).reduce((sum, [sectorId, weight]) => {
+      const sector = state.economyRuntime.sectors[sectorId];
+      const base = scenario?.sectors[sectorId as EconomySectorId]?.conditionsIndex ?? 100;
+      return sum + ((sector?.conditionsIndex ?? base) - base) * weight;
+    }, 0);
+    const outputSignal = n.outputIndex - startNational.outputIndex;
+    const employmentSignal = n.employmentIndex - startNational.employmentIndex;
+    const housingSignal = n.housingIndex - startNational.housingIndex;
+    const priceSignal = n.priceIndex - startNational.priceIndex;
+    const tradeProfile = scenario.sectors.trade;
+    const tradeSignal =
+      (state.economyRuntime.sectors.trade?.conditionsIndex ?? tradeProfile.conditionsIndex) -
+      tradeProfile.conditionsIndex;
+    current.conditionsIndex = moveToward(
+      current.conditionsIndex,
+      profile.starting.conditionsIndex +
+        outputSignal * profile.sensitivity.growth * 0.55 +
+        sectorSignal * 0.45 +
+        tradeSignal * profile.sensitivity.trade * 0.16 -
+        priceSignal * profile.sensitivity.inflation * 0.18 +
+        profile.annualStructuralTrend.conditions * years,
+      0.1,
+    );
+    current.employmentIndex = moveToward(
+      current.employmentIndex,
+      profile.starting.employmentIndex + employmentSignal * profile.sensitivity.growth +
+        sectorSignal * 0.25 +
+        tradeSignal * profile.sensitivity.trade * 0.1 +
+        profile.annualStructuralTrend.employment * years,
+      0.09,
+    );
+    current.housingIndex = moveToward(
+      current.housingIndex,
+      profile.starting.housingIndex + housingSignal * profile.sensitivity.housing -
+        priceSignal * 0.12 + profile.annualStructuralTrend.housing * years,
+      0.07,
+    );
+    state.economyRuntime.provinces[provinceId] = current;
+  }
 }
 
-/** Sector composites stay at 100 when every national index is at the January 2028 baseline. */
+/** Legacy/reference composites for worlds that do not provide canonical sector profiles. */
 export function sectorIndicesFromNational(
   n: NationalEconomyIndices,
 ): Record<string, { conditionsIndex: number }> {
@@ -274,24 +349,32 @@ export function processEconomyMonth(
   const month = monthStart(state.currentDate);
   if (state.economyRuntime.lastMonthProcessed === month) return [];
   if (Object.keys(state.economyRuntime.provinces).length === 0) {
-    for (const id of world.provinceIds) {
-      state.economyRuntime.provinces[id] = {
-        conditionsIndex: 100,
-        employmentIndex: 100,
-        housingIndex: 100,
-      };
-    }
+    const seeded = world.economyScenario
+      ? economyRuntimeFromScenario(world.economyScenario)
+      : baselineEconomyRuntime(world.provinceIds, state.currentDate);
+    state.economyRuntime.provinces = seeded.provinces;
+    state.economyRuntime.provinceHistory = seeded.provinceHistory;
   }
   const events: SimEvent[] = [];
   ingestPolicy(state);
   applyLags(state);
-  applyMomentumAndBudget(state, rng);
+  applyMomentumAndBudget(state, world, rng);
   events.push(...applyShock(state, world, rng, commandId));
   updateRegions(world, state);
   publicPoliticalEffects(world, state);
   state.economyRuntime.history.push({ date: month, ...state.economyRuntime.national });
   if (state.economyRuntime.history.length > HISTORY_MONTHS) {
     state.economyRuntime.history.splice(0, state.economyRuntime.history.length - HISTORY_MONTHS);
+  }
+  for (const [id, province] of Object.entries(state.economyRuntime.provinces)) {
+    const rows = (state.economyRuntime.provinceHistory[id] ??= []);
+    rows.push({ date: month, ...province });
+    if (rows.length > HISTORY_MONTHS) rows.splice(0, rows.length - HISTORY_MONTHS);
+  }
+  for (const [id, sector] of Object.entries(state.economyRuntime.sectors)) {
+    const rows = (state.economyRuntime.sectorHistory[id] ??= []);
+    rows.push({ date: month, ...sector });
+    if (rows.length > HISTORY_MONTHS) rows.splice(0, rows.length - HISTORY_MONTHS);
   }
   state.economyRuntime.lastMonthProcessed = month;
   const n = state.economyRuntime.national;

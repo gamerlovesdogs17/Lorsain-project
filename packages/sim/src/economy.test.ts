@@ -75,7 +75,7 @@ function withOperativeLaw(sim: Simulation, world: KernelWorld, issueId: string, 
 }
 
 describe("Phase 9 economy", () => {
-  it("keeps every sector near the January 2028 = 100 baseline on a no-policy February", () => {
+  it("keeps every sector near the reference-100 synthetic baseline on a no-policy February", () => {
     expect(sectorIndicesFromNational(BASELINE_INDICES).trade.conditionsIndex).toBe(100);
     for (const [id, sector] of Object.entries(sectorIndicesFromNational(BASELINE_INDICES))) {
       expect(sector.conditionsIndex, id).toBe(100);
@@ -173,7 +173,7 @@ describe("Phase 9 economy", () => {
     expect(a.hashState()).not.toBe(b.hashState());
   });
 
-  it("migrates schema 8 to 9 with January 2028 = 100 and empty media/org history", () => {
+  it("migrates schema 8 to 9 with the legacy reference-100 baseline and empty media/org history", () => {
     const world = legislativeHarnessWorld("ECON-MIG");
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "ECON-MIG" });
     const snap = jsonClone(sim.getSnapshot());

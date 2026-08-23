@@ -245,6 +245,25 @@ function futureEntriesForParty(
   return entries;
 }
 
+/**
+ * Fill future nomination shells only when their real exploration window opens.
+ * The ranking deliberately reads the live state at that date; creating the
+ * election/calendar years earlier must not freeze a future field.
+ */
+export function populateRuntimePresidentialCandidateFields(
+  state: SimState,
+  world: KernelWorld,
+  election: ElectionState,
+): void {
+  for (const contest of presidentialNominationContestsForElection(state, election.id)) {
+    const cycle = presidentialNominationCycleMetadata(contest);
+    if (!cycle || cycle.candidateSource !== "runtime_politics") continue;
+    if (Object.keys(contest.entries).length > 0) continue;
+    contest.entries = futureEntriesForParty(state, world, contest.partyId, election.date);
+    contest.metadata.candidateFieldPopulatedDate = state.currentDate;
+  }
+}
+
 export function ensurePresidentialNominationContests(
   state: SimState,
   world: KernelWorld,
@@ -265,15 +284,13 @@ export function ensurePresidentialNominationContests(
     const rule = world.nominationRules[def.nominationRuleId];
     if (!rule || (rule.partyId !== partyId && !state.dynamicParties[partyId])) continue;
     const id = padId("CONTEST", state.counters.nextPartyContestId++);
-    let entries: Record<string, ContestEntry> = {};
+    const entries: Record<string, ContestEntry> = {};
     if (scenarioStartCycle) {
       for (const pol of Object.values(state.politicians)) {
         if (pol.partyId !== partyId || !pol.alive || pol.retired) continue;
         const entry = seedEntryFromProfile(world, state, pol.id);
         if (entry) entries[pol.id] = entry;
       }
-    } else {
-      entries = futureEntriesForParty(state, world, partyId, election.date);
     }
     const contest: PartyContest = {
       id,

@@ -26,7 +26,7 @@ export function MapLegend(props: {
         </div>
         {props.mode === "election" ? (
           <p className="muted legend-note">
-            Sitting members and published polls — not hidden voter support.
+            Selected-election results or published geographic polls — never hidden voter support.
           </p>
         ) : null}
       </div>
@@ -41,7 +41,7 @@ export function MapLegend(props: {
           <span className="legend-bar campaign-org" />
           <span>High field org</span>
         </div>
-        <p className="muted legend-note">Your campaign organization by constituency.</p>
+        <p className="muted legend-note">Your provincial and constituency field organization.</p>
       </div>
     );
   }
@@ -54,7 +54,7 @@ export function MapLegend(props: {
           <span className="legend-bar economy-conditions" />
           <span>Stronger</span>
         </div>
-        <p className="muted legend-note">Regional economic conditions index (Jan 2028 = 100).</p>
+        <p className="muted legend-note">Regional economic conditions; index reference = 100.</p>
       </div>
     );
   }

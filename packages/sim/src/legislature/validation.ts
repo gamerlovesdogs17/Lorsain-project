@@ -37,6 +37,8 @@ function parsePolicyItems(raw: unknown, path: string): PolicyItem[] | string {
     }
     out.push({
       issueId: item.issueId,
+      ...(typeof item.provisionId === "string" ? { provisionId: item.provisionId } : {}),
+      ...(typeof item.optionId === "string" ? { optionId: item.optionId } : {}),
       direction: item.direction,
       magnitude: item.magnitude,
       fiscalImpact: typeof item.fiscalImpact === "number" ? item.fiscalImpact : null,
