@@ -195,7 +195,7 @@ describe("Phase 9 economy", () => {
     const parsed = parseSaveFile(raw);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(10);
+    expect(parsed.save.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     const restored = restoreSimulation(parsed.save, world);
     expect(restored.getSnapshot().economyRuntime.national.outputIndex).toBe(100);
     expect(Object.keys(restored.getSnapshot().mediaRuntime.stories)).toHaveLength(0);

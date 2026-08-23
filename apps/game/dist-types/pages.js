@@ -6,17 +6,18 @@ import { CampaignPage } from "./campaignScreen.js";
 import { CourtsPage } from "./courtsScreen.js";
 import { ExecutivePage } from "./executiveScreen.js";
 import { EconomyPage } from "./economyScreen.js";
+import { ElectionsPage } from "./electionsScreen.js";
 import { ForeignAffairsPage } from "./foreignAffairsScreen.js";
 import { OrganizationsPage } from "./organizationsScreen.js";
 import { NewsPage } from "./newsScreen.js";
 import { isMp, isPresident, playerCampaign, qualitativeStanding } from "./format.js";
 import { contestDisplayName, campaignTypeLabel, countryDisplayName, crisisStageLabel, electionDisplayName, eventDisplay, factionDisplayName, isPublicCrisisStage, latentStrategicTensions, partyColor, partyDisplayName, politicianDisplayName, pollShareLine, publicSeverityLabel, mediaHeadlineForEvent, treatyStatusLabel, treatyTypeLabel, } from "./presentation.js";
-import { decisionDisplayLabel, formatIndexDelta, formatPublicNumber, formatPublicPercent, interruptDisplay, } from "./presentation/display.js";
+import { decisionDisplayLabel, formatIndexDelta, interruptDisplay, } from "./presentation/display.js";
 import { DashboardLayout, EmptyState, MetricStrip, NewsItem, PageHeader, RightRail, SectionCard, StatCard, TabBar, ActivityFeedItem, LeadStory, StatusBadge, } from "./ui/kit.js";
 import { PoliticianProfile, PoliticianCard } from "./ui/politician.js";
 import { MapLegend } from "./ui/mapLegend.js";
 import { TerenaMap } from "./map/TerenaMap.js";
-import { constituencySittingSeatBreakdown, latestPublicPoll, mapFillFor } from "./map/fills.js";
+import { constituencySittingSeatBreakdown, mapFillFor } from "./map/fills.js";
 export function GamePages(props) {
     const { screen } = props;
     if (screen === "home")
@@ -30,7 +31,7 @@ export function GamePages(props) {
     if (screen === "campaign")
         return _jsx(CampaignPage, { ...props });
     if (screen === "elections")
-        return _jsx(Elections, { ...props });
+        return _jsx(ElectionsPage, { ...props });
     if (screen === "executive")
         return _jsx(ExecutivePage, { ...props });
     if (screen === "courts")
@@ -142,73 +143,6 @@ function Party(props) {
                                 .map((e) => (_jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: e.politicianId, compact: true }, e.politicianId))), c.winnerId ? (_jsxs("div", { children: ["Winner: ", politicianDisplayName(props.catalog, c.winnerId)] })) : null] }, c.id)))] }), elections.length > 0 ? (_jsx(SectionCard, { title: "Recent electoral performance", children: elections.map((e) => (_jsxs("div", { children: [electionDisplayName(e.id), " \u00B7", " ", e.winnerIds[0]
                             ? politicianDisplayName(props.catalog, e.winnerIds[0])
                             : e.status] }, e.id))) })) : null, _jsxs(SectionCard, { title: "Recent party events", children: [recent.length === 0 ? _jsx(EmptyState, { children: "No recent public party events." }) : null, recent.map((e) => (_jsx(ActivityFeedItem, { date: e.date, text: eventDisplay(props.catalog, props.world, props.snap, e) }, e.id)))] })] }));
-}
-function Elections(props) {
-    const elections = Object.values(props.snap.elections);
-    const due = props.snap.pendingInterrupt?.code === "PRESIDENTIAL_ELECTION_DUE";
-    const assemblyDue = props.snap.pendingInterrupt?.code === "ASSEMBLY_ELECTION_DUE";
-    const contests = Object.values(props.snap.partyContests).filter((c) => c.type === "presidential_nomination");
-    const poll = latestPublicPoll(props.snap);
-    const [sel, setSel] = useState(null);
-    const [tab, setTab] = useState("presidential");
-    const presElections = elections.filter((e) => e.id.includes("PRES"));
-    const asmElections = elections.filter((e) => e.id.includes("ASM"));
-    function voteWeight(raw) {
-        return Number(String(raw ?? "0").split("/")[0]) || 0;
-    }
-    function renderElectionResult(el, kind) {
-        const firstPrefs = el.countArchive && "firstPreferences" in el.countArchive
-            ? el.countArchive.firstPreferences
-            : {};
-        const totalVotes = Object.values(firstPrefs).reduce((sum, w) => sum + voteWeight(w), 0);
-        const winnerId = el.winnerIds[0] ?? null;
-        const ranked = Object.values(el.candidates).slice().sort((a, b) => {
-            const aw = voteWeight(firstPrefs[a.politicianId]);
-            const bw = voteWeight(firstPrefs[b.politicianId]);
-            if (bw !== aw)
-                return bw - aw;
-            if (a.politicianId === winnerId)
-                return -1;
-            if (b.politicianId === winnerId)
-                return 1;
-            return a.politicianId.localeCompare(b.politicianId);
-        });
-        const rounds = el.countArchive && "rounds" in el.countArchive ? el.countArchive.rounds : [];
-        return (_jsxs("div", { className: "election-result-card", children: [_jsx("h4", { className: "serif-head", children: electionDisplayName(el.id) }), _jsxs("div", { className: "muted", children: [el.status, " \u00B7 ", el.date, kind === "presidential" && el.status === "resolved"
-                            ? " · first-preference shares below are not final-round totals"
-                            : ""] }), winnerId ? (_jsxs("div", { className: "election-winner-banner", children: [_jsx("div", { className: "kicker", children: "Winner" }), _jsx("strong", { children: politicianDisplayName(props.catalog, winnerId) }), _jsx("div", { className: "muted", children: partyDisplayName(props.world, props.snap.politicians[winnerId]?.partyId ?? null, props.snap) })] })) : null, _jsx("div", { className: "candidate-result-list", children: ranked.map((cand) => {
-                        const fp = firstPrefs[cand.politicianId];
-                        const votes = fp ? formatPublicNumber(fp) : null;
-                        const share = totalVotes > 0 && fp ? voteWeight(fp) / totalVotes : undefined;
-                        const isWinner = winnerId === cand.politicianId;
-                        return (_jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: cand.politicianId, compact: true, selected: isWinner, action: votes ? (_jsxs("span", { className: "election-votes", children: [isWinner ? "Winner · " : "", "1st pref ", formatPublicPercent(share), " \u00B7 ", votes] })) : null }, cand.politicianId));
-                    }) }), due && el.type === "presidential" && el.status !== "resolved" ? (_jsx("button", { type: "button", className: "btn", onClick: () => {
-                        const resolved = props.sim.executeCommand({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
-                        props.report(resolved);
-                        if (resolved.ok) {
-                            props.sim.executeCommand({ type: "RESUME_TURN" });
-                        }
-                        props.onDone();
-                    }, children: "Resolve election" })) : null, assemblyDue && el.type === "assembly" && el.geographyKind === "national" && el.status !== "resolved" ? (_jsx("button", { type: "button", className: "btn", onClick: () => {
-                        const resolved = props.sim.executeCommand({ type: "RESOLVE_ASSEMBLY_ELECTION" });
-                        props.report(resolved);
-                        if (resolved.ok) {
-                            props.sim.executeCommand({ type: "RESUME_TURN" });
-                        }
-                        props.onDone();
-                    }, children: "Resolve Assembly election" })) : null, rounds.length > 0 ? (_jsxs("div", { className: "rcv-rounds", children: [_jsx("div", { className: "kicker", children: "RCV progression" }), _jsx("div", { className: "rcv-track", children: rounds.map((r, i) => (_jsxs("span", { className: `rcv-chip${r.electedId ? " winner" : ""}`, children: ["Round ", r.round ?? i + 1, r.eliminatedId
-                                        ? `: eliminated ${politicianDisplayName(props.catalog, r.eliminatedId)}`
-                                        : r.electedId
-                                            ? `: elected ${politicianDisplayName(props.catalog, r.electedId)}`
-                                            : ""] }, i))) })] })) : null] }, el.id));
-    }
-    return (_jsxs("div", { children: [_jsx(PageHeader, { kicker: "Returns", title: "Elections", subtitle: "Public polls and certified results only." }), _jsx(TabBar, { tabs: [
-                    { id: "presidential", label: "Presidential" },
-                    { id: "assembly", label: "Assembly" },
-                    { id: "nominations", label: "Nominations" },
-                ], value: tab, onChange: setTab }), tab === "presidential" ? (_jsxs("div", { children: [poll ? (_jsxs("p", { className: "muted", children: ["Latest national poll ", poll.publicationDate, ":", " ", pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)] })) : (_jsx(EmptyState, { children: "Presidential results are national. No geographic presidential returns are shown." })), presElections.map((el) => renderElectionResult(el, "presidential"))] })) : null, tab === "assembly" ? (_jsxs("div", { className: "dash dash-2", children: [_jsxs(SectionCard, { title: "Sitting Assembly geography", children: [_jsx(TerenaMap, { bundle: props.bundle, mode: "election", selectedId: sel?.id ?? null, fillFor: (f, kind) => mapFillFor("election", props.world, props.snap, f, kind), onSelect: setSel }), _jsx(MapLegend, { mode: "election", world: props.world }), sel?.kind === "constituency" ? (_jsxs("div", { children: [_jsx("p", { children: sel.name }), constituencySittingSeatBreakdown(props.world, props.snap, sel.id).map((row) => (_jsxs("div", { className: "muted", children: [partyDisplayName(props.world, row.partyId, props.snap), " \u00B7 ", row.seats, " sitting seat", row.seats === 1 ? "" : "s"] }, row.partyId ?? "none"))), _jsx("p", { className: "muted", children: "Sitting representation, not hidden voter support." })] })) : (_jsx(EmptyState, { children: "Select a constituency for the public seat breakdown." }))] }), _jsx("div", { children: asmElections.map((el) => renderElectionResult(el, "assembly")) })] })) : null, tab === "nominations" ? (_jsx("div", { children: contests.map((c) => (_jsxs(SectionCard, { title: contestDisplayName(props.snap, props.world, c.id), children: [_jsx(StatusBadge, { children: c.status }), Object.values(c.entries)
-                            .filter((e) => e.status !== "potential")
-                            .map((e) => (_jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: e.politicianId, compact: true }, e.politicianId))), c.winnerId ? (_jsxs("div", { children: ["Nomination winner: ", politicianDisplayName(props.catalog, c.winnerId)] })) : null] }, c.id))) })) : null] }));
 }
 function Terena(props) {
     const [mode, setMode] = useState("political");

@@ -10,6 +10,7 @@ export * from "./polls.js";
 export * from "./presidential.js";
 export * from "./assembly.js";
 export * from "./assembly-national.js";
+export * from "./assembly-cycle.js";
 export * from "./replay.js";
 export * from "./resolution.js";
 export * from "./validation.js";

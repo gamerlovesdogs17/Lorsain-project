@@ -1177,3 +1177,159 @@ export function migrateSaveV9ToV10(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 9, toSchema: 10, migrate: migrateSaveV9ToV10 });
+
+function migrationMonthStart(date: string, months: number): string {
+  return `${addMonths(date, months).slice(0, 7)}-01`;
+}
+
+/**
+ * Phase 10 saves lacked persistent Assembly filing/field/result structures and
+ * nomination contests were not explicitly tied to their presidential cycle.
+ * Legacy Assembly outcomes are retained as summary archives; no missing STV
+ * rounds or ballots are fabricated.
+ */
+export function migrateSaveV10ToV11(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 11 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 11 };
+  const elections = isRecord(sim.elections) ? { ...sim.elections } : {};
+  const presidentialElections: Array<{ id: string; date: string }> = [];
+  for (const [id, value] of Object.entries(elections).sort(([a], [b]) => a.localeCompare(b))) {
+    if (!isRecord(value)) continue;
+    const election: Record<string, unknown> = { ...value };
+    if (
+      election.type === "presidential" &&
+      typeof election.date === "string" &&
+      election.status !== "cancelled"
+    ) {
+      presidentialElections.push({ id, date: election.date });
+    }
+    election.assembly = isRecord(election.assembly) ? election.assembly : null;
+    if (
+      election.type === "assembly" &&
+      election.geographyKind === "national" &&
+      election.status === "resolved" &&
+      election.assembly == null &&
+      typeof election.date === "string"
+    ) {
+      const metadata = isRecord(election.metadata) ? election.metadata : {};
+      const winners = isRecord(metadata.constituencyWinners)
+        ? metadata.constituencyWinners
+        : {};
+      const constituencyElectionIds = isRecord(metadata.constituencyElectionIds)
+        ? metadata.constituencyElectionIds
+        : {};
+      const candidates = isRecord(election.candidates) ? election.candidates : {};
+      const candidacies: Record<string, unknown> = {};
+      const fields: Record<string, unknown> = {};
+      const results: Record<string, unknown> = {};
+      const partySeatTotals: Record<string, number> = {};
+      for (const [cid, rawWinnerIds] of Object.entries(winners).sort(([a], [b]) =>
+        a.localeCompare(b),
+      )) {
+        if (!Array.isArray(rawWinnerIds) || rawWinnerIds.some((pid) => typeof pid !== "string")) {
+          continue;
+        }
+        const electedIds = rawWinnerIds as string[];
+        const partyByCandidate: Record<string, string | null> = {};
+        for (const pid of electedIds) {
+          const candidate = isRecord(candidates[pid]) ? candidates[pid] : null;
+          const partyId = candidate && typeof candidate.partyId === "string" ? candidate.partyId : null;
+          partyByCandidate[pid] = partyId;
+          partySeatTotals[partyId ?? "independent"] =
+            (partySeatTotals[partyId ?? "independent"] ?? 0) + 1;
+          candidacies[pid] = {
+            politicianId: pid,
+            constituencyId: cid,
+            partyId,
+            filedDate:
+              candidate && typeof candidate.filedDate === "string"
+                ? candidate.filedDate
+                : election.date,
+            source: "npc",
+            incumbent: false,
+            status: "filed",
+          };
+        }
+        fields[cid] = {
+          constituencyId: cid,
+          magnitude: electedIds.length,
+          candidateIds: electedIds,
+          finalizedDate: migrationMonthStart(election.date, -1),
+        };
+        results[cid] = {
+          constituencyId: cid,
+          constituencyElectionId:
+            typeof constituencyElectionIds[cid] === "string"
+              ? constituencyElectionIds[cid]
+              : `${id}_${cid}`,
+          magnitude: electedIds.length,
+          candidateIds: electedIds,
+          partyByCandidate,
+          firstPreferences: {},
+          electedIds,
+          turnout: {
+            registeredElectorate: 0,
+            ballotsCast: 0,
+            invalidOrBlank: 0,
+            validVoteValue: 0,
+            turnoutRate: 0,
+          },
+          countArchive: null,
+          archiveCompleteness: "legacy_summary",
+        };
+      }
+      election.assembly = {
+        filingStatus: "closed",
+        filingOpenDate: migrationMonthStart(election.date, -6),
+        filingDeadlineDate: migrationMonthStart(election.date, -1),
+        decisions: {},
+        candidacies,
+        constituencyFields: fields,
+        constituencyResults: results,
+        previousPartySeatTotals: {},
+        partySeatTotals,
+      };
+    }
+    elections[id] = election;
+  }
+  sim.elections = elections;
+
+  presidentialElections.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  if (isRecord(sim.partyContests) && presidentialElections.length > 0) {
+    const contests = { ...sim.partyContests };
+    for (const [id, value] of Object.entries(contests)) {
+      if (!isRecord(value) || value.type !== "presidential_nomination") continue;
+      const contest: Record<string, unknown> = { ...value };
+      const metadata = isRecord(contest.metadata) ? { ...contest.metadata } : {};
+      if (typeof metadata.electionId !== "string") {
+        const anchorDate =
+          typeof contest.resolvedDate === "string"
+            ? contest.resolvedDate
+            : typeof contest.openedDate === "string"
+              ? contest.openedDate
+              : typeof contest.createdDate === "string"
+                ? contest.createdDate
+                : "";
+        const linked =
+          presidentialElections.find((election) => election.date >= anchorDate) ??
+          presidentialElections[presidentialElections.length - 1]!;
+        metadata.electionId = linked.id;
+        metadata.electionDate = linked.date;
+        metadata.cycleYear = Number(linked.date.slice(0, 4));
+        metadata.cycle = linked.date.slice(0, 4);
+        metadata.partyId = typeof contest.partyId === "string" ? contest.partyId : "";
+        metadata.candidateSource =
+          linked.id === "ELEC_PRES_2028" ? "scenario_start" : "runtime_politics";
+      }
+      contest.metadata = metadata;
+      contests[id] = contest;
+    }
+    sim.partyContests = contests;
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 10, toSchema: 11, migrate: migrateSaveV10ToV11 });

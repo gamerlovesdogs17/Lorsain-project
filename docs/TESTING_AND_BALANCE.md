@@ -4,10 +4,11 @@
 
 Every CI run loads `TERENA_2028`, executes a fixed command script for 240 turns and compares a state hash. Save/reload at multiple points must produce the identical final hash. No gameplay system may call `Math.random()`.
 
-**Phase 11.1:** `packages/sim/src/phase11.integration.test.ts` runs a 36-month integrated MP scenario with checkpoint save/reload hash equality and catastrophic invariants. Use:
+**Phase 11.1 closeout:** `packages/sim/src/phase11.integration.test.ts` runs the natural 2028→2034 presidential horizon, Assembly filing/count/assumption paths, player/observer scenarios, checkpoint save/reload hash equality, and catastrophic invariants. `phase11.closeout.test.ts` covers allocation, player filing autonomy, bounded campaign influence, typed archives, and v10→v11 migration. Use:
 
 ```bash
 pnpm exec vitest run packages/sim/src/phase11.integration.test.ts
+pnpm exec vitest run packages/sim/src/phase11.closeout.test.ts
 ```
 
 ## 2. Hands-off autonomy test
@@ -16,7 +17,7 @@ Run at least 100 saves for 600 monthly turns with a player who takes no politica
 
 ## 3. Election invariants
 
-Presidential RCV tests must guarantee one valid winner, consistent transfer arithmetic and no creation/loss of non-exhausted ballots. STV tests must guarantee exactly 420 Assembly seats and exactly the constituency seat magnitude in each district.
+Presidential RCV tests must guarantee one valid winner, consistent transfer arithmetic and no creation/loss of non-exhausted ballots. STV tests must guarantee exactly 420 Assembly seats and exactly the constituency seat magnitude in each district. Recurring-cycle tests also assert: field finalization precedes resolution; every winner is a finalized candidate; no politician appears in two Assembly constituencies; declined players are absent; campaign status agrees with the result; assumption dates begin winner terms; historical elections are not overwritten; and the next regular date advances.
 
 Property tests should verify that materially increasing a candidate's support, holding everything else fixed, does not systematically lower their win probability.
 
@@ -83,9 +84,17 @@ The script prints per-seed totals and distribution summaries for:
 
 Benchmark 1,000 active NPCs, 10,000 sparse relationship edges, a full Assembly, 48 constituencies and 48 foreign states. Monthly non-election turns should target <250 ms engine time on a mid-range desktop. Use profiling before adding micro-optimizations.
 
+Assembly calibration is a required 20-seed batch:
+
+```bash
+pnpm calibrate:assembly
+```
+
+Record candidate count and candidates/seat, uncontested constituencies, incumbent candidates/winners/reelection, challenger wins, party seat change, turnout, represented parties, field-generation time, one-constituency STV time, full-resolution time, and archive-serialization time. The closeout browser check separately records worker click-return time and total count time; an indeterminate count state is required because the engine does not cheaply expose honest progress percentages.
+
 ## 14. UI correctness
 
-Playwright covers new game, character creation/selection, end turn, save, load, map interaction, election count, bill vote, relationship inspection and history pages. Tooltips must pull names/data from content rather than duplicate hardcoded strings.
+Browser QA covers new game, character selection, end turn, save/load behavior, map interaction, election count, bill vote, relationship inspection, and history pages. Phase 11.1 requires actual Adrian run/decline, eligible non-incumbent Assembly, 2033 player contender, and 2033 observer workflows at 1440, 900, 600, and 390 pixels. Filing controls, Assembly campaign actions, indeterminate count state, national/constituency results, nomination controls, transitions, and horizontal overflow are inspected. Tooltips and result cards must use public names/data rather than raw IDs.
 
 ## 15. Long-save migration
 

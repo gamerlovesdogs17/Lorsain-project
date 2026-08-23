@@ -14,6 +14,7 @@ import {
   presidentOfficeId,
 } from "../offices.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
+import { ensurePresidentialNominationContests } from "../parties/state.js";
 import { ensurePlannedPresidentialElection } from "./state.js";
 import type { DomainResolutionRecord } from "./types.js";
 
@@ -151,6 +152,7 @@ export function applyPresidentialAssumption(
   state.presidential.certifiedPresidentElectId = null;
   state.presidential.nextRegularElectionDate = nextElection;
   const nextState = ensurePlannedPresidentialElection(state, world, nextElection);
+  ensurePresidentialNominationContests(state, world, nextState);
   const exists = state.scheduler.events.some(
     (e) =>
       e.eventType === "PRESIDENTIAL_ELECTION_DUE" &&

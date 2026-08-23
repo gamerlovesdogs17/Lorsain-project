@@ -21,6 +21,7 @@ export function resolveAssemblyConstituency(
     candidateIds: string[];
     partyByCandidate: Record<string, string | null>;
     ideologyById?: Record<string, ElectionCandidate["publicIdeology"]>;
+    mobilizationByCandidate?: Record<string, number>;
   },
 ): { election: ElectionState } | { error: CommandError } {
   const el = world.constituencyElectorate[args.constituencyId];
@@ -71,6 +72,7 @@ export function resolveAssemblyConstituency(
     turnout.validVoteValue,
     args.ideologyById,
     rng,
+    args.mobilizationByCandidate,
   );
   const validSum = integerBallotWeightSum(ballots);
   if (validSum !== BigInt(turnout.validVoteValue)) {
@@ -115,6 +117,7 @@ export function resolveAssemblyConstituency(
     countArchive: result,
     winnerIds: [...result.elected],
     resultEventId: null,
+    assembly: null,
     metadata: {},
   };
   return { election };

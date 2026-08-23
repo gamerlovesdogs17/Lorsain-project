@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import {
   activeRaceCampaigns,
@@ -94,6 +94,56 @@ export function CampaignPage(props: {
   const [mapSel, setMapSel] = useState<MapSelection | null>(null);
   const [hoverSel, setHoverSel] = useState<MapSelection | null>(null);
   const contest = c?.contestId ? props.snap.partyContests[c.contestId] : null;
+  const assemblyIncompatible = Object.values(props.snap.officeTerms).some((term) => {
+    if (
+      term.holderId !== props.snap.playerPoliticianId ||
+      (term.status !== "active" && term.status !== "suspended")
+    ) {
+      return false;
+    }
+    const kind = props.world.offices[term.officeId]?.kind;
+    return kind === "president" || kind === "governor" || kind === "constitutional_court_justice";
+  });
+  const assemblyElection = Object.values(props.snap.elections)
+    .filter(
+      (e) =>
+        e.type === "assembly" &&
+        e.geographyKind === "national" &&
+        e.assembly?.filingStatus === "open" &&
+        !assemblyIncompatible &&
+        !e.assembly.decisions[props.snap.playerPoliticianId],
+    )
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+  const incumbentConstituency = Object.values(props.snap.officeTerms)
+    .filter(
+      (term) =>
+        term.holderId === props.snap.playerPoliticianId &&
+        (term.status === "active" || term.status === "suspended"),
+    )
+    .map((term) => props.world.offices[term.officeId])
+    .find((office) => office?.kind === "assembly_member")?.constituencyId;
+  const preferredConstituency = useMemo(() => {
+    if (incumbentConstituency) return incumbentConstituency;
+    const home = props.world.politicianHomeProvince[props.snap.playerPoliticianId];
+    return Object.keys(props.world.constituencyElectorate)
+      .sort((a, b) => {
+        const share = (id: string) =>
+          props.world.constituencyElectorate[id]?.provincePopulationShares.find(
+            (row) => row.provinceId === home,
+          )?.share ?? 0;
+        return share(b) - share(a) || a.localeCompare(b);
+      })[0];
+  }, [incumbentConstituency, props.snap.playerPoliticianId, props.world]);
+  const [filingConstituency, setFilingConstituency] = useState(preferredConstituency ?? "");
+
+  useEffect(() => {
+    if (c?.type !== "assembly" || !c.constituencyId) return;
+    setVisitKind("constituency");
+    setVisitId(c.constituencyId);
+    setOrgId(c.constituencyId);
+    setAdGeo("constituency");
+    setAdGeoId(c.constituencyId);
+  }, [c?.constituencyId, c?.type]);
 
   const endorsers = useMemo(() => {
     if (!c || !contest) return [];
@@ -120,11 +170,23 @@ export function CampaignPage(props: {
   }, [c, contest, endorserQuery, props.catalog, props.snap, props.world]);
 
   if (!c) {
+    const currentPresidential = Object.values(props.snap.elections)
+      .filter(
+        (e) =>
+          e.type === "presidential" &&
+          e.status !== "resolved" &&
+          e.status !== "cancelled" &&
+          e.date >= props.snap.currentDate,
+      )
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
     const open = Object.values(props.snap.partyContests).find(
       (x) =>
         x.partyId === props.snap.politicians[props.snap.playerPoliticianId]?.partyId &&
         x.type === "presidential_nomination" &&
-        (x.status === "open" || x.status === "planned" || x.status === "qualification"),
+        x.metadata.electionId === currentPresidential?.id &&
+        (x.status === "open" ||
+          x.status === "qualification" ||
+          (x.status === "planned" && x.metadata.candidateSource === "scenario_start")),
     );
     return (
       <div>
@@ -133,6 +195,67 @@ export function CampaignPage(props: {
           title="Campaign"
           subtitle="You are not running an active campaign."
         />
+        {assemblyElection ? (
+          <SectionCard title={incumbentConstituency ? "Seek reelection" : "Run for the Assembly"}>
+            <p className="muted">
+              Filing closes {assemblyElection.assembly!.filingDeadlineDate}. Filing creates a real
+              constituency candidacy and opens your Assembly campaign.
+            </p>
+            <div className="form-stack filing-controls">
+              <label>
+                Constituency
+                <select
+                  value={filingConstituency || preferredConstituency}
+                  disabled={Boolean(incumbentConstituency)}
+                  onChange={(event) => setFilingConstituency(event.target.value)}
+                >
+                  {(incumbentConstituency
+                    ? [incumbentConstituency]
+                    : Object.keys(props.world.constituencyElectorate).sort()
+                  ).map((id) => (
+                    <option key={id} value={id}>
+                      {constituencyDisplayName(props.catalog, id)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="row">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() =>
+                    run(
+                      props.sim,
+                      {
+                        type: "FILE_ASSEMBLY_CANDIDACY",
+                        electionId: assemblyElection.id,
+                        constituencyId: filingConstituency || preferredConstituency!,
+                      },
+                      props.report,
+                      props.onDone,
+                    )
+                  }
+                >
+                  File candidacy
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() =>
+                    run(
+                      props.sim,
+                      { type: "DECLINE_ASSEMBLY_CANDIDACY", electionId: assemblyElection.id },
+                      props.report,
+                      props.onDone,
+                    )
+                  }
+                >
+                  Do not run
+                </button>
+              </div>
+            </div>
+          </SectionCard>
+        ) : null}
         {open ? (
           <SectionCard title="Enter the race">
             <p className="muted">
@@ -158,21 +281,27 @@ export function CampaignPage(props: {
               Explore / declare candidacy
             </button>
           </SectionCard>
-        ) : (
+        ) : !assemblyElection ? (
           <EmptyState>No open nomination contest is available to join right now.</EmptyState>
-        )}
+        ) : null}
       </div>
     );
   }
 
   const rivals = activeRaceCampaigns(props.snap, c);
   const provinces = props.world.provinceIds;
-  const constituencies = Object.keys(props.world.constituencyElectorate).sort();
+  const constituencies =
+    c.type === "assembly" && c.constituencyId
+      ? [c.constituencyId]
+      : Object.keys(props.world.constituencyElectorate).sort();
   const issues = props.world.issueIds;
   const spendOptions = AD_SPENDS.filter((n) => n <= Math.floor(c.cashOnHand));
   const showDebate = shouldHoldDebate(props.snap.currentDate, c.type);
   const noActions = c.actionPointsRemaining <= 0;
   const playerPol = props.snap.politicians[props.snap.playerPoliticianId];
+  const campaignElectionDate =
+    (c.electionId ? props.snap.elections[c.electionId]?.date : null) ??
+    (typeof contest?.metadata.electionDate === "string" ? contest.metadata.electionDate : null);
 
   function geoOptions(kind: "national" | "province" | "constituency") {
     if (kind === "national") return [] as string[];
@@ -199,7 +328,15 @@ export function CampaignPage(props: {
 
   return (
     <div className="campaign-page">
-      <PageHeader kicker="Command center" title={campaignTypeLabel(c.type)} />
+      <PageHeader
+        kicker="Command center"
+        title={campaignTypeLabel(c.type)}
+        subtitle={
+          c.type === "assembly" && c.constituencyId
+            ? `${constituencyDisplayName(props.catalog, c.constituencyId)} · Election ${campaignElectionDate ?? "upcoming"}`
+            : `Election ${campaignElectionDate ?? "upcoming"}`
+        }
+      />
       <div className="campaign-command">
         <div className="campaign-map-pane">
           <TerenaMap
@@ -265,6 +402,23 @@ export function CampaignPage(props: {
             {actionBtn("endorsement", "Endorsement", !contest)}
           </div>
           <div className="row campaign-util">
+            {c.type === "presidential_nomination" ? (
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={noActions}
+                onClick={() =>
+                  run(
+                    props.sim,
+                    { type: "CAMPAIGN_SEEK_NOMINATION_SUPPORT", campaignId: c.id },
+                    props.report,
+                    props.onDone,
+                  )
+                }
+              >
+                Seek nomination support
+              </button>
+            ) : null}
             <button
               type="button"
               className="btn secondary"
@@ -345,8 +499,8 @@ export function CampaignPage(props: {
                 value={visitKind}
                 onChange={(e) => setVisitKind(e.target.value as typeof visitKind)}
               >
-                <option value="national">Nationwide</option>
-                <option value="province">Province</option>
+                {c.type !== "assembly" ? <option value="national">Nationwide</option> : null}
+                {c.type !== "assembly" ? <option value="province">Province</option> : null}
                 <option value="constituency">Constituency</option>
               </select>
             </label>
@@ -445,8 +599,8 @@ export function CampaignPage(props: {
             <label>
               Geography
               <select value={adGeo} onChange={(e) => setAdGeo(e.target.value as typeof adGeo)}>
-                <option value="national">Nationwide</option>
-                <option value="province">Province</option>
+                {c.type !== "assembly" ? <option value="national">Nationwide</option> : null}
+                {c.type !== "assembly" ? <option value="province">Province</option> : null}
                 <option value="constituency">Constituency</option>
               </select>
             </label>

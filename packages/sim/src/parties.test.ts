@@ -871,12 +871,9 @@ describe("leadership contests, splits, knowledge, player, save", () => {
   it("does not auto-declare, withdraw, endorse, or defect the player", () => {
     const world = partyMiniWorld();
     const sim = createSimulation({ world, playerPoliticianId: "P3" });
-    const contest = Object.values(sim.getSnapshot().partyContests).find(
-      (c) => c.partyId === "PARTY_LAB" && c.type === "presidential_nomination",
-    )!;
-    expect(
-      contest.entries.P3?.status === "potential" || contest.entries.P3?.status === "exploring",
-    ).toBe(true);
+    const contestId = createdContestId(sim, "PARTY_LAB");
+    const contest = sim.getSnapshot().partyContests[contestId]!;
+    expect(contest.entries.P3).toBeUndefined();
     const before = contest.entries.P3?.status;
     for (let i = 0; i < 6; i++) {
       const r = sim.executeCommand({ type: "ADVANCE_TURN" });
@@ -1337,6 +1334,7 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
 
   it("rejects malformed saves for parties, factions, selectors, archives, and evidence", () => {
     const sim = simFor();
+    const contestId = createdContestId(sim, "PARTY_LAB");
     const base = jsonClone(sim.serializeSave()) as unknown as {
       simulation: Record<string, unknown>;
     };
@@ -1407,7 +1405,6 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
     expect(dynParsed.ok).toBe(true);
     if (dynParsed.ok) expect(() => restoreSimulation(dynParsed.save, sim.world())).toThrow();
 
-    const contestId = Object.keys(sim.getSnapshot().partyContests)[0]!;
     const banana = simRec();
     const contests = banana.simulation.partyContests as Record<string, Record<string, unknown>>;
     contests[contestId]!.selectorSummary = [

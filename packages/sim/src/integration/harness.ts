@@ -149,7 +149,7 @@ export function assertCatastrophicInvariants(
   return failures;
 }
 
-export function runDeterministicHorizon(args: {
+export async function runDeterministicHorizon(args: {
   playerPoliticianId: string;
   seed: string;
   months: number;
@@ -191,6 +191,7 @@ export function runDeterministicHorizon(args: {
         throw new Error(`reload hash drift at ${date}`);
       }
     }
+    if (i % 2 === 1) await new Promise<void>((resolveYield) => setTimeout(resolveYield, 0));
   }
 
   const invariantFailures = assertCatastrophicInvariants(world, continuous.getSnapshot());

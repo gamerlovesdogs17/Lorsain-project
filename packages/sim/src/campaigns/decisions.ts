@@ -8,6 +8,10 @@ import { WITHDRAW } from "./policy.js";
 import { contestPollShare, constituenciesInProvince } from "./actions.js";
 import { ownSkill, ownTrait, standingPublicScore } from "./effects.js";
 import { nominationQualificationNeed } from "./qualification.js";
+import {
+  presidentialInterestScore,
+  presidentialNominationCycleMetadata,
+} from "../parties/state.js";
 import { activeRaceCampaigns } from "./race.js";
 import type { CampaignState } from "./types.js";
 
@@ -290,16 +294,30 @@ export function chooseDeclare(
 ): boolean {
   if (politicianId === state.playerPoliticianId) return false;
   const profile = buildDecisionActorContext(world, state, politicianId, []);
+  const contest = state.partyContests[contestId];
+  const cycle = contest ? presidentialNominationCycleMetadata(contest) : null;
   const status = profile.profile.presidentialStatus;
   const ambition = profile.profile.traits.ambition;
+  const runtimeInterest = cycle
+    ? presidentialInterestScore(state, world, politicianId, cycle.electionDate)
+    : 0;
   const prior =
-    status === "frontrunner"
-      ? 0.85
-      : status === "likely"
-        ? 0.7
-        : status === "possible"
-          ? 0.45
-          : 0.22;
+    cycle?.candidateSource === "runtime_politics"
+      ? Math.max(0.2, Math.min(0.9, 0.2 + runtimeInterest))
+      : status === "frontrunner"
+        ? 0.85
+        : status === "likely"
+          ? 0.7
+          : status === "possible"
+            ? 0.45
+            : 0.22;
+  if (
+    cycle?.candidateSource === "runtime_politics" &&
+    contest?.entries[politicianId]?.status === "exploring" &&
+    runtimeInterest >= 0.48
+  ) {
+    return true;
+  }
   const options: DecisionOption[] = [
     {
       optionId: "DECLARE",

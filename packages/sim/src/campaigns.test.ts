@@ -6,6 +6,7 @@ import { restoreRngService } from "./rng.js";
 import { buildDecisionActorContext } from "./agents/context.js";
 import { candidateStandingOrDefault } from "./elections/standing.js";
 import { miniElectorateWorld } from "./mini-electorate-world.js";
+import { kernelOffice } from "./synthetic-world.js";
 import { SAVE_SCHEMA_VERSION, type Command, type KernelWorld } from "./types.js";
 import { chooseCampaignAction, campaignDecisionOptions } from "./campaigns/decisions.js";
 import { campaignFundraise } from "./campaigns/actions.js";
@@ -70,11 +71,30 @@ function nuNominationRule(world: KernelWorld) {
   };
 }
 
+function campaignTestWorld(): KernelWorld {
+  const world = miniElectorateWorld();
+  world.nextRegularAssemblyElectionDate = "2000-07-09";
+  world.offices.OFFICE_ASM_C001 = kernelOffice({
+    id: "OFFICE_ASM_C001",
+    kind: "assembly_member",
+    constituencyId: "C001",
+    jurisdictionId: "C001",
+    capacity: 2,
+  });
+  world.startingTerms = world.startingTerms.filter((term) => term.holderId !== "P1");
+  world.legislativeConstitution = { assemblySeatCount: 2, assemblyAbsoluteMajority: 2 };
+  return world;
+}
+
 function declarePlayerAssembly(sim: Simulation) {
+  expectOk(sim, { type: "ADVANCE_TURN" });
+  const election = Object.values(sim.getSnapshot().elections).find(
+    (candidate) => candidate.type === "assembly" && candidate.status === "field_open",
+  );
+  if (!election) throw new Error("open Assembly filing fixture missing");
   expectOk(sim, {
-    type: "DECLARE_CAMPAIGN",
-    politicianId: sim.getSnapshot().playerPoliticianId,
-    campaignType: "assembly",
+    type: "FILE_ASSEMBLY_CANDIDACY",
+    electionId: election.id,
     constituencyId: "C001",
   });
 }
@@ -89,12 +109,17 @@ describe("Phase 5 campaign finance and actions", () => {
   });
 
   it("fundraising increases cash and spending decreases it; zero ad spend rejects unchanged", () => {
-    const sim = createSimulation({ world: miniElectorateWorld(), playerPoliticianId: "P1" });
+    const sim = createSimulation({ world: campaignTestWorld(), playerPoliticianId: "P1" });
     declarePlayerAssembly(sim);
     const before = playerCampaign(sim).cashOnHand;
     expectOk(sim, { type: "CAMPAIGN_FUNDRAISE", campaignId: playerCampaign(sim).id });
-    const raised = playerCampaign(sim);
+    let raised = playerCampaign(sim);
     expect(raised.cashOnHand).toBeGreaterThan(before);
+    while (raised.cashOnHand < 5_000) {
+      if (raised.actionPointsRemaining < 1) expectOk(sim, { type: "ADVANCE_TURN" });
+      expectOk(sim, { type: "CAMPAIGN_FUNDRAISE", campaignId: playerCampaign(sim).id });
+      raised = playerCampaign(sim);
+    }
     expect(raised.totalRaised).toBe(raised.cashOnHand);
     const hash = sim.hashState();
     const rng = jsonClone(sim.getSnapshot().rng);
@@ -107,6 +132,7 @@ describe("Phase 5 campaign finance and actions", () => {
     expect(zero.ok).toBe(false);
     expect(sim.hashState()).toBe(hash);
     expect(sim.getSnapshot().rng).toEqual(rng);
+    if (playerCampaign(sim).actionPointsRemaining < 1) expectOk(sim, { type: "ADVANCE_TURN" });
     const cash = playerCampaign(sim).cashOnHand;
     expectOk(sim, {
       type: "CAMPAIGN_ADVERTISE",
@@ -119,7 +145,7 @@ describe("Phase 5 campaign finance and actions", () => {
   });
 
   it("higher ad spend generally produces a larger effect with diminishing returns", () => {
-    const world = miniElectorateWorld();
+    const world = campaignTestWorld();
     const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P5-AD-SPEND" });
     declarePlayerAssembly(sim);
     for (let i = 0; i < 6 && playerCampaign(sim).cashOnHand < 18_000; i++) {
@@ -150,7 +176,7 @@ describe("Phase 5 campaign finance and actions", () => {
 
   it("repeated same-geography visits have smaller marginal impact", () => {
     const sim = createSimulation({
-      world: miniElectorateWorld(),
+      world: campaignTestWorld(),
       playerPoliticianId: "P1",
       seed: "P5-VISIT-DIM",
     });
@@ -173,7 +199,7 @@ describe("Phase 5 campaign finance and actions", () => {
   });
 
   it("field organization increases local strength and a positive message does not lower own favorability", () => {
-    const sim = createSimulation({ world: miniElectorateWorld(), playerPoliticianId: "P1" });
+    const sim = createSimulation({ world: campaignTestWorld(), playerPoliticianId: "P1" });
     declarePlayerAssembly(sim);
     const fav0 = candidateStandingOrDefault(sim.world(), sim.getSnapshot(), "P1").favorability;
     expectOk(sim, {
@@ -224,7 +250,7 @@ describe("Phase 5 campaign finance and actions", () => {
     }
 
     const prepSim = createSimulation({
-      world: miniElectorateWorld(),
+      world: campaignTestWorld(),
       playerPoliticianId: "P1",
       seed: "P5-DEBATE",
     });
@@ -312,7 +338,7 @@ describe("Phase 5 campaign finance and actions", () => {
   });
 
   it("withdrawing stops further player campaign actions on that record", () => {
-    const sim = createSimulation({ world: miniElectorateWorld(), playerPoliticianId: "P1" });
+    const sim = createSimulation({ world: campaignTestWorld(), playerPoliticianId: "P1" });
     declarePlayerAssembly(sim);
     const id = playerCampaign(sim).id;
     expectOk(sim, { type: "WITHDRAW_CAMPAIGN", campaignId: id });
@@ -324,7 +350,7 @@ describe("Phase 5 campaign finance and actions", () => {
 
   it("never autonomously campaigns for playerPoliticianId", () => {
     const sim = createSimulation({
-      world: miniElectorateWorld(),
+      world: campaignTestWorld(),
       playerPoliticianId: "P1",
       seed: "P5-PLAYER",
     });
@@ -435,7 +461,7 @@ describe("Phase 5 campaign finance and actions", () => {
   });
 
   it("save/restore mid-campaign continues identically, including v4→v5 migration", () => {
-    const world = miniElectorateWorld();
+    const world = campaignTestWorld();
     const a = createSimulation({ world, playerPoliticianId: "P1", seed: "P5-SAVE" });
     declarePlayerAssembly(a);
     expectOk(a, { type: "CAMPAIGN_FUNDRAISE", campaignId: playerCampaign(a).id });
@@ -445,12 +471,14 @@ describe("Phase 5 campaign finance and actions", () => {
     expectOk(a, {
       type: "CAMPAIGN_VISIT",
       campaignId: playerCampaign(a).id,
-      geographyKind: "national",
+      geographyKind: "constituency",
+      geographyId: "C001",
     });
     expectOk(b, {
       type: "CAMPAIGN_VISIT",
       campaignId: playerCampaign(b).id,
-      geographyKind: "national",
+      geographyKind: "constituency",
+      geographyId: "C001",
     });
     expect(a.hashState()).toBe(b.hashState());
 
@@ -543,7 +571,7 @@ describe("Phase 5 rejected commands leave RNG unchanged", () => {
   });
 
   it("direct fundraise is deterministic for the campaigns stream", () => {
-    const world = miniElectorateWorld();
+    const world = campaignTestWorld();
     const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P5-DET" });
     declarePlayerAssembly(sim);
     const state = jsonClone(sim.getSnapshot());
@@ -567,7 +595,7 @@ describe("Phase 5 rejected commands leave RNG unchanged", () => {
 describe("Phase 7.1 campaign action-point month refresh", () => {
   it("refreshes the current month budget after ADVANCE_TURN without requiring an action", () => {
     const sim = createSimulation({
-      world: miniElectorateWorld(),
+      world: campaignTestWorld(),
       playerPoliticianId: "P1",
       seed: "P71-AP",
     });

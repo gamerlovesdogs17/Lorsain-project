@@ -115,7 +115,7 @@ Do not store a full duplicate world snapshot every month.
 - **Phase 10** — **COMPLETE (`9b3bda7`)** — Foreign affairs architecture: 48-state runtime, leaders, relations, trade, treaties, sanctions, crises, abstract conflict, world map UI, schemaVersion 10. See `docs/FOREIGN_AFFAIRS_SYSTEM.md`.
 - **Phase 10.1** — **COMPLETE** — Foreign affairs functional completion: Terena runtime, AI toward Terena, crisis/conflict reachability, war powers, treaty consent, UI/presentation fixes, regression tests, long-horizon calibration.
 - **Phase 10.2** — **COMPLETE** — Institutional deepening: treaty identity/lifecycle/ratification DecisionContract fix, Assembly war-authorization referral, canonical WA/LTO membership + SC vetoes, bounded institution consequences, leadership schedule/name/monarchy fixes, expanded calibration metrics.
-- **Phase 11.1** — **COMPLETE** — Full-game integration: multi-year harness, catastrophic invariants, Assembly 2030 resolver, career continuity after leaving office, performance/worker decision. See `docs/PHASE_11_1_RESULTS.md`. **Phase 11.2 not started.**
+- **Phase 11.1** — **COMPLETE** — Full recurring-election closeout: multi-year harness, natural 2033 presidential cycle, explicit/persisted Assembly filing and campaigns, order-independent national allocation, 48 typed STV archives, Assembly-specific UI, count Worker, save schema v11, and career continuity after leaving office. See `docs/PHASE_11_1_RESULTS.md`. **Phase 11.2 not started.**
 
 Deliverables:
 
@@ -216,7 +216,7 @@ Causal chain: campaign action → public standing/org/cash → Phase 4 underlyin
 
 Save **schemaVersion 5**; v4→v5 adds empty campaign runtime and `nextCampaignId` / `nextDebateId`. No fabricated campaign history. `contentVersion` remains `0.3.1-predev`. 20-year synthetic kernel hash at Phase 5 close: `d719f8693a6e3e532f9095e9c2e753d3`.
 
-From Phase 5 onward: fix **BLOCKING** issues (legitimate gameplay, save corruption, determinism, invalid election/campaign math, vertical-slice breakage). Record **NONBLOCKING** hostile-save / future-cycle / docs gaps in `docs/KNOWN_ISSUES.md` and continue.
+From Phase 11 onward, legitimate future-cycle failures are **BLOCKING**: every regular election must naturally create a field, preserve player entry choice, resolve, survive save/reload, transfer office, and schedule its successor. Career loss must remove powers without ending play or inventing a new job. Hostile hand-edited-save hardening and presentation depth may remain **NONBLOCKING** when no legitimate path is affected.
 
 Acceptance criteria: zero-DEV 2028 nomination+general path reaches October IRV and January assumption; player loss is not game-over; spending cannot exceed funds; cross-race attacks reject unchanged; deterministic save/restore mid-campaign; Phase 0b content unchanged.
 
@@ -236,9 +236,9 @@ Merged former “Phase 6.5 playable UI” and executive/ministry simulation.
 
 Save **schemaVersion 7**; v6→v7 adds empty executive runtime and `nextRegulationId` / `nextMotionId` / `nextEmergencyId` / `nextWarPowerId` / `nextBudgetId`. No fabricated past executive actions. `contentVersion` remains `0.3.1-predev`. 20-year synthetic kernel hash: `58c049dad4ca4b020941da51854bd889` (changed from Phase 6 `c98484fa46cfa98358742cf4d73f018d` because schema 7 adds empty executive fields).
 
-**Playable UI** is `apps/game`: React 19 + Vite, consuming `@lorsain/sim` only through commands. Launch with `pnpm game` or `start-game.bat`. Browser content loading uses `import.meta.glob` over canonical `data/` and `maps/`. IndexedDB (Dexie) stores serialized `SaveFile`s. Screens: title/New Game/Load, politician select, Home, Career, Assembly (including a 420-seat chamber from live membership), Party, Campaign, Elections (IRV rounds), Executive, Courts, Terena map, Archive. Role-aware actions. Hidden traits/skills/private goals are not shown in normal UI.
+**Playable UI** is `apps/game`: React 19 + Vite, consuming `@lorsain/sim` only through commands. Launch with `pnpm game` or `start-game.bat`. Browser content loading uses `import.meta.glob` over canonical `data/` and `maps/`. IndexedDB (Dexie) stores serialized `SaveFile`s. Screens: title/New Game/Load, politician select, Home, Career, Assembly (including a 420-seat chamber from live membership), Party, Campaign, Elections (separate presidential and Assembly results), Executive, Courts, Terena map, Archive. Role-aware actions. Hidden traits/skills/private goals are not shown in normal UI.
 
-Web Worker turn processing is deferred to Phase 11 if still needed.
+The heavy 48-constituency Assembly count runs in `apps/game/src/electionWorker.ts`. The UI posts one serialized save and resolve command, displays an indeterminate state, blocks duplicate count clicks, and restores the deterministic result. Ordinary monthly turns remain synchronous because this closeout did not justify a broad worker migration.
 
 ## 17. Phase 8 — courts and constitution
 
@@ -281,7 +281,7 @@ Acceptance criteria met: varied hands-off outcomes within Terena vertical-slice 
 
 ### Phase 11.1 — full-game integration (**COMPLETE**)
 
-Integrated Terena multi-year harness with scripted interrupt resolution (presidential + Assembly), catastrophic invariants, and continuous-vs-reload hash checks. Assembly 2030 is no longer a dead-end interrupt. Performance measured; Web Worker deferred. Docs: `PHASE_11_INTEGRATION_TEST_PLAN.md`, `PHASE_11_1_RESULTS.md`. **Phase 11.2 not started.**
+Integrated Terena multi-year harness with scripted interrupt resolution, catastrophic invariants, and continuous-vs-reload hash checks. Assembly 2030 now has a real pre-election filing/campaign lifecycle, nationally allocated candidate fields, typed constituency STV archives, an Assembly-specific result UI, June seating, and a dedicated count Worker. The 2033 presidential cycle creates fresh nomination contests from runtime politics, finalizes naturally, transitions in January 2034, and schedules 2038 without changing 2028 history. Player defeat, decline, and term completion preserve the politician and remove only office powers. Save schema is v11. Docs: `PHASE_11_INTEGRATION_TEST_PLAN.md`, `PHASE_11_1_RESULTS.md`. **Phase 11.2 not started.**
 
 Later 11.x: UI polish (11.2), balance (11.3), content/prose (11.4).
 

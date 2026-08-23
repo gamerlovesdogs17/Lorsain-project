@@ -1005,6 +1005,76 @@ button {
   min-width: 2px;
   height: 100%;
 }
+.assembly-party-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 1rem;
+  margin-bottom: 0.8rem;
+}
+.assembly-party-row {
+  display: grid;
+  grid-template-columns: 0.65rem minmax(0, 1fr) auto 2.25rem;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+}
+.party-swatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+}
+.election-cycle-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.election-cycle-picker select {
+  min-width: 12rem;
+}
+.counting-state {
+  margin: 0.7rem 0 0;
+  color: var(--navy);
+  font-weight: 600;
+}
+.stv-details {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.65rem;
+}
+.stv-details summary {
+  cursor: pointer;
+  color: var(--navy);
+  font-weight: 600;
+}
+.nomination-cycle-label {
+  margin-left: 0.45rem;
+}
+.filing-controls {
+  max-width: 32rem;
+}
+
+@media (max-width: 600px) {
+  .assembly-party-summary {
+    grid-template-columns: 1fr;
+  }
+  .assembly-results-layout {
+    display: block;
+  }
+  .election-cycle-picker {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .election-cycle-picker select {
+    min-width: 0;
+    width: 100%;
+  }
+  .assembly-candidate-list .politician-card {
+    align-items: flex-start;
+  }
+}
 .majority-note {
   font-size: 0.85rem;
   margin-bottom: 0.75rem;

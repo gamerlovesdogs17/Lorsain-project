@@ -4,6 +4,7 @@ import { pendingVoteKey, type LegislativeVoteStage } from "./legislature/types.j
 import { currentPresidentialAuthorityId } from "./executive/state.js";
 import { currentCourtJudgeIds } from "./courts/state.js";
 import { collectForeignPlayerDecisions } from "./foreign/decisions.js";
+import { incumbentAssemblyConstituency } from "./elections/assembly-cycle.js";
 
 export type PlayerDecisionKind =
   | "interrupt"
@@ -21,7 +22,8 @@ export type PlayerDecisionKind =
   | "foreign_presidential_action"
   | "incoming_treaty"
   | "incoming_summit"
-  | "war_powers";
+  | "war_powers"
+  | "assembly_filing";
 
 export type PlayerActionableDecision = {
   key: string;
@@ -37,6 +39,8 @@ export type PlayerActionableDecision = {
   treatyId?: string;
   targetCountryId?: string;
   pendingId?: string;
+  electionId?: string;
+  constituencyId?: string;
 };
 
 function playerHasCastLegislative(
@@ -69,6 +73,28 @@ export function collectPlayerActionableDecisions(
   const mp = currentAssemblyMemberIds(world, state).includes(playerId);
   const president = currentPresidentialAuthorityId(world, state) === playerId;
   const interrupt: PendingInterrupt | null = state.pendingInterrupt;
+
+  const assemblyElection = Object.values(state.elections)
+    .filter(
+      (e) =>
+        e.type === "assembly" &&
+        e.geographyKind === "national" &&
+        e.assembly?.filingStatus === "open" &&
+        !e.assembly.decisions[playerId],
+    )
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+  const incumbentConstituency = assemblyElection
+    ? incumbentAssemblyConstituency(state, world, playerId)
+    : null;
+  if (assemblyElection && incumbentConstituency) {
+    out.push({
+      key: `assembly-filing:${assemblyElection.id}`,
+      kind: "assembly_filing",
+      label: `Choose whether to seek another Assembly term before ${assemblyElection.assembly!.filingDeadlineDate}.`,
+      electionId: assemblyElection.id,
+      constituencyId: incumbentConstituency,
+    });
+  }
 
   if (interrupt) {
     out.push({

@@ -55,7 +55,7 @@ import type {
 
 export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 10 as const;
+export const SAVE_SCHEMA_VERSION = 11 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -343,6 +343,15 @@ export type Command =
   | {
       type: "RESOLVE_ASSEMBLY_ELECTION";
       electionId?: string;
+    }
+  | {
+      type: "FILE_ASSEMBLY_CANDIDACY";
+      electionId: string;
+      constituencyId: string;
+    }
+  | {
+      type: "DECLINE_ASSEMBLY_CANDIDACY";
+      electionId: string;
     }
   | {
       type: "FINALIZE_ELECTION_FIELD";

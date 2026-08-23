@@ -29,6 +29,7 @@ export function plannedElection(
     countArchive: null,
     winnerIds: [],
     resultEventId: null,
+    assembly: null,
     metadata: {},
   };
 }

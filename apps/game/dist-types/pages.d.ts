@@ -36,6 +36,8 @@ type PageProps = {
     setDebug: (v: boolean) => void;
     onDone: () => void;
     report: (r: CommandResult) => boolean;
+    countingElection: boolean;
+    onResolveAssembly: () => void;
     askConfirm: (opts: {
         title: string;
         body: string;

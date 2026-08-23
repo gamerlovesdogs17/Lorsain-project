@@ -878,7 +878,7 @@ Acceptance criteria: an autonomous Assembly can introduce, committee, negotiate 
 
 ### Phase 11.1 — full-game integration (**COMPLETE**)
 
-Integration harness + catastrophic invariants + multi-year determinism (`packages/sim/src/phase11.integration.test.ts`, `packages/sim/src/integration/harness.ts`). Minimal **2030 Assembly election** domain (`RESOLVE_ASSEMBLY_ELECTION` + June 1 assumption). Career continuity after leaving office verified for Mara Velic. Web Worker not required from measurements. See `docs/PHASE_11_1_RESULTS.md`. **Phase 11.2+ not started.**
+Integration harness + catastrophic invariants + multi-year determinism (`packages/sim/src/phase11.integration.test.ts`, `packages/sim/src/integration/harness.ts`). The **2030 Assembly election** has a persisted filing/candidacy phase, explicit player run/decline, autonomous incumbents and challengers, deterministic national allocation, real constituency campaigns, bounded organization effects, 48 typed STV archives, Assembly-specific results, June 1 seating, and 2034 scheduling. Heavy national STV counting runs once in a Web Worker with an indeterminate UI. The **2033 presidential cycle** creates cycle-specific party contests from current runtime politics, never auto-enters the player, finalizes and resolves naturally, assumes office in January 2034, preserves 2028 history, and schedules 2038. Career continuity is verified after defeat, decline, term limit, and voluntary exit without fabricated appointments. Save schemaVersion **11**. See `docs/PHASE_11_1_RESULTS.md`. **Phase 11.2+ not started.**
 
 ## 23. First playable vertical slice
 

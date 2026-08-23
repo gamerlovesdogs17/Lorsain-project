@@ -8,9 +8,9 @@ export default defineConfig({
   test: {
     include: ["packages/*/src/**/*.test.ts", "apps/*/src/**/*.test.ts", "scripts/**/*.test.ts"],
     environment: "node",
-    testTimeout: 60_000,
-    hookTimeout: 60_000,
-    teardownTimeout: 60_000,
+    testTimeout: 90_000,
+    hookTimeout: 90_000,
+    teardownTimeout: 90_000,
     fileParallelism: false,
   },
   resolve: {

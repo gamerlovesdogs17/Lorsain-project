@@ -81,7 +81,7 @@ describe("Phase 7 executive kernel", () => {
     const world = executiveHarness();
     const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P7-NEW" });
     expect(sim.getSnapshot().schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(SAVE_SCHEMA_VERSION).toBe(10);
+    expect(SAVE_SCHEMA_VERSION).toBe(11);
     expect(sim.getSnapshot().executiveRuntime.regulations).toEqual({});
     expect(sim.getSnapshot().executiveRuntime.motions).toEqual({});
     expect(currentPresidentialAuthorityId(world, sim.getSnapshot())).toBe("P1");
@@ -233,7 +233,7 @@ describe("Phase 7 executive kernel", () => {
     const parsed = parseSaveFile(v6, "0.3.1-predev");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.save.schemaVersion).toBe(10);
+    expect(parsed.save.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     expect(parsed.save.simulation.executiveRuntime.motions).toEqual({});
   });
 });

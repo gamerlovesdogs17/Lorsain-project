@@ -55,6 +55,7 @@ export {
   migrateSaveV7ToV8,
   migrateSaveV8ToV9,
   migrateSaveV9ToV10,
+  migrateSaveV10ToV11,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";

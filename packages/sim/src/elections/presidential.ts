@@ -16,6 +16,7 @@ import { constituencyTurnout, mergeTurnout } from "./turnout.js";
 import { scheduleAssumptionIfNeeded } from "./state.js";
 import type { ElectionCandidate, ElectionState } from "./types.js";
 import { FIELD } from "../campaigns/policy.js";
+import { presidentialNominationCycleMetadata } from "../parties/state.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -27,16 +28,17 @@ export function syncNominationWinnerToElection(state: SimState, contestId: strin
     return;
   }
   if (!contest.winnerId) return;
-  const election = Object.values(state.elections)
-    .filter(
-      (e) =>
-        e.type === "presidential" &&
-        !e.fieldFinalized &&
-        e.status !== "resolved" &&
-        e.status !== "cancelled",
-    )
-    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1))[0];
+  const cycle = presidentialNominationCycleMetadata(contest);
+  const election = cycle ? state.elections[cycle.electionId] : undefined;
   if (!election) return;
+  if (
+    election.type !== "presidential" ||
+    election.fieldFinalized ||
+    election.status === "resolved" ||
+    election.status === "cancelled"
+  ) {
+    return;
+  }
   const winner = contest.winnerId;
   election.candidates[winner] = {
     politicianId: winner,

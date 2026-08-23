@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { createSimulation, restoreSimulation, type Simulation } from "./engine.js";
 import { hashCanonical, jsonClone } from "./hash.js";
@@ -184,6 +184,12 @@ function assertNoStrategicGoalsInPublicEvents(world: KernelWorld, state: SimStat
 }
 
 describe("Phase 10 foreign affairs", () => {
+  beforeEach(async () => {
+    // Long deterministic replays are intentionally synchronous. Yield between tests so
+    // Vitest's worker can acknowledge the preceding task update before the next replay.
+    await new Promise<void>((resolveYield) => setImmediate(resolveYield));
+  });
+
   it("seeds 48 countries and canonical Terena bilateral relations", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR-BASE" });

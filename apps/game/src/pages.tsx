@@ -16,6 +16,7 @@ import { CampaignPage } from "./campaignScreen.js";
 import { CourtsPage } from "./courtsScreen.js";
 import { ExecutivePage } from "./executiveScreen.js";
 import { EconomyPage } from "./economyScreen.js";
+import { ElectionsPage } from "./electionsScreen.js";
 import { ForeignAffairsPage } from "./foreignAffairsScreen.js";
 import { OrganizationsPage } from "./organizationsScreen.js";
 import { NewsPage } from "./newsScreen.js";
@@ -43,8 +44,6 @@ import {
 import {
   decisionDisplayLabel,
   formatIndexDelta,
-  formatPublicNumber,
-  formatPublicPercent,
   interruptDisplay,
 } from "./presentation/display.js";
 import {
@@ -64,7 +63,7 @@ import {
 import { PoliticianProfile, PoliticianCard } from "./ui/politician.js";
 import { MapLegend } from "./ui/mapLegend.js";
 import { TerenaMap, type MapMode, type MapSelection } from "./map/TerenaMap.js";
-import { constituencySittingSeatBreakdown, latestPublicPoll, mapFillFor } from "./map/fills.js";
+import { constituencySittingSeatBreakdown, mapFillFor } from "./map/fills.js";
 
 export type Screen =
   | "home"
@@ -116,6 +115,8 @@ type PageProps = {
   setDebug: (v: boolean) => void;
   onDone: () => void;
   report: (r: CommandResult) => boolean;
+  countingElection: boolean;
+  onResolveAssembly: () => void;
   askConfirm: (opts: {
     title: string;
     body: string;
@@ -131,7 +132,7 @@ export function GamePages(props: PageProps) {
   if (screen === "assembly") return <AssemblyPage {...props} />;
   if (screen === "party") return <Party {...props} />;
   if (screen === "campaign") return <CampaignPage {...props} />;
-  if (screen === "elections") return <Elections {...props} />;
+  if (screen === "elections") return <ElectionsPage {...props} />;
   if (screen === "executive") return <ExecutivePage {...props} />;
   if (screen === "courts") return <CourtsPage {...props} />;
   if (screen === "economy") return <EconomyPage {...props} />;
@@ -560,229 +561,6 @@ function Party(props: PageProps) {
           />
         ))}
       </SectionCard>
-    </div>
-  );
-}
-
-function Elections(props: PageProps) {
-  const elections = Object.values(props.snap.elections);
-  const due = props.snap.pendingInterrupt?.code === "PRESIDENTIAL_ELECTION_DUE";
-  const assemblyDue = props.snap.pendingInterrupt?.code === "ASSEMBLY_ELECTION_DUE";
-  const contests = Object.values(props.snap.partyContests).filter(
-    (c) => c.type === "presidential_nomination",
-  );
-  const poll = latestPublicPoll(props.snap);
-  const [sel, setSel] = useState<MapSelection | null>(null);
-  const [tab, setTab] = useState<"presidential" | "assembly" | "nominations">("presidential");
-
-  const presElections = elections.filter((e) => e.id.includes("PRES"));
-  const asmElections = elections.filter((e) => e.id.includes("ASM"));
-
-  function voteWeight(raw: unknown): number {
-    return Number(String(raw ?? "0").split("/")[0]) || 0;
-  }
-
-  function renderElectionResult(el: (typeof elections)[0], kind: "presidential" | "assembly") {
-    const firstPrefs =
-      el.countArchive && "firstPreferences" in el.countArchive
-        ? el.countArchive.firstPreferences
-        : {};
-    const totalVotes = Object.values(firstPrefs).reduce((sum, w) => sum + voteWeight(w), 0);
-    const winnerId = el.winnerIds[0] ?? null;
-    const ranked = Object.values(el.candidates).slice().sort((a, b) => {
-      const aw = voteWeight(firstPrefs[a.politicianId]);
-      const bw = voteWeight(firstPrefs[b.politicianId]);
-      if (bw !== aw) return bw - aw;
-      if (a.politicianId === winnerId) return -1;
-      if (b.politicianId === winnerId) return 1;
-      return a.politicianId.localeCompare(b.politicianId);
-    });
-    const rounds =
-      el.countArchive && "rounds" in el.countArchive ? el.countArchive.rounds : [];
-    return (
-      <div key={el.id} className="election-result-card">
-        <h4 className="serif-head">{electionDisplayName(el.id)}</h4>
-        <div className="muted">
-          {el.status} · {el.date}
-          {kind === "presidential" && el.status === "resolved"
-            ? " · first-preference shares below are not final-round totals"
-            : ""}
-        </div>
-        {winnerId ? (
-          <div className="election-winner-banner">
-            <div className="kicker">Winner</div>
-            <strong>{politicianDisplayName(props.catalog, winnerId)}</strong>
-            <div className="muted">
-              {partyDisplayName(
-                props.world,
-                props.snap.politicians[winnerId]?.partyId ?? null,
-                props.snap,
-              )}
-            </div>
-          </div>
-        ) : null}
-        <div className="candidate-result-list">
-          {ranked.map((cand) => {
-            const fp = firstPrefs[cand.politicianId];
-            const votes = fp ? formatPublicNumber(fp) : null;
-            const share = totalVotes > 0 && fp ? voteWeight(fp) / totalVotes : undefined;
-            const isWinner = winnerId === cand.politicianId;
-            return (
-              <PoliticianCard
-                key={cand.politicianId}
-                catalog={props.catalog}
-                world={props.world}
-                state={props.snap}
-                politicianId={cand.politicianId}
-                compact
-                selected={isWinner}
-                action={
-                  votes ? (
-                    <span className="election-votes">
-                      {isWinner ? "Winner · " : ""}1st pref {formatPublicPercent(share)} · {votes}
-                    </span>
-                  ) : null
-                }
-              />
-            );
-          })}
-        </div>
-        {due && el.type === "presidential" && el.status !== "resolved" ? (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              const resolved = props.sim.executeCommand({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
-              props.report(resolved);
-              if (resolved.ok) {
-                props.sim.executeCommand({ type: "RESUME_TURN" });
-              }
-              props.onDone();
-            }}
-          >
-            Resolve election
-          </button>
-        ) : null}
-        {assemblyDue && el.type === "assembly" && el.geographyKind === "national" && el.status !== "resolved" ? (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              const resolved = props.sim.executeCommand({ type: "RESOLVE_ASSEMBLY_ELECTION" });
-              props.report(resolved);
-              if (resolved.ok) {
-                props.sim.executeCommand({ type: "RESUME_TURN" });
-              }
-              props.onDone();
-            }}
-          >
-            Resolve Assembly election
-          </button>
-        ) : null}
-        {rounds.length > 0 ? (
-          <div className="rcv-rounds">
-            <div className="kicker">RCV progression</div>
-            <div className="rcv-track">
-              {rounds.map((r, i) => (
-                <span
-                  key={i}
-                  className={`rcv-chip${r.electedId ? " winner" : ""}`}
-                >
-                  Round {r.round ?? i + 1}
-                  {r.eliminatedId
-                    ? `: eliminated ${politicianDisplayName(props.catalog, r.eliminatedId)}`
-                    : r.electedId
-                      ? `: elected ${politicianDisplayName(props.catalog, r.electedId)}`
-                      : ""}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <PageHeader kicker="Returns" title="Elections" subtitle="Public polls and certified results only." />
-      <TabBar
-        tabs={[
-          { id: "presidential", label: "Presidential" },
-          { id: "assembly", label: "Assembly" },
-          { id: "nominations", label: "Nominations" },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
-      {tab === "presidential" ? (
-        <div>
-          {poll ? (
-            <p className="muted">
-              Latest national poll {poll.publicationDate}:{" "}
-              {pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)}
-            </p>
-          ) : (
-            <EmptyState>
-              Presidential results are national. No geographic presidential returns are shown.
-            </EmptyState>
-          )}
-          {presElections.map((el) => renderElectionResult(el, "presidential"))}
-        </div>
-      ) : null}
-      {tab === "assembly" ? (
-        <div className="dash dash-2">
-          <SectionCard title="Sitting Assembly geography">
-            <TerenaMap
-              bundle={props.bundle}
-              mode="election"
-              selectedId={sel?.id ?? null}
-              fillFor={(f, kind) => mapFillFor("election", props.world, props.snap, f, kind)}
-              onSelect={setSel}
-            />
-            <MapLegend mode="election" world={props.world} />
-            {sel?.kind === "constituency" ? (
-              <div>
-                <p>{sel.name}</p>
-                {constituencySittingSeatBreakdown(props.world, props.snap, sel.id).map((row) => (
-                  <div key={row.partyId ?? "none"} className="muted">
-                    {partyDisplayName(props.world, row.partyId, props.snap)} · {row.seats} sitting
-                    seat{row.seats === 1 ? "" : "s"}
-                  </div>
-                ))}
-                <p className="muted">Sitting representation, not hidden voter support.</p>
-              </div>
-            ) : (
-              <EmptyState>Select a constituency for the public seat breakdown.</EmptyState>
-            )}
-          </SectionCard>
-          <div>{asmElections.map((el) => renderElectionResult(el, "assembly"))}</div>
-        </div>
-      ) : null}
-      {tab === "nominations" ? (
-        <div>
-          {contests.map((c) => (
-            <SectionCard key={c.id} title={contestDisplayName(props.snap, props.world, c.id)}>
-              <StatusBadge>{c.status}</StatusBadge>
-              {Object.values(c.entries)
-                .filter((e) => e.status !== "potential")
-                .map((e) => (
-                  <PoliticianCard
-                    key={e.politicianId}
-                    catalog={props.catalog}
-                    world={props.world}
-                    state={props.snap}
-                    politicianId={e.politicianId}
-                    compact
-                  />
-                ))}
-              {c.winnerId ? (
-                <div>Nomination winner: {politicianDisplayName(props.catalog, c.winnerId)}</div>
-              ) : null}
-            </SectionCard>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }

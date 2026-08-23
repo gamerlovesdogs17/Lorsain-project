@@ -1,6 +1,6 @@
 # Known issues and development policy
 
-## Policy (from Phase 5 onward)
+## Policy (Phase 11 onward)
 
 Classify every discovered issue.
 
@@ -11,13 +11,15 @@ Classify every discovered issue.
 - breaks determinism
 - produces invalid election/campaign mathematics
 - violates a major canonical political rule in normal play
-- prevents the 2028–2029 vertical slice from functioning
+- prevents any naturally scheduled regular election from creating a valid field, resolving, assuming office, or scheduling its successor
+- automatically enters the player into an election or prevents play after defeat, retirement, or term completion
+- disconnects an active election or campaign from its current-cycle UI
+- loses, rewrites, or cannot restore legitimate election history
 
 **NONBLOCKING / BACKLOG** — record and continue:
 
 - requires manually corrupting save JSON
 - validator accepts a state engine commands cannot naturally create
-- concerns future cycles outside the vertical slice
 - historical metadata could be stricter
 - documentation mismatch
 - minor coefficient/balance concern
@@ -36,9 +38,9 @@ These were accepted as **not blockers** to Phase 5 unless Phase 5 directly touch
 | P4-SAVE-XREF | NONBLOCKING | Hostile/tampered-save reference validation is incomplete. A hand-edited JSON save can still omit some cross-checks the engine would never produce. |
 | P4-DRES-HIST | NONBLOCKING | Stricter DomainResolutionRecord historical proof validation (archive/event payload edge cases) beyond the legitimate 2028 path. |
 | P4-POLL-SNAP | NONBLOCKING | Historical PollRecord snapshot/cross-reference strictness can still be tighter for impossible hand-edited records. |
-| P4-FUTURE-CYCLE | NONBLOCKING | Future presidential-cycle integrity beyond the first vertical slice (2033+ Terena playthrough with Assembly 2030 still unresolved). |
+| P4-FUTURE-CYCLE | **FIXED in Phase 11.1 closeout** | Future presidential elections create cycle-specific nomination contests from current runtime politics; 2033 resolves naturally, assumes office in 2034, preserves 2028 history, and schedules 2038. |
 | P4-PRES-STATUS | **FIXED in Phase 5** | `presidentialStatus` is now scenario-start metadata only. `seedStartingPublicStanding()` materializes it once; later `candidateStandingOrDefault()` / `ensureCandidateStanding()` do not reapply frontrunner/likely/possible/exploring. |
-| P4-ASM-2030 | **FIXED in Phase 11.1** | National Assembly election resolves via `RESOLVE_ASSEMBLY_ELECTION` (incumbent + membership-party STV fields) and June 1 assumption seats 420 members; next Assembly election is scheduled. Full Assembly campaign/nomination pipeline remains light (NONBLOCKING depth). |
+| P4-ASM-2030 | **FIXED in Phase 11.1 closeout** | Persisted filing, nationally allocated fields, real Assembly campaigns, worker-backed STV resolution, typed 48-constituency archives, and June 1 assumption seat 420 members; 2034 is scheduled. |
 | P4-SPECIAL | NONBLOCKING | Special presidential-election integration is not a full domain (regular 2028 cycle is the vertical slice). |
 | P4-REGIONAL-POLL | NONBLOCKING | Regional/specialist pollsters are rejected until geographic coverage is modeled. |
 | P4-IND-PETITION | NONBLOCKING | Independent qualification is an explicit evidence hook; petitions/signatures are deferred. |
@@ -56,7 +58,7 @@ Phase 5 campaign simulation is **COMPLETE** at `e3a6aae`.
 | --- | --- | --- |
 | P5-SAVE-XREF | NONBLOCKING | Campaign JSON that cannot be produced by engine commands (orphaned CAMP ids, extra debate participants, extra recent-effect rows, malformed CampaignState/DebateState) is not exhaustively hostile-validated. |
 | P5-FINANCE-CAT | NONBLOCKING | Fundraising is a single aggregate stream, not donor categories. Politically meaningful but not FEC-style. |
-| P5-ASM-CAMPAIGN | NONBLOCKING | Assembly campaign type exists, but 2030 Assembly candidate generation / full Assembly campaign loop is still incomplete (carries P4-ASM-2030). |
+| P5-ASM-CAMPAIGN | **FIXED in Phase 11.1 closeout** | A legitimate filed candidacy creates the Assembly campaign; bounded constituency organization feeds ballot preferences; results close the campaign. |
 | P5-QUAL-GATES | **FIXED** | Qualification uses campaign milestones and real endorsements; DEV evidence injection is not required for the 2028 path. |
 | P5-POLL-CADENCE | NONBLOCKING | Monthly public polls rotate one nomination contest plus one general field rather than firing every pollster every day. Cadence is approximate. |
 | P5-ATTACK-LEADER | NONBLOCKING | NPC attack targeting uses public standing order among active same-race rivals, not a full poll-based targeting planner. |
@@ -90,7 +92,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title �
 | P7-MINISTRY-DEPTH | NONBLOCKING | Ministries only store administrativeCapacity / currentPriorities. Deep cabinet politics and Phase 9 economic effects are deferred. |
 | P7-BUDGET-ECON | NONBLOCKING | Budget is indexed envelopes and continuity, not a macroeconomy. |
 | P7-UI-POLISH | NONBLOCKING | First playable UI is information-dense and unpolished. Charts, chamber animation, map analytics, and typography wait for Phase 11. |
-| P7-WORKER | NONBLOCKING | Turns run on the main thread with a processing indicator. Phase 11.1 measured ordinary months ~0.7s median and Assembly resolve ~12s on the integration host; Web Worker still deferred (not required to unblock play). |
+| P7-WORKER | **FIXED for heavy Assembly counts in Phase 11.1 closeout** | National Assembly STV runs once in a dedicated Worker with an indeterminate count state and deterministic state restore. Ordinary monthly turns remain on the main thread. |
 | P7-REG-ANNUL-DEFAULT | NONBLOCKING | Regulation annulment uses simple majority of votes cast (tie fails). That is a Phase-7 procedural default, not a quoted constitutional rule. |
 
 ## Phase 7.1 notes
@@ -137,16 +139,20 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title �
 
 ## Phase 11.1 notes
 
-**Phase 11.1 Full-game integration is COMPLETE.** See `docs/PHASE_11_1_RESULTS.md` and `docs/PHASE_11_INTEGRATION_TEST_PLAN.md`.
+**Phase 11.1 recurring-election and career closeout is COMPLETE.** See `docs/PHASE_11_1_RESULTS.md` and `docs/PHASE_11_INTEGRATION_TEST_PLAN.md`.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
-| P111-ASM-2030 | **FIXED** | Assembly election domain resolver + assumption + UI resolve control. |
-| P111-PERF | NONBLOCKING | Ordinary months exceed aspirational 250ms on measured host (~734ms median); still playable. Assembly national STV ~12s. |
-| P111-WORKER | NONBLOCKING | Same as P7-WORKER — no worker shipped in 11.1. |
-| P111-BUNDLE | NONBLOCKING | Same as P9-BUNDLE-SIZE — ~10.5MB client bundle. |
-| P111-ASM-CAMPAIGN | NONBLOCKING | Assembly resolver does not yet run a full nomination/campaign season before STV. |
-| P111-SCREENSHOTS | NONBLOCKING | Populated visual QA screenshots deferred to 11.2. |
+| P111-ASM-2030 | **FIXED** | Pre-election filing, national order-independent allocation, campaign integration, typed STV archives, Assembly UI, election resolver, June assumption, and 2034 scheduling. |
+| P111-PRES-2033 | **FIXED** | Fresh cycle-specific contests, runtime NPC interest, explicit player entry, exact current-cycle selection, natural field finalization, 2034 assumption, and 2038 scheduling. |
+| P111-PLAYER-AUTONOMY | **FIXED** | Incumbents must explicitly run; decline/non-filing omits the player from the ballot and leaves the politician playable after the old term ends. |
+| P111-ASM-ALLOCATION | **FIXED** | Candidates are allocated nationally before fields finalize; 20 closeout seeds produced 0 uncontested constituencies rather than 41/48. |
+| P111-ASM-ARCHIVE | **FIXED** | All 48 future constituency results persist typed fields, preferences, turnout, winners, rounds, and tie/lot data. |
+| P111-PERF | **FIXED for player-visible blocking** | Final 20-seed core full-count median 6.415s; a dedicated Worker returns the click in 278–306ms in browser QA and shows an indeterminate state until completion. |
+| P111-WORKER | **FIXED for Assembly count** | Same as P7-WORKER. Broader worker migration is unnecessary for this closeout. |
+| P111-BUNDLE | NONBLOCKING | Same as P9-BUNDLE-SIZE — ~10.8MB client bundle. |
+| P111-ASM-CAMPAIGN | **FIXED** | Persisted filing creates a real constituency campaign and bounded organization affects preferences. |
+| P111-SCREENSHOTS | **FIXED** | Actual 1440/900/600/390 QA screenshots are stored in `docs/qa/`. |
 | P111-MIGRATION-FIXTURES | NONBLOCKING | On-disk historic save fixtures still not checked in. |
 
 ## Phase 8 leftovers

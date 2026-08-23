@@ -55,6 +55,24 @@ export function createPartyContest(
 
   let ruleId = "";
   if (args.type === "presidential_nomination") {
+    const election = Object.values(state.elections)
+      .filter(
+        (candidate) =>
+          candidate.type === "presidential" &&
+          candidate.status !== "resolved" &&
+          candidate.status !== "cancelled" &&
+          candidate.date >= state.currentDate,
+      )
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+    if (election && typeof metadata.electionId !== "string") {
+      metadata.electionId = election.id;
+      metadata.electionDate = election.date;
+      metadata.cycle = election.date.slice(0, 4);
+      metadata.cycleYear = Number(election.date.slice(0, 4));
+      metadata.partyId = args.partyId;
+      metadata.candidateSource =
+        election.id === "ELEC_PRES_2028" ? "scenario_start" : "runtime_politics";
+    }
     ruleId = args.ruleId ?? def?.nominationRuleId ?? dyn?.nominationRuleId ?? "";
     if (!world.nominationRules[ruleId]) {
       return {

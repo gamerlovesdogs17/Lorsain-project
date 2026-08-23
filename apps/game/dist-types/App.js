@@ -20,6 +20,7 @@ export default function App() {
     const [snap, setSnap] = useState(null);
     const [screen, setScreen] = useState("home");
     const [busy, setBusy] = useState(false);
+    const [countingElection, setCountingElection] = useState(false);
     const [turnEvents, setTurnEvents] = useState([]);
     const [saves, setSaves] = useState([]);
     const [query, setQuery] = useState("");
@@ -91,6 +92,43 @@ export default function App() {
         setMode("play");
         setScreen("home");
         refresh(restored);
+    }
+    function replaceSimulation(save) {
+        if (!world)
+            return;
+        const restored = restoreSimulation(save, world);
+        refresh(restored);
+    }
+    function resolveAssemblyElection() {
+        if (!sim || !world || busy || countingElection)
+            return;
+        setCountingElection(true);
+        const worker = new Worker(new URL("./electionWorker.ts", import.meta.url), { type: "module" });
+        worker.onmessage = (event) => {
+            worker.terminate();
+            try {
+                if (event.data.ok) {
+                    feedback.report(event.data.result);
+                    if (event.data.result.ok)
+                        replaceSimulation(event.data.save);
+                }
+                else {
+                    feedback.setNotice(event.data.message);
+                }
+            }
+            catch (error) {
+                feedback.setNotice(error instanceof Error ? error.message : "The Assembly count could not be restored.");
+            }
+            finally {
+                setCountingElection(false);
+            }
+        };
+        worker.onerror = (event) => {
+            worker.terminate();
+            feedback.setNotice(event.message || "The Assembly count could not be completed.");
+            setCountingElection(false);
+        };
+        worker.postMessage({ save: sim.serializeSave(), world });
     }
     function endTurn() {
         if (!sim)
@@ -227,6 +265,6 @@ export default function App() {
     const offices = playerOffices(world, snap, snap.playerPoliticianId);
     const interrupt = snap.pendingInterrupt;
     const decisionCount = collectPlayerActionableDecisions(world, snap).length;
-    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, busy: busy, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, askConfirm: feedback.askConfirm }), feedback.overlay()] }));
+    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, busy: busy || countingElection, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, askConfirm: feedback.askConfirm }), feedback.overlay()] }));
 }
 //# sourceMappingURL=App.js.map

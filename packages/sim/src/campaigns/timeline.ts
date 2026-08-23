@@ -1,12 +1,12 @@
 import { addMonths, compareIsoDate, type IsoDate } from "../calendar.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
-import { CANONICAL_PRESIDENTIAL_ELECTION_ID } from "../elections/types.js";
 import {
   finalizePresidentialField,
   syncNominationWinnerToElection,
 } from "../elections/presidential.js";
 import { applyQualification, countableCandidateIds } from "../parties/nominations.js";
+import { presidentialNominationContestsForElection } from "../parties/state.js";
 import {
   cancelPartyContest,
   openPartyContest,
@@ -35,12 +35,21 @@ export type NominationCalendarDates = {
 };
 
 export function presidentialElectionDate(state: SimState): IsoDate | null {
-  const canonical = state.elections[CANONICAL_PRESIDENTIAL_ELECTION_ID];
-  if (canonical?.type === "presidential") return canonical.date;
-  const open = Object.values(state.elections)
-    .filter((e) => e.type === "presidential" && e.status !== "resolved" && e.status !== "cancelled")
-    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
-  return open[0]?.date ?? null;
+  return currentPresidentialElection(state)?.date ?? null;
+}
+
+export function currentPresidentialElection(state: SimState) {
+  return (
+    Object.values(state.elections)
+      .filter(
+        (e) =>
+          e.type === "presidential" &&
+          e.status !== "resolved" &&
+          e.status !== "cancelled" &&
+          compareIsoDate(e.date, state.currentDate) >= 0,
+      )
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0] ?? null
+  );
 }
 
 export function nominationCalendarDates(electionDate: IsoDate): NominationCalendarDates {
@@ -58,10 +67,8 @@ export function monthReached(current: IsoDate, gate: IsoDate): boolean {
   return compareIsoDate(monthStart(current), gate) >= 0;
 }
 
-function nominationContests(state: SimState) {
-  return Object.values(state.partyContests)
-    .filter((c) => c.type === "presidential_nomination")
-    .sort((a, b) => (a.id < b.id ? -1 : 1));
+function nominationContests(state: SimState, electionId: string) {
+  return presidentialNominationContestsForElection(state, electionId);
 }
 
 function closeNominationCampaigns(state: SimState, contestId: string): void {
@@ -95,19 +102,21 @@ function failUnqualifiedDeclared(
   return events;
 }
 
-function allNominationProcessesTerminal(state: SimState): boolean {
-  return nominationContests(state).every(
+function allNominationProcessesTerminal(state: SimState, electionId: string): boolean {
+  const contests = nominationContests(state, electionId);
+  return contests.length > 0 && contests.every(
     (c) => c.status === "resolved" || c.status === "cancelled",
   );
 }
 
 export function openDueNominationContests(state: SimState, commandId: string): SimEvent[] {
   const electionDate = presidentialElectionDate(state);
-  if (!electionDate) return [];
+  const election = currentPresidentialElection(state);
+  if (!electionDate || !election) return [];
   const cal = nominationCalendarDates(electionDate);
   if (!monthReached(state.currentDate, cal.open)) return [];
   const events: SimEvent[] = [];
-  for (const contest of nominationContests(state)) {
+  for (const contest of nominationContests(state, election.id)) {
     if (contest.status !== "planned") continue;
     const out = openPartyContest(state, contest.id, commandId);
     if (!("error" in out)) events.push(...out.events);
@@ -121,11 +130,12 @@ export function closeQualificationIfDue(
   commandId: string,
 ): SimEvent[] {
   const electionDate = presidentialElectionDate(state);
-  if (!electionDate) return [];
+  const election = currentPresidentialElection(state);
+  if (!electionDate || !election) return [];
   const cal = nominationCalendarDates(electionDate);
   if (!monthReached(state.currentDate, cal.qualify)) return [];
   const events: SimEvent[] = [];
-  for (const contest of nominationContests(state)) {
+  for (const contest of nominationContests(state, election.id)) {
     if (contest.status === "resolved" || contest.status === "cancelled") continue;
     if (contest.status === "planned") continue;
     const qErr = applyQualification(world, state, contest);
@@ -142,11 +152,12 @@ export function resolveDueNominationContests(
   commandId: string,
 ): SimEvent[] {
   const electionDate = presidentialElectionDate(state);
-  if (!electionDate) return [];
+  const election = currentPresidentialElection(state);
+  if (!electionDate || !election) return [];
   const cal = nominationCalendarDates(electionDate);
   if (!monthReached(state.currentDate, cal.resolve)) return [];
   const events: SimEvent[] = [];
-  for (const contest of nominationContests(state)) {
+  for (const contest of nominationContests(state, election.id)) {
     const live = state.partyContests[contest.id];
     if (!live || live.status === "resolved" || live.status === "cancelled") continue;
     if (live.status === "planned") {
@@ -185,17 +196,11 @@ export function resolveDueNominationContests(
 
 export function finalizePresidentialFieldIfDue(state: SimState, world: KernelWorld): SimEvent[] {
   const electionDate = presidentialElectionDate(state);
-  if (!electionDate) return [];
+  const election = currentPresidentialElection(state);
+  if (!electionDate || !election) return [];
   const cal = nominationCalendarDates(electionDate);
   if (!monthReached(state.currentDate, cal.fieldFinalize)) return [];
-  if (!allNominationProcessesTerminal(state)) return [];
-  const election =
-    state.elections[CANONICAL_PRESIDENTIAL_ELECTION_ID] ??
-    Object.values(state.elections)
-      .filter(
-        (e) => e.type === "presidential" && e.status !== "resolved" && e.status !== "cancelled",
-      )
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1))[0];
+  if (!allNominationProcessesTerminal(state, election.id)) return [];
   if (!election || election.fieldFinalized) return [];
   finalizePresidentialField(state, world, election.id);
   return [];

@@ -12,6 +12,7 @@ import {
 import { INDEPENDENT_AGGREGATE_ID, isSeedPresidentialStatus } from "./policy.js";
 import { factionMembers, membershipPartyIds, resolvePartyDefinition } from "./queries.js";
 import { contestCountReplayError } from "./replay.js";
+import { presidentialNominationCycleMetadata } from "./state.js";
 import {
   emptyQualificationEvidence,
   isCandidateStatus,
@@ -907,6 +908,25 @@ export function validatePartyAgainstWorld(
       if (!rule) return worldErr(`contest ${contest.id} nomination rule does not resolve`);
       if (rule.partyId !== contest.partyId && !state.dynamicParties[contest.partyId]) {
         return worldErr(`contest ${contest.id} rule/party mismatch`);
+      }
+      const cycle = presidentialNominationCycleMetadata(contest);
+      const presidentialElections = Object.values(state.elections).filter(
+        (election) => election.type === "presidential",
+      );
+      if (!cycle && presidentialElections.length > 0) {
+        return worldErr(`contest ${contest.id} missing presidential cycle metadata`);
+      }
+      if (cycle) {
+        const election = state.elections[cycle.electionId];
+        if (
+          !election ||
+          election.type !== "presidential" ||
+          election.date !== cycle.electionDate ||
+          cycle.partyId !== contest.partyId ||
+          cycle.cycleYear !== Number(election.date.slice(0, 4))
+        ) {
+          return worldErr(`contest ${contest.id} presidential cycle linkage`);
+        }
       }
     }
     if (contest.type === "faction_chair") {

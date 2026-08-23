@@ -16,25 +16,16 @@ import {
 import { enqueueScheduled, pushHistory } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
-import { emptyIdeology } from "../agents/profile.js";
 import { resolveAssemblyConstituency } from "./assembly.js";
 import { createDomainResolution } from "./resolution.js";
 import { plannedElection } from "./state.js";
-import type { ElectionCandidate, ElectionState } from "./types.js";
+import type { ElectionCandidate, ElectionState, TurnoutRecord } from "./types.js";
+import { mergeTurnout } from "./turnout.js";
+import { FIELD } from "../campaigns/policy.js";
+import { ensureAssemblyElectionCycle } from "./assembly-cycle.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
-}
-
-function publicIdeologyForIndependent(
-  world: KernelWorld,
-  politicianId: string,
-): NonNullable<ElectionCandidate["publicIdeology"]> {
-  const profile = world.agentProfiles[politicianId];
-  if (profile?.ideology) {
-    return { ...emptyIdeology(), ...profile.ideology };
-  }
-  return emptyIdeology();
 }
 
 export function assemblyElectionIdForDate(date: IsoDate): string {
@@ -78,55 +69,14 @@ function assemblyOfficeByConstituency(world: KernelWorld): Map<string, string> {
   return map;
 }
 
-function sittingHolders(state: SimState, officeId: string): string[] {
-  return occupyingTerms(state, officeId)
-    .filter((t) => t.holdingKind === "substantive")
-    .map((t) => t.holderId)
-    .sort();
-}
-
-function incumbentReservations(
-  state: SimState,
-  world: KernelWorld,
-): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const o of officesOfKind(world, "assembly_member")) {
-    if (!o.constituencyId) continue;
-    for (const id of sittingHolders(state, o.id)) {
-      map.set(id, o.constituencyId);
-    }
-  }
-  return map;
-}
-
-function eligibleChallenger(state: SimState, world: KernelWorld, id: string): boolean {
-  const pol = state.politicians[id];
-  if (!pol?.alive || pol.retired) return false;
-  if (pol.partyId == null || pol.partyId === world.independentAggregatePartyId) return false;
-  const party = world.partyDefinitions[pol.partyId];
-  if (!party || party.organizationType !== "membership_party") return false;
-  for (const t of activeTermsForPolitician(state, id)) {
-    const kind = world.offices[t.officeId]?.kind;
-    if (
-      kind === "president" ||
-      kind === "governor" ||
-      kind === "constitutional_court_justice" ||
-      kind === "assembly_member"
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/** Deterministic STV field: incumbents plus membership-party challengers. */
+/** Read the persisted national filing allocation for one constituency. */
 export function buildAssemblyConstituencyField(
   state: SimState,
   world: KernelWorld,
   constituencyId: string,
-  officeId: string,
-  claimedChallengers: ReadonlySet<string> = new Set(),
-  incumbentsByPolitician: ReadonlyMap<string, string> = new Map(),
+  _officeId: string,
+  _claimedChallengers: ReadonlySet<string> = new Set(),
+  _incumbentsByPolitician: ReadonlyMap<string, string> = new Map(),
 ):
   | {
       candidateIds: string[];
@@ -134,74 +84,32 @@ export function buildAssemblyConstituencyField(
       ideologyById: Record<string, ElectionCandidate["publicIdeology"]>;
     }
   | { error: CommandError } {
-  const el = world.constituencyElectorate[constituencyId];
-  if (!el) return { error: reject("INVALID_GEOGRAPHY", constituencyId) };
+  if (!world.constituencyElectorate[constituencyId]) {
+    return { error: reject("INVALID_GEOGRAPHY", constituencyId) };
+  }
+  const election = Object.values(state.elections)
+    .filter(
+      (e) =>
+        e.type === "assembly" &&
+        e.geographyKind === "national" &&
+        e.status !== "resolved" &&
+        e.status !== "cancelled",
+    )
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+  if (!election?.assembly) return { error: reject("FIELD_NOT_OPEN", constituencyId) };
+  const persisted = election.assembly.constituencyFields[constituencyId];
+  if (!persisted) return { error: reject("FIELD_NOT_OPEN", constituencyId) };
   const partyByCandidate: Record<string, string | null> = {};
   const ideologyById: Record<string, ElectionCandidate["publicIdeology"]> = {};
-  const candidates = new Set<string>();
-
-  for (const id of sittingHolders(state, officeId)) {
-    const pol = state.politicians[id];
-    if (!pol?.alive || pol.retired) continue;
-    candidates.add(id);
-    if (pol.partyId == null || pol.partyId === world.independentAggregatePartyId) {
-      partyByCandidate[id] = null;
-      ideologyById[id] = publicIdeologyForIndependent(world, id);
-    } else {
-      partyByCandidate[id] = pol.partyId;
-    }
+  const candidateIds = persisted.candidateIds.filter(
+    (id) => election.candidates[id] && !election.candidates[id]!.withdrawn,
+  );
+  for (const id of candidateIds) {
+    const candidate = election.candidates[id]!;
+    partyByCandidate[id] = candidate.partyId;
+    ideologyById[id] = candidate.publicIdeology;
   }
-
-  const partyIds = Object.keys(world.partyDefinitions)
-    .filter((pid) => world.partyDefinitions[pid]?.organizationType === "membership_party")
-    .sort();
-  const perPartyTarget = Math.max(2, Math.ceil(el.seats * 0.6));
-  for (const partyId of partyIds) {
-    let added = [...candidates].filter((id) => partyByCandidate[id] === partyId).length;
-    const pool = Object.keys(state.politicians)
-      .filter((id) => state.politicians[id]?.partyId === partyId && eligibleChallenger(state, world, id))
-      .filter(
-        (id) =>
-          !candidates.has(id) &&
-          !claimedChallengers.has(id) &&
-          !incumbentsByPolitician.has(id),
-      )
-      .sort();
-    for (const id of pool) {
-      if (added >= perPartyTarget) break;
-      candidates.add(id);
-      partyByCandidate[id] = partyId;
-      added += 1;
-    }
-  }
-
-  if (candidates.size < el.seats) {
-    const filler = Object.keys(state.politicians)
-      .filter(
-        (id) =>
-          eligibleChallenger(state, world, id) &&
-          !candidates.has(id) &&
-          !claimedChallengers.has(id) &&
-          !incumbentsByPolitician.has(id),
-      )
-      .sort();
-    for (const id of filler) {
-      if (candidates.size >= el.seats) break;
-      candidates.add(id);
-      partyByCandidate[id] = state.politicians[id]!.partyId;
-    }
-  }
-
-  if (candidates.size < el.seats) {
-    return {
-      error: reject(
-        "INSUFFICIENT_CANDIDATES",
-        `${constituencyId}: ${candidates.size} candidates for ${el.seats} seats`,
-      ),
-    };
-  }
-
-  return { candidateIds: [...candidates].sort(), partyByCandidate, ideologyById };
+  return { candidateIds, partyByCandidate, ideologyById };
 }
 
 export function resolveAssemblyElection(
@@ -220,6 +128,13 @@ export function resolveAssemblyElection(
   if (compareIsoDate(state.currentDate, election.date) !== 0) {
     return { error: reject("WRONG_DATE", `currentDate ${state.currentDate} != ${election.date}`) };
   }
+  if (!election.fieldFinalized || election.status !== "field_finalized") {
+    return { error: reject("FIELD_NOT_FINALIZED", election.id) };
+  }
+  const cycle = ensureAssemblyElectionCycle(state, world, election);
+  if (cycle.filingStatus !== "closed") {
+    return { error: reject("FIELD_NOT_FINALIZED", "Assembly filing remains open") };
+  }
 
   const officeByConst = assemblyOfficeByConstituency(world);
   const constituencyIds = Object.keys(world.constituencyElectorate).sort();
@@ -230,60 +145,67 @@ export function resolveAssemblyElection(
   const constituencyWinners: Record<string, string[]> = {};
   const constituencyElectionIds: Record<string, string> = {};
   const allWinners: string[] = [];
-  const claimedChallengers = new Set<string>();
-  const incumbentsByPolitician = incumbentReservations(state, world);
+  const allCandidates = new Set<string>();
+  const turnoutParts: TurnoutRecord[] = [];
   let totalSeats = 0;
 
   for (const cid of constituencyIds) {
     const officeId = officeByConst.get(cid);
     if (!officeId) return { error: reject("MISSING_OFFICE", `no assembly office for ${cid}`) };
-    const field = buildAssemblyConstituencyField(
-      state,
-      world,
-      cid,
-      officeId,
-      claimedChallengers,
-      incumbentsByPolitician,
-    );
+    const field = buildAssemblyConstituencyField(state, world, cid, officeId);
     if ("error" in field) return { error: field.error };
     for (const id of field.candidateIds) {
-      if (!incumbentsByPolitician.has(id)) claimedChallengers.add(id);
+      if (allCandidates.has(id)) {
+        return { error: reject("DUPLICATE_CANDIDATE", `${id} appears in multiple constituencies`) };
+      }
+      allCandidates.add(id);
+    }
+    const mobilizationByCandidate: Record<string, number> = {};
+    for (const id of field.candidateIds) {
+      const campaign = Object.values(state.campaignRuntime.campaigns).find(
+        (c) =>
+          c.type === "assembly" &&
+          c.electionId === election.id &&
+          c.constituencyId === cid &&
+          c.politicianId === id &&
+          c.status === "active",
+      );
+      const organization = campaign
+        ? Math.min(
+            1,
+            (campaign.organizationByConstituency[cid] ?? 0) + campaign.fieldOrganization * 0.35,
+          )
+        : 0;
+      mobilizationByCandidate[id] = 1 + FIELD.turnoutScale * organization;
     }
     const out = resolveAssemblyConstituency(world, state, rng, {
       constituencyId: cid,
       candidateIds: field.candidateIds,
       partyByCandidate: field.partyByCandidate,
       ideologyById: field.ideologyById,
+      mobilizationByCandidate,
     });
     if ("error" in out) return { error: out.error };
+    if (!out.election.turnout || !out.election.countArchive || out.election.countArchive.method !== "stv") {
+      return { error: reject("COUNT_FAILED", `${cid} did not produce a complete STV archive`) };
+    }
     constituencyElectionIds[cid] = out.election.id;
     constituencyWinners[cid] = [...out.election.winnerIds];
     allWinners.push(...out.election.winnerIds);
     totalSeats += out.election.winnerIds.length;
-    // Constituency counts are archived under the national election metadata; they are not
-    // separate top-level ElectionState records (those require resultEventId wiring).
-    election.metadata = {
-      ...election.metadata,
-      [`archive:${cid}`]: {
-        electionId: out.election.id,
-        turnout: out.election.turnout,
-        winnerIds: out.election.winnerIds,
-        candidateIds: field.candidateIds,
-      },
+    turnoutParts.push(out.election.turnout);
+    cycle.constituencyResults[cid] = {
+      constituencyId: cid,
+      constituencyElectionId: out.election.id,
+      magnitude: out.election.seats,
+      candidateIds: field.candidateIds.slice(),
+      partyByCandidate: { ...field.partyByCandidate },
+      firstPreferences: { ...out.election.countArchive.firstPreferences },
+      electedIds: out.election.winnerIds.slice(),
+      turnout: out.election.turnout,
+      countArchive: out.election.countArchive,
+      archiveCompleteness: "full",
     };
-    for (const id of field.candidateIds) {
-      if (!election.candidates[id]) {
-        election.candidates[id] = {
-          politicianId: id,
-          partyId: field.partyByCandidate[id] ?? null,
-          sourceContestId: null,
-          filedDate: state.currentDate,
-          publicIdeology: field.ideologyById[id] ?? null,
-          withdrawn: false,
-          independentQualified: (field.partyByCandidate[id] ?? null) == null,
-        };
-      }
-    }
   }
 
   if (new Set(allWinners).size !== allWinners.length) {
@@ -301,6 +223,13 @@ export function resolveAssemblyElection(
   election.status = "resolved";
   election.seats = totalSeats;
   election.winnerIds = [...allWinners].sort();
+  election.turnout = mergeTurnout(turnoutParts);
+  const partySeatTotals: Record<string, number> = {};
+  for (const id of election.winnerIds) {
+    const partyId = election.candidates[id]?.partyId ?? "independent";
+    partySeatTotals[partyId] = (partySeatTotals[partyId] ?? 0) + 1;
+  }
+  cycle.partySeatTotals = partySeatTotals;
   election.metadata = {
     ...election.metadata,
     constituencyWinners,
@@ -362,7 +291,18 @@ export function applyAssemblyAssumption(
   if (!election || election.type !== "assembly" || election.status !== "resolved") {
     return { error: reject("INVALID_ELECTION", electionId) };
   }
-  const winnersRaw = election.metadata.constituencyWinners;
+  const archivedWinners = election.assembly
+    ? Object.fromEntries(
+        Object.entries(election.assembly.constituencyResults).map(([cid, result]) => [
+          cid,
+          result.electedIds,
+        ]),
+      )
+    : null;
+  const winnersRaw =
+    archivedWinners && Object.keys(archivedWinners).length > 0
+      ? archivedWinners
+      : election.metadata.constituencyWinners;
   if (!winnersRaw || typeof winnersRaw !== "object") {
     return { error: reject("MISSING_WINNERS", "no certified constituency winners") };
   }

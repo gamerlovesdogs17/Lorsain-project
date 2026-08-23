@@ -15,8 +15,9 @@ import { contestSelectorMethod } from "../parties/selectorates.js";
 import { isDeclaredContestCandidate } from "../parties/lifecycle.js";
 import { candidateStandingOrDefault } from "../elections/standing.js";
 import { withdrawUnresolvedCandidacy } from "../elections/field.js";
+import { withdrawAssemblyCandidacy } from "../elections/assembly-cycle.js";
 import { contestPollAverage, pollAverage } from "../elections/polls.js";
-import { CANONICAL_PRESIDENTIAL_ELECTION_ID } from "../elections/types.js";
+import { presidentialNominationCycleMetadata } from "../parties/state.js";
 import { AD_SPEND, FIELD, FUNDRAISING, QUALIFICATION, STANDING_DELTA } from "./policy.js";
 import { nominationQualificationNeed } from "./qualification.js";
 import {
@@ -131,6 +132,10 @@ export function declareCampaign(
     if (contest.type !== "presidential_nomination") {
       return { error: reject("INVALID_CONTEST", "not a presidential nomination") };
     }
+    const cycle = presidentialNominationCycleMetadata(contest);
+    if (cycle?.candidateSource === "runtime_politics" && contest.status === "planned") {
+      return { error: reject("CONTEST_NOT_OPEN", "the nomination contest has not opened") };
+    }
     const declared = declareCandidacy(state, world, contestId, args.politicianId, commandId);
     if ("error" in declared) return declared;
     const campaign = createCampaignRecord(state, world, {
@@ -155,8 +160,17 @@ export function declareCampaign(
   }
 
   if (args.type === "presidential_general") {
-    const electionId = args.electionId ?? CANONICAL_PRESIDENTIAL_ELECTION_ID;
-    const election = state.elections[electionId];
+    const election = args.electionId
+      ? state.elections[args.electionId]
+      : Object.values(state.elections)
+          .filter(
+            (e) =>
+              e.type === "presidential" &&
+              e.status !== "resolved" &&
+              e.status !== "cancelled",
+          )
+          .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+    const electionId = election?.id ?? String(args.electionId ?? "presidential");
     if (!election || election.type !== "presidential") {
       return { error: reject("INVALID_ELECTION", electionId) };
     }
@@ -187,12 +201,33 @@ export function declareCampaign(
     };
   }
 
-  const electionId = args.electionId ?? null;
+  const election = args.electionId
+    ? state.elections[args.electionId]
+    : Object.values(state.elections)
+        .filter(
+          (e) =>
+            e.type === "assembly" &&
+            e.geographyKind === "national" &&
+            e.assembly?.candidacies[args.politicianId]?.status === "filed" &&
+            e.status !== "resolved" &&
+            e.status !== "cancelled",
+        )
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+  if (!election || election.type !== "assembly" || election.geographyKind !== "national") {
+    return { error: reject("INVALID_ELECTION", String(args.electionId ?? "assembly")) };
+  }
+  const candidacy = election.assembly?.candidacies[args.politicianId];
+  if (!candidacy || candidacy.status !== "filed") {
+    return { error: reject("NOT_A_CANDIDATE", args.politicianId) };
+  }
+  if (args.constituencyId && args.constituencyId !== candidacy.constituencyId) {
+    return { error: reject("INVALID_GEOGRAPHY", args.constituencyId) };
+  }
   const campaign = createCampaignRecord(state, world, {
     politicianId: args.politicianId,
     type: "assembly",
-    electionId,
-    constituencyId: args.constituencyId ?? null,
+    electionId: election.id,
+    constituencyId: candidacy.constituencyId,
     status: "active",
   });
   return {
@@ -202,8 +237,13 @@ export function declareCampaign(
         state,
         "CAMPAIGN_LAUNCHED",
         [args.politicianId],
-        [campaign.id],
-        { campaignId: campaign.id, type: "assembly" },
+        [campaign.id, election.id, candidacy.constituencyId],
+        {
+          campaignId: campaign.id,
+          type: "assembly",
+          electionId: election.id,
+          constituencyId: candidacy.constituencyId,
+        },
         commandId,
         0.55,
       ),
@@ -963,6 +1003,9 @@ export function withdrawCampaign(
       (el.status === "planned" || el.status === "field_open" || el.status === "field_finalized")
     ) {
       withdrawUnresolvedCandidacy(el, campaign.politicianId);
+      if (campaign.type === "assembly") {
+        withdrawAssemblyCandidacy(state, campaign.electionId, campaign.politicianId);
+      }
     }
   }
   events.push(
@@ -1017,9 +1060,8 @@ export function transitionNominationToGeneral(
     return [];
   }
   const events: SimEvent[] = [];
-  const election = Object.values(state.elections)
-    .filter((e) => e.type === "presidential" && e.status !== "resolved" && e.status !== "cancelled")
-    .sort((a, b) => (a.date < b.date ? -1 : a.id < b.id ? -1 : 1))[0];
+  const cycle = presidentialNominationCycleMetadata(contest);
+  const election = cycle ? state.elections[cycle.electionId] : undefined;
   for (const campaign of Object.values(state.campaignRuntime.campaigns)) {
     if (campaign.contestId !== contestId || campaign.type !== "presidential_nomination") continue;
     if (campaign.status !== "active" && campaign.status !== "exploring") continue;
@@ -1070,6 +1112,21 @@ export function closeGeneralCampaigns(state: SimState, electionId: string, winne
     if (campaign.electionId !== electionId || campaign.type !== "presidential_general") continue;
     if (campaign.status !== "active") continue;
     campaign.status = campaign.politicianId === winnerId ? "won" : "lost";
+    campaign.endedDate = state.currentDate;
+  }
+}
+
+export function closeAssemblyCampaigns(
+  state: SimState,
+  electionId: string,
+  winnerIds: readonly string[],
+): void {
+  const winners = new Set(winnerIds);
+  for (const campaign of Object.values(state.campaignRuntime.campaigns)) {
+    if (campaign.electionId !== electionId || campaign.type !== "assembly") continue;
+    if (campaign.status === "withdrawn") continue;
+    if (campaign.status !== "active" && campaign.status !== "exploring") continue;
+    campaign.status = winners.has(campaign.politicianId) ? "won" : "lost";
     campaign.endedDate = state.currentDate;
   }
 }

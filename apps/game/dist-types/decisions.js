@@ -20,19 +20,22 @@ export function DecisionPanel(props) {
     }
     const votes = decisions.filter((d) => d.kind !== "interrupt" &&
         d.kind !== "sign_bill" &&
-        d.kind !== "foreign_presidential_action");
+        d.kind !== "foreign_presidential_action" &&
+        d.kind !== "assembly_filing");
     const signs = decisions.filter((d) => d.kind === "sign_bill");
     const incomingDiplomacy = decisions.filter((d) => d.kind === "foreign_presidential_action");
+    const assemblyFiling = decisions.filter((d) => d.kind === "assembly_filing");
     return (_jsxs("div", { className: "alert", children: [_jsx("strong", { children: "Required decisions" }), _jsxs("p", { className: "muted", children: [decisions.length, " item", decisions.length === 1 ? "" : "s", " need your action before the month can close without abstention."] }), interrupt ? (_jsxs("div", { children: [_jsx("div", { children: interruptDisplay(interrupt) }), interrupt.code === "PRESIDENTIAL_ELECTION_DUE" ? (_jsx("button", { type: "button", className: "btn", onClick: () => {
                             run({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
                             run({ type: "RESUME_TURN" });
-                        }, children: "Resolve presidential election" })) : interrupt.code === "ASSEMBLY_ELECTION_DUE" ? (_jsx("button", { type: "button", className: "btn", onClick: () => {
-                            run({ type: "RESOLVE_ASSEMBLY_ELECTION" });
-                            run({ type: "RESUME_TURN" });
-                        }, children: "Resolve Assembly election" })) : interrupt.requiresResolution ? (_jsx("p", { className: "muted", children: "This event cannot be skipped. Use the legal action above." })) : (_jsx("button", { type: "button", className: "btn", onClick: () => {
+                        }, children: "Resolve presidential election" })) : interrupt.code === "ASSEMBLY_ELECTION_DUE" ? (_jsx("button", { type: "button", className: "btn", disabled: props.countingElection, onClick: props.onResolveAssembly, children: props.countingElection ? "Counting election…" : "Resolve Assembly election" })) : interrupt.requiresResolution ? (_jsx("p", { className: "muted", children: "This event cannot be skipped. Use the legal action above." })) : (_jsx("button", { type: "button", className: "btn", onClick: () => {
                             run({ type: "ACKNOWLEDGE_INTERRUPT" });
                             run({ type: "RESUME_TURN" });
-                        }, children: "Continue" }))] })) : null, president && warTrigger ? (_jsxs("div", { className: "row", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: "International crisis requires war powers authorization" }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "BEGIN_WAR_POWERS" }), children: "Begin war powers" })] })) : null, incomingDiplomacy.map((d) => {
+                        }, children: "Continue" }))] })) : null, president && warTrigger ? (_jsxs("div", { className: "row", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: "International crisis requires war powers authorization" }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "BEGIN_WAR_POWERS" }), children: "Begin war powers" })] })) : null, assemblyFiling.map((d) => (_jsxs("div", { className: "decision-choice", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: d.label }), _jsxs("div", { className: "row", style: { marginTop: "0.4rem" }, children: [_jsx("button", { type: "button", className: "btn", onClick: () => run({
+                                    type: "FILE_ASSEMBLY_CANDIDACY",
+                                    electionId: d.electionId,
+                                    constituencyId: d.constituencyId,
+                                }), children: "Run for reelection" }), _jsx("button", { type: "button", className: "btn secondary", onClick: () => run({ type: "DECLINE_ASSEMBLY_CANDIDACY", electionId: d.electionId }), children: "Do not run" })] })] }, d.key))), incomingDiplomacy.map((d) => {
                 const action = snap.foreignAffairsRuntime.pendingPresidentialActions.find((a) => d.targetCountryId != null
                     ? a.targetCountryId === d.targetCountryId && d.key.includes(a.kind)
                     : d.key.includes(a.kind));

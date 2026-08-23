@@ -18,7 +18,8 @@
     "validate:phase0b:recount": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/phase0b/recount_validate.ts",
     "game": "pnpm --filter @lorsain/game dev",
     "game:build": "pnpm --filter @lorsain/game build",
-    "calibrate:foreign": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/foreign-calibration.ts"
+    "calibrate:foreign": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/foreign-calibration.ts",
+    "calibrate:assembly": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/assembly-calibration.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

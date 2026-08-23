@@ -34,6 +34,8 @@ export function DecisionPanel(props: {
   sim: Simulation;
   onDone: () => void;
   report: (result: CommandResult) => boolean;
+  countingElection: boolean;
+  onResolveAssembly: () => void;
 }) {
   const { snap, sim, world } = props;
   const interrupt = snap.pendingInterrupt;
@@ -51,10 +53,12 @@ export function DecisionPanel(props: {
     (d) =>
       d.kind !== "interrupt" &&
       d.kind !== "sign_bill" &&
-      d.kind !== "foreign_presidential_action",
+      d.kind !== "foreign_presidential_action" &&
+      d.kind !== "assembly_filing",
   );
   const signs = decisions.filter((d) => d.kind === "sign_bill");
   const incomingDiplomacy = decisions.filter((d) => d.kind === "foreign_presidential_action");
+  const assemblyFiling = decisions.filter((d) => d.kind === "assembly_filing");
 
   return (
     <div className="alert">
@@ -81,12 +85,10 @@ export function DecisionPanel(props: {
             <button
               type="button"
               className="btn"
-              onClick={() => {
-                run({ type: "RESOLVE_ASSEMBLY_ELECTION" });
-                run({ type: "RESUME_TURN" });
-              }}
+              disabled={props.countingElection}
+              onClick={props.onResolveAssembly}
             >
-              Resolve Assembly election
+              {props.countingElection ? "Counting election…" : "Resolve Assembly election"}
             </button>
           ) : interrupt.requiresResolution ? (
             <p className="muted">This event cannot be skipped. Use the legal action above.</p>
@@ -112,6 +114,35 @@ export function DecisionPanel(props: {
           </button>
         </div>
       ) : null}
+      {assemblyFiling.map((d) => (
+        <div key={d.key} className="decision-choice" style={{ marginTop: "0.5rem" }}>
+          <span>{d.label}</span>
+          <div className="row" style={{ marginTop: "0.4rem" }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() =>
+                run({
+                  type: "FILE_ASSEMBLY_CANDIDACY",
+                  electionId: d.electionId!,
+                  constituencyId: d.constituencyId!,
+                })
+              }
+            >
+              Run for reelection
+            </button>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() =>
+                run({ type: "DECLINE_ASSEMBLY_CANDIDACY", electionId: d.electionId! })
+              }
+            >
+              Do not run
+            </button>
+          </div>
+        </div>
+      ))}
       {incomingDiplomacy.map((d) => {
         const action = snap.foreignAffairsRuntime.pendingPresidentialActions.find(
           (a) =>

@@ -75,6 +75,10 @@ import {
   applyAssemblyAssumption,
   resolveAssemblyElection,
 } from "./elections/assembly-national.js";
+import {
+  declineAssemblyCandidacy,
+  fileAssemblyCandidacy,
+} from "./elections/assembly-cycle.js";
 import { emptyIdeology } from "./agents/profile.js";
 import { IDEOLOGY_AXES } from "./agents/types.js";
 import { emptyCampaignRuntime } from "./campaigns/types.js";
@@ -88,6 +92,7 @@ import {
   campaignSeekEndorsement,
   campaignSeekNominationSupport,
   campaignVisit,
+  closeAssemblyCampaigns,
   closeGeneralCampaigns,
   declareCampaign,
   ensureCampaignForDeclaredCandidacy,
@@ -308,8 +313,8 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
       throw new Error(queued.error.message);
     }
   }
-  seedPartyInstitutions(state, world);
   seedCanonicalElections(state, world);
+  seedPartyInstitutions(state, world);
   seedStartingPublicStanding(world, state);
   seedInitialGoals(state, world);
   seedCommitteesIfNeeded(world, state);
@@ -462,6 +467,7 @@ function runTowardTarget(
   rng: RngService,
   target: IsoDate,
   commandId: string,
+  includeTargetEvents = false,
 ): { events: SimEvent[]; interrupt: PendingInterrupt | null } {
   const events: SimEvent[] = [];
   events.push(...processEconomyMonth(state, world, rng, commandId));
@@ -472,7 +478,7 @@ function runTowardTarget(
   events.push(...processCourtsMonth(state, world, rng, commandId));
   sortScheduler(state);
   while (true) {
-    const next = nextPendingBefore(state, target);
+    const next = nextPendingBefore(state, target, includeTargetEvents);
     if (!next) break;
     const out = applyScheduled(state, world, rng, next, commandId);
     events.push(...out.events);
@@ -554,8 +560,8 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   const rng = restoreRngService(parsed.save.simulation.rng);
   const state = jsonClone(parsed.save.simulation);
   state.rng = rng.serialize();
-  if (needsPartyInstitutionSeed(state, frozen)) seedPartyInstitutions(state, frozen);
   if (needsElectoralSeed(state, frozen)) seedCanonicalElections(state, frozen);
+  if (needsPartyInstitutionSeed(state, frozen)) seedPartyInstitutions(state, frozen);
   if (Object.keys(state.candidateStanding).length === 0) {
     seedStartingPublicStanding(frozen, state);
   }
@@ -640,7 +646,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       }
       const target = state.activeTurnTarget ?? turnTarget(state);
       state.activeTurnTarget = target;
-      const out = runTowardTarget(state, world, rng, target, commandId);
+      const out = runTowardTarget(state, world, rng, target, commandId, true);
       syncRng(state, rng);
       return { ok: true, commandId, events: out.events, interrupt: out.interrupt };
     }
@@ -1405,6 +1411,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         metadata: { phase: "count" },
       });
       pending.resolutionStatus = "resolved";
+      closeAssemblyCampaigns(state, electionId, out.election.winnerIds);
       syncRng(state, rng);
       return { ok: true, commandId, events: out.events, interrupt: pending };
     }
@@ -1519,6 +1526,86 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       const out = addElectionCandidate(state, world, command.electionId, candidate);
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "FILE_ASSEMBLY_CANDIDACY") {
+      const previewState = jsonClone(state);
+      const previewFiled = fileAssemblyCandidacy(
+        previewState,
+        world,
+        {
+          electionId: command.electionId,
+          politicianId: state.playerPoliticianId,
+          constituencyId: command.constituencyId,
+        },
+        null,
+      );
+      if ("error" in previewFiled) {
+        return fail(previewFiled.error.code, previewFiled.error.message);
+      }
+      const previewCampaign = declareCampaign(
+        previewState,
+        world,
+        {
+          politicianId: state.playerPoliticianId,
+          type: "assembly",
+          electionId: command.electionId,
+          constituencyId: command.constituencyId,
+        },
+        null,
+      );
+      if ("error" in previewCampaign) {
+        return fail(previewCampaign.error.code, previewCampaign.error.message);
+      }
+      const commandId = nextCommandId();
+      const filed = fileAssemblyCandidacy(
+        state,
+        world,
+        {
+          electionId: command.electionId,
+          politicianId: state.playerPoliticianId,
+          constituencyId: command.constituencyId,
+        },
+        commandId,
+      );
+      if ("error" in filed) return fail(filed.error.code, filed.error.message);
+      const campaign = declareCampaign(
+        state,
+        world,
+        {
+          politicianId: state.playerPoliticianId,
+          type: "assembly",
+          electionId: command.electionId,
+          constituencyId: command.constituencyId,
+        },
+        commandId,
+      );
+      if ("error" in campaign) return fail(campaign.error.code, campaign.error.message);
+      return {
+        ok: true,
+        commandId,
+        events: [...filed.events, ...campaign.events],
+        interrupt: null,
+      };
+    }
+
+    if (command.type === "DECLINE_ASSEMBLY_CANDIDACY") {
+      const preview = declineAssemblyCandidacy(
+        jsonClone(state),
+        world,
+        { electionId: command.electionId, politicianId: state.playerPoliticianId },
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = declineAssemblyCandidacy(
+        state,
+        world,
+        { electionId: command.electionId, politicianId: state.playerPoliticianId },
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
     if (command.type === "DECLARE_CAMPAIGN") {
