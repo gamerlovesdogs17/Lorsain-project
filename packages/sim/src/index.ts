@@ -75,6 +75,10 @@ export {
 } from "./elections/assembly-cycle.js";
 export { evaluatePresidentialEligibility } from "./parties/eligibility.js";
 export {
+  candidateStandingOrDefault,
+  ensureCandidateStanding,
+} from "./elections/standing.js";
+export {
   occupyingTerms,
   currentHolderIds,
   canAssumeOffice,

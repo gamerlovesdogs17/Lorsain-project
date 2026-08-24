@@ -80,7 +80,10 @@ export function catalogFromBundle(
 }
 
 export function politicianDisplayName(catalog: PresentationCatalog, id: string): string {
-  return catalog.figures.get(id)?.name ?? id;
+  const named = catalog.figures.get(id)?.name;
+  if (named && named.trim()) return named;
+  // Never leak raw simulation IDs into normal play surfaces.
+  return "Unknown politician";
 }
 
 export function partyDisplayName(
@@ -89,7 +92,11 @@ export function partyDisplayName(
   state?: SimState,
 ): string {
   if (!partyId) return "Independent";
-  return world.partyDefinitions[partyId]?.name ?? state?.dynamicParties[partyId]?.name ?? partyId;
+  return (
+    world.partyDefinitions[partyId]?.name ??
+    state?.dynamicParties[partyId]?.name ??
+    "Unrecognized party"
+  );
 }
 
 export function partyColor(world: KernelWorld, partyId: string | null | undefined): string {
@@ -107,16 +114,16 @@ export function factionDisplayName(
 
 export function constituencyDisplayName(catalog: PresentationCatalog, id: string | null): string {
   if (!id) return "National";
-  return catalog.places.get(id)?.name ?? id;
+  return catalog.places.get(id)?.name ?? "Unknown constituency";
 }
 
 export function issueDisplayName(catalog: PresentationCatalog, issueId: string): string {
-  return catalog.issues.get(issueId)?.name ?? issueId;
+  return catalog.issues.get(issueId)?.name ?? "Unrecognized issue";
 }
 
 export function committeeDisplayName(id: string | null | undefined): string {
   if (!id) return "Unassigned";
-  return COMMITTEE_NAMES[id as keyof typeof COMMITTEE_NAMES] ?? id;
+  return COMMITTEE_NAMES[id as keyof typeof COMMITTEE_NAMES] ?? "Committee";
 }
 
 export function countryDisplayName(world: KernelWorld, countryId: string | null | undefined): string {

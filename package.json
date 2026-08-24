@@ -21,7 +21,9 @@
     "calibrate:foreign": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/foreign-calibration.ts",
     "calibrate:assembly": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/assembly-calibration.ts",
     "calibrate:economy": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/economy-calibration.ts",
-    "calibrate:campaign-geography": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/campaign-geography-calibration.ts"
+    "calibrate:campaign-geography": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/campaign-geography-calibration.ts",
+    "calibrate:whole-game": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/whole-game-calibration.ts",
+    "calibrate:whole-game:smoke": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/whole-game-calibration.ts --smoke"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

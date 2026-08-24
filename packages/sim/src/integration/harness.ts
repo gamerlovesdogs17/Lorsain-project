@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
+import { loadContentBundleFromRepo } from "../../../content-loader/src/node.js";
 import { createSimulation, restoreSimulation, type Simulation } from "../engine.js";
 import { jsonClone } from "../hash.js";
 import { occupyingTerms, officesOfKind } from "../offices.js";

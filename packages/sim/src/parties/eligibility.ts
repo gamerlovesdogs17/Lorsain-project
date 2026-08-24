@@ -145,7 +145,7 @@ export function evaluatePresidentialEligibility(
       eligible: false,
       code: "PRESIDENTIALLY_INELIGIBLE",
       reasons: [
-        `${politicianId} has ${elected} elected presidential terms; maximum is ${rules.termLimitElected}`,
+        `Term limit reached (${elected} of ${rules.termLimitElected} elected presidential terms)`,
       ],
       deferred,
     };

@@ -27,9 +27,10 @@ import { playerCampaign, playerOffices, politicianName } from "./format.js";
 import { GamePages, type Figure, type Screen } from "./pages.js";
 import { DecisionPanel } from "./decisions.js";
 import { useCommandFeedback } from "./feedback.js";
-import { catalogFromBundle, partyDisplayName, politicianDisplayName } from "./presentation.js";
+import { catalogFromBundle, partyColor, partyDisplayName, politicianDisplayName } from "./presentation.js";
 import { GameShell } from "./ui/shell.js";
-import { PoliticianCard } from "./ui/politician.js";
+import { StatusBadge } from "./ui/kit.js";
+import { PoliticianAvatar, PoliticianCard } from "./ui/politician.js";
 
 export default function App() {
   const [bundle, setBundle] = useState<ContentBundle | null>(null);
@@ -326,6 +327,35 @@ export default function App() {
       if ((f.office ?? "").toLowerCase().includes("mayor")) return "Limited role: set a civic priority and pursue future office.";
       return "Continue a political career and seek a legitimate electoral opportunity.";
     }
+    /** Featured starts only — meaningful gameplay depth, not Limited minister/mayor loops. */
+    function gameplayFocus(f: Figure): string {
+      const kind = officeKind(f);
+      const o = (f.office ?? "").toLowerCase();
+      if (kind === "president") return "Executive · foreign · legislation";
+      if (kind === "governor") return "Provincial administration · reelection";
+      if (o.includes("speaker")) return "Floor control · legislation · party";
+      if (kind === "leader") return "Party contests · caucus · career";
+      if (kind === "assembly" || o.includes("mp") || o.includes("committee"))
+        return "Legislation · constituency · votes";
+      if (kind === "courts") return "Constitutional docket · precedent";
+      if (f.presidential_status === "frontrunner") return "Presidential nomination · campaign";
+      return "Electoral career · opportunities";
+    }
+    function complexity(f: Figure): "High" | "Medium" | "Low" {
+      const kind = officeKind(f);
+      const o = (f.office ?? "").toLowerCase();
+      if (kind === "president" || o.includes("speaker") || f.presidential_status === "frontrunner")
+        return "High";
+      if (kind === "governor" || kind === "leader" || kind === "assembly" || kind === "courts")
+        return "Medium";
+      return "Low";
+    }
+    function roleLabel(f: Figure): string {
+      const o = (f.office ?? "").trim();
+      if (o) return o;
+      if (f.presidential_status === "frontrunner") return "Presidential frontrunner";
+      return "Public figure";
+    }
     const filtered = figuresList
       .filter((f) => {
         const q = query.trim().toLowerCase();
@@ -358,7 +388,48 @@ export default function App() {
     const page = Math.min(browsePage, pageCount - 1);
     const pageRows = browse.slice(page * pageSize, page * pageSize + pageSize);
     const tempCatalog = catalogFromBundle(bundle, figures);
-    const card = (f: Figure) => (
+    const featuredCard = (f: Figure) => {
+      const accent = partyColor(world, f.party_id ?? null);
+      const level = complexity(f);
+      return (
+        <article
+          key={f.id}
+          className="featured-start"
+          style={{ borderLeftColor: accent }}
+        >
+          <div className="featured-start-top">
+            <PoliticianAvatar
+              name={f.name}
+              {...(f.party_id != null ? { partyId: f.party_id } : {})}
+              world={world}
+              size="sm"
+            />
+            <div className="featured-start-id">
+              <h3 className="featured-start-name serif-head">{f.name}</h3>
+              <div className="featured-start-role">{roleLabel(f)}</div>
+              <div className="muted featured-start-party">
+                {f.party ?? "Independent"}
+                {f.home ? ` · ${f.home}` : ""}
+              </div>
+            </div>
+            <StatusBadge tone={level === "High" ? "warn" : level === "Medium" ? "idle" : "ok"}>
+              {level}
+            </StatusBadge>
+          </div>
+          <div className="featured-start-focus">
+            <span className="kicker">Gameplay focus</span>
+            <div>{gameplayFocus(f)}</div>
+          </div>
+          <div className="featured-start-foot">
+            <span className="muted">Complexity · {level}</span>
+            <button className="btn" onClick={() => startGame(f.id)}>
+              Play
+            </button>
+          </div>
+        </article>
+      );
+    };
+    const rosterCard = (f: Figure) => (
       <PoliticianCard
         key={f.id}
         catalog={tempCatalog}
@@ -370,6 +441,7 @@ export default function App() {
         {...(f.office ? { office: f.office } : {})}
         {...(f.home ? { home: f.home } : {})}
         descriptor={`${roleDescription(f)}${f.notes ?? f.display_summary ? ` ${f.notes ?? f.display_summary}` : ""}`}
+        compact={officeKind(f) === "minister" || (f.office ?? "").toLowerCase().includes("mayor")}
         action={
           <button className="btn" onClick={() => startGame(f.id)}>
             Play
@@ -382,8 +454,8 @@ export default function App() {
         <div className="new-game-header">
           <h2 className="serif-head">Choose your career</h2>
           <p className="muted">
-            Begin as a notable officeholder, or search the full public roster. Hidden traits are
-            never shown.
+            Featured starts are full-depth political roles. Search the roster for Limited offices and
+            other public figures. Hidden traits are never shown.
           </p>
         </div>
         <div className="row new-game-filters">
@@ -445,15 +517,26 @@ export default function App() {
         </div>
         {!searching ? (
           <>
-            <h3>Featured careers</h3>
-            <div className="featured-grid">{featured.map(card)}</div>
-            <h3 style={{ marginTop: "1.25rem" }}>Find another politician</h3>
-            <p className="muted">Ordinary MPs and other public figures — {browse.length} remaining.</p>
+            <div className="new-game-section-head">
+              <h3>Featured starts</h3>
+              <p className="muted">
+                Name, role, gameplay focus, and complexity — President, Governor, Assembly, courts,
+                and party leadership with real monthly work.
+              </p>
+            </div>
+            <div className="featured-start-grid">{featured.map(featuredCard)}</div>
+            <div className="new-game-section-head" style={{ marginTop: "1.25rem" }}>
+              <h3>Full roster</h3>
+              <p className="muted">
+                Ordinary MPs, Limited ministers/mayors, and other public figures — {browse.length}{" "}
+                remaining. Use search and filters for the complete list.
+              </p>
+            </div>
           </>
         ) : (
           <p className="muted">{filtered.length} matching politicians</p>
         )}
-        <div className="featured-grid">{pageRows.map(card)}</div>
+        <div className="featured-grid">{pageRows.map(rosterCard)}</div>
         {pageCount > 1 ? (
           <div className="row" style={{ marginTop: "0.75rem" }}>
             <button

@@ -19,8 +19,17 @@ import {
 import { formatPublicNumber, formatPublicPercent } from "./presentation/display.js";
 import { latestPublicPoll, mapFillFor } from "./map/fills.js";
 import { TerenaMap, type MapSelection } from "./map/TerenaMap.js";
-import { EmptyState, PageHeader, SectionCard, StatusBadge, TabBar } from "./ui/kit.js";
-import { PoliticianCard } from "./ui/politician.js";
+import {
+  DataTable,
+  EmptyState,
+  EntityRow,
+  MapDetailLayout,
+  PageHeader,
+  SectionCard,
+  SectionDivider,
+  StatusBadge,
+  TabBar,
+} from "./ui/kit.js";
 
 type Props = {
   world: KernelWorld;
@@ -46,7 +55,15 @@ function statusLabel(status: string): string {
   if (status === "qualification") return "Qualification";
   if (status === "resolved") return "Completed";
   if (status === "planned") return "Upcoming";
+  if (status === "filing_open") return "Filing open";
+  if (status === "assumed") return "Assumed";
   return status.replace(/_/g, " ");
+}
+
+function statusTone(status: string): "ok" | "warn" | "idle" {
+  if (status === "resolved" || status === "assumed") return "ok";
+  if (status === "field_open" || status === "filing_open" || status === "qualification") return "warn";
+  return "idle";
 }
 
 export function ElectionsPage(props: Props) {
@@ -55,7 +72,9 @@ export function ElectionsPage(props: Props) {
   const assemblyDue = props.snap.pendingInterrupt?.code === "ASSEMBLY_ELECTION_DUE";
   const poll = latestPublicPoll(props.snap);
   const [selection, setSelection] = useState<MapSelection | null>(null);
-  const [tab, setTab] = useState<"presidential" | "assembly" | "gubernatorial" | "nominations">("presidential");
+  const [tab, setTab] = useState<"presidential" | "assembly" | "gubernatorial" | "nominations">(
+    "presidential",
+  );
 
   const electionOrder = (a: (typeof elections)[number], b: (typeof elections)[number]) => {
     const aCurrent = a.status !== "resolved" && a.status !== "cancelled";
@@ -79,14 +98,19 @@ export function ElectionsPage(props: Props) {
   const gubernatorial = Object.values(props.snap.provincialRuntime.elections).sort((a, b) => {
     const aa = a.status !== "resolved" && a.status !== "assumed" ? 1 : 0;
     const ba = b.status !== "resolved" && b.status !== "assumed" ? 1 : 0;
-    return ba - aa || (aa ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)) || a.provinceId.localeCompare(b.provinceId);
+    return (
+      ba - aa ||
+      (aa ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)) ||
+      a.provinceId.localeCompare(b.provinceId)
+    );
   });
   const homeProvince = props.world.politicianHomeProvince[props.snap.playerPoliticianId];
   const [governorElectionId, setGovernorElectionId] = useState("");
-  const selectedGovernorRace = gubernatorial.find((race) => race.id === governorElectionId)
-    ?? gubernatorial.find((race) => race.provinceId === homeProvince)
-    ?? gubernatorial[0]
-    ?? null;
+  const selectedGovernorRace =
+    gubernatorial.find((race) => race.id === governorElectionId) ??
+    gubernatorial.find((race) => race.provinceId === homeProvince) ??
+    gubernatorial[0] ??
+    null;
 
   function resolvePresidential() {
     const result = props.sim.executeCommand({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
@@ -95,7 +119,7 @@ export function ElectionsPage(props: Props) {
     props.onDone();
   }
 
-  function presidentialCard(election: (typeof elections)[number]) {
+  function presidentialView(election: (typeof elections)[number]) {
     const firstPreferences =
       election.countArchive && "firstPreferences" in election.countArchive
         ? election.countArchive.firstPreferences
@@ -117,76 +141,110 @@ export function ElectionsPage(props: Props) {
       election.countArchive && "rounds" in election.countArchive
         ? election.countArchive.rounds
         : [];
+
     return (
-      <article key={election.id} className="election-result-card">
-        <h3 className="serif-head">{electionDisplayName(election.id)}</h3>
-        <p className="muted">
-          {statusLabel(election.status)} · {election.date}
-          {election.status === "resolved"
-            ? " · first-preference shares are not final-round totals"
-            : ""}
-        </p>
-        {winnerId ? (
-          <div className="election-winner-banner">
-            <div className="kicker">Winner</div>
-            <strong>{politicianDisplayName(props.catalog, winnerId)}</strong>
-            <div className="muted">
-              {partyDisplayName(
-                props.world,
-                election.candidates[winnerId]?.partyId ?? null,
-                props.snap,
-              )}
-            </div>
+      <article key={election.id} className="election-pres-block">
+        <div className="election-pres-layout">
+          <div>
+            <SectionDivider
+              title={electionDisplayName(election.id)}
+              hint={election.date}
+              actions={<StatusBadge tone={statusTone(election.status)}>{statusLabel(election.status)}</StatusBadge>}
+            />
+            {winnerId ? (
+              <div className="election-winner-banner">
+                <div className="kicker">Winner</div>
+                <strong>{politicianDisplayName(props.catalog, winnerId)}</strong>
+                <div className="muted">
+                  {partyDisplayName(
+                    props.world,
+                    election.candidates[winnerId]?.partyId ?? null,
+                    props.snap,
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="muted">
+                {election.status === "resolved"
+                  ? "No certified winner recorded."
+                  : "National result pending resolution."}
+              </p>
+            )}
+            {poll && election.status !== "resolved" ? (
+              <p className="muted">
+                Latest national poll {poll.publicationDate}:{" "}
+                {pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)}
+              </p>
+            ) : null}
+            <TerenaMap
+              bundle={props.bundle}
+              mode="election"
+              selectedId={null}
+              showConstituencies={false}
+              fillFor={(feature, kind) =>
+                mapFillFor("election", props.world, props.snap, feature, kind)
+              }
+            />
+            {presidentialDue && election.status !== "resolved" ? (
+              <button type="button" className="btn" onClick={resolvePresidential}>
+                Resolve election
+              </button>
+            ) : null}
           </div>
-        ) : null}
-        <div className="candidate-result-list">
-          {ranked.map((candidate) => {
-            const rawVotes = firstPreferences[candidate.politicianId];
-            const firstPreferenceShare =
-              totalVotes > 0 ? voteWeight(rawVotes) / totalVotes : undefined;
-            return (
-              <PoliticianCard
-                key={candidate.politicianId}
-                catalog={props.catalog}
-                world={props.world}
-                state={props.snap}
-                politicianId={candidate.politicianId}
-                office="Presidential candidate"
-                compact
-                selected={winnerId === candidate.politicianId}
-                action={
-                  rawVotes != null ? (
-                    <span className="election-votes">
-                      {winnerId === candidate.politicianId ? "Winner · " : ""}1st pref{" "}
-                      {formatPublicPercent(firstPreferenceShare)} · {formatPublicNumber(rawVotes)}
-                    </span>
-                  ) : null
-                }
-              />
-            );
-          })}
+          <aside className="candidate-result-rail">
+            <SectionDivider title="Candidates" hint="1st preference shares" />
+            {ranked.length === 0 ? <EmptyState>No candidates filed.</EmptyState> : null}
+            {ranked.map((candidate) => {
+              const rawVotes = firstPreferences[candidate.politicianId];
+              const firstPreferenceShare =
+                totalVotes > 0 ? voteWeight(rawVotes) / totalVotes : undefined;
+              const isWinner = winnerId === candidate.politicianId;
+              return (
+                <EntityRow
+                  key={candidate.politicianId}
+                  title={politicianDisplayName(props.catalog, candidate.politicianId)}
+                  meta={partyDisplayName(props.world, candidate.partyId ?? null, props.snap)}
+                  status={
+                    isWinner ? (
+                      <StatusBadge tone="ok">Winner</StatusBadge>
+                    ) : election.status === "resolved" ? (
+                      <StatusBadge>Defeated</StatusBadge>
+                    ) : (
+                      <StatusBadge>On ballot</StatusBadge>
+                    )
+                  }
+                  trailing={
+                    rawVotes != null ? (
+                      <span className="election-votes">
+                        {formatPublicPercent(firstPreferenceShare)}
+                        <span className="muted"> · {formatPublicNumber(rawVotes)}</span>
+                      </span>
+                    ) : null
+                  }
+                  selected={isWinner}
+                />
+              );
+            })}
+          </aside>
         </div>
-        {presidentialDue && election.status !== "resolved" ? (
-          <button type="button" className="btn" onClick={resolvePresidential}>
-            Resolve election
-          </button>
-        ) : null}
         {rounds.length > 0 ? (
-          <details className="stv-details">
-            <summary>View ranked-choice progression ({rounds.length} rounds)</summary>
-            <div className="rcv-track">
+          <>
+            <SectionDivider title="Ranked-choice rounds" hint="Elimination and election sequence" />
+            <DataTable headers={["Round", "Outcome"]} dense caption="RCV progression">
               {rounds.map((round, index) => (
-                <span key={index} className={`rcv-chip${round.electedId ? " winner" : ""}`}>
-                  Round {round.round ?? index + 1}
-                  {round.eliminatedId
-                    ? `: excluded ${politicianDisplayName(props.catalog, round.eliminatedId)}`
-                    : round.electedId
-                      ? `: elected ${politicianDisplayName(props.catalog, round.electedId)}`
-                      : ""}
-                </span>
+                <tr key={index}>
+                  <td>{round.round ?? index + 1}</td>
+                  <td>
+                    {round.eliminatedId
+                      ? `Excluded ${politicianDisplayName(props.catalog, round.eliminatedId)}`
+                      : round.electedId
+                        ? `Elected ${politicianDisplayName(props.catalog, round.electedId)}`
+                        : "Count complete"}
+                  </td>
+                </tr>
               ))}
-            </div>
-          </details>
+            </DataTable>
+          </>
         ) : null}
       </article>
     );
@@ -214,6 +272,7 @@ export function ElectionsPage(props: Props) {
       const voteDelta = voteWeight(firstPreferences[b]) - voteWeight(firstPreferences[a]);
       return voteDelta || Number(elected.has(b)) - Number(elected.has(a)) || a.localeCompare(b);
     });
+    const magnitude = result?.magnitude ?? field?.magnitude ?? 0;
     const partyRows = Object.entries(cycle?.partySeatTotals ?? {})
       .map(([partyKey, seats]) => ({
         partyKey,
@@ -231,187 +290,210 @@ export function ElectionsPage(props: Props) {
         const partyId = constituency.partyByCandidate[winnerId] ?? null;
         totals.set(partyId, (totals.get(partyId) ?? 0) + 1);
       }
-      return [...totals.entries()].sort(
-        (a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])),
-      )[0]?.[0] ?? null;
+      return (
+        [...totals.entries()].sort(
+          (a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])),
+        )[0]?.[0] ?? null
+      );
     };
     const steps = result?.countArchive?.steps ?? [];
 
     return (
       <div className="assembly-election-view">
-        <SectionCard title={`${electionDisplayName(election.id)} · ${statusLabel(election.status)}`}>
-          <p className="muted">Election date {election.date}</p>
-          {partyRows.length > 0 ? (
-            <>
-              <div className="composition-bar" aria-label="Assembly party composition">
-                {partyRows.map((row) => (
-                  <span
-                    key={row.partyKey}
-                    className="composition-seg"
-                    style={{
-                      width: `${(row.seats / 420) * 100}%`,
-                      background: partyColor(props.world, row.partyId),
-                    }}
-                    title={`${partyDisplayName(props.world, row.partyId, props.snap)}: ${row.seats}`}
-                  />
-                ))}
-              </div>
-              <p className="majority-note">
-                420 seats · 211 for a majority ·{" "}
-                {majority
-                  ? `${partyDisplayName(props.world, majority.partyId, props.snap)} holds a majority`
-                  : "No party holds a majority"}
-              </p>
-              <div className="assembly-party-summary">
-                {partyRows.map((row) => (
-                  <div key={row.partyKey} className="assembly-party-row">
+        <SectionDivider
+          title={electionDisplayName(election.id)}
+          hint={`Election date ${election.date}`}
+          actions={
+            <StatusBadge tone={statusTone(election.status)}>{statusLabel(election.status)}</StatusBadge>
+          }
+        />
+        {partyRows.length > 0 ? (
+          <>
+            <div className="composition-bar" aria-label="Assembly party composition">
+              {partyRows.map((row) => (
+                <span
+                  key={row.partyKey}
+                  className="composition-seg"
+                  style={{
+                    width: `${(row.seats / 420) * 100}%`,
+                    background: partyColor(props.world, row.partyId),
+                  }}
+                  title={`${partyDisplayName(props.world, row.partyId, props.snap)}: ${row.seats}`}
+                />
+              ))}
+            </div>
+            <p className="majority-note">
+              420 seats · 211 for a majority ·{" "}
+              {majority
+                ? `${partyDisplayName(props.world, majority.partyId, props.snap)} holds a majority`
+                : "No party holds a majority"}
+            </p>
+            <DataTable headers={["Party", "Seats", "Change"]} dense>
+              {partyRows.map((row) => (
+                <tr key={row.partyKey}>
+                  <td>
                     <span
                       className="party-swatch"
                       style={{ background: partyColor(props.world, row.partyId) }}
                       aria-hidden
-                    />
-                    <span>{partyDisplayName(props.world, row.partyId, props.snap)}</span>
-                    <strong>{row.seats}</strong>
-                    <span className="muted">
-                      {row.change === 0 ? "—" : row.change > 0 ? `+${row.change}` : row.change}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="muted">
-              {cycle?.filingStatus === "open"
-                ? `Candidate filing is open through ${cycle.filingDeadlineDate}.`
-                : election.fieldFinalized
-                  ? `${Object.keys(fields).length} constituency ballots are finalized.`
-                  : "Candidate filing has not opened."}
-            </p>
-          )}
-          {assemblyDue && election.status !== "resolved" ? (
-            <button
-              type="button"
-              className="btn"
-              disabled={props.countingElection}
-              onClick={props.onResolveAssembly}
-            >
-              {props.countingElection ? "Counting election…" : "Resolve Assembly election"}
-            </button>
-          ) : null}
-          {props.countingElection ? (
-            <p className="counting-state" role="status" aria-live="polite">
-              Counting election… The national STV count is running in the background.
-            </p>
-          ) : null}
-        </SectionCard>
-        <div className="dash dash-2 assembly-results-layout">
-          <SectionCard title="Constituency map">
-            <TerenaMap
-              bundle={props.bundle}
-              mode="election"
-              selectedId={constituencyId}
-              fillFor={(feature, kind) =>
-                kind === "constituency" && results[feature.id]
-                  ? partyColor(props.world, pluralityParty(feature.id))
-                  : kind === "province"
-                    ? "#e7efe6"
-                    : "transparent"
-              }
-              onSelect={setSelection}
-            />
-            <p className="muted">
-              Constituencies are colored by the party winning the largest number of seats. Select
-              one for its public count.
-            </p>
-          </SectionCard>
-          <SectionCard
-            title={
-              constituencyId
-                ? constituencyDisplayName(props.catalog, constituencyId)
-                : "Constituency result"
-            }
+                    />{" "}
+                    {partyDisplayName(props.world, row.partyId, props.snap)}
+                  </td>
+                  <td>{row.seats}</td>
+                  <td className="muted">
+                    {row.change === 0 ? "—" : row.change > 0 ? `+${row.change}` : row.change}
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </>
+        ) : (
+          <p className="muted">
+            {cycle?.filingStatus === "open"
+              ? `Candidate filing is open through ${cycle.filingDeadlineDate}.`
+              : election.fieldFinalized
+                ? `${Object.keys(fields).length} constituency ballots are finalized.`
+                : "Candidate filing has not opened."}
+          </p>
+        )}
+        {assemblyDue && election.status !== "resolved" ? (
+          <button
+            type="button"
+            className="btn"
+            disabled={props.countingElection}
+            onClick={props.onResolveAssembly}
           >
-            {!constituencyId ? (
-              <EmptyState>Constituency fields are not available yet.</EmptyState>
-            ) : (
-              <>
-                <p className="muted">
-                  {result?.magnitude ?? field?.magnitude ?? 0} seats
-                  {result ? ` · turnout ${formatPublicPercent(result.turnout.turnoutRate)}` : " · ballot field"}
-                </p>
-                {result?.archiveCompleteness === "legacy_summary" ? (
-                  <p className="muted">This result predates detailed STV archiving.</p>
-                ) : null}
-                <div className="candidate-result-list assembly-candidate-list">
-                  {candidateRows.map((candidateId) => {
-                    const rawVotes = firstPreferences[candidateId];
-                    const share =
-                      totalFirstPreferences > 0
-                        ? voteWeight(rawVotes) / totalFirstPreferences
-                        : undefined;
-                    return (
-                      <PoliticianCard
-                        key={candidateId}
-                        catalog={props.catalog}
-                        world={props.world}
-                        state={props.snap}
-                        politicianId={candidateId}
-                        office={
-                          result
-                            ? elected.has(candidateId)
-                              ? "Elected to the National Assembly"
-                              : "Assembly candidate"
-                            : "Filed Assembly candidate"
-                        }
-                        compact
-                        selected={elected.has(candidateId)}
-                        action={
-                          <span className="election-votes">
-                            {result ? (elected.has(candidateId) ? "Elected" : "Not elected") : "Candidate"}
+            {props.countingElection ? "Counting election…" : "Resolve Assembly election"}
+          </button>
+        ) : null}
+        {props.countingElection ? (
+          <p className="counting-state" role="status" aria-live="polite">
+            Counting election… The national STV count is running in the background.
+          </p>
+        ) : null}
+
+        <MapDetailLayout
+          className="assembly-results-layout"
+          map={
+            <>
+              <SectionDivider title="Constituency map" />
+              <TerenaMap
+                bundle={props.bundle}
+                mode="election"
+                selectedId={constituencyId}
+                fillFor={(feature, kind) =>
+                  kind === "constituency" && results[feature.id]
+                    ? partyColor(props.world, pluralityParty(feature.id))
+                    : kind === "province"
+                      ? "#e7efe6"
+                      : "transparent"
+                }
+                onSelect={setSelection}
+              />
+              <p className="muted">
+                Colored by the party winning the largest seat share in that multi-member district.
+              </p>
+            </>
+          }
+          detail={
+            <>
+              <SectionDivider
+                title={
+                  constituencyId
+                    ? constituencyDisplayName(props.catalog, constituencyId)
+                    : "Constituency"
+                }
+                {...(constituencyId
+                  ? {
+                      hint: `${magnitude} seat${magnitude === 1 ? "" : "s"}${
+                        result
+                          ? ` · turnout ${formatPublicPercent(result.turnout.turnoutRate)}`
+                          : " · ballot field"
+                      }`,
+                    }
+                  : {})}
+              />
+              {!constituencyId ? (
+                <EmptyState>Constituency fields are not available yet.</EmptyState>
+              ) : (
+                <>
+                  {result?.archiveCompleteness === "legacy_summary" ? (
+                    <p className="muted">This result predates detailed STV archiving.</p>
+                  ) : null}
+                  <DataTable
+                    headers={["Candidate", "Party", "1st pref", "Status"]}
+                    dense
+                    caption={magnitude > 1 ? "STV multi-member field" : "Constituency field"}
+                  >
+                    {candidateRows.map((candidateId) => {
+                      const rawVotes = firstPreferences[candidateId];
+                      const share =
+                        totalFirstPreferences > 0
+                          ? voteWeight(rawVotes) / totalFirstPreferences
+                          : undefined;
+                      const partyId =
+                        result?.partyByCandidate[candidateId] ??
+                        props.snap.politicians[candidateId]?.partyId ??
+                        null;
+                      const status = result
+                        ? elected.has(candidateId)
+                          ? "Elected"
+                          : "Not elected"
+                        : "Candidate";
+                      return (
+                        <tr key={candidateId} className={elected.has(candidateId) ? "selected" : ""}>
+                          <td>{politicianDisplayName(props.catalog, candidateId)}</td>
+                          <td>{partyDisplayName(props.world, partyId, props.snap)}</td>
+                          <td>
                             {rawVotes != null
-                              ? ` · 1st pref ${formatPublicPercent(share)} · ${formatPublicNumber(rawVotes)}`
-                              : ""}
-                          </span>
-                        }
-                      />
-                    );
-                  })}
-                </div>
-                {steps.length > 0 ? (
-                  <details className="stv-details">
-                    <summary>View STV count rounds ({steps.length})</summary>
-                    <div className="rcv-track">
-                      {steps.map((step) => {
-                        const electedNames = [
-                          ...(step.electedId ? [step.electedId] : []),
-                          ...(step.electedIds ?? []),
-                        ].map((id) => politicianDisplayName(props.catalog, id));
-                        return (
-                          <span
-                            key={step.step}
-                            className={`rcv-chip${electedNames.length ? " winner" : ""}`}
-                          >
-                            Count {step.step}: {electedNames.length
-                              ? `elected ${electedNames.join(", ")}`
-                              : step.eliminatedId
-                                ? `excluded ${politicianDisplayName(props.catalog, step.eliminatedId)}`
-                                : "count complete"}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </details>
-                ) : null}
-              </>
-            )}
-          </SectionCard>
-        </div>
+                              ? `${formatPublicPercent(share)} · ${formatPublicNumber(rawVotes)}`
+                              : "—"}
+                          </td>
+                          <td>
+                            <StatusBadge tone={elected.has(candidateId) ? "ok" : "idle"}>
+                              {status}
+                            </StatusBadge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </DataTable>
+                  {steps.length > 0 ? (
+                    <>
+                      <SectionDivider title="STV count steps" />
+                      <DataTable headers={["Count", "Outcome"]} dense>
+                        {steps.map((step) => {
+                          const electedNames = [
+                            ...(step.electedId ? [step.electedId] : []),
+                            ...(step.electedIds ?? []),
+                          ].map((id) => politicianDisplayName(props.catalog, id));
+                          return (
+                            <tr key={step.step}>
+                              <td>{step.step}</td>
+                              <td>
+                                {electedNames.length
+                                  ? `Elected ${electedNames.join(", ")}`
+                                  : step.eliminatedId
+                                    ? `Excluded ${politicianDisplayName(props.catalog, step.eliminatedId)}`
+                                    : "Count complete"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </DataTable>
+                    </>
+                  ) : null}
+                </>
+              )}
+            </>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="page-tone-election">
       <PageHeader
         kicker="Returns"
         title="Elections"
@@ -437,7 +519,8 @@ export function ElectionsPage(props: Props) {
           ) : (
             <EmptyState>No current national presidential poll has been published.</EmptyState>
           )}
-          {presidential.map(presidentialCard)}
+          {presidential.length === 0 ? <EmptyState>No presidential election is scheduled.</EmptyState> : null}
+          {presidential.map(presidentialView)}
         </div>
       ) : null}
       {tab === "assembly" ? (
@@ -445,7 +528,10 @@ export function ElectionsPage(props: Props) {
           {assembly.length > 1 ? (
             <label className="election-cycle-picker">
               Election cycle
-              <select value={selectedAssembly?.id ?? ""} onChange={(e) => setAssemblyId(e.target.value)}>
+              <select
+                value={selectedAssembly?.id ?? ""}
+                onChange={(e) => setAssemblyId(e.target.value)}
+              >
                 {assembly.map((election) => (
                   <option key={election.id} value={election.id}>
                     {election.date.slice(0, 4)} · {statusLabel(election.status)}
@@ -463,62 +549,153 @@ export function ElectionsPage(props: Props) {
       ) : null}
       {tab === "gubernatorial" ? (
         <div className="governor-election-view">
-          {selectedGovernorRace ? <>
-            <label className="election-cycle-picker">Province
-              <select value={selectedGovernorRace.id} onChange={(event) => setGovernorElectionId(event.target.value)}>
-                {gubernatorial.map((race) => <option key={race.id} value={race.id}>{props.catalog.places.get(race.provinceId)?.name ?? race.provinceId} · {race.date.slice(0, 4)} · {statusLabel(race.status)}</option>)}
-              </select>
-            </label>
-            <div className="dash dash-2">
-              <SectionCard title="Provincial election map">
-                <TerenaMap
-                  bundle={props.bundle}
-                  mode="election"
-                  selectedId={selectedGovernorRace.provinceId}
-                  showConstituencies={false}
-                  fillFor={(feature, kind) => mapFillFor("election", props.world, props.snap, feature, kind, undefined, undefined, selectedGovernorRace.id)}
-                  onSelect={(selected) => {
-                    if (selected.kind !== "province") return;
-                    const race = gubernatorial.find((candidate) => candidate.provinceId === selected.id && candidate.date.slice(0, 4) === selectedGovernorRace.date.slice(0, 4));
-                    if (race) setGovernorElectionId(race.id);
-                  }}
-                  tooltipFor={(selected) => {
-                    const race = gubernatorial.find((candidate) => candidate.provinceId === selected.id && candidate.date.slice(0, 4) === selectedGovernorRace.date.slice(0, 4));
-                    return <><strong>{selected.name}</strong><span>{race?.winnerId ? `Winner ${politicianDisplayName(props.catalog, race.winnerId)}` : race ? `${statusLabel(race.status)} · ${Object.keys(race.candidates).length} candidates` : "No race in this cycle"}</span></>;
-                  }}
-                />
-                <p className="muted">Province-wide certified winners are colored by party. Unresolved races remain neutral.</p>
-              </SectionCard>
-              <SectionCard title={`${props.catalog.places.get(selectedGovernorRace.provinceId)?.name ?? selectedGovernorRace.provinceId} governor`}>
-                <p className="muted">{selectedGovernorRace.date} · {statusLabel(selectedGovernorRace.status)}{selectedGovernorRace.turnoutRate != null ? ` · turnout ${formatPublicPercent(selectedGovernorRace.turnoutRate)}` : ""}</p>
-                {Object.values(selectedGovernorRace.candidates)
-                  .filter((candidate) => !candidate.withdrawn)
-                  .sort((a, b) => (selectedGovernorRace.voteShares[b.politicianId] ?? 0) - (selectedGovernorRace.voteShares[a.politicianId] ?? 0))
-                  .map((candidate) => <PoliticianCard
-                    key={candidate.politicianId}
-                    catalog={props.catalog}
-                    world={props.world}
-                    state={props.snap}
-                    politicianId={candidate.politicianId}
-                    office={candidate.incumbent ? "Incumbent governor" : "Candidate for governor"}
-                    compact
-                    selected={selectedGovernorRace.winnerId === candidate.politicianId}
-                    action={<span className="election-votes">{selectedGovernorRace.winnerId === candidate.politicianId ? "Winner" : selectedGovernorRace.status === "resolved" || selectedGovernorRace.status === "assumed" ? "Not elected" : "Filed"}{selectedGovernorRace.voteShares[candidate.politicianId] != null ? ` · ${formatPublicPercent(selectedGovernorRace.voteShares[candidate.politicianId])}` : ""}</span>}
-                  />)}
-                {Object.keys(selectedGovernorRace.candidates).length === 0 ? <EmptyState>The candidate field will form when filing opens.</EmptyState> : null}
-              </SectionCard>
-            </div>
-          </> : <EmptyState>No gubernatorial election is scheduled.</EmptyState>}
+          {selectedGovernorRace ? (
+            <>
+              <label className="election-cycle-picker">
+                Province
+                <select
+                  value={selectedGovernorRace.id}
+                  onChange={(event) => setGovernorElectionId(event.target.value)}
+                >
+                  {gubernatorial.map((race) => (
+                    <option key={race.id} value={race.id}>
+                      {props.catalog.places.get(race.provinceId)?.name ?? race.provinceId} ·{" "}
+                      {race.date.slice(0, 4)} · {statusLabel(race.status)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <MapDetailLayout
+                map={
+                  <>
+                    <SectionDivider title="Provincial election map" />
+                    <TerenaMap
+                      bundle={props.bundle}
+                      mode="election"
+                      selectedId={selectedGovernorRace.provinceId}
+                      showConstituencies={false}
+                      fillFor={(feature, kind) =>
+                        mapFillFor(
+                          "election",
+                          props.world,
+                          props.snap,
+                          feature,
+                          kind,
+                          undefined,
+                          undefined,
+                          selectedGovernorRace.id,
+                        )
+                      }
+                      onSelect={(selected) => {
+                        if (selected.kind !== "province") return;
+                        const race = gubernatorial.find(
+                          (candidate) =>
+                            candidate.provinceId === selected.id &&
+                            candidate.date.slice(0, 4) === selectedGovernorRace.date.slice(0, 4),
+                        );
+                        if (race) setGovernorElectionId(race.id);
+                      }}
+                      tooltipFor={(selected) => {
+                        const race = gubernatorial.find(
+                          (candidate) =>
+                            candidate.provinceId === selected.id &&
+                            candidate.date.slice(0, 4) === selectedGovernorRace.date.slice(0, 4),
+                        );
+                        return (
+                          <>
+                            <strong>{selected.name}</strong>
+                            <span>
+                              {race?.winnerId
+                                ? `Winner ${politicianDisplayName(props.catalog, race.winnerId)}`
+                                : race
+                                  ? `${statusLabel(race.status)} · ${Object.keys(race.candidates).length} candidates`
+                                  : "No race in this cycle"}
+                            </span>
+                          </>
+                        );
+                      }}
+                    />
+                    <p className="muted">
+                      Province-wide certified winners are colored by party. Unresolved races remain
+                      neutral.
+                    </p>
+                  </>
+                }
+                detail={
+                  <>
+                    <SectionDivider
+                      title={`${props.catalog.places.get(selectedGovernorRace.provinceId)?.name ?? selectedGovernorRace.provinceId} governor`}
+                      hint={selectedGovernorRace.date}
+                      actions={
+                        <StatusBadge tone={statusTone(selectedGovernorRace.status)}>
+                          {statusLabel(selectedGovernorRace.status)}
+                        </StatusBadge>
+                      }
+                    />
+                    {selectedGovernorRace.turnoutRate != null ? (
+                      <p className="muted">
+                        Turnout {formatPublicPercent(selectedGovernorRace.turnoutRate)}
+                      </p>
+                    ) : null}
+                    <DataTable headers={["Candidate", "Party", "Share", "Status"]} dense>
+                      {Object.values(selectedGovernorRace.candidates)
+                        .filter((candidate) => !candidate.withdrawn)
+                        .sort(
+                          (a, b) =>
+                            (selectedGovernorRace.voteShares[b.politicianId] ?? 0) -
+                            (selectedGovernorRace.voteShares[a.politicianId] ?? 0),
+                        )
+                        .map((candidate) => {
+                          const isWinner = selectedGovernorRace.winnerId === candidate.politicianId;
+                          const status = isWinner
+                            ? "Winner"
+                            : selectedGovernorRace.status === "resolved" ||
+                                selectedGovernorRace.status === "assumed"
+                              ? "Not elected"
+                              : candidate.incumbent
+                                ? "Incumbent"
+                                : "Filed";
+                          return (
+                            <tr key={candidate.politicianId}>
+                              <td>{politicianDisplayName(props.catalog, candidate.politicianId)}</td>
+                              <td>
+                                {partyDisplayName(
+                                  props.world,
+                                  props.snap.politicians[candidate.politicianId]?.partyId ?? null,
+                                  props.snap,
+                                )}
+                              </td>
+                              <td>
+                                {selectedGovernorRace.voteShares[candidate.politicianId] != null
+                                  ? formatPublicPercent(
+                                      selectedGovernorRace.voteShares[candidate.politicianId],
+                                    )
+                                  : "—"}
+                              </td>
+                              <td>
+                                <StatusBadge tone={isWinner ? "ok" : "idle"}>{status}</StatusBadge>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </DataTable>
+                    {Object.keys(selectedGovernorRace.candidates).length === 0 ? (
+                      <EmptyState>The candidate field will form when filing opens.</EmptyState>
+                    ) : null}
+                  </>
+                }
+              />
+            </>
+          ) : (
+            <EmptyState>No gubernatorial election is scheduled.</EmptyState>
+          )}
         </div>
       ) : null}
       {tab === "nominations" ? (
         <div>
           {nominations.map((contest) => (
-            <SectionCard
-              key={contest.id}
-              title={contestDisplayName(props.snap, props.world, contest.id)}
-            >
-              <StatusBadge>{statusLabel(contest.status)}</StatusBadge>
+            <SectionCard key={contest.id} title={contestDisplayName(props.snap, props.world, contest.id)}>
+              <StatusBadge tone={statusTone(contest.status)}>{statusLabel(contest.status)}</StatusBadge>
               <span className="muted nomination-cycle-label">
                 {typeof contest.metadata.electionDate === "string"
                   ? ` Presidential election ${contest.metadata.electionDate}`
@@ -527,14 +704,18 @@ export function ElectionsPage(props: Props) {
               {Object.values(contest.entries)
                 .filter((entry) => entry.status !== "potential")
                 .map((entry) => (
-                  <PoliticianCard
+                  <EntityRow
                     key={entry.politicianId}
-                    catalog={props.catalog}
-                    world={props.world}
-                    state={props.snap}
-                    politicianId={entry.politicianId}
-                    office="Presidential nomination candidate"
-                    compact
+                    title={politicianDisplayName(props.catalog, entry.politicianId)}
+                    meta="Nomination candidate"
+                    status={
+                      contest.winnerId === entry.politicianId ? (
+                        <StatusBadge tone="ok">Winner</StatusBadge>
+                      ) : (
+                        <StatusBadge>{entry.status.replace(/_/g, " ")}</StatusBadge>
+                      )
+                    }
+                    selected={contest.winnerId === entry.politicianId}
                   />
                 ))}
               {contest.winnerId ? (

@@ -1,4 +1,4 @@
-import { occupyingTerms } from "@lorsain/sim";
+import { occupyingTerms, candidateStandingOrDefault } from "@lorsain/sim";
 import type { KernelWorld, SimState } from "@lorsain/sim";
 import {
   currentAssemblyMemberIds,
@@ -8,16 +8,28 @@ import {
 } from "@lorsain/sim";
 
 export function politicianName(figures: Map<string, { name: string }>, id: string): string {
-  return figures.get(id)?.name ?? id;
+  const named = figures.get(id)?.name;
+  if (named && named.trim()) return named;
+  return "Unknown politician";
+}
+
+/** Public standing for display — never leaves officeholders as blank "unknown". */
+export function publicStandingLabel(
+  world: KernelWorld,
+  state: SimState,
+  politicianId: string,
+): string {
+  const standing = candidateStandingOrDefault(world, state, politicianId);
+  return qualitativeStanding(standing.favorability);
 }
 
 export function partyName(world: KernelWorld, partyId: string | null): string {
   if (!partyId) return "Independent";
-  return world.partyDefinitions[partyId]?.name ?? partyId;
+  return world.partyDefinitions[partyId]?.name ?? "Unrecognized party";
 }
 
-export function qualitativeStanding(n: number | undefined): string {
-  if (n == null) return "unknown";
+export function qualitativeStanding(n: number | undefined | null): string {
+  if (n == null) return "Not routinely measured";
   if (n >= 0.7) return "high";
   if (n >= 0.5) return "solid";
   if (n >= 0.35) return "mixed";

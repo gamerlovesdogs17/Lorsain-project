@@ -15,12 +15,23 @@ import { playerCampaign, playerOffices } from "./format.js";
 import {
   campaignTypeLabel,
   constituencyDisplayName,
+  eventDisplay,
   issueDisplayName,
   partyDisplayName,
   politicianDisplayName,
+  pollShareLine,
   type PresentationCatalog,
 } from "./presentation.js";
-import { EmptyState, PageHeader, SectionCard } from "./ui/kit.js";
+import { latestPublicPoll } from "./map/fills.js";
+import {
+  ActivityFeedItem,
+  EmptyState,
+  EntityRow,
+  PageHeader,
+  SectionCard,
+  SectionDivider,
+  StatusBadge,
+} from "./ui/kit.js";
 import { PoliticianCard, PoliticianProfile } from "./ui/politician.js";
 import { MapLegend } from "./ui/mapLegend.js";
 import { TerenaMap, type MapSelection } from "./map/TerenaMap.js";
@@ -192,7 +203,7 @@ export function CampaignPage(props: {
           (x.status === "planned" && x.metadata.candidateSource === "scenario_start")),
     );
     return (
-      <div>
+      <div className="page-tone-campaign">
         <PageHeader
           kicker="War room"
           title="Campaign"
@@ -318,6 +329,16 @@ export function CampaignPage(props: {
         : c.type === "gubernatorial" && gubernatorialRace
           ? `Governor · ${props.catalog.places.get(gubernatorialRace.provinceId)?.name ?? gubernatorialRace.provinceId}`
           : "Political campaign";
+  const poll = latestPublicPoll(props.snap);
+  const recentActivity = props.snap.history
+    .filter((e) =>
+      e.type.startsWith("CAMPAIGN_") ||
+      e.type.startsWith("ENDORSEMENT_") ||
+      e.type === "POLL_PUBLISHED" ||
+      e.type === "DEBATE_HELD",
+    )
+    .slice(-8)
+    .reverse();
 
   function geoOptions(kind: "national" | "province" | "constituency") {
     if (kind === "national") return [] as string[];
@@ -342,18 +363,87 @@ export function CampaignPage(props: {
     </button>
   );
 
+  const focus = mapSel ?? hoverSel;
+
   return (
-    <div className="campaign-page">
+    <div className="campaign-page page-tone-campaign">
       <PageHeader
         kicker="Command center"
         title={campaignTypeLabel(c.type).replace(/^./, (letter) => letter.toUpperCase())}
         subtitle={`${raceDescription} · Election ${campaignElectionDate ?? "upcoming"}`}
+        actions={<StatusBadge tone={noActions ? "warn" : "ok"}>{c.status}</StatusBadge>}
       />
-      <div className="campaign-command">
-        <div className="campaign-map-pane">
+
+      <div className="campaign-command-v5">
+        <aside className="campaign-left">
+          <PoliticianProfile
+            catalog={props.catalog}
+            world={props.world}
+            state={props.snap}
+            politicianId={props.snap.playerPoliticianId}
+            {...(playerOffices(props.world, props.snap, props.snap.playerPoliticianId)[0]
+              ? { office: playerOffices(props.world, props.snap, props.snap.playerPoliticianId)[0] }
+              : {})}
+            party={partyDisplayName(props.world, playerPol?.partyId ?? null, props.snap)}
+          />
+          <SectionDivider title="Resources" />
+          <div className="campaign-stats">
+            <div>
+              <div className="kicker">Cash</div>
+              <strong>{Math.round(c.cashOnHand).toLocaleString()}</strong>
+            </div>
+            <div>
+              <div className="kicker">Org</div>
+              <strong>{c.fieldOrganization.toFixed(2)}</strong>
+            </div>
+            <div>
+              <div className="kicker">AP</div>
+              <strong className={noActions ? "text-warn" : ""}>
+                {c.actionPointsRemaining}/{c.actionPointsMax}
+              </strong>
+            </div>
+          </div>
+          {noActions ? (
+            <p className="muted campaign-actions-note">Monthly actions spent. End turn to refresh.</p>
+          ) : null}
+          <SectionDivider title="Rivals" {...(rivals.length ? {} : { hint: "No active rivals" })} />
+          {rivals.length === 0 ? <EmptyState>Field is clear for now.</EmptyState> : null}
+          {rivals.slice(0, 6).map((r) => (
+            <EntityRow
+              key={r.politicianId}
+              title={politicianDisplayName(props.catalog, r.politicianId)}
+              meta={partyDisplayName(
+                props.world,
+                props.snap.politicians[r.politicianId]?.partyId ?? null,
+                props.snap,
+              )}
+              status={<StatusBadge>Rival</StatusBadge>}
+            />
+          ))}
+        </aside>
+
+        <div className="campaign-center">
           <div className="map-scale-switch" aria-label="Campaign map scale">
-            <button type="button" className={mapScale === "province" ? "active" : ""} onClick={() => { setMapScale("province"); setMapSel(null); }}>Provinces</button>
-            <button type="button" className={mapScale === "constituency" ? "active" : ""} onClick={() => { setMapScale("constituency"); setMapSel(null); }}>Constituencies</button>
+            <button
+              type="button"
+              className={mapScale === "province" ? "active" : ""}
+              onClick={() => {
+                setMapScale("province");
+                setMapSel(null);
+              }}
+            >
+              Provinces
+            </button>
+            <button
+              type="button"
+              className={mapScale === "constituency" ? "active" : ""}
+              onClick={() => {
+                setMapScale("constituency");
+                setMapSel(null);
+              }}
+            >
+              Constituencies
+            </button>
           </div>
           <TerenaMap
             bundle={props.bundle}
@@ -376,68 +466,57 @@ export function CampaignPage(props: {
             tooltipFor={(selection) => (
               <>
                 <strong>{selection.name}</strong>
-                <span>{selection.kind === "province"
-                  ? `Provincial organization ${(c.organizationByProvince[selection.id] ?? 0).toFixed(2)}`
-                  : selection.kind === "constituency"
-                    ? `Constituency organization ${(c.organizationByConstituency[selection.id] ?? 0).toFixed(2)}`
-                    : "Campaign location"}</span>
+                <span>
+                  {selection.kind === "province"
+                    ? `Provincial organization ${(c.organizationByProvince[selection.id] ?? 0).toFixed(2)}`
+                    : selection.kind === "constituency"
+                      ? `Constituency organization ${(c.organizationByConstituency[selection.id] ?? 0).toFixed(2)}`
+                      : "Campaign location"}
+                </span>
               </>
             )}
           />
           <MapLegend mode="campaign" world={props.world} />
-          {(mapSel ?? hoverSel) ? (
+          {focus ? (
             <p className="map-selection-note">
-              {(mapSel ?? hoverSel)!.name}
-              {(mapSel ?? hoverSel)!.kind === "constituency"
-                ? ` · org ${(c.organizationByConstituency[(mapSel ?? hoverSel)!.id] ?? 0).toFixed(2)}`
-                : (mapSel ?? hoverSel)!.kind === "province"
-                  ? ` · provincial org ${(c.organizationByProvince[(mapSel ?? hoverSel)!.id] ?? 0).toFixed(2)}`
+              {focus.name}
+              {focus.kind === "constituency"
+                ? ` · org ${(c.organizationByConstituency[focus.id] ?? 0).toFixed(2)}`
+                : focus.kind === "province"
+                  ? ` · provincial org ${(c.organizationByProvince[focus.id] ?? 0).toFixed(2)}`
                   : ""}
             </p>
           ) : (
             <EmptyState>Field organization you control — not latent voter support.</EmptyState>
           )}
         </div>
-        <aside className="campaign-panel">
-          <PoliticianProfile
-            catalog={props.catalog}
-            world={props.world}
-            state={props.snap}
-            politicianId={props.snap.playerPoliticianId}
-            {...(playerOffices(props.world, props.snap, props.snap.playerPoliticianId)[0]
-              ? { office: playerOffices(props.world, props.snap, props.snap.playerPoliticianId)[0] }
-              : {})}
-            party={partyDisplayName(props.world, playerPol?.partyId ?? null, props.snap)}
-          />
-          <div className="campaign-stats">
-            <div>
-              <div className="kicker">Cash on hand</div>
-              <strong>{Math.round(c.cashOnHand).toLocaleString()}</strong>
-            </div>
-            <div>
-              <div className="kicker">Field org</div>
-              <strong>{c.fieldOrganization.toFixed(2)}</strong>
-            </div>
-            <div>
-              <div className="kicker">Actions</div>
-              <strong className={noActions ? "text-warn" : ""}>
-                {c.actionPointsRemaining} / {c.actionPointsMax}
-              </strong>
-            </div>
-          </div>
-          {noActions ? (
-            <p className="muted campaign-actions-note">
-              All monthly campaign actions used. End Turn to refresh next month.
-            </p>
-          ) : null}
+
+        <aside className="campaign-right">
+          <SectionDivider title="Actions" hint="1 AP each" />
           <div className="campaign-actions-grid">
             {actionBtn("visit", "Visit")}
             {actionBtn("organize", "Organize")}
             {actionBtn("advertise", "Advertise")}
+            <button
+              type="button"
+              className="campaign-action-btn"
+              disabled={noActions}
+              title={noActions ? "No campaign actions remaining this month" : undefined}
+              onClick={() =>
+                run(
+                  props.sim,
+                  { type: "CAMPAIGN_FUNDRAISE", campaignId: c.id },
+                  props.report,
+                  props.onDone,
+                )
+              }
+            >
+              Fundraise
+            </button>
             {actionBtn("message", "Message")}
-            {actionBtn("attack", "Attack", rivals.length === 0)}
-            {actionBtn("endorsement", "Endorsement", !contest)}
+            {actionBtn("endorsement", "Endorse", !contest)}
           </div>
+          <SectionDivider title="Utilities" />
           <div className="row campaign-util">
             {c.type === "presidential_nomination" ? (
               <button
@@ -453,25 +532,10 @@ export function CampaignPage(props: {
                   )
                 }
               >
-                Seek nomination support
+                Seek support
               </button>
             ) : null}
-            <button
-              type="button"
-              className="btn secondary"
-              disabled={noActions}
-              title={noActions ? "No campaign actions remaining this month" : undefined}
-              onClick={() =>
-                run(
-                  props.sim,
-                  { type: "CAMPAIGN_FUNDRAISE", campaignId: c.id },
-                  props.report,
-                  props.onDone,
-                )
-              }
-            >
-              Fundraise
-            </button>
+            {actionBtn("attack", "Attack", rivals.length === 0)}
             {showDebate ? (
               <button
                 type="button"
@@ -486,7 +550,7 @@ export function CampaignPage(props: {
                   )
                 }
               >
-                Prepare debate
+                Debate prep
               </button>
             ) : null}
             <button
@@ -510,28 +574,38 @@ export function CampaignPage(props: {
               Withdraw
             </button>
           </div>
-          {rivals.length > 0 ? (
-            <SectionCard title="Active rivals">
-              {rivals.slice(0, 5).map((r) => (
-                <PoliticianCard
-                  key={r.politicianId}
-                  catalog={props.catalog}
-                  world={props.world}
-                  state={props.snap}
-                  politicianId={r.politicianId}
-                  compact
-                />
-              ))}
-            </SectionCard>
-          ) : null}
         </aside>
       </div>
 
+      <div className="campaign-footer">
+        <SectionDivider title="Recent campaign activity" />
+        {recentActivity.length === 0 ? (
+          <EmptyState>No recent campaign events in the public record.</EmptyState>
+        ) : (
+          recentActivity.map((e) => (
+            <ActivityFeedItem
+              key={e.id}
+              date={e.date}
+              text={eventDisplay(props.catalog, props.world, props.snap, e)}
+            />
+          ))
+        )}
+        <SectionDivider title="Public polls" hint="Published first-preference shares only" />
+        {poll ? (
+          <p className="muted">
+            {poll.publicationDate}:{" "}
+            {pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)}
+          </p>
+        ) : (
+          <EmptyState>No public poll has been published yet.</EmptyState>
+        )}
+      </div>
+
       {activeAction === "visit" ? (
-        <ActionDrawer title="Campaign visit" onClose={() => setActiveAction(null)}>
+        <ActionDrawer title="Visit" onClose={() => setActiveAction(null)}>
           <div className="form-stack">
             <label>
-              Geography
+              Area
               <select
                 value={visitKind}
                 onChange={(e) => setVisitKind(e.target.value as typeof visitKind)}
@@ -545,7 +619,7 @@ export function CampaignPage(props: {
               <label>
                 Place
                 <select value={visitId} onChange={(e) => setVisitId(e.target.value)}>
-                  <option value="">Choose place</option>
+                  <option value="">Choose</option>
                   {geoOptions(visitKind).map((id) => (
                     <option key={id} value={id}>
                       {constituencyDisplayName(props.catalog, id)}
@@ -573,24 +647,28 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Conduct visit (1 action)
+              Visit (1 AP)
             </button>
           </div>
         </ActionDrawer>
       ) : null}
 
       {activeAction === "organize" ? (
-        <ActionDrawer title="Field organization" onClose={() => setActiveAction(null)}>
+        <ActionDrawer title="Organize" onClose={() => setActiveAction(null)}>
           <div className="form-stack">
             <label>
-              Organizing level
-              <select value={orgKind} disabled={c.type === "assembly"} onChange={(event) => {
-                const kind = event.target.value as typeof orgKind;
-                setOrgKind(kind);
-                setOrgId(kind === "province" ? (provinces[0] ?? "") : (constituencies[0] ?? ""));
-              }}>
-                {c.type !== "assembly" ? <option value="province">Province operation</option> : null}
-                <option value="constituency">Constituency operation</option>
+              Level
+              <select
+                value={orgKind}
+                disabled={c.type === "assembly"}
+                onChange={(event) => {
+                  const kind = event.target.value as typeof orgKind;
+                  setOrgKind(kind);
+                  setOrgId(kind === "province" ? (provinces[0] ?? "") : (constituencies[0] ?? ""));
+                }}
+              >
+                {c.type !== "assembly" ? <option value="province">Province</option> : null}
+                <option value="constituency">Constituency</option>
               </select>
             </label>
             <label>
@@ -610,24 +688,29 @@ export function CampaignPage(props: {
               onClick={() => {
                 run(
                   props.sim,
-                  { type: "CAMPAIGN_ORGANIZE", campaignId: c.id, geographyKind: orgKind, geographyId: orgId },
+                  {
+                    type: "CAMPAIGN_ORGANIZE",
+                    campaignId: c.id,
+                    geographyKind: orgKind,
+                    geographyId: orgId,
+                  },
                   props.report,
                   props.onDone,
                 );
                 setActiveAction(null);
               }}
             >
-              Organize (1 action)
+              Organize (1 AP)
             </button>
           </div>
         </ActionDrawer>
       ) : null}
 
       {activeAction === "advertise" ? (
-        <ActionDrawer title="Advertising" onClose={() => setActiveAction(null)}>
+        <ActionDrawer title="Advertise" onClose={() => setActiveAction(null)}>
           <div className="form-stack">
             <label>
-              Message type
+              Type
               <select value={adType} onChange={(e) => setAdType(e.target.value as typeof adType)}>
                 <option value="positive">Positive</option>
                 <option value="contrast">Contrast</option>
@@ -645,7 +728,7 @@ export function CampaignPage(props: {
               </select>
             </label>
             <label>
-              Geography
+              Area
               <select value={adGeo} onChange={(e) => setAdGeo(e.target.value as typeof adGeo)}>
                 {c.type !== "assembly" ? <option value="national">Nationwide</option> : null}
                 {c.type !== "assembly" ? <option value="province">Province</option> : null}
@@ -656,7 +739,7 @@ export function CampaignPage(props: {
               <label>
                 Place
                 <select value={adGeoId} onChange={(e) => setAdGeoId(e.target.value)}>
-                  <option value="">Choose place</option>
+                  <option value="">Choose</option>
                   {geoOptions(adGeo).map((id) => (
                     <option key={id} value={id}>
                       {constituencyDisplayName(props.catalog, id)}
@@ -667,9 +750,9 @@ export function CampaignPage(props: {
             ) : null}
             {adType !== "positive" ? (
               <label>
-                Target rival
+                Rival
                 <select value={adTarget} onChange={(e) => setAdTarget(e.target.value)}>
-                  <option value="">Choose rival</option>
+                  <option value="">Choose</option>
                   {rivals.map((r) => (
                     <option key={r.politicianId} value={r.politicianId}>
                       {politicianDisplayName(props.catalog, r.politicianId)}
@@ -716,17 +799,17 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Run ad (1 action)
+              Run ad (1 AP)
             </button>
           </div>
         </ActionDrawer>
       ) : null}
 
       {activeAction === "message" ? (
-        <ActionDrawer title="Issue message" onClose={() => setActiveAction(null)}>
+        <ActionDrawer title="Message" onClose={() => setActiveAction(null)}>
           <div className="form-stack">
             <label>
-              Emphasize issue
+              Issue
               <select value={messageIssue} onChange={(e) => setMessageIssue(e.target.value)}>
                 {issues.map((id) => (
                   <option key={id} value={id}>
@@ -749,19 +832,19 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Emphasize (1 action)
+              Emphasize (1 AP)
             </button>
           </div>
         </ActionDrawer>
       ) : null}
 
       {activeAction === "attack" ? (
-        <ActionDrawer title="Attack rival" onClose={() => setActiveAction(null)}>
+        <ActionDrawer title="Attack" onClose={() => setActiveAction(null)}>
           <div className="form-stack">
             <label>
-              Target
+              Rival
               <select value={attackTarget} onChange={(e) => setAttackTarget(e.target.value)}>
-                <option value="">Choose rival</option>
+                <option value="">Choose</option>
                 {rivals.map((r) => (
                   <option key={r.politicianId} value={r.politicianId}>
                     {politicianDisplayName(props.catalog, r.politicianId)}
@@ -798,18 +881,18 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Attack (1 action)
+              Attack (1 AP)
             </button>
           </div>
         </ActionDrawer>
       ) : null}
 
       {activeAction === "endorsement" && contest ? (
-        <ActionDrawer title="Seek endorsement" onClose={() => setActiveAction(null)}>
-          <p className="muted">Active rivals in this race cannot endorse you.</p>
+        <ActionDrawer title="Endorsement" onClose={() => setActiveAction(null)}>
+          <p className="muted">Active rivals cannot endorse you.</p>
           <input
             className="search"
-            placeholder="Search eligible politicians"
+            placeholder="Search"
             value={endorserQuery}
             onChange={(e) => setEndorserQuery(e.target.value)}
           />
@@ -849,7 +932,7 @@ export function CampaignPage(props: {
               setActiveAction(null);
             }}
           >
-            Ask for endorsement (1 action)
+            Ask (1 AP)
           </button>
         </ActionDrawer>
       ) : null}

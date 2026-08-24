@@ -8,9 +8,10 @@ import { playerCampaign, playerOffices, politicianName } from "./format.js";
 import { GamePages } from "./pages.js";
 import { DecisionPanel } from "./decisions.js";
 import { useCommandFeedback } from "./feedback.js";
-import { catalogFromBundle, partyDisplayName, politicianDisplayName } from "./presentation.js";
+import { catalogFromBundle, partyColor, partyDisplayName, politicianDisplayName } from "./presentation.js";
 import { GameShell } from "./ui/shell.js";
-import { PoliticianCard } from "./ui/politician.js";
+import { StatusBadge } from "./ui/kit.js";
+import { PoliticianAvatar, PoliticianCard } from "./ui/politician.js";
 export default function App() {
     const [bundle, setBundle] = useState(null);
     const [world, setWorld] = useState(null);
@@ -254,6 +255,43 @@ export default function App() {
                 return "Limited role: set a civic priority and pursue future office.";
             return "Continue a political career and seek a legitimate electoral opportunity.";
         }
+        /** Featured starts only — meaningful gameplay depth, not Limited minister/mayor loops. */
+        function gameplayFocus(f) {
+            const kind = officeKind(f);
+            const o = (f.office ?? "").toLowerCase();
+            if (kind === "president")
+                return "Executive · foreign · legislation";
+            if (kind === "governor")
+                return "Provincial administration · reelection";
+            if (o.includes("speaker"))
+                return "Floor control · legislation · party";
+            if (kind === "leader")
+                return "Party contests · caucus · career";
+            if (kind === "assembly" || o.includes("mp") || o.includes("committee"))
+                return "Legislation · constituency · votes";
+            if (kind === "courts")
+                return "Constitutional docket · precedent";
+            if (f.presidential_status === "frontrunner")
+                return "Presidential nomination · campaign";
+            return "Electoral career · opportunities";
+        }
+        function complexity(f) {
+            const kind = officeKind(f);
+            const o = (f.office ?? "").toLowerCase();
+            if (kind === "president" || o.includes("speaker") || f.presidential_status === "frontrunner")
+                return "High";
+            if (kind === "governor" || kind === "leader" || kind === "assembly" || kind === "courts")
+                return "Medium";
+            return "Low";
+        }
+        function roleLabel(f) {
+            const o = (f.office ?? "").trim();
+            if (o)
+                return o;
+            if (f.presidential_status === "frontrunner")
+                return "Presidential frontrunner";
+            return "Public figure";
+        }
         const filtered = figuresList
             .filter((f) => {
             const q = query.trim().toLowerCase();
@@ -289,8 +327,13 @@ export default function App() {
         const page = Math.min(browsePage, pageCount - 1);
         const pageRows = browse.slice(page * pageSize, page * pageSize + pageSize);
         const tempCatalog = catalogFromBundle(bundle, figures);
-        const card = (f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), descriptor: `${roleDescription(f)}${f.notes ?? f.display_summary ? ` ${f.notes ?? f.display_summary}` : ""}`, action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id));
-        return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: "Choose your career" }), _jsx("p", { className: "muted", children: "Begin as a notable officeholder, or search the full public roster. Hidden traits are never shown." })] }), _jsxs("div", { className: "row new-game-filters", children: [_jsx("input", { className: "search", placeholder: "Search by name, office, party, or home", value: query, onChange: (e) => {
+        const featuredCard = (f) => {
+            const accent = partyColor(world, f.party_id ?? null);
+            const level = complexity(f);
+            return (_jsxs("article", { className: "featured-start", style: { borderLeftColor: accent }, children: [_jsxs("div", { className: "featured-start-top", children: [_jsx(PoliticianAvatar, { name: f.name, ...(f.party_id != null ? { partyId: f.party_id } : {}), world: world, size: "sm" }), _jsxs("div", { className: "featured-start-id", children: [_jsx("h3", { className: "featured-start-name serif-head", children: f.name }), _jsx("div", { className: "featured-start-role", children: roleLabel(f) }), _jsxs("div", { className: "muted featured-start-party", children: [f.party ?? "Independent", f.home ? ` · ${f.home}` : ""] })] }), _jsx(StatusBadge, { tone: level === "High" ? "warn" : level === "Medium" ? "idle" : "ok", children: level })] }), _jsxs("div", { className: "featured-start-focus", children: [_jsx("span", { className: "kicker", children: "Gameplay focus" }), _jsx("div", { children: gameplayFocus(f) })] }), _jsxs("div", { className: "featured-start-foot", children: [_jsxs("span", { className: "muted", children: ["Complexity \u00B7 ", level] }), _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" })] })] }, f.id));
+        };
+        const rosterCard = (f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), descriptor: `${roleDescription(f)}${f.notes ?? f.display_summary ? ` ${f.notes ?? f.display_summary}` : ""}`, compact: officeKind(f) === "minister" || (f.office ?? "").toLowerCase().includes("mayor"), action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id));
+        return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: "Choose your career" }), _jsx("p", { className: "muted", children: "Featured starts are full-depth political roles. Search the roster for Limited offices and other public figures. Hidden traits are never shown." })] }), _jsxs("div", { className: "row new-game-filters", children: [_jsx("input", { className: "search", placeholder: "Search by name, office, party, or home", value: query, onChange: (e) => {
                                 setQuery(e.target.value);
                                 setBrowsePage(0);
                             } }), _jsxs("select", { value: partyFilter, onChange: (e) => {
@@ -302,7 +345,7 @@ export default function App() {
                             }, children: [_jsx("option", { value: "all", children: "All offices" }), _jsx("option", { value: "president", children: "President" }), _jsx("option", { value: "governor", children: "Governors" }), _jsx("option", { value: "minister", children: "Ministers" }), _jsx("option", { value: "leader", children: "Party leaders" }), _jsx("option", { value: "assembly", children: "Assembly" }), _jsx("option", { value: "courts", children: "Courts" })] }), _jsxs("select", { value: provinceFilter, onChange: (e) => {
                                 setProvinceFilter(e.target.value);
                                 setBrowsePage(0);
-                            }, children: [_jsx("option", { value: "all", children: "All provinces" }), provinces.map((home) => (_jsx("option", { value: home, children: home }, home)))] }), _jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" })] }), !searching ? (_jsxs(_Fragment, { children: [_jsx("h3", { children: "Featured careers" }), _jsx("div", { className: "featured-grid", children: featured.map(card) }), _jsx("h3", { style: { marginTop: "1.25rem" }, children: "Find another politician" }), _jsxs("p", { className: "muted", children: ["Ordinary MPs and other public figures \u2014 ", browse.length, " remaining."] })] })) : (_jsxs("p", { className: "muted", children: [filtered.length, " matching politicians"] })), _jsx("div", { className: "featured-grid", children: pageRows.map(card) }), pageCount > 1 ? (_jsxs("div", { className: "row", style: { marginTop: "0.75rem" }, children: [_jsx("button", { className: "btn secondary", disabled: page <= 0, onClick: () => setBrowsePage((p) => Math.max(0, p - 1)), children: "Previous" }), _jsxs("span", { className: "muted", children: ["Page ", page + 1, " of ", pageCount] }), _jsx("button", { className: "btn secondary", disabled: page >= pageCount - 1, onClick: () => setBrowsePage((p) => p + 1), children: "Next" })] })) : null] }));
+                            }, children: [_jsx("option", { value: "all", children: "All provinces" }), provinces.map((home) => (_jsx("option", { value: home, children: home }, home)))] }), _jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" })] }), !searching ? (_jsxs(_Fragment, { children: [_jsxs("div", { className: "new-game-section-head", children: [_jsx("h3", { children: "Featured starts" }), _jsx("p", { className: "muted", children: "Name, role, gameplay focus, and complexity \u2014 President, Governor, Assembly, courts, and party leadership with real monthly work." })] }), _jsx("div", { className: "featured-start-grid", children: featured.map(featuredCard) }), _jsxs("div", { className: "new-game-section-head", style: { marginTop: "1.25rem" }, children: [_jsx("h3", { children: "Full roster" }), _jsxs("p", { className: "muted", children: ["Ordinary MPs, Limited ministers/mayors, and other public figures \u2014 ", browse.length, " ", "remaining. Use search and filters for the complete list."] })] })] })) : (_jsxs("p", { className: "muted", children: [filtered.length, " matching politicians"] })), _jsx("div", { className: "featured-grid", children: pageRows.map(rosterCard) }), pageCount > 1 ? (_jsxs("div", { className: "row", style: { marginTop: "0.75rem" }, children: [_jsx("button", { className: "btn secondary", disabled: page <= 0, onClick: () => setBrowsePage((p) => Math.max(0, p - 1)), children: "Previous" }), _jsxs("span", { className: "muted", children: ["Page ", page + 1, " of ", pageCount] }), _jsx("button", { className: "btn secondary", disabled: page >= pageCount - 1, onClick: () => setBrowsePage((p) => p + 1), children: "Next" })] })) : null] }));
     }
     if (!sim || !snap || !catalog)
         return null;

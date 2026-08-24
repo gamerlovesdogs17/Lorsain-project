@@ -297,7 +297,11 @@ Integrated Terena multi-year harness with scripted interrupt resolution, catastr
 - UI System V4 adds role-aware Home/Office, type-specific elections, truthful map layers/tooltips, responsive density and long-save-aware presentation.
 - Save schema is v12; docs and evidence are in `PHASE_11_2_UX_GAMEPLAY_AUDIT.md`, `UI_SYSTEM_V4.md`, and `PHASE_11_2_RESULTS.md`.
 
-Later 11.x: numerical balance (11.3), content/prose depth (11.4), release audit (11.5).
+### Phase 11.3 — UI System V5 + whole-game balance (**IN PROGRESS**)
+
+Layout reconstruction and policy UX under `UI_SYSTEM_V5.md`; before/after in `PHASE_11_3_UI_BEFORE_AFTER.md`; living results skeleton in `PHASE_11_3_RESULTS.md` (baseline `b00ec52`). Whole-game calibration target: 100 saves × 600 months. **STOP before Phase 11.4** until 11.3 is accepted.
+
+Later 11.x: content/prose depth (11.4), release audit (11.5).
 
 ## 21. First playable vertical slice
 

@@ -1,16 +1,24 @@
-import { occupyingTerms } from "@lorsain/sim";
+import { occupyingTerms, candidateStandingOrDefault } from "@lorsain/sim";
 import { currentAssemblyMemberIds, currentPresidentialAuthorityId, currentSpeakerId, deriveCabinet, } from "@lorsain/sim";
 export function politicianName(figures, id) {
-    return figures.get(id)?.name ?? id;
+    const named = figures.get(id)?.name;
+    if (named && named.trim())
+        return named;
+    return "Unknown politician";
+}
+/** Public standing for display — never leaves officeholders as blank "unknown". */
+export function publicStandingLabel(world, state, politicianId) {
+    const standing = candidateStandingOrDefault(world, state, politicianId);
+    return qualitativeStanding(standing.favorability);
 }
 export function partyName(world, partyId) {
     if (!partyId)
         return "Independent";
-    return world.partyDefinitions[partyId]?.name ?? partyId;
+    return world.partyDefinitions[partyId]?.name ?? "Unrecognized party";
 }
 export function qualitativeStanding(n) {
     if (n == null)
-        return "unknown";
+        return "Not routinely measured";
     if (n >= 0.7)
         return "high";
     if (n >= 0.5)

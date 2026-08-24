@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 export function PageHeader(props: {
   kicker?: string;
@@ -157,6 +157,204 @@ export function ActivityFeedItem(props: { date: string; text: string }) {
     <div className="activity-feed-item">
       <time className="muted">{props.date}</time>
       <div>{props.text}</div>
+    </div>
+  );
+}
+
+/** Desktop workbench: identity strip, main column, optional contextual rail. */
+export function WorkLayout(props: {
+  header?: ReactNode;
+  main: ReactNode;
+  rail?: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`work-layout${props.rail ? " work-layout-rail" : ""}${props.className ? ` ${props.className}` : ""}`}>
+      {props.header ? <div className="work-layout-header">{props.header}</div> : null}
+      <div className="work-layout-body">
+        <div className="work-layout-main">{props.main}</div>
+        {props.rail ? <aside className="work-layout-rail-pane">{props.rail}</aside> : null}
+      </div>
+      {props.footer ? <div className="work-layout-footer">{props.footer}</div> : null}
+    </div>
+  );
+}
+
+/** Map + selected-entity detail (desktop map-first). */
+export function MapDetailLayout(props: {
+  toolbar?: ReactNode;
+  map: ReactNode;
+  detail: ReactNode;
+  legend?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`map-detail-layout${props.className ? ` ${props.className}` : ""}`}>
+      {props.toolbar ? <div className="map-detail-toolbar">{props.toolbar}</div> : null}
+      <div className="map-detail-body">
+        <div className="map-detail-map">{props.map}</div>
+        <aside className="map-detail-panel">{props.detail}</aside>
+      </div>
+      {props.legend ? <div className="map-detail-legend">{props.legend}</div> : null}
+    </div>
+  );
+}
+
+/** List/table + inspector for directories, bills, organizations. */
+export function MasterDetail(props: {
+  list: ReactNode;
+  detail: ReactNode;
+  listWidth?: "narrow" | "wide";
+  className?: string;
+}) {
+  return (
+    <div
+      className={`master-detail master-detail-${props.listWidth ?? "narrow"}${props.className ? ` ${props.className}` : ""}`}
+    >
+      <div className="master-detail-list">{props.list}</div>
+      <div className="master-detail-inspector">{props.detail}</div>
+    </div>
+  );
+}
+
+export function SectionDivider(props: { title: string; hint?: string; actions?: ReactNode }) {
+  return (
+    <div className="section-divider">
+      <div>
+        <h3 className="section-divider-title">{props.title}</h3>
+        {props.hint ? <p className="muted section-divider-hint">{props.hint}</p> : null}
+      </div>
+      {props.actions ? <div className="section-divider-actions">{props.actions}</div> : null}
+    </div>
+  );
+}
+
+export function EntityRow(props: {
+  title: ReactNode;
+  meta?: ReactNode;
+  status?: ReactNode;
+  trailing?: ReactNode;
+  selected?: boolean;
+  onClick?: () => void;
+}) {
+  const interactive = Boolean(props.onClick);
+  const Tag = interactive ? "button" : "div";
+  return (
+    <Tag
+      type={interactive ? "button" : undefined}
+      className={`entity-row${props.selected ? " selected" : ""}`}
+      onClick={props.onClick}
+    >
+      <div className="entity-row-main">
+        <div className="entity-row-title">{props.title}</div>
+        {props.meta ? <div className="entity-row-meta muted">{props.meta}</div> : null}
+      </div>
+      {props.status ? <div className="entity-row-status">{props.status}</div> : null}
+      {props.trailing ? <div className="entity-row-trailing">{props.trailing}</div> : null}
+    </Tag>
+  );
+}
+
+export function DataTable(props: {
+  headers: string[];
+  children: ReactNode;
+  caption?: string;
+  dense?: boolean;
+}) {
+  return (
+    <div className={`data-table-wrap${props.dense ? " dense" : ""}`}>
+      <table className="data-table">
+        {props.caption ? <caption>{props.caption}</caption> : null}
+        <thead>
+          <tr>
+            {props.headers.map((h) => (
+              <th key={h}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{props.children}</tbody>
+      </table>
+    </div>
+  );
+}
+
+export type PolicyChoiceOption = {
+  id: string;
+  label: string;
+  summary: string;
+  effects?: Array<{ label: string; tone?: "up" | "down" | "flat" }>;
+  cost?: string;
+  current?: boolean;
+};
+
+/** Compact categorical policy chooser — title, current, LOW/MOD/HIGH-style options. */
+export function PolicyChoiceGroup(props: {
+  title: string;
+  currentLabel: string;
+  options: PolicyChoiceOption[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  details?: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="policy-choice-group">
+      <div className="policy-choice-head">
+        <h4>{props.title}</h4>
+        <div className="muted">
+          Current: <strong>{props.currentLabel}</strong>
+        </div>
+      </div>
+      <div className="policy-choice-options" role="listbox" aria-label={props.title}>
+        {props.options.map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            role="option"
+            aria-selected={props.selectedId === opt.id}
+            className={`policy-choice-option${props.selectedId === opt.id ? " selected" : ""}${opt.current ? " is-current" : ""}`}
+            onClick={() => props.onSelect(opt.id)}
+          >
+            <div className="policy-choice-option-label">
+              <strong>{opt.label}</strong>
+              {opt.current ? <StatusBadge tone="idle">Current law</StatusBadge> : null}
+            </div>
+            <p className="policy-choice-summary">{opt.summary}</p>
+            {opt.effects?.length ? (
+              <div className="policy-choice-effects">
+                {opt.effects.map((e) => (
+                  <span key={e.label} className={`fx fx-${e.tone ?? "flat"}`}>
+                    {e.label}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {opt.cost ? <div className="policy-choice-cost muted">{opt.cost}</div> : null}
+          </button>
+        ))}
+      </div>
+      {props.details ? (
+        <div className="policy-choice-details">
+          <button type="button" className="btn ghost" onClick={() => setOpen((v) => !v)}>
+            {open ? "Hide details" : "Details"}
+          </button>
+          {open ? <div className="policy-choice-details-body">{props.details}</div> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function BriefStrip(props: { items: Array<{ label: string; value: ReactNode }> }) {
+  return (
+    <div className="brief-strip" aria-label="This month">
+      {props.items.map((item) => (
+        <div key={item.label} className="brief-strip-item">
+          <span className="kicker">{item.label}</span>
+          <strong>{item.value}</strong>
+        </div>
+      ))}
     </div>
   );
 }

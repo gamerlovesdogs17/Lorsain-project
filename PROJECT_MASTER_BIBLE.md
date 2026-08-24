@@ -886,6 +886,10 @@ Phase 11.2 closes three integration defects: future presidential contest shells 
 
 Career now begins with legitimate Political Opportunities and public-fact geography selection. Campaign organization has national, provincial and constituency layers with maintenance/decay; national action reaches all geography without ID-order bias. Canonical `terena_economy_2028.json` supplies non-flat national, sector and province conditions plus structural exposure/sensitivity and persistent history. Bills contain one to three concrete legal provisions with named options, current law, estimated effects, and deterministic public prose. UI System V4 adds a role-aware Office, role briefing, type-specific election views, truthful map modes, real hover/click/tap tooltips, lightweight map navigation, and denser responsive layouts. Save schemaVersion is **12** with a v11→v12 migration that seeds only new runtime fields and fabricates no history. See `docs/PHASE_11_2_UX_GAMEPLAY_AUDIT.md`, `docs/UI_SYSTEM_V4.md`, and `docs/PHASE_11_2_RESULTS.md`.
 
+### Phase 11.3 — UI System V5 reconstruction + whole-game balance (**IN PROGRESS**)
+
+Phase 11.3 rebuilds page information architecture under UI System V5 (`docs/UI_SYSTEM_V5.md`): desktop workbench layouts (`WorkLayout`, `MapDetailLayout`, `MasterDetail`), denser elections/campaign/legislation presentation, policy-choice clarity, and whole-game calibration (target 100×600). Baseline `b00ec52`. See `docs/PHASE_11_3_UI_ARCHITECTURE_AUDIT.md`, `docs/PHASE_11_3_UI_BEFORE_AFTER.md`, and `docs/PHASE_11_3_RESULTS.md`. **Do not begin Phase 11.4** until 11.3 is accepted.
+
 ## 23. First playable vertical slice
 
 Do **not** wait for every system. The first playable target should contain:

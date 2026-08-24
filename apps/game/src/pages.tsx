@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import {
+  caseTitle,
   collectPlayerActionableDecisions,
   assemblyCandidateEligibilityError,
   currentAssemblyElectionForFiling,
@@ -26,7 +27,7 @@ import { ForeignAffairsPage } from "./foreignAffairsScreen.js";
 import { OrganizationsPage } from "./organizationsScreen.js";
 import { NewsPage } from "./newsScreen.js";
 import { OfficePage } from "./officeScreen.js";
-import { isMp, isPresident, playerCampaign, qualitativeStanding } from "./format.js";
+import { isMp, isPresident, playerCampaign, publicStandingLabel } from "./format.js";
 import {
   contestDisplayName,
   campaignTypeLabel,
@@ -53,18 +54,19 @@ import {
   interruptDisplay,
 } from "./presentation/display.js";
 import {
-  DashboardLayout,
+  ActivityFeedItem,
+  BriefStrip,
+  DataTable,
   EmptyState,
-  MetricStrip,
+  EntityRow,
   NewsItem,
   PageHeader,
-  RightRail,
   SectionCard,
-  StatCard,
+  SectionDivider,
   TabBar,
-  ActivityFeedItem,
   LeadStory,
   StatusBadge,
+  WorkLayout,
 } from "./ui/kit.js";
 import { PoliticianProfile, PoliticianCard } from "./ui/politician.js";
 import { MapLegend } from "./ui/mapLegend.js";
@@ -170,14 +172,14 @@ function Home(props: PageProps) {
   );
   const playerIsPresident = isPresident(props.world, props.snap, props.snap.playerPoliticianId);
   const warTrigger = props.snap.executiveRuntime.warTrigger;
-  const feed = monthEvents.slice(-12).reverse();
-  const stories = storiesChronological(props.snap).slice(0, 5);
+  const feed = monthEvents.slice(-8).reverse();
+  const stories = storiesChronological(props.snap).slice(0, 4);
   const polls = Object.values(props.snap.polls).slice(-2);
   const n = props.snap.economyRuntime.national;
   const upcoming = Object.values(props.snap.elections).filter((e) => e.status !== "resolved");
   const figure = props.figures.get(playerId);
   const runtime = props.snap.politicians[playerId];
-  const standing = props.snap.candidateStanding[playerId];
+  const standingLabel = publicStandingLabel(props.world, props.snap, playerId);
   const prevConfidence =
     props.snap.economyRuntime.history.slice(-2)[0]?.confidenceIndex ?? n.confidenceIndex;
   const confDelta = n.confidenceIndex - prevConfidence;
@@ -185,176 +187,163 @@ function Home(props: PageProps) {
   const governorState = governedProvince ? props.snap.provincialRuntime.provinces[governedProvince] : null;
   const governorEconomy = governedProvince ? props.snap.economyRuntime.provinces[governedProvince] : null;
   const playerIsMp = isMp(props.world, props.snap, playerId);
+  const billsAwaiting = Object.values(props.snap.legislatureRuntime.bills).filter(
+    (bill) => bill.status === "sent_to_president",
+  ).length;
+  const publicCrises = Object.values(props.snap.foreignAffairsRuntime.crises).filter((crisis) =>
+    isPublicCrisisStage(crisis.stage),
+  ).length;
+  const votesDue = decisions.filter((decision) => decision.kind.endsWith("vote")).length;
+  const briefTitle = playerIsPresident
+    ? "Presidential briefing"
+    : governedProvince
+      ? `${props.catalog.places.get(governedProvince)?.name ?? "Province"} briefing`
+      : playerIsMp
+        ? "Assembly briefing"
+        : props.campaign
+          ? "Campaign briefing"
+          : "Career briefing";
+
+  const briefItems = playerIsPresident
+    ? [
+        { label: "Bills awaiting", value: billsAwaiting },
+        { label: "Public crises", value: publicCrises },
+        { label: "Your decisions", value: decisions.length },
+        { label: "Confidence", value: `${n.confidenceIndex.toFixed(1)} (${formatIndexDelta(confDelta)})` },
+      ]
+    : governedProvince && governorState && governorEconomy
+      ? [
+          { label: "Conditions", value: governorEconomy.conditionsIndex.toFixed(1) },
+          { label: "Actions left", value: governorState.actionPointsRemaining },
+          { label: "Pressure", value: governorState.activePressureId ? "Action needed" : "Stable" },
+          { label: "Standing", value: standingLabel },
+        ]
+      : playerIsMp
+        ? [
+            { label: "Votes due", value: votesDue },
+            {
+              label: "Active bills",
+              value: Object.values(props.snap.legislatureRuntime.bills).filter((bill) =>
+                ["committee", "floor_scheduled", "repassage_scheduled"].includes(bill.status),
+              ).length,
+            },
+            {
+              label: "Next Assembly",
+              value: upcoming.find((election) => election.type === "assembly")?.date ?? "—",
+            },
+            { label: "Standing", value: standingLabel },
+          ]
+        : props.campaign
+          ? [
+              { label: "Actions", value: props.campaign.actionPointsRemaining },
+              { label: "Cash", value: Math.round(props.campaign.cashOnHand).toLocaleString() },
+              {
+                label: "Race",
+                value: props.campaign.electionId
+                  ? electionDisplayName(props.campaign.electionId)
+                  : campaignTypeLabel(props.campaign.type),
+              },
+              { label: "Standing", value: standingLabel },
+            ]
+          : [
+              { label: "Scheduled races", value: upcoming.length },
+              { label: "Opportunities", value: "Career" },
+              { label: "Standing", value: standingLabel },
+              { label: "Office", value: props.offices[0] ?? "Private citizen" },
+            ];
 
   return (
-    <div className="home-briefing">
-      <PoliticianProfile
-        catalog={props.catalog}
-        world={props.world}
-        state={props.snap}
-        politicianId={playerId}
-        office={props.offices[0] ?? "Private citizen"}
-        party={partyDisplayName(props.world, runtime?.partyId ?? null, props.snap)}
-        faction={factionDisplayName(props.world, runtime?.factionId ?? null)}
-        {...(figure?.home ? { home: figure.home } : {})}
-        standing={`Public standing: ${qualitativeStanding(standing?.favorability)}`}
-        {...((figure?.notes ?? figure?.display_summary)
-          ? { biography: figure?.notes ?? figure?.display_summary }
-          : {})}
-      />
-
-      <section className="role-briefing-band" aria-label="Role briefing">
-        <div className="role-briefing-heading">
-          <span className="eyebrow">Your brief</span>
-          <strong>{playerIsPresident ? "Presidential business" : governedProvince ? `${props.catalog.places.get(governedProvince)?.name ?? governedProvince} agenda` : playerIsMp ? "Assembly business" : props.campaign ? "Campaign priorities" : "Political career"}</strong>
-        </div>
-        <div className="role-briefing-items">
-          {playerIsPresident ? <>
-            <span><b>{Object.values(props.snap.legislatureRuntime.bills).filter((bill) => bill.status === "sent_to_president").length}</b> bills awaiting action</span>
-            <span><b>{Object.values(props.snap.foreignAffairsRuntime.crises).filter((crisis) => isPublicCrisisStage(crisis.stage)).length}</b> public crises</span>
-            <span><b>{decisions.length}</b> decisions awaiting you</span>
-          </> : null}
-          {governedProvince && governorState && governorEconomy ? <>
-            <span><b>{governorEconomy.conditionsIndex.toFixed(1)}</b> regional conditions</span>
-            <span><b>{governorState.actionPointsRemaining}</b> governor actions left</span>
-            <span><b>{governorState.activePressureId ? "Action needed" : "Stable"}</b> provincial pressure</span>
-          </> : null}
-          {!playerIsPresident && !governedProvince && playerIsMp ? <>
-            <span><b>{Object.values(props.snap.legislatureRuntime.bills).filter((bill) => ["committee", "floor_scheduled", "repassage_scheduled"].includes(bill.status)).length}</b> active bills</span>
-            <span><b>{decisions.filter((decision) => decision.kind.endsWith("vote")).length}</b> votes due</span>
-            <span><b>{upcoming.find((election) => election.type === "assembly")?.date ?? "—"}</b> next Assembly election</span>
-          </> : null}
-          {!playerIsPresident && !governedProvince && !playerIsMp && props.campaign ? <>
-            <span><b>{props.campaign.actionPointsRemaining}</b> campaign actions</span>
-            <span><b>{Math.round(props.campaign.cashOnHand)}</b> cash on hand</span>
-            <span><b>{props.campaign.electionId ? electionDisplayName(props.campaign.electionId) : campaignTypeLabel(props.campaign.type)}</b> active race</span>
-          </> : null}
-          {!playerIsPresident && !governedProvince && !playerIsMp && !props.campaign ? <>
-            <span><b>{upcoming.length}</b> scheduled elections</span>
-            <span><b>Career</b> review eligible races</span>
-            <span><b>No office required</b> the game continues</span>
-          </> : null}
-        </div>
-      </section>
-
-      {interrupt ? (
-        <div className="briefing-urgent alert">
-          <strong>Urgent</strong>
-          <p>{interruptDisplay(interrupt)}</p>
-        </div>
-      ) : null}
-
-      {decisions.length > 0 ? (
-        <SectionCard title="Required decisions">
-          {decisions.map((d) => (
-            <div key={d.key} className="urgent-item">
-              {decisionDisplayLabel(d, interrupt)}
-            </div>
-          ))}
-        </SectionCard>
-      ) : null}
-
-      {lead ? (
-        <LeadStory
-          kicker="Lead story"
-          headline={eventDisplay(props.catalog, props.world, props.snap, lead)}
-          date={lead.date}
-        />
-      ) : (
-        <EmptyState>No major developments this month.</EmptyState>
-      )}
-
-      {terenaPublicCrisis ? (
-        <div className="briefing-urgent alert">
-          <strong>International crisis</strong>
-          <p>
-            Terena is involved in an active international crisis (
-            {crisisStageLabel(terenaPublicCrisis.stage)} ·{" "}
-            {publicSeverityLabel(terenaPublicCrisis.intensity, terenaPublicCrisis.stage)}). See{" "}
-            {terenaPublicCrisis.participantIds
-              .filter((id) => id !== TERENA_WORLD_ID)
-              .map((id) => countryDisplayName(props.world, id))
-              .join(", ") || "foreign partners"}{" "}
-            on the Foreign Affairs map.
-          </p>
-        </div>
-      ) : null}
-
-      {terenaLatentTension && !terenaPublicCrisis ? (
-        <div className="briefing-note alert">
-          <strong>Strategic tension</strong>
-          <p>
-            Background tension with{" "}
-            {terenaLatentTension.participantIds
-              .filter((id) => id !== TERENA_WORLD_ID)
-              .map((id) => countryDisplayName(props.world, id))
-              .join(", ") || "a foreign power"}{" "}
-            persists ({publicSeverityLabel(terenaLatentTension.intensity, terenaLatentTension.stage)}
-            ). Monitor developments on the Foreign Affairs map.
-          </p>
-        </div>
-      ) : null}
-
-      {playerIsPresident && warTrigger ? (
-        <div className="briefing-urgent alert">
-          <strong>War powers decision required</strong>
-          <p>
-            International developments require presidential war powers. Open Executive or Foreign
-            Affairs to invoke war powers or seek Assembly authorization.
-          </p>
-        </div>
-      ) : null}
-
-      <DashboardLayout
+    <div className="home-v5">
+      <WorkLayout
+        header={
+          <>
+            <PoliticianProfile
+              catalog={props.catalog}
+              world={props.world}
+              state={props.snap}
+              politicianId={playerId}
+              office={props.offices[0] ?? "Private citizen"}
+              party={partyDisplayName(props.world, runtime?.partyId ?? null, props.snap)}
+              faction={factionDisplayName(props.world, runtime?.factionId ?? null)}
+              {...(figure?.home ? { home: figure.home } : {})}
+              standing={`Public standing: ${standingLabel}`}
+              {...((figure?.notes ?? figure?.display_summary)
+                ? { biography: figure?.notes ?? figure?.display_summary }
+                : {})}
+            />
+            <SectionDivider title={briefTitle} hint="What matters this month" />
+            <BriefStrip items={briefItems} />
+          </>
+        }
         main={
           <>
-            <SectionCard title="Political situation">
-              <MetricStrip>
-                <StatCard
-                  label="Standing"
-                  value={qualitativeStanding(standing?.favorability)}
+            {interrupt ? (
+              <div className="briefing-urgent alert">
+                <strong>Urgent</strong>
+                <p>{interruptDisplay(interrupt)}</p>
+              </div>
+            ) : null}
+            {decisions.length > 0 ? (
+              <div>
+                <SectionDivider title="Required decisions" />
+                {decisions.map((d) => (
+                  <div key={d.key} className="decision-row">
+                    <span>{decisionDisplayLabel(d, interrupt)}</span>
+                    <StatusBadge tone="warn">Action</StatusBadge>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="lead-block">
+              {lead ? (
+                <LeadStory
+                  kicker="Lead story"
+                  headline={eventDisplay(props.catalog, props.world, props.snap, lead)}
+                  date={lead.date}
                 />
-                <StatCard
-                  label="Confidence"
-                  value={n.confidenceIndex.toFixed(1)}
-                  hint={`${formatIndexDelta(confDelta)} vs prior month`}
-                />
-                <StatCard
-                  label="Employment index"
-                  value={n.employmentIndex.toFixed(1)}
-                  hint="Index reference = 100"
-                />
-                {props.campaign ? (
-                  <StatCard
-                    label="Campaign actions"
-                    value={`${props.campaign.actionPointsRemaining} / ${props.campaign.actionPointsMax}`}
-                  />
-                ) : null}
-              </MetricStrip>
-              {polls.length > 0 ? (
-                <div className="muted" style={{ marginTop: "0.75rem" }}>
-                  Latest poll {polls[polls.length - 1]!.publicationDate}:{" "}
-                  {pollShareLine(
-                    props.catalog,
-                    props.world,
-                    props.snap,
-                    polls[polls.length - 1]!.firstPreference,
-                  )}
-                </div>
-              ) : null}
-            </SectionCard>
-            <SectionCard title="Recent activity">
-              {feed.length === 0 ? <EmptyState>Quiet month in public records.</EmptyState> : null}
-              {feed.map((e) => (
-                <ActivityFeedItem
-                  key={e.id}
-                  date={e.date}
-                  text={eventDisplay(props.catalog, props.world, props.snap, e)}
-                />
-              ))}
-            </SectionCard>
+              ) : (
+                <EmptyState>No major developments this month.</EmptyState>
+              )}
+            </div>
+            {terenaPublicCrisis ? (
+              <div className="briefing-urgent alert">
+                <strong>International crisis</strong>
+                <p>
+                  Terena is involved in an active international crisis (
+                  {crisisStageLabel(terenaPublicCrisis.stage)} ·{" "}
+                  {publicSeverityLabel(terenaPublicCrisis.intensity, terenaPublicCrisis.stage)}). See
+                  Foreign Affairs.
+                </p>
+              </div>
+            ) : null}
+            {terenaLatentTension && !terenaPublicCrisis ? (
+              <div className="briefing-note alert">
+                <strong>Strategic tension</strong>
+                <p>
+                  Background tension persists (
+                  {publicSeverityLabel(terenaLatentTension.intensity, terenaLatentTension.stage)}
+                  ). Monitor Foreign Affairs.
+                </p>
+              </div>
+            ) : null}
+            {playerIsPresident && warTrigger ? (
+              <div className="briefing-urgent alert">
+                <strong>War powers decision required</strong>
+                <p>Open Executive or Foreign Affairs to invoke war powers or seek Assembly authorization.</p>
+              </div>
+            ) : null}
+            <SectionDivider title="Recent activity" />
+            {feed.length === 0 ? <EmptyState>Quiet month in public records.</EmptyState> : null}
+            {feed.map((e) => (
+              <ActivityFeedItem
+                key={e.id}
+                date={e.date}
+                text={eventDisplay(props.catalog, props.world, props.snap, e)}
+              />
+            ))}
             {stories.length > 0 ? (
-              <SectionCard title="In the press">
+              <>
+                <SectionDivider title="In the press" />
                 {stories.map((s) => (
                   <NewsItem
                     key={s.id}
@@ -364,37 +353,51 @@ function Home(props: PageProps) {
                         ? mediaHeadlineForEvent(s.factEventType, s.framing)
                         : s.headlineKey
                     }
-                    outlet={props.world.mediaOutlets[s.outletId]?.name ?? s.outletId}
+                    outlet={props.world.mediaOutlets[s.outletId]?.name ?? "Press"}
                     date={s.date}
                     category={s.category}
                   />
                 ))}
-              </SectionCard>
+              </>
             ) : null}
           </>
         }
         rail={
-          <RightRail>
-            <SectionCard title="Upcoming elections">
-              {upcoming.length === 0 ? <EmptyState>No pending elections.</EmptyState> : null}
-              {upcoming.map((el) => (
-                <div key={el.id} className="rail-item">
+          <>
+            <SectionDivider title="Calendar" />
+            {upcoming.length === 0 ? <EmptyState>No pending elections.</EmptyState> : null}
+            {upcoming.map((el) => (
+              <div key={el.id} className="decision-row">
+                <div>
                   <strong>{electionDisplayName(el.id)}</strong>
                   <div className="muted">{el.date}</div>
                 </div>
-              ))}
-            </SectionCard>
-            <SectionCard title="Campaign">
-              {props.campaign ? (
-                <div>
-                  <StatusBadge tone="ok">Active</StatusBadge>
-                  <div className="muted">{campaignTypeLabel(props.campaign.type)}</div>
-                </div>
-              ) : (
-                <EmptyState>Not campaigning</EmptyState>
-              )}
-            </SectionCard>
-          </RightRail>
+              </div>
+            ))}
+            <SectionDivider title="Campaign" />
+            {props.campaign ? (
+              <div>
+                <StatusBadge tone="ok">Active</StatusBadge>
+                <div className="muted">{campaignTypeLabel(props.campaign.type)}</div>
+              </div>
+            ) : (
+              <EmptyState>Not campaigning</EmptyState>
+            )}
+            {polls.length > 0 ? (
+              <>
+                <SectionDivider title="Public poll" />
+                <p className="muted">
+                  {polls[polls.length - 1]!.publicationDate}:{" "}
+                  {pollShareLine(
+                    props.catalog,
+                    props.world,
+                    props.snap,
+                    polls[polls.length - 1]!.firstPreference,
+                  )}
+                </p>
+              </>
+            ) : null}
+          </>
         }
       />
     </div>
@@ -402,13 +405,13 @@ function Home(props: PageProps) {
 }
 
 function Career(props: PageProps) {
-  const [tab, setTab] = useState<"opportunities" | "overview" | "career" | "positions" | "relationships" | "record">(
+  const [tab, setTab] = useState<"opportunities" | "overview" | "career" | "positions" | "record">(
     "opportunities",
   );
   const [raceGeography, setRaceGeography] = useState("");
   const figure = props.figures.get(props.snap.playerPoliticianId);
   const runtime = props.snap.politicians[props.snap.playerPoliticianId];
-  const standing = props.snap.candidateStanding[props.snap.playerPoliticianId];
+  const standingLabel = publicStandingLabel(props.world, props.snap, props.snap.playerPoliticianId);
   const age = figure?.birth_date
     ? Number(props.snap.currentDate.slice(0, 4)) - Number(figure.birth_date.slice(0, 4))
     : null;
@@ -461,7 +464,7 @@ function Career(props: PageProps) {
         party={partyDisplayName(props.world, runtime?.partyId ?? null, props.snap)}
         faction={factionDisplayName(props.world, runtime?.factionId ?? null)}
         {...(figure?.home ? { home: figure.home } : {})}
-        standing={`Public standing: ${qualitativeStanding(standing?.favorability)}`}
+        standing={`Public standing: ${standingLabel}`}
         {...((figure?.notes ?? figure?.display_summary)
           ? { biography: figure?.notes ?? figure?.display_summary }
           : {})}
@@ -472,7 +475,6 @@ function Career(props: PageProps) {
           { id: "overview", label: "Overview" },
           { id: "career", label: "Career" },
           { id: "positions", label: "Positions" },
-          { id: "relationships", label: "Relationships" },
           { id: "record", label: "Public record" },
         ]}
         value={tab}
@@ -510,7 +512,7 @@ function Career(props: PageProps) {
                       const parties = constituencySittingSeatBreakdown(props.world, props.snap, id);
                       const selected = id === chosenConstituency;
                       return <button key={id} type="button" className={`geography-choice${selected ? " selected" : ""}`} onClick={() => setRaceGeography(id)}>
-                        <strong>{info?.name ?? id}</strong>
+                        <strong>{info?.name ?? "Unknown constituency"}</strong>
                         <span>{info?.provinceName ?? "Terena"} · {props.world.constituencyElectorate[id]?.seats ?? "?"} seats</span>
                         <span>{parties.slice(0, 2).map((row) => `${partyDisplayName(props.world, row.partyId, props.snap)} ${row.seats}`).join(" · ") || "Open representation"}</span>
                       </button>;
@@ -560,14 +562,7 @@ function Career(props: PageProps) {
           <p className="muted">
             {props.campaign ? "Campaign underway" : "Not currently campaigning"}
           </p>
-        </SectionCard>
-      ) : null}
-      {tab === "relationships" ? (
-        <SectionCard title="Known public associations">
-          <EmptyState>
-            Exact private relationship values are not shown. Use Organizations for known public
-            contact.
-          </EmptyState>
+          <p className="muted">Public associations: see Organizations for known contacts.</p>
         </SectionCard>
       ) : null}
       {tab === "record" ? (
@@ -897,197 +892,347 @@ function Terena(props: PageProps) {
   );
 }
 
-function Archive(props: PageProps) {
-  const [filter, setFilter] = useState<
-    "all" | "elections" | "laws" | "events" | "leadership" | "foreign"
-  >("all");
-  const laws = Object.values(props.snap.legislatureRuntime.enactedLaws);
-  const elections = Object.values(props.snap.elections).filter((e) => e.status === "resolved");
-  const governorElections = Object.values(props.snap.provincialRuntime.elections).filter((e) => e.status === "resolved" || e.status === "assumed");
-  const leadership = Object.values(props.snap.partyContests).filter((c) => c.winnerId);
-  const events = props.snap.history.filter((e) => e.type !== "TURN_COMPLETED").slice(-40).reverse();
-  const foreign = props.snap.foreignAffairsRuntime;
-  const foreignEvents = props.snap.history
-    .filter((e) => {
-      if (e.type === "TURN_COMPLETED") return false;
-      return /DIPLOMATIC|SANCTION|TREATY|FOREIGN|CRISIS|TRADE|POSTURE|CONFLICT|ALLIANCE/i.test(
-        e.type,
-      );
-    })
-    .slice(-30)
-    .reverse();
-  const treaties = Object.values(foreign.treaties).sort((a, b) =>
-    (b.signedDate ?? "") < (a.signedDate ?? "") ? -1 : 1,
+const ARCHIVE_PAGE_SIZE = 25;
+
+type ArchiveTab =
+  | "elections"
+  | "administrations"
+  | "legislation"
+  | "courts"
+  | "foreign"
+  | "economy";
+
+function ArchivePager(props: {
+  page: number;
+  pageCount: number;
+  total: number;
+  onChange: (page: number) => void;
+}) {
+  if (props.pageCount <= 1) return null;
+  return (
+    <div className="pager">
+      <button
+        type="button"
+        className="btn secondary"
+        disabled={props.page <= 0}
+        onClick={() => props.onChange(props.page - 1)}
+      >
+        Previous
+      </button>
+      <span className="muted">
+        Page {props.page + 1} of {props.pageCount} · {props.total} records
+      </span>
+      <button
+        type="button"
+        className="btn secondary"
+        disabled={props.page >= props.pageCount - 1}
+        onClick={() => props.onChange(props.page + 1)}
+      >
+        Next
+      </button>
+    </div>
   );
-  const crises = Object.values(foreign.crises);
-  const sanctions = Object.values(foreign.sanctions);
-  const conflicts = Object.values(foreign.conflicts);
-  const foreignLeadership = props.snap.history
-    .filter((e) => e.type === "FOREIGN_LEADERSHIP_CHANGE")
-    .slice(-20)
-    .reverse();
+}
+
+function Archive(props: PageProps) {
+  const [tab, setTab] = useState<ArchiveTab>("elections");
+  const [page, setPage] = useState(0);
+
+  const laws = useMemo(
+    () =>
+      Object.values(props.snap.legislatureRuntime.enactedLaws).sort((a, b) =>
+        (b.enactedDate ?? "") < (a.enactedDate ?? "") ? -1 : 1,
+      ),
+    [props.snap.legislatureRuntime.enactedLaws],
+  );
+  const elections = useMemo(() => {
+    const national = Object.values(props.snap.elections)
+      .filter((e) => e.status === "resolved")
+      .map((e) => ({
+        id: e.id,
+        date: e.date,
+        label: electionDisplayName(e.id),
+        detail:
+          e.type === "assembly"
+            ? `${e.winnerIds.length} members elected`
+            : `won by ${e.winnerIds.map((id) => politicianDisplayName(props.catalog, id)).join(", ")}`,
+      }));
+    const gubernatorial = Object.values(props.snap.provincialRuntime.elections)
+      .filter((e) => e.status === "resolved" || e.status === "assumed")
+      .map((e) => ({
+        id: e.id,
+        date: e.date,
+        label: `${props.catalog.places.get(e.provinceId)?.name ?? e.provinceId} gubernatorial`,
+        detail: e.winnerId
+          ? `won by ${politicianDisplayName(props.catalog, e.winnerId)}`
+          : "result unavailable",
+      }));
+    return [...national, ...gubernatorial].sort((a, b) => (b.date < a.date ? -1 : 1));
+  }, [props.catalog, props.snap.elections, props.snap.provincialRuntime.elections]);
+
+  const administrations = useMemo(() => {
+    const canonical =
+      props.bundle.content.terena_presidential_administrations?.administrations?.map((a) => ({
+        id: a.id,
+        date: a.term_start,
+        title: a.president_name,
+        meta: `${partyDisplayName(props.world, a.party_id, props.snap)} · ${a.term_start} – ${a.term_end}${a.status ? ` · ${a.status}` : ""}`,
+      })) ?? [];
+    const assumptions = props.snap.history
+      .filter(
+        (e) =>
+          e.type === "PRESIDENTIAL_ASSUMPTION" ||
+          e.type === "ACTING_PRESIDENT_ASSUMED" ||
+          e.type === "OFFICE_TERM_ENDED",
+      )
+      .filter((e) => {
+        if (e.type !== "OFFICE_TERM_ENDED") return true;
+        const officeId = (e.payload as { officeId?: string } | undefined)?.officeId;
+        return officeId === "OFFICE_PRESIDENT" || officeId == null;
+      })
+      .map((e) => ({
+        id: e.id,
+        date: e.date,
+        title: eventDisplay(props.catalog, props.world, props.snap, e),
+        meta: e.date,
+      }));
+    const leadership = Object.values(props.snap.partyContests)
+      .filter((c) => c.winnerId)
+      .map((c) => ({
+        id: c.id,
+        date: c.resolvedDate ?? c.openedDate ?? c.createdDate ?? "",
+        title: contestDisplayName(props.snap, props.world, c.id),
+        meta: politicianDisplayName(props.catalog, c.winnerId!),
+      }));
+    return [...canonical, ...assumptions, ...leadership].sort((a, b) =>
+      (b.date ?? "") < (a.date ?? "") ? -1 : 1,
+    );
+  }, [props.bundle, props.catalog, props.snap, props.world]);
+
+  const courtRows = useMemo(() => {
+    const decisions = Object.values(props.snap.constitutionalRuntime.courtDecisions)
+      .slice()
+      .sort((a, b) => (b.decisionDate < a.decisionDate ? -1 : 1))
+      .map((d) => {
+        const courtCase = props.snap.constitutionalRuntime.courtCases[d.caseId];
+        return {
+          id: d.id,
+          date: d.decisionDate,
+          title: courtCase ? caseTitle(courtCase) : d.caseId,
+          meta: `${d.disposition} · uphold ${d.uphold} · invalidate ${d.invalidate}`,
+        };
+      });
+    const history = props.snap.history
+      .filter((e) => e.type === "COURT_DECISION" || e.type === "COURT_VACANCY")
+      .map((e) => ({
+        id: e.id,
+        date: e.date,
+        title: eventDisplay(props.catalog, props.world, props.snap, e),
+        meta: e.date,
+      }));
+    const seen = new Set(decisions.map((d) => d.id));
+    return [...decisions, ...history.filter((h) => !seen.has(h.id))].sort((a, b) =>
+      b.date < a.date ? -1 : 1,
+    );
+  }, [props.catalog, props.snap, props.world]);
+
+  const foreign = props.snap.foreignAffairsRuntime;
+  const foreignRows = useMemo(() => {
+    const treaties = Object.values(foreign.treaties).map((t) => ({
+      id: t.id,
+      date: t.signedDate ?? "",
+      title: t.title,
+      meta: `${treatyTypeLabel(t.kind)} · ${treatyStatusLabel(t)}${t.signedDate ? ` · ${t.signedDate}` : ""}`,
+    }));
+    const crises = Object.values(foreign.crises).map((c) => ({
+      id: c.id,
+      date: c.startedDate,
+      title: c.participantIds.map((id) => countryDisplayName(props.world, id)).join(" · "),
+      meta: `${crisisStageLabel(c.stage)} · since ${c.startedDate}`,
+    }));
+    const conflicts = Object.values(foreign.conflicts).map((c) => ({
+      id: c.id,
+      date: c.startedDate ?? c.endedDate ?? "",
+      title: c.belligerentIds.map((id) => countryDisplayName(props.world, id)).join(" vs "),
+      meta: `${publicSeverityLabel(c.intensity, "conflict")}${c.endedDate ? ` · ended ${c.endedDate}` : " · ongoing"}`,
+    }));
+    const sanctions = Object.values(foreign.sanctions).map((s) => ({
+      id: s.id,
+      date: s.imposedDate,
+      title: `${countryDisplayName(props.world, s.imposerId)} → ${countryDisplayName(props.world, s.targetId)}`,
+      meta: `${s.active ? "active" : "lifted"} · ${s.imposedDate}`,
+    }));
+    const diplomatic = props.snap.history
+      .filter((e) => {
+        if (e.type === "TURN_COMPLETED") return false;
+        return /DIPLOMATIC|SANCTION|TREATY|FOREIGN|CRISIS|TRADE|POSTURE|CONFLICT|ALLIANCE/i.test(
+          e.type,
+        );
+      })
+      .map((e) => ({
+        id: e.id,
+        date: e.date,
+        title: eventDisplay(props.catalog, props.world, props.snap, e),
+        meta: e.date,
+      }));
+    return [...treaties, ...crises, ...conflicts, ...sanctions, ...diplomatic].sort((a, b) =>
+      (b.date ?? "") < (a.date ?? "") ? -1 : 1,
+    );
+  }, [foreign, props.catalog, props.snap.history, props.world]);
+
+  const economyRows = useMemo(() => {
+    const shocks = props.snap.economyRuntime.shocks.map((s) => ({
+      id: s.id,
+      date: s.date,
+      title: s.kind.replace(/_/g, " "),
+      meta: `${s.date} · ${s.remainingMonths} months remain`,
+    }));
+    const history = props.snap.history
+      .filter(
+        (e) =>
+          e.type === "ECONOMY_MONTH" ||
+          e.type === "ECONOMY_SHOCK" ||
+          /ECONOMY|FISCAL|BUDGET/i.test(e.type),
+      )
+      .filter((e) => e.type !== "TURN_COMPLETED")
+      .map((e) => ({
+        id: e.id,
+        date: e.date,
+        title: eventDisplay(props.catalog, props.world, props.snap, e),
+        meta: e.date,
+      }));
+    // Cap economy event noise: prefer named shocks, then recent public history
+    return [...shocks, ...history]
+      .sort((a, b) => (b.date < a.date ? -1 : 1))
+      .slice(0, 200);
+  }, [props.catalog, props.snap, props.world]);
+
+  const rowsForTab: Array<{ id: string; date: string; title: string; meta: string }> =
+    tab === "elections"
+      ? elections.map((e) => ({ id: e.id, date: e.date, title: e.label, meta: e.detail }))
+      : tab === "administrations"
+        ? administrations
+        : tab === "legislation"
+          ? laws.map((l) => ({
+              id: l.id,
+              date: l.enactedDate ?? "",
+              title: l.title,
+              meta: l.enactedDate ?? "",
+            }))
+          : tab === "courts"
+            ? courtRows
+            : tab === "foreign"
+              ? foreignRows
+              : economyRows;
+
+  const pageCount = Math.max(1, Math.ceil(rowsForTab.length / ARCHIVE_PAGE_SIZE));
+  const pageIndex = Math.min(page, pageCount - 1);
+  const pageRows = rowsForTab.slice(
+    pageIndex * ARCHIVE_PAGE_SIZE,
+    pageIndex * ARCHIVE_PAGE_SIZE + ARCHIVE_PAGE_SIZE,
+  );
 
   return (
-    <div>
-      <PageHeader kicker="History" title="Archive" subtitle="Political history drawn from public records." />
-      <TabBar
-        tabs={[
-          { id: "all", label: "All" },
-          { id: "elections", label: "Elections" },
-          { id: "laws", label: "Laws" },
-          { id: "leadership", label: "Leadership" },
-          { id: "foreign", label: "Foreign" },
-          { id: "events", label: "Events" },
-        ]}
-        value={filter}
-        onChange={setFilter}
-      />
-      {(filter === "all" || filter === "elections") && elections.length > 0 ? (
-        <SectionCard title="Elections">
-          {elections.map((e) => (
-            <div key={e.id}>
-              {electionDisplayName(e.id)} · {e.type === "assembly" ? `${e.winnerIds.length} members elected` : `won by ${e.winnerIds.map((id) => politicianDisplayName(props.catalog, id)).join(", ")}`}
-            </div>
-          ))}
-          {governorElections.map((e) => <div key={e.id}>{props.catalog.places.get(e.provinceId)?.name ?? e.provinceId} gubernatorial election · {e.winnerId ? `won by ${politicianDisplayName(props.catalog, e.winnerId)}` : "result unavailable"}</div>)}
-        </SectionCard>
-      ) : null}
-      {(filter === "all" || filter === "laws") && laws.length > 0 ? (
-        <SectionCard title="Laws enacted">
-          {laws.map((l) => (
-            <div key={l.id}>
-              {l.title} ({l.enactedDate})
-            </div>
-          ))}
-        </SectionCard>
-      ) : null}
-      {(filter === "all" || filter === "leadership") && leadership.length > 0 ? (
-        <SectionCard title="Party leadership">
-          {leadership.map((c) => (
-            <div key={c.id}>
-              {contestDisplayName(props.snap, props.world, c.id)} —{" "}
-              {politicianDisplayName(props.catalog, c.winnerId!)}
-            </div>
-          ))}
-        </SectionCard>
-      ) : null}
-      {(filter === "all" || filter === "foreign") ? (
+    <WorkLayout
+      header={
+        <PageHeader
+          kicker="History"
+          title="Archive"
+          subtitle="Sectioned public records — not an unbounded fifty-year feed."
+        />
+      }
+      main={
         <>
-          {treaties.length > 0 ? (
-            <SectionCard title="Treaties">
-              {treaties.map((t) => (
-                <div key={t.id}>
-                  {t.title} · {treatyTypeLabel(t.kind)} · {treatyStatusLabel(t)}
-                  {t.signedDate ? ` · ${t.signedDate}` : ""}
-                </div>
+          <TabBar
+            tabs={[
+              { id: "elections", label: "Elections" },
+              { id: "administrations", label: "Administrations" },
+              { id: "legislation", label: "Legislation" },
+              { id: "courts", label: "Courts" },
+              { id: "foreign", label: "Foreign" },
+              { id: "economy", label: "Economy" },
+            ]}
+            value={tab}
+            onChange={(id) => {
+              setTab(id);
+              setPage(0);
+            }}
+          />
+
+          <SectionDivider
+            title={
+              tab === "elections"
+                ? "Elections"
+                : tab === "administrations"
+                  ? "Administrations"
+                  : tab === "legislation"
+                    ? "Legislation"
+                    : tab === "courts"
+                      ? "Courts"
+                      : tab === "foreign"
+                        ? "Foreign"
+                        : "Economy"
+            }
+            hint={
+              rowsForTab.length === 0
+                ? "No records in this section yet."
+                : `${rowsForTab.length} record${rowsForTab.length === 1 ? "" : "s"}`
+            }
+          />
+
+          {pageRows.length === 0 ? <EmptyState>No records in this section yet.</EmptyState> : null}
+
+          {tab === "legislation" || tab === "elections" ? (
+            <DataTable dense headers={["Date", "Record", "Detail"]}>
+              {pageRows.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.date || "—"}</td>
+                  <td>{row.title}</td>
+                  <td>{row.meta}</td>
+                </tr>
               ))}
-            </SectionCard>
-          ) : filter === "foreign" ? (
-            <SectionCard title="Treaties">
-              <EmptyState>No treaties on record.</EmptyState>
-            </SectionCard>
-          ) : null}
-          {crises.length > 0 ? (
-            <SectionCard title="International crises">
-              {crises.map((c) => (
-                <div key={c.id}>
-                  {c.participantIds.map((id) => countryDisplayName(props.world, id)).join(" · ")} ·{" "}
-                  {crisisStageLabel(c.stage)} · since {c.startedDate}
-                </div>
-              ))}
-            </SectionCard>
-          ) : filter === "foreign" ? (
-            <SectionCard title="International crises">
-              <EmptyState>No crises on record.</EmptyState>
-            </SectionCard>
-          ) : null}
-          {conflicts.length > 0 ? (
-            <SectionCard title="Conflicts">
-              {conflicts.map((c) => (
-                <div key={c.id}>
-                  {c.belligerentIds.map((id) => countryDisplayName(props.world, id)).join(" vs ")} ·
-                  {publicSeverityLabel(c.intensity, "conflict")}
-                  {c.endedDate ? ` · ended ${c.endedDate}` : " · ongoing"}
-                </div>
-              ))}
-            </SectionCard>
-          ) : null}
-          {sanctions.length > 0 ? (
-            <SectionCard title="Sanctions">
-              {sanctions.map((s) => (
-                <div key={s.id}>
-                  {countryDisplayName(props.world, s.imposerId)} →{" "}
-                  {countryDisplayName(props.world, s.targetId)} · {s.active ? "active" : "lifted"} ·{" "}
-                  {s.imposedDate}
-                </div>
-              ))}
-            </SectionCard>
-          ) : null}
-          {foreignLeadership.length > 0 ? (
-            <SectionCard title="Foreign leadership changes">
-              {foreignLeadership.map((e) => (
-                <ActivityFeedItem
-                  key={e.id}
-                  date={e.date}
-                  text={eventDisplay(props.catalog, props.world, props.snap, e)}
-                />
-              ))}
-            </SectionCard>
-          ) : null}
-          {foreignEvents.length > 0 ? (
-            <SectionCard title="Diplomatic events">
-              {foreignEvents.map((e) => (
-                <ActivityFeedItem
-                  key={e.id}
-                  date={e.date}
-                  text={eventDisplay(props.catalog, props.world, props.snap, e)}
-                />
-              ))}
-            </SectionCard>
-          ) : filter === "foreign" ? (
-            <SectionCard title="Diplomatic events">
-              <EmptyState>No diplomatic events recorded.</EmptyState>
-            </SectionCard>
+            </DataTable>
+          ) : (
+            pageRows.map((row) => (
+              <EntityRow key={row.id} title={row.title} meta={row.meta} status={row.date || undefined} />
+            ))
+          )}
+
+          <ArchivePager
+            page={pageIndex}
+            pageCount={pageCount}
+            total={rowsForTab.length}
+            onChange={setPage}
+          />
+
+          {import.meta.env.DEV ? (
+            <details className="dev-panel">
+              <summary>Development tools</summary>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={props.debug}
+                  onChange={(e) => props.setDebug(e.target.checked)}
+                />{" "}
+                Show hidden developer numbers
+              </label>
+              {props.debug ? (
+                <pre>
+                  {JSON.stringify(
+                    {
+                      standing: props.snap.candidateStanding[props.snap.playerPoliticianId],
+                      player: props.snap.politicians[props.snap.playerPoliticianId],
+                      mp: isMp(props.world, props.snap, props.snap.playerPoliticianId),
+                    },
+                    null,
+                    2,
+                  )}
+                </pre>
+              ) : null}
+            </details>
           ) : null}
         </>
-      ) : null}
-      {(filter === "all" || filter === "events") ? (
-        <SectionCard title="Public events">
-          {events.map((e) => (
-            <ActivityFeedItem
-              key={e.id}
-              date={e.date}
-              text={eventDisplay(props.catalog, props.world, props.snap, e)}
-            />
-          ))}
-        </SectionCard>
-      ) : null}
-      {import.meta.env.DEV ? (
-      <details className="dev-panel">
-        <summary>Development tools</summary>
-        <label>
-          <input
-            type="checkbox"
-            checked={props.debug}
-            onChange={(e) => props.setDebug(e.target.checked)}
-          />{" "}
-          Show hidden developer numbers
-        </label>
-        {props.debug ? (
-          <pre>
-            {JSON.stringify(
-              {
-                standing: props.snap.candidateStanding[props.snap.playerPoliticianId],
-                player: props.snap.politicians[props.snap.playerPoliticianId],
-                mp: isMp(props.world, props.snap, props.snap.playerPoliticianId),
-              },
-              null,
-              2,
-            )}
-          </pre>
-        ) : null}
-      </details>
-      ) : null}
-    </div>
+      }
+    />
   );
 }

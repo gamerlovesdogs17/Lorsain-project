@@ -83,7 +83,7 @@ export function GameShell(props: {
     (id === "career" && props.roleKind === "private_citizen");
 
   return (
-    <div className={`shell v3${props.busy ? " busy" : ""}`}>
+    <div className={`shell v5${props.busy ? " busy" : ""}`}>
       <button
         type="button"
         className="nav-toggle"
@@ -100,7 +100,7 @@ export function GameShell(props: {
           onClick={() => setNavOpen(false)}
         />
       ) : null}
-      <nav className={`nav v3${navOpen ? " open" : ""}`} aria-label="Game navigation">
+      <nav className={`nav v3 v5${navOpen ? " open" : ""}`} aria-label="Game navigation">
         <div className="nav-brand">
           <strong>Lorsain</strong>
           <button type="button" className="nav-close" onClick={() => setNavOpen(false)}>
