@@ -11,7 +11,7 @@ import {
   type SimState,
   type Simulation,
 } from "@lorsain/sim";
-import { playerCampaign, playerOffices } from "./format.js";
+import { groundGameStrength, playerCampaign, playerOffices } from "./format.js";
 import {
   campaignTypeLabel,
   constituencyDisplayName,
@@ -393,8 +393,8 @@ export function CampaignPage(props: {
               <strong>{Math.round(c.cashOnHand).toLocaleString()}</strong>
             </div>
             <div>
-              <div className="kicker">Org</div>
-              <strong>{c.fieldOrganization.toFixed(2)}</strong>
+              <div className="kicker">Ground Game</div>
+              <strong>{groundGameStrength(c.fieldOrganization)}/100</strong>
             </div>
             <div>
               <div className="kicker">AP</div>
@@ -468,9 +468,9 @@ export function CampaignPage(props: {
                 <strong>{selection.name}</strong>
                 <span>
                   {selection.kind === "province"
-                    ? `Provincial organization ${(c.organizationByProvince[selection.id] ?? 0).toFixed(2)}`
+                    ? `Provincial Ground Game ${groundGameStrength(c.organizationByProvince[selection.id])}/100`
                     : selection.kind === "constituency"
-                      ? `Constituency organization ${(c.organizationByConstituency[selection.id] ?? 0).toFixed(2)}`
+                      ? `Constituency Ground Game ${groundGameStrength(c.organizationByConstituency[selection.id])}/100`
                       : "Campaign location"}
                 </span>
               </>
@@ -481,13 +481,13 @@ export function CampaignPage(props: {
             <p className="map-selection-note">
               {focus.name}
               {focus.kind === "constituency"
-                ? ` · org ${(c.organizationByConstituency[focus.id] ?? 0).toFixed(2)}`
+                ? ` · Ground Game ${groundGameStrength(c.organizationByConstituency[focus.id])}/100`
                 : focus.kind === "province"
-                  ? ` · provincial org ${(c.organizationByProvince[focus.id] ?? 0).toFixed(2)}`
+                  ? ` · Ground Game ${groundGameStrength(c.organizationByProvince[focus.id])}/100`
                   : ""}
             </p>
           ) : (
-            <EmptyState>Field organization you control — not latent voter support.</EmptyState>
+            <EmptyState>Your Ground Game strength — not latent voter support.</EmptyState>
           )}
         </div>
 

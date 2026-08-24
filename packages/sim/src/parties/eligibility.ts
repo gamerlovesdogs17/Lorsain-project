@@ -140,12 +140,15 @@ export function evaluatePresidentialEligibility(
   }
 
   const elected = state.presidential.electedTermCountByPolitician[politicianId] ?? 0;
-  if (elected >= rules.termLimitElected) {
+  const constitutionalTermLimit =
+    state.provincialRuntime.constitutionalRules.presidential_term_limit?.value ??
+    rules.termLimitElected;
+  if (elected >= constitutionalTermLimit) {
     return {
       eligible: false,
       code: "PRESIDENTIALLY_INELIGIBLE",
       reasons: [
-        `Term limit reached (${elected} of ${rules.termLimitElected} elected presidential terms)`,
+        `Term limit reached (${elected} of ${constitutionalTermLimit} elected presidential terms)`,
       ],
       deferred,
     };

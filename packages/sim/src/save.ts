@@ -168,12 +168,24 @@ function parsePolitician(id: string, raw: unknown): PoliticianRuntime | string {
   if (raw.factionId != null && typeof raw.factionId !== "string") {
     return `politicians.${id} factionId must be string or null`;
   }
+  if (raw.homeProvinceId != null && typeof raw.homeProvinceId !== "string") {
+    return `politicians.${id} homeProvinceId must be string or undefined`;
+  }
+  if (raw.displayName != null && typeof raw.displayName !== "string") {
+    return `politicians.${id} displayName must be string or undefined`;
+  }
+  if (raw.description != null && typeof raw.description !== "string") {
+    return `politicians.${id} description must be string or undefined`;
+  }
   return {
     id,
     alive: raw.alive,
     retired: raw.retired,
     partyId: raw.partyId === undefined ? null : (raw.partyId as string | null),
     factionId: raw.factionId === undefined ? null : (raw.factionId as string | null),
+    ...(typeof raw.homeProvinceId === "string" ? { homeProvinceId: raw.homeProvinceId } : {}),
+    ...(typeof raw.displayName === "string" ? { displayName: raw.displayName } : {}),
+    ...(typeof raw.description === "string" ? { description: raw.description } : {}),
   };
 }
 
@@ -1399,3 +1411,45 @@ export function migrateSaveV11ToV12(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 11, toSchema: 12, migrate: migrateSaveV11ToV12 });
+
+/**
+ * Phase 11.3 adds lightweight Provincial Assemblies, a renewable political
+ * recruitment pool, public runtime identities, and mutable curated
+ * constitutional rules. Existing history is preserved; current institutions
+ * are seeded deterministically after restore.
+ */
+export function migrateSaveV12ToV13(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 13 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 13 };
+  const provincial = isRecord(sim.provincialRuntime) ? sim.provincialRuntime : {};
+  sim.provincialRuntime = {
+    ...provincial,
+    assemblies: isRecord(provincial.assemblies) ? provincial.assemblies : {},
+    legislators: isRecord(provincial.legislators) ? provincial.legislators : {},
+    assemblyElections: isRecord(provincial.assemblyElections) ? provincial.assemblyElections : {},
+    bills: isRecord(provincial.bills) ? provincial.bills : {},
+    votes: isRecord(provincial.votes) ? provincial.votes : {},
+    promotions: isRecord(provincial.promotions) ? provincial.promotions : {},
+    constitutionalRules: isRecord(provincial.constitutionalRules) ? provincial.constitutionalRules : {},
+    constitutionalAmendments: isRecord(provincial.constitutionalAmendments)
+      ? provincial.constitutionalAmendments
+      : {},
+  };
+  if (isRecord(sim.legislatureRuntime)) {
+    sim.legislatureRuntime = {
+      ...sim.legislatureRuntime,
+      caucusLeadership: isRecord(sim.legislatureRuntime.caucusLeadership)
+        ? sim.legislatureRuntime.caucusLeadership
+        : {},
+      caucusContests: isRecord(sim.legislatureRuntime.caucusContests)
+        ? sim.legislatureRuntime.caucusContests
+        : {},
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 12, toSchema: 13, migrate: migrateSaveV12ToV13 });

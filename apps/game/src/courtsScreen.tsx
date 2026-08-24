@@ -3,6 +3,7 @@ import {
   confirmationYesNeeded,
   currentPresidentialAuthorityId,
   deriveCourtBench,
+  getAgentProfile,
   judicialEligibilityError,
   vacantCourtSeatIds,
   caseTitle,
@@ -15,7 +16,27 @@ import {
 } from "@lorsain/sim";
 import { useMemo, useState } from "react";
 import { politicianDisplayName, type PresentationCatalog } from "./presentation.js";
-import { PageHeader, SectionCard } from "./ui/kit.js";
+import { DataTable, EmptyState, PageHeader, SectionCard, StatusBadge } from "./ui/kit.js";
+import { PoliticianProfile } from "./ui/politician.js";
+
+function legalCareer(world: KernelWorld, state: SimState, politicianId: string): string {
+  const profile = getAgentProfile(world, state, politicianId);
+  const roles = profile?.roleTypes ?? [];
+  if (roles.some((role) => role.includes("constitutional_court"))) return "Constitutional Court justice";
+  if (roles.some((role) => role.includes("judge"))) return "Judge";
+  if (roles.some((role) => role.includes("prosecut"))) return "Prosecutor";
+  if (roles.some((role) => role.includes("defender"))) return "Public defender";
+  if (roles.some((role) => role.includes("academic"))) return "Legal academic";
+  if (roles.some((role) => role.includes("lawyer"))) return "Senior lawyer";
+  return "Senior public-law record";
+}
+
+function publicCaseStrength(value: number): string {
+  if (value >= 0.78) return "compelling";
+  if (value >= 0.6) return "substantial";
+  if (value >= 0.42) return "contested";
+  return "limited";
+}
 
 export function CourtsPage(props: {
   world: KernelWorld;
@@ -39,6 +60,7 @@ export function CourtsPage(props: {
   const [nominee, setNominee] = useState("");
   const [query, setQuery] = useState("");
   const [basisId, setBasisId] = useState("");
+  const [selectedJudge, setSelectedJudge] = useState<string | null>(null);
   const impeachmentBases = availableImpeachmentBases(world, snap);
   const targetSeat = seat || vacancies[0] || "";
   const eligible = useMemo(() => {
@@ -87,20 +109,21 @@ export function CourtsPage(props: {
           Nine judges · 12-year nonrenewable terms · confirmation {confirmationYesNeeded(world)} yes
           of {world.legislativeConstitution.assemblySeatCount} authorized seats.
         </p>
-        <div className="bench-cards">
+        <div className="bench-chart" role="list" aria-label="Nine-seat Constitutional Court bench">
           {bench.map((s) => {
             const chief = /chief/i.test(s.title);
             return (
-              <div key={s.officeId} className={`judge-card${chief ? " chief" : ""}`}>
+              <button key={s.officeId} type="button" className={`judge-card${chief ? " chief" : ""}${s.holderId === selectedJudge ? " selected" : ""}`} onClick={() => setSelectedJudge(s.holderId)}>
                 <div className="kicker">{chief ? "Chief Justice" : s.title}</div>
                 <strong>
                   {s.holderId ? politicianDisplayName(catalog, s.holderId) : "Vacant"}
                 </strong>
                 <div className="muted">Term ends {s.termEndDate ?? "—"}</div>
-              </div>
+              </button>
             );
           })}
         </div>
+        {selectedJudge ? <div className="bench-inspector"><PoliticianProfile catalog={catalog} world={world} state={snap} politicianId={selectedJudge} office="Constitutional Court justice" /></div> : null}
       </SectionCard>
       {president && vacancies.length > 0 ? (
         <div className="card">
@@ -108,7 +131,7 @@ export function CourtsPage(props: {
           <select value={seat} onChange={(e) => setSeat(e.target.value)}>
             {vacancies.map((id) => (
               <option key={id} value={id}>
-                {world.offices[id]?.title ?? id}
+                {world.offices[id]?.title ?? "Constitutional Court seat"}
               </option>
             ))}
           </select>
@@ -117,15 +140,18 @@ export function CourtsPage(props: {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <select value={nominee} onChange={(e) => setNominee(e.target.value)}>
-            <option value="">Choose nominee</option>
-            {eligible.map((p) => (
-              <option key={p.id} value={p.id}>
-                {politicianDisplayName(catalog, p.id)}
-                {p.partyId ? "" : " · independent"}
-              </option>
-            ))}
-          </select>
+          <div className="appointment-browser" role="listbox" aria-label="Eligible judicial candidates">
+            {eligible.length === 0 ? <EmptyState>No eligible candidate matches this search.</EmptyState> : null}
+            {eligible.map((p) => {
+              const profile = getAgentProfile(world, snap, p.id);
+              const age = profile?.birthDate ? Number(snap.currentDate.slice(0, 4)) - Number(profile.birthDate.slice(0, 4)) : null;
+              return <button key={p.id} type="button" className={`appointment-candidate${nominee === p.id ? " selected" : ""}`} onClick={() => setNominee(p.id)}>
+                <span className="appointment-monogram" aria-hidden="true">{politicianDisplayName(catalog, p.id).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span>
+                <span><strong>{politicianDisplayName(catalog, p.id)}</strong><small>{legalCareer(world, snap, p.id)}{age != null ? ` · age ${age}` : ""}</small></span>
+                {nominee === p.id ? <StatusBadge tone="ok">Selected</StatusBadge> : null}
+              </button>;
+            })}
+          </div>
           <button
             type="button"
             className="btn"
@@ -202,8 +228,8 @@ export function CourtsPage(props: {
               >
                 {impeachmentBases.map((g) => (
                   <option key={g.id} value={g.id}>
-                    {g.grounds.replace(/_/g, " ")} · evidence {g.evidenceStrength.toFixed(2)} ·
-                    severity {g.severity.toFixed(2)}
+                    {g.grounds.replace(/_/g, " ")} · {publicCaseStrength(g.evidenceStrength)} evidence ·
+                    {publicCaseStrength(g.severity)} constitutional gravity
                   </option>
                 ))}
               </select>
@@ -385,6 +411,19 @@ export function CourtsPage(props: {
               </div>
               <div className="muted">Decided: {d.decisionDate}</div>
               <div className="muted">Constitutional question: {d.constitutionalQuestion}</div>
+              <div className="court-opinions">
+                <h4>Controlling opinion</h4>
+                {typeof d.metadata.majorityAuthorId === "string" ? <div className="muted">Opinion by {politicianDisplayName(catalog, d.metadata.majorityAuthorId)}</div> : null}
+                <p><strong>Holding:</strong> {typeof d.metadata.holding === "string" ? d.metadata.holding : "The Court resolved the constitutional question on the recorded grounds."}</p>
+                <p><strong>Rationale:</strong> {typeof d.metadata.majorityRationale === "string" ? d.metadata.majorityRationale : d.constitutionalQuestion}</p>
+                <p className="muted"><strong>Constitutional provision:</strong> {typeof d.metadata.constitutionalProvision === "string" ? d.metadata.constitutionalProvision : d.constitutionalRule.replace(/_/g, " ")}</p>
+                {typeof d.metadata.dissentingOpinion === "string" ? <><h4>Dissent</h4>{typeof d.metadata.dissentAuthorId === "string" ? <div className="muted">Opinion by {politicianDisplayName(catalog, d.metadata.dissentAuthorId)}</div> : null}<p>{d.metadata.dissentingOpinion}</p></> : null}
+              </div>
+              <DataTable dense headers={["Justice", "Vote"]}>
+                {Object.entries(d.votes).sort((a, b) => politicianDisplayName(catalog, a[0]).localeCompare(politicianDisplayName(catalog, b[0]))).map(([justiceId, vote]) => (
+                  <tr key={justiceId}><td>{politicianDisplayName(catalog, justiceId)}</td><td>{vote === "uphold" ? "Uphold" : vote === "invalidate" ? "Invalidate" : "Not participating"}</td></tr>
+                ))}
+              </DataTable>
             </div>
           );
         })}

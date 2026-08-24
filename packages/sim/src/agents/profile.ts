@@ -309,7 +309,7 @@ export function syntheticAgentProfile(
     skills: { ...emptySkills(0.5), ...partial.skills },
     issueSalience: partial.issueSalience ?? { ISS_REFORM: 0.4 },
     aiTier: partial.aiTier ?? "standard",
-    roleTypes: partial.roleTypes ?? [],
+    roleTypes: [...new Set(partial.roleTypes ?? [])].sort(),
     presidentialStatus: partial.presidentialStatus ?? null,
   };
   const err = agentProfileError(profile);

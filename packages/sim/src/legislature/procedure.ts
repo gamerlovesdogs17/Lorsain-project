@@ -2,6 +2,7 @@ import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js"
 import type { JsonObject } from "../json.js";
 import type { IsoDate } from "../calendar.js";
 import { monthStart } from "../campaigns/effects.js";
+import { recordOrganizationPolicyBehavior } from "../organizations/monthly.js";
 import { pushHistory } from "../scheduler.js";
 import type {
   AmendmentState,
@@ -151,9 +152,24 @@ export function introduceBill(
     enactedLawId: null,
     stageReadyDate: state.currentDate,
     metadata: {},
+    version: 1,
+    versionHistory: [
+      {
+        version: 1,
+        date: state.currentDate,
+        reason: "introduced",
+        amendmentId: null,
+        policyItems: items.map((item) => ({ ...item })),
+      },
+    ],
   };
   bill.assignedCommitteeId = assignCommitteeForBill(world, bill);
   state.legislatureRuntime.bills[bill.id] = bill;
+  recordOrganizationPolicyBehavior(world, state, {
+    politicianId: bill.sponsorId,
+    policyItems: bill.policyItems,
+    behavior: "sponsor",
+  });
   return {
     bill,
     events: [
@@ -200,6 +216,7 @@ export function proposeAmendment(
     policyItems: items,
     status: "proposed",
     metadata: {},
+    targetProvisionIds: items.map((item) => item.provisionId ?? item.issueId),
   };
   state.legislatureRuntime.amendments[amendment.id] = amendment;
   bill.amendmentIds = [...bill.amendmentIds, amendment.id];
@@ -234,7 +251,25 @@ export function adoptAmendment(
   const bill = state.legislatureRuntime.bills[amendment.billId];
   if (!bill) return [];
   amendment.status = "adopted";
-  bill.policyItems = amendment.policyItems.map((p) => ({ ...p }));
+  const next = bill.policyItems.map((item) => ({ ...item }));
+  for (const replacement of amendment.policyItems) {
+    const index = next.findIndex((item) =>
+      replacement.provisionId
+        ? item.provisionId === replacement.provisionId
+        : item.issueId === replacement.issueId,
+    );
+    if (index >= 0) next[index] = { ...replacement };
+    else if (next.length < 3) next.push({ ...replacement });
+  }
+  bill.policyItems = next;
+  bill.version += 1;
+  bill.versionHistory.push({
+    version: bill.version,
+    date: state.currentDate,
+    reason: "amendment_adopted",
+    amendmentId: amendment.id,
+    policyItems: next.map((item) => ({ ...item })),
+  });
   return [
     event(
       state,
@@ -325,6 +360,15 @@ export function recordAmendmentVote(
     metadata: { amendmentId: amendment.id, kind: "amendment" },
   };
   state.legislatureRuntime.legislativeVotes[vote.id] = vote;
+  const playerChoice = args.votes[state.playerPoliticianId];
+  if (playerChoice) {
+    recordOrganizationPolicyBehavior(world, state, {
+      politicianId: state.playerPoliticianId,
+      policyItems: bill.policyItems,
+      behavior: "vote",
+      voteChoice: playerChoice,
+    });
+  }
   amendment.metadata = { ...amendment.metadata, voteId: vote.id };
   const events = passed
     ? adoptAmendment(state, amendment.id, commandId)
@@ -380,6 +424,15 @@ export function recordVote(
     metadata: {},
   };
   state.legislatureRuntime.legislativeVotes[vote.id] = vote;
+  const playerChoice = args.votes[state.playerPoliticianId];
+  if (playerChoice) {
+    recordOrganizationPolicyBehavior(world, state, {
+      politicianId: state.playerPoliticianId,
+      policyItems: bill.policyItems,
+      behavior: "vote",
+      voteChoice: playerChoice,
+    });
+  }
   const events: SimEvent[] = [];
   if (args.stage === "committee") {
     bill.committeeVoteId = vote.id;
@@ -460,6 +513,11 @@ export function signBill(
   if (president !== args.actorId) return { error: reject("NOT_PRESIDENT", args.actorId) };
   bill.presidentialDisposition = "signed";
   bill.status = "signed";
+  recordOrganizationPolicyBehavior(world, state, {
+    politicianId: args.actorId,
+    policyItems: bill.policyItems,
+    behavior: "sign",
+  });
   const events = [
     event(state, "BILL_SIGNED", [args.actorId], [bill.id], { billId: bill.id }, commandId, 0.85),
   ];
@@ -482,6 +540,11 @@ export function returnBill(
   if (president !== args.actorId) return { error: reject("NOT_PRESIDENT", args.actorId) };
   bill.presidentialDisposition = "returned";
   bill.status = "repassage_scheduled";
+  recordOrganizationPolicyBehavior(world, state, {
+    politicianId: args.actorId,
+    policyItems: bill.policyItems,
+    behavior: "veto",
+  });
   bill.stageReadyDate = state.currentDate;
   state.legislatureRuntime.floorQueue = [
     bill.id,

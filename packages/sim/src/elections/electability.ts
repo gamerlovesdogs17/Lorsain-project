@@ -11,6 +11,7 @@ export function publicElectabilitySignal(
   politicianId: string,
   contestType?: PartyContestType,
   contestId?: string | null,
+  precomputedPollShare?: number,
 ): number {
   const standing = candidateStandingOrDefault(world, state, politicianId);
   const standingScore =
@@ -19,7 +20,8 @@ export function publicElectabilitySignal(
     standing.enthusiasm * 0.2;
   let pollShare = 0;
   if (contestType === "presidential_nomination" && contestId) {
-    pollShare = contestPollAverage(state, state.currentDate, contestId)[politicianId] ?? 0;
+    pollShare =
+      precomputedPollShare ?? contestPollAverage(state, state.currentDate, contestId)[politicianId] ?? 0;
   }
   return (
     standingScore * SELECTOR_ELECTABILITY.standing + pollShare * SELECTOR_ELECTABILITY.pollShare

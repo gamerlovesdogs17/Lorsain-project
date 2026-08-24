@@ -103,14 +103,13 @@ export function ExecutivePage(props: {
           return false;
         }
         if (!q) return true;
-        const fig = props.catalog.figures.get(id);
         const offices = playerOffices(props.world, props.snap, id).join(" ");
         const party = partyDisplayName(
           props.world,
           props.snap.politicians[id]?.partyId ?? null,
           props.snap,
         );
-        return `${fig?.name ?? id} ${party} ${offices}`.toLowerCase().includes(q);
+        return `${politicianDisplayName(props.catalog, id)} ${party} ${offices}`.toLowerCase().includes(q);
       })
       .sort((a, b) =>
         politicianDisplayName(props.catalog, a).localeCompare(
@@ -435,7 +434,7 @@ export function ExecutivePage(props: {
                     <option value="-1">Against</option>
                   </select>
                   <label>
-                    Intensity {regMag.toFixed(2)}
+                    Regulatory scope {regMag >= 0.75 ? "sweeping" : regMag >= 0.5 ? "broad" : regMag >= 0.3 ? "targeted" : "limited"}
                     <input
                       type="range"
                       min={0.1}
@@ -500,7 +499,7 @@ export function ExecutivePage(props: {
                 <DataTable dense headers={["Ministry", "Envelope"]}>
                   {Object.entries(b.allocations).map(([officeId, n]) => (
                     <tr key={officeId}>
-                      <td>{cab.find((m) => m.officeId === officeId)?.title ?? officeId}</td>
+                      <td>{cab.find((m) => m.officeId === officeId)?.title ?? props.world.offices[officeId]?.title ?? "Ministry"}</td>
                       <td>{n.toLocaleString()}</td>
                     </tr>
                   ))}

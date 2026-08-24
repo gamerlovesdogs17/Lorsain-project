@@ -37,6 +37,7 @@ import type {
   PolicyItem,
   LegislativeVoteChoice,
   LegislativeVoteStage,
+  RecommendationStance,
 } from "./legislature/types.js";
 import type { ExecutiveRuntime, MotionKind } from "./executive/types.js";
 import type { ConstitutionalRuntime, CourtCaseType, JudicialVoteChoice } from "./courts/types.js";
@@ -53,14 +54,17 @@ import type {
   ForeignAffairsRuntime,
 } from "./foreign/types.js";
 import type {
+  ConstitutionalRuleId,
+  ProvincialBillSubject,
   ProvincialInvestment,
+  ProvincialLeadershipRole,
   ProvincialPriority,
   ProvincialRuntime,
 } from "./provinces/types.js";
 
 export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 12 as const;
+export const SAVE_SCHEMA_VERSION = 13 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -68,6 +72,11 @@ export type PoliticianRuntime = {
   retired: boolean;
   partyId: string | null;
   factionId: string | null;
+  homeProvinceId?: string;
+  /** Save-owned public identity for politicians created after scenario start. */
+  displayName?: string;
+  /** Short authored-style public biography; never used as hidden AI input. */
+  description?: string;
 };
 
 export type OfficeTermStatus = "active" | "ended" | "suspended";
@@ -450,6 +459,8 @@ export type Command =
       provinceId: string;
     }
   | { type: "DECLINE_GUBERNATORIAL_CANDIDACY"; electionId: string }
+  | { type: "FILE_PROVINCIAL_ASSEMBLY_CANDIDACY"; electionId: string }
+  | { type: "DECLINE_PROVINCIAL_ASSEMBLY_CANDIDACY"; electionId: string }
   | {
       type: "GOVERNOR_SET_PRIORITY";
       provinceId: string;
@@ -472,6 +483,11 @@ export type Command =
       pressureId: string;
       response: "mobilize" | "coordinate" | "request_federal_support";
     }
+  | { type: "GOVERNOR_SIGN_PROVINCIAL_BILL"; billId: string }
+  | { type: "GOVERNOR_VETO_PROVINCIAL_BILL"; billId: string }
+  | { type: "GOVERNOR_PROPOSE_PROVINCIAL_BILL"; provinceId: string; subject: ProvincialBillSubject }
+  | { type: "CAST_PROVINCIAL_BILL_VOTE"; billId: string; choice: "yes" | "no" | "abstain" }
+  | { type: "SEEK_PROVINCIAL_LEADERSHIP"; provinceId: string; role: ProvincialLeadershipRole }
   | { type: "MINISTER_ADVISE_PRIORITY"; issueId: string }
   | { type: "MAYOR_SET_CIVIC_PRIORITY"; priority: "housing" | "transport" | "services" }
   | {
@@ -494,6 +510,23 @@ export type Command =
   | { type: "RETURN_BILL"; billId: string }
   | { type: "SCHEDULE_BILL"; billId: string }
   | { type: "DELAY_BILL"; billId: string }
+  | { type: "DECLARE_CAUCUS_LEADERSHIP_CANDIDACY"; contestId: string }
+  | { type: "SET_CAUCUS_BILL_POSITION"; billId: string; stance: RecommendationStance }
+  | {
+      type: "PROPOSE_CONSTITUTIONAL_AMENDMENT";
+      ruleId: ConstitutionalRuleId;
+      proposedValue: number;
+    }
+  | {
+      type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE";
+      amendmentId: string;
+      choice: "yes" | "no" | "abstain";
+    }
+  | {
+      type: "CAST_CONSTITUTIONAL_RATIFICATION_VOTE";
+      amendmentId: string;
+      choice: "yes" | "no" | "abstain";
+    }
   | { type: "APPOINT_MINISTER"; officeId: string; politicianId: string }
   | { type: "DISMISS_MINISTER"; officeId: string }
   | {
@@ -546,7 +579,8 @@ export type Command =
         | "appointment"
         | "election"
         | "impeachment"
-        | "executive_action";
+        | "executive_action"
+        | "provincial_law";
       challengedId: string;
       respondentId?: string;
       constitutionalQuestion: string;

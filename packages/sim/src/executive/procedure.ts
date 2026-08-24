@@ -5,6 +5,7 @@ import { monthStart } from "../campaigns/effects.js";
 import { pushHistory } from "../scheduler.js";
 import { assumeOffice, endTerm, occupyingTerms } from "../offices.js";
 import { currentAssemblyMemberIds, currentSpeakerId } from "../legislature/state.js";
+import { getAgentProfile } from "../agents/profile.js";
 import type { LegislativeVoteChoice, PolicyItem } from "../legislature/types.js";
 import {
   allocateBudgetId,
@@ -328,8 +329,19 @@ export function scheduleWarAuthorizationReferral(
   const mps = currentAssemblyMemberIds(world, state);
   if (mps.length === 0) return { error: reject("NO_ASSEMBLY", "no sitting Assembly members") };
   const speaker = currentSpeakerId(world, state);
+  const institutionalSponsor = mps
+    .filter((id) => id !== state.playerPoliticianId)
+    .sort((a, b) => {
+      const ap = getAgentProfile(world, state, a);
+      const bp = getAgentProfile(world, state, b);
+      const as = (ap?.skills.legislation ?? 0) * 0.6 + (ap?.traits.institutionalism ?? 0) * 0.4;
+      const bs = (bp?.skills.legislation ?? 0) * 0.6 + (bp?.traits.institutionalism ?? 0) * 0.4;
+      return bs - as || a.localeCompare(b);
+    })[0];
   const sponsorId =
-    speaker && mps.includes(speaker) ? speaker : mps[0]!;
+    speaker && mps.includes(speaker)
+      ? speaker
+      : institutionalSponsor ?? mps[0]!;
   return introduceMotion(
     world,
     state,

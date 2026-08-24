@@ -34,6 +34,7 @@ import {
   recordRecallReferralVote,
   tallyJudicialDisposition,
   resolveNationalRecall,
+  chooseConfirmationVote,
   chooseImpeachmentVote,
 } from "./courts/index.js";
 import type { ImpeachmentGrounds, JudicialVoteChoice } from "./courts/types.js";
@@ -156,8 +157,15 @@ function courtHarness(): KernelWorld {
       partyId: id === "NOM1" ? null : "PARTY_A",
       factionId: null,
     });
-    world.agentProfiles[id] = syntheticAgentProfile(id, { roleTypes: ["private_citizen"] });
+    world.agentProfiles[id] = syntheticAgentProfile(id, {
+      roleTypes: id === "MIL1" ? ["military"] : ["senior_lawyer"],
+    });
   }
+  politicians.push({ id: "CIT1", alive: true, retired: false, partyId: null, factionId: null });
+  world.agentProfiles.CIT1 = syntheticAgentProfile("CIT1", { roleTypes: ["private_citizen"] });
+  world.agentProfiles.CIT1.skills.legislation = 0.2;
+  world.agentProfiles.CIT1.skills.negotiation = 0.2;
+  world.agentProfiles.CIT1.traits.institutionalism = 0.2;
   world.offices.OFFICE_MIL = kernelOffice({
     id: "OFFICE_MIL",
     kind: "military",
@@ -321,6 +329,20 @@ describe("Phase 8 courts kernel", () => {
     if (!dup.ok) expect(dup.error.code).toBe("ALREADY_JUDGE");
   });
 
+  it("rejects a private citizen without a qualifying public legal record", () => {
+    const world = courtHarness();
+    const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P8-LEGAL-BAR" });
+    expectOk(sim, { type: "DEV_VACATE_OFFICE", officeId: "OFFICE_COURT_SEAT_7", reason: "test" });
+    advance(sim, 1);
+    const result = sim.executeCommand({
+      type: "NOMINATE_CONSTITUTIONAL_JUDGE",
+      seatOfficeId: "OFFICE_COURT_SEAT_7",
+      nomineeId: "CIT1",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("LEGAL_QUALIFICATION_REQUIRED");
+  });
+
   it("rejects former justices when court terms are nonrenewable", () => {
     const world = courtHarness();
     expect(world.courtConstitution.renewable).toBe(false);
@@ -452,6 +474,11 @@ describe("Phase 8 courts kernel", () => {
     const law = jsonClone(live.getSnapshot());
     const applied = recordJudicialDecision(world, law, { caseId, votes }, null);
     expect("error" in applied).toBe(false);
+    const opinion = Object.values(law.constitutionalRuntime.courtDecisions)[0]!;
+    expect(typeof opinion.metadata.majorityAuthorId).toBe("string");
+    expect(typeof opinion.metadata.holding).toBe("string");
+    expect(typeof opinion.metadata.majorityRationale).toBe("string");
+    expect(opinion.metadata.constitutionalProvision).toBe("law review");
     expect(law.legislatureRuntime.enactedLaws.LAW000001?.operative).toBe(false);
     expect(law.legislatureRuntime.enactedLaws.LAW000001).toBeTruthy();
     const tallied = tallyJudicialDisposition(votes);
@@ -503,11 +530,11 @@ describe("Phase 8 courts kernel", () => {
       world,
     );
     advance(restored, 1);
-    expect(
-      Object.values(restored.getSnapshot().constitutionalRuntime.courtCases).some(
-        (c) => c.caseType === "EMERGENCY_REVIEW",
-      ),
-    ).toBe(true);
+    const emergencyReview = Object.values(
+      restored.getSnapshot().constitutionalRuntime.courtCases,
+    ).find((c) => c.caseType === "EMERGENCY_REVIEW");
+    expect(emergencyReview).toBeTruthy();
+    expect(emergencyReview?.petitionerId).not.toBe(restored.getSnapshot().playerPoliticianId);
 
     const seeded = withImpeachmentBasis(sim, world);
     expectOk(seeded.sim, {
@@ -809,6 +836,27 @@ describe("Phase 8 courts kernel", () => {
 });
 
 describe("Phase 8 authorized-assembly thresholds", () => {
+  it("lets a legally qualified nominee assemble the required cross-party confirmation vote", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC002", seed: "P8-CONFIRM-VIABLE" });
+    const state = jsonClone(sim.getSnapshot());
+    const seat = officesOfKind(world, "constitutional_court_justice")[0]!;
+    const sitting = occupyingTerms(state, seat.id)[0];
+    if (sitting) endTerm(state, sitting.id, state.currentDate, "test");
+    const nomineeId = Object.keys(state.politicians)
+      .sort()
+      .find((id) => id !== state.playerPoliticianId && !judicialEligibilityError(world, state, id, seat.id));
+    expect(nomineeId).toBeTruthy();
+    if (!nomineeId) return;
+    const rng = createRngService("P8-CONFIRM-VIABLE");
+    const votes = currentAssemblyMemberIds(world, state).map((id) =>
+      chooseConfirmationVote(world, state, id, nomineeId, rng),
+    );
+    expect(votes.filter((vote) => vote === "yes").length).toBeGreaterThanOrEqual(
+      confirmationYesNeeded(world),
+    );
+  });
+
   it("keeps 252/280 thresholds with 419 sitting MPs", () => {
     const world = loadTerenaWorld();
     expect(world.courtConstitution.confirmationFraction).toBe(0.6);
@@ -839,6 +887,9 @@ describe("Phase 8 authorized-assembly thresholds", () => {
     const nomineeId =
       remaining.find((id) => id !== "NPC002" && !currentCourtJudgeIds(world, state).includes(id)) ??
       remaining[5]!;
+    world.agentProfiles[nomineeId] = syntheticAgentProfile(nomineeId, {
+      roleTypes: ["senior_lawyer"],
+    });
     state.counters.nextCourtNominationId = 2;
     state.constitutionalRuntime.nominations.CNOM000001 = {
       id: "CNOM000001",

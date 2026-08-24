@@ -10,7 +10,6 @@ import { buildDecisionActorContext } from "../agents/context.js";
 import { emptySignals, evaluateDecision, type DecisionOption } from "../agents/decisions.js";
 import type { KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
-import { occupyingTerms, officesOfKind } from "../offices.js";
 import {
   CAMPAIGNS_NOISE_AMP,
   CR_FACTION_BLEND,
@@ -34,6 +33,7 @@ import type {
 } from "./types.js";
 import { isNominationMethod } from "./types.js";
 import { publicElectabilitySignal } from "../elections/electability.js";
+import { contestPollAverage } from "../elections/polls.js";
 
 function shareToRational(share: number): Rational {
   const den = 1_000_000;
@@ -53,14 +53,26 @@ function publicProminence(entry: PartyContest["entries"][string]): number {
   return Math.max(seed, statusBoost);
 }
 
+const activeOfficeKindCaches = new WeakMap<SimState, Map<string, Set<string>>>();
+
+function activeOfficeKinds(world: KernelWorld, state: SimState): Map<string, Set<string>> {
+  const existing = activeOfficeKindCaches.get(state);
+  if (existing) return existing;
+  const map = new Map<string, Set<string>>();
+  for (const term of Object.values(state.officeTerms)) {
+    if (term.status !== "active" && term.status !== "suspended") continue;
+    const kind = world.offices[term.officeId]?.kind;
+    if (!kind) continue;
+    const kinds = map.get(term.holderId) ?? new Set<string>();
+    kinds.add(kind);
+    map.set(term.holderId, kinds);
+  }
+  activeOfficeKindCaches.set(state, map);
+  return map;
+}
+
 function isKindHolder(world: KernelWorld, state: SimState, id: string, kind: string): boolean {
-  const ids = new Set(officesOfKind(world, kind).map((o) => o.id));
-  return Object.values(state.officeTerms).some(
-    (t) =>
-      t.holderId === id &&
-      ids.has(t.officeId) &&
-      (t.status === "active" || t.status === "suspended"),
-  );
+  return activeOfficeKinds(world, state).get(id)?.has(kind) ?? false;
 }
 
 function saturatingEndorsement(raw: number): number {
@@ -70,55 +82,57 @@ function saturatingEndorsement(raw: number): number {
   );
 }
 
-function liveEndorsementWeight(
+function liveEndorsementWeights(
   world: KernelWorld,
   state: SimState,
   contest: PartyContest,
-  candidateId: string,
-): number {
-  let sum = 0;
+): Record<string, number> {
+  const raw: Record<string, number> = {};
   for (const end of activeEndorsementsForContest(state, contest.id)) {
-    if (end.targetId !== candidateId) continue;
+    let weight = 0;
     if (end.endorserType === "faction") {
       const fac = state.factionStates[end.endorserId];
       const def = world.factionDefinitions[end.endorserId];
       if (!fac || !def || fac.status !== "active" || def.partyId !== contest.partyId) continue;
-      sum += ENDORSEMENT_INFLUENCE.factionInstitutional;
-      continue;
-    }
-    if (end.endorserType === "provincial_organization") {
+      weight = ENDORSEMENT_INFLUENCE.factionInstitutional;
+    } else if (end.endorserType === "provincial_organization") {
       const org = resolveProvincialOrganization(world, end.endorserId);
       if (!org || org.status !== "active" || org.partyId !== contest.partyId) continue;
-      sum += ENDORSEMENT_INFLUENCE.provincialOrganization;
-      continue;
+      weight = ENDORSEMENT_INFLUENCE.provincialOrganization;
+    } else {
+      const pol = state.politicians[end.endorserId];
+      if (!pol || !pol.alive || pol.retired) continue;
+      weight = ENDORSEMENT_INFLUENCE.politician as number;
+      if (isKindHolder(world, state, pol.id, "assembly_member")) weight = ENDORSEMENT_INFLUENCE.mp;
+      if (isKindHolder(world, state, pol.id, "governor"))
+        weight = Math.max(weight, ENDORSEMENT_INFLUENCE.governor);
+      if (state.partyStates[contest.partyId]?.leaderId === pol.id) {
+        weight = Math.max(weight, ENDORSEMENT_INFLUENCE.partyLeader);
+      }
+      if (pol.factionId && state.factionStates[pol.factionId]?.chairId === pol.id) {
+        weight = Math.max(weight, ENDORSEMENT_INFLUENCE.factionChair);
+      }
     }
-    const pol = state.politicians[end.endorserId];
-    if (!pol || !pol.alive || pol.retired) continue;
-    let w = ENDORSEMENT_INFLUENCE.politician as number;
-    if (isKindHolder(world, state, pol.id, "assembly_member")) w = ENDORSEMENT_INFLUENCE.mp;
-    if (isKindHolder(world, state, pol.id, "governor"))
-      w = Math.max(w, ENDORSEMENT_INFLUENCE.governor);
-    if (state.partyStates[contest.partyId]?.leaderId === pol.id) {
-      w = Math.max(w, ENDORSEMENT_INFLUENCE.partyLeader);
-    }
-    if (pol.factionId && state.factionStates[pol.factionId]?.chairId === pol.id) {
-      w = Math.max(w, ENDORSEMENT_INFLUENCE.factionChair);
-    }
-    sum += w;
+    raw[end.targetId] = (raw[end.targetId] ?? 0) + weight;
   }
-  return saturatingEndorsement(sum);
+  const out: Record<string, number> = {};
+  for (const [candidateId, value] of Object.entries(raw)) {
+    out[candidateId] = saturatingEndorsement(value);
+  }
+  return out;
 }
 
 export function blendedFactionShares(
   world: KernelWorld,
   state: SimState,
   partyId: string,
+  memberIds?: readonly string[],
 ): Record<string, number> {
   const def = world.partyDefinitions[partyId];
   const factionIds = def?.factionIds ?? [];
   const canonical = def?.canonicalFactionShares ?? {};
   if (factionIds.length === 0) return {};
-  const members = partyMembers(state, partyId);
+  const members = memberIds ?? partyMembers(state, partyId);
   const counts: Record<string, number> = {};
   let n = 0;
   for (const id of members) {
@@ -183,9 +197,88 @@ function groupIdiosyncrasy(groupId: string, candidateId: string): number {
 }
 
 function holdsAnyOffice(world: KernelWorld, state: SimState, politicianId: string): boolean {
-  return Object.values(world.offices).some((office) =>
-    occupyingTerms(state, office.id).some((t) => t.holderId === politicianId),
-  );
+  return (activeOfficeKinds(world, state).get(politicianId)?.size ?? 0) > 0;
+}
+
+type CandidatePublicCache = {
+  endorsement: number;
+  prominence: number;
+  office: boolean;
+  partyLeader: boolean;
+  factionChair: boolean;
+  home: string | null;
+  electability: number;
+};
+const publicCandidateCaches = new WeakMap<SimState, Map<string, CandidatePublicCache>>();
+const publicContestPollCaches = new WeakMap<SimState, Map<string, Record<string, number>>>();
+const publicContestEndorsementCaches = new WeakMap<SimState, Map<string, Record<string, number>>>();
+
+export function clearSelectoratePublicCache(state: SimState): void {
+  publicCandidateCaches.delete(state);
+  publicContestPollCaches.delete(state);
+  publicContestEndorsementCaches.delete(state);
+  activeOfficeKindCaches.delete(state);
+}
+
+function cachedContestEndorsementWeights(
+  world: KernelWorld,
+  state: SimState,
+  contest: PartyContest,
+): Record<string, number> {
+  let cache = publicContestEndorsementCaches.get(state);
+  if (!cache) {
+    cache = new Map();
+    publicContestEndorsementCaches.set(state, cache);
+  }
+  const existing = cache.get(contest.id);
+  if (existing) return existing;
+  const weights = liveEndorsementWeights(world, state, contest);
+  cache.set(contest.id, weights);
+  return weights;
+}
+
+function cachedContestPollShares(state: SimState, contestId: string): Record<string, number> {
+  let cache = publicContestPollCaches.get(state);
+  if (!cache) {
+    cache = new Map();
+    publicContestPollCaches.set(state, cache);
+  }
+  const existing = cache.get(contestId);
+  if (existing) return existing;
+  const shares = contestPollAverage(state, state.currentDate, contestId);
+  cache.set(contestId, shares);
+  return shares;
+}
+
+function candidatePublicCache(world: KernelWorld, state: SimState, contest: PartyContest, candidateId: string): CandidatePublicCache {
+  let cache = publicCandidateCaches.get(state);
+  if (!cache) {
+    cache = new Map();
+    publicCandidateCaches.set(state, cache);
+  }
+  const key = `${contest.id}:${candidateId}`;
+  const existing = cache.get(key);
+  if (existing) return existing;
+  const pol = state.politicians[candidateId];
+  const entry = contest.entries[candidateId];
+  const value: CandidatePublicCache = {
+    endorsement: cachedContestEndorsementWeights(world, state, contest)[candidateId] ?? 0,
+    prominence: entry ? publicProminence(entry) : 0,
+    office: holdsAnyOffice(world, state, candidateId),
+    partyLeader: state.partyStates[contest.partyId]?.leaderId === candidateId,
+    factionChair: Boolean(pol?.factionId && state.factionStates[pol.factionId]?.chairId === candidateId),
+    home: state.politicians[candidateId]?.homeProvinceId ?? world.politicianHomeProvince[candidateId] ?? null,
+    electability: publicElectabilitySignal(
+      world,
+      state,
+      candidateId,
+      contest.type,
+      contest.id,
+      cachedContestPollShares(state, contest.id)[candidateId] ?? 0,
+    ),
+  };
+  cache.set(key, value);
+  return value;
 }
 
 function publicScore(
@@ -198,6 +291,7 @@ function publicScore(
   const pol = state.politicians[candidateId];
   const entry = contest.entries[candidateId];
   if (!pol || !entry) return 0;
+  const cached = candidatePublicCache(world, state, contest, candidateId);
   let score = 0;
   if (group.factionId && pol.factionId === group.factionId) {
     score += SELECTOR_PUBLIC_WEIGHTS.sameFaction * tendencyBias(group.tendency, "faction");
@@ -205,22 +299,22 @@ function publicScore(
     score += SELECTOR_PUBLIC_WEIGHTS.crossFaction * tendencyBias(group.tendency, "cross");
   }
   score +=
-    liveEndorsementWeight(world, state, contest, candidateId) *
+    cached.endorsement *
     tendencyBias(group.tendency, "endorsement");
   score +=
-    publicProminence(entry) *
+    cached.prominence *
     SELECTOR_PUBLIC_WEIGHTS.prominence *
     tendencyBias(group.tendency, "prominence");
-  if (holdsAnyOffice(world, state, candidateId)) {
+  if (cached.office) {
     score += SELECTOR_PUBLIC_WEIGHTS.publicOffice * tendencyBias(group.tendency, "office");
   }
-  if (state.partyStates[contest.partyId]?.leaderId === candidateId) {
+  if (cached.partyLeader) {
     score += SELECTOR_PUBLIC_WEIGHTS.leadership * tendencyBias(group.tendency, "leadership");
   }
-  if (pol.factionId && state.factionStates[pol.factionId]?.chairId === candidateId) {
+  if (cached.factionChair) {
     score += SELECTOR_PUBLIC_WEIGHTS.leadership * 0.55 * tendencyBias(group.tendency, "leadership");
   }
-  const home = world.politicianHomeProvince[candidateId];
+  const home = cached.home;
   if (group.provinceId && home === group.provinceId) {
     score += SELECTOR_PUBLIC_WEIGHTS.regional * tendencyBias(group.tendency, "regional");
   } else if (!group.provinceId && home) {
@@ -230,7 +324,7 @@ function publicScore(
   if (group.kind === "members" || group.kind === "convention_delegates") {
     score += cohesion * SELECTOR_PUBLIC_WEIGHTS.discipline;
   }
-  score += publicElectabilitySignal(world, state, candidateId, contest.type, contest.id);
+  score += cached.electability;
   score += groupIdiosyncrasy(group.id, candidateId) * SELECTOR_GROUP_IDIOSYNCRASY;
   return score;
 }
@@ -337,15 +431,16 @@ function factionProvinceShares(
   state: SimState,
   partyId: string,
   factionId: string | null,
+  partyMemberIds?: readonly string[],
 ): Array<{ provinceId: string | null; share: number }> {
-  const members = partyMembers(state, partyId).filter((id) => {
+  const members = (partyMemberIds ?? partyMembers(state, partyId)).filter((id) => {
     if (!factionId) return true;
     return state.politicians[id]?.factionId === factionId;
   });
   const counts: Record<string, number> = {};
   let unspecified = 0;
   for (const id of members) {
-    const home = world.politicianHomeProvince[id];
+    const home = state.politicians[id]?.homeProvinceId ?? world.politicianHomeProvince[id];
     if (!home) unspecified += 1;
     else counts[home] = (counts[home] ?? 0) + 1;
   }
@@ -371,7 +466,8 @@ function heterogeneousFactionGroups(
   total: Rational,
   onlyFactionId?: string | null,
 ): SelectorGroup[] {
-  const shares = blendedFactionShares(world, state, partyId);
+  const members = partyMembers(state, partyId);
+  const shares = blendedFactionShares(world, state, partyId, members);
   const factions = (onlyFactionId ? [onlyFactionId] : Object.keys(shares)).sort();
   if (factions.length === 0) {
     return [
@@ -390,7 +486,7 @@ function heterogeneousFactionGroups(
   const factionDenom = onlyFactionId ? 1 : factions.reduce((s, f) => s + (shares[f] ?? 0), 0) || 1;
   for (const factionId of factions) {
     const factionShare = onlyFactionId ? 1 : (shares[factionId] ?? 0) / factionDenom;
-    const provinces = factionProvinceShares(world, state, partyId, factionId);
+    const provinces = factionProvinceShares(world, state, partyId, factionId, members);
     for (const t of tendencyEntries()) {
       for (const prov of provinces) {
         const w = mul(
@@ -520,7 +616,7 @@ export function regionalProvincialSelectorate(
   const members = partyMembers(state, partyId);
   const homeCount: Record<string, number> = {};
   for (const id of members) {
-    const home = world.politicianHomeProvince[id];
+    const home = state.politicians[id]?.homeProvinceId ?? world.politicianHomeProvince[id];
     if (!home) continue;
     homeCount[home] = (homeCount[home] ?? 0) + 1;
   }
@@ -574,7 +670,7 @@ function caucusSelectorate(
       kind: "members" as const,
       partyId: contest.partyId,
       factionId: state.politicians[id]?.factionId ?? null,
-      provinceId: world.politicianHomeProvince[id] ?? null,
+      provinceId: state.politicians[id]?.homeProvinceId ?? world.politicianHomeProvince[id] ?? null,
       tendency: null,
       weight: "1/1",
     }));

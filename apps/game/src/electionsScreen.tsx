@@ -6,6 +6,7 @@ import type {
   SimState,
   Simulation,
 } from "@lorsain/sim";
+import { nominationCalendarDates } from "@lorsain/sim";
 import {
   constituencyDisplayName,
   contestDisplayName,
@@ -72,7 +73,7 @@ export function ElectionsPage(props: Props) {
   const assemblyDue = props.snap.pendingInterrupt?.code === "ASSEMBLY_ELECTION_DUE";
   const poll = latestPublicPoll(props.snap);
   const [selection, setSelection] = useState<MapSelection | null>(null);
-  const [tab, setTab] = useState<"presidential" | "assembly" | "gubernatorial" | "nominations">(
+  const [tab, setTab] = useState<"presidential" | "assembly" | "gubernatorial" | "nominations" | "calendar">(
     "presidential",
   );
 
@@ -111,6 +112,42 @@ export function ElectionsPage(props: Props) {
     gubernatorial.find((race) => race.provinceId === homeProvince) ??
     gubernatorial[0] ??
     null;
+  const groupProvincialCycles = <T extends { date: string; status: string }>(
+    rows: T[],
+    label: string,
+  ) => Object.values(rows.reduce<Record<string, { date: string; title: string; detail: string; count: number }>>(
+    (groups, row) => {
+      const key = `${row.date}:${row.status}`;
+      const existing = groups[key];
+      if (existing) {
+        existing.count += 1;
+        existing.title = `${existing.count} ${label}`;
+      } else {
+        groups[key] = { date: row.date, title: `1 ${label}`, detail: statusLabel(row.status), count: 1 };
+      }
+      return groups;
+    },
+    {},
+  ));
+  const calendarEvents = [
+    ...elections.map((election) => ({ date: election.date, title: election.type === "presidential" ? "Presidential election" : "National Assembly election", detail: statusLabel(election.status) })),
+    ...groupProvincialCycles(Object.values(props.snap.provincialRuntime.elections), "gubernatorial elections"),
+    ...groupProvincialCycles(Object.values(props.snap.provincialRuntime.assemblyElections), "Provincial Assembly elections"),
+    ...Object.values(props.snap.legislatureRuntime.caucusContests).map((contest) => ({ date: contest.closeDate, title: `${partyDisplayName(props.world, contest.partyId, props.snap)} ${contest.role === "floor_leader" ? "floor leader" : "whip"} election`, detail: statusLabel(contest.status) })),
+    ...Object.values(props.snap.partyContests).flatMap((contest) => {
+      const electionDate = typeof contest.metadata.electionDate === "string" ? contest.metadata.electionDate : null;
+      const date = contest.type === "presidential_nomination" && electionDate
+        ? nominationCalendarDates(electionDate).resolve
+        : contest.resolvedDate ?? (typeof contest.metadata.closeDate === "string" ? contest.metadata.closeDate : null) ?? contest.openedDate ?? contest.createdDate;
+      const title = contest.type === "presidential_nomination"
+        ? `${partyDisplayName(props.world, contest.partyId, props.snap)} presidential nomination`
+        : contest.factionId
+          ? `${props.world.factionDefinitions[contest.factionId]?.name ?? "Caucus"} leadership contest`
+          : `${partyDisplayName(props.world, contest.partyId, props.snap)} leadership election`;
+      return [{ date, title, detail: statusLabel(contest.status) }];
+    }),
+    ...Object.values(props.snap.provincialRuntime.constitutionalAmendments).flatMap((amendment) => amendment.ratificationDeadline ? [{ date: amendment.ratificationDeadline, title: `${amendment.title} ratification deadline`, detail: `${amendment.ratifiedProvinceIds.length} of 13 provinces` }] : []),
+  ].sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
 
   function resolvePresidential() {
     const result = props.sim.executeCommand({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
@@ -505,6 +542,7 @@ export function ElectionsPage(props: Props) {
           { id: "assembly", label: "Assembly" },
           { id: "gubernatorial", label: "Governors" },
           { id: "nominations", label: "Nominations" },
+          { id: "calendar", label: "Political Calendar" },
         ]}
         value={tab}
         onChange={setTab}
@@ -722,6 +760,19 @@ export function ElectionsPage(props: Props) {
                 <p>Nomination winner: {politicianDisplayName(props.catalog, contest.winnerId)}</p>
               ) : null}
             </SectionCard>
+          ))}
+        </div>
+      ) : null}
+      {tab === "calendar" ? (
+        <div className="political-calendar">
+          {calendarEvents.length === 0 ? <EmptyState>No political dates are scheduled.</EmptyState> : null}
+          {[...new Set(calendarEvents.map((event) => event.date.slice(0, 4)))].map((year) => (
+            <section key={year} className="calendar-year">
+              <h2>{year}</h2>
+              <div className="calendar-events">
+                {calendarEvents.filter((event) => event.date.startsWith(year)).map((event, index) => <EntityRow key={`${event.date}:${event.title}:${index}`} title={event.title} meta={event.date} status={<StatusBadge>{event.detail}</StatusBadge>} />)}
+              </div>
+            </section>
           ))}
         </div>
       ) : null}

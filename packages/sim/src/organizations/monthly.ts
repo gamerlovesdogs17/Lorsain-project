@@ -18,7 +18,7 @@ function note(
   if (actor.recentActions.length > 6) actor.recentActions.length = 6;
 }
 
-function orgIssueFit(
+export function orgIssueFit(
   world: KernelWorld,
   orgId: string,
   issueId: string,
@@ -40,6 +40,58 @@ function orgIssueFit(
     if (type.includes("maritime") || type.includes("farm") || type.includes("manufactur")) return 0.4;
   }
   return 0.25;
+}
+
+function clampSigned(value: number): number {
+  return Math.max(-1, Math.min(1, value));
+}
+
+export function recordOrganizationPolicyBehavior(
+  world: KernelWorld,
+  state: SimState,
+  args: {
+    politicianId: string;
+    policyItems: Array<{ issueId: string; direction: number }>;
+    behavior: "sponsor" | "vote" | "sign" | "veto";
+    voteChoice?: "yes" | "no" | "abstain";
+  },
+): void {
+  for (const [orgId, actor] of Object.entries(state.organizationRuntime.actors)) {
+    const fits = args.policyItems
+      .map((item) => orgIssueFit(world, orgId, item.issueId) * item.direction)
+      .filter((fit) => Math.abs(fit) >= 0.12);
+    if (fits.length === 0) continue;
+    const policySignal = fits.reduce((sum, fit) => sum + fit, 0) / fits.length;
+    const behaviorDirection =
+      args.behavior === "veto" || args.voteChoice === "no"
+        ? -1
+        : args.voteChoice === "abstain"
+          ? 0
+          : 1;
+    if (behaviorDirection === 0) continue;
+    const alignment = policySignal * behaviorDirection;
+    const weight = args.behavior === "vote" ? 0.06 : args.behavior === "sponsor" ? 0.045 : 0.05;
+    const edge = actor.relationships[args.politicianId] ?? {
+      affinity: 0,
+      trust: 0,
+      policyAlignment: 0,
+      lastUpdatedDate: null,
+      lastReason: null,
+    };
+    edge.policyAlignment = clampSigned(edge.policyAlignment + alignment * weight);
+    edge.affinity = clampSigned(edge.affinity + alignment * weight * 0.45);
+    edge.trust = clampSigned(edge.trust + (alignment >= 0 ? 1 : -1) * weight * 0.35);
+    edge.lastUpdatedDate = state.currentDate;
+    edge.lastReason =
+      args.behavior === "vote"
+        ? `${args.voteChoice === "yes" ? "Supported" : "Opposed"} priority legislation`
+        : args.behavior === "sponsor"
+          ? "Sponsored priority legislation"
+          : args.behavior === "sign"
+            ? "Signed priority legislation"
+            : "Vetoed priority legislation";
+    actor.relationships[args.politicianId] = edge;
+  }
 }
 
 export function organizationPressureForBill(
@@ -91,6 +143,41 @@ export function processOrganizationsMonth(
     const canon = world.interestOrganizations[orgId]!;
     const actor = state.organizationRuntime.actors[orgId];
     if (!actor) continue;
+    for (const endorsement of actor.endorsements) {
+      if ((endorsement.status ?? "active") !== "active") continue;
+      const campaign = endorsement.campaignId
+        ? state.campaignRuntime.campaigns[endorsement.campaignId]
+        : null;
+      const relationship = actor.relationships[endorsement.politicianId];
+      const campaignEnded = campaign != null && !["active", "exploring"].includes(campaign.status);
+      const relationshipCollapsed = (relationship?.policyAlignment ?? 0) <= -0.45 ||
+        (relationship?.trust ?? 0) <= -0.4;
+      if (!campaignEnded && !relationshipCollapsed) continue;
+      endorsement.status = "withdrawn";
+      endorsement.withdrawnDate = state.currentDate;
+      const reason = relationshipCollapsed
+        ? "Withdrew an endorsement after a sustained policy break"
+        : "Closed an endorsement after the campaign ended";
+      note(actor, state.currentDate, "endorsement_withdrawn", reason);
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "ORGANIZATION_ENDORSEMENT_WITHDRAWN",
+          importance: relationshipCollapsed ? 0.58 : 0.3,
+          visibility: "public",
+          actorIds: [endorsement.politicianId],
+          entityIds: [orgId, ...(endorsement.campaignId ? [endorsement.campaignId] : [])],
+          payload: {
+            organizationId: orgId,
+            politicianId: endorsement.politicianId,
+            campaignId: endorsement.campaignId,
+            reason: relationshipCollapsed ? "policy_break" : "campaign_ended",
+          },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
+    }
     actor.billPressure = actor.billPressure.filter((p) =>
       activeBills.some((b) => b.id === p.billId),
     );
@@ -145,12 +232,16 @@ export function processOrganizationsMonth(
         const party = state.politicians[c.politicianId]?.partyId;
         return party != null && canon.leanPartyIds.includes(party);
       });
-      if (campaign && !actor.endorsements.some((e) => e.politicianId === campaign.politicianId)) {
+      if (campaign && !actor.endorsements.some(
+        (e) => e.politicianId === campaign.politicianId && (e.status ?? "active") === "active",
+      )) {
         actor.endorsements.push({
           politicianId: campaign.politicianId,
           campaignId: campaign.id,
           date: state.currentDate,
           public: true,
+          status: "active",
+          withdrawnDate: null,
         });
         const standing = ensureCandidateStanding(world, state, campaign.politicianId);
         standing.favorability = clampUnit(standing.favorability + 0.012 * canon.strength);

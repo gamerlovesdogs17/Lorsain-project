@@ -75,6 +75,13 @@ function terenaSanctionsOn(state: SimState, targetId: string): boolean {
   );
 }
 
+function sanctionsScopeLabel(severity: number): string {
+  if (severity >= 0.75) return "comprehensive";
+  if (severity >= 0.55) return "broad";
+  if (severity >= 0.35) return "targeted";
+  return "limited";
+}
+
 export function ForeignAffairsPage(props: {
   world: KernelWorld;
   snap: SimState;
@@ -356,8 +363,7 @@ export function ForeignAffairsPage(props: {
                         .filter((s) => s.active && s.targetId === selectedId)
                         .map((s) => (
                           <div key={s.id} className="muted">
-                            Imposed by {countryDisplayName(world, s.imposerId)} · severity{" "}
-                            {formatPublicPercent(s.severity)}
+                            Imposed by {countryDisplayName(world, s.imposerId)} · {sanctionsScopeLabel(s.severity)} measures
                           </div>
                         ))}
                       {Object.values(runtime.sanctions).every(
@@ -600,7 +606,7 @@ export function ForeignAffairsPage(props: {
           {activeSanctions.slice(0, 8).map((s) => (
             <div key={s.id} className="muted">
               {countryDisplayName(world, s.imposerId)} → {countryDisplayName(world, s.targetId)} ·
-              severity {formatPublicPercent(s.severity)}
+              {sanctionsScopeLabel(s.severity)} measures
             </div>
           ))}
         </SectionCard>
@@ -733,7 +739,7 @@ export function ForeignAffairsPage(props: {
               ) : null}
               {drawer === "sanctions" ? (
                 <label>
-                  Severity {sanctionSeverity.toFixed(2)}
+                  Scope: {sanctionsScopeLabel(sanctionSeverity)}
                   <input
                     type="range"
                     min={0.2}

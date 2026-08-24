@@ -71,6 +71,7 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
         name: typeof rec.name === "string" ? rec.name : id,
         dimension: typeof rec.dimension === "string" ? rec.dimension : "",
         memberIds: rec.memberIds as string[],
+        chairId: typeof rec.chairId === "string" ? rec.chairId : null,
       } satisfies CommitteeState;
     }
   }
@@ -124,6 +125,21 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
               ? rec.introducedDate
               : null,
         metadata: isRecord(rec.metadata) ? (rec.metadata as BillState["metadata"]) : {},
+        version: isInt(rec.version) && rec.version >= 1 ? rec.version : 1,
+        versionHistory: Array.isArray(rec.versionHistory)
+          ? (rec.versionHistory as BillState["versionHistory"])
+          : [
+              {
+                version: 1,
+                date:
+                  typeof rec.introducedDate === "string" && isIsoDate(rec.introducedDate)
+                    ? rec.introducedDate
+                    : "2000-01-01",
+                reason: "introduced",
+                amendmentId: null,
+                policyItems: items.map((item) => ({ ...item })),
+              },
+            ],
       };
       runtime.bills[id] = bill;
     }
@@ -144,6 +160,9 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
             ? rec.status
             : "proposed",
         metadata: isRecord(rec.metadata) ? (rec.metadata as AmendmentState["metadata"]) : {},
+        targetProvisionIds: Array.isArray(rec.targetProvisionIds)
+          ? rec.targetProvisionIds.filter((value): value is string => typeof value === "string")
+          : items.map((item) => item.provisionId ?? item.issueId),
       };
     }
   }
@@ -233,6 +252,12 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
   if (isRecord(raw.factionRecommendations)) {
     runtime.factionRecommendations =
       raw.factionRecommendations as LegislatureRuntime["factionRecommendations"];
+  }
+  if (isRecord(raw.caucusLeadership)) {
+    runtime.caucusLeadership = raw.caucusLeadership as LegislatureRuntime["caucusLeadership"];
+  }
+  if (isRecord(raw.caucusContests)) {
+    runtime.caucusContests = raw.caucusContests as LegislatureRuntime["caucusContests"];
   }
   void BILL_STATUSES;
   void COMMITTEE_IDS;

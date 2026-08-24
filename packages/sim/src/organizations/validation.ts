@@ -29,11 +29,21 @@ export function parseOrganizationRuntime(raw: unknown): OrganizationRuntime | st
           if (typeof v === "number") positions[k] = v;
         }
       }
-      const relationships: Record<string, { affinity: number }> = {};
+      const relationships: OrganizationRuntime["actors"][string]["relationships"] = {};
       if (isRecord(rec.relationships)) {
         for (const [pid, edge] of Object.entries(rec.relationships)) {
           if (isRecord(edge) && typeof edge.affinity === "number") {
-            relationships[pid] = { affinity: edge.affinity };
+            relationships[pid] = {
+              affinity: edge.affinity,
+              trust: typeof edge.trust === "number" ? edge.trust : edge.affinity * 0.5,
+              policyAlignment:
+                typeof edge.policyAlignment === "number" ? edge.policyAlignment : 0,
+              lastUpdatedDate:
+                typeof edge.lastUpdatedDate === "string" && isIsoDate(edge.lastUpdatedDate)
+                  ? edge.lastUpdatedDate
+                  : null,
+              lastReason: typeof edge.lastReason === "string" ? edge.lastReason : null,
+            };
           }
         }
       }
@@ -60,6 +70,11 @@ export function parseOrganizationRuntime(raw: unknown): OrganizationRuntime | st
                 campaignId: typeof e.campaignId === "string" ? e.campaignId : null,
                 date: typeof e.date === "string" && isIsoDate(e.date) ? e.date : "2000-01-01",
                 public: true as const,
+                status: e.status === "withdrawn" ? "withdrawn" as const : "active" as const,
+                withdrawnDate:
+                  typeof e.withdrawnDate === "string" && isIsoDate(e.withdrawnDate)
+                    ? e.withdrawnDate
+                    : null,
               }))
           : [],
         cooldownUntil:

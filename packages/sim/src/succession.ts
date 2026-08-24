@@ -17,6 +17,8 @@ import {
 } from "./offices.js";
 import { enqueueScheduled, pushHistory } from "./scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "./types.js";
+import { ensurePlannedPresidentialElection } from "./elections/state.js";
+import { ensurePresidentialNominationContests } from "./parties/state.js";
 
 function unavailable(state: SimState, id: string): boolean {
   const p = state.politicians[id];
@@ -184,6 +186,12 @@ export function applyPresidentialVacancy(
   const daysLeft = daysBetween(args.date, state.presidential.nextRegularElectionDate);
   if (daysLeft > world.specialElectionMoreThanDays) {
     const deadline = addDays(args.date, world.specialElectionWithinDays);
+    const specialElection = ensurePlannedPresidentialElection(state, world, deadline);
+    specialElection.metadata.specialElection = true;
+    specialElection.metadata.vacancyDate = args.date;
+    specialElection.metadata.regularTermElectionDate = state.presidential.nextRegularElectionDate;
+    specialElection.metadata.assumptionDate = addDays(deadline, 14);
+    ensurePresidentialNominationContests(state, world, specialElection);
     events.push(
       pushHistory(state, {
         date: args.date,
@@ -208,13 +216,23 @@ export function applyPresidentialVacancy(
     const queued = enqueueScheduled(state, {
       dueDate: deadline,
       eventType: "SPECIAL_PRESIDENTIAL_ELECTION_DEADLINE",
-      payload: { vacancyDate: args.date, deadline },
+      payload: { vacancyDate: args.date, deadline, electionId: specialElection.id },
+      priority: -1,
+      blocking: false,
+      requiresResolution: false,
+      source: "RULE_PRESIDENTIAL_VACANCY",
+    });
+    if ("error" in queued) return { events, error: queued.error };
+    const electionQueued = enqueueScheduled(state, {
+      dueDate: deadline,
+      eventType: "PRESIDENTIAL_ELECTION_DUE",
+      payload: { electionId: specialElection.id, specialElection: true },
       priority: 0,
       blocking: true,
       requiresResolution: true,
       source: "RULE_PRESIDENTIAL_VACANCY",
     });
-    if ("error" in queued) return { events, error: queued.error };
+    if ("error" in electionQueued) return { events, error: electionQueued.error };
   } else {
     events.push(
       pushHistory(state, {

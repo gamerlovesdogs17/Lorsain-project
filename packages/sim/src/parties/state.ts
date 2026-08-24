@@ -1,6 +1,6 @@
 import { padId } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimState } from "../types.js";
-import { getAgentProfile } from "../agents/profile.js";
+import { ageOnDate, getAgentProfile } from "../agents/profile.js";
 import { INDEPENDENT_AGGREGATE_ID } from "./policy.js";
 import { meanLoyalty, partyMembers, factionMembers, membershipPartyIds } from "./queries.js";
 import {
@@ -11,9 +11,63 @@ import {
 } from "./types.js";
 import { evaluatePresidentialEligibility } from "./eligibility.js";
 import { PRESIDENTIAL_ENTRY_FROM_STATUS, isSeedPresidentialStatus } from "./policy.js";
-import { activeTermsForPolitician } from "../offices.js";
 import { candidateStandingOrDefault } from "../elections/standing.js";
 import type { ElectionState } from "../elections/types.js";
+
+type PresidentialInterestContext = {
+  officeKindsByPolitician: Map<string, Set<string>>;
+  partyLeaders: Set<string>;
+  factionChairs: Set<string>;
+  priorGeneralCandidates: Set<string>;
+  priorNominationCandidates: Set<string>;
+};
+
+function buildPresidentialInterestContext(state: SimState, world: KernelWorld): PresidentialInterestContext {
+  const officeKindsByPolitician = new Map<string, Set<string>>();
+  for (const term of Object.values(state.officeTerms)) {
+    if (term.status !== "active" && term.status !== "suspended") continue;
+    const kind = world.offices[term.officeId]?.kind;
+    if (!kind) continue;
+    const kinds = officeKindsByPolitician.get(term.holderId) ?? new Set<string>();
+    kinds.add(kind);
+    officeKindsByPolitician.set(term.holderId, kinds);
+  }
+  const priorGeneralCandidates = new Set<string>();
+  for (const election of Object.values(state.elections)) {
+    if (election.type !== "presidential" || election.status !== "resolved") continue;
+    for (const candidateId of Object.keys(election.candidates)) priorGeneralCandidates.add(candidateId);
+  }
+  const priorNominationCandidates = new Set<string>();
+  for (const contest of Object.values(state.partyContests)) {
+    if (contest.type !== "presidential_nomination" || contest.status !== "resolved") continue;
+    for (const candidateId of Object.keys(contest.entries)) priorNominationCandidates.add(candidateId);
+  }
+  return {
+    officeKindsByPolitician,
+    partyLeaders: new Set(Object.values(state.partyStates).flatMap((party) => party.leaderId ? [party.leaderId] : [])),
+    factionChairs: new Set(Object.values(state.factionStates).flatMap((faction) => faction.chairId ? [faction.chairId] : [])),
+    priorGeneralCandidates,
+    priorNominationCandidates,
+  };
+}
+
+function presidentialEligibilityFast(
+  state: SimState,
+  world: KernelWorld,
+  politicianId: string,
+  electionDate: string,
+  context: PresidentialInterestContext,
+): boolean {
+  const profile = getAgentProfile(world, state, politicianId);
+  const age = ageOnDate(profile?.birthDate ?? null, electionDate);
+  if (age == null || age < world.presidentialEligibility.minimumAge) return false;
+  const termLimit =
+    state.provincialRuntime.constitutionalRules.presidential_term_limit?.value ??
+    world.presidentialEligibility.termLimitElected;
+  if ((state.presidential.electedTermCountByPolitician[politicianId] ?? 0) >= termLimit) return false;
+  const held = context.officeKindsByPolitician.get(politicianId);
+  return !world.presidentialEligibility.mustResignOfficeKinds.some((kind) => held?.has(kind));
+}
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -159,40 +213,24 @@ export function presidentialInterestScore(
   world: KernelWorld,
   politicianId: string,
   electionDate: string,
+  suppliedContext?: PresidentialInterestContext,
 ): number {
+  const context = suppliedContext ?? buildPresidentialInterestContext(state, world);
   const profile = getAgentProfile(world, state, politicianId);
   if (!profile) return -Infinity;
   const standing = candidateStandingOrDefault(world, state, politicianId);
-  const officeKinds = activeTermsForPolitician(state, politicianId)
-    .map((term) => world.offices[term.officeId]?.kind)
-    .filter((kind): kind is string => Boolean(kind));
+  const officeKinds = context.officeKindsByPolitician.get(politicianId) ?? new Set<string>();
   let office = 0;
-  if (officeKinds.includes("governor")) office = 1;
-  else if (officeKinds.includes("minister")) office = 0.9;
-  else if (officeKinds.includes("assembly_member")) office = 0.65;
-  const leadership = Object.values(state.partyStates).some(
-    (party) => party.leaderId === politicianId,
-  )
+  if (officeKinds.has("governor")) office = 1;
+  else if (officeKinds.has("minister")) office = 0.9;
+  else if (officeKinds.has("assembly_member")) office = 0.65;
+  const leadership = context.partyLeaders.has(politicianId)
     ? 1
-    : Object.values(state.factionStates).some((faction) => faction.chairId === politicianId)
+    : context.factionChairs.has(politicianId)
       ? 0.55
       : 0;
-  const priorGeneral = Object.values(state.elections).some(
-    (election) =>
-      election.type === "presidential" &&
-      election.status === "resolved" &&
-      Boolean(election.candidates[politicianId]),
-  )
-    ? 1
-    : 0;
-  const priorNomination = Object.values(state.partyContests).some(
-    (contest) =>
-      contest.type === "presidential_nomination" &&
-      contest.status === "resolved" &&
-      Boolean(contest.entries[politicianId]),
-  )
-    ? 1
-    : 0;
+  const priorGeneral = context.priorGeneralCandidates.has(politicianId) ? 1 : 0;
+  const priorNomination = context.priorNominationCandidates.has(politicianId) ? 1 : 0;
   const momentum = (standing.momentum + 1) / 2;
   const score =
     profile.traits.ambition * 0.25 +
@@ -206,7 +244,7 @@ export function presidentialInterestScore(
     leadership * 0.06 +
     priorGeneral * 0.025 +
     priorNomination * 0.015;
-  return evaluatePresidentialEligibility(world, state, politicianId, electionDate).eligible
+  return presidentialEligibilityFast(state, world, politicianId, electionDate, context)
     ? score
     : -Infinity;
 }
@@ -216,6 +254,7 @@ function futureEntriesForParty(
   world: KernelWorld,
   partyId: string,
   electionDate: string,
+  context: PresidentialInterestContext,
 ): Record<string, ContestEntry> {
   const ranked = Object.values(state.politicians)
     .filter(
@@ -227,7 +266,7 @@ function futureEntriesForParty(
     )
     .map((politician) => ({
       politicianId: politician.id,
-      score: presidentialInterestScore(state, world, politician.id, electionDate),
+      score: presidentialInterestScore(state, world, politician.id, electionDate, context),
     }))
     .filter((row) => Number.isFinite(row.score))
     .sort((a, b) => b.score - a.score || a.politicianId.localeCompare(b.politicianId))
@@ -255,11 +294,12 @@ export function populateRuntimePresidentialCandidateFields(
   world: KernelWorld,
   election: ElectionState,
 ): void {
+  const context = buildPresidentialInterestContext(state, world);
   for (const contest of presidentialNominationContestsForElection(state, election.id)) {
     const cycle = presidentialNominationCycleMetadata(contest);
     if (!cycle || cycle.candidateSource !== "runtime_politics") continue;
     if (Object.keys(contest.entries).length > 0) continue;
-    contest.entries = futureEntriesForParty(state, world, contest.partyId, election.date);
+    contest.entries = futureEntriesForParty(state, world, contest.partyId, election.date, context);
     contest.metadata.candidateFieldPopulatedDate = state.currentDate;
   }
 }

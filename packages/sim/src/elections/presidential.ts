@@ -178,8 +178,10 @@ export function resolvePresidentialElection(
   election.winnerIds = [winnerId];
   election.resultEventId = resultEvent.id;
   state.presidential.certifiedPresidentElectId = winnerId;
-  state.presidential.electedTermCountByPolitician[winnerId] =
-    (state.presidential.electedTermCountByPolitician[winnerId] ?? 0) + 1;
+  if (election.metadata.specialElection !== true) {
+    state.presidential.electedTermCountByPolitician[winnerId] =
+      (state.presidential.electedTermCountByPolitician[winnerId] ?? 0) + 1;
+  }
   scheduleAssumptionIfNeeded(state, world, election.date, election.id, args.commandId);
   return { events: [resultEvent], election };
 }

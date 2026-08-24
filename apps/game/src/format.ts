@@ -1,5 +1,6 @@
 import { occupyingTerms, candidateStandingOrDefault } from "@lorsain/sim";
 import type { KernelWorld, SimState } from "@lorsain/sim";
+import { generatedAssemblyCandidateName } from "./presentation.js";
 import {
   currentAssemblyMemberIds,
   currentPresidentialAuthorityId,
@@ -7,9 +8,18 @@ import {
   deriveCabinet,
 } from "@lorsain/sim";
 
-export function politicianName(figures: Map<string, { name: string }>, id: string): string {
+export function politicianName(
+  figures: Map<string, { name: string }>,
+  id: string,
+  state?: SimState | null,
+): string {
   const named = figures.get(id)?.name;
   if (named && named.trim()) return named;
+  const runtime = state?.politicians[id]?.displayName;
+  if (runtime?.trim()) return runtime;
+  if (id.startsWith("GENASM_") || id.startsWith("POL_PLEG_")) {
+    return generatedAssemblyCandidateName(id);
+  }
   return "Unknown politician";
 }
 
@@ -34,6 +44,11 @@ export function qualitativeStanding(n: number | undefined | null): string {
   if (n >= 0.5) return "solid";
   if (n >= 0.35) return "mixed";
   return "weak";
+}
+
+/** Public campaign presentation: bounded, readable strength rather than a raw 0–1 coefficient. */
+export function groundGameStrength(n: number | undefined | null): number {
+  return Math.round(Math.max(0, Math.min(1, n ?? 0)) * 100);
 }
 
 export function playerOffices(world: KernelWorld, state: SimState, id: string): string[] {

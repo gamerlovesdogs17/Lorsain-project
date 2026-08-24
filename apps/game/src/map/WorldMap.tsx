@@ -98,7 +98,7 @@ export function WorldMap(props: {
             onClick={() => props.onSelect?.(p.id)}
             tabIndex={0}
             role="button"
-            aria-label={p.name ?? p.id}
+            aria-label={p.name ?? "Unnamed country"}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") props.onSelect?.(p.id);
             }}
@@ -117,7 +117,7 @@ export function WorldMap(props: {
                   className="map-country-label"
                   pointerEvents="none"
                 >
-                  {p.name?.split(" ").slice(-1)[0] ?? p.id}
+                  {p.name?.split(" ").slice(-1)[0] ?? "Country"}
                 </text>
               ) : null,
             )
@@ -125,7 +125,7 @@ export function WorldMap(props: {
       </svg>
       {hoveredId ? (
         <div className="map-tooltip" role="status" style={{ left: tip.x, top: tip.y }}>
-          {props.tooltipFor?.(hoveredId) ?? <strong>{paths.find((path) => path.id === hoveredId)?.name ?? hoveredId}</strong>}
+          {props.tooltipFor?.(hoveredId) ?? <strong>{paths.find((path) => path.id === hoveredId)?.name ?? "Unnamed country"}</strong>}
         </div>
       ) : null}
     </div>

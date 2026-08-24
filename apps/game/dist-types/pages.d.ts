@@ -44,6 +44,10 @@ type PageProps = {
         confirmLabel?: string;
         action: () => void;
     }) => void;
+    globalFocus: {
+        kind: string;
+        id: string;
+    } | null;
 };
 export declare function GamePages(props: PageProps): import("react").JSX.Element;
 export {};

@@ -127,7 +127,7 @@ describe("Phase 9 organizations", () => {
     );
   });
 
-  it("caps player meetings and does not leak hidden scores in public actions", () => {
+  it("keeps meetings secondary and does not leak hidden scores in public actions", () => {
     const world = orgHarness();
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "ORG-MEET" });
     expectOk(sim, { type: "MEET_ORGANIZATION", organizationId: "ORG_TCL" });
@@ -141,8 +141,27 @@ describe("Phase 9 organizations", () => {
     expect(third.ok).toBe(false);
     if (!third.ok) expect(third.error.code).toBe("ORG_MEETING_LIMIT");
     expect(sim.getSnapshot().organizationRuntime.meetingsThisMonth).toBe(MAX_ORG_MEETINGS_PER_MONTH);
+    expect(
+      sim.getSnapshot().organizationRuntime.actors.ORG_TCL?.relationships.MP02?.affinity,
+    ).toBeCloseTo(0.015);
     const summaries = sim.getSnapshot().organizationRuntime.actors.ORG_TCL?.recentActions ?? [];
     expect(summaries.every((a) => !/utility|weight|hidden/i.test(a.summary))).toBe(true);
+  });
+
+  it("updates organization trust and alignment from legislative behavior", () => {
+    const world = orgHarness();
+    const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "ORG-BEHAVIOR" });
+    expectOk(sim, {
+      type: "INTRODUCE_BILL",
+      title: "Income Security Act",
+      policyItems: [
+        { issueId: "ISS_WELFARE", direction: 1, magnitude: 0.7, fiscalImpact: null },
+      ],
+    });
+    const relationship = sim.getSnapshot().organizationRuntime.actors.ORG_TCL?.relationships.MP02;
+    expect(relationship?.policyAlignment ?? 0).toBeGreaterThan(0);
+    expect(relationship?.trust ?? 0).toBeGreaterThan(0);
+    expect(relationship?.lastReason).toBe("Sponsored priority legislation");
   });
 
   it("organizations still act when the player does nothing", () => {
@@ -158,6 +177,38 @@ describe("Phase 9 organizations", () => {
       (a) => a.recentActions.length > 0 || a.billPressure.length > 0,
     );
     expect(acted).toBe(true);
+  });
+
+  it("withdraws an active endorsement after a sustained policy break", () => {
+    const world = orgHarness();
+    const created = createSimulation({ world, playerPoliticianId: "MP02", seed: "ORG-WITHDRAW" });
+    const raw = jsonClone(created.serializeSave()) as ReturnType<Simulation["serializeSave"]>;
+    const mutable = raw.simulation;
+    const campaign = Object.values(mutable.campaignRuntime.campaigns)
+      .find((row) => row.politicianId === "MP02");
+    const actor = mutable.organizationRuntime.actors.ORG_TCL!;
+    actor.endorsements.push({
+      politicianId: "MP02",
+      campaignId: campaign?.id ?? null,
+      date: mutable.currentDate,
+      public: true,
+      status: "active",
+      withdrawnDate: null,
+    });
+    actor.relationships.MP02 = {
+      affinity: -0.2,
+      trust: -0.5,
+      policyAlignment: -0.6,
+      lastUpdatedDate: mutable.currentDate,
+      lastReason: "Opposed priority legislation",
+    };
+    const sim = restoreSimulation(raw, world);
+    advance(sim, 1);
+    const snapshot = sim.getSnapshot();
+    const withdrawn = snapshot.organizationRuntime.actors.ORG_TCL?.endorsements[0];
+    expect(withdrawn?.status).toBe("withdrawn");
+    expect(withdrawn?.withdrawnDate).not.toBeNull();
+    expect(snapshot.history.some((event) => event.type === "ORGANIZATION_ENDORSEMENT_WITHDRAWN")).toBe(true);
   });
 
   it("save/restore continues organization state", () => {

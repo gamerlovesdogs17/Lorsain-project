@@ -57,6 +57,7 @@ export {
   migrateSaveV9ToV10,
   migrateSaveV10ToV11,
   migrateSaveV11ToV12,
+  migrateSaveV12ToV13,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -140,11 +141,15 @@ export {
   gubernatorialEligibilityError,
   PROVINCIAL_PRIORITIES,
   PROVINCIAL_INVESTMENTS,
+  PROVINCIAL_BILL_SUBJECTS,
+  CONSTITUTIONAL_RULE_IDS,
 } from "./provinces/index.js";
 export type {
   ProvincialRuntime,
   ProvinceGovernanceState,
   GubernatorialElection,
+  ProvincialBillSubject,
+  ConstitutionalRuleId,
 } from "./provinces/types.js";
 export {
   processLegislatureMonth,
@@ -159,6 +164,7 @@ export {
   provisionForPolicyItem,
   optionForPolicyItem,
   currentProvisionOption,
+  defaultProvisionOptionId,
   estimatedProvisionEffects,
 } from "./legislature/index.js";
 export type {

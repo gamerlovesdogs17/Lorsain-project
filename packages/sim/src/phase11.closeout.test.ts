@@ -72,6 +72,34 @@ describe("Phase 11.1 closeout Assembly candidacy", () => {
     }
   });
 
+  it("recruits against the actual eligible filing pool after long-run attrition", () => {
+    const world = loadTerenaWorld();
+    const simulation = createSimulation({ world, playerPoliticianId: "NPC146", seed: "P11-LATE-POOL" });
+    const state = simulation.serializeSave().simulation;
+    const election = state.elections[CANONICAL_ASSEMBLY_ELECTION_ID]!;
+    state.currentDate = "2029-11-01";
+
+    const retained = new Set(
+      Object.keys(state.politicians)
+        .filter((id) => id !== state.playerPoliticianId)
+        .sort()
+        .slice(0, 250),
+    );
+    for (const politician of Object.values(state.politicians)) {
+      if (politician.id !== state.playerPoliticianId && !retained.has(politician.id)) {
+        politician.retired = true;
+      }
+    }
+
+    const beforePromotions = Object.keys(state.provincialRuntime.promotions).length;
+    const events = openAssemblyFilingIfDue(state, world, election, "CMD-LATE-POOL");
+    expect(events).toHaveLength(1);
+    expect(Object.keys(state.provincialRuntime.promotions).length).toBeGreaterThan(beforePromotions);
+    for (const field of Object.values(election.assembly!.constituencyFields)) {
+      expect(field.candidateIds.length).toBeGreaterThanOrEqual(field.magnitude + 1);
+    }
+  });
+
   it("keeps an incumbent player off the ballot unless they affirmatively file", () => {
     const { world, state, election } = preparedAssemblyState("NPC146");
     expect(election.assembly?.constituencyFields.C007?.candidateIds).not.toContain("NPC146");

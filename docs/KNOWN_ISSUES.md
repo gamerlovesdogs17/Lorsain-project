@@ -180,6 +180,29 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title �
 | P112-BALANCE | DEFERRED TO 11.3 | Incumbency, competitiveness and coefficient tuning require deeper multi-seed balance work after this structural phase. |
 | P112-CONTENT | DEFERRED TO 11.4 | More biographies, flavor prose, tutorials and content variety remain a content pass, not a missing mechanic. |
 
+## Phase 11.3 notes
+
+**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is implemented.** Formal results and telemetry are recorded in `docs/PHASE_11_3_RESULTS.md` and `docs/qa/phase11_3/whole_game_calibration.json`. Phase 11.4 has not begun.
+
+| ID | Severity | Issue |
+| --- | --- | --- |
+| P113-CANDIDATE-SUPPLY | **FIXED** | Twenty-one renewable Provincial Assemblies provide named lightweight political careers. Before filing allocation, federal recruitment counts actual valid filings, running incumbents and eligible challengers, then promotes existing provincial figures until every constituency can have more candidates than seats. No count-time fallback generation is used. |
+| P113-COURT-RENEWAL | **FIXED** | Qualified nominees receive cross-party confirmation credit for professional record and institutional confidence rather than party alignment alone; promoted provincial solicitors provide a renewable legal-career path. The 252-of-420 threshold and rejection risk remain. |
+| P113-PRES-ASM-OVERLAP | **FIXED** | A politician who assumes the Presidency now withdraws any incompatible unresolved Assembly candidacy. Assembly assumption also defensively refuses to evict a sitting President, preserving continuous presidential authority in the reproducing 600-month seed. |
+| P113-PROVINCIAL-ID-ORDER | **FIXED** | Constitutional ratification scheduling uses an amendment-specific deterministic order, not `provinceIds.slice(0, 3)`; stable IDs remain final tie-breakers only. |
+| P113-PARTY-CAUCUS | **FIXED** | Party/faction leadership cycles and Assembly caucus floor-leader/whip elections have explicit selectorates, archives and player autonomy. |
+| P113-ASSEMBLY-UI | **FIXED** | The federal chamber displays all 420 seats; party pages use Assembly seat totals rather than treating `winnerIds[0]` as a national winner; individual roll calls and politician profiles are navigable. |
+| P113-COURT | **FIXED** | Nine-seat bench, legal qualification, federal–provincial disputes, provincial-law review, individual votes and majority/dissent authorship are implemented and public. |
+| P113-CONSTITUTION | **FIXED** | Amendment procedure requires 280 Assembly votes and 13 of 21 Provincial Assemblies within 18 months, with no presidential role; supported rules are live runtime values. |
+| P113-LAW-COPY | **FIXED** | Bills use 30 concrete provision categories / 90 named options, targeted amendments and deterministic editorial titles instead of IDs or “moderate on …” descriptions. |
+| P113-LAW-OPTION-IDS | **FIXED** | Persisted bill choices use policy-specific option IDs rather than generic `low/current/high`. Legacy schema-13 development saves resolve those three values only as read-time aliases and canonicalize every new write. |
+| P113-ORGANIZATIONS | **FIXED** | Relationship scorecards derive from affinity, trust, policy alignment and behavior; endorsements can be withdrawn when their campaign or relationship basis ends. |
+| P113-MINISTER-MAYOR | NONBLOCKING | Minister and Mayor remain deliberately labeled limited roles. Full ministry portfolio politics and municipal legislatures are outside v1. |
+| P113-NOMINATION-TOTAL | NONBLOCKING | Later-cycle formal nomination counts can still take multiple seconds of worker time as the political population grows. They run off the main thread with a truthful indeterminate state; further algorithmic work is release optimization, not a browser freeze. |
+| P113-BUNDLE-SIZE | NONBLOCKING | Canonical domestic/world geometry and content keep the production bundle large. Route/data splitting remains a Phase 11.5 release-engineering opportunity. |
+| P113-SCREENSHOT-CI | NONBLOCKING | Phase 11.3 includes manual browser evidence at all required widths; automated visual-diff CI is not yet wired. |
+| P113-DEEP-LOCAL | POST-11.5 IDEA | Provincial cabinets, detailed provincial budgets/taxes, municipal legislatures and separate provincial constitutions would overexpand v1 and are deliberately absent. |
+
 ## Phase 8 leftovers
 
 | ID | Severity | Issue |

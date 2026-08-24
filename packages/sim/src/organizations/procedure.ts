@@ -39,8 +39,17 @@ export function meetOrganization(
   if ("error" in found) return { error: found.error };
   const limit = bumpMeetings(state);
   if (limit) return { error: limit };
-  const rel = found.actor.relationships[args.actorId] ?? { affinity: 0 };
-  rel.affinity = Math.max(-1, Math.min(1, rel.affinity + 0.06));
+  const rel = found.actor.relationships[args.actorId] ?? {
+    affinity: 0,
+    trust: 0,
+    policyAlignment: 0,
+    lastUpdatedDate: null,
+    lastReason: null,
+  };
+  rel.affinity = Math.max(-1, Math.min(1, rel.affinity + 0.015));
+  rel.trust = Math.max(-1, Math.min(1, rel.trust + 0.012));
+  rel.lastUpdatedDate = state.currentDate;
+  rel.lastReason = "Direct meeting";
   found.actor.relationships[args.actorId] = rel;
   found.actor.recentActions.unshift({
     date: state.currentDate,
@@ -81,6 +90,13 @@ export function seekOrganizationEndorsement(
   if (!campaign || campaign.politicianId !== args.actorId) {
     return { error: reject("UNKNOWN_CAMPAIGN", args.campaignId) };
   }
+  if (found.actor.endorsements.some(
+    (endorsement) => endorsement.politicianId === args.actorId &&
+      endorsement.campaignId === args.campaignId &&
+      (endorsement.status ?? "active") === "active",
+  )) {
+    return { error: reject("ENDORSEMENT_ALREADY_ACTIVE", "This organization already endorses the campaign") };
+  }
   const limit = bumpMeetings(state);
   if (limit) return { error: limit };
   const canon = world.interestOrganizations[args.organizationId];
@@ -116,7 +132,21 @@ export function seekOrganizationEndorsement(
     campaignId: args.campaignId,
     date: state.currentDate,
     public: true,
+    status: "active",
+    withdrawnDate: null,
   });
+  const endorsedRelationship = found.actor.relationships[args.actorId] ?? {
+    affinity: 0,
+    trust: 0,
+    policyAlignment: 0,
+    lastUpdatedDate: null,
+    lastReason: null,
+  };
+  endorsedRelationship.affinity = Math.min(1, endorsedRelationship.affinity + 0.03);
+  endorsedRelationship.trust = Math.min(1, endorsedRelationship.trust + 0.04);
+  endorsedRelationship.lastUpdatedDate = state.currentDate;
+  endorsedRelationship.lastReason = "Campaign endorsement";
+  found.actor.relationships[args.actorId] = endorsedRelationship;
   const standing = ensureCandidateStanding(world, state, args.actorId);
   standing.favorability = clampUnit(standing.favorability + 0.015 * canon.strength);
   standing.enthusiasm = Math.min(1, standing.enthusiasm + 0.012 * canon.strength);

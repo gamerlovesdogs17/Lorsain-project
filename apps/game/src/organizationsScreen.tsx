@@ -5,9 +5,10 @@ import {
   type SimState,
   type Simulation,
 } from "@lorsain/sim";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActionPanel,
+  DataTable,
   EmptyState,
   EntityHeader,
   EntityRow,
@@ -27,9 +28,15 @@ export function OrganizationsPage(props: {
   catalog: PresentationCatalog;
   onDone: () => void;
   report: (r: CommandResult) => boolean;
+  globalFocus?: { kind: string; id: string } | null;
 }) {
   const ids = Object.keys(props.world.interestOrganizations).sort();
   const [sel, setSel] = useState(ids[0] ?? "");
+  useEffect(() => {
+    if (props.globalFocus?.kind === "Organization" && props.world.interestOrganizations[props.globalFocus.id]) {
+      setSel(props.globalFocus.id);
+    }
+  }, [props.globalFocus, props.world]);
   const canon = props.world.interestOrganizations[sel];
   const actor = props.snap.organizationRuntime.actors[sel];
   const remaining = MAX_ORG_MEETINGS_PER_MONTH - props.snap.organizationRuntime.meetingsThisMonth;
@@ -38,11 +45,28 @@ export function OrganizationsPage(props: {
       c.politicianId === props.snap.playerPoliticianId &&
       (c.status === "active" || c.status === "exploring"),
   );
-  const known = actor?.relationships[props.snap.playerPoliticianId]?.affinity;
-  const knownLabel = relationshipPublicLabel(known);
+  const relationship = actor?.relationships[props.snap.playerPoliticianId];
+  const knownLabel = relationshipPublicLabel(relationship?.affinity);
+  const trustLabel = relationshipPublicLabel(relationship?.trust);
+  const alignmentLabel = relationshipPublicLabel(relationship?.policyAlignment);
+  const currentStance = actor?.billPressure.find((pressure) => pressure.stance !== "watch")?.stance ?? "watch";
   const bills = Object.values(props.snap.legislatureRuntime.bills).filter((b) =>
     ["committee", "floor_scheduled", "sent_to_president"].includes(b.status),
   );
+  const scorecard = Object.values(props.snap.legislatureRuntime.legislativeVotes)
+    .flatMap((vote) => {
+      const choice = vote.votes[props.snap.playerPoliticianId];
+      const bill = props.snap.legislatureRuntime.bills[vote.billId];
+      if (!choice || !bill || !bill.policyItems.some((item) => canon?.issues.includes(item.issueId))) return [];
+      const pressure = actor?.billPressure.find((item) => item.billId === bill.id);
+      const aligned = pressure
+        ? (pressure.stance === "support" && choice === "yes") || (pressure.stance === "oppose" && choice === "no")
+        : null;
+      return [{ id: vote.id, date: vote.date, bill, choice, pressure, aligned }];
+    })
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 12);
+  const influenceLabel = !canon ? "—" : canon.strength >= 0.75 ? "National heavyweight" : canon.strength >= 0.55 ? "Strong national voice" : canon.strength >= 0.35 ? "Established advocate" : "Specialist association";
 
   function run(type: "meet" | "endorse" | "bill", billId?: string) {
     if (!sel) return;
@@ -112,14 +136,25 @@ export function OrganizationsPage(props: {
                 <EntityHeader name={canon.name} office={canon.type} party={canon.lean} />
 
                 <SectionDivider title="Public profile" />
-                <p>
-                  Strength <StatusBadge>{canon.strength.toFixed(2)}</StatusBadge>
-                </p>
+                <p>Influence <StatusBadge>{influenceLabel}</StatusBadge></p>
                 <p className="muted">
                   Issues: {canon.issues.map((i) => issueDisplayName(props.catalog, i)).join(", ")}
                 </p>
-                <p className="muted">Known relationship: {knownLabel}</p>
+                <div className="metric-strip">
+                  <div><span>Relationship</span><strong>{knownLabel}</strong></div>
+                  <div><span>Trust</span><strong>{trustLabel}</strong></div>
+                  <div><span>Policy alignment</span><strong>{alignmentLabel}</strong></div>
+                  <div><span>Current stance</span><strong>{currentStance === "support" ? "Supportive" : currentStance === "oppose" ? "Opposed" : "Watching"}</strong></div>
+                </div>
+                {relationship?.lastReason ? <p className="muted">Latest change: {relationship.lastReason}</p> : null}
                 <p className="muted">Current public positions are issue leanings, not hidden scores.</p>
+
+                <SectionDivider title="Political scorecard" hint="Public behavior, not meeting grind" />
+                {scorecard.length === 0 ? <EmptyState>No relevant recorded vote by this politician.</EmptyState> : (
+                  <DataTable dense headers={["Date", "Measure", "Your vote", "Organization"]}>
+                    {scorecard.map((row) => <tr key={row.id}><td>{row.date}</td><td>{row.bill.title}</td><td>{row.choice === "yes" ? "Aye" : row.choice === "no" ? "Nay" : "Abstain"}</td><td>{row.pressure ? <StatusBadge tone={row.aligned ? "ok" : "warn"}>{row.aligned ? "Aligned" : "At odds"}</StatusBadge> : "No formal position"}</td></tr>)}
+                  </DataTable>
+                )}
 
                 <SectionDivider title="Positions and support" />
                 {actor?.billPressure.length ? (
@@ -138,7 +173,7 @@ export function OrganizationsPage(props: {
                     <EntityRow
                       key={`${e.politicianId}-${i}`}
                       title={`Endorsed ${politicianDisplayName(props.catalog, e.politicianId)}`}
-                      meta={e.date}
+                      meta={`${e.date}${e.status === "withdrawn" ? ` · withdrawn ${e.withdrawnDate ?? ""}` : " · active"}`}
                     />
                   ))
                 ) : (

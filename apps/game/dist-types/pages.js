@@ -1,5 +1,5 @@
 import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { caseTitle, collectPlayerActionableDecisions, assemblyCandidateEligibilityError, currentAssemblyElectionForFiling, currentAssemblyMemberIds, currentGubernatorialOpportunity, governedProvinceId, evaluatePresidentialEligibility, storiesChronological, TERENA_WORLD_ID, } from "@lorsain/sim";
 import { AssemblyPage } from "./assemblyScreen.js";
 import { CampaignPage } from "./campaignScreen.js";
@@ -11,8 +11,8 @@ import { ForeignAffairsPage } from "./foreignAffairsScreen.js";
 import { OrganizationsPage } from "./organizationsScreen.js";
 import { NewsPage } from "./newsScreen.js";
 import { OfficePage } from "./officeScreen.js";
-import { isMp, isPresident, playerCampaign, publicStandingLabel } from "./format.js";
-import { contestDisplayName, campaignTypeLabel, countryDisplayName, crisisStageLabel, electionDisplayName, eventDisplay, factionDisplayName, isPublicCrisisStage, latentStrategicTensions, partyColor, partyDisplayName, politicianDisplayName, pollShareLine, publicSeverityLabel, mediaHeadlineForEvent, treatyStatusLabel, treatyTypeLabel, } from "./presentation.js";
+import { groundGameStrength, isMp, isPresident, playerCampaign, publicStandingLabel } from "./format.js";
+import { contestDisplayName, campaignTypeLabel, committeeDisplayName, countryDisplayName, crisisStageLabel, electionDisplayName, eventDisplay, factionDisplayName, isPublicCrisisStage, latentStrategicTensions, partyColor, partyDisplayName, politicianDisplayName, pollShareLine, publicSeverityLabel, mediaHeadlineForEvent, treatyStatusLabel, treatyTypeLabel, } from "./presentation.js";
 import { decisionDisplayLabel, formatIndexDelta, interruptDisplay, } from "./presentation/display.js";
 import { ActivityFeedItem, BriefStrip, DataTable, EmptyState, EntityRow, NewsItem, PageHeader, SectionCard, SectionDivider, TabBar, LeadStory, StatusBadge, WorkLayout, } from "./ui/kit.js";
 import { PoliticianProfile, PoliticianCard } from "./ui/politician.js";
@@ -143,6 +143,19 @@ function Home(props) {
 function Career(props) {
     const [tab, setTab] = useState("opportunities");
     const [raceGeography, setRaceGeography] = useState("");
+    const [directoryQuery, setDirectoryQuery] = useState("");
+    const [directorySelection, setDirectorySelection] = useState(props.snap.playerPoliticianId);
+    const [directoryVoteFilter, setDirectoryVoteFilter] = useState("all");
+    const [directoryParty, setDirectoryParty] = useState("all");
+    const [directoryCaucus, setDirectoryCaucus] = useState("all");
+    const [directoryProvince, setDirectoryProvince] = useState("all");
+    const [directoryOffice, setDirectoryOffice] = useState("all");
+    useEffect(() => {
+        if (props.globalFocus?.kind !== "Politician")
+            return;
+        setDirectorySelection(props.globalFocus.id);
+        setTab("directory");
+    }, [props.globalFocus]);
     const figure = props.figures.get(props.snap.playerPoliticianId);
     const runtime = props.snap.politicians[props.snap.playerPoliticianId];
     const standingLabel = publicStandingLabel(props.world, props.snap, props.snap.playerPoliticianId);
@@ -169,6 +182,12 @@ function Career(props) {
     });
     const chosenConstituency = raceGeography || eligibleConstituencies[0] || "";
     const gubernatorial = currentGubernatorialOpportunity(props.snap, props.world, playerId);
+    const playerHome = runtime?.homeProvinceId ?? props.world.politicianHomeProvince[playerId] ?? null;
+    const provincialAssemblyOpportunities = Object.values(props.snap.provincialRuntime.assemblyElections)
+        .filter((election) => election.playerDecision == null &&
+        election.status !== "resolved" &&
+        election.provinceId === playerHome)
+        .sort((a, b) => a.date.localeCompare(b.date));
     const presidential = Object.values(props.snap.elections)
         .filter((election) => election.type === "presidential" && election.status !== "resolved" && election.status !== "cancelled")
         .sort((a, b) => a.date.localeCompare(b.date))[0];
@@ -187,12 +206,15 @@ function Career(props) {
     };
     return (_jsxs("div", { children: [_jsx(PoliticianProfile, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: props.snap.playerPoliticianId, office: props.offices[0] ?? "Private citizen", party: partyDisplayName(props.world, runtime?.partyId ?? null, props.snap), faction: factionDisplayName(props.world, runtime?.factionId ?? null), ...(figure?.home ? { home: figure.home } : {}), standing: `Public standing: ${standingLabel}`, ...((figure?.notes ?? figure?.display_summary)
                     ? { biography: figure?.notes ?? figure?.display_summary }
-                    : {}) }), _jsx(TabBar, { tabs: [
+                    : runtime?.description
+                        ? { biography: runtime.description }
+                        : {}) }), _jsx(TabBar, { tabs: [
                     { id: "opportunities", label: "Political opportunities" },
                     { id: "overview", label: "Overview" },
                     { id: "career", label: "Career" },
                     { id: "positions", label: "Positions" },
                     { id: "record", label: "Public record" },
+                    { id: "directory", label: "Politicians" },
                 ], value: tab, onChange: setTab }), tab === "opportunities" ? (_jsxs("div", { className: "opportunities-layout", children: [_jsxs("div", { className: "opportunities-intro", children: [_jsxs("div", { children: [_jsx("span", { className: "eyebrow", children: "Run for office" }), _jsx("h2", { children: "Political opportunities" })] }), _jsxs("p", { children: ["Only races for which ", politicianDisplayName(props.catalog, playerId), " is presently eligible are actionable. Public facts are shown; hidden support is not."] })] }), presidential ? (_jsxs("section", { className: "opportunity-row", children: [_jsxs("div", { className: "opportunity-office", children: [_jsx("span", { children: "National" }), _jsx("h3", { children: "President" }), _jsx("strong", { children: presidential.date })] }), _jsxs("div", { className: "opportunity-details", children: [_jsx("p", { children: presidentialEligibility?.eligible ? "Constitutionally eligible" : presidentialEligibility?.reasons.join(" · ") || "Not presently eligible" }), _jsxs("p", { className: "muted", children: ["Nomination: ", nomination?.status ?? "not open", " \u00B7 national constituency \u00B7 term incompatibilities apply on assumption."] })] }), _jsx("div", { className: "opportunity-action", children: presidentialEligibility?.eligible && nomination && ["open", "qualification"].includes(nomination.status) && !nomination.entries[playerId] ? (_jsx("button", { className: "btn", onClick: () => run({ type: "DECLARE_CAMPAIGN", politicianId: playerId, campaignType: "presidential_nomination", contestId: nomination.id }), children: "Enter nomination" })) : nomination?.entries[playerId] ? _jsx(StatusBadge, { tone: "ok", children: "Entered" }) : _jsx(StatusBadge, { children: "Not yet open" }) })] })) : null, assemblyElection ? (_jsxs("section", { className: "opportunity-row opportunity-geographic", children: [_jsxs("div", { className: "opportunity-office", children: [_jsx("span", { children: "Constituency" }), _jsx("h3", { children: "National Assembly" }), _jsx("strong", { children: assemblyElection.date })] }), _jsxs("div", { className: "opportunity-details", children: [_jsxs("p", { children: [eligibleConstituencies.length ? `${eligibleConstituencies.length} eligible constituencies` : "No eligible constituency", " \u00B7 filing ", assemblyCycle?.filingOpenDate, "\u2013", assemblyCycle?.filingDeadlineDate] }), assemblyCycle?.filingStatus === "open" && !assemblyDecision ? (_jsx("div", { className: "geography-choice-grid", role: "listbox", "aria-label": "Choose an Assembly constituency", children: eligibleConstituencies.map((id) => {
                                             const info = props.catalog.places.get(id);
                                             const parties = constituencySittingSeatBreakdown(props.world, props.snap, id);
@@ -201,13 +223,74 @@ function Career(props) {
                                         }) })) : _jsxs("p", { className: "muted", children: ["Filing status: ", assemblyDecision?.decision ?? assemblyCycle?.filingStatus ?? "planned"] })] }), _jsx("div", { className: "opportunity-action", children: assemblyCycle?.filingStatus === "open" && !assemblyDecision && chosenConstituency ? _jsxs(_Fragment, { children: [_jsx("button", { className: "btn", onClick: () => run({ type: "FILE_ASSEMBLY_CANDIDACY", electionId: assemblyElection.id, constituencyId: chosenConstituency }), children: "File candidacy" }), _jsx("button", { className: "btn secondary", onClick: () => run({ type: "DECLINE_ASSEMBLY_CANDIDACY", electionId: assemblyElection.id }), children: "Decline this cycle" })] }) : assemblyDecision?.decision === "filed" ? _jsx(StatusBadge, { tone: "ok", children: "Filed" }) : assemblyDecision?.decision === "declined" ? _jsx(StatusBadge, { children: "Declined" }) : _jsx(StatusBadge, { children: "Filing not open" }) })] })) : null, gubernatorial.map((race) => {
                         const provinceName = props.catalog.places.get(race.provinceId)?.name ?? race.provinceId;
                         return _jsxs("section", { className: "opportunity-row", children: [_jsxs("div", { className: "opportunity-office", children: [_jsx("span", { children: "Province" }), _jsxs("h3", { children: ["Governor of ", provinceName] }), _jsx("strong", { children: race.date })] }), _jsxs("div", { className: "opportunity-details", children: [_jsxs("p", { children: ["Resident and presently eligible \u00B7 incumbent ", race.incumbentId ? politicianDisplayName(props.catalog, race.incumbentId) : "none"] }), _jsxs("p", { className: "muted", children: ["Filing ", race.filingOpenDate, "\u2013", race.filingDeadlineDate, " \u00B7 province-wide plurality election."] })] }), _jsx("div", { className: "opportunity-action", children: race.status === "filing_open" ? _jsxs(_Fragment, { children: [_jsx("button", { className: "btn", onClick: () => run({ type: "FILE_GUBERNATORIAL_CANDIDACY", electionId: race.id, provinceId: race.provinceId }), children: "File candidacy" }), _jsx("button", { className: "btn secondary", onClick: () => run({ type: "DECLINE_GUBERNATORIAL_CANDIDACY", electionId: race.id }), children: "Decline this cycle" })] }) : _jsxs(StatusBadge, { children: ["Opens ", race.filingOpenDate] }) })] }, race.id);
-                    }), !presidential && !assemblyElection && gubernatorial.length === 0 ? _jsx(EmptyState, { children: "No modeled election opportunity is currently scheduled." }) : null] })) : null, tab === "overview" ? (_jsxs(SectionCard, { title: "Public biography", children: [_jsx("p", { children: figure?.notes ?? figure?.display_summary ?? "No public biography on file." }), age != null ? _jsxs("p", { children: ["Age: ", age] }) : null] })) : null, tab === "career" ? (_jsxs(SectionCard, { title: "Offices", children: [terms.length === 0 ? _jsx(EmptyState, { children: "No office terms on file." }) : null, terms.map((t) => (_jsxs("div", { children: [props.world.offices[t.officeId]?.title ?? t.officeId, " \u00B7 ", t.status, " \u00B7 ", t.startDate, t.endDate ? ` – ${t.endDate}` : ""] }, t.id)))] })) : null, tab === "positions" ? (_jsxs(SectionCard, { title: "Public offices and campaign", children: [_jsx("p", { children: props.offices.join(", ") || "No current office" }), _jsx("p", { className: "muted", children: props.campaign ? "Campaign underway" : "Not currently campaigning" }), _jsx("p", { className: "muted", children: "Public associations: see Organizations for known contacts." })] })) : null, tab === "record" ? (_jsx(SectionCard, { title: "Recent public events", children: props.snap.history
+                    }), provincialAssemblyOpportunities.map((race) => {
+                        const provinceName = props.catalog.places.get(race.provinceId)?.name ?? race.provinceId;
+                        return _jsxs("section", { className: "opportunity-row", children: [_jsxs("div", { className: "opportunity-office", children: [_jsx("span", { children: "Province" }), _jsxs("h3", { children: [provinceName, " Provincial Assembly"] }), _jsx("strong", { children: race.date })] }), _jsxs("div", { className: "opportunity-details", children: [_jsxs("p", { children: ["Province-wide proportional election \u00B7 chamber ", props.snap.provincialRuntime.assemblies[race.provinceId]?.seatCount ?? "—", " seats"] }), _jsx("p", { className: "muted", children: "A provincial term can build a record for Governor or the National Assembly." })] }), _jsx("div", { className: "opportunity-action", children: race.status === "filing_open" ? _jsxs(_Fragment, { children: [_jsx("button", { className: "btn", onClick: () => run({ type: "FILE_PROVINCIAL_ASSEMBLY_CANDIDACY", electionId: race.id }), children: "Join party list" }), _jsx("button", { className: "btn secondary", onClick: () => run({ type: "DECLINE_PROVINCIAL_ASSEMBLY_CANDIDACY", electionId: race.id }), children: "Decline this cycle" })] }) : _jsx(StatusBadge, { children: "Opens five months before election" }) })] }, race.id);
+                    }), !presidential && !assemblyElection && gubernatorial.length === 0 && provincialAssemblyOpportunities.length === 0 ? _jsx(EmptyState, { children: "No modeled election opportunity is currently scheduled." }) : null] })) : null, tab === "overview" ? (_jsxs(SectionCard, { title: "Public biography", children: [_jsx("p", { children: figure?.notes ?? figure?.display_summary ?? runtime?.description ?? "No public biography on file." }), age != null ? _jsxs("p", { children: ["Age: ", age] }) : null] })) : null, tab === "career" ? (_jsxs(SectionCard, { title: "Offices", children: [terms.length === 0 ? _jsx(EmptyState, { children: "No office terms on file." }) : null, terms.map((t) => (_jsxs("div", { children: [props.world.offices[t.officeId]?.title ?? t.officeId, " \u00B7 ", t.status, " \u00B7 ", t.startDate, t.endDate ? ` – ${t.endDate}` : ""] }, t.id)))] })) : null, tab === "positions" ? (_jsxs(SectionCard, { title: "Public offices and campaign", children: [_jsx("p", { children: props.offices.join(", ") || "No current office" }), _jsx("p", { className: "muted", children: props.campaign ? "Campaign underway" : "Not currently campaigning" }), _jsx("p", { className: "muted", children: "Public associations: see Organizations for known contacts." })] })) : null, tab === "record" ? (_jsx(SectionCard, { title: "Recent public events", children: props.snap.history
                     .filter((e) => e.actorIds.includes(props.snap.playerPoliticianId))
                     .slice(-12)
-                    .map((e) => (_jsxs("div", { className: "muted", children: [e.date, " \u00B7 ", eventDisplay(props.catalog, props.world, props.snap, e)] }, e.id))) })) : null] }));
+                    .map((e) => (_jsxs("div", { className: "muted", children: [e.date, " \u00B7 ", eventDisplay(props.catalog, props.world, props.snap, e)] }, e.id))) })) : null, tab === "directory" ? (() => {
+                const query = directoryQuery.trim().toLowerCase();
+                const rows = Object.values(props.snap.politicians)
+                    .filter((politician) => politician.alive)
+                    .filter((politician) => {
+                    const name = politicianDisplayName(props.catalog, politician.id).toLowerCase();
+                    const party = partyDisplayName(props.world, politician.partyId, props.snap).toLowerCase();
+                    return !query || name.includes(query) || party.includes(query);
+                })
+                    .filter((politician) => directoryParty === "all" || politician.partyId === directoryParty)
+                    .filter((politician) => directoryCaucus === "all" || politician.factionId === directoryCaucus)
+                    .filter((politician) => directoryProvince === "all" || (politician.homeProvinceId ?? props.world.politicianHomeProvince[politician.id]) === directoryProvince)
+                    .filter((politician) => {
+                    if (directoryOffice === "all")
+                        return true;
+                    if (directoryOffice === "party_leader")
+                        return Object.values(props.snap.partyStates).some((party) => party.leaderId === politician.id);
+                    if (directoryOffice === "caucus_leader")
+                        return Object.values(props.snap.factionStates).some((caucus) => caucus.chairId === politician.id);
+                    return Object.values(props.snap.officeTerms).some((term) => term.holderId === politician.id && term.status === "active" && props.world.offices[term.officeId]?.kind === directoryOffice);
+                })
+                    .sort((a, b) => politicianDisplayName(props.catalog, a.id).localeCompare(politicianDisplayName(props.catalog, b.id)));
+                const selected = props.snap.politicians[directorySelection] ?? rows[0];
+                const selectedTerms = selected ? Object.values(props.snap.officeTerms).filter((term) => term.holderId === selected.id) : [];
+                const selectedCommittees = selected ? Object.values(props.snap.legislatureRuntime.committees).filter((committee) => committee.chairId === selected.id) : [];
+                const selectedPartyLeadership = selected ? Object.values(props.snap.partyStates).filter((party) => party.leaderId === selected.id) : [];
+                const selectedCaucusLeadership = selected ? Object.values(props.snap.factionStates).filter((caucus) => caucus.chairId === selected.id) : [];
+                const selectedVotes = selected ? Object.values(props.snap.legislatureRuntime.legislativeVotes)
+                    .filter((vote) => vote.votes[selected.id])
+                    .filter((vote) => directoryVoteFilter === "all" || vote.votes[selected.id] === directoryVoteFilter)
+                    .sort((a, b) => b.date.localeCompare(a.date))
+                    .slice(0, 40) : [];
+                return _jsx(WorkLayout, { main: _jsxs(_Fragment, { children: [_jsx("input", { "aria-label": "Search politicians", placeholder: "Search name or party", value: directoryQuery, onChange: (event) => setDirectoryQuery(event.target.value) }), _jsxs("div", { className: "directory-filters", children: [_jsxs("label", { className: "field-label", children: ["Party", _jsxs("select", { value: directoryParty, onChange: (event) => setDirectoryParty(event.target.value), children: [_jsx("option", { value: "all", children: "All parties" }), Object.keys(props.world.partyDefinitions).filter((partyId) => partyId !== props.world.independentAggregatePartyId).sort().map((partyId) => _jsx("option", { value: partyId, children: partyDisplayName(props.world, partyId, props.snap) }, partyId))] })] }), _jsxs("label", { className: "field-label", children: ["Caucus", _jsxs("select", { value: directoryCaucus, onChange: (event) => setDirectoryCaucus(event.target.value), children: [_jsx("option", { value: "all", children: "All caucuses" }), Object.entries(props.world.factionDefinitions).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([caucusId, caucus]) => _jsx("option", { value: caucusId, children: caucus.name }, caucusId))] })] }), _jsxs("label", { className: "field-label", children: ["Province", _jsxs("select", { value: directoryProvince, onChange: (event) => setDirectoryProvince(event.target.value), children: [_jsx("option", { value: "all", children: "All provinces" }), props.world.provinceIds.slice().sort((a, b) => (props.catalog.places.get(a)?.name ?? a).localeCompare(props.catalog.places.get(b)?.name ?? b)).map((provinceId) => _jsx("option", { value: provinceId, children: props.catalog.places.get(provinceId)?.name ?? "Province" }, provinceId))] })] }), _jsxs("label", { className: "field-label", children: ["Office", _jsxs("select", { value: directoryOffice, onChange: (event) => setDirectoryOffice(event.target.value), children: [_jsx("option", { value: "all", children: "All offices" }), _jsx("option", { value: "assembly_member", children: "National Assembly" }), _jsx("option", { value: "governor", children: "Governor" }), _jsx("option", { value: "minister", children: "Minister" }), _jsx("option", { value: "mayor", children: "Mayor" }), _jsx("option", { value: "constitutional_court_justice", children: "Justice" }), _jsx("option", { value: "party_leader", children: "Party leader" }), _jsx("option", { value: "caucus_leader", children: "Caucus chair" })] })] })] }), _jsxs("p", { className: "muted", children: [rows.length, " matching public figures \u00B7 showing the first 80"] }), _jsx("div", { className: "entity-list", children: rows.slice(0, 80).map((politician) => _jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: politician.id, compact: true, selected: politician.id === selected?.id, onSelect: () => setDirectorySelection(politician.id) }, politician.id)) })] }), rail: selected ? _jsxs(_Fragment, { children: [_jsx(PoliticianProfile, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: selected.id, party: partyDisplayName(props.world, selected.partyId, props.snap), ...(selected.description ? { biography: selected.description } : {}) }), _jsx(SectionDivider, { title: "Office history" }), selectedTerms.length === 0 ? _jsx(EmptyState, { children: "No public office on file." }) : selectedTerms.slice().reverse().map((term) => _jsxs("div", { className: "muted", children: [props.world.offices[term.officeId]?.title ?? "Public office", " \u00B7 ", term.startDate ?? "date unknown", " \u00B7 ", term.status] }, term.id)), _jsx(SectionDivider, { title: "Institutional roles" }), selectedCommittees.length + selectedPartyLeadership.length + selectedCaucusLeadership.length === 0 ? _jsx(EmptyState, { children: "No current public leadership role." }) : _jsxs(_Fragment, { children: [selectedCommittees.map((committee) => _jsxs("div", { className: "muted", children: ["Chair \u00B7 ", committeeDisplayName(committee.id)] }, committee.id)), selectedPartyLeadership.map((party) => _jsxs("div", { className: "muted", children: ["Leader \u00B7 ", partyDisplayName(props.world, party.partyId, props.snap)] }, party.partyId)), selectedCaucusLeadership.map((caucus) => _jsxs("div", { className: "muted", children: ["Chair \u00B7 ", factionDisplayName(props.world, caucus.factionId)] }, caucus.factionId))] }), _jsx(SectionDivider, { title: "Recent Assembly votes" }), _jsx("div", { className: "map-scale-switch", "aria-label": "Filter politician voting record", children: ["all", "yes", "no", "abstain"].map((choice) => _jsx("button", { type: "button", className: directoryVoteFilter === choice ? "active" : "", onClick: () => setDirectoryVoteFilter(choice), children: choice === "yes" ? "Aye" : choice === "no" ? "Nay" : choice[0].toUpperCase() + choice.slice(1) }, choice)) }), selectedVotes.length === 0 ? _jsx(EmptyState, { children: "No recorded federal roll call matches this filter." }) : _jsx(DataTable, { dense: true, headers: ["Date", "Measure", "Vote", "Party", "Caucus"], children: selectedVotes.map((vote) => {
+                                    const bill = props.snap.legislatureRuntime.bills[vote.billId];
+                                    const choice = vote.votes[selected.id];
+                                    const partyId = selected.partyId;
+                                    const recommendation = partyId ? props.snap.legislatureRuntime.partyRecommendations[`${partyId}:${vote.billId}`]?.stance ?? "free_vote" : "free_vote";
+                                    const followed = recommendation === "free_vote" ? "Free vote" : recommendation === "support" ? choice === "yes" ? "Followed party" : "Broke with party" : choice === "no" ? "Followed party" : "Broke with party";
+                                    const factionId = selected.factionId;
+                                    const caucusRecommendation = factionId ? props.snap.legislatureRuntime.factionRecommendations[`${factionId}:${vote.billId}`]?.stance ?? "free_vote" : "free_vote";
+                                    const caucusFollowed = caucusRecommendation === "free_vote" ? "Free vote" : caucusRecommendation === "support" ? choice === "yes" ? "Followed caucus" : "Broke with caucus" : choice === "no" ? "Followed caucus" : "Broke with caucus";
+                                    return _jsxs("tr", { children: [_jsx("td", { children: vote.date }), _jsx("td", { children: bill?.title ?? "Assembly matter" }), _jsx("td", { children: choice === "yes" ? "Aye" : choice === "no" ? "Nay" : "Abstain" }), _jsx("td", { children: followed }), _jsx("td", { children: caucusFollowed })] }, vote.id);
+                                }) })] }) : _jsx(EmptyState, { children: "Select a politician." }) });
+            })() : null] }));
 }
 function Party(props) {
-    const partyId = props.snap.politicians[props.snap.playerPoliticianId]?.partyId;
+    const playerPartyId = props.snap.politicians[props.snap.playerPoliticianId]?.partyId;
+    const availablePartyIds = Object.keys(props.world.partyDefinitions)
+        .filter((id) => id !== props.world.independentAggregatePartyId)
+        .sort((a, b) => partyDisplayName(props.world, a, props.snap).localeCompare(partyDisplayName(props.world, b, props.snap)));
+    const [selectedPartyId, setSelectedPartyId] = useState(playerPartyId ?? availablePartyIds[0] ?? "");
+    useEffect(() => {
+        if (props.globalFocus?.kind === "Party" && props.world.partyDefinitions[props.globalFocus.id]) {
+            setSelectedPartyId(props.globalFocus.id);
+        }
+        else if (props.globalFocus?.kind === "Caucus") {
+            const partyId = props.world.factionDefinitions[props.globalFocus.id]?.partyId;
+            if (partyId)
+                setSelectedPartyId(partyId);
+        }
+    }, [props.globalFocus, props.world]);
+    const partyId = selectedPartyId || playerPartyId;
     const party = partyId ? props.world.partyDefinitions[partyId] : null;
     const runtime = partyId ? props.snap.partyStates[partyId] : null;
     const contests = Object.values(props.snap.partyContests).filter((c) => c.partyId === partyId);
@@ -230,13 +313,26 @@ function Party(props) {
         .slice(-8)
         .reverse();
     const elections = Object.values(props.snap.elections).filter((e) => e.status === "resolved");
-    return (_jsxs("div", { children: [_jsx(PageHeader, { kicker: "Party", title: party?.name ?? "No party" }), party ? (_jsxs("div", { className: "party-banner", style: { borderLeftColor: partyColor(props.world, partyId) }, children: [_jsxs(StatusBadge, { tone: "ok", children: [caucus, " of ", totalSeats, " Assembly seats"] }), _jsx(StatusBadge, { children: position })] })) : null, runtime?.leaderId ? (_jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: runtime.leaderId, office: "Party leader" })) : (_jsx(EmptyState, { children: "Leadership is vacant." })), _jsx(SectionCard, { title: "Factions", children: _jsx("div", { className: "faction-cards", children: (party?.factionIds ?? []).map((fid) => {
+    const caucusLeadership = partyId ? props.snap.legislatureRuntime.caucusLeadership[partyId] : null;
+    const caucusContests = Object.values(props.snap.legislatureRuntime.caucusContests).filter((contest) => contest.partyId === partyId);
+    const run = (command) => {
+        props.report(props.sim.executeCommand(command));
+        props.onDone();
+    };
+    return (_jsxs("div", { children: [_jsx(PageHeader, { kicker: "Parties and caucuses", title: party?.name ?? "No party", subtitle: "National party directory, internal elections, factions, and parliamentary leadership." }), _jsx("div", { className: "party-directory-strip", role: "navigation", "aria-label": "All parties", children: availablePartyIds.map((id) => {
+                    const seats = members.filter((memberId) => props.snap.politicians[memberId]?.partyId === id).length;
+                    const leader = props.snap.partyStates[id]?.leaderId;
+                    return _jsxs("button", { type: "button", className: `party-directory-item${id === partyId ? " selected" : ""}`, style: { borderLeftColor: partyColor(props.world, id) }, onClick: () => setSelectedPartyId(id), children: [_jsx("strong", { children: partyDisplayName(props.world, id, props.snap) }), _jsxs("span", { children: [seats, " seats \u00B7 ", leader ? politicianDisplayName(props.catalog, leader) : "leadership vacant"] })] }, id);
+                }) }), party ? (_jsxs("div", { className: "party-banner", style: { borderLeftColor: partyColor(props.world, partyId) }, children: [_jsxs(StatusBadge, { tone: "ok", children: [caucus, " of ", totalSeats, " Assembly seats"] }), _jsx(StatusBadge, { children: position })] })) : null, runtime?.leaderId ? (_jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: runtime.leaderId, office: "Party leader" })) : (_jsx(EmptyState, { children: "Leadership is vacant." })), _jsx(SectionCard, { title: "Caucuses", children: _jsx("div", { className: "faction-cards", children: (party?.factionIds ?? []).map((fid) => {
                         const chair = props.snap.factionStates[fid]?.chairId;
-                        return (_jsxs("div", { className: "faction-card", children: [_jsx("strong", { children: factionDisplayName(props.world, fid) }), _jsxs("div", { className: "muted", children: ["Chair: ", chair ? politicianDisplayName(props.catalog, chair) : "vacant"] })] }, fid));
-                    }) }) }), _jsxs(SectionCard, { title: "Nominations and leadership", children: [contests.length === 0 ? _jsx(EmptyState, { children: "No current party contests." }) : null, contests.map((c) => (_jsxs("div", { className: "contest-card", children: [_jsx("strong", { children: contestDisplayName(props.snap, props.world, c.id) }), " ", _jsx(StatusBadge, { tone: c.status === "open" ? "warn" : "idle", children: c.status }), _jsxs("div", { className: "muted", children: [Object.values(c.entries).filter((e) => e.status !== "potential").length, " candidates"] }), Object.values(c.entries)
+                        const caucusMembers = Object.values(props.snap.politicians).filter((politician) => politician.factionId === fid && politician.alive && !politician.retired);
+                        const caucusMps = members.filter((memberId) => props.snap.politicians[memberId]?.factionId === fid).length;
+                        const share = caucus === 0 ? 0 : Math.round((caucusMps / caucus) * 100);
+                        return (_jsxs("div", { className: "faction-card", children: [_jsx("strong", { children: factionDisplayName(props.world, fid) }), _jsxs("div", { className: "muted", children: ["Chair: ", chair ? politicianDisplayName(props.catalog, chair) : "vacant"] }), _jsxs("div", { className: "muted", children: [caucusMps, " MPs \u00B7 ", share, "% of party caucus \u00B7 ", caucusMembers.length, " known politicians"] })] }, fid));
+                    }) }) }), _jsxs(SectionCard, { title: "Assembly caucus", children: [caucusLeadership ? _jsxs("div", { className: "faction-cards", children: [caucusLeadership.floorLeaderId ? _jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: caucusLeadership.floorLeaderId, office: "Floor leader", compact: true }) : _jsxs("div", { className: "faction-card", children: [_jsx("strong", { children: "Floor leader" }), _jsx("div", { className: "muted", children: "Vacant" })] }), caucusLeadership.whipId ? _jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: caucusLeadership.whipId, office: "Whip", compact: true }) : _jsxs("div", { className: "faction-card", children: [_jsx("strong", { children: "Whip" }), _jsx("div", { className: "muted", children: "Vacant" })] }), _jsxs("div", { className: "faction-card", children: [_jsx("strong", { children: "Next caucus election" }), _jsx("div", { className: "muted", children: caucusLeadership.nextElectionDate })] })] }) : _jsx(EmptyState, { children: "No sitting Assembly caucus." }), caucusContests.filter((contest) => contest.status === "open").map((contest) => _jsxs("div", { className: "decision-row", children: [_jsxs("div", { children: [_jsx("strong", { children: contest.role === "floor_leader" ? "Floor leader election" : "Whip election" }), _jsxs("div", { className: "muted", children: ["Closes ", contest.closeDate, " \u00B7 ", contest.candidateIds.length, " candidates"] })] }), partyId === playerPartyId && contest.playerDecision == null ? _jsx("button", { className: "btn", onClick: () => run({ type: "DECLARE_CAUCUS_LEADERSHIP_CANDIDACY", contestId: contest.id }), children: "Stand for election" }) : _jsx(StatusBadge, { children: contest.playerDecision ?? contest.status })] }, contest.id))] }), _jsxs(SectionCard, { title: "Nominations and leadership", children: [contests.length === 0 ? _jsx(EmptyState, { children: "No current party contests." }) : null, contests.map((c) => (_jsxs("div", { className: "contest-card", children: [_jsx("strong", { children: contestDisplayName(props.snap, props.world, c.id) }), " ", _jsx(StatusBadge, { tone: c.status === "open" ? "warn" : "idle", children: c.status }), _jsxs("div", { className: "muted", children: [Object.values(c.entries).filter((e) => e.status !== "potential").length, " candidates"] }), Object.values(c.entries)
                                 .filter((e) => e.status !== "potential")
                                 .slice(0, 6)
-                                .map((e) => (_jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: e.politicianId, compact: true }, e.politicianId))), c.winnerId ? (_jsxs("div", { children: ["Winner: ", politicianDisplayName(props.catalog, c.winnerId)] })) : null] }, c.id)))] }), elections.length > 0 ? (_jsx(SectionCard, { title: "Recent electoral performance", children: elections.map((e) => (_jsxs("div", { children: [electionDisplayName(e.id), " \u00B7", " ", e.type === "assembly"
+                                .map((e) => (_jsx(PoliticianCard, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: e.politicianId, compact: true }, e.politicianId))), c.winnerId ? (_jsxs("div", { children: ["Winner: ", politicianDisplayName(props.catalog, c.winnerId)] })) : null, c.status === "open" && partyId === playerPartyId && !c.entries[props.snap.playerPoliticianId] ? _jsx("button", { className: "btn", onClick: () => run({ type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c.id, politicianId: props.snap.playerPoliticianId }), children: "Enter contest" }) : null] }, c.id)))] }), elections.length > 0 ? (_jsx(SectionCard, { title: "Recent electoral performance", children: elections.map((e) => (_jsxs("div", { children: [electionDisplayName(e.id), " \u00B7", " ", e.type === "assembly"
                             ? Object.entries(e.assembly?.partySeatTotals ?? {})
                                 .sort((a, b) => b[1] - a[1])
                                 .slice(0, 3)
@@ -293,7 +389,7 @@ function Terena(props) {
                 : selection.kind === "constituency"
                     ? props.campaign?.organizationByConstituency[selection.id]
                     : null;
-            return _jsxs(_Fragment, { children: [_jsx("strong", { children: selection.name }), _jsx("span", { children: value == null ? "No active field operation" : `Field organization ${value.toFixed(2)}` })] });
+            return _jsxs(_Fragment, { children: [_jsx("strong", { children: selection.name }), _jsx("span", { children: value == null ? "No active field operation" : `Ground Game ${groundGameStrength(value)}/100` })] });
         }
         if (mode === "political" && selection.kind === "constituency") {
             const rows = constituencySittingSeatBreakdown(props.world, props.snap, selection.id);
@@ -357,7 +453,7 @@ function Terena(props) {
                             props.setMapHover(selection?.id ?? null);
                         }, tooltipFor: tooltip }), mode === "election" && activeMapElection?.type === "presidential" ? (_jsxs("div", { className: "map-legend", children: [_jsx("div", { className: "kicker", children: "Legend" }), _jsx("div", { className: "legend-items", children: _jsxs("span", { className: "legend-item", children: [_jsx("span", { className: "swatch", style: { background: "#d8d6cf" } }), "No public geographic data"] }) })] })) : _jsx(MapLegend, { mode: mode, world: props.world }), _jsx(SectionCard, { title: "Selection", children: sel && place ? (_jsxs(_Fragment, { children: [_jsx("strong", { children: place.name }), _jsx("div", { className: "muted", children: sel.kind === "constituency"
                                         ? `${place.seats ?? "?"} seats · ${sitting} sitting${place.provinceName ? ` · ${place.provinceName}` : ""}`
-                                        : "Province" }), org != null ? _jsxs("div", { children: ["Your field organization: ", org.toFixed(2)] }) : null, mode === "political" && sel.kind === "constituency"
+                                        : "Province" }), org != null ? _jsxs("div", { children: ["Your Ground Game: ", groundGameStrength(org), "/100"] }) : null, mode === "political" && sel.kind === "constituency"
                                     ? constituencySittingSeatBreakdown(props.world, props.snap, sel.id).map((row) => (_jsxs("div", { className: "muted", children: [partyDisplayName(props.world, row.partyId, props.snap), " \u00B7 ", row.seats, " sitting seat", row.seats === 1 ? "" : "s"] }, row.partyId ?? "none")))
                                     : null, mode === "economy" && regionEcon ? (_jsxs("div", { children: ["Conditions ", regionEcon.conditionsIndex.toFixed(1), " \u00B7 employment", " ", regionEcon.employmentIndex.toFixed(1)] })) : null, mode === "election" ? (_jsx("div", { className: "map-selection-mode", children: tooltip(sel) })) : null] })) : (_jsx(EmptyState, { children: mode === "election" && activeMapElection?.type === "presidential"
                                 ? "This national presidential race has no public geographic result. Select another election for a geographic view."

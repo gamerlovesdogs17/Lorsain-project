@@ -31,10 +31,13 @@ export function deriveCourtBench(
   holderId: string | null;
   termEndDate: string | null;
 }> {
+  const termsByOffice = new Map<string, (typeof state.officeTerms)[string]>();
+  for (const term of Object.values(state.officeTerms)) {
+    if (term.status === "active") termsByOffice.set(term.officeId, term);
+  }
   return courtSeatOfficeIds(world).map((officeId) => {
     const office = world.offices[officeId]!;
-    const terms = occupyingTerms(state, officeId).filter((t) => t.status === "active");
-    const term = terms[0];
+    const term = termsByOffice.get(officeId);
     return {
       officeId,
       title: office.title,

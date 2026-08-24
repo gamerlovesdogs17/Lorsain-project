@@ -126,6 +126,14 @@ export function parseProvincialRuntime(raw: unknown): ProvincialRuntime | string
   }
   if (isRecord(raw.actions)) runtime.actions = raw.actions as Record<string, ProvincialActionRecord>;
   if (isRecord(raw.pressures)) runtime.pressures = raw.pressures as Record<string, ProvincialPressure>;
+  if (isRecord(raw.assemblies)) runtime.assemblies = raw.assemblies as ProvincialRuntime["assemblies"];
+  if (isRecord(raw.legislators)) runtime.legislators = raw.legislators as ProvincialRuntime["legislators"];
+  if (isRecord(raw.assemblyElections)) runtime.assemblyElections = raw.assemblyElections as ProvincialRuntime["assemblyElections"];
+  if (isRecord(raw.bills)) runtime.bills = raw.bills as ProvincialRuntime["bills"];
+  if (isRecord(raw.votes)) runtime.votes = raw.votes as ProvincialRuntime["votes"];
+  if (isRecord(raw.promotions)) runtime.promotions = raw.promotions as ProvincialRuntime["promotions"];
+  if (isRecord(raw.constitutionalRules)) runtime.constitutionalRules = raw.constitutionalRules as ProvincialRuntime["constitutionalRules"];
+  if (isRecord(raw.constitutionalAmendments)) runtime.constitutionalAmendments = raw.constitutionalAmendments as ProvincialRuntime["constitutionalAmendments"];
   runtime.lastMonthProcessed = typeof raw.lastMonthProcessed === "string" && isIsoDate(raw.lastMonthProcessed) ? raw.lastMonthProcessed : null;
   return runtime;
 }

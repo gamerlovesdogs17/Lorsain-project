@@ -250,12 +250,8 @@ export function chooseCampaignAction(
 ): DecisionOption | null {
   if (campaign.politicianId === state.playerPoliticianId) return null;
   const options = campaignDecisionOptions(world, state, campaign);
-  const ctx = buildDecisionActorContext(
-    world,
-    state,
-    campaign.politicianId,
-    options.flatMap((o) => o.targetIds),
-  );
+  const profile = getAgentProfile(world, state, campaign.politicianId);
+  if (!profile) return null;
   const risk = ownTrait(world, state, campaign.politicianId, "riskTolerance");
   const ambition = ownTrait(world, state, campaign.politicianId, "ambition");
   const pragmatism = ownTrait(world, state, campaign.politicianId, "pragmatism");
@@ -298,9 +294,20 @@ export function chooseCampaignAction(
       },
     };
   });
-  const out = chooseDecision(tuned, ctx, rng);
-  if (!out.chosen) return null;
-  return tuned.find((o) => o.optionId === out.chosen!.optionId) ?? null;
+  return tuned
+    .map((option) => ({
+      option,
+      score:
+        option.signals.careerBenefit * (0.35 + ambition * 0.35) +
+        option.signals.pragmaticEffectiveness * (0.3 + pragmatism * 0.35) +
+        option.signals.partyAlignment * profile.traits.partyLoyalty * 0.25 +
+        option.signals.factionAlignment * profile.traits.factionLoyalty * 0.18 +
+        option.signals.institutionalAlignment * profile.traits.institutionalism * 0.18 +
+        option.signals.statusBenefit * profile.traits.ego * 0.16 -
+        option.signals.risk * (1 - risk) * 0.32 +
+        (rng.float01("npc-decisions") - 0.5) * option.uncertainty * 0.3,
+    }))
+    .sort((a, b) => b.score - a.score || a.option.optionId.localeCompare(b.option.optionId))[0]?.option ?? null;
 }
 
 export function chooseDeclare(

@@ -29,7 +29,16 @@ export type PresentationCatalog = {
 export function catalogFromBundle(
   bundle: ContentBundle,
   figures: Map<string, FigureName>,
+  state?: SimState | null,
 ): PresentationCatalog {
+  const publicFigures = new Map(figures);
+  if (state) {
+    for (const politician of Object.values(state.politicians)) {
+      if (politician.displayName?.trim()) {
+        publicFigures.set(politician.id, { id: politician.id, name: politician.displayName });
+      }
+    }
+  }
   const issues = new Map<string, { name: string; low?: string; high?: string }>();
   for (const issue of (bundle.content.terena_issues?.issues ?? []) as Array<{
     id: string;
@@ -76,14 +85,49 @@ export function catalogFromBundle(
     places.set(id, info);
     if (f.properties?.svg_path_id) places.set(f.properties.svg_path_id, info);
   }
-  return { figures, issues, places };
+  return { figures: publicFigures, issues, places };
 }
 
 export function politicianDisplayName(catalog: PresentationCatalog, id: string): string {
   const named = catalog.figures.get(id)?.name;
   if (named && named.trim()) return named;
+  if (id.startsWith("GENASM_") || id.startsWith("POL_PLEG_")) return generatedAssemblyCandidateName(id);
   // Never leak raw simulation IDs into normal play surfaces.
   return "Unknown politician";
+}
+
+/** Deterministic public label for long-run generated Assembly candidates. */
+export function generatedAssemblyCandidateName(id: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < id.length; i += 1) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const first = [
+    "Alex",
+    "Mira",
+    "Jonah",
+    "Elena",
+    "Rafi",
+    "Soren",
+    "Nadia",
+    "Theo",
+    "Lina",
+    "Omar",
+  ][(hash >>> 0) % 10]!;
+  const last = [
+    "Vale",
+    "Korrin",
+    "Denev",
+    "Ashar",
+    "Brel",
+    "Quenn",
+    "Sable",
+    "Torin",
+    "Wren",
+    "Hale",
+  ][((hash >>> 8) % 10)]!;
+  return `${first} ${last}`;
 }
 
 export function partyDisplayName(

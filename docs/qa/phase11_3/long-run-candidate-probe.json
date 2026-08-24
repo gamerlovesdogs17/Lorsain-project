@@ -1,0 +1,5920 @@
+{
+  "meta": {
+    "phase": "11.3",
+    "harness": "whole-game-calibration",
+    "generatedAt": "2026-08-24T12:46:53.520Z",
+    "smoke": false,
+    "seeds": 1,
+    "months": 600,
+    "seedStart": 0,
+    "parallel": 1,
+    "acceptanceTarget": {
+      "seeds": 100,
+      "months": 600
+    },
+    "playerPoliticianId": "NPC146",
+    "contentVersion": "0.3.1-predev",
+    "env": {
+      "WHOLE_GAME_SEEDS": null,
+      "WHOLE_GAME_MONTHS": null,
+      "WHOLE_GAME_SMOKE": null
+    }
+  },
+  "aggregate": {
+    "runsCompleted": 1,
+    "runsWithErrors": 0,
+    "catastrophic": {
+      "totalFailures": 0,
+      "meanPerRun": 0,
+      "byCode": {},
+      "nearZero": true,
+      "earlyHorizonAsmNote": null
+    },
+    "presidential": {
+      "races": 10,
+      "winnersByParty": {
+        "PARTY_LAB": 5,
+        "PARTY_NU": 3,
+        "PARTY_RL": 2
+      },
+      "incumbentRetentionRate": 0.5,
+      "marginFinalRound": {
+        "n": 10,
+        "min": 0.008748731025378095,
+        "median": 0.032931775504767676,
+        "p95": 0.1510502835940418,
+        "max": 0.20692368218804869,
+        "mean": 0.07993367308030391,
+        "sum": 0.7993367308030391
+      }
+    },
+    "assembly": {
+      "races": 12,
+      "seatShiftHalf": {
+        "n": 12,
+        "min": 3,
+        "median": 8,
+        "p95": 14.5,
+        "max": 23,
+        "mean": 9.958333333333334,
+        "sum": 119.5
+      },
+      "uncontestedConstituencies": {
+        "n": 12,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      }
+    },
+    "governors": {
+      "races": 265,
+      "margin": {
+        "n": 265,
+        "min": 0.0024591632214749914,
+        "median": 0.07830099248553313,
+        "p95": 0.22410770477298156,
+        "max": 1,
+        "mean": 0.13012032240387103,
+        "sum": 34.481885437025824
+      },
+      "incumbentRetentionRate": 0.8716981132075472
+    },
+    "economy": {
+      "outputDelta": {
+        "n": 1,
+        "min": 21.435106656245324,
+        "median": 21.435106656245324,
+        "p95": 21.435106656245324,
+        "max": 21.435106656245324,
+        "mean": 21.435106656245324,
+        "sum": 21.435106656245324
+      },
+      "meanOutputSignChanges": {
+        "n": 1,
+        "min": 115,
+        "median": 115,
+        "p95": 115,
+        "max": 115,
+        "mean": 115,
+        "sum": 115
+      },
+      "meanOutputDirectionChanges": {
+        "n": 1,
+        "min": 115,
+        "median": 115,
+        "p95": 115,
+        "max": 115,
+        "mean": 115,
+        "sum": 115
+      }
+    },
+    "regionalEconomy": {
+      "rankingChurn": {
+        "n": 1,
+        "min": 0.272108843537415,
+        "median": 0.272108843537415,
+        "p95": 0.272108843537415,
+        "max": 0.272108843537415,
+        "mean": 0.272108843537415,
+        "sum": 0.272108843537415
+      }
+    },
+    "legislative": {
+      "billsIntroduced": {
+        "n": 1,
+        "min": 806,
+        "median": 806,
+        "p95": 806,
+        "max": 806,
+        "mean": 806,
+        "sum": 806
+      },
+      "billsEnactedOrSigned": {
+        "n": 1,
+        "min": 486,
+        "median": 486,
+        "p95": 486,
+        "max": 486,
+        "mean": 486,
+        "sum": 486
+      },
+      "billsReturnedByPresident": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      }
+    },
+    "institutions": {
+      "provincialSeats": {
+        "n": 1,
+        "min": 918,
+        "median": 918,
+        "p95": 918,
+        "max": 918,
+        "mean": 918,
+        "sum": 918
+      },
+      "provincialElections": {
+        "n": 1,
+        "min": 273,
+        "median": 273,
+        "p95": 273,
+        "max": 273,
+        "mean": 273,
+        "sum": 273
+      },
+      "provincialLeadershipElections": {
+        "n": 1,
+        "min": 3549,
+        "median": 3549,
+        "p95": 3549,
+        "max": 3549,
+        "mean": 3549,
+        "sum": 3549
+      },
+      "provincialBillsIntroduced": {
+        "n": 1,
+        "min": 1050,
+        "median": 1050,
+        "p95": 1050,
+        "max": 1050,
+        "mean": 1050,
+        "sum": 1050
+      },
+      "provincialBillsSigned": {
+        "n": 1,
+        "min": 766,
+        "median": 766,
+        "p95": 766,
+        "max": 766,
+        "mean": 766,
+        "sum": 766
+      },
+      "provincialVetoes": {
+        "n": 1,
+        "min": 249,
+        "median": 249,
+        "p95": 249,
+        "max": 249,
+        "mean": 249,
+        "sum": 249
+      },
+      "provincialOverrides": {
+        "n": 1,
+        "min": 100,
+        "median": 100,
+        "p95": 100,
+        "max": 100,
+        "mean": 100,
+        "sum": 100
+      },
+      "provincialLegislators": {
+        "n": 1,
+        "min": 1343,
+        "median": 1343,
+        "p95": 1343,
+        "max": 1343,
+        "mean": 1343,
+        "sum": 1343
+      },
+      "provincialPromotions": {
+        "n": 1,
+        "min": 253,
+        "median": 253,
+        "p95": 253,
+        "max": 253,
+        "mean": 253,
+        "sum": 253
+      },
+      "generatedNationalPoliticians": {
+        "n": 1,
+        "min": 253,
+        "median": 253,
+        "p95": 253,
+        "max": 253,
+        "mean": 253,
+        "sum": 253
+      },
+      "partyLeadershipContests": {
+        "n": 1,
+        "min": 48,
+        "median": 48,
+        "p95": 48,
+        "max": 48,
+        "mean": 48,
+        "sum": 48
+      },
+      "factionChairContests": {
+        "n": 1,
+        "min": 199,
+        "median": 199,
+        "p95": 199,
+        "max": 199,
+        "mean": 199,
+        "sum": 199
+      },
+      "caucusContests": {
+        "n": 1,
+        "min": 288,
+        "median": 288,
+        "p95": 288,
+        "max": 288,
+        "mean": 288,
+        "sum": 288
+      },
+      "constitutionalProposed": {
+        "n": 1,
+        "min": 4,
+        "median": 4,
+        "p95": 4,
+        "max": 4,
+        "mean": 4,
+        "sum": 4
+      },
+      "constitutionalRatified": {
+        "n": 1,
+        "min": 4,
+        "median": 4,
+        "p95": 4,
+        "max": 4,
+        "mean": 4,
+        "sum": 4
+      },
+      "courtDecisions": {
+        "n": 1,
+        "min": 144,
+        "median": 144,
+        "p95": 144,
+        "max": 144,
+        "mean": 144,
+        "sum": 144
+      },
+      "organizationActions": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      },
+      "organizationRelationships": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      },
+      "candidateShortageEvents": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      }
+    },
+    "foreign": {
+      "crisesCreated": {
+        "n": 1,
+        "min": 1092,
+        "median": 1092,
+        "p95": 1092,
+        "max": 1092,
+        "mean": 1092,
+        "sum": 1092
+      },
+      "conflictsStarted": {
+        "n": 1,
+        "min": 30,
+        "median": 30,
+        "p95": 30,
+        "max": 30,
+        "mean": 30,
+        "sum": 30
+      },
+      "treatiesActive": {
+        "n": 1,
+        "min": 56,
+        "median": 56,
+        "p95": 56,
+        "max": 56,
+        "mean": 56,
+        "sum": 56
+      },
+      "treatiesRatified": {
+        "n": 1,
+        "min": 73,
+        "median": 73,
+        "p95": 73,
+        "max": 73,
+        "mean": 73,
+        "sum": 73
+      }
+    },
+    "performance": {
+      "medianTurnMs": {
+        "n": 1,
+        "min": 434.025,
+        "median": 434.025,
+        "p95": 434.025,
+        "max": 434.025,
+        "mean": 434.025,
+        "sum": 434.025
+      },
+      "p95TurnMs": {
+        "n": 1,
+        "min": 9728.514,
+        "median": 9728.514,
+        "p95": 9728.514,
+        "max": 9728.514,
+        "mean": 9728.514,
+        "sum": 9728.514
+      }
+    },
+    "saveGrowth": {
+      "finalBytes": {
+        "n": 1,
+        "min": 130305624,
+        "median": 130305624,
+        "p95": 130305624,
+        "max": 130305624,
+        "mean": 130305624,
+        "sum": 130305624
+      }
+    }
+  },
+  "determinism": {
+    "seed": "P113-WG-000",
+    "dualRunMatch": false,
+    "hashA": null,
+    "hashB": null,
+    "reloadMatch": false,
+    "reloadHashContinuous": null,
+    "reloadHashRestored": null,
+    "error": "skipped by --skip-determinism"
+  },
+  "runs": [
+    {
+      "seed": "P113-WG-000",
+      "seedIndex": 0,
+      "monthsRequested": 600,
+      "monthsCompleted": 600,
+      "finalDate": "2078-01-01",
+      "finalHash": "9ac147e361ef1b380c53477af77d1ba1",
+      "error": null,
+      "catastrophicFailures": [],
+      "catastrophicFailureCount": 0,
+      "presidential": [
+        {
+          "electionId": "ELEC_PRES_2028",
+          "date": "2028-10-14",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "NPC003",
+          "winnerPartyId": "PARTY_LAB",
+          "marginFinalRound": 0.1510502835940418,
+          "incumbentRetained": false
+        },
+        {
+          "electionId": "ELEC_PRES_2033",
+          "date": "2033-10-08",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "NPC012",
+          "winnerPartyId": "PARTY_LAB",
+          "marginFinalRound": 0.09175183083962672,
+          "incumbentRetained": false
+        },
+        {
+          "electionId": "ELEC_PRES_2038",
+          "date": "2038-10-09",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "NPC012",
+          "winnerPartyId": "PARTY_LAB",
+          "marginFinalRound": 0.015215511269605232,
+          "incumbentRetained": true
+        },
+        {
+          "electionId": "ELEC_PRES_2043",
+          "date": "2043-10-10",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "NPC004",
+          "winnerPartyId": "PARTY_NU",
+          "marginFinalRound": 0.03259550448686578,
+          "incumbentRetained": false
+        },
+        {
+          "electionId": "ELEC_PRES_2048",
+          "date": "2048-10-10",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "NPC004",
+          "winnerPartyId": "PARTY_NU",
+          "marginFinalRound": 0.008748731025378095,
+          "incumbentRetained": true
+        },
+        {
+          "electionId": "ELEC_PRES_2053",
+          "date": "2053-10-11",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "NPC004",
+          "winnerPartyId": "PARTY_NU",
+          "marginFinalRound": 0.021082423147474813,
+          "incumbentRetained": true
+        },
+        {
+          "electionId": "ELEC_PRES_2058",
+          "date": "2058-10-12",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "NPC007",
+          "winnerPartyId": "PARTY_RL",
+          "marginFinalRound": 0.11788929028862338,
+          "incumbentRetained": false
+        },
+        {
+          "electionId": "ELEC_PRES_2063",
+          "date": "2063-10-13",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "NPC007",
+          "winnerPartyId": "PARTY_RL",
+          "marginFinalRound": 0.032931775504767676,
+          "incumbentRetained": true
+        },
+        {
+          "electionId": "ELEC_PRES_2068",
+          "date": "2068-10-13",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "POL_PLEG_P09_079",
+          "winnerPartyId": "PARTY_LAB",
+          "marginFinalRound": 0.20692368218804869,
+          "incumbentRetained": false
+        },
+        {
+          "electionId": "ELEC_PRES_2073",
+          "date": "2073-10-14",
+          "nomineeCount": 6,
+          "partiesWithoutNominee": 0,
+          "winnerId": "NPC012",
+          "winnerPartyId": "PARTY_LAB",
+          "marginFinalRound": 0.12114769845860687,
+          "incumbentRetained": true
+        }
+      ],
+      "assembly": [
+        {
+          "electionId": "ELEC_ASM_2030",
+          "date": "2030-05-12",
+          "seatShiftHalf": 23,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5819367461355552
+        },
+        {
+          "electionId": "ELEC_ASM_2034",
+          "date": "2034-05-14",
+          "seatShiftHalf": 4,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5815954265103198
+        },
+        {
+          "electionId": "ELEC_ASM_2038",
+          "date": "2038-05-09",
+          "seatShiftHalf": 8,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5826567996969385
+        },
+        {
+          "electionId": "ELEC_ASM_2042",
+          "date": "2042-05-11",
+          "seatShiftHalf": 3,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5827124100388413
+        },
+        {
+          "electionId": "ELEC_ASM_2046",
+          "date": "2046-05-13",
+          "seatShiftHalf": 7,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5808953346826276
+        },
+        {
+          "electionId": "ELEC_ASM_2050",
+          "date": "2050-05-08",
+          "seatShiftHalf": 11.5,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5848539843787725
+        },
+        {
+          "electionId": "ELEC_ASM_2054",
+          "date": "2054-05-10",
+          "seatShiftHalf": 11.5,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5796863859229111
+        },
+        {
+          "electionId": "ELEC_ASM_2058",
+          "date": "2058-05-12",
+          "seatShiftHalf": 6.5,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5836649044210259
+        },
+        {
+          "electionId": "ELEC_ASM_2062",
+          "date": "2062-05-14",
+          "seatShiftHalf": 5.5,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5811149880986062
+        },
+        {
+          "electionId": "ELEC_ASM_2066",
+          "date": "2066-05-09",
+          "seatShiftHalf": 14.5,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5818613041643708
+        },
+        {
+          "electionId": "ELEC_ASM_2070",
+          "date": "2070-05-11",
+          "seatShiftHalf": 12.5,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5841221099024659
+        },
+        {
+          "electionId": "ELEC_ASM_2074",
+          "date": "2074-05-13",
+          "seatShiftHalf": 12.5,
+          "uncontestedConstituencies": 0,
+          "constituencyCount": 48,
+          "representedParties": 7,
+          "turnoutRate": 0.5839972282556594
+        }
+      ],
+      "governors": [
+        {
+          "electionId": "ELEC_GOV_FDV_2029",
+          "provinceId": "FDV",
+          "date": "2029-10-01",
+          "winnerId": "NPC001",
+          "incumbentRetained": false,
+          "margin": 0.02654136620568953,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2029",
+          "provinceId": "P01",
+          "date": "2029-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": false,
+          "margin": 0.11987456416564107,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2029",
+          "provinceId": "P02",
+          "date": "2029-10-01",
+          "winnerId": "NPC011",
+          "incumbentRetained": false,
+          "margin": 0.0024591632214749914,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2029",
+          "provinceId": "P03",
+          "date": "2029-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.023997299419719897,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2029",
+          "provinceId": "P04",
+          "date": "2029-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.012907620031630929,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2029",
+          "provinceId": "P05",
+          "date": "2029-10-01",
+          "winnerId": "NPC004",
+          "incumbentRetained": false,
+          "margin": 0.12415637620543607,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2029",
+          "provinceId": "P06",
+          "date": "2029-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.04510374306765863,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2029",
+          "provinceId": "P07",
+          "date": "2029-10-01",
+          "winnerId": "NPC009",
+          "incumbentRetained": false,
+          "margin": 0.028937437239704933,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2029",
+          "provinceId": "P08",
+          "date": "2029-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": false,
+          "margin": 0.06945442475066282,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2029",
+          "provinceId": "P09",
+          "date": "2029-10-01",
+          "winnerId": "NPC012",
+          "incumbentRetained": false,
+          "margin": 0.12568608273907478,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2029",
+          "provinceId": "P10",
+          "date": "2029-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.019627750507129116,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2029",
+          "provinceId": "P11",
+          "date": "2029-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.03902412626029245,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2029",
+          "provinceId": "P12",
+          "date": "2029-10-01",
+          "winnerId": "NPC013",
+          "incumbentRetained": false,
+          "margin": 0.04210301766975283,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2029",
+          "provinceId": "P13",
+          "date": "2029-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": false,
+          "margin": 0.010878938265578342,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2029",
+          "provinceId": "P14",
+          "date": "2029-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.012814066987731965,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2029",
+          "provinceId": "P15",
+          "date": "2029-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": false,
+          "margin": 0.006345301232573541,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2029",
+          "provinceId": "P16",
+          "date": "2029-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": false,
+          "margin": 0.13400144132130265,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2029",
+          "provinceId": "P17",
+          "date": "2029-10-01",
+          "winnerId": "NPC008",
+          "incumbentRetained": false,
+          "margin": 0.09758271250103998,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2029",
+          "provinceId": "P18",
+          "date": "2029-10-01",
+          "winnerId": "NPC035",
+          "incumbentRetained": false,
+          "margin": 0.02064135521203464,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2029",
+          "provinceId": "P19",
+          "date": "2029-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": false,
+          "margin": 0.025186151005577806,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2029",
+          "provinceId": "P20",
+          "date": "2029-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_FDV_2033",
+          "provinceId": "FDV",
+          "date": "2033-10-01",
+          "winnerId": "NPC001",
+          "incumbentRetained": true,
+          "margin": 0.07852829084229745,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2033",
+          "provinceId": "P01",
+          "date": "2033-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.13408495479010357,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2033",
+          "provinceId": "P02",
+          "date": "2033-10-01",
+          "winnerId": "NPC011",
+          "incumbentRetained": true,
+          "margin": 0.021760013886747254,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2033",
+          "provinceId": "P03",
+          "date": "2033-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.01222129480944445,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2033",
+          "provinceId": "P04",
+          "date": "2033-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.024936649088756424,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2033",
+          "provinceId": "P05",
+          "date": "2033-10-01",
+          "winnerId": "NPC004",
+          "incumbentRetained": true,
+          "margin": 0.15049102466658903,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2033",
+          "provinceId": "P06",
+          "date": "2033-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.03491118684918465,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2033",
+          "provinceId": "P07",
+          "date": "2033-10-01",
+          "winnerId": "NPC009",
+          "incumbentRetained": true,
+          "margin": 0.08557097435033084,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2033",
+          "provinceId": "P08",
+          "date": "2033-10-01",
+          "winnerId": "NPC018",
+          "incumbentRetained": false,
+          "margin": 0.043875024303838384,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2033",
+          "provinceId": "P09",
+          "date": "2033-10-01",
+          "winnerId": "NPC012",
+          "incumbentRetained": true,
+          "margin": 0.10265670136156124,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2033",
+          "provinceId": "P10",
+          "date": "2033-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.06587777942123837,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2033",
+          "provinceId": "P11",
+          "date": "2033-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.05641303539486464,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2033",
+          "provinceId": "P12",
+          "date": "2033-10-01",
+          "winnerId": "NPC989",
+          "incumbentRetained": false,
+          "margin": 0.013825164343720386,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2033",
+          "provinceId": "P13",
+          "date": "2033-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.03348933105354873,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2033",
+          "provinceId": "P14",
+          "date": "2033-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.026015687654360964,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2033",
+          "provinceId": "P15",
+          "date": "2033-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.02145976124771065,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2033",
+          "provinceId": "P16",
+          "date": "2033-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": true,
+          "margin": 0.15705373026605385,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2033",
+          "provinceId": "P17",
+          "date": "2033-10-01",
+          "winnerId": "NPC008",
+          "incumbentRetained": true,
+          "margin": 0.11405155197540978,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2033",
+          "provinceId": "P18",
+          "date": "2033-10-01",
+          "winnerId": "NPC035",
+          "incumbentRetained": true,
+          "margin": 0.025626020204227606,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2033",
+          "provinceId": "P19",
+          "date": "2033-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.0632745764271804,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2033",
+          "provinceId": "P20",
+          "date": "2033-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_FDV_2037",
+          "provinceId": "FDV",
+          "date": "2037-10-01",
+          "winnerId": "NPC972",
+          "incumbentRetained": false,
+          "margin": 0.007483954045017671,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2037",
+          "provinceId": "P01",
+          "date": "2037-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.16431091036466547,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2037",
+          "provinceId": "P02",
+          "date": "2037-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": false,
+          "margin": 0.025648069513560356,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2037",
+          "provinceId": "P03",
+          "date": "2037-10-01",
+          "winnerId": "NPC019",
+          "incumbentRetained": false,
+          "margin": 0.0650078945141267,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2037",
+          "provinceId": "P04",
+          "date": "2037-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.043925029817872774,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2037",
+          "provinceId": "P05",
+          "date": "2037-10-01",
+          "winnerId": "NPC004",
+          "incumbentRetained": true,
+          "margin": 0.17310541240369293,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2037",
+          "provinceId": "P06",
+          "date": "2037-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.05643847109348282,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2037",
+          "provinceId": "P07",
+          "date": "2037-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": false,
+          "margin": 0.057939853850464906,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2037",
+          "provinceId": "P08",
+          "date": "2037-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": false,
+          "margin": 0.13951900123867972,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2037",
+          "provinceId": "P09",
+          "date": "2037-10-01",
+          "winnerId": "NPC984",
+          "incumbentRetained": false,
+          "margin": 0.003372095952929699,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2037",
+          "provinceId": "P10",
+          "date": "2037-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.0642366064673418,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2037",
+          "provinceId": "P11",
+          "date": "2037-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.051554729627393714,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2037",
+          "provinceId": "P12",
+          "date": "2037-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": false,
+          "margin": 0.02480778257266536,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2037",
+          "provinceId": "P13",
+          "date": "2037-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.019689542255218462,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2037",
+          "provinceId": "P14",
+          "date": "2037-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.05078044176824678,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2037",
+          "provinceId": "P15",
+          "date": "2037-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.06587160870946074,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2037",
+          "provinceId": "P16",
+          "date": "2037-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": true,
+          "margin": 0.16896875850918905,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2037",
+          "provinceId": "P17",
+          "date": "2037-10-01",
+          "winnerId": "NPC008",
+          "incumbentRetained": true,
+          "margin": 0.09152557364994393,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2037",
+          "provinceId": "P18",
+          "date": "2037-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": false,
+          "margin": 0.055635672980316186,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2037",
+          "provinceId": "P19",
+          "date": "2037-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.054275105595487205,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2037",
+          "provinceId": "P20",
+          "date": "2037-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_FDV_2041",
+          "provinceId": "FDV",
+          "date": "2041-10-01",
+          "winnerId": "NPC972",
+          "incumbentRetained": true,
+          "margin": 0.022754772718400762,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2041",
+          "provinceId": "P01",
+          "date": "2041-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.175597286073005,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2041",
+          "provinceId": "P02",
+          "date": "2041-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.031440711389033704,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2041",
+          "provinceId": "P03",
+          "date": "2041-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": false,
+          "margin": 0.03422096229446464,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2041",
+          "provinceId": "P04",
+          "date": "2041-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.06384774235974025,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2041",
+          "provinceId": "P05",
+          "date": "2041-10-01",
+          "winnerId": "NPC004",
+          "incumbentRetained": true,
+          "margin": 0.20434970431926988,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2041",
+          "provinceId": "P06",
+          "date": "2041-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.07823610799054698,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2041",
+          "provinceId": "P07",
+          "date": "2041-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.06114029699290385,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2041",
+          "provinceId": "P08",
+          "date": "2041-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.15916167045911628,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2041",
+          "provinceId": "P09",
+          "date": "2041-10-01",
+          "winnerId": "NPC021",
+          "incumbentRetained": false,
+          "margin": 0.017681904837236195,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2041",
+          "provinceId": "P10",
+          "date": "2041-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.11675047945790906,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2041",
+          "provinceId": "P11",
+          "date": "2041-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.06823370501172094,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2041",
+          "provinceId": "P12",
+          "date": "2041-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.03874891679751474,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2041",
+          "provinceId": "P13",
+          "date": "2041-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.013391276652524597,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2041",
+          "provinceId": "P14",
+          "date": "2041-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.06986608703544014,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2041",
+          "provinceId": "P15",
+          "date": "2041-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.07257853863545774,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2041",
+          "provinceId": "P16",
+          "date": "2041-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": true,
+          "margin": 0.18539839927536994,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2041",
+          "provinceId": "P17",
+          "date": "2041-10-01",
+          "winnerId": "NPC008",
+          "incumbentRetained": true,
+          "margin": 0.06471151626435145,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2041",
+          "provinceId": "P18",
+          "date": "2041-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.057151399365868605,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2041",
+          "provinceId": "P19",
+          "date": "2041-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.03866623048594375,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2041",
+          "provinceId": "P20",
+          "date": "2041-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_FDV_2045",
+          "provinceId": "FDV",
+          "date": "2045-10-01",
+          "winnerId": "NPC014",
+          "incumbentRetained": false,
+          "margin": 0.02547586859675377,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2045",
+          "provinceId": "P01",
+          "date": "2045-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.1940204071861801,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2045",
+          "provinceId": "P02",
+          "date": "2045-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.046951400503365215,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2045",
+          "provinceId": "P03",
+          "date": "2045-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.05133390470295712,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2045",
+          "provinceId": "P04",
+          "date": "2045-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.0648439686154055,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2045",
+          "provinceId": "P05",
+          "date": "2045-10-01",
+          "winnerId": "NPC022",
+          "incumbentRetained": false,
+          "margin": 0.026838559971229914,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2045",
+          "provinceId": "P06",
+          "date": "2045-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.07766872544702708,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2045",
+          "provinceId": "P07",
+          "date": "2045-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.0519836090394975,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2045",
+          "provinceId": "P08",
+          "date": "2045-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.18461484578011583,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2045",
+          "provinceId": "P09",
+          "date": "2045-10-01",
+          "winnerId": "NPC021",
+          "incumbentRetained": true,
+          "margin": 0.030320111802063676,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2045",
+          "provinceId": "P10",
+          "date": "2045-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.1200492553062476,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2045",
+          "provinceId": "P11",
+          "date": "2045-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.0751647260551766,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2045",
+          "provinceId": "P12",
+          "date": "2045-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.04488550915705586,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2045",
+          "provinceId": "P13",
+          "date": "2045-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.028510067021001284,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2045",
+          "provinceId": "P14",
+          "date": "2045-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.07163328353481468,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2045",
+          "provinceId": "P15",
+          "date": "2045-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.08810047937305104,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2045",
+          "provinceId": "P16",
+          "date": "2045-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": true,
+          "margin": 0.21148596121841406,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2045",
+          "provinceId": "P17",
+          "date": "2045-10-01",
+          "winnerId": "NPC008",
+          "incumbentRetained": true,
+          "margin": 0.046956739309669204,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2045",
+          "provinceId": "P18",
+          "date": "2045-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.07704840654806672,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2045",
+          "provinceId": "P19",
+          "date": "2045-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.055563449326234415,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2045",
+          "provinceId": "P20",
+          "date": "2045-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2049",
+          "provinceId": "P01",
+          "date": "2049-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.16908938764777487,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2049",
+          "provinceId": "P02",
+          "date": "2049-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.06922868886009154,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2049",
+          "provinceId": "P03",
+          "date": "2049-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.06648791544886473,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2049",
+          "provinceId": "P04",
+          "date": "2049-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.06388165764166451,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2049",
+          "provinceId": "P05",
+          "date": "2049-10-01",
+          "winnerId": "NPC022",
+          "incumbentRetained": true,
+          "margin": 0.05223836884855332,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2049",
+          "provinceId": "P06",
+          "date": "2049-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.0728639760087193,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2049",
+          "provinceId": "P07",
+          "date": "2049-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.12296707145196856,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2049",
+          "provinceId": "P08",
+          "date": "2049-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.1950021062394729,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2049",
+          "provinceId": "P09",
+          "date": "2049-10-01",
+          "winnerId": "NPC984",
+          "incumbentRetained": false,
+          "margin": 0.024018750411043177,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2049",
+          "provinceId": "P10",
+          "date": "2049-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.11992018359966922,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2049",
+          "provinceId": "P11",
+          "date": "2049-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.07817485480321984,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2049",
+          "provinceId": "P12",
+          "date": "2049-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.033506505540741194,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2049",
+          "provinceId": "P13",
+          "date": "2049-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.052938252614018966,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2049",
+          "provinceId": "P14",
+          "date": "2049-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.07633650077052567,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2049",
+          "provinceId": "P15",
+          "date": "2049-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.10501142626621707,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2049",
+          "provinceId": "P16",
+          "date": "2049-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": true,
+          "margin": 0.19993849663234367,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2049",
+          "provinceId": "P17",
+          "date": "2049-10-01",
+          "winnerId": "NPC008",
+          "incumbentRetained": true,
+          "margin": 0.029157879539933262,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2049",
+          "provinceId": "P18",
+          "date": "2049-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.09925828200957831,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2049",
+          "provinceId": "P19",
+          "date": "2049-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.07470621032486918,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2049",
+          "provinceId": "P20",
+          "date": "2049-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2053",
+          "provinceId": "P01",
+          "date": "2053-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.16386055171837913,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2053",
+          "provinceId": "P02",
+          "date": "2053-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.07431971589612996,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2053",
+          "provinceId": "P03",
+          "date": "2053-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.07191555373843733,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2053",
+          "provinceId": "P04",
+          "date": "2053-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.06882587486351519,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2053",
+          "provinceId": "P05",
+          "date": "2053-10-01",
+          "winnerId": "NPC022",
+          "incumbentRetained": true,
+          "margin": 0.07618101963118296,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2053",
+          "provinceId": "P06",
+          "date": "2053-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.07667565245984898,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2053",
+          "provinceId": "P07",
+          "date": "2053-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.12772104364611717,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2053",
+          "provinceId": "P08",
+          "date": "2053-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.22410770477298156,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2053",
+          "provinceId": "P09",
+          "date": "2053-10-01",
+          "winnerId": "NPC984",
+          "incumbentRetained": true,
+          "margin": 0.07163939169818326,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2053",
+          "provinceId": "P10",
+          "date": "2053-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.0991416646958044,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2053",
+          "provinceId": "P11",
+          "date": "2053-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.08138936596911817,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2053",
+          "provinceId": "P12",
+          "date": "2053-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.0381155160449933,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2053",
+          "provinceId": "P13",
+          "date": "2053-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.07830099248553313,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2053",
+          "provinceId": "P14",
+          "date": "2053-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.1045131753248297,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2053",
+          "provinceId": "P15",
+          "date": "2053-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.09867713263165143,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2053",
+          "provinceId": "P16",
+          "date": "2053-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": true,
+          "margin": 0.2041923012367938,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2053",
+          "provinceId": "P17",
+          "date": "2053-10-01",
+          "winnerId": "NPC008",
+          "incumbentRetained": true,
+          "margin": 0.01976963274900856,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2053",
+          "provinceId": "P18",
+          "date": "2053-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.12129182429494417,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2053",
+          "provinceId": "P19",
+          "date": "2053-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.09308692530989349,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2053",
+          "provinceId": "P20",
+          "date": "2053-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2057",
+          "provinceId": "P01",
+          "date": "2057-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.17324519382165537,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2057",
+          "provinceId": "P02",
+          "date": "2057-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.07541037741371859,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2057",
+          "provinceId": "P03",
+          "date": "2057-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.0761845480244383,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2057",
+          "provinceId": "P04",
+          "date": "2057-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.06984802542951563,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2057",
+          "provinceId": "P05",
+          "date": "2057-10-01",
+          "winnerId": "NPC022",
+          "incumbentRetained": true,
+          "margin": 0.07346011737042324,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2057",
+          "provinceId": "P06",
+          "date": "2057-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.07848917367714275,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2057",
+          "provinceId": "P07",
+          "date": "2057-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.1334443090968365,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2057",
+          "provinceId": "P08",
+          "date": "2057-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.19512315797940025,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2057",
+          "provinceId": "P09",
+          "date": "2057-10-01",
+          "winnerId": "NPC984",
+          "incumbentRetained": true,
+          "margin": 0.0488039205319733,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2057",
+          "provinceId": "P10",
+          "date": "2057-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.12238458775781597,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2057",
+          "provinceId": "P11",
+          "date": "2057-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.1022597452062258,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2057",
+          "provinceId": "P12",
+          "date": "2057-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.027303639360732546,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2057",
+          "provinceId": "P13",
+          "date": "2057-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.10326753357340435,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2057",
+          "provinceId": "P14",
+          "date": "2057-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.09945289798643289,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2057",
+          "provinceId": "P15",
+          "date": "2057-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.1386657089160965,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2057",
+          "provinceId": "P16",
+          "date": "2057-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": true,
+          "margin": 0.20638632629964154,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2057",
+          "provinceId": "P17",
+          "date": "2057-10-01",
+          "winnerId": "NPC008",
+          "incumbentRetained": true,
+          "margin": 0.0194910271075307,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2057",
+          "provinceId": "P18",
+          "date": "2057-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.12978430915179612,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2057",
+          "provinceId": "P19",
+          "date": "2057-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.0943792219727844,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2057",
+          "provinceId": "P20",
+          "date": "2057-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2061",
+          "provinceId": "P01",
+          "date": "2061-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.11669137701229676,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2061",
+          "provinceId": "P02",
+          "date": "2061-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.10105733106779519,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2061",
+          "provinceId": "P03",
+          "date": "2061-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.07903510974304584,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2061",
+          "provinceId": "P04",
+          "date": "2061-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.06678808282995458,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2061",
+          "provinceId": "P05",
+          "date": "2061-10-01",
+          "winnerId": "NPC022",
+          "incumbentRetained": true,
+          "margin": 0.033609768897934045,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2061",
+          "provinceId": "P06",
+          "date": "2061-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.08066166270528446,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2061",
+          "provinceId": "P07",
+          "date": "2061-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.13189508956700102,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2061",
+          "provinceId": "P08",
+          "date": "2061-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.21645884280998823,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2061",
+          "provinceId": "P09",
+          "date": "2061-10-01",
+          "winnerId": "NPC984",
+          "incumbentRetained": true,
+          "margin": 0.047738866784061446,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2061",
+          "provinceId": "P10",
+          "date": "2061-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.10165734845402241,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2061",
+          "provinceId": "P11",
+          "date": "2061-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.10587997653855566,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2061",
+          "provinceId": "P12",
+          "date": "2061-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.012539996210773952,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2061",
+          "provinceId": "P13",
+          "date": "2061-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.16221787332170173,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2061",
+          "provinceId": "P14",
+          "date": "2061-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.07556082261295222,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2061",
+          "provinceId": "P15",
+          "date": "2061-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.12169744384276365,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2061",
+          "provinceId": "P16",
+          "date": "2061-10-01",
+          "winnerId": "NPC029",
+          "incumbentRetained": false,
+          "margin": 0.03307483828982427,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2061",
+          "provinceId": "P17",
+          "date": "2061-10-01",
+          "winnerId": "NPC027",
+          "incumbentRetained": false,
+          "margin": 0.037159416172124815,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2061",
+          "provinceId": "P18",
+          "date": "2061-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.1495207786131167,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2061",
+          "provinceId": "P19",
+          "date": "2061-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.09471937309251577,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2061",
+          "provinceId": "P20",
+          "date": "2061-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2065",
+          "provinceId": "P01",
+          "date": "2065-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.09058621578008946,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2065",
+          "provinceId": "P02",
+          "date": "2065-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.11371071163964924,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2065",
+          "provinceId": "P03",
+          "date": "2065-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.080838974273781,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2065",
+          "provinceId": "P04",
+          "date": "2065-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.06850467134532243,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2065",
+          "provinceId": "P05",
+          "date": "2065-10-01",
+          "winnerId": "NPC022",
+          "incumbentRetained": true,
+          "margin": 0.003524144594509948,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2065",
+          "provinceId": "P06",
+          "date": "2065-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.07659491397749224,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2065",
+          "provinceId": "P07",
+          "date": "2065-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.1327112775784717,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2065",
+          "provinceId": "P08",
+          "date": "2065-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.19800882664168407,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2065",
+          "provinceId": "P09",
+          "date": "2065-10-01",
+          "winnerId": "NPC984",
+          "incumbentRetained": true,
+          "margin": 0.058087964998632585,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2065",
+          "provinceId": "P10",
+          "date": "2065-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.13093503379099533,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2065",
+          "provinceId": "P11",
+          "date": "2065-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.11108203642558045,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2065",
+          "provinceId": "P12",
+          "date": "2065-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.031502636662484984,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2065",
+          "provinceId": "P13",
+          "date": "2065-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.1434627879985702,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2065",
+          "provinceId": "P14",
+          "date": "2065-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.102439084189206,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2065",
+          "provinceId": "P15",
+          "date": "2065-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.08191493284668028,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2065",
+          "provinceId": "P16",
+          "date": "2065-10-01",
+          "winnerId": "NPC029",
+          "incumbentRetained": true,
+          "margin": 0.07876799851088626,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2065",
+          "provinceId": "P17",
+          "date": "2065-10-01",
+          "winnerId": "NPC027",
+          "incumbentRetained": true,
+          "margin": 0.03670664940282198,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2065",
+          "provinceId": "P18",
+          "date": "2065-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.1378524791323104,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2065",
+          "provinceId": "P19",
+          "date": "2065-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.09587712011170127,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2065",
+          "provinceId": "P20",
+          "date": "2065-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2069",
+          "provinceId": "P01",
+          "date": "2069-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.09994349498892618,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2069",
+          "provinceId": "P02",
+          "date": "2069-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.06983598307347288,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2069",
+          "provinceId": "P03",
+          "date": "2069-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.08223241861793906,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2069",
+          "provinceId": "P04",
+          "date": "2069-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.06986751254526252,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2069",
+          "provinceId": "P05",
+          "date": "2069-10-01",
+          "winnerId": "NPC022",
+          "incumbentRetained": true,
+          "margin": 0.041133117497111404,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2069",
+          "provinceId": "P06",
+          "date": "2069-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.11161609964182823,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2069",
+          "provinceId": "P07",
+          "date": "2069-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.12964353499553502,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2069",
+          "provinceId": "P08",
+          "date": "2069-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.22882033339366364,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2069",
+          "provinceId": "P09",
+          "date": "2069-10-01",
+          "winnerId": "NPC984",
+          "incumbentRetained": true,
+          "margin": 0.050007592660107375,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2069",
+          "provinceId": "P10",
+          "date": "2069-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.1241589681705513,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2069",
+          "provinceId": "P11",
+          "date": "2069-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.11270099518228388,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2069",
+          "provinceId": "P12",
+          "date": "2069-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.04866544907138992,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2069",
+          "provinceId": "P13",
+          "date": "2069-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.13714429463369499,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2069",
+          "provinceId": "P14",
+          "date": "2069-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.07623401068378124,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2069",
+          "provinceId": "P15",
+          "date": "2069-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.11385589513732486,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2069",
+          "provinceId": "P16",
+          "date": "2069-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": false,
+          "margin": 0.008547597770144189,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2069",
+          "provinceId": "P17",
+          "date": "2069-10-01",
+          "winnerId": "NPC027",
+          "incumbentRetained": true,
+          "margin": 0.011531961326961437,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2069",
+          "provinceId": "P18",
+          "date": "2069-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.14462216547579845,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2069",
+          "provinceId": "P19",
+          "date": "2069-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.09764314346034306,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2069",
+          "provinceId": "P20",
+          "date": "2069-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2073",
+          "provinceId": "P01",
+          "date": "2073-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.09012266271173508,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2073",
+          "provinceId": "P02",
+          "date": "2073-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.1117053091434772,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2073",
+          "provinceId": "P03",
+          "date": "2073-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.0803161360982304,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2073",
+          "provinceId": "P04",
+          "date": "2073-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.0723152234441054,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2073",
+          "provinceId": "P05",
+          "date": "2073-10-01",
+          "winnerId": "NPC004",
+          "incumbentRetained": false,
+          "margin": 0.012167468962012262,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2073",
+          "provinceId": "P06",
+          "date": "2073-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.0765444033102653,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2073",
+          "provinceId": "P07",
+          "date": "2073-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.13705226317092734,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2073",
+          "provinceId": "P08",
+          "date": "2073-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.19117138821244256,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2073",
+          "provinceId": "P09",
+          "date": "2073-10-01",
+          "winnerId": "NPC984",
+          "incumbentRetained": true,
+          "margin": 0.04194023115964318,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2073",
+          "provinceId": "P10",
+          "date": "2073-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.145536261223091,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2073",
+          "provinceId": "P11",
+          "date": "2073-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.10737239397065054,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2073",
+          "provinceId": "P12",
+          "date": "2073-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.0781176073784518,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2073",
+          "provinceId": "P13",
+          "date": "2073-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.16995991085852183,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2073",
+          "provinceId": "P14",
+          "date": "2073-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.10408466838698788,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2073",
+          "provinceId": "P15",
+          "date": "2073-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.08750199308809142,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2073",
+          "provinceId": "P16",
+          "date": "2073-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": true,
+          "margin": 0.06951759370788935,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2073",
+          "provinceId": "P17",
+          "date": "2073-10-01",
+          "winnerId": "NPC027",
+          "incumbentRetained": true,
+          "margin": 0.009013337333561189,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2073",
+          "provinceId": "P18",
+          "date": "2073-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.18435084437589797,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2073",
+          "provinceId": "P19",
+          "date": "2073-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.09831229892540122,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2073",
+          "provinceId": "P20",
+          "date": "2073-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        },
+        {
+          "electionId": "ELEC_GOV_P01_2077",
+          "provinceId": "P01",
+          "date": "2077-10-01",
+          "winnerId": "NPC006",
+          "incumbentRetained": true,
+          "margin": 0.08684684306594409,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P02_2077",
+          "provinceId": "P02",
+          "date": "2077-10-01",
+          "winnerId": "NPC986",
+          "incumbentRetained": true,
+          "margin": 0.0764193314567751,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P03_2077",
+          "provinceId": "P03",
+          "date": "2077-10-01",
+          "winnerId": "NPC023",
+          "incumbentRetained": true,
+          "margin": 0.10700834834321893,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P04_2077",
+          "provinceId": "P04",
+          "date": "2077-10-01",
+          "winnerId": "NPC024",
+          "incumbentRetained": true,
+          "margin": 0.10732126386690108,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P05_2077",
+          "provinceId": "P05",
+          "date": "2077-10-01",
+          "winnerId": "NPC004",
+          "incumbentRetained": true,
+          "margin": 0.014120405278917392,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P06_2077",
+          "provinceId": "P06",
+          "date": "2077-10-01",
+          "winnerId": "NPC973",
+          "incumbentRetained": true,
+          "margin": 0.1135726556678412,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P07_2077",
+          "provinceId": "P07",
+          "date": "2077-10-01",
+          "winnerId": "NPC541",
+          "incumbentRetained": true,
+          "margin": 0.15074490780038446,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P08_2077",
+          "provinceId": "P08",
+          "date": "2077-10-01",
+          "winnerId": "NPC005",
+          "incumbentRetained": true,
+          "margin": 0.22333802815008671,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P09_2077",
+          "provinceId": "P09",
+          "date": "2077-10-01",
+          "winnerId": "NPC984",
+          "incumbentRetained": true,
+          "margin": 0.05386968530907388,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P10_2077",
+          "provinceId": "P10",
+          "date": "2077-10-01",
+          "winnerId": "NPC028",
+          "incumbentRetained": true,
+          "margin": 0.13241314874250892,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P11_2077",
+          "provinceId": "P11",
+          "date": "2077-10-01",
+          "winnerId": "NPC976",
+          "incumbentRetained": true,
+          "margin": 0.09065306576533039,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P12_2077",
+          "provinceId": "P12",
+          "date": "2077-10-01",
+          "winnerId": "NPC003",
+          "incumbentRetained": true,
+          "margin": 0.12932120911208084,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P13_2077",
+          "provinceId": "P13",
+          "date": "2077-10-01",
+          "winnerId": "NPC988",
+          "incumbentRetained": true,
+          "margin": 0.14169611194473897,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P14_2077",
+          "provinceId": "P14",
+          "date": "2077-10-01",
+          "winnerId": "NPC978",
+          "incumbentRetained": true,
+          "margin": 0.07897887569631684,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P15_2077",
+          "provinceId": "P15",
+          "date": "2077-10-01",
+          "winnerId": "NPC318",
+          "incumbentRetained": true,
+          "margin": 0.10432051508799758,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P16_2077",
+          "provinceId": "P16",
+          "date": "2077-10-01",
+          "winnerId": "NPC007",
+          "incumbentRetained": true,
+          "margin": 0.10708147639285304,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P17_2077",
+          "provinceId": "P17",
+          "date": "2077-10-01",
+          "winnerId": "NPC804",
+          "incumbentRetained": false,
+          "margin": 0.006047713883747807,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P18_2077",
+          "provinceId": "P18",
+          "date": "2077-10-01",
+          "winnerId": "NPC031",
+          "incumbentRetained": true,
+          "margin": 0.14560095419412566,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P19_2077",
+          "provinceId": "P19",
+          "date": "2077-10-01",
+          "winnerId": "NPC821",
+          "incumbentRetained": true,
+          "margin": 0.09539730772193394,
+          "candidateCount": 4
+        },
+        {
+          "electionId": "ELEC_GOV_P20_2077",
+          "provinceId": "P20",
+          "date": "2077-10-01",
+          "winnerId": "NPC982",
+          "incumbentRetained": true,
+          "margin": 1,
+          "candidateCount": 1
+        }
+      ],
+      "economy": {
+        "start": {
+          "outputIndex": 98.7,
+          "employmentIndex": 99.3,
+          "priceIndex": 103.8,
+          "housingIndex": 96.4,
+          "confidenceIndex": 94.8
+        },
+        "end": {
+          "outputIndex": 120.13510665624533,
+          "employmentIndex": 114.16206135514906,
+          "priceIndex": 142.19630062385642,
+          "housingIndex": 106.469029815377,
+          "confidenceIndex": 94.88044600124977
+        },
+        "delta": {
+          "outputIndex": 21.435106656245324,
+          "employmentIndex": 14.862061355149066,
+          "priceIndex": 38.39630062385642,
+          "housingIndex": 10.069029815376993,
+          "confidenceIndex": 0.08044600124976853
+        },
+        "outputSignChanges": 115,
+        "outputDirectionChanges": 115
+      },
+      "regionalEconomy": {
+        "provinceCount": 21,
+        "rankingChurn": 0.272108843537415,
+        "top5Start": [
+          "P11",
+          "P08",
+          "P14",
+          "P02",
+          "P06"
+        ],
+        "top5End": [
+          "FDV",
+          "P01",
+          "P02",
+          "P03",
+          "P04"
+        ]
+      },
+      "legislative": {
+        "billsIntroduced": 806,
+        "billsEnactedOrSigned": 486,
+        "billsReturnedByPresident": 0,
+        "billsByStatus": {
+          "enacted": 486,
+          "committee_failed": 309,
+          "floor_failed": 4,
+          "floor_scheduled": 5,
+          "committee": 2
+        },
+        "historyIntroduced": 806,
+        "historySigned": 486
+      },
+      "institutions": {
+        "provincialSeats": 918,
+        "provincialSeatMin": 25,
+        "provincialSeatMax": 65,
+        "provincialElections": 273,
+        "provincialLeadershipElections": 3549,
+        "provincialBillsIntroduced": 1050,
+        "provincialBillsPassed": 1050,
+        "provincialBillsSigned": 766,
+        "provincialVetoes": 249,
+        "provincialOverrides": 100,
+        "provincialVotes": 1359,
+        "provincialLegislators": 1343,
+        "provincialPromotions": 253,
+        "generatedNationalPoliticians": 253,
+        "partyLeadershipContests": 48,
+        "factionChairContests": 199,
+        "partyContestsResolved": 307,
+        "caucusContests": 288,
+        "caucusContestsResolved": 276,
+        "constitutionalProposed": 4,
+        "constitutionalAssemblyPassed": 4,
+        "constitutionalRatified": 4,
+        "constitutionalFailed": 0,
+        "courtDecisions": 144,
+        "federalProvincialCases": 77,
+        "organizationActions": 0,
+        "organizationEndorsements": 0,
+        "organizationRelationships": 0,
+        "candidateShortageEvents": 0
+      },
+      "careers": {
+        "sampleSize": 24,
+        "politicianIds": [
+          "NPC001",
+          "NPC002",
+          "NPC003",
+          "NPC004",
+          "NPC005",
+          "NPC006",
+          "NPC007",
+          "NPC008",
+          "NPC009",
+          "NPC010",
+          "NPC011",
+          "NPC012",
+          "NPC013",
+          "NPC014",
+          "NPC015",
+          "NPC016",
+          "NPC017",
+          "NPC018",
+          "NPC019",
+          "NPC020",
+          "NPC021",
+          "NPC022",
+          "NPC023",
+          "NPC024"
+        ],
+        "termsObserved": 274,
+        "transitions": [
+          {
+            "politicianId": "NPC001",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2024-01-20",
+            "endedDate": "2029-01-20",
+            "accessionReason": "election",
+            "endedReason": "presidential_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC001",
+            "officeId": "OFFICE_GOVERNOR_FDV",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC001",
+            "officeId": "OFFICE_GOVERNOR_FDV",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2034-10-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "court_incompatibility",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC001",
+            "officeId": "OFFICE_COURT_SEAT_2",
+            "officeKind": "constitutional_court_justice",
+            "startDate": "2034-10-01",
+            "endedDate": "2046-10-01",
+            "accessionReason": "assembly_confirmation",
+            "endedReason": "term_expired",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC001",
+            "officeId": "OFFICE_ASSEMBLY_C003",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC001",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC001",
+            "officeId": "OFFICE_ASSEMBLY_C027",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC001",
+            "officeId": "OFFICE_ASSEMBLY_C027",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2030-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_SPEAKER",
+            "officeKind": "speaker",
+            "startDate": "2026-06-01",
+            "endedDate": "2031-05-01",
+            "accessionReason": "assembly_selection",
+            "endedReason": "court_incompatibility",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2031-05-01",
+            "accessionReason": "election",
+            "endedReason": "court_incompatibility",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_COURT_SEAT_0",
+            "officeKind": "constitutional_court_justice",
+            "startDate": "2031-05-01",
+            "endedDate": "2043-05-01",
+            "accessionReason": "assembly_confirmation",
+            "endedReason": "term_expired",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_ASSEMBLY_C025",
+            "officeKind": "assembly_member",
+            "startDate": "2046-06-01",
+            "endedDate": "2050-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_ASSEMBLY_C025",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_ASSEMBLY_C025",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_ASSEMBLY_C025",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_ASSEMBLY_C025",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC002",
+            "officeId": "OFFICE_ASSEMBLY_C024",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": null,
+            "endedDate": "2029-01-20",
+            "accessionReason": "preexisting",
+            "endedReason": "incompatible_with_presidency",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2029-01-20",
+            "endedDate": "2034-01-20",
+            "accessionReason": "elected_assumption",
+            "endedReason": "presidential_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2037-11-01",
+            "endedDate": "2041-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2041-11-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2045-11-01",
+            "endedDate": "2049-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2049-11-01",
+            "endedDate": "2053-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2053-11-01",
+            "endedDate": "2057-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2057-11-01",
+            "endedDate": "2061-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2061-11-01",
+            "endedDate": "2065-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2065-11-01",
+            "endedDate": "2069-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2069-11-01",
+            "endedDate": "2073-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2073-11-01",
+            "endedDate": "2077-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC003",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2077-11-01",
+            "endedDate": null,
+            "accessionReason": "provincial_election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2029-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2037-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2037-11-01",
+            "endedDate": "2041-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2041-11-01",
+            "endedDate": "2044-01-20",
+            "accessionReason": "provincial_election",
+            "endedReason": "incompatible_with_presidency",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2044-01-20",
+            "endedDate": "2049-01-20",
+            "accessionReason": "elected_assumption",
+            "endedReason": "presidential_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2049-01-20",
+            "endedDate": "2054-01-20",
+            "accessionReason": "elected_assumption",
+            "endedReason": "presidential_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2054-01-20",
+            "endedDate": "2059-01-20",
+            "accessionReason": "elected_assumption",
+            "endedReason": "presidential_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_ASSEMBLY_C041",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_ASSEMBLY_C043",
+            "officeKind": "assembly_member",
+            "startDate": "2070-06-01",
+            "endedDate": "2073-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2073-11-01",
+            "endedDate": "2077-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC004",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2077-11-01",
+            "endedDate": null,
+            "accessionReason": "provincial_election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_MINISTER_FOREIGN",
+            "officeKind": "minister",
+            "startDate": null,
+            "endedDate": null,
+            "accessionReason": "appointment",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2037-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2037-11-01",
+            "endedDate": "2041-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2041-11-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2045-11-01",
+            "endedDate": "2049-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2049-11-01",
+            "endedDate": "2053-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2053-11-01",
+            "endedDate": "2057-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2057-11-01",
+            "endedDate": "2061-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2061-11-01",
+            "endedDate": "2065-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2065-11-01",
+            "endedDate": "2069-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2069-11-01",
+            "endedDate": "2073-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2073-11-01",
+            "endedDate": "2077-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC005",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2077-11-01",
+            "endedDate": null,
+            "accessionReason": "provincial_election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_ASSEMBLY_C045",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2029-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2037-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2037-11-01",
+            "endedDate": "2041-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2041-11-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2045-11-01",
+            "endedDate": "2049-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2049-11-01",
+            "endedDate": "2053-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2053-11-01",
+            "endedDate": "2057-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2057-11-01",
+            "endedDate": "2061-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2061-11-01",
+            "endedDate": "2065-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2065-11-01",
+            "endedDate": "2069-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2069-11-01",
+            "endedDate": "2073-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2073-11-01",
+            "endedDate": "2077-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC006",
+            "officeId": "OFFICE_GOVERNOR_P01",
+            "officeKind": "governor",
+            "startDate": "2077-11-01",
+            "endedDate": null,
+            "accessionReason": "provincial_election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_ASSEMBLY_C047",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2029-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2037-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2037-11-01",
+            "endedDate": "2041-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2041-11-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2045-11-01",
+            "endedDate": "2049-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2049-11-01",
+            "endedDate": "2053-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2053-11-01",
+            "endedDate": "2057-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2057-11-01",
+            "endedDate": "2059-01-20",
+            "accessionReason": "provincial_election",
+            "endedReason": "incompatible_with_presidency",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2059-01-20",
+            "endedDate": "2064-01-20",
+            "accessionReason": "elected_assumption",
+            "endedReason": "presidential_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2064-01-20",
+            "endedDate": "2069-01-20",
+            "accessionReason": "elected_assumption",
+            "endedReason": "presidential_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2069-11-01",
+            "endedDate": "2073-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2073-11-01",
+            "endedDate": "2077-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC007",
+            "officeId": "OFFICE_GOVERNOR_P16",
+            "officeKind": "governor",
+            "startDate": "2077-11-01",
+            "endedDate": null,
+            "accessionReason": "provincial_election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_ASSEMBLY_C038",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2029-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_GOVERNOR_P17",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_GOVERNOR_P17",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2037-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_GOVERNOR_P17",
+            "officeKind": "governor",
+            "startDate": "2037-11-01",
+            "endedDate": "2041-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_GOVERNOR_P17",
+            "officeKind": "governor",
+            "startDate": "2041-11-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_GOVERNOR_P17",
+            "officeKind": "governor",
+            "startDate": "2045-11-01",
+            "endedDate": "2049-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_GOVERNOR_P17",
+            "officeKind": "governor",
+            "startDate": "2049-11-01",
+            "endedDate": "2053-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_GOVERNOR_P17",
+            "officeKind": "governor",
+            "startDate": "2053-11-01",
+            "endedDate": "2057-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_GOVERNOR_P17",
+            "officeKind": "governor",
+            "startDate": "2057-11-01",
+            "endedDate": "2061-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_ASSEMBLY_C039",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_ASSEMBLY_C039",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC008",
+            "officeId": "OFFICE_ASSEMBLY_C039",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC009",
+            "officeId": "OFFICE_MINISTER_FINANCE",
+            "officeKind": "minister",
+            "startDate": null,
+            "endedDate": "2035-01-01",
+            "accessionReason": "appointment",
+            "endedReason": "court_incompatibility",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC009",
+            "officeId": "OFFICE_GOVERNOR_P07",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC009",
+            "officeId": "OFFICE_GOVERNOR_P07",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2035-01-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "court_incompatibility",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC009",
+            "officeId": "OFFICE_COURT_SEAT_3",
+            "officeKind": "constitutional_court_justice",
+            "startDate": "2035-01-01",
+            "endedDate": "2047-01-01",
+            "accessionReason": "assembly_confirmation",
+            "endedReason": "term_expired",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC009",
+            "officeId": "OFFICE_ASSEMBLY_C027",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC009",
+            "officeId": "OFFICE_ASSEMBLY_C027",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC009",
+            "officeId": "OFFICE_ASSEMBLY_C017",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC009",
+            "officeId": "OFFICE_ASSEMBLY_C027",
+            "officeKind": "assembly_member",
+            "startDate": "2070-06-01",
+            "endedDate": "2074-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC010",
+            "officeId": "OFFICE_MINISTER_DEFENSE",
+            "officeKind": "minister",
+            "startDate": null,
+            "endedDate": null,
+            "accessionReason": "appointment",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC010",
+            "officeId": "OFFICE_ASSEMBLY_C001",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2034-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC010",
+            "officeId": "OFFICE_ASSEMBLY_C001",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2038-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC010",
+            "officeId": "OFFICE_ASSEMBLY_C001",
+            "officeKind": "assembly_member",
+            "startDate": "2038-06-01",
+            "endedDate": "2042-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC010",
+            "officeId": "OFFICE_ASSEMBLY_C001",
+            "officeKind": "assembly_member",
+            "startDate": "2042-06-01",
+            "endedDate": "2046-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC010",
+            "officeId": "OFFICE_ASSEMBLY_C001",
+            "officeKind": "assembly_member",
+            "startDate": "2046-06-01",
+            "endedDate": "2050-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC010",
+            "officeId": "OFFICE_ASSEMBLY_C001",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC010",
+            "officeId": "OFFICE_ASSEMBLY_C001",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC010",
+            "officeId": "OFFICE_ASSEMBLY_C005",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_MINISTER_JUSTICE",
+            "officeKind": "minister",
+            "startDate": null,
+            "endedDate": "2036-04-01",
+            "accessionReason": "appointment",
+            "endedReason": "court_incompatibility",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_GOVERNOR_P02",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_GOVERNOR_P02",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2036-04-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "court_incompatibility",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_COURT_SEAT_5",
+            "officeKind": "constitutional_court_justice",
+            "startDate": "2036-04-01",
+            "endedDate": "2048-04-01",
+            "accessionReason": "assembly_confirmation",
+            "endedReason": "term_expired",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_ASSEMBLY_C015",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_ASSEMBLY_C015",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_ASSEMBLY_C015",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_ASSEMBLY_C015",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_ASSEMBLY_C015",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC011",
+            "officeId": "OFFICE_ASSEMBLY_C014",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2029-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_GOVERNOR_P09",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_GOVERNOR_P09",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2034-01-20",
+            "accessionReason": "provincial_election",
+            "endedReason": "incompatible_with_presidency",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2034-01-20",
+            "endedDate": "2039-01-20",
+            "accessionReason": "elected_assumption",
+            "endedReason": "presidential_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2039-01-20",
+            "endedDate": "2044-01-20",
+            "accessionReason": "elected_assumption",
+            "endedReason": "presidential_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2046-06-01",
+            "endedDate": "2050-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2070-06-01",
+            "endedDate": "2074-01-20",
+            "accessionReason": "election",
+            "endedReason": "incompatible_with_presidency",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC012",
+            "officeId": "OFFICE_PRESIDENT",
+            "officeKind": "president",
+            "startDate": "2074-01-20",
+            "endedDate": null,
+            "accessionReason": "elected_assumption",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C001",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2029-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_GOVERNOR_P12",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C005",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2038-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C005",
+            "officeKind": "assembly_member",
+            "startDate": "2038-06-01",
+            "endedDate": "2042-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C005",
+            "officeKind": "assembly_member",
+            "startDate": "2042-06-01",
+            "endedDate": "2046-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C005",
+            "officeKind": "assembly_member",
+            "startDate": "2046-06-01",
+            "endedDate": "2050-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C005",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C005",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C005",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C005",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC013",
+            "officeId": "OFFICE_ASSEMBLY_C003",
+            "officeKind": "assembly_member",
+            "startDate": "2070-06-01",
+            "endedDate": "2074-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2030-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2034-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2038-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_SPEAKER",
+            "officeKind": "speaker",
+            "startDate": "2034-06-01",
+            "endedDate": null,
+            "accessionReason": "assembly_selection",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2038-06-01",
+            "endedDate": "2042-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2042-06-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2046-06-01",
+            "endedDate": "2046-06-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C016",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2050-06-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C027",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C016",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C027",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C017",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C027",
+            "officeKind": "assembly_member",
+            "startDate": "2070-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC014",
+            "officeId": "OFFICE_ASSEMBLY_C031",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": "2074-06-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2030-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2034-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2038-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2038-06-01",
+            "endedDate": "2042-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2042-06-01",
+            "endedDate": "2046-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2046-06-01",
+            "endedDate": "2050-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC015",
+            "officeId": "OFFICE_ASSEMBLY_C013",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2030-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2034-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2038-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2038-06-01",
+            "endedDate": "2042-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2042-06-01",
+            "endedDate": "2046-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2046-06-01",
+            "endedDate": "2050-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC016",
+            "officeId": "OFFICE_ASSEMBLY_C026",
+            "officeKind": "assembly_member",
+            "startDate": "2070-06-01",
+            "endedDate": "2074-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2030-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2034-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2038-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2038-06-01",
+            "endedDate": "2042-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2042-06-01",
+            "endedDate": "2046-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2046-06-01",
+            "endedDate": "2050-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2070-06-01",
+            "endedDate": "2074-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC017",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_ASSEMBLY_C023",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2030-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_ASSEMBLY_C023",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_GOVERNOR_P08",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2035-09-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "court_incompatibility",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_COURT_SEAT_4",
+            "officeKind": "constitutional_court_justice",
+            "startDate": "2035-09-01",
+            "endedDate": "2047-09-01",
+            "accessionReason": "assembly_confirmation",
+            "endedReason": "term_expired",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2070-06-01",
+            "endedDate": "2074-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC018",
+            "officeId": "OFFICE_ASSEMBLY_C028",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC019",
+            "officeId": "OFFICE_ASSEMBLY_C008",
+            "officeKind": "assembly_member",
+            "startDate": "2026-06-01",
+            "endedDate": "2030-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC019",
+            "officeId": "OFFICE_ASSEMBLY_C008",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2034-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC019",
+            "officeId": "OFFICE_ASSEMBLY_C008",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2037-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC019",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2037-11-01",
+            "endedDate": "2038-01-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "court_incompatibility",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC019",
+            "officeId": "OFFICE_COURT_SEAT_6",
+            "officeKind": "constitutional_court_justice",
+            "startDate": "2038-01-01",
+            "endedDate": "2050-01-01",
+            "accessionReason": "assembly_confirmation",
+            "endedReason": "term_expired",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC019",
+            "officeId": "OFFICE_ASSEMBLY_C010",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC019",
+            "officeId": "OFFICE_ASSEMBLY_C010",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC019",
+            "officeId": "OFFICE_ASSEMBLY_C009",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC019",
+            "officeId": "OFFICE_ASSEMBLY_C008",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC020",
+            "officeId": "OFFICE_COURT_SEAT_0",
+            "officeKind": "constitutional_court_justice",
+            "startDate": "2019-03-14",
+            "endedDate": "2031-03-14",
+            "accessionReason": "appointment",
+            "endedReason": "term_expired",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC020",
+            "officeId": "OFFICE_ASSEMBLY_C010",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC020",
+            "officeId": "OFFICE_ASSEMBLY_C037",
+            "officeKind": "assembly_member",
+            "startDate": "2070-06-01",
+            "endedDate": "2074-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_GOVERNOR_P09",
+            "officeKind": "governor",
+            "startDate": null,
+            "endedDate": "2029-11-01",
+            "accessionReason": "preexisting",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2034-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2038-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_MINISTER_FINANCE",
+            "officeKind": "minister",
+            "startDate": "2035-02-01",
+            "endedDate": null,
+            "accessionReason": "presidential_appointment",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_ASSEMBLY_C006",
+            "officeKind": "assembly_member",
+            "startDate": "2038-06-01",
+            "endedDate": "2041-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_GOVERNOR_P09",
+            "officeKind": "governor",
+            "startDate": "2041-11-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_GOVERNOR_P09",
+            "officeKind": "governor",
+            "startDate": "2045-11-01",
+            "endedDate": "2049-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_ASSEMBLY_C007",
+            "officeKind": "assembly_member",
+            "startDate": "2050-06-01",
+            "endedDate": "2054-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_ASSEMBLY_C007",
+            "officeKind": "assembly_member",
+            "startDate": "2054-06-01",
+            "endedDate": "2058-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_ASSEMBLY_C007",
+            "officeKind": "assembly_member",
+            "startDate": "2058-06-01",
+            "endedDate": "2062-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_ASSEMBLY_C007",
+            "officeKind": "assembly_member",
+            "startDate": "2062-06-01",
+            "endedDate": "2066-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_ASSEMBLY_C007",
+            "officeKind": "assembly_member",
+            "startDate": "2066-06-01",
+            "endedDate": "2070-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC021",
+            "officeId": "OFFICE_ASSEMBLY_C024",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": null,
+            "endedDate": "2029-11-01",
+            "accessionReason": "preexisting",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_ASSEMBLY_C043",
+            "officeKind": "assembly_member",
+            "startDate": "2030-06-01",
+            "endedDate": "2034-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_ASSEMBLY_C043",
+            "officeKind": "assembly_member",
+            "startDate": "2034-06-01",
+            "endedDate": "2038-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_ASSEMBLY_C043",
+            "officeKind": "assembly_member",
+            "startDate": "2038-06-01",
+            "endedDate": "2042-06-01",
+            "accessionReason": "election",
+            "endedReason": "assembly_assumption",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_ASSEMBLY_C043",
+            "officeKind": "assembly_member",
+            "startDate": "2042-06-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2045-11-01",
+            "endedDate": "2049-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2049-11-01",
+            "endedDate": "2053-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2053-11-01",
+            "endedDate": "2057-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2057-11-01",
+            "endedDate": "2061-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2061-11-01",
+            "endedDate": "2065-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2065-11-01",
+            "endedDate": "2069-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_GOVERNOR_P05",
+            "officeKind": "governor",
+            "startDate": "2069-11-01",
+            "endedDate": "2073-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC022",
+            "officeId": "OFFICE_ASSEMBLY_C043",
+            "officeKind": "assembly_member",
+            "startDate": "2074-06-01",
+            "endedDate": null,
+            "accessionReason": "election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": null,
+            "endedDate": "2029-11-01",
+            "accessionReason": "preexisting",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2037-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_ASSEMBLY_C008",
+            "officeKind": "assembly_member",
+            "startDate": "2038-06-01",
+            "endedDate": "2041-11-01",
+            "accessionReason": "election",
+            "endedReason": "assumed_governorship",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2041-11-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2045-11-01",
+            "endedDate": "2049-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2049-11-01",
+            "endedDate": "2053-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2053-11-01",
+            "endedDate": "2057-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2057-11-01",
+            "endedDate": "2061-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2061-11-01",
+            "endedDate": "2065-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2065-11-01",
+            "endedDate": "2069-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2069-11-01",
+            "endedDate": "2073-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2073-11-01",
+            "endedDate": "2077-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC023",
+            "officeId": "OFFICE_GOVERNOR_P03",
+            "officeKind": "governor",
+            "startDate": "2077-11-01",
+            "endedDate": null,
+            "accessionReason": "provincial_election",
+            "endedReason": null,
+            "status": "active"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": null,
+            "endedDate": "2029-11-01",
+            "accessionReason": "preexisting",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2029-11-01",
+            "endedDate": "2033-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2033-11-01",
+            "endedDate": "2037-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2037-11-01",
+            "endedDate": "2041-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2041-11-01",
+            "endedDate": "2045-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2045-11-01",
+            "endedDate": "2049-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2049-11-01",
+            "endedDate": "2053-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2053-11-01",
+            "endedDate": "2057-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2057-11-01",
+            "endedDate": "2061-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2061-11-01",
+            "endedDate": "2065-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2065-11-01",
+            "endedDate": "2069-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2069-11-01",
+            "endedDate": "2073-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2073-11-01",
+            "endedDate": "2077-11-01",
+            "accessionReason": "provincial_election",
+            "endedReason": "gubernatorial_transition",
+            "status": "ended"
+          },
+          {
+            "politicianId": "NPC024",
+            "officeId": "OFFICE_GOVERNOR_P04",
+            "officeKind": "governor",
+            "startDate": "2077-11-01",
+            "endedDate": null,
+            "accessionReason": "provincial_election",
+            "endedReason": null,
+            "status": "active"
+          }
+        ]
+      },
+      "foreign": {
+        "crisesTotal": 1093,
+        "crisesCreated": 1092,
+        "crisesSettled": 1046,
+        "conflictsStarted": 30,
+        "conflictsEnded": 27,
+        "conflictsActive": 3,
+        "treatiesTotal": 148,
+        "treatiesActive": 56,
+        "treatiesProposed": 147,
+        "treatiesRatified": 73,
+        "treatiesTerminated": 17
+      },
+      "performance": {
+        "turnSamples": 600,
+        "medianTurnMs": 434.025,
+        "p95TurnMs": 9728.514,
+        "maxTurnMs": 32828.259
+      },
+      "saveGrowth": [
+        {
+          "month": 0,
+          "date": "2028-01-01",
+          "bytes": 1757113
+        },
+        {
+          "month": 120,
+          "date": "2038-01-01",
+          "bytes": 25438503
+        },
+        {
+          "month": 300,
+          "date": "2053-01-01",
+          "bytes": 64714647
+        },
+        {
+          "month": 600,
+          "date": "2078-01-01",
+          "bytes": 130305624
+        }
+      ]
+    }
+  ]
+}

@@ -16,6 +16,7 @@ import { currentPresidentialAuthorityId } from "../legislature/state.js";
 import { changePartyMembership } from "../parties/membership.js";
 import { applyPresidentialVacancy } from "../succession.js";
 import type { LegislativeVoteChoice } from "../legislature/types.js";
+import { getAgentProfile } from "../agents/profile.js";
 import {
   allocateCaseId,
   allocateConstitutionalGroundsId,
@@ -25,6 +26,7 @@ import {
   allocateRecallId,
   confirmationYesNeeded,
   currentCourtJudgeIds,
+  deriveCourtBench,
   impeachmentYesNeeded,
   recallReferralYesNeeded,
   vacantCourtSeatIds,
@@ -151,6 +153,30 @@ export function judicialEligibilityError(
     hasEverHeldSubstantiveCourtTerm(world, state, nomineeId)
   ) {
     return reject("COURT_TERM_NONRENEWABLE", nomineeId);
+  }
+  const profile = getAgentProfile(world, state, nomineeId);
+  if (!profile) return reject("LEGAL_QUALIFICATION_REQUIRED", nomineeId);
+  const explicitLegalBackground = profile.roleTypes.some((role) =>
+    [
+      "constitutional_court_justice",
+      "judge",
+      "appellate_judge",
+      "prosecutor",
+      "public_defender",
+      "constitutional_lawyer",
+      "legal_academic",
+      "senior_lawyer",
+    ].includes(role),
+  );
+  const publicLawQualification =
+    profile.skills.legislation * 0.5 +
+    profile.traits.institutionalism * 0.35 +
+    profile.skills.negotiation * 0.15;
+  const birthYear = profile.birthDate ? Number(profile.birthDate.slice(0, 4)) : null;
+  const age = birthYear ? Number(state.currentDate.slice(0, 4)) - birthYear : null;
+  if (age != null && age < 35) return reject("INSUFFICIENT_LEGAL_EXPERIENCE", `${nomineeId} is under 35`);
+  if (!explicitLegalBackground && publicLawQualification < 0.62) {
+    return reject("LEGAL_QUALIFICATION_REQUIRED", `${nomineeId} lacks a qualifying public legal record`);
   }
   return null;
 }
@@ -437,7 +463,10 @@ export function recordConfirmationVote(
     return { events };
   }
   events.push(...prepared.events);
-  const endDate = addYears(state.currentDate, world.courtConstitution.termYears);
+  const termYears =
+    state.provincialRuntime.constitutionalRules.court_term_years?.value ??
+    world.courtConstitution.termYears;
+  const endDate = addYears(state.currentDate, termYears);
   const assumed = assumeOffice(state, world, {
     officeId: nom.seatOfficeId,
     holderId: nom.nomineeId,
@@ -669,6 +698,22 @@ function applyDisposition(
         ),
       );
     }
+  } else if (courtCase.challengedKind === "provincial_law") {
+    const bill = state.provincialRuntime.bills[courtCase.challengedId];
+    if (bill && (bill.status === "signed" || bill.status === "override_passed")) {
+      bill.status = "invalidated";
+      events.push(
+        event(
+          state,
+          "PROVINCIAL_LAW_INVALIDATED",
+          [],
+          [bill.id, bill.provinceId, courtCase.id],
+          { billId: bill.id, provinceId: bill.provinceId, caseId: courtCase.id, title: bill.title },
+          commandId,
+          0.88,
+        ),
+      );
+    }
   }
   maybeRecordImpeachmentBasisFromInvalidation(world, state, courtCase);
   return events;
@@ -757,6 +802,29 @@ export function recordJudicialDecision(
   courtCase.decisionId = decisionId;
   courtCase.decisionDate = state.currentDate;
   courtCase.status = "decided";
+  const majorityVote: JudicialVoteChoice =
+    tallied.disposition === "UPHOLD" ? "uphold" : "invalidate";
+  const dissentVote: JudicialVoteChoice =
+    majorityVote === "uphold" ? "invalidate" : "uphold";
+  const benchOrder = deriveCourtBench(world, state)
+    .map((seat) => seat.holderId)
+    .filter((id): id is string => id != null);
+  const majorityAuthorId = benchOrder.find((id) => args.votes[id] === majorityVote) ?? null;
+  const dissentAuthorId = benchOrder.find((id) => args.votes[id] === dissentVote) ?? null;
+  const holding =
+    tallied.disposition === "UPHOLD"
+      ? "The challenged act remains in force."
+      : "The challenged act is constitutionally invalid.";
+  const majorityRationale =
+    tallied.disposition === "UPHOLD"
+      ? `The challenged authority is consistent with ${courtCase.constitutionalRule.replace(/_/g, " ")}.`
+      : `The challenged authority exceeds the limits imposed by ${courtCase.constitutionalRule.replace(/_/g, " ")}.`;
+  const majorityOpinion = `${holding} ${majorityRationale}`;
+  const dissentingOpinion = dissentAuthorId
+    ? tallied.disposition === "UPHOLD"
+      ? "The dissent would invalidate the challenged act because the asserted authority exceeds the constitutional limit."
+      : "The dissent would uphold the challenged act and defer to the responsible elected institution."
+    : null;
   const decision = {
     id: decisionId,
     caseId: courtCase.id,
@@ -769,7 +837,16 @@ export function recordJudicialDecision(
     constitutionalQuestion: courtCase.constitutionalQuestion,
     constitutionalRule: courtCase.constitutionalRule,
     caseType: courtCase.caseType,
-    metadata: {},
+    metadata: {
+      majorityOpinion,
+      majorityAuthorId,
+      holding,
+      majorityRationale,
+      constitutionalProvision: courtCase.constitutionalRule.replace(/_/g, " "),
+      ...(dissentingOpinion
+        ? { dissentingOpinion, dissentAuthorId, dissentRationale: dissentingOpinion }
+        : {}),
+    },
   };
   state.constitutionalRuntime.courtDecisions[decisionId] = decision;
   state.constitutionalRuntime.precedents[decisionId] = {

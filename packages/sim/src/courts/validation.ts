@@ -62,7 +62,8 @@ export function parseConstitutionalRuntime(raw: unknown): ConstitutionalRuntime 
           rec.challengedKind === "appointment" ||
           rec.challengedKind === "election" ||
           rec.challengedKind === "impeachment" ||
-          rec.challengedKind === "executive_action"
+          rec.challengedKind === "executive_action" ||
+          rec.challengedKind === "provincial_law"
             ? rec.challengedKind
             : "law",
         challengedId: typeof rec.challengedId === "string" ? rec.challengedId : "",

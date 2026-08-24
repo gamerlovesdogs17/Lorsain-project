@@ -24,6 +24,16 @@ export type OrganizationEndorsement = {
   campaignId: string | null;
   date: IsoDate;
   public: true;
+  status?: "active" | "withdrawn";
+  withdrawnDate?: IsoDate | null;
+};
+
+export type OrganizationRelationship = {
+  affinity: number;
+  trust: number;
+  policyAlignment: number;
+  lastUpdatedDate: IsoDate | null;
+  lastReason: string | null;
 };
 
 export type OrganizationActorState = {
@@ -31,7 +41,7 @@ export type OrganizationActorState = {
   influence: number;
   resources: number;
   publicPositions: Record<string, number>;
-  relationships: Record<string, { affinity: number }>;
+  relationships: Record<string, OrganizationRelationship>;
   billPressure: OrganizationBillPressure[];
   endorsements: OrganizationEndorsement[];
   cooldownUntil: IsoDate | null;

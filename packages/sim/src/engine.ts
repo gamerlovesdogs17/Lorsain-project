@@ -20,6 +20,7 @@ import {
   withdrawCandidacy,
 } from "./parties/contests.js";
 import { splitFaction } from "./parties/split.js";
+import { processPartyInstitutionsMonth } from "./parties/monthly.js";
 import {
   emptyPartyRuntime,
   needsPartyInstitutionSeed,
@@ -70,6 +71,7 @@ import {
   applyPresidentialAssumption,
   createDomainResolution,
   payloadElectionId,
+  resolveUnablePresidentElect,
 } from "./elections/resolution.js";
 import {
   applyAssemblyAssumption,
@@ -120,6 +122,11 @@ import {
 } from "./legislature/procedure.js";
 import { upsertRecommendations } from "./legislature/recommendations.js";
 import { seedCommitteesIfNeeded } from "./legislature/state.js";
+import {
+  declareCaucusLeadershipCandidacy,
+  seedCaucusLeadership,
+  setCaucusBillPosition,
+} from "./legislature/caucus.js";
 import { emptyExecutiveRuntime, isMotionKind } from "./executive/types.js";
 import { processExecutiveMonth } from "./executive/monthly.js";
 import {
@@ -157,6 +164,19 @@ import {
   setProvincialPriority,
   takeProvincialFederalPosition,
 } from "./provinces/procedure.js";
+import {
+  declineProvincialAssemblyCandidacy,
+  castProvincialBillVote,
+  fileProvincialAssemblyCandidacy,
+  governorProposeProvincialBill,
+  governorProvincialBillDisposition,
+  seekProvincialLeadership,
+} from "./provinces/assemblies.js";
+import {
+  castConstitutionalAssemblyVote,
+  castConstitutionalRatificationVote,
+  proposeConstitutionalAmendment,
+} from "./provinces/constitutional.js";
 import { processOrganizationsMonth } from "./organizations/monthly.js";
 import {
   askOrganizationBillSupport,
@@ -337,6 +357,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
   seedStartingPublicStanding(world, state);
   seedInitialGoals(state, world);
   seedCommitteesIfNeeded(world, state);
+  seedCaucusLeadership(world, state);
   seedMinistriesIfNeeded(world, state);
   seedForeignAffairsRuntime(world, state);
   return state;
@@ -489,13 +510,22 @@ function runTowardTarget(
   includeTargetEvents = false,
 ): { events: SimEvent[]; interrupt: PendingInterrupt | null } {
   const events: SimEvent[] = [];
-  events.push(...processEconomyMonth(state, world, rng, commandId));
-  events.push(...processProvincialMonth(state, world, rng, commandId));
-  events.push(...processOrganizationsMonth(state, world, rng, commandId));
-  events.push(...processCampaignMonth(state, world, rng, commandId));
-  events.push(...processLegislatureMonth(state, world, rng, commandId));
-  events.push(...processExecutiveMonth(state, world, rng, commandId));
-  events.push(...processCourtsMonth(state, world, rng, commandId));
+  const profile = (globalThis as typeof globalThis & { __lorsainStageTimings?: Record<string, number[]> }).__lorsainStageTimings;
+  const timed = <T,>(stage: string, fn: () => T): T => {
+    if (!profile) return fn();
+    const started = performance.now();
+    const result = fn();
+    (profile[stage] ??= []).push(performance.now() - started);
+    return result;
+  };
+  events.push(...timed("economy", () => processEconomyMonth(state, world, rng, commandId)));
+  events.push(...timed("provincial", () => processProvincialMonth(state, world, rng, commandId)));
+  events.push(...timed("party", () => processPartyInstitutionsMonth(world, state, rng, commandId)));
+  events.push(...timed("organizations", () => processOrganizationsMonth(state, world, rng, commandId)));
+  events.push(...timed("campaign", () => processCampaignMonth(state, world, rng, commandId)));
+  events.push(...timed("legislature", () => processLegislatureMonth(state, world, rng, commandId)));
+  events.push(...timed("executive", () => processExecutiveMonth(state, world, rng, commandId)));
+  events.push(...timed("courts", () => processCourtsMonth(state, world, rng, commandId)));
   sortScheduler(state);
   while (true) {
     // Non-blocking events become effective on their due date.  In particular,
@@ -515,10 +545,10 @@ function runTowardTarget(
     events.push(...out.events);
     if (out.interrupt) return { events, interrupt: out.interrupt };
   }
-  const foreignEvents = processForeignAffairsMonth(state, world, rng, commandId);
+  const foreignEvents = timed("foreign", () => processForeignAffairsMonth(state, world, rng, commandId));
   events.push(...foreignEvents);
-  events.push(...processOrganizationForeignReactions(state, world, commandId, foreignEvents));
-  events.push(...processMediaMonth(state, world, rng, commandId));
+  events.push(...timed("organization_foreign", () => processOrganizationForeignReactions(state, world, commandId, foreignEvents)));
+  events.push(...timed("media", () => processMediaMonth(state, world, rng, commandId)));
   state.currentDate = target;
   state.completedTurns += 1;
   state.activeTurnTarget = null;
@@ -598,6 +628,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   }
   if (needsInitialGoals(state)) seedInitialGoals(state, frozen);
   seedCommitteesIfNeeded(frozen, state);
+  seedCaucusLeadership(frozen, state);
   seedMinistriesIfNeeded(frozen, state);
   if (Object.keys(state.organizationRuntime.actors).length === 0) {
     state.organizationRuntime.actors = seedOrganizationRuntime(frozen.interestOrganizations).actors;
@@ -1143,6 +1174,45 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
+    if (command.type === "GOVERNOR_PROPOSE_PROVINCIAL_BILL") {
+      const preview = governorProposeProvincialBill(world, jsonClone(state), state.playerPoliticianId, command.provinceId, command.subject, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = governorProposeProvincialBill(world, state, state.playerPoliticianId, command.provinceId, command.subject, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_PROVINCIAL_BILL_VOTE") {
+      const preview = castProvincialBillVote(jsonClone(state), state.playerPoliticianId, command.billId, command.choice);
+      if (preview.error) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = castProvincialBillVote(state, state.playerPoliticianId, command.billId, command.choice);
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "SEEK_PROVINCIAL_LEADERSHIP") {
+      const preview = seekProvincialLeadership(
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.provinceId,
+        command.role,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = seekProvincialLeadership(
+        state,
+        state.playerPoliticianId,
+        command.provinceId,
+        command.role,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
     if (command.type === "CHANGE_FACTION") {
       const preview = changeFaction(
         jsonClone(state),
@@ -1451,10 +1521,34 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       if (!pending || pending.code !== "PRESIDENTIAL_ASSUMPTION_DUE") {
         return fail("DOMAIN_RESOLUTION_REQUIRED", "no president-elect assumption block");
       }
-      return fail(
-        "PRESIDENT_ELECT_UNABLE_TO_ASSUME",
-        "constitution does not define a substitute president-elect",
-      );
+      const electId = state.presidential.certifiedPresidentElectId;
+      const elect = electId ? state.politicians[electId] : null;
+      const useUnableResolution = !elect?.alive || elect.retired;
+      const preview = useUnableResolution
+        ? resolveUnablePresidentElect(jsonClone(state), world, {
+            scheduledEventId: pending.scheduledEventId,
+            commandId: "CMD000000",
+          })
+        : applyPresidentialAssumption(jsonClone(state), world, {
+            date: state.currentDate,
+            scheduledEventId: pending.scheduledEventId,
+            commandId: "CMD000000",
+          });
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = useUnableResolution
+        ? resolveUnablePresidentElect(state, world, {
+            scheduledEventId: pending.scheduledEventId,
+            commandId,
+          })
+        : applyPresidentialAssumption(state, world, {
+            date: state.currentDate,
+            scheduledEventId: pending.scheduledEventId,
+            commandId,
+          });
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      pending.resolutionStatus = "resolved";
+      return { ok: true, commandId, events: out.events, interrupt: pending };
     }
 
     if (command.type === "DEV_CREATE_POLL") {
@@ -1988,6 +2082,46 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
+    if (command.type === "FILE_PROVINCIAL_ASSEMBLY_CANDIDACY") {
+      const preview = fileProvincialAssemblyCandidacy(
+        world,
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.electionId,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = fileProvincialAssemblyCandidacy(
+        world,
+        state,
+        state.playerPoliticianId,
+        command.electionId,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DECLINE_PROVINCIAL_ASSEMBLY_CANDIDACY") {
+      const preview = declineProvincialAssemblyCandidacy(
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.electionId,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = declineProvincialAssemblyCandidacy(
+        state,
+        state.playerPoliticianId,
+        command.electionId,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
     if (command.type === "GOVERNOR_SET_PRIORITY") {
       const args = {
         actorId: state.playerPoliticianId,
@@ -2042,6 +2176,33 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       if ("error" in preview) return fail(preview.error.code, preview.error.message);
       const commandId = nextCommandId();
       const out = respondProvincialPressure(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (
+      command.type === "GOVERNOR_SIGN_PROVINCIAL_BILL" ||
+      command.type === "GOVERNOR_VETO_PROVINCIAL_BILL"
+    ) {
+      const disposition = command.type === "GOVERNOR_SIGN_PROVINCIAL_BILL" ? "sign" : "veto";
+      const preview = governorProvincialBillDisposition(
+        world,
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.billId,
+        disposition,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = governorProvincialBillDisposition(
+        world,
+        state,
+        state.playerPoliticianId,
+        command.billId,
+        disposition,
+        commandId,
+      );
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
@@ -2225,6 +2386,96 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       );
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "DECLARE_CAUCUS_LEADERSHIP_CANDIDACY") {
+      const preview = declareCaucusLeadershipCandidacy(
+        world,
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.contestId,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = declareCaucusLeadershipCandidacy(
+        world,
+        state,
+        state.playerPoliticianId,
+        command.contestId,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "SET_CAUCUS_BILL_POSITION") {
+      const preview = setCaucusBillPosition(
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.billId,
+        command.stance,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = setCaucusBillPosition(
+        state,
+        state.playerPoliticianId,
+        command.billId,
+        command.stance,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "PROPOSE_CONSTITUTIONAL_AMENDMENT") {
+      const preview = proposeConstitutionalAmendment(
+        world,
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.ruleId,
+        command.proposedValue,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = proposeConstitutionalAmendment(
+        world,
+        state,
+        state.playerPoliticianId,
+        command.ruleId,
+        command.proposedValue,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAST_CONSTITUTIONAL_AMENDMENT_VOTE") {
+      const commandId = nextCommandId();
+      const out = castConstitutionalAssemblyVote(
+        world,
+        state,
+        state.playerPoliticianId,
+        command.amendmentId,
+        command.choice,
+      );
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
+    }
+
+    if (command.type === "CAST_CONSTITUTIONAL_RATIFICATION_VOTE") {
+      const commandId = nextCommandId();
+      const out = castConstitutionalRatificationVote(
+        state,
+        state.playerPoliticianId,
+        command.amendmentId,
+        command.choice,
+      );
+      if (out.error) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: [], interrupt: null };
     }
 
     if (command.type === "APPOINT_MINISTER") {

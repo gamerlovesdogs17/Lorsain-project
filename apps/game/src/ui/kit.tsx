@@ -288,7 +288,7 @@ export type PolicyChoiceOption = {
   current?: boolean;
 };
 
-/** Compact categorical policy chooser — title, current, LOW/MOD/HIGH-style options. */
+/** Compact categorical policy chooser for current law and named legal alternatives. */
 export function PolicyChoiceGroup(props: {
   title: string;
   currentLabel: string;

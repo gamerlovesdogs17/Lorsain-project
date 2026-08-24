@@ -1,6 +1,7 @@
 import { addMonths, compareIsoDate, formatIsoDate, parseIsoDate, type IsoDate } from "../calendar.js";
 import { getAgentProfile, ageOnDate } from "../agents/profile.js";
 import { activeTermsForPolitician, occupyingTerms, officesOfKind } from "../offices.js";
+import { recruitFederalAssemblyClass } from "../provinces/assemblies.js";
 import { pushHistory } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import { emptyIdeology } from "../agents/profile.js";
@@ -177,8 +178,8 @@ function candidateQuality(state: SimState, world: KernelWorld, politicianId: str
   );
 }
 
-function localFit(world: KernelWorld, politicianId: string, constituencyId: string): number {
-  const home = world.politicianHomeProvince[politicianId];
+function localFit(state: SimState, world: KernelWorld, politicianId: string, constituencyId: string): number {
+  const home = state.politicians[politicianId]?.homeProvinceId ?? world.politicianHomeProvince[politicianId];
   if (!home) return 0;
   return (
     world.constituencyElectorate[constituencyId]?.provincePopulationShares.find(
@@ -222,6 +223,48 @@ function eligibleNpcChallengers(
       ),
     )
     .sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Count the people who will actually be available to the national filing
+ * allocation. Raw living-politician totals are misleading because sitting
+ * Presidents, Governors and justices are incompatible, while incumbents who
+ * have decided not to run are intentionally absent from the challenger pool.
+ */
+function availableAssemblyCandidateIds(
+  state: SimState,
+  world: KernelWorld,
+  election: ElectionState,
+): Set<string> {
+  const constituencyIds = Object.keys(world.constituencyElectorate);
+  const officeByConstituency = assemblyOfficeByConstituency(world);
+  const incumbentById = new Map<string, string>();
+  for (const constituencyId of constituencyIds) {
+    const officeId = officeByConstituency.get(constituencyId);
+    if (!officeId) continue;
+    for (const term of occupyingTerms(state, officeId)) {
+      incumbentById.set(term.holderId, constituencyId);
+    }
+  }
+
+  const available = new Set<string>();
+  for (const candidacy of Object.values(ensureAssemblyElectionCycle(state, world, election).candidacies)) {
+    if (
+      candidacy.status === "filed" &&
+      !assemblyCandidateEligibilityError(state, world, candidacy.politicianId, candidacy.constituencyId)
+    ) {
+      available.add(candidacy.politicianId);
+    }
+  }
+  for (const [politicianId, constituencyId] of incumbentById) {
+    if (politicianId === state.playerPoliticianId) continue;
+    if (assemblyCandidateEligibilityError(state, world, politicianId, constituencyId)) continue;
+    if (npcIncumbentRuns(state, world, politicianId, election.date)) available.add(politicianId);
+  }
+  for (const politicianId of eligibleNpcChallengers(state, world, new Set(incumbentById.keys()))) {
+    available.add(politicianId);
+  }
+  return available;
 }
 
 type Allocation = {
@@ -314,7 +357,7 @@ export function allocateAssemblyCandidateFields(
       localFitByConstituency: new Map(
         constituencyIds.map((constituencyId) => [
           constituencyId,
-          localFit(world, politicianId, constituencyId),
+          localFit(state, world, politicianId, constituencyId),
         ]),
       ),
     });
@@ -480,6 +523,20 @@ export function openAssemblyFilingIfDue(
   }
   cycle.filingStatus = "open";
   election.status = "field_open";
+  // Recruit before the public field is allocated. Every constituency should
+  // have at least one more filed candidate than seats, and the count must be
+  // based on actually eligible/running people rather than all living figures.
+  const fieldTarget = Object.values(world.constituencyElectorate).reduce(
+    (sum, row) => sum + row.seats + 1,
+    0,
+  );
+  const availableBeforeRecruitment = availableAssemblyCandidateIds(state, world, election).size;
+  const promoted = recruitFederalAssemblyClass(
+    world,
+    state,
+    election.id,
+    Math.max(0, fieldTarget - availableBeforeRecruitment),
+  );
   const err = rebuildAssemblyAllocation(state, world, election);
   if (err) throw new Error(`${err.code}: ${err.message}`);
   return [
@@ -494,6 +551,7 @@ export function openAssemblyFilingIfDue(
         electionId: election.id,
         electionDate: election.date,
         filingDeadlineDate: cycle.filingDeadlineDate,
+        recruitedFromProvincialPolitics: promoted.length,
       },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,

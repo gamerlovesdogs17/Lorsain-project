@@ -31,15 +31,20 @@ function provision(
   high: readonly [string, string, string],
   fiscal: readonly [number | null, number | null, number | null] = [null, null, null],
 ): LegislativeProvisionDefinition {
+  const optionId = (label: string): string =>
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
   return {
     id,
     issueId,
     category,
     currentLawLabel,
     options: [
-      { id: "low", label: low[0], change: low[1], billTitle: low[2], direction: -1, magnitude: 0.65, fiscalImpact: fiscal[0] },
-      { id: "current", label: middle[0], change: middle[1], billTitle: middle[2], direction: 0, magnitude: 0.2, fiscalImpact: fiscal[1] },
-      { id: "high", label: high[0], change: high[1], billTitle: high[2], direction: 1, magnitude: 0.65, fiscalImpact: fiscal[2] },
+      { id: optionId(low[0]), label: low[0], change: low[1], billTitle: low[2], direction: -1, magnitude: 0.65, fiscalImpact: fiscal[0] },
+      { id: optionId(middle[0]), label: middle[0], change: middle[1], billTitle: middle[2], direction: 0, magnitude: 0.2, fiscalImpact: fiscal[1] },
+      { id: optionId(high[0]), label: high[0], change: high[1], billTitle: high[2], direction: 1, magnitude: 0.65, fiscalImpact: fiscal[2] },
     ],
   };
 }
@@ -79,9 +84,9 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
     ["Keep five-year route", "Retains the present five-year route and civic requirements.", "Residency Law Continuity Bill"],
     ["Shorter residency route", "Reduces the qualifying period to three years for applicants meeting work and civic requirements.", "Residency Access Bill"], [-0.03, 0, 0.04]),
   provision("PROV_POLICE_COMPLAINTS", "ISS_POLICING", "Police misconduct review", "Provincial bodies investigate complaints under national minimum standards",
-    ["Internal review", "Returns ordinary misconduct investigations to police internal-affairs units.", "Police Discipline Bill"],
+    ["Independent review", "Creates an independent national inspector with power to reopen serious cases.", "Independent Police Review Bill"],
     ["Keep provincial review", "Retains provincial review bodies and national minimum standards.", "Police Review Continuity Bill"],
-    ["Independent review", "Creates an independent national inspector with power to reopen serious cases.", "Independent Police Review Bill"], [-0.04, 0, 0.09]),
+    ["Internal review", "Returns ordinary misconduct investigations to police internal-affairs units.", "Police Discipline Bill"], [0.09, 0, -0.04]),
   provision("PROV_REVENUE_DISCRETION", "ISS_DECENT", "Provincial revenue authority", "Provinces may levy a limited property surcharge",
     ["National uniformity", "Repeals the provincial property surcharge and replaces it with a national transfer formula.", "National Revenue Uniformity Bill"],
     ["Keep limited surcharge", "Retains the present provincial property-surcharge authority.", "Provincial Revenue Continuity Bill"],
@@ -106,6 +111,66 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
     ["Reduce readiness fund", "Reduces the equipment-readiness appropriation for the next two fiscal years.", "Defense Savings Bill"],
     ["Keep current funding", "Retains the current equipment-readiness appropriation.", "Readiness Funding Continuity Bill"],
     ["Increase readiness fund", "Adds a four-year appropriation for maintenance, reserves and equipment replacement.", "Defense Readiness Investment Bill"], [-0.16, 0, 0.24]),
+  provision("PROV_PRIMARY_CARE", "ISS_WELFARE", "Primary care coverage", "National insurance covers essential primary care with limited copayments",
+    ["Higher copayments", "Raises copayments for routine primary-care visits while preserving exemptions.", "Primary Care Contributions Bill"],
+    ["Keep current coverage", "Retains existing primary-care benefits and copayments.", "Primary Care Continuity Bill"],
+    ["No routine copayment", "Removes routine primary-care copayments and expands rural clinic grants.", "Universal Primary Care Bill"], [-0.12, 0, 0.24]),
+  provision("PROV_TUITION_SUPPORT", "ISS_WELFARE", "Public university tuition", "Students pay capped tuition with income-tested grants",
+    ["Higher tuition cap", "Raises the tuition cap and narrows income-tested grants.", "University Finance Bill"],
+    ["Keep capped tuition", "Retains the current tuition cap and grant rules.", "Higher Education Continuity Bill"],
+    ["Tuition-free first degree", "Funds a tuition-free first undergraduate degree at public universities.", "Public University Access Bill"], [-0.15, 0, 0.28]),
+  provision("PROV_INCOME_TAX", "ISS_WELFARE", "Top income-tax rate", "A progressive national schedule applies to personal income",
+    ["Lower top rate", "Reduces the top personal income-tax rate by four points.", "Income Tax Reduction Bill"],
+    ["Keep current schedule", "Retains the current progressive income-tax schedule.", "Income Tax Continuity Bill"],
+    ["Higher top rate", "Raises the top rate on the highest income band by four points.", "High Income Contribution Bill"], [-0.2, 0, 0.18]),
+  provision("PROV_UNEMPLOYMENT_INSURANCE", "ISS_WELFARE", "Unemployment insurance duration", "Benefits are earnings-related for a fixed insured period",
+    ["Shorter insured period", "Shortens the standard insured benefit period by twelve weeks.", "Employment Insurance Targeting Bill"],
+    ["Keep current duration", "Retains the present insured benefit period.", "Employment Insurance Continuity Bill"],
+    ["Extended downturn benefit", "Adds twelve weeks of benefits when provincial unemployment rises sharply.", "Employment Security Bill"], [-0.11, 0, 0.2]),
+  provision("PROV_UNION_RECOGNITION", "ISS_LABOR", "Union recognition", "Recognition normally follows a supervised workplace ballot",
+    ["Voluntary recognition", "Allows an employer to recognize a union without a statutory process.", "Voluntary Recognition Bill"],
+    ["Mandatory ballot", "Retains the supervised workplace ballot for recognition.", "Union Ballot Continuity Bill"],
+    ["Majority sign-up", "Requires recognition when a verified majority signs union cards.", "Majority Sign-Up Bill"], [null, null, 0.03]),
+  provision("PROV_STRIKE_NOTICE", "ISS_LABOR", "Strike notice", "Unions must give seven days' notice before protected action",
+    ["Fourteen-day notice", "Requires fourteen days' notice before protected industrial action.", "Industrial Action Notice Bill"],
+    ["Keep seven days", "Retains the seven-day notice requirement.", "Strike Notice Continuity Bill"],
+    ["Three-day notice", "Reduces the notice period for protected action to three days.", "Protected Action Bill"], [-0.02, 0, 0.03]),
+  provision("PROV_PUBLIC_HOUSING", "ISS_HOUSING", "Public housing fund", "The national fund co-finances provincial social housing",
+    ["Smaller capital fund", "Reduces new national public-housing commitments for three years.", "Housing Fund Restraint Bill"],
+    ["Keep current fund", "Retains current public-housing capital grants.", "Public Housing Continuity Bill"],
+    ["Expand capital fund", "Funds a five-year expansion of provincial social-housing construction.", "Public Housing Investment Bill"], [-0.1, 0, 0.3]),
+  provision("PROV_TRANSIT_ZONING", "ISS_HOUSING", "Transit-oriented development grants", "Cities may seek grants for housing near major transit",
+    ["End density grants", "Ends national grants tied to housing density near transit stations.", "Local Planning Bill"],
+    ["Keep voluntary grants", "Retains voluntary grants for transit-oriented housing plans.", "Transit Housing Continuity Bill"],
+    ["Priority density grants", "Prioritizes infrastructure grants for cities permitting more homes near transit.", "Transit-Oriented Housing Bill"], [-0.04, 0, 0.16]),
+  provision("PROV_INFRASTRUCTURE_BANK", "ISS_OWNERSHIP", "National infrastructure finance", "Large projects use ordinary appropriations and private lending",
+    ["Private project finance", "Requires qualifying infrastructure projects to seek private finance first.", "Infrastructure Finance Bill"],
+    ["Keep current finance", "Retains ordinary appropriations and project lending.", "Infrastructure Finance Continuity Bill"],
+    ["Public infrastructure bank", "Creates a public bank for long-term transport, water and energy loans.", "National Infrastructure Bank Bill"], [-0.08, 0, 0.22]),
+  provision("PROV_FARM_STABILIZATION", "ISS_TRADE", "Farm income stabilization", "Emergency farm support requires a declared market disruption",
+    ["Market insurance only", "Replaces emergency price support with privately delivered crop insurance.", "Agricultural Risk Bill"],
+    ["Keep emergency support", "Retains support after a declared market disruption.", "Farm Support Continuity Bill"],
+    ["Stabilization payments", "Creates temporary payments when designated farm prices fall below a published benchmark.", "Farm Income Stabilization Bill"], [-0.08, 0, 0.18]),
+  provision("PROV_CARBON_PRICE", "ISS_CLIMATE", "Industrial carbon price", "Large emitters pay a nationally administered carbon levy",
+    ["Repeal industrial levy", "Repeals the carbon levy for large industrial emitters.", "Industrial Energy Cost Bill"],
+    ["Keep current levy", "Retains the current levy and rebate schedule.", "Carbon Pricing Continuity Bill"],
+    ["Raise and rebate", "Raises the levy on large emitters and returns part of the revenue to households.", "Carbon Levy and Rebate Bill"], [-0.1, 0, 0.16]),
+  provision("PROV_SURVEILLANCE_WARRANT", "ISS_LIBERTY", "Digital surveillance warrants", "Police need a judicial warrant to obtain private communications",
+    ["Emergency access window", "Allows temporary access before a warrant in narrowly defined emergencies.", "Emergency Communications Access Bill"],
+    ["Keep prior warrant", "Retains the prior judicial-warrant requirement.", "Communications Privacy Continuity Bill"],
+    ["Stricter warrant test", "Requires a heightened necessity finding for bulk or location surveillance.", "Digital Privacy Safeguards Bill"], [null, null, 0.03]),
+  provision("PROV_SENTENCING", "ISS_POLICING", "Serious repeat-offense sentencing", "Judges apply statutory ranges with stated reasons for departure",
+    ["Expanded rehabilitation", "Expands treatment and supervised-release alternatives within statutory ranges.", "Sentencing Rehabilitation Bill"],
+    ["Keep judicial ranges", "Retains current sentencing ranges and reasoned departures.", "Sentencing Continuity Bill"],
+    ["Mandatory minimum term", "Sets a minimum custodial term for defined serious repeat offenses.", "Repeat Offender Sentencing Bill"], [0.08, 0, -0.06]),
+  provision("PROV_ELECTION_ADMIN", "ISS_REFORM", "National election administration", "A national commission sets standards while provinces staff polling",
+    ["Province-run standards", "Returns polling standards and administration to provincial election offices.", "Provincial Elections Administration Bill"],
+    ["Keep shared administration", "Retains national standards with provincial staffing.", "Election Administration Continuity Bill"],
+    ["Independent national service", "Creates an independent national service to administer federal polling directly.", "Independent Elections Service Bill"], [-0.04, 0, 0.1]),
+  provision("PROV_SCHOOL_MEALS", "ISS_WELFARE", "School meal eligibility", "Subsidized meals are available through an income test",
+    ["Narrow income test", "Limits subsidized school meals to the lowest income band.", "School Meals Targeting Bill"],
+    ["Keep income test", "Retains current school-meal eligibility.", "School Meals Continuity Bill"],
+    ["Universal school meals", "Funds a meal for every pupil in participating public schools.", "Universal School Meals Bill"], [-0.07, 0, 0.15]),
 ] as const;
 
 export function legislativeProvision(id: string): LegislativeProvisionDefinition | null {
@@ -116,7 +181,26 @@ export function legislativeProvisionOption(
   provisionId: string,
   optionId: string,
 ): LegislativeProvisionOption | null {
-  return legislativeProvision(provisionId)?.options.find((option) => option.id === optionId) ?? null;
+  const definition = legislativeProvision(provisionId);
+  if (!definition) return null;
+  const direct = definition.options.find((option) => option.id === optionId);
+  if (direct) return direct;
+  // Schema-13 development saves may contain the former universal option IDs.
+  // Read them as aliases, but every newly persisted choice uses its legal name.
+  const legacyDirection = optionId === "low" ? -1 : optionId === "current" ? 0 : optionId === "high" ? 1 : null;
+  return legacyDirection == null
+    ? null
+    : definition.options.find((option) => option.direction === legacyDirection) ?? null;
+}
+
+export function defaultProvisionOptionId(provisionId: string): string {
+  const definition = legislativeProvision(provisionId);
+  return (
+    definition?.options.find((option) => option.direction > 0)?.id ??
+    definition?.options.find((option) => option.direction !== 0)?.id ??
+    definition?.options[0]?.id ??
+    ""
+  );
 }
 
 export function policyItemForProvision(provisionId: string, optionId: string): PolicyItem | null {
@@ -126,7 +210,7 @@ export function policyItemForProvision(provisionId: string, optionId: string): P
   return {
     issueId: definition.issueId,
     provisionId,
-    optionId,
+    optionId: option.id,
     direction: option.direction,
     magnitude: option.magnitude,
     fiscalImpact: option.fiscalImpact,
@@ -141,7 +225,7 @@ export function provisionForPolicyItem(item: PolicyItem): LegislativeProvisionDe
 export function optionForPolicyItem(item: PolicyItem): LegislativeProvisionOption | null {
   const definition = provisionForPolicyItem(item);
   if (!definition) return null;
-  if (item.optionId) return definition.options.find((option) => option.id === item.optionId) ?? null;
+  if (item.optionId) return legislativeProvisionOption(definition.id, item.optionId);
   const direction = item.direction < 0 ? -1 : item.direction > 0 ? 1 : 0;
   return definition.options.find((option) => option.direction === direction) ?? definition.options[1] ?? null;
 }
@@ -154,7 +238,7 @@ export function currentProvisionOption(state: SimState, provisionId: string): Le
     const item = law.policyItems.find((candidate) => candidate.provisionId === provisionId);
     if (item) return optionForPolicyItem(item);
   }
-  return legislativeProvision(provisionId)?.options.find((option) => option.id === "current") ?? null;
+  return legislativeProvision(provisionId)?.options.find((option) => option.direction === 0) ?? null;
 }
 
 export function estimatedProvisionEffects(item: PolicyItem): Partial<NationalEconomyIndices> {

@@ -92,7 +92,11 @@ export function scheduleAssumptionIfNeeded(
   electionId: string,
   commandId: string | null,
 ): void {
-  const due = presidentialAssumptionDate(electionDate, world.presidentialCalendar);
+  const election = state.elections[electionId];
+  const due =
+    typeof election?.metadata.assumptionDate === "string"
+      ? election.metadata.assumptionDate
+      : presidentialAssumptionDate(electionDate, world.presidentialCalendar);
   const exists = state.scheduler.events.some(
     (e) =>
       e.eventType === "PRESIDENTIAL_ASSUMPTION_DUE" &&

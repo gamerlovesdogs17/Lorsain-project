@@ -72,66 +72,20 @@ export function chooseLegislativeVote(
   const institutionalism = profile?.traits.institutionalism ?? 0.5;
   const pragmatism = profile?.traits.pragmatism ?? 0.5;
   const district = constituencyFit(world, state, politicianId, bill);
-  const rel = 0;
   const orgPressure = organizationPressureForBill(world, state, politicianId, bill.id);
   const partyPush = party === "support" ? 1 : party === "oppose" ? -1 : 0;
   const factionPush = faction === "support" ? 1 : faction === "oppose" ? -1 : 0;
-  const options: DecisionOption[] = [
-    {
-      optionId: "YES",
-      actionType: "CAST_LEGISLATIVE_VOTE",
-      targetIds: [bill.sponsorId],
-      uncertainty: 0.12,
-      signals: emptySignals({
-        ideologicalAlignment: fit,
-        partyAlignment: partyPush * partyLoyalty,
-        factionAlignment: factionPush * factionLoyalty,
-        pragmaticEffectiveness: district * 0.5 + pragmatism * 0.1,
-        institutionalAlignment: institutionalism * 0.2,
-        relationshipConsequence: rel + orgPressure,
-        careerBenefit: 0.15,
-        risk: 0.1,
-      }),
-      goalImpacts: goalImpacts(state, politicianId, 0.3),
-      metadata: { billId: bill.id, choice: "yes" },
-    },
-    {
-      optionId: "NO",
-      actionType: "CAST_LEGISLATIVE_VOTE",
-      targetIds: [bill.sponsorId],
-      uncertainty: 0.12,
-      signals: emptySignals({
-        ideologicalAlignment: -fit,
-        partyAlignment: -partyPush * partyLoyalty,
-        factionAlignment: -factionPush * factionLoyalty,
-        pragmaticEffectiveness: -district * 0.5 + pragmatism * 0.1,
-        institutionalAlignment: institutionalism * 0.15,
-        relationshipConsequence: -orgPressure,
-        careerBenefit: 0.1,
-        risk: 0.12,
-      }),
-      goalImpacts: goalImpacts(state, politicianId, 0.15),
-      metadata: { billId: bill.id, choice: "no" },
-    },
-    {
-      optionId: "ABSTAIN",
-      actionType: "CAST_LEGISLATIVE_VOTE",
-      targetIds: [],
-      uncertainty: 0.2,
-      signals: emptySignals({
-        risk: 0.05,
-        institutionalAlignment: 0.05,
-        pragmaticEffectiveness: 0.08,
-        careerBenefit: 0.02,
-      }),
-      goalImpacts: {},
-      metadata: { billId: bill.id, choice: "abstain" },
-    },
-  ];
-  const ctx = buildDecisionActorContext(world, state, politicianId, [bill.sponsorId]);
-  const chosen = chooseDecision(options, ctx, rng).chosen;
-  if (chosen?.optionId === "YES") return "yes";
-  if (chosen?.optionId === "NO") return "no";
+  const score =
+    fit * 0.42 +
+    partyPush * partyLoyalty * 0.28 +
+    factionPush * factionLoyalty * 0.18 +
+    district * 0.16 +
+    orgPressure * 0.75 +
+    (pragmatism - 0.5) * 0.06 +
+    (institutionalism - 0.5) * 0.04 +
+    (rng.float01("legislature") - 0.5) * 0.22;
+  if (score > 0.045) return "yes";
+  if (score < -0.045) return "no";
   return "abstain";
 }
 
@@ -159,34 +113,8 @@ export function chooseIntroduce(
   const v = profile.ideology[axis] ?? 0;
   const direction = v >= 0 ? 1 : -1;
   const magnitude = Math.min(1, 0.35 + Math.abs(v) * 0.5);
-  const options: DecisionOption[] = [
-    {
-      optionId: "INTRODUCE",
-      actionType: "INTRODUCE_BILL",
-      targetIds: [],
-      uncertainty: 0.2,
-      signals: emptySignals({
-        ideologicalAlignment: Math.abs(v),
-        careerBenefit: 0.35 + profile.traits.ambition * 0.3,
-        pragmaticEffectiveness: 0.2 + profile.skills.legislation * 0.3,
-        risk: 0.15,
-      }),
-      goalImpacts: goalImpacts(state, politicianId, 0.4),
-      metadata: { issueId },
-    },
-    {
-      optionId: "WAIT",
-      actionType: "WAIT",
-      targetIds: [],
-      uncertainty: 0.08,
-      signals: emptySignals({ risk: 0.04, careerBenefit: 0.05 }),
-      goalImpacts: {},
-      metadata: {},
-    },
-  ];
-  const ctx = buildDecisionActorContext(world, state, politicianId, []);
-  const chosen = chooseDecision(options, ctx, rng).chosen;
-  if (chosen?.optionId !== "INTRODUCE") return null;
+  const propensity = 0.12 + Math.abs(v) * 0.26 + profile.traits.ambition * 0.2 + profile.skills.legislation * 0.18;
+  if (rng.float01("legislature") > propensity) return null;
   return { issueId, direction, magnitude, fiscalImpact: null };
 }
 

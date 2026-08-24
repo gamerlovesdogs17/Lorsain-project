@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   PROVINCIAL_INVESTMENTS,
+  PROVINCIAL_BILL_SUBJECTS,
   PROVINCIAL_PRIORITIES,
   caseTitle,
   collectPlayerActionableDecisions,
@@ -25,6 +26,7 @@ import {
 } from "./presentation.js";
 import {
   BriefStrip,
+  DataTable,
   EmptyState,
   EntityRow,
   MetricStrip,
@@ -60,9 +62,13 @@ export function OfficePage(props: {
   const economy = provinceId ? props.snap.economyRuntime.provinces[provinceId] : null;
   const [priority, setPriority] = useState(province?.administrativePriority ?? "transport");
   const [investment, setInvestment] = useState(province?.investmentEmphasis ?? "transport");
+  const [provincialBillSubject, setProvincialBillSubject] = useState<(typeof PROVINCIAL_BILL_SUBJECTS)[number]>("housing_delivery");
   const [federalIssue, setFederalIssue] = useState(props.world.issueIds[0] ?? "ISS_HOUSING");
   const [limitedIssue, setLimitedIssue] = useState(props.world.issueIds[0] ?? "ISS_HOUSING");
   const [deferredBills, setDeferredBills] = useState<Record<string, true>>({});
+  const [selectedProvincialVoteId, setSelectedProvincialVoteId] = useState<string | null>(null);
+  const [selectedProvincialMemberId, setSelectedProvincialMemberId] = useState<string | null>(null);
+  const [provincialRollCallFilter, setProvincialRollCallFilter] = useState<"all" | "yes" | "no" | "abstain">("all");
   const provinceName = provinceId
     ? props.catalog.places.get(provinceId)?.name ?? "Unknown province"
     : null;
@@ -138,6 +144,47 @@ export function OfficePage(props: {
   const pendingCases = Object.values(props.snap.constitutionalRuntime.courtCases)
     .filter((c) => c.status === "pending")
     .sort((a, b) => (a.id < b.id ? -1 : 1));
+  const provincialAssembly = provinceId ? props.snap.provincialRuntime.assemblies[provinceId] : null;
+  const provincialBills = provinceId
+    ? Object.values(props.snap.provincialRuntime.bills)
+        .filter((bill) => bill.provinceId === provinceId)
+        .sort((a, b) => b.introducedDate.localeCompare(a.introducedDate) || b.id.localeCompare(a.id))
+    : [];
+  const provincialName = (id: string) =>
+    props.snap.provincialRuntime.legislators[id]?.displayName ?? politicianDisplayName(props.catalog, id);
+  const renderProvincialRollCall = (voteId: string | null) => {
+    const vote = voteId ? props.snap.provincialRuntime.votes[voteId] : null;
+    if (!vote) return null;
+    const rows = Object.entries(vote.votes)
+      .filter(([, choice]) => provincialRollCallFilter === "all" || choice === provincialRollCallFilter)
+      .sort((a, b) => provincialName(a[0]).localeCompare(provincialName(b[0])));
+    const breakdown = new Map<string, { yes: number; no: number; abstain: number }>();
+    for (const [memberId, choice] of Object.entries(vote.votes)) {
+      const partyId = props.snap.provincialRuntime.legislators[memberId]?.partyId ?? "none";
+      const count = breakdown.get(partyId) ?? { yes: 0, no: 0, abstain: 0 };
+      count[choice] += 1;
+      breakdown.set(partyId, count);
+    }
+    return <div className="roll-call-panel">
+      <SectionDivider title="Provincial Roll Call" hint={`${vote.yes} Aye · ${vote.no} Nay · ${vote.abstain} Abstain`} />
+      <div className="roll-call-breakdown">
+        {[...breakdown.entries()]
+          .sort((a, b) => (b[1].yes + b[1].no + b[1].abstain) - (a[1].yes + a[1].no + a[1].abstain))
+          .map(([partyId, count]) => <span key={partyId}><strong>{partyDisplayName(props.world, partyId === "none" ? null : partyId, props.snap)}</strong> {count.yes} Aye · {count.no} Nay · {count.abstain} Abstain</span>)}
+      </div>
+      <div className="map-scale-switch" aria-label="Filter provincial roll call">
+        {(["all", "yes", "no", "abstain"] as const).map((choice) => <button type="button" key={choice} className={provincialRollCallFilter === choice ? "active" : ""} onClick={() => setProvincialRollCallFilter(choice)}>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : choice[0]!.toUpperCase() + choice.slice(1)}</button>)}
+      </div>
+      <div className="roll-call-scroll">
+        <DataTable dense headers={["Member", "Party", "Caucus", "Vote"]}>
+          {rows.map(([memberId, choice]) => {
+            const member = props.snap.provincialRuntime.legislators[memberId];
+            return <tr key={memberId}><td><button type="button" className="link-button" onClick={() => setSelectedProvincialMemberId(memberId)}>{provincialName(memberId)}</button></td><td>{partyDisplayName(props.world, member?.partyId ?? null, props.snap)}</td><td>{member?.factionId ? props.world.factionDefinitions[member.factionId]?.name ?? "—" : "—"}</td><td>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : "Abstain"}</td></tr>;
+          })}
+        </DataTable>
+      </div>
+    </div>;
+  };
 
   if (provinceId && province && economy) {
     const governorId = currentGovernorId(props.world, props.snap, provinceId);
@@ -175,6 +222,69 @@ export function OfficePage(props: {
           }
           main={
             <>
+              <SectionDivider
+                title="Provincial Assembly"
+                hint={provincialAssembly ? `${provincialAssembly.seatCount} seats · majority ${Math.floor(provincialAssembly.seatCount / 2) + 1}` : "No chamber record"}
+              />
+              {provincialAssembly ? (
+                <>
+                  <div className="provincial-composition" aria-label="Provincial Assembly party composition">
+                    {Object.entries(provincialAssembly.partySeats)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([partyId, seats]) => (
+                        <div key={partyId} className="provincial-party-seat">
+                          <span className="party-dot" style={{ background: props.world.partyDefinitions[partyId]?.color ?? "#8b8b83" }} />
+                          <strong>{partyDisplayName(props.world, partyId, props.snap)}</strong>
+                          <span>{seats}</span>
+                        </div>
+                      ))}
+                  </div>
+                  <p className="muted">
+                    Presiding officer: {provincialAssembly.presidingOfficerId ? provincialName(provincialAssembly.presidingOfficerId) : "Vacant"} · next election {provincialAssembly.nextElectionDate}
+                  </p>
+                  <DataTable dense headers={["Party", "Floor leader", "Whip"]}>
+                    {Object.values(provincialAssembly.partyLeadership ?? {})
+                      .sort((a, b) => (provincialAssembly.partySeats[b.partyId] ?? 0) - (provincialAssembly.partySeats[a.partyId] ?? 0) || a.partyId.localeCompare(b.partyId))
+                      .map((leadership) => <tr key={leadership.partyId}>
+                        <td>{partyDisplayName(props.world, leadership.partyId, props.snap)}</td>
+                        <td>{leadership.floorLeaderId ? <button type="button" className="link-button" onClick={() => setSelectedProvincialMemberId(leadership.floorLeaderId)}>{provincialName(leadership.floorLeaderId)}</button> : "Vacant"}</td>
+                        <td>{leadership.whipId ? <button type="button" className="link-button" onClick={() => setSelectedProvincialMemberId(leadership.whipId)}>{provincialName(leadership.whipId)}</button> : "Vacant"}</td>
+                      </tr>)}
+                  </DataTable>
+                </>
+              ) : <EmptyState>No Provincial Assembly is available.</EmptyState>}
+
+              <SectionCard title="Governor's legislative program">
+                <p className="muted">Place one focused measure before the chamber. The Assembly votes next month; a veto may face a two-thirds override.</p>
+                <div className="row">
+                  <label className="field-label">Policy area
+                    <select value={provincialBillSubject} onChange={(event) => setProvincialBillSubject(event.target.value as typeof provincialBillSubject)}>
+                      {PROVINCIAL_BILL_SUBJECTS.map((subject) => <option key={subject} value={subject}>{title(subject)}</option>)}
+                    </select>
+                  </label>
+                  <button type="button" className="btn" onClick={() => execute({ type: "GOVERNOR_PROPOSE_PROVINCIAL_BILL", provinceId, subject: provincialBillSubject })}>
+                    Send to Assembly
+                  </button>
+                </div>
+              </SectionCard>
+
+              <SectionDivider title="Provincial legislation" hint={`${provincialBills.length} public record${provincialBills.length === 1 ? "" : "s"}`} />
+              {provincialBills.length === 0 ? <EmptyState>No provincial bills have been introduced.</EmptyState> : (
+                <DataTable dense headers={["Measure", "Sponsor", "Status", "Roll call", "Governor"]}>
+                  {provincialBills.slice(0, 12).map((bill) => {
+                    const vote = bill.voteId ? props.snap.provincialRuntime.votes[bill.voteId] : null;
+                    return <tr key={bill.id} className={selectedProvincialVoteId === vote?.id ? "selected" : undefined}>
+                      <td><strong>{bill.title}</strong><div className="muted">{bill.summary}</div></td>
+                      <td>{provincialName(bill.sponsorId)}</td>
+                      <td><StatusBadge tone={bill.status === "signed" || bill.status === "override_passed" ? "ok" : bill.status === "failed" || bill.status === "vetoed" || bill.status === "override_failed" ? "warn" : "idle"}>{title(bill.status)}</StatusBadge></td>
+                      <td>{vote ? <button type="button" className="link-button" onClick={() => setSelectedProvincialVoteId(vote.id)}>{vote.yes}–{vote.no}{vote.abstain ? ` · ${vote.abstain} abstain` : ""}</button> : "Pending"}</td>
+                      <td>{bill.status === "passed" ? <div className="row"><button type="button" className="btn compact" onClick={() => execute({ type: "GOVERNOR_SIGN_PROVINCIAL_BILL", billId: bill.id })}>Sign</button><button type="button" className="btn danger compact" onClick={() => execute({ type: "GOVERNOR_VETO_PROVINCIAL_BILL", billId: bill.id })}>Veto</button></div> : bill.governorDispositionDate ?? "—"}</td>
+                    </tr>;
+                  })}
+                </DataTable>
+              )}
+              {renderProvincialRollCall(selectedProvincialVoteId)}
+
               <SectionDivider title="Governor's agenda" hint="Each apply costs 1 action point" />
               <PolicyChoiceGroup
                 title="Administrative priority"
@@ -339,6 +449,18 @@ export function OfficePage(props: {
                   <span key={id}>{politicianDisplayName(props.catalog, id)}</span>
                 ))}
               </div>
+              {selectedProvincialMemberId && props.snap.provincialRuntime.legislators[selectedProvincialMemberId] ? (() => {
+                const member = props.snap.provincialRuntime.legislators[selectedProvincialMemberId]!;
+                const standing = member.standing >= 0.7 ? "Strong" : member.standing >= 0.5 ? "Established" : member.standing >= 0.35 ? "Developing" : "Limited";
+                return <>
+                  <SectionDivider title="Local politician" />
+                  <h3>{member.displayName}</h3>
+                  <p>{partyDisplayName(props.world, member.partyId, props.snap)}{member.factionId ? ` · ${props.world.factionDefinitions[member.factionId]?.name ?? "Caucus"}` : ""}</p>
+                  <p className="muted">Age {Number(props.snap.currentDate.slice(0, 4)) - member.birthYear} · local standing {standing}</p>
+                  <p>{member.description}</p>
+                  <p className="muted">Service {member.serviceStartDate ?? "not yet seated"}{member.serviceEndDate ? `–${member.serviceEndDate}` : "–present"}</p>
+                </>;
+              })() : null}
               <SectionDivider title="Election" />
               {election ? (
                 <>
@@ -355,6 +477,84 @@ export function OfficePage(props: {
               <p className="muted">Use Career → Opportunities for reelection or another race.</p>
             </>
           }
+        />
+      </div>
+    );
+  }
+
+  const provincialMember = props.snap.provincialRuntime.legislators[playerId];
+  if (provincialMember?.serviceStartDate && !provincialMember.serviceEndDate) {
+    const chamber = props.snap.provincialRuntime.assemblies[provincialMember.provinceId];
+    const chamberBills = Object.values(props.snap.provincialRuntime.bills)
+      .filter((bill) => bill.provinceId === provincialMember.provinceId)
+      .sort((a, b) => b.introducedDate.localeCompare(a.introducedDate));
+    const placeName = props.catalog.places.get(provincialMember.provinceId)?.name ?? "Province";
+    return (
+      <div className="office-page provincial-member-office">
+        <PageHeader kicker="Provincial Assembly" title={`${placeName} Assembly`} subtitle="Your chamber agenda, recorded votes, and route to higher office." />
+        <WorkLayout
+          header={<BriefStrip items={[
+            { label: "Role", value: chamber?.presidingOfficerId === playerId ? "Presiding officer" : "Provincial Assembly member" },
+            { label: "Party", value: partyDisplayName(props.world, provincialMember.partyId, props.snap) },
+            { label: "Chamber", value: chamber ? `${chamber.seatCount} seats` : "—" },
+            { label: "Next election", value: chamber?.nextElectionDate ?? "Not scheduled" },
+          ]} />}
+          main={<>
+            <SectionDivider title="Current agenda" hint="Your choice is never filled in automatically" />
+            {chamberBills.filter((bill) => bill.status === "introduced").length === 0 ? <EmptyState>No vote is presently open.</EmptyState> : null}
+            {chamberBills.filter((bill) => bill.status === "introduced").map((bill) => {
+              const key = `pending:bill:${bill.id}:${playerId}`;
+              const choice = props.snap.provincialRuntime.votes[key]?.votes[playerId];
+              return <div className="decision-row" key={bill.id}>
+                <div><strong>{bill.title}</strong><div className="muted">{bill.summary}</div></div>
+                {choice ? <StatusBadge>{title(choice)} recorded</StatusBadge> : <div className="row">
+                  <button type="button" className="btn" onClick={() => execute({ type: "CAST_PROVINCIAL_BILL_VOTE", billId: bill.id, choice: "yes" })}>Aye</button>
+                  <button type="button" className="btn secondary" onClick={() => execute({ type: "CAST_PROVINCIAL_BILL_VOTE", billId: bill.id, choice: "no" })}>Nay</button>
+                  <button type="button" className="btn quiet" onClick={() => execute({ type: "CAST_PROVINCIAL_BILL_VOTE", billId: bill.id, choice: "abstain" })}>Abstain</button>
+                </div>}
+              </div>;
+            })}
+            {Object.values(props.snap.provincialRuntime.constitutionalAmendments).filter((amendment) => amendment.status === "ratifying" && !amendment.provincialVoteIds[provincialMember.provinceId]).map((amendment) => {
+              const key = `pending:${amendment.id}:${provincialMember.provinceId}:${playerId}`;
+              const choice = props.snap.provincialRuntime.votes[key]?.votes[playerId];
+              return <div className="decision-row" key={amendment.id}>
+                <div><strong>{amendment.title}</strong><div className="muted">Constitutional ratification · {amendment.ratifiedProvinceIds.length} of 13 provinces</div></div>
+                {choice ? <StatusBadge>{title(choice)} recorded</StatusBadge> : <div className="row">
+                  <button type="button" className="btn" onClick={() => execute({ type: "CAST_CONSTITUTIONAL_RATIFICATION_VOTE", amendmentId: amendment.id, choice: "yes" })}>Ratify</button>
+                  <button type="button" className="btn secondary" onClick={() => execute({ type: "CAST_CONSTITUTIONAL_RATIFICATION_VOTE", amendmentId: amendment.id, choice: "no" })}>Reject</button>
+                  <button type="button" className="btn quiet" onClick={() => execute({ type: "CAST_CONSTITUTIONAL_RATIFICATION_VOTE", amendmentId: amendment.id, choice: "abstain" })}>Abstain</button>
+                </div>}
+              </div>;
+            })}
+            <SectionDivider title="Recent roll calls" />
+            <DataTable dense headers={["Date", "Measure", "Result", "Your vote"]}>
+              {chamberBills.filter((bill) => bill.voteId).slice(0, 12).map((bill) => {
+                const vote = props.snap.provincialRuntime.votes[bill.voteId!];
+                return <tr key={bill.id} className={selectedProvincialVoteId === vote?.id ? "selected" : undefined}><td>{vote?.date ?? "—"}</td><td>{bill.title}</td><td>{vote ? <button type="button" className="link-button" onClick={() => setSelectedProvincialVoteId(vote.id)}>{vote.yes}–{vote.no} · {vote.abstain} abstain</button> : "—"}</td><td>{vote?.votes[playerId] ? title(vote.votes[playerId]!) : "—"}</td></tr>;
+              })}
+            </DataTable>
+            {renderProvincialRollCall(selectedProvincialVoteId)}
+          </>}
+          rail={<>
+            <SectionDivider title="Chamber leadership" />
+            <p><strong>{chamber?.presidingOfficerId ? provincialName(chamber.presidingOfficerId) : "Vacant"}</strong></p>
+            <p className="muted">Presiding officer</p>
+            {provincialMember.partyId && chamber?.partyLeadership[provincialMember.partyId] ? <>
+              <p><strong>{chamber.partyLeadership[provincialMember.partyId]!.floorLeaderId ? provincialName(chamber.partyLeadership[provincialMember.partyId]!.floorLeaderId!) : "Vacant"}</strong></p>
+              <p className="muted">{partyDisplayName(props.world, provincialMember.partyId, props.snap)} floor leader</p>
+              <p><strong>{chamber.partyLeadership[provincialMember.partyId]!.whipId ? provincialName(chamber.partyLeadership[provincialMember.partyId]!.whipId!) : "Vacant"}</strong></p>
+              <p className="muted">Party whip</p>
+            </> : null}
+            <div className="button-stack">
+              <button type="button" className="btn" onClick={() => execute({ type: "SEEK_PROVINCIAL_LEADERSHIP", provinceId: provincialMember.provinceId, role: "speaker" })}>Seek Speaker</button>
+              {provincialMember.partyId ? <>
+                <button type="button" className="btn secondary" onClick={() => execute({ type: "SEEK_PROVINCIAL_LEADERSHIP", provinceId: provincialMember.provinceId, role: "floor_leader" })}>Seek floor leadership</button>
+                <button type="button" className="btn secondary" onClick={() => execute({ type: "SEEK_PROVINCIAL_LEADERSHIP", provinceId: provincialMember.provinceId, role: "whip" })}>Seek whip</button>
+              </> : null}
+            </div>
+            <SectionDivider title="Career" />
+            <p className="muted">Career → Opportunities lists eligible Governor and National Assembly races without filing you automatically.</p>
+          </>}
         />
       </div>
     );

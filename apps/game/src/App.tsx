@@ -28,7 +28,7 @@ import { GamePages, type Figure, type Screen } from "./pages.js";
 import { DecisionPanel } from "./decisions.js";
 import { useCommandFeedback } from "./feedback.js";
 import { catalogFromBundle, partyColor, partyDisplayName, politicianDisplayName } from "./presentation.js";
-import { GameShell } from "./ui/shell.js";
+import { GameShell, type ShellSearchEntry } from "./ui/shell.js";
 import { StatusBadge } from "./ui/kit.js";
 import { PoliticianAvatar, PoliticianCard } from "./ui/politician.js";
 
@@ -54,6 +54,7 @@ export default function App() {
   const [selectedBill, setSelectedBill] = useState<string | null>(null);
   const [mapHover, setMapHover] = useState<string | null>(null);
   const [debug, setDebug] = useState(false);
+  const [globalFocus, setGlobalFocus] = useState<{ kind: string; id: string } | null>(null);
   const feedback = useCommandFeedback();
 
   useEffect(() => {
@@ -72,13 +73,77 @@ export default function App() {
     return map;
   }, [bundle]);
   const catalog = useMemo(
-    () => (bundle ? catalogFromBundle(bundle, figures) : null),
-    [bundle, figures],
+    () => (bundle ? catalogFromBundle(bundle, figures, snap) : null),
+    [bundle, figures, snap],
   );
+  const searchEntries = useMemo<ShellSearchEntry[]>(() => {
+    if (!world || !snap || !catalog) return [];
+    const pages: Array<[Screen, string, string]> = [
+      ["home", "Home", "Current political briefing"], ["career", "Political opportunities", "Career and politician directory"],
+      ["party", "Parties and caucuses", "Leadership and internal politics"], ["campaign", "Campaign", "Race command center and Ground Game"],
+      ["elections", "Elections and calendar", "Presidential, Assembly and provincial races"], ["assembly", "National Assembly", "Bills, committees and roll calls"],
+      ["executive", "Executive", "President, cabinet and administration"], ["courts", "Constitutional Court", "Bench, docket and decisions"],
+      ["economy", "Economy", "Public national and regional indicators"], ["organizations", "Organizations", "Influence, priorities and scorecards"],
+      ["foreign", "Foreign Affairs", "World relations and crises"], ["terena", "Maps", "Political, election and economic geography"],
+      ["news", "News", "Political news desk"], ["archive", "Archive", "Public political history"],
+    ];
+    const entries: ShellSearchEntry[] = pages.map(([screen, label, detail]) => ({ id: screen, kind: "Page", label, detail, screen }));
+    for (const politician of Object.values(snap.politicians)) {
+      if (!politician.alive) continue;
+      entries.push({ id: politician.id, kind: "Politician", label: politicianDisplayName(catalog, politician.id), detail: partyDisplayName(world, politician.partyId, snap), screen: "career" });
+    }
+    for (const partyId of Object.keys(world.partyDefinitions)) {
+      if (partyId === world.independentAggregatePartyId) continue;
+      entries.push({ id: partyId, kind: "Party", label: partyDisplayName(world, partyId, snap), detail: "Leadership, caucus and electoral record", screen: "party" });
+    }
+    for (const faction of Object.values(world.factionDefinitions)) {
+      entries.push({ id: faction.factionId, kind: "Caucus", label: faction.name, detail: partyDisplayName(world, faction.partyId, snap), screen: "party" });
+    }
+    for (const provinceId of world.provinceIds) {
+      entries.push({ id: provinceId, kind: "Province", label: catalog.places.get(provinceId)?.name ?? "Province", detail: "Governor, Assembly and regional statistics", screen: "terena" });
+    }
+    for (const constituencyId of Object.keys(world.constituencyElectorate).sort()) {
+      const place = catalog.places.get(constituencyId);
+      entries.push({
+        id: constituencyId,
+        kind: "Constituency",
+        label: place?.name ?? "Constituency",
+        detail: `${place?.provinceName ?? "Terena"} · ${world.constituencyElectorate[constituencyId]?.seats ?? "?"} Assembly seats`,
+        screen: "terena",
+      });
+    }
+    for (const organization of Object.values(world.interestOrganizations)) {
+      entries.push({ id: organization.id, kind: "Organization", label: organization.name, detail: organization.type, screen: "organizations" });
+    }
+    for (const election of Object.values(snap.elections)) {
+      entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${election.type === "assembly" ? "National Assembly" : "presidential"} election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
+    }
+    for (const election of Object.values(snap.provincialRuntime.elections)) {
+      const province = catalog.places.get(election.provinceId)?.name ?? "Province";
+      entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${province} gubernatorial election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
+    }
+    for (const election of Object.values(snap.provincialRuntime.assemblyElections)) {
+      const province = catalog.places.get(election.provinceId)?.name ?? "Province";
+      entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${province} Assembly election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
+    }
+    for (const bill of Object.values(snap.legislatureRuntime.bills)) {
+      entries.push({ id: bill.id, kind: "Bill", label: bill.title, detail: bill.status.replace(/_/g, " "), screen: "assembly" });
+    }
+    for (const courtCase of Object.values(snap.constitutionalRuntime.courtCases)) {
+      entries.push({ id: courtCase.id, kind: "Court case", label: courtCase.constitutionalQuestion, detail: courtCase.status.replace(/_/g, " "), screen: "courts" });
+    }
+    return entries;
+  }, [world, snap, catalog]);
 
   function refresh(next: Simulation) {
     setSim(next);
     setSnap(next.getSnapshot());
+  }
+
+  function selectSearchEntry(entry: ShellSearchEntry) {
+    setGlobalFocus({ kind: entry.kind, id: entry.id });
+    if (entry.kind === "Bill") setSelectedBill(entry.id);
+    setScreen(entry.screen);
   }
 
   function startGame(politicianId: string) {
@@ -98,9 +163,9 @@ export default function App() {
     if (!sim || !snap) return;
     await putSave({
       id: `${snap.playerPoliticianId}-${Date.now()}`,
-      name: `${politicianName(figures, snap.playerPoliticianId)} ${snap.currentDate}`,
+      name: `${politicianName(figures, snap.playerPoliticianId, snap)} ${snap.currentDate}`,
       savedAt: new Date().toISOString(),
-      playerName: politicianName(figures, snap.playerPoliticianId),
+      playerName: politicianName(figures, snap.playerPoliticianId, snap),
       date: snap.currentDate,
       save: sim.serializeSave(),
     });
@@ -585,6 +650,8 @@ export default function App() {
       onEndTurn={endTurn}
       onSave={() => void saveGame()}
       onExport={() => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`)}
+      searchEntries={searchEntries}
+      onSearchSelect={selectSearchEntry}
     >
       <DecisionPanel
         world={world}
@@ -617,6 +684,7 @@ export default function App() {
         countingElection={countingElection}
         onResolveAssembly={resolveAssemblyElection}
         askConfirm={feedback.askConfirm}
+        globalFocus={globalFocus}
       />
       {feedback.overlay()}
     </GameShell>

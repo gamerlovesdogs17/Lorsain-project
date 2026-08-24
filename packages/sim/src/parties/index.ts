@@ -4,6 +4,7 @@ export * from "./queries.js";
 export * from "./state.js";
 export * from "./membership.js";
 export * from "./leadership.js";
+export * from "./monthly.js";
 export * from "./endorsements.js";
 export * from "./contests.js";
 export * from "./selectorates.js";

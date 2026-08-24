@@ -45,17 +45,39 @@ function selectPostElectionSpeaker(
   electionId: string,
 ): string | null {
   const seatTotals = state.elections[electionId]?.assembly?.partySeatTotals ?? {};
-  return winnerIds.slice().sort((a, b) => {
-    const score = (id: string) => {
-      const politician = state.politicians[id];
-      const standing = candidateStandingOrDefault(world, state, id);
-      const partySeats = seatTotals[politician?.partyId ?? "independent"] ?? 0;
-      const partyLeader = politician?.partyId && state.partyStates[politician.partyId]?.leaderId === id ? 1 : 0;
-      return partySeats / Math.max(1, world.legislativeConstitution.assemblySeatCount) * 1.8 +
-        standing.nameRecognition * 0.35 + standing.favorability * 0.2 + partyLeader * 0.3;
-    };
-    return score(b) - score(a) || stableHash(`${electionId}:speaker:${a}`) - stableHash(`${electionId}:speaker:${b}`);
-  })[0] ?? null;
+  const speakerOffice = world.offices.OFFICE_SPEAKER;
+  if (!speakerOffice) return null;
+  return winnerIds
+    .filter((id) => id !== state.playerPoliticianId)
+    .filter((id) =>
+      activeTermsForPolitician(state, id).every((term) => {
+        const other = world.offices[term.officeId];
+        return (
+          !other ||
+          other.id === speakerOffice.id ||
+          !officesAreIncompatible(speakerOffice, other)
+        );
+      }),
+    )
+    .sort((a, b) => {
+      const score = (id: string) => {
+        const politician = state.politicians[id];
+        const standing = candidateStandingOrDefault(world, state, id);
+        const partySeats = seatTotals[politician?.partyId ?? "independent"] ?? 0;
+        const partyLeader =
+          politician?.partyId && state.partyStates[politician.partyId]?.leaderId === id ? 1 : 0;
+        return (
+          (partySeats / Math.max(1, world.legislativeConstitution.assemblySeatCount)) * 1.8 +
+          standing.nameRecognition * 0.35 +
+          standing.favorability * 0.2 +
+          partyLeader * 0.3
+        );
+      };
+      return (
+        score(b) - score(a) ||
+        stableHash(`${electionId}:speaker:${a}`) - stableHash(`${electionId}:speaker:${b}`)
+      );
+    })[0] ?? null;
 }
 
 export function assemblyElectionIdForDate(date: IsoDate): string {
@@ -340,7 +362,10 @@ export function applyAssemblyAssumption(
   const officeByConst = assemblyOfficeByConstituency(world);
   const events: SimEvent[] = [];
 
-  const nextYear = parseIsoDate(election.date).year + world.assemblyCalendar.intervalYears;
+  const assemblyTermYears =
+    state.provincialRuntime.constitutionalRules.assembly_term_years?.value ??
+    world.assemblyCalendar.intervalYears;
+  const nextYear = parseIsoDate(election.date).year + assemblyTermYears;
   const nextElection = regularElectionDate(world.assemblyCalendar, nextYear);
   const nextAssume = assemblyAssumptionDate(nextElection, world.assemblyCalendar);
 
@@ -371,6 +396,29 @@ export function applyAssemblyAssumption(
     const officeId = officeByConst.get(cid);
     if (!officeId) return { error: reject("MISSING_OFFICE", cid) };
     for (const holderId of winners) {
+      const presidentialTerm = activeTermsForPolitician(state, holderId).find(
+        (term) => world.offices[term.officeId]?.kind === "president",
+      );
+      if (presidentialTerm) {
+        events.push(
+          pushHistory(state, {
+            date: args.date,
+            type: "ASSEMBLY_SEAT_DECLINED_INCOMPATIBLE_OFFICE",
+            importance: 0.75,
+            visibility: "public",
+            actorIds: [holderId],
+            entityIds: [electionId, cid, presidentialTerm.officeId],
+            payload: {
+              electionId,
+              constituencyId: cid,
+              protectedOfficeKind: "president",
+            },
+            sourceScheduledEventId: args.scheduledEventId,
+            sourceCommandId: args.commandId,
+          }),
+        );
+        continue;
+      }
       for (const t of activeTermsForPolitician(state, holderId)) {
         const other = world.offices[t.officeId];
         const assemblyOffice = world.offices[officeId];

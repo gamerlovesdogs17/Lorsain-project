@@ -56,6 +56,17 @@ function idx1(n: number): string {
   return n.toFixed(1);
 }
 
+function signedPercent(n: number): string {
+  return `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
+}
+
+function conditionsLabel(n: number): string {
+  if (n >= 104) return "Strong";
+  if (n >= 100) return "Firm";
+  if (n >= 96) return "Soft";
+  return "Weak";
+}
+
 function provinceNameMap(bundle: ContentBundle): Map<string, string> {
   const names = new Map<string, string>();
   for (const f of (bundle.content.terena_provinces?.features ?? []) as Array<{
@@ -83,7 +94,7 @@ export function EconomyPage(props: {
   const yearAgo = history.length >= 13 ? history[history.length - 13]! : null;
   const start = history[0] ?? null;
   const deltaHint = (key: IndicatorId) => {
-    if (!prev) return "Index = 100";
+    if (!prev) return "No prior month";
     const m = formatIndexDelta(n[key] - prev[key]);
     const y = yearAgo ? formatIndexDelta(n[key] - yearAgo[key]) : "—";
     return `${m} mo · ${y} 12m`;
@@ -105,6 +116,12 @@ export function EconomyPage(props: {
         }))
       : [];
   const regionChart = chartPath(regionSeries);
+  const publicMetrics = {
+    growth: yearAgo ? ((n.outputIndex / yearAgo.outputIndex) - 1) * 100 : 1.8 + (n.outputIndex - 100) * 0.12,
+    unemployment: Math.max(2.5, Math.min(14, 5.9 - (n.employmentIndex - 100) * 0.16)),
+    inflation: yearAgo ? ((n.priceIndex / yearAgo.priceIndex) - 1) * 100 : 2.3 + (n.priceIndex - 100) * 0.16,
+    realPay: yearAgo ? ((n.realWageIndex / yearAgo.realWageIndex) - 1) * 100 : (n.realWageIndex - 100) * 0.22,
+  };
 
   const provinceRows = useMemo(() => {
     const placeNames = provinceNameMap(props.bundle);
@@ -115,7 +132,7 @@ export function EconomyPage(props: {
         const pYear = hist.length >= 13 ? hist[hist.length - 13]! : null;
         return {
           id,
-          name: placeNames.get(id) ?? id,
+          name: placeNames.get(id) ?? "Unnamed province",
           data,
           monthDelta: pPrev ? data.conditionsIndex - pPrev.conditionsIndex : null,
           yearDelta: pYear ? data.conditionsIndex - pYear.conditionsIndex : null,
@@ -138,17 +155,21 @@ export function EconomyPage(props: {
       }
       main={
         <>
-          <SectionDivider title="Key indicators" hint="Month and 12-month moves when history allows" />
+          <SectionDivider title="Public economic briefing" hint="Readable statistics derived consistently from the scenario series" />
           <MetricStrip>
-            {INDICATORS.map((ind) => (
-              <StatCard
-                key={ind.id}
-                label={ind.label}
-                value={idx1(n[ind.id])}
-                hint={deltaHint(ind.id)}
-              />
-            ))}
+            <StatCard label="Real output growth" value={signedPercent(publicMetrics.growth)} hint={yearAgo ? "12 months" : "Scenario pace"} />
+            <StatCard label="Unemployment" value={`${publicMetrics.unemployment.toFixed(1)}%`} hint={deltaHint("employmentIndex")} />
+            <StatCard label="Inflation" value={`${publicMetrics.inflation.toFixed(1)}%`} hint={yearAgo ? "12 months" : "Scenario pace"} />
+            <StatCard label="Real pay" value={signedPercent(publicMetrics.realPay)} hint={yearAgo ? "12 months" : "Scenario position"} />
+            <StatCard label="Housing market" value={conditionsLabel(202 - n.housingIndex)} hint={deltaHint("housingIndex")} />
+            <StatCard label="Confidence" value={conditionsLabel(n.confidenceIndex)} hint={deltaHint("confidenceIndex")} />
           </MetricStrip>
+
+          <details className="economic-index-reference">
+            <summary>Reference indices</summary>
+            <div className="compact-index-grid">{INDICATORS.map((ind) => <span key={ind.id}><strong>{ind.label}</strong> {idx1(n[ind.id])}</span>)}</div>
+            <p className="muted">Reference 100 is a comparison scale, not a percentage or a claim that January 2028 was economically neutral.</p>
+          </details>
 
           <SectionDivider title="Trends" />
           <TabBar

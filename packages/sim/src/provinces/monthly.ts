@@ -7,6 +7,8 @@ import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { processGubernatorialCalendar } from "./elections.js";
 import { currentGovernorId, resetProvinceActionPoints } from "./state.js";
 import type { ProvincialPressure } from "./types.js";
+import { processProvincialAssembliesMonth } from "./assemblies.js";
+import { processConstitutionalAmendmentsMonth } from "./constitutional.js";
 
 function clampIndex(value: number): number {
   return Math.max(80, Math.min(120, value));
@@ -137,6 +139,8 @@ export function processProvincialMonth(
   for (const provinceId of world.provinceIds) {
     events.push(...updateProvince(state, world, rng, provinceId, commandId));
   }
+  events.push(...processProvincialAssembliesMonth(world, state, rng, commandId));
+  events.push(...processConstitutionalAmendmentsMonth(world, state, commandId));
   events.push(...processGubernatorialCalendar(state, world, rng, commandId));
   state.provincialRuntime.lastMonthProcessed = month;
   return events;

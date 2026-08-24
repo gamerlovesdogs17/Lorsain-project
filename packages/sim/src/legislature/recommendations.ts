@@ -49,13 +49,19 @@ export function upsertRecommendations(world: KernelWorld, state: SimState, bill:
       .map((p) => p.id)
       .sort();
     let acc = 0;
-    for (const id of members.slice(0, 40)) acc += billPolicyFit(world, state, id, bill);
-    const fit = members.length ? acc / Math.min(members.length, 40) : 0;
+    for (const id of members) acc += billPolicyFit(world, state, id, bill);
+    const fit = members.length ? acc / members.length : 0;
     const key = `${partyId}:${bill.id}`;
+    if (state.legislatureRuntime.partyRecommendations[key]?.source === "caucus_leadership") {
+      continue;
+    }
     state.legislatureRuntime.partyRecommendations[key] = {
       partyId,
       billId: bill.id,
       stance: stanceFromFit(fit),
+      setById: null,
+      date: state.currentDate,
+      source: "derived",
     };
   }
   for (const factionId of [...factions].sort()) {
@@ -64,8 +70,8 @@ export function upsertRecommendations(world: KernelWorld, state: SimState, bill:
       .map((p) => p.id)
       .sort();
     let acc = 0;
-    for (const id of members.slice(0, 24)) acc += billPolicyFit(world, state, id, bill);
-    const fit = members.length ? acc / Math.min(members.length, 24) : 0;
+    for (const id of members) acc += billPolicyFit(world, state, id, bill);
+    const fit = members.length ? acc / members.length : 0;
     const key = `${factionId}:${bill.id}`;
     state.legislatureRuntime.factionRecommendations[key] = {
       factionId,

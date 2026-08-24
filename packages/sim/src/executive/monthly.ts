@@ -185,6 +185,16 @@ function syntheticBillForMotion(world: KernelWorld, motion: AssemblyMotion): Bil
     enactedLawId: null,
     stageReadyDate: motion.stageReadyDate,
     metadata: { motionKind: motion.kind },
+    version: 1,
+    versionHistory: [
+      {
+        version: 1,
+        date: motion.introducedDate,
+        reason: "introduced",
+        amendmentId: null,
+        policyItems: [{ issueId, direction: 0, magnitude: 0.2, fiscalImpact: null }],
+      },
+    ],
   };
 }
 

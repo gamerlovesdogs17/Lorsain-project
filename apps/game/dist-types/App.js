@@ -34,6 +34,7 @@ export default function App() {
     const [selectedBill, setSelectedBill] = useState(null);
     const [mapHover, setMapHover] = useState(null);
     const [debug, setDebug] = useState(false);
+    const [globalFocus, setGlobalFocus] = useState(null);
     const feedback = useCommandFeedback();
     useEffect(() => {
         try {
@@ -51,10 +52,56 @@ export default function App() {
             map.set(f.id, f);
         return map;
     }, [bundle]);
-    const catalog = useMemo(() => (bundle ? catalogFromBundle(bundle, figures) : null), [bundle, figures]);
+    const catalog = useMemo(() => (bundle ? catalogFromBundle(bundle, figures, snap) : null), [bundle, figures, snap]);
+    const searchEntries = useMemo(() => {
+        if (!world || !snap || !catalog)
+            return [];
+        const pages = [
+            ["home", "Home", "Current political briefing"], ["career", "Political opportunities", "Career and politician directory"],
+            ["party", "Parties and caucuses", "Leadership and internal politics"], ["campaign", "Campaign", "Race command center and Ground Game"],
+            ["elections", "Elections and calendar", "Presidential, Assembly and provincial races"], ["assembly", "National Assembly", "Bills, committees and roll calls"],
+            ["executive", "Executive", "President, cabinet and administration"], ["courts", "Constitutional Court", "Bench, docket and decisions"],
+            ["economy", "Economy", "Public national and regional indicators"], ["organizations", "Organizations", "Influence, priorities and scorecards"],
+            ["foreign", "Foreign Affairs", "World relations and crises"], ["terena", "Maps", "Political, election and economic geography"],
+            ["news", "News", "Political news desk"], ["archive", "Archive", "Public political history"],
+        ];
+        const entries = pages.map(([screen, label, detail]) => ({ id: screen, kind: "Page", label, detail, screen }));
+        for (const politician of Object.values(snap.politicians)) {
+            if (!politician.alive)
+                continue;
+            entries.push({ id: politician.id, kind: "Politician", label: politicianDisplayName(catalog, politician.id), detail: partyDisplayName(world, politician.partyId, snap), screen: "career" });
+        }
+        for (const partyId of Object.keys(world.partyDefinitions)) {
+            if (partyId === world.independentAggregatePartyId)
+                continue;
+            entries.push({ id: partyId, kind: "Party", label: partyDisplayName(world, partyId, snap), detail: "Leadership, caucus and electoral record", screen: "party" });
+        }
+        for (const faction of Object.values(world.factionDefinitions)) {
+            entries.push({ id: faction.factionId, kind: "Caucus", label: faction.name, detail: partyDisplayName(world, faction.partyId, snap), screen: "party" });
+        }
+        for (const provinceId of world.provinceIds) {
+            entries.push({ id: provinceId, kind: "Province", label: catalog.places.get(provinceId)?.name ?? "Province", detail: "Governor, Assembly and regional statistics", screen: "terena" });
+        }
+        for (const election of Object.values(snap.elections)) {
+            entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${election.type === "assembly" ? "National Assembly" : "presidential"} election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
+        }
+        for (const bill of Object.values(snap.legislatureRuntime.bills)) {
+            entries.push({ id: bill.id, kind: "Bill", label: bill.title, detail: bill.status.replace(/_/g, " "), screen: "assembly" });
+        }
+        for (const courtCase of Object.values(snap.constitutionalRuntime.courtCases)) {
+            entries.push({ id: courtCase.id, kind: "Court case", label: courtCase.constitutionalQuestion, detail: courtCase.status.replace(/_/g, " "), screen: "courts" });
+        }
+        return entries;
+    }, [world, snap, catalog]);
     function refresh(next) {
         setSim(next);
         setSnap(next.getSnapshot());
+    }
+    function selectSearchEntry(entry) {
+        setGlobalFocus({ kind: entry.kind, id: entry.id });
+        if (entry.kind === "Bill")
+            setSelectedBill(entry.id);
+        setScreen(entry.screen);
     }
     function startGame(politicianId) {
         if (!world)
@@ -74,9 +121,9 @@ export default function App() {
             return;
         await putSave({
             id: `${snap.playerPoliticianId}-${Date.now()}`,
-            name: `${politicianName(figures, snap.playerPoliticianId)} ${snap.currentDate}`,
+            name: `${politicianName(figures, snap.playerPoliticianId, snap)} ${snap.currentDate}`,
             savedAt: new Date().toISOString(),
-            playerName: politicianName(figures, snap.playerPoliticianId),
+            playerName: politicianName(figures, snap.playerPoliticianId, snap),
             date: snap.currentDate,
             save: sim.serializeSave(),
         });
@@ -357,6 +404,6 @@ export default function App() {
         .find(Boolean) ?? "private_citizen";
     const interrupt = snap.pendingInterrupt;
     const decisionCount = collectPlayerActionableDecisions(world, snap).length;
-    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, askConfirm: feedback.askConfirm }), feedback.overlay()] }));
+    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), searchEntries: searchEntries, onSearchSelect: selectSearchEntry, children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, askConfirm: feedback.askConfirm, globalFocus: globalFocus }), feedback.overlay()] }));
 }
 //# sourceMappingURL=App.js.map

@@ -5,8 +5,8 @@ import type { KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import type { LegislativeVoteChoice } from "../legislature/types.js";
 import { currentAssemblyMemberIds, currentPresidentialAuthorityId } from "../legislature/state.js";
-import type { CourtCase, ImpeachmentProceeding, JudicialVoteChoice } from "./types.js";
-import { judicialEligibilityError, similarPrecedent } from "./procedure.js";
+import type { CourtCase, ImpeachmentProceeding, JudicialVoteChoice, PrecedentRecord } from "./types.js";
+import { similarPrecedent } from "./procedure.js";
 
 export function chooseJudicialVote(
   world: KernelWorld,
@@ -14,6 +14,7 @@ export function chooseJudicialVote(
   judgeId: string,
   courtCase: CourtCase,
   rng: RngService,
+  resolvedPrecedent?: PrecedentRecord | null,
 ): JudicialVoteChoice {
   if (judgeId === state.playerPoliticianId) return "nonparticipation";
   const profile = getAgentProfile(world, state, judgeId);
@@ -21,7 +22,7 @@ export function chooseJudicialVote(
   const pragmatism = profile?.traits.pragmatism ?? 0.5;
   const independence = 1 - (profile?.traits.partyLoyalty ?? 0.5) * 0.35;
   const ideology = ((profile?.ideology.authority ?? 0) + (profile?.ideology.economic ?? 0)) / 2;
-  const precedent = similarPrecedent(state, courtCase);
+  const precedent = resolvedPrecedent === undefined ? similarPrecedent(state, courtCase) : resolvedPrecedent;
   let score = courtCase.meritsLean * 1.15;
   score -= (institutionalism - 0.5) * 0.7;
   if (precedent) {
@@ -55,20 +56,31 @@ export function chooseConfirmationVote(
   const nominee = state.politicians[nomineeId];
   if (!mp || !nominee) return "abstain";
   const profile = getAgentProfile(world, state, mpId);
+  const nomineeProfile = getAgentProfile(world, state, nomineeId);
   const sameParty = mp.partyId && nominee.partyId && mp.partyId === nominee.partyId ? 1 : 0;
+  const crossParty = mp.partyId && nominee.partyId && mp.partyId !== nominee.partyId ? 1 : 0;
+  const nonpartisanNominee = nominee.partyId == null ? 1 : 0;
   const standing = state.candidateStanding[nomineeId]?.favorability ?? 0;
   const rel = getRelationship(state, mpId, nomineeId, state.currentDate);
   const institutionalism = profile?.traits.institutionalism ?? 0.5;
+  const legalQualification = nomineeProfile
+    ? nomineeProfile.skills.legislation * 0.5 +
+      nomineeProfile.traits.institutionalism * 0.35 +
+      nomineeProfile.skills.negotiation * 0.15
+    : 0.62;
   let score =
-    sameParty * 0.55 +
-    standing * 0.2 +
-    (rel?.affinity ?? 0) * 0.15 +
-    (institutionalism - 0.35) * 0.2 +
+    0.08 +
+    sameParty * 0.32 +
+    nonpartisanNominee * 0.18 -
+    crossParty * 0.06 +
+    (legalQualification - 0.55) * 0.55 +
+    standing * 0.1 +
+    (rel?.affinity ?? 0) * 0.08 +
+    institutionalism * 0.16 +
     (rng.float01("npc-decisions") - 0.5) * 0.12;
-  if (sameParty === 0 && mp.partyId && nominee.partyId) score -= 0.18;
-  if (score > 0.12) return "yes";
-  if (score < -0.08) return "no";
-  return rng.float01("npc-decisions") > 0.55 ? "yes" : "abstain";
+  if (score > 0.1) return "yes";
+  if (score < -0.06) return "no";
+  return rng.float01("npc-decisions") > 0.42 ? "yes" : "abstain";
 }
 
 export function chooseImpeachmentVote(
@@ -149,12 +161,59 @@ export function chooseJudgeNominee(
   if (!president) return null;
   const own = getAgentProfile(world, state, presidentId);
   const mps = new Set(currentAssemblyMemberIds(world, state));
+  const partySeats = new Map<string, number>();
+  for (const id of mps) {
+    const partyId = state.politicians[id]?.partyId;
+    if (partyId) partySeats.set(partyId, (partySeats.get(partyId) ?? 0) + 1);
+  }
+  const activeDisqualifications = new Set<string>();
+  const formerJudges = new Set<string>();
+  for (const term of Object.values(state.officeTerms)) {
+    const kind = world.offices[term.officeId]?.kind;
+    if (
+      (term.status === "active" || term.status === "suspended") &&
+      (kind === "military" || kind === "constitutional_court_justice")
+    ) {
+      activeDisqualifications.add(term.holderId);
+    }
+    if (term.holdingKind === "substantive" && kind === "constitutional_court_justice") {
+      formerJudges.add(term.holderId);
+    }
+  }
+  const legalRoles = new Set([
+    "constitutional_court_justice",
+    "judge",
+    "appellate_judge",
+    "prosecutor",
+    "public_defender",
+    "constitutional_lawyer",
+    "legal_academic",
+    "senior_lawyer",
+  ]);
+  const currentYear = Number(state.currentDate.slice(0, 4));
+  const legallyEligible = (id: string): boolean => {
+    if (activeDisqualifications.has(id)) return false;
+    if (world.courtConstitution.renewable === false && formerJudges.has(id)) return false;
+    const profile = getAgentProfile(world, state, id);
+    if (!profile) return false;
+    const birthYear = profile.birthDate ? Number(profile.birthDate.slice(0, 4)) : null;
+    if (birthYear && currentYear - birthYear < 35) return false;
+    if (profile.roleTypes.some((role) => legalRoles.has(role))) return true;
+    return (
+      profile.skills.legislation * 0.5 +
+        profile.traits.institutionalism * 0.35 +
+        profile.skills.negotiation * 0.15 >=
+      0.62
+    );
+  };
   const candidates = Object.values(state.politicians)
     .filter((p) => p.alive && !p.retired && p.id !== presidentId)
     .filter((p) => p.id !== state.playerPoliticianId)
-    .filter((p) => judicialEligibilityError(world, state, p.id, seatOfficeId) == null)
+    .filter((p) => legallyEligible(p.id))
     .sort((a, b) => (a.id < b.id ? -1 : 1));
   if (candidates.length === 0) return null;
+  const goals = goalsOwnedBy(state, presidentId).filter((g) => g.status === "active");
+  const goalBoost = goals.some((g) => g.type === "career_advancement") ? 0.05 : 0;
   const scored = candidates.map((p) => {
     const pub = p.partyId ? world.partyPublicIdeology[p.partyId] : null;
     const ideologyFit =
@@ -169,14 +228,8 @@ export function chooseJudgeNominee(
     const sameParty = p.partyId && p.partyId === president.partyId ? 1 : 0;
     let viable = 0.4;
     if (p.partyId) {
-      let same = 0;
-      for (const id of mps) {
-        if (state.politicians[id]?.partyId === p.partyId) same += 1;
-      }
-      viable = mps.size > 0 ? same / mps.size : 0.4;
+      viable = mps.size > 0 ? (partySeats.get(p.partyId) ?? 0) / mps.size : 0.4;
     }
-    const goals = goalsOwnedBy(state, presidentId).filter((g) => g.status === "active");
-    const goalBoost = goals.some((g) => g.type === "career_advancement") ? 0.05 : 0;
     const noise = rng.float01("npc-decisions") * 0.12;
     return {
       id: p.id,

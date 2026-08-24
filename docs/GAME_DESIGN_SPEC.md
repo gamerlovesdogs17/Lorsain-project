@@ -139,6 +139,18 @@ Every save maintains an in-game historical database: elections, officeholders, c
 
 A politician page should remain accessible after retirement or death. Long saves should feel like generated political history, not disposable runs.
 
+### 18.1 Institutional political ladder (Phase 11.3)
+
+Terena's national political class is replenished through visible institutions rather than emergency anonymous candidates. Each province has one lightweight Provincial Assembly sized from population. These chambers use bounded proportional elections, named legislators, individual roll calls and a small provincial bill cycle. Governors may sign or veto; a two-thirds chamber vote overrides. Before a national Assembly filing period opens, recruitment measures the real eligible/running federal pool and promotes already-existing provincial figures to sustain competitive fields. The model deliberately omits provincial cabinets, detailed budgets, local taxes and municipal legislatures.
+
+Provincial legislators are a renewable lower-detail career population. Only figures who become relevant to a national race or office are promoted into the full politician/agent model. Promotion preserves identity, party, province and public career continuity. Player filing is always explicit; the simulation may create opportunities and fields around the player but never chooses candidacy, withdrawal, endorsement or a vote for them.
+
+Parties are playable institutions rather than labels. Each party and faction has recurring leadership selection by its legitimate membership. Each represented Assembly caucus elects a floor leader and whip from sitting members. Leaders may set bounded priorities and affect coordination, but recommendations remain pressure rather than compelled votes. Losing leadership does not remove a politician from the game.
+
+The Constitution is executable political state. An amendment requires 280 votes in the 420-seat National Assembly and ratification by 13 of 21 Provincial Assemblies within 18 months. The President has no formal role. Supported rules—Assembly term length, presidential term limit, Court term length and veto-override fraction—change only after ratification and all downstream eligibility/scheduling/threshold code reads the live value.
+
+Federal lawmaking is expressed through concrete choices: every bill contains one to three provisions, every provision selects a named legal option, and ordinary amendments replace a specific provision choice. The player sees current law, proposed law and bounded estimated effects. Public titles and summaries are deterministic editorial copy, not IDs, ideological shorthand or runtime AI prose.
+
 ## 19. Turn resolution order
 
 Recommended monthly resolution sequence:

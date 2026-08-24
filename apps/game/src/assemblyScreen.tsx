@@ -1,8 +1,10 @@
 import { useState } from "react";
 import {
   collectPlayerActionableDecisions,
+  CONSTITUTIONAL_RULE_IDS,
   currentAssemblyMemberIds,
   currentProvisionOption,
+  defaultProvisionOptionId,
   estimatedProvisionEffects,
   partyStance,
   factionStance,
@@ -42,6 +44,7 @@ import {
   WorkLayout,
   type PolicyChoiceOption,
 } from "./ui/kit.js";
+import { PoliticianProfile } from "./ui/politician.js";
 
 type ChamberTab = "business" | "draft" | "committees" | "votes";
 type BillDetailTab = "overview" | "provisions" | "politics" | "process";
@@ -55,6 +58,64 @@ const EFFECT_LABELS: Record<keyof NationalEconomyIndices, string> = {
   confidenceIndex: "Confidence",
   fiscalPressure: "Pressure",
 };
+
+const AMENDMENT_VALUES = {
+  assembly_term_years: [3, 4, 5],
+  presidential_term_limit: [1, 2, 3],
+  court_term_years: [9, 12, 15],
+  veto_override_fraction: [0.6, 2 / 3, 0.75],
+} as const;
+
+function AssemblyHemicycle(props: {
+  world: KernelWorld;
+  snap: SimState;
+  catalog: PresentationCatalog;
+  memberIds: string[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const grouped = props.memberIds.slice().sort((a, b) => {
+    const ap = props.snap.politicians[a]?.partyId ?? "";
+    const bp = props.snap.politicians[b]?.partyId ?? "";
+    return ap.localeCompare(bp) || a.localeCompare(b);
+  });
+  const ringCounts = [24, 28, 32, 36, 40, 44, 48, 52, 56, 60] as const;
+  let offset = 0;
+  return (
+    <svg className="assembly-hemicycle" viewBox="0 0 320 182" role="img" aria-label="420-seat National Assembly chamber">
+      {ringCounts.flatMap((count, ring) => {
+        const radius = 56 + ring * 11.2;
+        const start = offset;
+        offset += count;
+        return Array.from({ length: count }, (_, index) => {
+          const memberId = grouped[start + index];
+          if (!memberId) return null;
+          const angle = Math.PI - (index / Math.max(1, count - 1)) * Math.PI;
+          const x = 160 + Math.cos(angle) * radius;
+          const y = 166 - Math.sin(angle) * radius;
+          const partyId = props.snap.politicians[memberId]?.partyId ?? null;
+          return (
+            <circle
+              key={memberId}
+              cx={x}
+              cy={y}
+              r={memberId === props.selectedId ? 3.1 : 2.2}
+              fill={partyColor(props.world, partyId)}
+              className={memberId === props.selectedId ? "assembly-seat selected" : "assembly-seat"}
+              tabIndex={0}
+              role="button"
+              aria-label={`${politicianDisplayName(props.catalog, memberId)}, ${partyDisplayName(props.world, partyId, props.snap)}`}
+              onClick={() => props.onSelect(memberId)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") props.onSelect(memberId);
+              }}
+            />
+          );
+        });
+      })}
+    </svg>
+  );
+}
 
 function oneLine(text: string): string {
   const sentence = text.split(/(?<=\.)\s/)[0] ?? text;
@@ -105,7 +166,7 @@ function provisionChoices(
       id: opt.id,
       label: opt.label,
       summary: oneLine(opt.change),
-      current: current ? opt.id === current.id : opt.id === "current",
+      current: current ? opt.id === current.id : opt.direction === 0,
     };
     if (cost) choice.cost = cost;
     if (effects?.length) choice.effects = effects;
@@ -133,11 +194,19 @@ export function AssemblyPage(props: {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [draftProvisions, setDraftProvisions] = useState<Array<{ provisionId: string; optionId: string }>>([
-    { provisionId: LEGISLATIVE_PROVISIONS[0]?.id ?? "", optionId: "high" },
+    {
+      provisionId: LEGISLATIVE_PROVISIONS[0]?.id ?? "",
+      optionId: defaultProvisionOptionId(LEGISLATIVE_PROVISIONS[0]?.id ?? ""),
+    },
   ]);
-  const [amendIssue, setAmendIssue] = useState("");
-  const [amendDir, setAmendDir] = useState<1 | -1>(1);
-  const [amendMag, setAmendMag] = useState(0.4);
+  const [amendProvision, setAmendProvision] = useState("");
+  const [amendOption, setAmendOption] = useState("");
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
+  const [selectedVoteId, setSelectedVoteId] = useState<string | null>(null);
+  const [selectedCommitteeId, setSelectedCommitteeId] = useState<string | null>(null);
+  const [rollCallFilter, setRollCallFilter] = useState<"all" | "yes" | "no" | "abstain">("all");
+  const [amendmentRule, setAmendmentRule] = useState<(typeof CONSTITUTIONAL_RULE_IDS)[number]>("assembly_term_years");
+  const [amendmentValue, setAmendmentValue] = useState<number>(5);
 
   const mps = currentAssemblyMemberIds(props.world, props.snap);
   const seatCount = props.world.legislativeConstitution.assemblySeatCount;
@@ -149,6 +218,8 @@ export function AssemblyPage(props: {
   }
   const partyRanks = [...counts.entries()].sort((a, b) => b[1] - a[1]);
   const playerParty = props.snap.politicians[props.snap.playerPoliticianId]?.partyId ?? "none";
+  const playerCaucusLeadership = playerParty !== "none" ? props.snap.legislatureRuntime.caucusLeadership[playerParty] : null;
+  const playerMaySetWhip = !!playerCaucusLeadership && [playerCaucusLeadership.floorLeaderId, playerCaucusLeadership.whipId].includes(props.snap.playerPoliticianId);
 
   const bill = props.selectedBill ? props.snap.legislatureRuntime.bills[props.selectedBill] : null;
   const mp = isMp(props.world, props.snap, props.snap.playerPoliticianId);
@@ -161,6 +232,11 @@ export function AssemblyPage(props: {
   const currentBusiness = allBills.filter((b) =>
     ["floor_scheduled", "repassage_scheduled", "committee"].includes(b.status),
   );
+  const committeeIds = Object.keys(props.snap.legislatureRuntime.committees).sort();
+  const activeCommitteeId = selectedCommitteeId ?? committeeIds[0] ?? null;
+  const selectedCommittee = activeCommitteeId
+    ? props.snap.legislatureRuntime.committees[activeCommitteeId]
+    : null;
   const floorQueue = allBills.filter((b) =>
     b.status === "floor_scheduled" || b.status === "repassage_scheduled",
   );
@@ -195,6 +271,14 @@ export function AssemblyPage(props: {
   const compositionHeader = (
     <>
       <div className="composition-strip">
+        <AssemblyHemicycle
+          world={props.world}
+          snap={props.snap}
+          catalog={props.catalog}
+          memberIds={mps}
+          selectedId={selectedMember}
+          onSelect={setSelectedMember}
+        />
         <div className="composition-bar" aria-label="Party composition">
           {partyRanks.map(([party, n]) => (
             <div
@@ -223,6 +307,26 @@ export function AssemblyPage(props: {
           ))}
         </div>
       </div>
+      {selectedMember ? (
+        <div className="assembly-member-inspector">
+          <PoliticianProfile
+            catalog={props.catalog}
+            world={props.world}
+            state={props.snap}
+            politicianId={selectedMember}
+            office="Assembly member"
+            party={partyDisplayName(
+              props.world,
+              props.snap.politicians[selectedMember]?.partyId ?? null,
+              props.snap,
+            )}
+            {...(props.snap.politicians[selectedMember]?.description
+              ? { biography: props.snap.politicians[selectedMember]!.description! }
+              : {})}
+          />
+          <button type="button" className="btn ghost" onClick={() => setSelectedMember(null)}>Close member detail</button>
+        </div>
+      ) : null}
       <BriefStrip
         items={[
           { label: "Sitting", value: `${mps.length}/${seatCount}` },
@@ -397,6 +501,52 @@ export function AssemblyPage(props: {
                   ))
                 )}
 
+                <SectionDivider title="Constitutional amendments" hint="280 Assembly votes · 13 Provincial Assemblies" />
+                {Object.values(props.snap.provincialRuntime.constitutionalAmendments).length === 0 ? <p className="muted">No amendment is currently before the institutions.</p> : null}
+                {Object.values(props.snap.provincialRuntime.constitutionalAmendments).sort((a, b) => b.proposedDate.localeCompare(a.proposedDate)).slice(0, 8).map((amendment) => (
+                  <div className="constitutional-tracker" key={amendment.id}>
+                    <div><strong>{amendment.title}</strong><p>{amendment.summary}</p></div>
+                    <div className="constitutional-progress"><span>Assembly {amendment.assemblyYes}/280</span><span>Provinces {amendment.ratifiedProvinceIds.length}/13</span><StatusBadge tone={amendment.status === "ratified" ? "ok" : amendment.status.includes("failed") ? "warn" : "idle"}>{amendment.status.replace(/_/g, " ")}</StatusBadge></div>
+                    <details className="constitutional-provinces">
+                      <summary>Provincial ratification record · 21 Assemblies</summary>
+                      <DataTable dense headers={["Province", "Status"]}>
+                        {props.world.provinceIds
+                          .slice()
+                          .sort((a, b) => (props.catalog.places.get(a)?.name ?? a).localeCompare(props.catalog.places.get(b)?.name ?? b))
+                          .map((provinceId) => {
+                            const ratified = amendment.ratifiedProvinceIds.includes(provinceId);
+                            const rejected = amendment.rejectedProvinceIds.includes(provinceId);
+                            const status = ratified ? "Ratified" : rejected ? "Rejected" : "Pending";
+                            return <tr key={provinceId}><td>{props.catalog.places.get(provinceId)?.name ?? "Unknown province"}</td><td><StatusBadge tone={ratified ? "ok" : rejected ? "warn" : "idle"}>{status}</StatusBadge></td></tr>;
+                          })}
+                      </DataTable>
+                    </details>
+                    {mp && amendment.status === "proposed" && !amendment.assemblyVotes[props.snap.playerPoliticianId] ? <div className="row">
+                      <button type="button" className="btn" onClick={() => run({ type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE", amendmentId: amendment.id, choice: "yes" })}>Aye</button>
+                      <button type="button" className="btn secondary" onClick={() => run({ type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE", amendmentId: amendment.id, choice: "no" })}>Nay</button>
+                      <button type="button" className="btn quiet" onClick={() => run({ type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE", amendmentId: amendment.id, choice: "abstain" })}>Abstain</button>
+                    </div> : null}
+                  </div>
+                ))}
+                {mp ? <div className="constitutional-proposal">
+                  <label className="field-label">Rule
+                    <select value={amendmentRule} onChange={(event) => {
+                      const rule = event.target.value as typeof amendmentRule;
+                      setAmendmentRule(rule);
+                      const current = props.snap.provincialRuntime.constitutionalRules[rule]?.value;
+                      setAmendmentValue(AMENDMENT_VALUES[rule].find((value) => value !== current) ?? AMENDMENT_VALUES[rule][0]);
+                    }}>
+                      {CONSTITUTIONAL_RULE_IDS.map((rule) => <option key={rule} value={rule}>{props.snap.provincialRuntime.constitutionalRules[rule]?.label ?? rule.replace(/_/g, " ")}</option>)}
+                    </select>
+                  </label>
+                  <label className="field-label">Proposed value
+                    <select value={amendmentValue} onChange={(event) => setAmendmentValue(Number(event.target.value))}>
+                      {AMENDMENT_VALUES[amendmentRule].map((value) => <option key={value} value={value} disabled={value === props.snap.provincialRuntime.constitutionalRules[amendmentRule]?.value}>{value < 1 ? `${Math.round(value * 100)}%` : value}</option>)}
+                    </select>
+                  </label>
+                  <button type="button" className="btn secondary" onClick={() => run({ type: "PROPOSE_CONSTITUTIONAL_AMENDMENT", ruleId: amendmentRule, proposedValue: amendmentValue })}>Propose amendment</button>
+                </div> : null}
+
                 <SectionDivider title="Bills" hint="All introduced measures" />
                 <DataTable headers={["Title", "Status", "Sponsor"]} dense>
                   {allBills.map((b) => (
@@ -442,6 +592,7 @@ export function AssemblyPage(props: {
                         <BriefStrip
                           items={[
                             { label: "Status", value: billStatusLabel(bill.status) },
+                            { label: "Version", value: `Version ${bill.version}` },
                             { label: "Committee", value: committeeDisplayName(bill.assignedCommitteeId) },
                             {
                               label: "Sponsor",
@@ -477,57 +628,55 @@ export function AssemblyPage(props: {
                         {mp &&
                         ["committee", "floor_scheduled", "repassage_scheduled"].includes(bill.status) ? (
                           <div style={{ marginTop: "0.8rem" }}>
-                            <SectionDivider title="Propose amendment" hint="Magnitude is not auto-cut" />
-                            <div className="row">
-                              <select
-                                value={amendIssue || bill.policyItems[0]?.issueId || ""}
-                                onChange={(e) => setAmendIssue(e.target.value)}
-                              >
-                                {bill.policyItems.map((p) => (
-                                  <option key={p.issueId} value={p.issueId}>
-                                    {issueDisplayName(props.catalog, p.issueId)}
-                                  </option>
-                                ))}
-                              </select>
-                              <select
-                                value={String(amendDir)}
-                                onChange={(e) => setAmendDir(Number(e.target.value) as 1 | -1)}
-                              >
-                                <option value="1">For</option>
-                                <option value="-1">Against</option>
-                              </select>
-                              <label>
-                                Intensity {amendMag.toFixed(2)}
-                                <input
-                                  type="range"
-                                  min={0.1}
-                                  max={1}
-                                  step={0.05}
-                                  value={amendMag}
-                                  onChange={(e) => setAmendMag(Number(e.target.value))}
-                                />
-                              </label>
-                              <button
-                                type="button"
-                                className="btn"
-                                onClick={() => {
-                                  const target = amendIssue || bill.policyItems[0]?.issueId;
-                                  if (!target) return;
-                                  const items = bill.policyItems.map((p) =>
-                                    p.issueId === target
-                                      ? { ...p, direction: amendDir, magnitude: amendMag }
-                                      : p,
-                                  );
-                                  run({
-                                    type: "PROPOSE_AMENDMENT",
-                                    billId: bill.id,
-                                    policyItems: items,
-                                  });
-                                }}
-                              >
-                                Propose amendment
-                              </button>
-                            </div>
+                            <SectionDivider title="Propose amendment" hint="Replace one concrete provision" />
+                            {(() => {
+                              const amendable = bill.policyItems.filter((item) => item.provisionId);
+                              const targetId = amendProvision || amendable[0]?.provisionId || "";
+                              const target = targetId ? provisionChoices(props.snap, targetId) : null;
+                              const currentItem = amendable.find((item) => item.provisionId === targetId);
+                              const selectedOption = amendOption || currentItem?.optionId || target?.definition.options.find((option) => option.direction === 0)?.id || target?.definition.options[0]?.id || "";
+                              return amendable.length === 0 || !target ? (
+                                <p className="muted">This legacy bill has no concrete provision that can be amended.</p>
+                              ) : (
+                                <>
+                                  <label className="field-label">
+                                    Provision
+                                    <select
+                                      value={targetId}
+                                      onChange={(event) => {
+                                        setAmendProvision(event.target.value);
+                                        setAmendOption("");
+                                      }}
+                                    >
+                                      {amendable.map((item) => (
+                                        <option key={item.provisionId} value={item.provisionId}>
+                                          {legislativeProvision(item.provisionId!)?.category ?? issueDisplayName(props.catalog, item.issueId)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                  <PolicyChoiceGroup
+                                    title={target.definition.category}
+                                    currentLabel={target.currentLabel}
+                                    selectedId={selectedOption}
+                                    onSelect={setAmendOption}
+                                    options={target.options}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="btn"
+                                    disabled={selectedOption === currentItem?.optionId}
+                                    onClick={() => {
+                                      const replacement = policyItemForProvision(targetId, selectedOption);
+                                      if (!replacement) return;
+                                      run({ type: "PROPOSE_AMENDMENT", billId: bill.id, policyItems: [replacement] });
+                                    }}
+                                  >
+                                    Submit provision amendment
+                                  </button>
+                                </>
+                              );
+                            })()}
                           </div>
                         ) : null}
                       </div>
@@ -622,6 +771,26 @@ export function AssemblyPage(props: {
                             })}
                           </>
                         ) : null}
+                        {playerMaySetWhip ? (
+                          <div className="whip-position-controls">
+                            <SectionDivider title="Set caucus position" hint="Members retain their own vote" />
+                            <div className="row">
+                              <button type="button" className="btn" onClick={() => run({ type: "SET_CAUCUS_BILL_POSITION", billId: bill.id, stance: "support" })}>Support</button>
+                              <button type="button" className="btn danger" onClick={() => run({ type: "SET_CAUCUS_BILL_POSITION", billId: bill.id, stance: "oppose" })}>Oppose</button>
+                              <button type="button" className="btn secondary" onClick={() => run({ type: "SET_CAUCUS_BILL_POSITION", billId: bill.id, stance: "free_vote" })}>Free vote</button>
+                            </div>
+                          </div>
+                        ) : null}
+                        <SectionDivider title="Version history" hint={`Current version ${bill.version}`} />
+                        <div className="bill-version-history">
+                          {bill.versionHistory.slice().reverse().map((version) => (
+                            <EntityRow
+                              key={`${bill.id}:v${version.version}`}
+                              title={`Version ${version.version}`}
+                              meta={`${version.date} · ${version.reason === "introduced" ? "Introduced" : "Adopted amendment"} · ${version.policyItems.map((item) => policyItemDisplay(props.catalog, item)).join("; ")}`}
+                            />
+                          ))}
+                        </div>
                         {bill.cosponsorIds.length > 0 ? (
                           <p className="muted" style={{ marginTop: "0.6rem" }}>
                             Cosponsors:{" "}
@@ -660,7 +829,7 @@ export function AssemblyPage(props: {
                             setDraftProvisions((rows) =>
                               rows.map((row, rowIndex) =>
                                 rowIndex === index
-                                  ? { provisionId: nextId, optionId: "high" }
+                                  ? { provisionId: nextId, optionId: defaultProvisionOptionId(nextId) }
                                   : row,
                               ),
                             );
@@ -728,7 +897,7 @@ export function AssemblyPage(props: {
                       if (next) {
                         setDraftProvisions((rows) => [
                           ...rows,
-                          { provisionId: next.id, optionId: "high" },
+                          { provisionId: next.id, optionId: defaultProvisionOptionId(next.id) },
                         ]);
                       }
                     }}
@@ -785,12 +954,23 @@ export function AssemblyPage(props: {
                   <EntityRow
                     key={c.id}
                     title={committeeDisplayName(c.id)}
-                    meta={`${c.memberIds.length} members · ${c.memberIds
-                      .slice(0, 8)
-                      .map((id) => politicianDisplayName(props.catalog, id))
-                      .join(" · ")}${c.memberIds.length > 8 ? " …" : ""}`}
+                    meta={`${c.memberIds.length} members · Chair ${c.chairId ? politicianDisplayName(props.catalog, c.chairId) : "vacant"}`}
+                    selected={c.id === activeCommitteeId}
+                    onClick={() => setSelectedCommitteeId(c.id)}
                   />
                 ))}
+                {selectedCommittee ? <>
+                  <SectionDivider title={committeeDisplayName(selectedCommittee.id)} hint={`Chair · ${selectedCommittee.chairId ? politicianDisplayName(props.catalog, selectedCommittee.chairId) : "Vacant"}`} />
+                  <div className="roll-call-scroll">
+                    <DataTable dense headers={["Member", "Party", "Caucus"]}>
+                      {selectedCommittee.memberIds.map((memberId) => <tr key={memberId} onClick={() => setSelectedMember(memberId)}><td><button type="button" className="link-button">{politicianDisplayName(props.catalog, memberId)}</button>{memberId === selectedCommittee.chairId ? " · Chair" : ""}</td><td>{partyDisplayName(props.world, props.snap.politicians[memberId]?.partyId ?? null, props.snap)}</td><td>{props.snap.politicians[memberId]?.factionId ? props.world.factionDefinitions[props.snap.politicians[memberId]!.factionId!]?.name ?? "—" : "—"}</td></tr>)}
+                    </DataTable>
+                  </div>
+                  <SectionDivider title="Pending bills" />
+                  {allBills.filter((candidate) => candidate.assignedCommitteeId === selectedCommittee.id && ["introduced", "committee"].includes(candidate.status)).length === 0 ? <p className="muted">No bill is presently pending.</p> : allBills.filter((candidate) => candidate.assignedCommitteeId === selectedCommittee.id && ["introduced", "committee"].includes(candidate.status)).map((candidate) => <EntityRow key={candidate.id} title={candidate.title} meta={billStatusLabel(candidate.status)} onClick={() => selectBill(candidate.id)} />)}
+                  <SectionDivider title="Recent committee votes" />
+                  {votes.filter((vote) => vote.committeeId === selectedCommittee.id).length === 0 ? <p className="muted">No committee roll call has been recorded.</p> : <DataTable dense headers={["Date", "Measure", "Result"]}>{votes.filter((vote) => vote.committeeId === selectedCommittee.id).slice(0, 12).map((vote) => <tr key={vote.id} onClick={() => { setSelectedVoteId(vote.id); setChamberTab("votes"); }}><td>{vote.date}</td><td>{props.snap.legislatureRuntime.bills[vote.billId]?.title ?? "Assembly matter"}</td><td>{vote.yes}–{vote.no} · {vote.abstain} abstain</td></tr>)}</DataTable>}
+                </> : null}
               </>
             ) : null}
 
@@ -812,7 +992,7 @@ export function AssemblyPage(props: {
                         ? "Treaty ratification"
                         : v.stage;
                     return (
-                      <tr key={v.id}>
+                      <tr key={v.id} className={selectedVoteId === v.id ? "selected" : undefined} onClick={() => setSelectedVoteId(v.id)}>
                         <td>{parent?.title ?? metaTitle ?? v.billId}</td>
                         <td>{stageLabel}</td>
                         <td>
@@ -823,6 +1003,33 @@ export function AssemblyPage(props: {
                     );
                   })}
                 </DataTable>
+                {selectedVoteId && props.snap.legislatureRuntime.legislativeVotes[selectedVoteId] ? (() => {
+                  const selectedVote = props.snap.legislatureRuntime.legislativeVotes[selectedVoteId]!;
+                  const rows = Object.entries(selectedVote.votes)
+                    .filter(([, choice]) => rollCallFilter === "all" || choice === rollCallFilter)
+                    .sort((a, b) => politicianDisplayName(props.catalog, a[0]).localeCompare(politicianDisplayName(props.catalog, b[0])));
+                  const breakdown = new Map<string, { yes: number; no: number; abstain: number }>();
+                  for (const [memberId, choice] of Object.entries(selectedVote.votes)) {
+                    const partyId = props.snap.politicians[memberId]?.partyId ?? "none";
+                    const count = breakdown.get(partyId) ?? { yes: 0, no: 0, abstain: 0 };
+                    count[choice] += 1;
+                    breakdown.set(partyId, count);
+                  }
+                  return <div className="roll-call-panel">
+                    <SectionDivider title="Roll Call" hint={`${selectedVote.yes} Aye · ${selectedVote.no} Nay · ${selectedVote.abstain} Abstain`} />
+                    <div className="roll-call-breakdown">
+                      {[...breakdown.entries()].sort((a, b) => (b[1].yes + b[1].no + b[1].abstain) - (a[1].yes + a[1].no + a[1].abstain)).map(([partyId, count]) => <span key={partyId}><strong>{partyDisplayName(props.world, partyId === "none" ? null : partyId, props.snap)}</strong> {count.yes} Aye · {count.no} Nay · {count.abstain} Abstain</span>)}
+                    </div>
+                    <div className="map-scale-switch" aria-label="Filter roll call">
+                      {(["all", "yes", "no", "abstain"] as const).map((choice) => <button type="button" key={choice} className={rollCallFilter === choice ? "active" : ""} onClick={() => setRollCallFilter(choice)}>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : choice[0]!.toUpperCase() + choice.slice(1)}</button>)}
+                    </div>
+                    <div className="roll-call-scroll">
+                      <DataTable dense headers={["Member", "Party", "Caucus", "Vote"]}>
+                        {rows.map(([memberId, choice]) => <tr key={memberId} onClick={() => setSelectedMember(memberId)}><td><button type="button" className="link-button">{politicianDisplayName(props.catalog, memberId)}</button></td><td>{partyDisplayName(props.world, props.snap.politicians[memberId]?.partyId ?? null, props.snap)}</td><td>{props.snap.politicians[memberId]?.factionId ? props.world.factionDefinitions[props.snap.politicians[memberId]!.factionId!]?.name ?? "—" : "—"}</td><td>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : "Abstain"}</td></tr>)}
+                      </DataTable>
+                    </div>
+                  </div>;
+                })() : null}
               </>
             ) : null}
           </>

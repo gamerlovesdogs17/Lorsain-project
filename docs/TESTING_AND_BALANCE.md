@@ -113,6 +113,35 @@ Browser QA covers new game, character selection, end turn, save/load behavior, m
 
 Phase 11.2 additionally requires President, MP, Governor, non-incumbent, former officeholder and justice role passes, plus limited-role checks for Minister/Mayor. Inspect Home/Office/Career, province actions, gubernatorial filing/campaign/result, concrete bill composition, each truthful domestic map mode, world-map modes, hover/leave/click/tap/keyboard behavior, and populated News/Archive states. Responsive widths are 1440, 1200, 900, 600 and 390 pixels. Evidence screenshots live under `docs/qa/phase11_2/`.
 
+### 14.1 Phase 11.3 institutional acceptance
+
+The formal whole-game gate is **100 deterministic saves × 600 monthly turns**:
+
+```bash
+pnpm calibrate:whole-game -- --seeds=100 --months=600 --parallel=12
+```
+
+The checked-in runner may divide absolute seed indices among workers, but merges results in seed order and performs a continuous/reload determinism check after aggregation. Parallelism may change wall-clock duration only; it must not change a seed's simulation result.
+
+Required telemetry covers catastrophic invariants, candidate supply and generation/promotion, party/faction/caucus leadership turnover, Provincial Assembly elections and legislation, Governor disposition/override, constitutional amendments, federal bills/amendments/roll calls, organization relationships and endorsements, career generations, economy cycles, campaign geography/outcomes, monthly/election performance and serialized save growth at 0/120/300/600 months. Acceptance requires zero catastrophic failures and identical continuous/reload hashes.
+
+Targeted Phase 11.3 regressions additionally prove:
+
+- 21 chambers, 25–65 seats, unique public names and renewable legislators;
+- federal recruitment sizes the pre-filing promotion class from valid filings, running incumbents and command-layer-eligible challengers; no count-time fallback generation is permitted;
+- player authority/autonomy for party, caucus, provincial, Court and constitutional commands;
+- recurring leadership contests and individual archived ballots;
+- 280 federal votes plus 13 provincial ratifications, with amendment-specific province ordering rather than P01-first scheduling;
+- provincial bills, roll calls, Governor sign/veto and two-thirds override;
+- Court federal–provincial jurisdiction, qualification and opinion authorship;
+- concrete one-to-three-provision federal bills and targeted amendments;
+- organization endorsement withdrawal and relationship change from policy behavior;
+- save schema 12→13 deterministic migration without fabricated history.
+
+Browser acceptance covers President, MP/Speaker, Governor, non-incumbent/former officeholder and Justice, plus limited Minister/Mayor disclosure. V6 screens are inspected at 1440, 1200, 900, 600 and 390 pixels. Required flows include party/caucus selection, chamber and roll calls, bill comparison/amendment, Court bench/docket/decision/appointment, Provincial Assembly/Governor disposition, constitutional tracker, Ground Game, Economy, Calendar, global search/profile navigation, map hover/leave/click/tap/keyboard selection and populated long-save pages. Evidence lives under `docs/qa/phase11_3/screenshots/`.
+
+Normal closeout commands remain `pnpm build`, `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm validate:content`, `pnpm validate:phase0b:recount`, `pnpm game:build`, `pnpm calibrate:foreign`, `pnpm calibrate:assembly`, `pnpm calibrate:economy`, and `pnpm calibrate:campaign-geography`.
+
 ## 15. Long-save migration
 
 Maintain fixture saves from every released schema version. Migration tests upgrade them to current version and verify critical history, player identity, election results and officeholders remain intact.

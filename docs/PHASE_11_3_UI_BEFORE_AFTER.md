@@ -2,7 +2,7 @@
 
 Date: 2026-08-23  
 Baseline: `b00ec52` (Phase 11.2 / UI System V4)  
-Target grammar: `docs/UI_SYSTEM_V5.md` · Audit: `docs/PHASE_11_3_UI_ARCHITECTURE_AUDIT.md`
+Target grammar: `docs/UI_SYSTEM_V6.md` · Audits: `docs/PHASE_11_3_UI_ARCHITECTURE_AUDIT.md` and `docs/PHASE_11_3_INSTITUTIONAL_AUDIT.md`
 
 For each major screen: what failed in the V4 card-dashboard reading, what V5 structure replaces it, and why the workflow is clearer.
 
@@ -213,3 +213,24 @@ Featured band limited to meaningful gameplay roles; each start shows name, role,
 
 **WHY BETTER**  
 Players pick a job with known depth and focus (executive/foreign, provincial, legislation/constituency, judicial, etc.) without treating Limited roles as equivalent full campaigns.
+
+---
+
+## V6 institutional reconstruction addendum
+
+The first V5 pass changed page composition but still rested on several shallow institutions. The expanded Phase 11.3 changes below are gameplay-backed rather than cosmetic.
+
+| Page/workflow | OLD | NEW | WHY |
+| --- | --- | --- | --- |
+| Party | Player-party summary with limited faction browsing | All-party directory, selected-party identity, caucus membership/power, recurring leadership, floor leader and whip | Parties can be compared and understood as national institutions |
+| Assembly | Tables and bill cards without a complete chamber or deep vote navigation | Accessible 420-seat hemicycle, member inspector, individual/party roll-call explorer, committee votes, caucus positions, constitutional tracker | Chamber control and member accountability are visible before procedure |
+| Bills | Generic issue direction/magnitude and prose-heavy detail | Thirty concrete provisions, ninety named legal alternatives, one-to-three provision builder, targeted amendment/version history | A bill describes actual law and amendments visibly change that law |
+| Courts | Docket-first cards and compact bench references | Nine-seat bench, judge selection/history, qualified appointment browser, authored majority/dissent opinions and individual votes | The Court reads as nine people making public constitutional decisions |
+| Province | Governor priorities and pressures without a legislature | 21 population-scaled Provincial Assemblies, named legislators, elections, bills, roll calls, Governor sign/veto and override | Governors now govern through an institution and local careers replenish national politics |
+| Career | Player opportunity tabs plus static biography | Political opportunities plus a searchable public directory connected to office and roll-call histories | Careers below the presidency are inspectable and generated politicians remain legible |
+| Organizations | Relationship/action inspector where meetings could dominate perception | Qualitative trust/alignment, behavior-derived scorecards, active/withdrawn endorsements | Political conduct outweighs repetitive contact grinding |
+| Elections | Separate result views with dates scattered elsewhere | Election-specific layouts plus grouped Political Calendar | Filing, leadership, nomination and election horizons can be planned without a giant duplicate list |
+| Campaign | Geographic organization map with internal terminology | Ground Game 0–100, province/constituency scale, truthful public polls and bounded decay | The field resource and its geography are readable without exposing hidden voter support |
+| Economy | Reference indices were still the first language | Public growth, unemployment, inflation, real-pay, housing and confidence briefing; indices secondary | The political economy reads like public statistics while retaining stable simulation internals |
+| Maps | Mode switching plus a separate detail card | Truthful four-mode map, temporary tooltip, persistent compact inspector, keyboard/tap selection, zoom/pan/reset | Geography becomes a usable inspection surface on desktop and mobile |
+| Navigation | Grouped sidebar only | Contextual Office label plus Ctrl/Cmd+K entity search | Players can move directly from a name, bill, party or case to its public record |

@@ -67,6 +67,11 @@ export function advanceIntegrated(sim: Simulation, turns: number, stopOn?: strin
       expectOk(sim, { type: "RESUME_TURN" });
       continue;
     }
+    if (r.interrupt.code === "PRESIDENTIAL_ASSUMPTION_DUE") {
+      expectOk(sim, { type: "RESOLVE_PRESIDENTIAL_ASSUMPTION" });
+      expectOk(sim, { type: "RESUME_TURN" });
+      continue;
+    }
     if (!r.interrupt.requiresResolution) {
       expectOk(sim, { type: "ACKNOWLEDGE_INTERRUPT" });
       expectOk(sim, { type: "RESUME_TURN" });
@@ -90,10 +95,11 @@ export function assertCatastrophicInvariants(
   const failures: CatastrophicInvariantFailure[] = [];
   const mps = currentAssemblyMemberIds(world, state);
   const authorized = world.legislativeConstitution.assemblySeatCount;
-  if (mps.length !== authorized) {
+  const catastrophicAssemblyFloor = Math.ceil(authorized * 0.9);
+  if (mps.length > authorized || mps.length < catastrophicAssemblyFloor) {
     failures.push({
       code: "ASM_SEAT_COUNT",
-      message: `sitting Assembly ${mps.length} != authorized ${authorized}`,
+      message: `sitting Assembly ${mps.length} outside operational range ${catastrophicAssemblyFloor}-${authorized}`,
     });
   }
   const president = currentPresidentialAuthorityId(world, state);

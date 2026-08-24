@@ -9,6 +9,7 @@ export const COURT_CASE_TYPES = [
   "EMERGENCY_REVIEW",
   "ELECTION_CONSTITUTIONAL_DISPUTE",
   "IMPEACHMENT_JUDGMENT",
+  "FEDERAL_PROVINCIAL_DISPUTE",
 ] as const;
 export type CourtCaseType = (typeof COURT_CASE_TYPES)[number];
 
@@ -72,7 +73,8 @@ export type CourtCase = {
     | "appointment"
     | "election"
     | "impeachment"
-    | "executive_action";
+    | "executive_action"
+    | "provincial_law";
   challengedId: string;
   constitutionalQuestion: string;
   constitutionalRule: string;

@@ -4,7 +4,6 @@ import { monthStart } from "../campaigns/effects.js";
 import { currentAssemblyMemberIds, currentPresidentialAuthorityId } from "../legislature/state.js";
 import type { LegislativeVoteChoice } from "../legislature/types.js";
 import {
-  activeCaseload,
   courtStageRipe,
   fileConstitutionalCase,
   nominateConstitutionalJudge,
@@ -14,6 +13,7 @@ import {
   recordJudicialDecision,
   recordRecallReferralVote,
   resolveNationalRecall,
+  similarPrecedent,
   takePendingCourtVote,
 } from "./procedure.js";
 import {
@@ -27,6 +27,7 @@ import {
 import { currentCourtJudgeIds } from "./state.js";
 import type { JudicialVoteChoice } from "./types.js";
 import { MAX_ACTIVE_COURT_CASES } from "./types.js";
+import { currentGovernorId } from "../provinces/state.js";
 
 function tallyAssembly(
   mps: string[],
@@ -51,6 +52,7 @@ function nominationWork(
   world: KernelWorld,
   rng: RngService,
   commandId: string,
+  mps: string[],
 ): SimEvent[] {
   const events: SimEvent[] = [];
   events.push(...openVacancyNominations(world, state, commandId));
@@ -73,7 +75,6 @@ function nominationWork(
       }
     }
   }
-  const mps = currentAssemblyMemberIds(world, state);
   const ripe = Object.values(state.constitutionalRuntime.nominations)
     .filter(
       (n) =>
@@ -101,9 +102,9 @@ function docketWork(
   world: KernelWorld,
   rng: RngService,
   commandId: string,
+  judges: string[],
 ): SimEvent[] {
   const events: SimEvent[] = [];
-  const judges = currentCourtJudgeIds(world, state);
   const pending = Object.values(state.constitutionalRuntime.courtCases)
     .filter((c) => c.status === "pending" && courtStageRipe(state, c.stageReadyDate))
     .sort((a, b) => {
@@ -116,6 +117,7 @@ function docketWork(
     ? takePendingCourtVote(state, "judicial", courtCase.id)
     : null;
   const votes: Record<string, JudicialVoteChoice> = {};
+  const precedent = similarPrecedent(state, courtCase);
   for (const id of judges) {
     if (id === state.playerPoliticianId) {
       votes[id] =
@@ -126,7 +128,7 @@ function docketWork(
           : "nonparticipation";
       continue;
     }
-    votes[id] = chooseJudicialVote(world, state, id, courtCase, rng);
+    votes[id] = chooseJudicialVote(world, state, id, courtCase, rng, precedent);
   }
   const out = recordJudicialDecision(world, state, { caseId: courtCase.id, votes }, commandId);
   if (!("error" in out)) events.push(...out.events);
@@ -138,9 +140,9 @@ function assemblyProceedings(
   world: KernelWorld,
   rng: RngService,
   commandId: string,
+  mps: string[],
 ): SimEvent[] {
   const events: SimEvent[] = [];
-  const mps = currentAssemblyMemberIds(world, state);
   const impeach = Object.values(state.constitutionalRuntime.impeachments)
     .filter((p) => p.status === "assembly_pending" && courtStageRipe(state, p.stageReadyDate))
     .sort((a, b) => a.stageReadyDate.localeCompare(b.stageReadyDate) || a.introducedDate.localeCompare(b.introducedDate) || a.id.localeCompare(b.id))[0];
@@ -188,18 +190,53 @@ function generateCases(
   world: KernelWorld,
   rng: RngService,
   commandId: string,
+  mps: string[],
 ): SimEvent[] {
   const events: SimEvent[] = [];
+  const existingCases = Object.values(state.constitutionalRuntime.courtCases);
+  const reviewedTargets = new Set(
+    existingCases.map((courtCase) => `${courtCase.challengedKind}:${courtCase.challengedId}`),
+  );
+  let activeCases = existingCases.reduce(
+    (count, courtCase) => count + (courtCase.status === "filed" || courtCase.status === "pending" ? 1 : 0),
+    0,
+  );
+  for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) => a.id.localeCompare(b.id))) {
+    if (bill.status !== "signed" && bill.status !== "override_passed") continue;
+    if (stableCourtDisputeHash(bill.id) % 100 >= 8) continue;
+    if (reviewedTargets.has(`provincial_law:${bill.id}`) || activeCases >= MAX_ACTIVE_COURT_CASES) continue;
+    const governorId = currentGovernorId(world, state, bill.provinceId);
+    const presidentId = currentPresidentialAuthorityId(world, state);
+    if (!governorId || !presidentId || governorId === state.playerPoliticianId) continue;
+    const filed = fileConstitutionalCase(
+      world,
+      state,
+      {
+        actorId: governorId,
+        caseType: "FEDERAL_PROVINCIAL_DISPUTE",
+        challengedKind: "provincial_law",
+        challengedId: bill.id,
+        respondentId: presidentId,
+        constitutionalQuestion: `Whether ${bill.title} remains within provincial authority`,
+        constitutionalRule: "federal_provincial_competence",
+        meritsLean: ((stableCourtDisputeHash(`${bill.id}:merits`) % 101) - 50) / 100,
+      },
+      commandId,
+    );
+    if (!("error" in filed)) {
+      events.push(...filed.events);
+      reviewedTargets.add(`provincial_law:${bill.id}`);
+      activeCases += 1;
+    }
+  }
   for (const emergency of Object.values(state.executiveRuntime.emergencies)) {
     if (emergency.status !== "active") continue;
     if (emergency.metadata.courtReviewRequired !== true) continue;
-    const exists = Object.values(state.constitutionalRuntime.courtCases).some(
-      (c) => c.caseType === "EMERGENCY_REVIEW" && c.challengedId === emergency.id,
-    );
-    if (exists) continue;
-    const petitioner =
-      currentAssemblyMemberIds(world, state).find((id) => id !== state.playerPoliticianId) ??
-      emergency.declaredBy;
+    if (reviewedTargets.has(`emergency:${emergency.id}`)) continue;
+    const eligibleEmergencyPetitioners = mps.filter((id) => id !== state.playerPoliticianId);
+    const petitioner = eligibleEmergencyPetitioners.length > 0
+      ? eligibleEmergencyPetitioners[rng.uint32("npc-decisions") % eligibleEmergencyPetitioners.length]!
+      : emergency.declaredBy;
     const filed = fileConstitutionalCase(
       world,
       state,
@@ -216,24 +253,23 @@ function generateCases(
       },
       commandId,
     );
-    if (!("error" in filed)) events.push(...filed.events);
+    if (!("error" in filed)) {
+      events.push(...filed.events);
+      reviewedTargets.add(`emergency:${emergency.id}`);
+      activeCases += 1;
+    }
   }
-  if (activeCaseload(state) >= MAX_ACTIVE_COURT_CASES) return events;
+  if (activeCases >= MAX_ACTIVE_COURT_CASES) return events;
   const laws = Object.values(state.legislatureRuntime.enactedLaws)
     .filter((l) => l.operative !== false)
     .sort((a, b) => (a.id < b.id ? 1 : -1));
   const law = laws[0];
-  const mps = currentAssemblyMemberIds(world, state).filter(
-    (id) => id !== state.playerPoliticianId,
-  );
-  const petitioner = mps.length > 0
-    ? mps[rng.uint32("npc-decisions") % mps.length]
+  const eligiblePetitioners = mps.filter((id) => id !== state.playerPoliticianId);
+  const petitioner = eligiblePetitioners.length > 0
+    ? eligiblePetitioners[rng.uint32("npc-decisions") % eligiblePetitioners.length]
     : undefined;
   if (law && petitioner && npcShouldFileLawReview(world, state, petitioner, rng)) {
-    const already = Object.values(state.constitutionalRuntime.courtCases).some(
-      (c) => c.challengedKind === "law" && c.challengedId === law.id,
-    );
-    if (!already) {
+    if (!reviewedTargets.has(`law:${law.id}`)) {
       const filed = fileConstitutionalCase(
         world,
         state,
@@ -249,19 +285,20 @@ function generateCases(
         },
         commandId,
       );
-      if (!("error" in filed)) events.push(...filed.events);
+      if (!("error" in filed)) {
+        events.push(...filed.events);
+        reviewedTargets.add(`law:${law.id}`);
+        activeCases += 1;
+      }
     }
   }
-  if (activeCaseload(state) >= MAX_ACTIVE_COURT_CASES) return events;
+  if (activeCases >= MAX_ACTIVE_COURT_CASES) return events;
   const regs = Object.values(state.executiveRuntime.regulations)
     .filter((r) => r.status === "active")
     .sort((a, b) => (a.id < b.id ? 1 : -1));
   const reg = regs[0];
   if (reg && petitioner && rng.float01("npc-decisions") < 0.05) {
-    const already = Object.values(state.constitutionalRuntime.courtCases).some(
-      (c) => c.challengedKind === "regulation" && c.challengedId === reg.id,
-    );
-    if (!already) {
+    if (!reviewedTargets.has(`regulation:${reg.id}`)) {
       const filed = fileConstitutionalCase(
         world,
         state,
@@ -283,6 +320,15 @@ function generateCases(
   return events;
 }
 
+function stableCourtDisputeHash(text: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 export function processCourtsMonth(
   state: SimState,
   world: KernelWorld,
@@ -292,10 +338,20 @@ export function processCourtsMonth(
   const month = monthStart(state.currentDate);
   if (state.constitutionalRuntime.lastMonthProcessed === month) return [];
   const events: SimEvent[] = [];
-  events.push(...nominationWork(state, world, rng, commandId));
-  events.push(...assemblyProceedings(state, world, rng, commandId));
-  events.push(...generateCases(state, world, rng, commandId));
-  events.push(...docketWork(state, world, rng, commandId));
+  const profile = (globalThis as typeof globalThis & { __lorsainStageTimings?: Record<string, number[]> }).__lorsainStageTimings;
+  const timed = <T,>(stage: string, work: () => T): T => {
+    if (!profile) return work();
+    const started = performance.now();
+    const result = work();
+    (profile[stage] ??= []).push(performance.now() - started);
+    return result;
+  };
+  const mps = timed("courts.current_assembly", () => currentAssemblyMemberIds(world, state));
+  const judges = timed("courts.current_bench", () => currentCourtJudgeIds(world, state));
+  events.push(...timed("courts.nominations", () => nominationWork(state, world, rng, commandId, mps)));
+  events.push(...timed("courts.proceedings", () => assemblyProceedings(state, world, rng, commandId, mps)));
+  events.push(...timed("courts.case_generation", () => generateCases(state, world, rng, commandId, mps)));
+  events.push(...timed("courts.docket", () => docketWork(state, world, rng, commandId, judges)));
   state.constitutionalRuntime.lastMonthProcessed = month;
   return events;
 }

@@ -13,7 +13,11 @@ import { occupyingTerms, officesOfKind, endTerm } from "./offices.js";
 import { parseSaveFile } from "./save.js";
 import { currentMinisterHolderId, deriveCabinet } from "./executive/state.js";
 import { currentPresidentialAuthorityId, currentAssemblyMemberIds } from "./legislature/state.js";
-import { assemblyFractionYesNeeded, recordMotionVote } from "./executive/procedure.js";
+import {
+  assemblyFractionYesNeeded,
+  recordMotionVote,
+  scheduleWarAuthorizationReferral,
+} from "./executive/procedure.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 
@@ -81,7 +85,7 @@ describe("Phase 7 executive kernel", () => {
     const world = executiveHarness();
     const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P7-NEW" });
     expect(sim.getSnapshot().schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(SAVE_SCHEMA_VERSION).toBe(12);
+    expect(SAVE_SCHEMA_VERSION).toBe(13);
     expect(sim.getSnapshot().executiveRuntime.regulations).toEqual({});
     expect(sim.getSnapshot().executiveRuntime.motions).toEqual({});
     expect(currentPresidentialAuthorityId(world, sim.getSnapshot())).toBe("P1");
@@ -214,6 +218,41 @@ describe("Phase 7 executive kernel", () => {
     const war = restoreSimulation(warSave, world);
     expectOk(war, { type: "BEGIN_WAR_POWERS" });
     expect(Object.keys(war.getSnapshot().executiveRuntime.warPowers).length).toBe(1);
+  });
+
+  it("chooses a politically grounded war-referral sponsor when the Speakership is vacant", () => {
+    const world = executiveHarness();
+    const state = jsonClone(
+      createSimulation({ world, playerPoliticianId: "P1", seed: "P7-WAR-SPONSOR" }).getSnapshot(),
+    );
+    for (const term of Object.values(state.officeTerms)) {
+      if (term.status !== "active" || world.offices[term.officeId]?.kind !== "speaker") continue;
+      term.status = "ended";
+      term.endDate = state.currentDate;
+      term.endedDate = state.currentDate;
+      term.endedReason = "test_vacancy";
+    }
+    const mps = currentAssemblyMemberIds(world, state).filter((id) => id !== state.playerPoliticianId);
+    const expected = mps.at(-1)!;
+    for (const id of mps) {
+      const profile = world.agentProfiles[id]!;
+      profile.skills.legislation = id === expected ? 1 : 0;
+      profile.traits.institutionalism = id === expected ? 1 : 0;
+    }
+    state.executiveRuntime.warPowers.WAR000001 = {
+      id: "WAR000001",
+      startedBy: state.playerPoliticianId,
+      startDate: state.currentDate,
+      unilateralUntil: state.currentDate,
+      status: "unilateral",
+      authorized: false,
+      metadata: {},
+    };
+    const result = scheduleWarAuthorizationReferral(world, state, "WAR000001", null);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.motion.sponsorId).toBe(expected);
+    expect(result.motion.sponsorId).not.toBe(mps[0]);
   });
 
   it("migrates v6 saves into empty executive runtime", () => {

@@ -368,12 +368,13 @@ export function resolvePartyContest(
   if (!RESOLVABLE.has(contest.status)) {
     return { error: reject("INVALID_CONTEST", `cannot resolve from ${contest.status}`) };
   }
-  if (selectorateForRule(world, state, contest).length === 0) {
+  const selectorate = selectorateForRule(world, state, contest);
+  if (selectorate.length === 0) {
     return { error: reject("EMPTY_SELECTORATE", "no legitimate selectors") };
   }
   const qErr = applyQualification(world, state, contest);
   if (qErr) return { error: qErr };
-  const counted = resolveContestCount(world, state, contest, rng);
+  const counted = resolveContestCount(world, state, contest, rng, selectorate);
   if ("error" in counted) return counted;
   contest.selectorSummary = counted.selectorSummary;
   contest.countInput = counted.countInput;

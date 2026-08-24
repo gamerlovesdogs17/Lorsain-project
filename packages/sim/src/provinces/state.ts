@@ -8,6 +8,7 @@ import type {
   ProvincialRuntime,
 } from "./types.js";
 import { emptyProvincialRuntime } from "./types.js";
+import { seedProvincialAssemblies } from "./assemblies.js";
 
 function clampUnit(value: number): number {
   return Math.max(-1, Math.min(1, value));
@@ -106,6 +107,9 @@ export function seedProvincialRuntime(
   state: SimState,
   existing: ProvincialRuntime = emptyProvincialRuntime(),
 ): ProvincialRuntime {
+  // Initial creation passes a fresh runtime; make it authoritative before the
+  // assembly seeder writes its connected institutional records.
+  state.provincialRuntime = existing;
   for (const provinceId of world.provinceIds) {
     existing.provinces[provinceId] ??= provinceState(world, state, provinceId);
     const hasFuture = Object.values(existing.elections).some(
@@ -121,6 +125,7 @@ export function seedProvincialRuntime(
       existing.elections[election.id] = election;
     }
   }
+  seedProvincialAssemblies(world, state);
   return existing;
 }
 

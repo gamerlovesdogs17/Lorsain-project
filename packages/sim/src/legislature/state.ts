@@ -4,6 +4,7 @@ import type { KernelWorld, SimState } from "../types.js";
 import { COMMITTEE_IDS, COMMITTEE_DIMENSIONS, emptyLegislatureRuntime } from "./types.js";
 import type { CommitteeState, LegislatureRuntime } from "./types.js";
 import { COMMITTEE_NAMES, LEGISLATURE } from "./policy.js";
+import { getAgentProfile } from "../agents/profile.js";
 
 export function currentAssemblyMemberIds(world: KernelWorld, state: SimState): string[] {
   const officeIds = new Set(officesOfKind(world, "assembly_member").map((o) => o.id));
@@ -106,9 +107,38 @@ function largestRemainder(shares: number[], total: number): number[] {
   return floors;
 }
 
+function selectCommitteeChair(
+  world: KernelWorld,
+  state: SimState,
+  memberIds: string[],
+): string | null {
+  return memberIds
+    .filter((id) => id !== state.playerPoliticianId)
+    .slice()
+    .sort((a, b) => {
+      const pa = getAgentProfile(world, state, a);
+      const pb = getAgentProfile(world, state, b);
+      const as = (pa?.skills.legislation ?? 0.5) * 0.72 + (pa?.traits.ambition ?? 0.5) * 0.28;
+      const bs = (pb?.skills.legislation ?? 0.5) * 0.72 + (pb?.traits.ambition ?? 0.5) * 0.28;
+      return bs - as || a.localeCompare(b);
+    })[0] ?? null;
+}
+
 export function seedCommitteesIfNeeded(world: KernelWorld, state: SimState): void {
-  if (Object.keys(state.legislatureRuntime.committees).length > 0) return;
   const mps = currentAssemblyMemberIds(world, state);
+  const existingCommittees = Object.values(state.legislatureRuntime.committees);
+  if (existingCommittees.length > 0) {
+    const currentMembers = new Set(mps);
+    const assignedMembers = new Set(existingCommittees.flatMap((committee) => committee.memberIds));
+    const staleRoster = existingCommittees.some((committee) =>
+      committee.memberIds.some((id) => !currentMembers.has(id)),
+    ) || mps.some((id) => !assignedMembers.has(id));
+    if (!staleRoster) for (const committee of existingCommittees) {
+      committee.chairId ??= selectCommitteeChair(world, state, committee.memberIds);
+    }
+    if (!staleRoster) return;
+    state.legislatureRuntime.committees = {};
+  }
   if (mps.length === 0) return;
   const size = Math.min(
     LEGISLATURE.committeeSizeMax,
@@ -160,6 +190,7 @@ export function seedCommitteesIfNeeded(world: KernelWorld, state: SimState): voi
       name: COMMITTEE_NAMES[cid],
       dimension: COMMITTEE_DIMENSIONS[cid],
       memberIds: members,
+      chairId: selectCommitteeChair(world, state, members),
     };
   }
   const player = state.playerPoliticianId;

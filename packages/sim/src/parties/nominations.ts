@@ -8,6 +8,7 @@ import { assemblyCaucus } from "./queries.js";
 import {
   contestSelectorMethod,
   rankCandidatesForGroup,
+  clearSelectoratePublicCache,
   selectorateForRule,
 } from "./selectorates.js";
 import type { ContestCountInput, PartyContest, SelectorGroup } from "./types.js";
@@ -25,10 +26,11 @@ function distinctPmProvincialOrgs(
   state: SimState,
   contest: PartyContest,
   targetId: string,
+  active = activeEndorsementsForContest(state, contest.id),
 ): Set<string> {
   const orgs = new Set<string>();
   const provinces = new Set<string>();
-  for (const e of activeEndorsementsForContest(state, contest.id)) {
+  for (const e of active) {
     if (e.targetId !== targetId || e.endorserType !== "provincial_organization") continue;
     const org = resolveProvincialOrganization(world, e.endorserId);
     if (!org || org.status !== "active" || org.partyId !== contest.partyId) continue;
@@ -47,6 +49,7 @@ export function applyQualification(
 ): CommandError | null {
   const rule = world.nominationRules[contest.ruleId];
   const method = contestSelectorMethod(contest, world);
+  const activeEndorsements = activeEndorsementsForContest(state, contest.id);
   for (const entry of Object.values(contest.entries)) {
     if (entry.status === "withdrawn" || entry.status === "eliminated" || entry.status === "winner")
       continue;
@@ -66,7 +69,7 @@ export function applyQualification(
       const caucus = assemblyCaucus(world, state, contest.partyId);
       if (caucus.length === 0) return reject("INVALID_CONTEST", "empty assembly caucus");
       const needed = Math.ceil(frac * caucus.length);
-      const got = activeEndorsementsForContest(state, contest.id).filter(
+      const got = activeEndorsements.filter(
         (e) =>
           e.targetId === entry.politicianId &&
           e.endorserType === "politician" &&
@@ -76,7 +79,7 @@ export function applyQualification(
       qualified = got >= needed;
     } else if (method === "direct_member_rcv") {
       const min = rule?.provincialOrganizationEndorsementsMin ?? 4;
-      qualified = distinctPmProvincialOrgs(world, state, contest, entry.politicianId).size >= min;
+      qualified = distinctPmProvincialOrgs(world, state, contest, entry.politicianId, activeEndorsements).size >= min;
     } else if (method === "weighted_ranked_choice") {
       qualified =
         qualified &&
@@ -120,15 +123,17 @@ export function resolveContestCount(
   state: SimState,
   contest: PartyContest,
   rng: RngService,
+  precomputedGroups?: SelectorGroup[],
 ):
   | { archive: IrvResult; countInput: ContestCountInput; selectorSummary: SelectorGroup[] }
   | { error: CommandError } {
   const candidates = countableCandidateIds(world, state, contest);
   if (candidates.length < 1) return { error: reject("INVALID_CONTEST", "no qualified candidates") };
-  const groups = selectorateForRule(world, state, contest);
+  const groups = precomputedGroups ?? selectorateForRule(world, state, contest);
   if (groups.length === 0) {
     return { error: reject("EMPTY_SELECTORATE", "no legitimate selectors") };
   }
+  clearSelectoratePublicCache(state);
   const ballots: BallotGroupInput[] = groups.map((g) => ({
     id: g.id,
     rankings: rankCandidatesForGroup(world, state, contest, g, candidates, rng),

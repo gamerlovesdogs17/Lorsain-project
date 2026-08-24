@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import {
   caseTitle,
@@ -27,10 +27,11 @@ import { ForeignAffairsPage } from "./foreignAffairsScreen.js";
 import { OrganizationsPage } from "./organizationsScreen.js";
 import { NewsPage } from "./newsScreen.js";
 import { OfficePage } from "./officeScreen.js";
-import { isMp, isPresident, playerCampaign, publicStandingLabel } from "./format.js";
+import { groundGameStrength, isMp, isPresident, playerCampaign, publicStandingLabel } from "./format.js";
 import {
   contestDisplayName,
   campaignTypeLabel,
+  committeeDisplayName,
   countryDisplayName,
   crisisStageLabel,
   electionDisplayName,
@@ -132,6 +133,7 @@ type PageProps = {
     confirmLabel?: string;
     action: () => void;
   }) => void;
+  globalFocus: { kind: string; id: string } | null;
 };
 
 export function GamePages(props: PageProps) {
@@ -405,10 +407,22 @@ function Home(props: PageProps) {
 }
 
 function Career(props: PageProps) {
-  const [tab, setTab] = useState<"opportunities" | "overview" | "career" | "positions" | "record">(
+  const [tab, setTab] = useState<"opportunities" | "overview" | "career" | "positions" | "record" | "directory">(
     "opportunities",
   );
   const [raceGeography, setRaceGeography] = useState("");
+  const [directoryQuery, setDirectoryQuery] = useState("");
+  const [directorySelection, setDirectorySelection] = useState(props.snap.playerPoliticianId);
+  const [directoryVoteFilter, setDirectoryVoteFilter] = useState<"all" | "yes" | "no" | "abstain">("all");
+  const [directoryParty, setDirectoryParty] = useState("all");
+  const [directoryCaucus, setDirectoryCaucus] = useState("all");
+  const [directoryProvince, setDirectoryProvince] = useState("all");
+  const [directoryOffice, setDirectoryOffice] = useState("all");
+  useEffect(() => {
+    if (props.globalFocus?.kind !== "Politician") return;
+    setDirectorySelection(props.globalFocus.id);
+    setTab("directory");
+  }, [props.globalFocus]);
   const figure = props.figures.get(props.snap.playerPoliticianId);
   const runtime = props.snap.politicians[props.snap.playerPoliticianId];
   const standingLabel = publicStandingLabel(props.world, props.snap, props.snap.playerPoliticianId);
@@ -435,6 +449,14 @@ function Career(props: PageProps) {
     });
   const chosenConstituency = raceGeography || eligibleConstituencies[0] || "";
   const gubernatorial = currentGubernatorialOpportunity(props.snap, props.world, playerId);
+  const playerHome = runtime?.homeProvinceId ?? props.world.politicianHomeProvince[playerId] ?? null;
+  const provincialAssemblyOpportunities = Object.values(props.snap.provincialRuntime.assemblyElections)
+    .filter((election) =>
+      election.playerDecision == null &&
+      election.status !== "resolved" &&
+      election.provinceId === playerHome,
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
   const presidential = Object.values(props.snap.elections)
     .filter((election) => election.type === "presidential" && election.status !== "resolved" && election.status !== "cancelled")
     .sort((a, b) => a.date.localeCompare(b.date))[0];
@@ -467,6 +489,8 @@ function Career(props: PageProps) {
         standing={`Public standing: ${standingLabel}`}
         {...((figure?.notes ?? figure?.display_summary)
           ? { biography: figure?.notes ?? figure?.display_summary }
+          : runtime?.description
+            ? { biography: runtime.description }
           : {})}
       />
       <TabBar
@@ -476,6 +500,7 @@ function Career(props: PageProps) {
           { id: "career", label: "Career" },
           { id: "positions", label: "Positions" },
           { id: "record", label: "Public record" },
+          { id: "directory", label: "Politicians" },
         ]}
         value={tab}
         onChange={setTab}
@@ -536,12 +561,20 @@ function Career(props: PageProps) {
               <div className="opportunity-action">{race.status === "filing_open" ? <><button className="btn" onClick={() => run({ type: "FILE_GUBERNATORIAL_CANDIDACY", electionId: race.id, provinceId: race.provinceId })}>File candidacy</button><button className="btn secondary" onClick={() => run({ type: "DECLINE_GUBERNATORIAL_CANDIDACY", electionId: race.id })}>Decline this cycle</button></> : <StatusBadge>Opens {race.filingOpenDate}</StatusBadge>}</div>
             </section>;
           })}
-          {!presidential && !assemblyElection && gubernatorial.length === 0 ? <EmptyState>No modeled election opportunity is currently scheduled.</EmptyState> : null}
+          {provincialAssemblyOpportunities.map((race) => {
+            const provinceName = props.catalog.places.get(race.provinceId)?.name ?? race.provinceId;
+            return <section className="opportunity-row" key={race.id}>
+              <div className="opportunity-office"><span>Province</span><h3>{provinceName} Provincial Assembly</h3><strong>{race.date}</strong></div>
+              <div className="opportunity-details"><p>Province-wide proportional election · chamber {props.snap.provincialRuntime.assemblies[race.provinceId]?.seatCount ?? "—"} seats</p><p className="muted">A provincial term can build a record for Governor or the National Assembly.</p></div>
+              <div className="opportunity-action">{race.status === "filing_open" ? <><button className="btn" onClick={() => run({ type: "FILE_PROVINCIAL_ASSEMBLY_CANDIDACY", electionId: race.id })}>Join party list</button><button className="btn secondary" onClick={() => run({ type: "DECLINE_PROVINCIAL_ASSEMBLY_CANDIDACY", electionId: race.id })}>Decline this cycle</button></> : <StatusBadge>Opens five months before election</StatusBadge>}</div>
+            </section>;
+          })}
+          {!presidential && !assemblyElection && gubernatorial.length === 0 && provincialAssemblyOpportunities.length === 0 ? <EmptyState>No modeled election opportunity is currently scheduled.</EmptyState> : null}
         </div>
       ) : null}
       {tab === "overview" ? (
         <SectionCard title="Public biography">
-          <p>{figure?.notes ?? figure?.display_summary ?? "No public biography on file."}</p>
+          <p>{figure?.notes ?? figure?.display_summary ?? runtime?.description ?? "No public biography on file."}</p>
           {age != null ? <p>Age: {age}</p> : null}
         </SectionCard>
       ) : null}
@@ -577,12 +610,96 @@ function Career(props: PageProps) {
             ))}
         </SectionCard>
       ) : null}
+      {tab === "directory" ? (() => {
+        const query = directoryQuery.trim().toLowerCase();
+        const rows = Object.values(props.snap.politicians)
+          .filter((politician) => politician.alive)
+          .filter((politician) => {
+            const name = politicianDisplayName(props.catalog, politician.id).toLowerCase();
+            const party = partyDisplayName(props.world, politician.partyId, props.snap).toLowerCase();
+            return !query || name.includes(query) || party.includes(query);
+          })
+          .filter((politician) => directoryParty === "all" || politician.partyId === directoryParty)
+          .filter((politician) => directoryCaucus === "all" || politician.factionId === directoryCaucus)
+          .filter((politician) => directoryProvince === "all" || (politician.homeProvinceId ?? props.world.politicianHomeProvince[politician.id]) === directoryProvince)
+          .filter((politician) => {
+            if (directoryOffice === "all") return true;
+            if (directoryOffice === "party_leader") return Object.values(props.snap.partyStates).some((party) => party.leaderId === politician.id);
+            if (directoryOffice === "caucus_leader") return Object.values(props.snap.factionStates).some((caucus) => caucus.chairId === politician.id);
+            return Object.values(props.snap.officeTerms).some((term) => term.holderId === politician.id && term.status === "active" && props.world.offices[term.officeId]?.kind === directoryOffice);
+          })
+          .sort((a, b) => politicianDisplayName(props.catalog, a.id).localeCompare(politicianDisplayName(props.catalog, b.id)));
+        const selected = props.snap.politicians[directorySelection] ?? rows[0];
+        const selectedTerms = selected ? Object.values(props.snap.officeTerms).filter((term) => term.holderId === selected.id) : [];
+        const selectedCommittees = selected ? Object.values(props.snap.legislatureRuntime.committees).filter((committee) => committee.chairId === selected.id) : [];
+        const selectedPartyLeadership = selected ? Object.values(props.snap.partyStates).filter((party) => party.leaderId === selected.id) : [];
+        const selectedCaucusLeadership = selected ? Object.values(props.snap.factionStates).filter((caucus) => caucus.chairId === selected.id) : [];
+        const selectedVotes = selected ? Object.values(props.snap.legislatureRuntime.legislativeVotes)
+          .filter((vote) => vote.votes[selected.id])
+          .filter((vote) => directoryVoteFilter === "all" || vote.votes[selected.id] === directoryVoteFilter)
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .slice(0, 40) : [];
+        return <WorkLayout
+          main={<>
+            <input aria-label="Search politicians" placeholder="Search name or party" value={directoryQuery} onChange={(event) => setDirectoryQuery(event.target.value)} />
+            <div className="directory-filters">
+              <label className="field-label">Party<select value={directoryParty} onChange={(event) => setDirectoryParty(event.target.value)}><option value="all">All parties</option>{Object.keys(props.world.partyDefinitions).filter((partyId) => partyId !== props.world.independentAggregatePartyId).sort().map((partyId) => <option key={partyId} value={partyId}>{partyDisplayName(props.world, partyId, props.snap)}</option>)}</select></label>
+              <label className="field-label">Caucus<select value={directoryCaucus} onChange={(event) => setDirectoryCaucus(event.target.value)}><option value="all">All caucuses</option>{Object.entries(props.world.factionDefinitions).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([caucusId, caucus]) => <option key={caucusId} value={caucusId}>{caucus.name}</option>)}</select></label>
+              <label className="field-label">Province<select value={directoryProvince} onChange={(event) => setDirectoryProvince(event.target.value)}><option value="all">All provinces</option>{props.world.provinceIds.slice().sort((a, b) => (props.catalog.places.get(a)?.name ?? a).localeCompare(props.catalog.places.get(b)?.name ?? b)).map((provinceId) => <option key={provinceId} value={provinceId}>{props.catalog.places.get(provinceId)?.name ?? "Province"}</option>)}</select></label>
+              <label className="field-label">Office<select value={directoryOffice} onChange={(event) => setDirectoryOffice(event.target.value)}><option value="all">All offices</option><option value="assembly_member">National Assembly</option><option value="governor">Governor</option><option value="minister">Minister</option><option value="mayor">Mayor</option><option value="constitutional_court_justice">Justice</option><option value="party_leader">Party leader</option><option value="caucus_leader">Caucus chair</option></select></label>
+            </div>
+            <p className="muted">{rows.length} matching public figures · showing the first 80</p>
+            <div className="entity-list">{rows.slice(0, 80).map((politician) => <PoliticianCard key={politician.id} catalog={props.catalog} world={props.world} state={props.snap} politicianId={politician.id} compact selected={politician.id === selected?.id} onSelect={() => setDirectorySelection(politician.id)} />)}</div>
+          </>}
+          rail={selected ? <>
+            <PoliticianProfile catalog={props.catalog} world={props.world} state={props.snap} politicianId={selected.id} party={partyDisplayName(props.world, selected.partyId, props.snap)} {...(selected.description ? { biography: selected.description } : {})} />
+            <SectionDivider title="Office history" />
+            {selectedTerms.length === 0 ? <EmptyState>No public office on file.</EmptyState> : selectedTerms.slice().reverse().map((term) => <div key={term.id} className="muted">{props.world.offices[term.officeId]?.title ?? "Public office"} · {term.startDate ?? "date unknown"} · {term.status}</div>)}
+            <SectionDivider title="Institutional roles" />
+            {selectedCommittees.length + selectedPartyLeadership.length + selectedCaucusLeadership.length === 0 ? <EmptyState>No current public leadership role.</EmptyState> : <>
+              {selectedCommittees.map((committee) => <div key={committee.id} className="muted">Chair · {committeeDisplayName(committee.id)}</div>)}
+              {selectedPartyLeadership.map((party) => <div key={party.partyId} className="muted">Leader · {partyDisplayName(props.world, party.partyId, props.snap)}</div>)}
+              {selectedCaucusLeadership.map((caucus) => <div key={caucus.factionId} className="muted">Chair · {factionDisplayName(props.world, caucus.factionId)}</div>)}
+            </>}
+            <SectionDivider title="Recent Assembly votes" />
+            <div className="map-scale-switch" aria-label="Filter politician voting record">
+              {(["all", "yes", "no", "abstain"] as const).map((choice) => <button type="button" key={choice} className={directoryVoteFilter === choice ? "active" : ""} onClick={() => setDirectoryVoteFilter(choice)}>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : choice[0]!.toUpperCase() + choice.slice(1)}</button>)}
+            </div>
+            {selectedVotes.length === 0 ? <EmptyState>No recorded federal roll call matches this filter.</EmptyState> : <DataTable dense headers={["Date", "Measure", "Vote", "Party", "Caucus"]}>
+              {selectedVotes.map((vote) => {
+                const bill = props.snap.legislatureRuntime.bills[vote.billId];
+                const choice = vote.votes[selected.id]!;
+                const partyId = selected.partyId;
+                const recommendation = partyId ? props.snap.legislatureRuntime.partyRecommendations[`${partyId}:${vote.billId}`]?.stance ?? "free_vote" : "free_vote";
+                const followed = recommendation === "free_vote" ? "Free vote" : recommendation === "support" ? choice === "yes" ? "Followed party" : "Broke with party" : choice === "no" ? "Followed party" : "Broke with party";
+                const factionId = selected.factionId;
+                const caucusRecommendation = factionId ? props.snap.legislatureRuntime.factionRecommendations[`${factionId}:${vote.billId}`]?.stance ?? "free_vote" : "free_vote";
+                const caucusFollowed = caucusRecommendation === "free_vote" ? "Free vote" : caucusRecommendation === "support" ? choice === "yes" ? "Followed caucus" : "Broke with caucus" : choice === "no" ? "Followed caucus" : "Broke with caucus";
+                return <tr key={vote.id}><td>{vote.date}</td><td>{bill?.title ?? "Assembly matter"}</td><td>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : "Abstain"}</td><td>{followed}</td><td>{caucusFollowed}</td></tr>;
+              })}
+            </DataTable>}
+          </> : <EmptyState>Select a politician.</EmptyState>}
+        />;
+      })() : null}
     </div>
   );
 }
 
 function Party(props: PageProps) {
-  const partyId = props.snap.politicians[props.snap.playerPoliticianId]?.partyId;
+  const playerPartyId = props.snap.politicians[props.snap.playerPoliticianId]?.partyId;
+  const availablePartyIds = Object.keys(props.world.partyDefinitions)
+    .filter((id) => id !== props.world.independentAggregatePartyId)
+    .sort((a, b) => partyDisplayName(props.world, a, props.snap).localeCompare(partyDisplayName(props.world, b, props.snap)));
+  const [selectedPartyId, setSelectedPartyId] = useState(playerPartyId ?? availablePartyIds[0] ?? "");
+  useEffect(() => {
+    if (props.globalFocus?.kind === "Party" && props.world.partyDefinitions[props.globalFocus.id]) {
+      setSelectedPartyId(props.globalFocus.id);
+    } else if (props.globalFocus?.kind === "Caucus") {
+      const partyId = props.world.factionDefinitions[props.globalFocus.id]?.partyId;
+      if (partyId) setSelectedPartyId(partyId);
+    }
+  }, [props.globalFocus, props.world]);
+  const partyId = selectedPartyId || playerPartyId;
   const party = partyId ? props.world.partyDefinitions[partyId] : null;
   const runtime = partyId ? props.snap.partyStates[partyId] : null;
   const contests = Object.values(props.snap.partyContests).filter((c) => c.partyId === partyId);
@@ -606,10 +723,26 @@ function Party(props: PageProps) {
     .slice(-8)
     .reverse();
   const elections = Object.values(props.snap.elections).filter((e) => e.status === "resolved");
+  const caucusLeadership = partyId ? props.snap.legislatureRuntime.caucusLeadership[partyId] : null;
+  const caucusContests = Object.values(props.snap.legislatureRuntime.caucusContests).filter((contest) => contest.partyId === partyId);
+  const run = (command: Parameters<Simulation["executeCommand"]>[0]) => {
+    props.report(props.sim.executeCommand(command));
+    props.onDone();
+  };
 
   return (
     <div>
-      <PageHeader kicker="Party" title={party?.name ?? "No party"} />
+      <PageHeader kicker="Parties and caucuses" title={party?.name ?? "No party"} subtitle="National party directory, internal elections, factions, and parliamentary leadership." />
+      <div className="party-directory-strip" role="navigation" aria-label="All parties">
+        {availablePartyIds.map((id) => {
+          const seats = members.filter((memberId) => props.snap.politicians[memberId]?.partyId === id).length;
+          const leader = props.snap.partyStates[id]?.leaderId;
+          return <button key={id} type="button" className={`party-directory-item${id === partyId ? " selected" : ""}`} style={{ borderLeftColor: partyColor(props.world, id) }} onClick={() => setSelectedPartyId(id)}>
+            <strong>{partyDisplayName(props.world, id, props.snap)}</strong>
+            <span>{seats} seats · {leader ? politicianDisplayName(props.catalog, leader) : "leadership vacant"}</span>
+          </button>;
+        })}
+      </div>
       {party ? (
         <div className="party-banner" style={{ borderLeftColor: partyColor(props.world, partyId) }}>
           <StatusBadge tone="ok">
@@ -629,20 +762,35 @@ function Party(props: PageProps) {
       ) : (
         <EmptyState>Leadership is vacant.</EmptyState>
       )}
-      <SectionCard title="Factions">
+      <SectionCard title="Caucuses">
         <div className="faction-cards">
           {(party?.factionIds ?? []).map((fid) => {
             const chair = props.snap.factionStates[fid]?.chairId;
+            const caucusMembers = Object.values(props.snap.politicians).filter((politician) => politician.factionId === fid && politician.alive && !politician.retired);
+            const caucusMps = members.filter((memberId) => props.snap.politicians[memberId]?.factionId === fid).length;
+            const share = caucus === 0 ? 0 : Math.round((caucusMps / caucus) * 100);
             return (
               <div key={fid} className="faction-card">
                 <strong>{factionDisplayName(props.world, fid)}</strong>
                 <div className="muted">
                   Chair: {chair ? politicianDisplayName(props.catalog, chair) : "vacant"}
                 </div>
+                <div className="muted">{caucusMps} MPs · {share}% of party caucus · {caucusMembers.length} known politicians</div>
               </div>
             );
           })}
         </div>
+      </SectionCard>
+      <SectionCard title="Assembly caucus">
+        {caucusLeadership ? <div className="faction-cards">
+          {caucusLeadership.floorLeaderId ? <PoliticianCard catalog={props.catalog} world={props.world} state={props.snap} politicianId={caucusLeadership.floorLeaderId} office="Floor leader" compact /> : <div className="faction-card"><strong>Floor leader</strong><div className="muted">Vacant</div></div>}
+          {caucusLeadership.whipId ? <PoliticianCard catalog={props.catalog} world={props.world} state={props.snap} politicianId={caucusLeadership.whipId} office="Whip" compact /> : <div className="faction-card"><strong>Whip</strong><div className="muted">Vacant</div></div>}
+          <div className="faction-card"><strong>Next caucus election</strong><div className="muted">{caucusLeadership.nextElectionDate}</div></div>
+        </div> : <EmptyState>No sitting Assembly caucus.</EmptyState>}
+        {caucusContests.filter((contest) => contest.status === "open").map((contest) => <div key={contest.id} className="decision-row">
+          <div><strong>{contest.role === "floor_leader" ? "Floor leader election" : "Whip election"}</strong><div className="muted">Closes {contest.closeDate} · {contest.candidateIds.length} candidates</div></div>
+          {partyId === playerPartyId && contest.playerDecision == null ? <button className="btn" onClick={() => run({ type: "DECLARE_CAUCUS_LEADERSHIP_CANDIDACY", contestId: contest.id })}>Stand for election</button> : <StatusBadge>{contest.playerDecision ?? contest.status}</StatusBadge>}
+        </div>)}
       </SectionCard>
       <SectionCard title="Nominations and leadership">
         {contests.length === 0 ? <EmptyState>No current party contests.</EmptyState> : null}
@@ -669,6 +817,7 @@ function Party(props: PageProps) {
             {c.winnerId ? (
               <div>Winner: {politicianDisplayName(props.catalog, c.winnerId)}</div>
             ) : null}
+            {c.status === "open" && partyId === playerPartyId && !c.entries[props.snap.playerPoliticianId] ? <button className="btn" onClick={() => run({ type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c.id, politicianId: props.snap.playerPoliticianId })}>Enter contest</button> : null}
           </div>
         ))}
       </SectionCard>
@@ -710,6 +859,16 @@ function Terena(props: PageProps) {
   const [hoverSel, setHoverSel] = useState<MapSelection | null>(null);
   const [mapElectionId, setMapElectionId] = useState("");
   const [campaignMapScale, setCampaignMapScale] = useState<"province" | "constituency">("province");
+  useEffect(() => {
+    const focus = props.globalFocus;
+    if (!focus || (focus.kind !== "Province" && focus.kind !== "Constituency")) return;
+    const kind = focus.kind === "Province" ? "province" : "constituency";
+    const place = props.catalog.places.get(focus.id);
+    if (!place) return;
+    setMode("political");
+    setSel({ id: focus.id, kind, name: place.name });
+    setHoverSel(null);
+  }, [props.globalFocus, props.catalog]);
   const place = sel ? props.catalog.places.get(sel.id) : null;
   const electionChoices = [
     ...Object.values(props.snap.elections).map((election) => ({ id: election.id, date: election.date, type: election.type, status: election.status, provinceId: null as string | null })),
@@ -750,7 +909,7 @@ function Terena(props: PageProps) {
         : selection.kind === "constituency"
           ? props.campaign?.organizationByConstituency[selection.id]
           : null;
-      return <><strong>{selection.name}</strong><span>{value == null ? "No active field operation" : `Field organization ${value.toFixed(2)}`}</span></>;
+      return <><strong>{selection.name}</strong><span>{value == null ? "No active field operation" : `Ground Game ${groundGameStrength(value)}/100`}</span></>;
     }
     if (mode === "political" && selection.kind === "constituency") {
       const rows = constituencySittingSeatBreakdown(props.world, props.snap, selection.id);
@@ -859,7 +1018,7 @@ function Terena(props: PageProps) {
                   ? `${place.seats ?? "?"} seats · ${sitting} sitting${place.provinceName ? ` · ${place.provinceName}` : ""}`
                   : "Province"}
               </div>
-              {org != null ? <div>Your field organization: {org.toFixed(2)}</div> : null}
+              {org != null ? <div>Your Ground Game: {groundGameStrength(org)}/100</div> : null}
               {mode === "political" && sel.kind === "constituency"
                 ? constituencySittingSeatBreakdown(props.world, props.snap, sel.id).map((row) => (
                     <div key={row.partyId ?? "none"} className="muted">

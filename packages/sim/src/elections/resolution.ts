@@ -10,6 +10,7 @@ import {
   assumeOffice,
   canAssumeOffice,
   endTerm,
+  officesAreIncompatible,
   occupyingTerms,
   presidentOfficeId,
 } from "../offices.js";
@@ -17,6 +18,8 @@ import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js"
 import { ensurePresidentialNominationContests } from "../parties/state.js";
 import { ensurePlannedPresidentialElection } from "./state.js";
 import type { DomainResolutionRecord } from "./types.js";
+import { applyPresidentialVacancy } from "../succession.js";
+import { withdrawAssemblyCandidacy } from "./assembly-cycle.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -74,6 +77,7 @@ export function applyPresidentialAssumption(
   if (!sourceElection || sourceElection.status !== "resolved") {
     return { error: reject("INVALID_ELECTION", sourceElectionId) };
   }
+  const isSpecialElection = sourceElection.metadata.specialElection === true;
   const officeId = presidentOfficeId(world);
   const events: SimEvent[] = [];
   for (const t of occupyingTerms(state, officeId)) {
@@ -95,10 +99,11 @@ export function applyPresidentialAssumption(
     }
   }
   const presidentOffice = world.offices[officeId];
-  const incompatible = new Set(presidentOffice?.incompatibleWithKinds ?? []);
   for (const t of activeTermsForPolitician(state, electId)) {
-    const kind = world.offices[t.officeId]?.kind;
-    if (!kind || !incompatible.has(kind)) continue;
+    const currentOffice = world.offices[t.officeId];
+    if (!presidentOffice || !currentOffice || !officesAreIncompatible(presidentOffice, currentOffice)) {
+      continue;
+    }
     const ended = endTerm(state, t.id, args.date, "incompatible_with_presidency");
     if (ended) {
       events.push(
@@ -116,22 +121,56 @@ export function applyPresidentialAssumption(
       );
     }
   }
-  const nextElectionYear = parseIsoDate(state.presidential.nextRegularElectionDate).year;
-  const assumedFrom = state.presidential.nextRegularElectionDate;
-  const nextYear = nextElectionYear + world.presidentialCalendar.intervalYears;
-  const nextElection = regularElectionDate(world.presidentialCalendar, nextYear);
+  const assumedFrom = sourceElection.date;
+  const nextElection = isSpecialElection
+    ? typeof sourceElection.metadata.regularTermElectionDate === "string"
+      ? sourceElection.metadata.regularTermElectionDate
+      : state.presidential.nextRegularElectionDate
+    : regularElectionDate(
+        world.presidentialCalendar,
+        parseIsoDate(state.presidential.nextRegularElectionDate).year + world.presidentialCalendar.intervalYears,
+      );
   const termEnd = presidentialAssumptionDate(nextElection, world.presidentialCalendar);
   const assumed = assumeOffice(state, world, {
     officeId,
     holderId: electId,
     date: args.date,
-    accessionReason: "elected_assumption",
+    accessionReason: isSpecialElection ? "special_election_assumption" : "elected_assumption",
     holdingKind: "substantive",
     endDate: termEnd,
     startKnown: true,
     sourceElectionId,
   });
   if ("error" in assumed) return { error: assumed.error };
+  for (const futureElection of Object.values(state.elections)) {
+    if (
+      futureElection.type !== "assembly" ||
+      futureElection.status === "resolved" ||
+      futureElection.status === "cancelled" ||
+      futureElection.assembly?.candidacies[electId]?.status !== "filed"
+    ) {
+      continue;
+    }
+    const candidacy = futureElection.assembly.candidacies[electId]!;
+    withdrawAssemblyCandidacy(state, futureElection.id, electId);
+    events.push(
+      pushHistory(state, {
+        date: args.date,
+        type: "ASSEMBLY_CANDIDACY_WITHDRAWN",
+        importance: 0.65,
+        visibility: "public",
+        actorIds: [electId],
+        entityIds: [futureElection.id, candidacy.constituencyId],
+        payload: {
+          electionId: futureElection.id,
+          constituencyId: candidacy.constituencyId,
+          reason: "assumed_presidency",
+        },
+        sourceScheduledEventId: args.scheduledEventId,
+        sourceCommandId: args.commandId,
+      }),
+    );
+  }
   events.push(
     pushHistory(state, {
       date: args.date,
@@ -144,6 +183,7 @@ export function applyPresidentialAssumption(
         termId: assumed.term.id,
         previousElectionDate: assumedFrom,
         electionId: sourceElectionId,
+        specialElection: isSpecialElection,
       },
       sourceScheduledEventId: args.scheduledEventId,
       sourceCommandId: args.commandId,
@@ -151,24 +191,26 @@ export function applyPresidentialAssumption(
   );
   state.presidential.certifiedPresidentElectId = null;
   state.presidential.nextRegularElectionDate = nextElection;
-  const nextState = ensurePlannedPresidentialElection(state, world, nextElection);
-  ensurePresidentialNominationContests(state, world, nextState);
-  const exists = state.scheduler.events.some(
-    (e) =>
-      e.eventType === "PRESIDENTIAL_ELECTION_DUE" &&
-      e.dueDate === nextElection &&
-      payloadElectionId(e.payload) === nextState.id,
-  );
-  if (!exists) {
-    enqueueScheduled(state, {
-      dueDate: nextElection,
-      eventType: "PRESIDENTIAL_ELECTION_DUE",
-      payload: { electionId: nextState.id },
-      priority: 0,
-      blocking: true,
-      requiresResolution: true,
-      source: "CALENDAR_PRESIDENTIAL_REGULAR",
-    });
+  if (!isSpecialElection) {
+    const nextState = ensurePlannedPresidentialElection(state, world, nextElection);
+    ensurePresidentialNominationContests(state, world, nextState);
+    const exists = state.scheduler.events.some(
+      (e) =>
+        e.eventType === "PRESIDENTIAL_ELECTION_DUE" &&
+        e.dueDate === nextElection &&
+        payloadElectionId(e.payload) === nextState.id,
+    );
+    if (!exists) {
+      enqueueScheduled(state, {
+        dueDate: nextElection,
+        eventType: "PRESIDENTIAL_ELECTION_DUE",
+        payload: { electionId: nextState.id },
+        priority: 0,
+        blocking: true,
+        requiresResolution: true,
+        source: "CALENDAR_PRESIDENTIAL_REGULAR",
+      });
+    }
   }
   createDomainResolution(state, {
     sourceScheduledEventId: args.scheduledEventId,
@@ -177,9 +219,86 @@ export function applyPresidentialAssumption(
     electionId: sourceElectionId,
     resultEventId: events[events.length - 1]!.id,
     archiveElectionId: sourceElectionId,
-    metadata: {},
+    metadata: { specialElection: isSpecialElection },
   });
   return { events };
+}
+
+/**
+ * A deceased or retired President-elect is not replaced by a runner-up. The
+ * outgoing term ends, the lawful successor acts, and voters choose a President
+ * for the remainder of the regular term in a special election.
+ */
+export function resolveUnablePresidentElect(
+  state: SimState,
+  world: KernelWorld,
+  args: { scheduledEventId: string; commandId: string },
+): { events: SimEvent[] } | { error: CommandError } {
+  const src = state.scheduler.events.find((event) => event.id === args.scheduledEventId);
+  const sourceElectionId = payloadElectionId(src?.payload);
+  const sourceElection = sourceElectionId ? state.elections[sourceElectionId] : null;
+  if (!sourceElection || sourceElection.type !== "presidential" || sourceElection.status !== "resolved") {
+    return { error: reject("INVALID_ELECTION", sourceElectionId ?? "missing") };
+  }
+  const electId = state.presidential.certifiedPresidentElectId;
+  const elect = electId ? state.politicians[electId] : null;
+  if (elect?.alive && !elect.retired) {
+    return { error: reject("PRESIDENT_ELECT_AVAILABLE", electId ?? "missing") };
+  }
+
+  const nextRegularElection = regularElectionDate(
+    world.presidentialCalendar,
+    parseIsoDate(sourceElection.date).year + world.presidentialCalendar.intervalYears,
+  );
+  state.presidential.certifiedPresidentElectId = null;
+  state.presidential.nextRegularElectionDate = nextRegularElection;
+  const nextState = ensurePlannedPresidentialElection(state, world, nextRegularElection);
+  ensurePresidentialNominationContests(state, world, nextState);
+  if (
+    !state.scheduler.events.some(
+      (event) =>
+        event.eventType === "PRESIDENTIAL_ELECTION_DUE" &&
+        event.dueDate === nextRegularElection &&
+        payloadElectionId(event.payload) === nextState.id,
+    )
+  ) {
+    enqueueScheduled(state, {
+      dueDate: nextRegularElection,
+      eventType: "PRESIDENTIAL_ELECTION_DUE",
+      payload: { electionId: nextState.id },
+      priority: 0,
+      blocking: true,
+      requiresResolution: true,
+      source: "CALENDAR_PRESIDENTIAL_REGULAR",
+    });
+  }
+  const vacancy = applyPresidentialVacancy(state, world, {
+    reason: "president_elect_unable_to_assume",
+    date: state.currentDate,
+    commandId: args.commandId,
+  });
+  if (vacancy.error) return { error: vacancy.error };
+  const resolved = pushHistory(state, {
+    date: state.currentDate,
+    type: "PRESIDENT_ELECT_VACANCY_RESOLVED",
+    importance: 1,
+    visibility: "public",
+    actorIds: electId ? [electId] : [],
+    entityIds: [sourceElection.id],
+    payload: { sourceElectionId: sourceElection.id, nextRegularElection, specialElectionRequired: true },
+    sourceScheduledEventId: args.scheduledEventId,
+    sourceCommandId: args.commandId,
+  });
+  createDomainResolution(state, {
+    sourceScheduledEventId: args.scheduledEventId,
+    domainType: "presidential_assumption",
+    date: state.currentDate,
+    electionId: sourceElection.id,
+    resultEventId: resolved.id,
+    archiveElectionId: sourceElection.id,
+    metadata: { presidentElectUnable: true },
+  });
+  return { events: [...vacancy.events, resolved] };
 }
 
 export function canAssumeOfficeCapacityFree(

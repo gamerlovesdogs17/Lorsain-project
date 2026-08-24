@@ -27,6 +27,7 @@ import type {
   LegislativeVoteStage,
 } from "./types.js";
 import { concretePolicyItem } from "./provisions.js";
+import { processCaucusLeadershipMonth } from "./caucus.js";
 
 function activeBillCount(state: SimState): number {
   return Object.values(state.legislatureRuntime.bills).filter((b) =>
@@ -328,6 +329,7 @@ export function processLegislatureMonth(
   if (state.legislatureRuntime.lastMonthProcessed === month) return [];
   seedCommitteesIfNeeded(world, state);
   const events: SimEvent[] = [];
+  events.push(...processCaucusLeadershipMonth(world, state, commandId));
   events.push(...npcIntroductions(state, world, rng, commandId));
   events.push(...committeeWork(state, world, rng, commandId));
   events.push(...floorWork(state, world, rng, commandId));

@@ -49,7 +49,7 @@ describe("Phase 6 legislature kernel", () => {
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "P6-SEED" });
     const snap = sim.getSnapshot();
     expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(SAVE_SCHEMA_VERSION).toBe(12);
+    expect(SAVE_SCHEMA_VERSION).toBe(13);
     expect(currentAssemblyMemberIds(world, snap)).toHaveLength(36);
     expect(Object.keys(snap.legislatureRuntime.committees).sort()).toEqual([
       "COMMITTEE_ECONOMIC",
@@ -345,10 +345,15 @@ describe("Phase 6 legislature kernel", () => {
       stage: "floor",
       choice: "no",
     });
-    advance(sim, 1);
-    const floorVote = Object.values(sim.getSnapshot().legislatureRuntime.legislativeVotes).find(
+    let floorVote = Object.values(sim.getSnapshot().legislatureRuntime.legislativeVotes).find(
       (v) => v.billId === "BILL000001" && v.stage === "floor" && v.metadata.kind !== "amendment",
     );
+    for (let month = 0; month < 4 && !floorVote; month += 1) {
+      advance(sim, 1);
+      floorVote = Object.values(sim.getSnapshot().legislatureRuntime.legislativeVotes).find(
+        (v) => v.billId === "BILL000001" && v.stage === "floor" && v.metadata.kind !== "amendment",
+      );
+    }
     expect(floorVote?.votes.MP02).toBe("no");
     expect(committeeVote?.votes.MP02).toBe("yes");
   });

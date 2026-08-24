@@ -37,11 +37,11 @@ export function MapLegend(props: {
       <div className="map-legend">
         <div className="kicker">Legend</div>
         <div className="legend-gradient">
-          <span>Low field org</span>
+          <span>Ground Game 0</span>
           <span className="legend-bar campaign-org" />
-          <span>High field org</span>
+          <span>Ground Game 100</span>
         </div>
-        <p className="muted legend-note">Your provincial and constituency field organization.</p>
+        <p className="muted legend-note">Your provincial and constituency Ground Game strength.</p>
       </div>
     );
   }

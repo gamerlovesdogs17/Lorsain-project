@@ -67,6 +67,7 @@ export type CommitteeState = {
   name: string;
   dimension: string;
   memberIds: string[];
+  chairId: string | null;
 };
 
 export type BillState = {
@@ -89,6 +90,16 @@ export type BillState = {
   /** Month the current vote-bearing stage began. Tallied only after a later month. */
   stageReadyDate: IsoDate | null;
   metadata: JsonObject;
+  version: number;
+  versionHistory: BillVersionRecord[];
+};
+
+export type BillVersionRecord = {
+  version: number;
+  date: IsoDate;
+  reason: "introduced" | "amendment_adopted";
+  amendmentId: string | null;
+  policyItems: PolicyItem[];
 };
 
 export type AmendmentState = {
@@ -99,6 +110,7 @@ export type AmendmentState = {
   policyItems: PolicyItem[];
   status: AmendmentStatus;
   metadata: JsonObject;
+  targetProvisionIds: string[];
 };
 
 export type LegislativeVoteRecord = {
@@ -144,12 +156,37 @@ export type PartyRecommendation = {
   partyId: string;
   billId: string;
   stance: RecommendationStance;
+  setById?: string | null;
+  date?: IsoDate;
+  source?: "caucus_leadership" | "derived";
 };
 
 export type FactionRecommendation = {
   factionId: string;
   billId: string;
   stance: RecommendationStance;
+};
+
+export type CaucusLeadershipState = {
+  partyId: string;
+  floorLeaderId: string | null;
+  whipId: string | null;
+  selectedDate: IsoDate | null;
+  nextElectionDate: IsoDate;
+  priorityBillIds: string[];
+};
+
+export type CaucusLeadershipContest = {
+  id: string;
+  partyId: string;
+  role: "floor_leader" | "whip";
+  status: "open" | "resolved" | "cancelled";
+  openedDate: IsoDate;
+  closeDate: IsoDate;
+  candidateIds: string[];
+  playerDecision: "declared" | "declined" | null;
+  votes: Record<string, string>;
+  winnerId: string | null;
 };
 
 export type LegislatureRuntime = {
@@ -160,6 +197,8 @@ export type LegislatureRuntime = {
   enactedLaws: Record<string, EnactedLawRecord>;
   partyRecommendations: Record<string, PartyRecommendation>;
   factionRecommendations: Record<string, FactionRecommendation>;
+  caucusLeadership: Record<string, CaucusLeadershipState>;
+  caucusContests: Record<string, CaucusLeadershipContest>;
   floorQueue: string[];
   pendingPlayerVotes: Record<string, PendingPlayerVote>;
   lastMonthProcessed: IsoDate | null;
@@ -175,6 +214,8 @@ export function emptyLegislatureRuntime(): LegislatureRuntime {
     enactedLaws: {},
     partyRecommendations: {},
     factionRecommendations: {},
+    caucusLeadership: {},
+    caucusContests: {},
     floorQueue: [],
     pendingPlayerVotes: {},
     lastMonthProcessed: null,

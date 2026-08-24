@@ -12,6 +12,10 @@ import type { KernelWorld } from "./types.js";
 import { countRelationshipEdges } from "./agents/relationships.js";
 import { SAVE_SCHEMA_VERSION } from "./types.js";
 import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
+import { enqueueScheduled } from "./scheduler.js";
+import { applyPresidentialAssumption, resolveUnablePresidentElect } from "./elections/resolution.js";
+import { ensureAssemblyElectionCycle } from "./elections/assembly-cycle.js";
+import { plannedElection } from "./elections/state.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 
@@ -158,6 +162,96 @@ describe("TERENA_2028 office instantiation", () => {
 });
 
 describe("presidential vacancy", () => {
+  it("ends a President-elect's symmetrically incompatible office before assumption", () => {
+    const { world } = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC337", seed: "P113-SPEAKER-ELECT" });
+    const state = sim.serializeSave().simulation;
+    const election = state.elections.ELEC_PRES_2028!;
+    election.status = "resolved";
+    election.winnerIds = ["NPC002"];
+    state.presidential.certifiedPresidentElectId = "NPC002";
+    const assemblyElection = plannedElection({
+      id: "ELEC_ASM_ASSUMPTION_TEST",
+      type: "assembly",
+      date: "2029-05-13",
+      geographyKind: "national",
+      constituencyId: null,
+      seats: 420,
+    });
+    state.elections[assemblyElection.id] = assemblyElection;
+    const assemblyCycle = ensureAssemblyElectionCycle(state, world, assemblyElection);
+    assemblyCycle.filingStatus = "open";
+    assemblyCycle.candidacies.NPC002 = {
+      politicianId: "NPC002",
+      constituencyId: "C001",
+      partyId: state.politicians.NPC002?.partyId ?? null,
+      filedDate: state.currentDate,
+      source: "npc",
+      incumbent: true,
+      status: "filed",
+    };
+    const scheduled = enqueueScheduled(state, {
+      dueDate: state.currentDate,
+      eventType: "PRESIDENTIAL_ASSUMPTION_DUE",
+      payload: { electionId: election.id, electionDate: election.date },
+      priority: 0,
+      blocking: true,
+      requiresResolution: true,
+      source: "TEST",
+    });
+    expect("error" in scheduled).toBe(false);
+    if ("error" in scheduled) return;
+    const result = applyPresidentialAssumption(state, world, {
+      date: state.currentDate,
+      scheduledEventId: scheduled.id,
+      commandId: "CMD_TEST",
+    });
+    expect("error" in result).toBe(false);
+    expect(occupyingTerms(state, "OFFICE_PRESIDENT")[0]?.holderId).toBe("NPC002");
+    expect(occupyingTerms(state, "OFFICE_SPEAKER")).toHaveLength(0);
+    expect(assemblyCycle.candidacies.NPC002?.status).toBe("withdrawn");
+    expect(
+      "events" in result &&
+        result.events.some((event) => event.type === "ASSEMBLY_CANDIDACY_WITHDRAWN"),
+    ).toBe(true);
+  });
+
+  it("uses lawful succession and schedules a real special election when the President-elect cannot assume", () => {
+    const { world } = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC337", seed: "P113-ELECT-VACANCY" });
+    const state = sim.serializeSave().simulation;
+    const election = state.elections.ELEC_PRES_2028!;
+    election.status = "resolved";
+    election.winnerIds = ["NPC006"];
+    state.presidential.certifiedPresidentElectId = "NPC006";
+    state.politicians.NPC006!.alive = false;
+    const scheduled = enqueueScheduled(state, {
+      dueDate: state.currentDate,
+      eventType: "PRESIDENTIAL_ASSUMPTION_DUE",
+      payload: { electionId: election.id, electionDate: election.date },
+      priority: 0,
+      blocking: true,
+      requiresResolution: true,
+      source: "TEST",
+    });
+    expect("error" in scheduled).toBe(false);
+    if ("error" in scheduled) return;
+    const result = resolveUnablePresidentElect(state, world, {
+      scheduledEventId: scheduled.id,
+      commandId: "CMD_TEST",
+    });
+    expect("error" in result).toBe(false);
+    expect(state.presidential.certifiedPresidentElectId).toBeNull();
+    expect(occupyingTerms(state, "OFFICE_PRESIDENT").some((term) => term.holdingKind === "acting")).toBe(true);
+    const special = Object.values(state.elections).find((candidate) => candidate.metadata.specialElection === true);
+    expect(special).toBeTruthy();
+    expect(
+      state.scheduler.events.some(
+        (event) => event.eventType === "PRESIDENTIAL_ELECTION_DUE" && event.payload.electionId === special?.id,
+      ),
+    ).toBe(true);
+  });
+
   it("Speaker becomes Acting President and a special election is required early in the term", () => {
     const { world } = loadTerenaWorld();
     const sim = createSimulation({ world, playerPoliticianId: "NPC002" });
