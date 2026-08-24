@@ -18,7 +18,8 @@ Formal acceptance target **100×600** is **running** (`docs/qa/phase11_3/whole_g
 
 ### 1. Final commit hash
 
-Recorded at closeout commit on `cursor/phase113-ui-balance` (see git log). Baseline: `b00ec52`.
+**`9584cbbba23191041485784f1e390b3ca244f9c5`** on `main` (fast-forward from Phase 11.2 `b00ec52`).  
+GitHub remotes consolidated to **`origin/main` only**.
 
 ### 2. Full page architecture before / after
 
