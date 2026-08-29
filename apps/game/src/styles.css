@@ -2293,6 +2293,7 @@ button.entity-row:hover,
   align-items: center;
 }
 .policy-choice-summary { margin: 0; font-size: 0.84rem; line-height: 1.35; }
+.policy-choice-groups { margin-top: 0.35rem; font-size: 0.74rem; line-height: 1.35; }
 .policy-choice-effects { display: flex; flex-wrap: wrap; gap: 0.25rem; }
 .policy-choice-effects .fx {
   font-size: 0.72rem;
@@ -2530,6 +2531,14 @@ button.entity-row:hover,
 .constitutional-tracker { display: grid; grid-template-columns: minmax(14rem, 1fr) auto; gap: 0.75rem 1rem; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid var(--line); }
 .constitutional-tracker p { margin: 0.2rem 0 0; color: var(--muted); }
 .constitutional-progress { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.55rem; font-size: 0.8rem; }
+.constitutional-map-legend { display: flex; flex-wrap: wrap; gap: 0.8rem; margin: 0.65rem 0; font-size: 0.8rem; }
+.constitutional-map-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.constitutional-map-legend i { width: 0.85rem; height: 0.85rem; border: 1px solid var(--line-strong); }
+.constitutional-map-legend .ratified { background: #5f896c; }
+.constitutional-map-legend .rejected { background: #a86460; }
+.constitutional-map-legend .pending { background: #d2d6cf; }
+.constitutional-ratification-layout { display: grid; grid-template-columns: minmax(22rem, 1.35fr) minmax(16rem, 0.65fr); gap: 0.8rem; align-items: start; }
+.constitutional-ratification-layout .terena-map { min-height: 18rem; max-height: 26rem; }
 .constitutional-provinces { grid-column: 1 / -1; }
 .constitutional-provinces summary { cursor: pointer; color: var(--navy); font-weight: 700; font-size: 0.82rem; }
 .constitutional-provinces .table-wrap { max-height: 24rem; overflow: auto; margin-top: 0.55rem; }
@@ -2574,6 +2583,7 @@ button.entity-row:hover,
   .bench-chart .judge-card:nth-child(n+6) { transform: none; }
   .constitutional-tracker { grid-template-columns: 1fr; }
   .constitutional-progress { justify-content: flex-start; }
+  .constitutional-ratification-layout { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .global-search-button { min-width: auto; }
@@ -2586,4 +2596,5 @@ button.entity-row:hover,
   .appointment-browser { grid-template-columns: 1fr; }
   .calendar-year { grid-template-columns: 1fr; gap: 0.35rem; }
   .roll-call-breakdown { grid-template-columns: 1fr; }
+  .data-table:has(th:nth-child(4)) { min-width: 38rem; }
 }

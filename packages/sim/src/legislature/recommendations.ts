@@ -21,6 +21,13 @@ export function billPolicyFit(
   let acc = 0;
   let n = 0;
   for (const item of bill.policyItems) {
+    if (item.dimensionEffects && Object.keys(item.dimensionEffects).length > 0) {
+      const rows = Object.entries(item.dimensionEffects) as Array<[IdeologyAxis, number]>;
+      const structuralFit = rows.reduce((sum, [axis, effect]) => sum + (profile.ideology[axis] ?? 0) * effect, 0) / rows.length;
+      acc += structuralFit * item.magnitude;
+      n += 1;
+      continue;
+    }
     const dim = world.issueDimensions[item.issueId] ?? "institutional";
     const axis = axisForDimension(dim);
     acc += (profile.ideology[axis] ?? 0) * item.direction * item.magnitude;

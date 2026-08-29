@@ -245,6 +245,46 @@ export function declareCampaign(
     };
   }
 
+  if (args.type === "provincial_assembly") {
+    const election = args.electionId
+      ? state.provincialRuntime.assemblyElections[args.electionId]
+      : Object.values(state.provincialRuntime.assemblyElections)
+          .filter((candidate) =>
+            candidate.candidateIds.includes(args.politicianId) &&
+            candidate.status === "filing_open")
+          .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+    if (!election) return { error: reject("INVALID_ELECTION", String(args.electionId ?? "provincial_assembly")) };
+    if (!election.candidateIds.includes(args.politicianId)) {
+      return { error: reject("NOT_A_CANDIDATE", args.politicianId) };
+    }
+    const campaign = createCampaignRecord(state, world, {
+      politicianId: args.politicianId,
+      type: "provincial_assembly",
+      electionId: election.id,
+      status: "active",
+      metadata: { provinceId: election.provinceId },
+    });
+    return {
+      campaign,
+      events: [
+        event(
+          state,
+          "CAMPAIGN_LAUNCHED",
+          [args.politicianId],
+          [campaign.id, election.id, election.provinceId],
+          {
+            campaignId: campaign.id,
+            type: "provincial_assembly",
+            electionId: election.id,
+            provinceId: election.provinceId,
+          },
+          commandId,
+          0.52,
+        ),
+      ],
+    };
+  }
+
   const election = args.electionId
     ? state.elections[args.electionId]
     : Object.values(state.elections)
@@ -1144,6 +1184,13 @@ export function withdrawCampaign(
     const candidacy = election?.candidates[campaign.politicianId];
     if (candidacy && election?.status !== "resolved" && election?.status !== "assumed") {
       candidacy.withdrawn = true;
+    }
+  }
+  if (campaign.type === "provincial_assembly" && campaign.electionId) {
+    const election = state.provincialRuntime.assemblyElections[campaign.electionId];
+    if (election?.status === "filing_open") {
+      election.candidateIds = election.candidateIds.filter((id) => id !== campaign.politicianId);
+      if (campaign.politicianId === state.playerPoliticianId) election.playerDecision = "declined";
     }
   }
   events.push(

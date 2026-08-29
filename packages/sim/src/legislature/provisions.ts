@@ -2,15 +2,19 @@ import type { SimState } from "../types.js";
 import { policyIndexDelta } from "../economy/policy.js";
 import type { NationalEconomyIndices } from "../economy/types.js";
 import type { PolicyItem } from "./types.js";
+import type { IdeologyAxis } from "../agents/types.js";
 
 export type LegislativeProvisionOption = {
   id: string;
   label: string;
   change: string;
   billTitle: string;
-  direction: -1 | 0 | 1;
+  direction: number;
   magnitude: number;
   fiscalImpact: number | null;
+  current: boolean;
+  affectedGroups: readonly string[];
+  dimensionEffects?: Partial<Record<IdeologyAxis, number>>;
 };
 
 export type LegislativeProvisionDefinition = {
@@ -42,10 +46,71 @@ function provision(
     category,
     currentLawLabel,
     options: [
-      { id: optionId(low[0]), label: low[0], change: low[1], billTitle: low[2], direction: -1, magnitude: 0.65, fiscalImpact: fiscal[0] },
-      { id: optionId(middle[0]), label: middle[0], change: middle[1], billTitle: middle[2], direction: 0, magnitude: 0.2, fiscalImpact: fiscal[1] },
-      { id: optionId(high[0]), label: high[0], change: high[1], billTitle: high[2], direction: 1, magnitude: 0.65, fiscalImpact: fiscal[2] },
+      { id: optionId(low[0]), label: low[0], change: low[1], billTitle: low[2], direction: -1, magnitude: 0.65, fiscalImpact: fiscal[0], current: false, affectedGroups: groupsForIssue(issueId) },
+      { id: optionId(middle[0]), label: middle[0], change: middle[1], billTitle: middle[2], direction: 0, magnitude: 0.2, fiscalImpact: fiscal[1], current: true, affectedGroups: groupsForIssue(issueId) },
+      { id: optionId(high[0]), label: high[0], change: high[1], billTitle: high[2], direction: 1, magnitude: 0.65, fiscalImpact: fiscal[2], current: false, affectedGroups: groupsForIssue(issueId) },
     ],
+  };
+}
+
+const ISSUE_GROUPS: Record<string, readonly string[]> = {
+  ISS_LABOR: ["Workers", "Employers", "Trade unions"],
+  ISS_WELFARE: ["Households", "Public services", "Taxpayers"],
+  ISS_OWNERSHIP: ["Consumers", "Public operators", "Private firms"],
+  ISS_TRADE: ["Producers", "Importers", "Consumers"],
+  ISS_HOUSING: ["Renters", "Homeowners", "Local governments"],
+  ISS_CLIMATE: ["Energy users", "Industry", "Communities"],
+  ISS_LIBERTY: ["Individuals", "Courts", "Public authorities"],
+  ISS_IMMIGRATION: ["Migrants", "Employers", "Local services"],
+  ISS_POLICING: ["Communities", "Police", "Courts"],
+  ISS_DECENT: ["Provinces", "Municipalities", "National government"],
+  ISS_EXEC: ["Executive", "Assembly", "Public"],
+  ISS_REFORM: ["Voters", "Candidates", "Election authorities"],
+  ISS_DEFENSE: ["Armed forces", "Industry", "Taxpayers"],
+};
+
+function groupsForIssue(issueId: string): readonly string[] {
+  return ISSUE_GROUPS[issueId] ?? ["Households", "Public services", "Taxpayers"];
+}
+
+function variableProvision(
+  id: string,
+  issueId: string,
+  category: string,
+  currentLawLabel: string,
+  options: readonly LegislativeProvisionOption[],
+): LegislativeProvisionDefinition {
+  if (options.length < 2 || options.filter((option) => option.current).length !== 1) {
+    throw new Error(`${id} must define at least two alternatives and exactly one current-law option`);
+  }
+  return { id, issueId, category, currentLawLabel, options };
+}
+
+function option(
+  id: string,
+  label: string,
+  change: string,
+  billTitle: string,
+  args: {
+    direction: number;
+    magnitude?: number;
+    fiscalImpact?: number | null;
+    current?: boolean;
+    affectedGroups?: readonly string[];
+    dimensionEffects?: Partial<Record<IdeologyAxis, number>>;
+  },
+): LegislativeProvisionOption {
+  return {
+    id,
+    label,
+    change,
+    billTitle,
+    direction: Math.max(-1, Math.min(1, args.direction)),
+    magnitude: args.magnitude ?? 0.65,
+    fiscalImpact: args.fiscalImpact ?? null,
+    current: args.current === true,
+    affectedGroups: args.affectedGroups ?? [],
+    ...(args.dimensionEffects ? { dimensionEffects: args.dimensionEffects } : {}),
   };
 }
 
@@ -171,6 +236,117 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
     ["Narrow income test", "Limits subsidized school meals to the lowest income band.", "School Meals Targeting Bill"],
     ["Keep income test", "Retains current school-meal eligibility.", "School Meals Continuity Bill"],
     ["Universal school meals", "Funds a meal for every pupil in participating public schools.", "Universal School Meals Bill"], [-0.07, 0, 0.15]),
+  variableProvision("PROV_HEALTH_INSURANCE_MODEL", "ISS_WELFARE", "Healthcare financing model", "National insurance funds essential care through public and contracted providers", [
+    option("regulated_private_insurance", "Regulated private insurance", "Replaces national insurance with mandatory regulated private plans and income-tested subsidies.", "Health Insurance Choice Bill", { direction: -0.8, fiscalImpact: -0.18, affectedGroups: ["Patients", "Insurers", "Employers"], dimensionEffects: { economic: -0.75, authority: -0.25 } }),
+    option("nonprofit_insurance_funds", "Nonprofit insurance funds", "Creates competing nonprofit sickness funds under one national benefit schedule.", "Nonprofit Health Funds Bill", { direction: -0.25, fiscalImpact: 0.04, affectedGroups: ["Patients", "Nonprofit funds", "Providers"], dimensionEffects: { economic: -0.15, authority: 0.15 } }),
+    option("national_insurance", "National insurance", "Retains national insurance with public and contracted providers.", "Health Insurance Continuity Bill", { direction: 0.15, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Patients", "Providers", "Taxpayers"], dimensionEffects: { economic: 0.2, authority: 0.1 } }),
+    option("national_health_service", "National health service", "Moves core hospitals and primary care into one publicly operated national service.", "National Health Service Bill", { direction: 0.9, fiscalImpact: 0.34, affectedGroups: ["Patients", "Health workers", "Taxpayers"], dimensionEffects: { economic: 0.9, authority: 0.5 } }),
+  ]),
+  variableProvision("PROV_MEDICINE_PRICING", "ISS_WELFARE", "Prescription medicine purchasing", "Insurers reimburse medicines after national price negotiation", [
+    option("market_pricing", "Market pricing", "Ends national price negotiation and permits insurers to set separate formularies.", "Medicines Market Bill", { direction: -0.8, fiscalImpact: -0.1, affectedGroups: ["Patients", "Drug makers", "Insurers"] }),
+    option("reference_pricing", "International reference pricing", "Caps reimbursement using prices in comparable countries.", "Fair Medicines Pricing Bill", { direction: 0.25, fiscalImpact: -0.05, affectedGroups: ["Patients", "Drug makers", "Insurers"], dimensionEffects: { economic: 0.2, globalism: 0.35 } }),
+    option("negotiated_prices", "National negotiation", "Retains national negotiation with separate insurer reimbursement.", "Medicines Purchasing Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Patients", "Drug makers", "Insurers"] }),
+    option("single_public_purchaser", "Single public purchaser", "Creates one public purchaser for covered prescription medicines.", "National Medicines Purchasing Bill", { direction: 0.85, fiscalImpact: 0.08, affectedGroups: ["Patients", "Pharmacies", "Drug makers"], dimensionEffects: { economic: 0.85, authority: 0.35 } }),
+  ]),
+  variableProvision("PROV_HOSPITAL_GOVERNANCE", "ISS_WELFARE", "Hospital governance", "Public hospital boards operate within national funding standards", [
+    option("contracted_hospital_networks", "Contracted hospital networks", "Allows provinces to contract regional hospital systems to nonprofit or private operators.", "Hospital Networks Bill", { direction: -0.6, fiscalImpact: -0.05, affectedGroups: ["Patients", "Hospital staff", "Provincial governments"], dimensionEffects: { economic: -0.45, authority: -0.3 } }),
+    option("public_hospital_boards", "Public hospital boards", "Retains locally governed public hospital boards under national standards.", "Hospital Governance Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Patients", "Hospital boards", "Provinces"] }),
+    option("integrated_regional_authorities", "Regional health authorities", "Combines hospitals and community care under elected regional health authorities.", "Regional Health Authorities Bill", { direction: 0.55, fiscalImpact: 0.14, affectedGroups: ["Patients", "Health workers", "Regional authorities"], dimensionEffects: { economic: 0.35, authority: -0.25 } }),
+  ]),
+  variableProvision("PROV_CHILDCARE_MODEL", "ISS_WELFARE", "Early-childhood care", "Income-tested childcare subsidies support licensed providers", [
+    option("tax_credit", "Childcare tax credit", "Replaces direct subsidies with a refundable household tax credit.", "Childcare Tax Credit Bill", { direction: -0.45, fiscalImpact: -0.03, affectedGroups: ["Parents", "Childcare providers", "Taxpayers"] }),
+    option("income_tested_subsidy", "Income-tested subsidy", "Retains income-tested support for licensed childcare.", "Childcare Support Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Parents", "Childcare providers", "Taxpayers"] }),
+    option("universal_fee_cap", "Universal fee cap", "Caps fees for licensed childcare and reimburses providers for eligible places.", "Affordable Childcare Bill", { direction: 0.55, fiscalImpact: 0.2, affectedGroups: ["Parents", "Children", "Childcare providers"] }),
+    option("public_childcare_network", "Public childcare network", "Builds a national network of publicly operated early-childhood centers.", "Early Childhood Service Bill", { direction: 0.9, fiscalImpact: 0.38, affectedGroups: ["Parents", "Children", "Childcare workers"], dimensionEffects: { economic: 0.85, authority: 0.4 } }),
+  ]),
+  variableProvision("PROV_VOCATIONAL_TRAINING", "ISS_LABOR", "Vocational training governance", "Employers, unions and colleges share apprenticeship standards", [
+    option("employer_led_credentials", "Employer-led credentials", "Lets accredited employer groups set occupational credentials and training hours.", "Skills Accreditation Bill", { direction: -0.55, fiscalImpact: -0.06, affectedGroups: ["Apprentices", "Employers", "Colleges"] }),
+    option("tripartite_apprenticeships", "Tripartite apprenticeships", "Retains joint employer, union and college apprenticeship standards.", "Apprenticeship Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Apprentices", "Employers", "Trade unions"] }),
+    option("public_training_guarantee", "Public training guarantee", "Guarantees a funded training place to young adults not in work or education.", "Training Guarantee Bill", { direction: 0.75, fiscalImpact: 0.24, affectedGroups: ["Young adults", "Colleges", "Employers"] }),
+  ]),
+  variableProvision("PROV_MINIMUM_WAGE", "ISS_LABOR", "Minimum-wage setting", "An independent commission recommends annual adjustments", [
+    option("province_minimums", "Provincial minimums", "Ends the national floor and leaves minimum wages to Provincial Assemblies.", "Provincial Wage Standards Bill", { direction: -0.65, fiscalImpact: -0.02, affectedGroups: ["Low-wage workers", "Employers", "Provinces"], dimensionEffects: { economic: -0.4, authority: -0.6 } }),
+    option("commission_recommendation", "Commission recommendation", "Retains annual recommendations from the independent wage commission.", "Minimum Wage Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Low-wage workers", "Employers", "Wage commission"] }),
+    option("wage_indexation", "Wage indexation", "Indexes the national minimum to median wages with an emergency review clause.", "Fair Wage Indexation Bill", { direction: 0.55, fiscalImpact: 0.04, affectedGroups: ["Low-wage workers", "Employers", "Consumers"] }),
+    option("living_wage_floor", "Living-wage floor", "Raises the floor toward a published household living-cost benchmark over three years.", "Living Wage Bill", { direction: 0.9, fiscalImpact: 0.1, affectedGroups: ["Low-wage workers", "Employers", "Households"] }),
+  ]),
+  variableProvision("PROV_PLATFORM_WORK", "ISS_LABOR", "Platform-worker status", "Status is decided case by case under the ordinary employment test", [
+    option("independent_contractor_safe_harbor", "Contractor safe harbor", "Treats platform workers as contractors when written flexibility conditions are met.", "Independent Platform Work Bill", { direction: -0.75, fiscalImpact: -0.04, affectedGroups: ["Platform workers", "Digital platforms", "Consumers"] }),
+    option("case_by_case_test", "Case-by-case test", "Retains the ordinary employment-status test for platform work.", "Platform Work Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Platform workers", "Digital platforms", "Courts"] }),
+    option("employee_presumption", "Employee presumption", "Presumes employee status unless a platform proves genuine independent enterprise.", "Platform Worker Protections Bill", { direction: 0.8, fiscalImpact: 0.05, affectedGroups: ["Platform workers", "Digital platforms", "Labor inspectors"] }),
+  ]),
+  variableProvision("PROV_PAID_LEAVE", "ISS_LABOR", "Paid family leave", "Twelve weeks of earnings-related leave are financed through social insurance", [
+    option("employer_leave", "Employer-funded leave", "Replaces social insurance with a minimum employer-funded leave duty.", "Family Leave Responsibility Bill", { direction: -0.55, fiscalImpact: -0.12, affectedGroups: ["Parents", "Employers", "Workers"] }),
+    option("twelve_week_insurance", "Twelve-week insurance", "Retains twelve weeks of earnings-related social-insurance leave.", "Family Leave Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Parents", "Employers", "Workers"] }),
+    option("sixteen_week_insurance", "Sixteen-week insurance", "Extends insured family leave to sixteen weeks.", "Family Leave Extension Bill", { direction: 0.5, fiscalImpact: 0.14, affectedGroups: ["Parents", "Children", "Employers"] }),
+    option("shared_parental_year", "Shared parental year", "Creates a year of shared leave with reserved periods for each parent.", "Shared Parental Leave Bill", { direction: 0.9, fiscalImpact: 0.32, affectedGroups: ["Parents", "Children", "Employers"] }),
+  ]),
+  variableProvision("PROV_RENT_POLICY", "ISS_HOUSING", "Rent stabilization", "Cities may cap annual increases in designated high-pressure areas", [
+    option("market_rents", "Market rents", "Repeals local rent-increase caps while preserving notice and habitability rules.", "Rental Market Bill", { direction: -0.8, fiscalImpact: -0.03, affectedGroups: ["Renters", "Landlords", "Cities"] }),
+    option("pressure_area_caps", "High-pressure area caps", "Retains local caps in designated high-pressure housing areas.", "Rent Stabilization Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Renters", "Landlords", "Cities"] }),
+    option("national_rent_stabilization", "National stabilization rule", "Limits annual increases for existing tenancies nationwide, with renovation exemptions.", "National Rent Stabilization Bill", { direction: 0.8, fiscalImpact: 0.08, affectedGroups: ["Renters", "Landlords", "Housing agencies"] }),
+  ]),
+  variableProvision("PROV_LAND_VALUE_TAX", "ISS_HOUSING", "Land taxation", "Local property tax applies to assessed land and buildings", [
+    option("building_value_tax", "Property-value tax", "Retains taxation of both land and buildings under local assessment.", "Property Tax Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Property owners", "Municipalities", "Developers"] }),
+    option("split_rate_tax", "Split-rate tax", "Taxes land at a higher rate than buildings to discourage vacant and underused sites.", "Productive Land Tax Bill", { direction: 0.35, fiscalImpact: -0.03, affectedGroups: ["Landowners", "Developers", "Municipalities"], dimensionEffects: { economic: 0.25, authority: -0.1 } }),
+    option("land_value_tax", "Land-value tax", "Replaces the building-value charge with a tax on unimproved site value.", "Land Value Tax Bill", { direction: 0.65, fiscalImpact: -0.08, affectedGroups: ["Landowners", "Developers", "Municipalities"], dimensionEffects: { economic: 0.45, authority: -0.15 } }),
+  ]),
+  variableProvision("PROV_INHERITANCE_TAX", "ISS_WELFARE", "Inheritance taxation", "Large estates pay tax above a protected family allowance", [
+    option("repeal_estate_tax", "Repeal estate tax", "Repeals inheritance tax and retains ordinary capital-gains rules on inherited assets.", "Estate Tax Repeal Bill", { direction: -0.9, fiscalImpact: -0.22, affectedGroups: ["Heirs", "Large estates", "Taxpayers"] }),
+    option("family_business_exemption", "Family-business exemption", "Exempts qualifying operating businesses while retaining tax on other large estates.", "Family Enterprise Succession Bill", { direction: -0.35, fiscalImpact: -0.1, affectedGroups: ["Family businesses", "Heirs", "Taxpayers"] }),
+    option("protected_allowance", "Protected allowance", "Retains the current protected allowance and progressive estate rates.", "Inheritance Tax Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Heirs", "Large estates", "Taxpayers"] }),
+    option("progressive_estate_rates", "Higher large-estate rates", "Adds higher bands for the largest estates and closes trust-avoidance rules.", "Large Estates Contribution Bill", { direction: 0.8, fiscalImpact: -0.18, affectedGroups: ["Large estates", "Heirs", "Public services"] }),
+  ]),
+  variableProvision("PROV_CORPORATE_TAX", "ISS_WELFARE", "Corporate tax base", "A national rate applies after investment and loss deductions", [
+    option("territorial_low_rate", "Territorial low rate", "Cuts the rate and exempts most qualifying foreign profits.", "Competitive Corporate Tax Bill", { direction: -0.85, fiscalImpact: -0.25, affectedGroups: ["Companies", "Investors", "Taxpayers"], dimensionEffects: { economic: -0.75, globalism: 0.35 } }),
+    option("investment_allowance", "Investment allowance", "Keeps the rate but accelerates deductions for new domestic capital investment.", "Business Investment Allowance Bill", { direction: -0.25, fiscalImpact: -0.12, affectedGroups: ["Companies", "Workers", "Investors"] }),
+    option("current_tax_base", "Current tax base", "Retains the national rate and current deduction rules.", "Corporate Tax Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Companies", "Investors", "Taxpayers"] }),
+    option("minimum_effective_tax", "Minimum effective tax", "Sets a minimum effective rate for large corporate groups after deductions.", "Corporate Minimum Tax Bill", { direction: 0.75, fiscalImpact: -0.18, affectedGroups: ["Large companies", "Taxpayers", "Public services"], dimensionEffects: { economic: 0.65, globalism: -0.15 } }),
+  ]),
+  variableProvision("PROV_ELECTRICITY_MARKET", "ISS_OWNERSHIP", "Electricity market structure", "Regulated utilities buy power from public and private generators", [
+    option("competitive_retail_market", "Competitive retail market", "Allows households to choose competing electricity retailers using regulated networks.", "Electricity Choice Bill", { direction: -0.85, fiscalImpact: -0.08, affectedGroups: ["Households", "Utilities", "Generators"], dimensionEffects: { economic: -0.8, authority: -0.25 } }),
+    option("regulated_private_utilities", "Regulated private utilities", "Moves distribution utilities into long-term regulated private franchises.", "Electricity Franchises Bill", { direction: -0.45, fiscalImpact: -0.12, affectedGroups: ["Households", "Utilities", "Investors"] }),
+    option("mixed_regulated_system", "Mixed regulated system", "Retains regulated utilities and mixed public-private generation.", "Electricity Market Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Households", "Utilities", "Generators"] }),
+    option("public_grid_operator", "Public grid operator", "Creates a public system operator while retaining independent generators.", "National Grid Operator Bill", { direction: 0.45, fiscalImpact: 0.14, affectedGroups: ["Households", "Grid workers", "Generators"], dimensionEffects: { economic: 0.45, authority: 0.35 } }),
+    option("public_generation_authority", "Public generation authority", "Establishes a public authority to own new strategic generation and storage.", "Public Power Authority Bill", { direction: 0.9, fiscalImpact: 0.32, affectedGroups: ["Households", "Energy workers", "Taxpayers"], dimensionEffects: { economic: 0.9, authority: 0.45, green: 0.3 } }),
+  ]),
+  variableProvision("PROV_NUCLEAR_POLICY", "ISS_CLIMATE", "Nuclear energy policy", "Existing reactors may operate while new projects require separate legislation", [
+    option("managed_phaseout", "Managed phaseout", "Closes existing reactors at the end of their licensed lives and prohibits replacement plants.", "Nuclear Phaseout Bill", { direction: -0.35, fiscalImpact: 0.12, affectedGroups: ["Energy workers", "Electricity users", "Host communities"], dimensionEffects: { green: 0.55, authority: 0.15 } }),
+    option("case_by_case_authorization", "Case-by-case authorization", "Retains separate legislative approval for each new nuclear project.", "Nuclear Energy Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Electricity users", "Regulators", "Host communities"] }),
+    option("standardized_new_build", "Standardized new build", "Creates a licensing and finance framework for a fleet of standardized reactors.", "Nuclear Generation Bill", { direction: 0.65, fiscalImpact: 0.3, affectedGroups: ["Electricity users", "Energy workers", "Taxpayers"], dimensionEffects: { green: 0.35, authority: 0.45, economic: 0.2 } }),
+  ]),
+  variableProvision("PROV_WATER_ENFORCEMENT", "ISS_CLIMATE", "Water-pollution enforcement", "Provincial inspectors enforce national discharge standards", [
+    option("province_only_enforcement", "Provincial enforcement", "Repeals national intervention powers and leaves inspections to provinces.", "Provincial Water Administration Bill", { direction: -0.6, fiscalImpact: -0.06, affectedGroups: ["Provinces", "Industry", "Water users"], dimensionEffects: { green: -0.45, authority: -0.6 } }),
+    option("shared_enforcement", "Shared enforcement", "Retains provincial inspection under national discharge standards.", "Water Standards Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Provinces", "Industry", "Water users"] }),
+    option("national_enforcement_office", "National enforcement office", "Creates a national office able to inspect major dischargers and levy civil penalties.", "Clean Water Enforcement Bill", { direction: 0.8, fiscalImpact: 0.12, affectedGroups: ["Water users", "Industry", "Environmental agencies"], dimensionEffects: { green: 0.8, authority: 0.5 } }),
+  ]),
+  variableProvision("PROV_BROADBAND", "ISS_OWNERSHIP", "Broadband infrastructure", "Private networks receive targeted rural buildout grants", [
+    option("market_only_buildout", "Market-led buildout", "Ends national buildout grants and relies on commercial network investment.", "Broadband Market Bill", { direction: -0.75, fiscalImpact: -0.14, affectedGroups: ["Rural households", "Network firms", "Taxpayers"] }),
+    option("targeted_rural_grants", "Targeted rural grants", "Retains grants for unserved rural and remote communities.", "Broadband Access Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Rural households", "Network firms", "Local governments"] }),
+    option("public_open_access_network", "Public open-access network", "Builds public fiber infrastructure leased on equal terms to retail providers.", "National Open Network Bill", { direction: 0.85, fiscalImpact: 0.3, affectedGroups: ["Households", "Network workers", "Retail providers"], dimensionEffects: { economic: 0.75, authority: 0.35 } }),
+  ]),
+  variableProvision("PROV_ASYLUM_PROCESS", "ISS_IMMIGRATION", "Asylum procedure", "Applicants receive an interview, legal review and appeal while claims are processed", [
+    option("safe_country_summary_process", "Safe-country summary process", "Uses a shortened procedure for applicants from designated safe countries, with judicial review.", "Safe Country Procedure Bill", { direction: -0.7, fiscalImpact: -0.06, affectedGroups: ["Asylum seekers", "Border officials", "Courts"], dimensionEffects: { social: -0.55, authority: 0.45, globalism: -0.4 } }),
+    option("standard_review", "Standard review", "Retains an interview, legal review and appeal during processing.", "Asylum Procedure Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Asylum seekers", "Caseworkers", "Courts"] }),
+    option("independent_case_agency", "Independent case agency", "Transfers initial decisions to an independent agency with published timeliness standards.", "Independent Asylum Decisions Bill", { direction: 0.3, fiscalImpact: 0.08, affectedGroups: ["Asylum seekers", "Caseworkers", "Courts"], dimensionEffects: { social: 0.2, authority: -0.25 } }),
+    option("right_to_work_after_six_months", "Work rights after six months", "Allows applicants to work when a first decision has not been made within six months.", "Asylum Applicant Work Rights Bill", { direction: 0.65, fiscalImpact: 0.03, affectedGroups: ["Asylum seekers", "Employers", "Local services"], dimensionEffects: { social: 0.45, economic: -0.1, globalism: 0.35 } }),
+  ]),
+  variableProvision("PROV_ELECTORAL_FORMULA", "ISS_REFORM", "Assembly electoral formula", "Multi-member constituencies elect members by single transferable vote", [
+    option("closed_party_lists", "Closed provincial lists", "Replaces constituency STV with closed provincial party lists.", "Provincial List Elections Bill", { direction: -0.2, fiscalImpact: -0.03, affectedGroups: ["Voters", "Political parties", "Election officials"], dimensionEffects: { authority: 0.55, social: -0.1 } }),
+    option("mixed_member_system", "Mixed-member system", "Elects half the Assembly locally and uses party lists to restore proportionality.", "Mixed Member Representation Bill", { direction: 0.25, fiscalImpact: 0.1, affectedGroups: ["Voters", "Candidates", "Political parties"], dimensionEffects: { authority: -0.2, social: 0.15 } }),
+    option("single_transferable_vote", "Single transferable vote", "Retains multi-member constituency elections by transferable vote.", "Electoral System Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Voters", "Candidates", "Election officials"] }),
+    option("national_compensatory_seats", "National compensatory seats", "Keeps constituency STV and adds a small national tier to correct severe disproportionality.", "Fair Representation Bill", { direction: 0.55, fiscalImpact: 0.12, affectedGroups: ["Voters", "Political parties", "Election officials"], dimensionEffects: { authority: -0.4, social: 0.2 } }),
+  ]),
+  variableProvision("PROV_FIREARMS_LICENSING", "ISS_POLICING", "Civilian firearms licensing", "Applicants pass background, training and safe-storage checks", [
+    option("basic_background_check", "Basic background check", "Removes mandatory training and renewals while retaining criminal-record checks.", "Firearms Licensing Reform Bill", { direction: -0.75, fiscalImpact: -0.04, affectedGroups: ["Firearms owners", "Police", "Communities"], dimensionEffects: { social: -0.45, authority: -0.55 } }),
+    option("training_and_storage_license", "Training and storage license", "Retains background, training, renewal and safe-storage requirements.", "Firearms Licensing Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Firearms owners", "Police", "Communities"] }),
+    option("permit_and_registration", "Permit and registration", "Adds registration and a demonstrated-need permit for restricted firearms.", "Firearms Safety Bill", { direction: 0.8, fiscalImpact: 0.08, affectedGroups: ["Firearms owners", "Police", "Communities"], dimensionEffects: { social: 0.45, authority: 0.65 } }),
+  ]),
+  variableProvision("PROV_FARMLAND_POLICY", "ISS_TRADE", "Agricultural land policy", "Provinces regulate conversion and foreign purchase of designated farmland", [
+    option("open_land_market", "Open land market", "Repeals national restrictions on large foreign purchases and leaves conversion rules to provinces.", "Agricultural Land Market Bill", { direction: -0.7, fiscalImpact: -0.03, affectedGroups: ["Farmers", "Landowners", "Investors"], dimensionEffects: { economic: -0.5, globalism: 0.55, authority: -0.35 } }),
+    option("provincial_land_controls", "Provincial land controls", "Retains provincial conversion rules and national review of large foreign purchases.", "Farmland Policy Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Farmers", "Provinces", "Investors"] }),
+    option("working_farm_protection", "Working-farm protection", "Creates a national conservation covenant and right of first refusal for working farmers.", "Working Farmland Protection Bill", { direction: 0.7, fiscalImpact: 0.12, affectedGroups: ["Farmers", "Rural communities", "Landowners"], dimensionEffects: { economic: 0.35, nationalism: 0.4, green: 0.3 } }),
+  ]),
 ] as const;
 
 export function legislativeProvision(id: string): LegislativeProvisionDefinition | null {
@@ -187,17 +363,16 @@ export function legislativeProvisionOption(
   if (direct) return direct;
   // Schema-13 development saves may contain the former universal option IDs.
   // Read them as aliases, but every newly persisted choice uses its legal name.
-  const legacyDirection = optionId === "low" ? -1 : optionId === "current" ? 0 : optionId === "high" ? 1 : null;
-  return legacyDirection == null
-    ? null
-    : definition.options.find((option) => option.direction === legacyDirection) ?? null;
+  if (optionId === "current") return definition.options.find((candidate) => candidate.current) ?? null;
+  if (optionId === "low") return definition.options.slice().sort((a, b) => a.direction - b.direction || a.id.localeCompare(b.id))[0] ?? null;
+  if (optionId === "high") return definition.options.slice().sort((a, b) => b.direction - a.direction || a.id.localeCompare(b.id))[0] ?? null;
+  return null;
 }
 
 export function defaultProvisionOptionId(provisionId: string): string {
   const definition = legislativeProvision(provisionId);
   return (
-    definition?.options.find((option) => option.direction > 0)?.id ??
-    definition?.options.find((option) => option.direction !== 0)?.id ??
+    definition?.options.find((candidate) => !candidate.current)?.id ??
     definition?.options[0]?.id ??
     ""
   );
@@ -214,6 +389,7 @@ export function policyItemForProvision(provisionId: string, optionId: string): P
     direction: option.direction,
     magnitude: option.magnitude,
     fiscalImpact: option.fiscalImpact,
+    ...(option.dimensionEffects ? { dimensionEffects: { ...option.dimensionEffects } } : {}),
   };
 }
 
@@ -226,8 +402,10 @@ export function optionForPolicyItem(item: PolicyItem): LegislativeProvisionOptio
   const definition = provisionForPolicyItem(item);
   if (!definition) return null;
   if (item.optionId) return legislativeProvisionOption(definition.id, item.optionId);
-  const direction = item.direction < 0 ? -1 : item.direction > 0 ? 1 : 0;
-  return definition.options.find((option) => option.direction === direction) ?? definition.options[1] ?? null;
+  return definition.options.slice().sort((a, b) =>
+    Math.abs(a.direction - item.direction) - Math.abs(b.direction - item.direction) ||
+    Number(a.current) - Number(b.current) || a.id.localeCompare(b.id)
+  )[0] ?? null;
 }
 
 export function currentProvisionOption(state: SimState, provisionId: string): LegislativeProvisionOption | null {
@@ -238,7 +416,7 @@ export function currentProvisionOption(state: SimState, provisionId: string): Le
     const item = law.policyItems.find((candidate) => candidate.provisionId === provisionId);
     if (item) return optionForPolicyItem(item);
   }
-  return legislativeProvision(provisionId)?.options.find((option) => option.direction === 0) ?? null;
+  return legislativeProvision(provisionId)?.options.find((option) => option.current) ?? null;
 }
 
 export function estimatedProvisionEffects(item: PolicyItem): Partial<NationalEconomyIndices> {
@@ -287,7 +465,9 @@ export function concretePolicyItem(item: PolicyItem): PolicyItem {
   if (item.provisionId && item.optionId) return { ...item };
   const definition = provisionForPolicyItem(item);
   if (!definition) return { ...item };
-  const direction = item.direction < 0 ? -1 : item.direction > 0 ? 1 : 0;
-  const option = definition.options.find((candidate) => candidate.direction === direction) ?? definition.options[1]!;
+  const option = definition.options.slice().sort((a, b) =>
+    Math.abs(a.direction - item.direction) - Math.abs(b.direction - item.direction) ||
+    Number(a.current) - Number(b.current) || a.id.localeCompare(b.id)
+  )[0]!;
   return policyItemForProvision(definition.id, option.id) ?? { ...item };
 }

@@ -300,14 +300,15 @@ Integrated Terena multi-year harness with scripted interrupt resolution, catastr
 ### Phase 11.3 — institutional politics + UI System V6 + whole-game balance (**CLOSEOUT**)
 
 - Replace emergency federal-candidate replenishment with a renewable provincial political class: 21 population-scaled Provincial Assemblies, proportional recurring elections, named lightweight legislators, explicit player filing, and selective pre-filing promotion into the full national model sized from the actually eligible/running federal pool.
+- Add deterministic NPC retirement/death and filing-stage provincial retirement so the starting cohort does not remain active for fifty years; reuse office/leadership/candidacy cleanup and never decide the player's exit.
 - Add bounded provincial legislation, individual roll calls, Governor sign/veto, two-thirds override, public archives, and federal–provincial Court disputes without building 21 miniature federal governments.
 - Add recurring party/faction leadership elections, elected Assembly caucus floor leaders and whips, all-party browsing, member rosters, leadership history and strict player autonomy.
 - Make the National Assembly and Court readable institutions: 420-seat chamber, individual federal roll calls, searchable politician directory/profiles, nine-seat Court, vote/opinion records and legally qualified appointments.
-- Make constitutional procedure executable: 280 Assembly votes, 13 of 21 Provincial Assembly ratifications within 18 months, no presidential role, and supported constitutional rules stored in runtime state.
-- Complete the concrete federal law system with 30 provision categories / 90 named options, one-to-three-provision bills, editorial deterministic titles, current-law comparison, effects and targeted ordinary amendments.
+- Make constitutional procedure executable: 280 Assembly votes, 13 of 21 Provincial Assembly ratifications, no presidential role, no invented universal deadline, and supported constitutional rules stored in runtime state.
+- Complete the concrete federal law system with 50 provision categories / 161 policy-specific options, one-to-three-provision bills, editorial deterministic titles, current-law comparison, effects and targeted ordinary amendments.
 - Rebuild organization relationships around policy alignment, trust, action history, active endorsement lifecycle and public scorecards. Present campaign capacity as Ground Game and tune national/province/constituency effects as a single bounded system.
 - Ship UI System V6 role-aware workspaces, party/caucus directory, chamber, roll calls, Court bench, Provincial Assembly detail, Calendar, global search, map inspector, public economic measures and responsive evidence at 1440/1200/900/600/390.
-- Advance save schema to v13 with deterministic v12→v13 migration and no fabricated historical events. Validate with targeted institutional tests, the normal repository suite, browser role playtests, and 100 saves × 600 months of deterministic whole-game telemetry.
+- Advance save schema to v14 with deterministic v12→v13 and v13→v14 migrations and no fabricated historical events. Validate with targeted institutional tests, the normal repository suite, browser role playtests, and staged resumable gates culminating in 100 saves × 600 months of deterministic whole-game telemetry.
 
 Artifacts: `PHASE_11_3_INSTITUTIONAL_AUDIT.md`, `UI_SYSTEM_V6.md`, `PHASE_11_3_UI_BEFORE_AFTER.md`, `PHASE_11_3_RESULTS.md`, and `qa/phase11_3/`. **STOP after Phase 11.3. Do not begin Phase 11.4.**
 

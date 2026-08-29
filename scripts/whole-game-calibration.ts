@@ -5,16 +5,27 @@
  * assertCatastrophicInvariants). Telemetry samples public state/history only —
  * it does not draw from gameplay RNG streams.
  *
- * Acceptance target: 100 seeds × 600 months.
- * Local/CI smoke: WHOLE_GAME_SMOKE=1 or --smoke → 3 × 24.
- * Overrides: WHOLE_GAME_SEEDS, WHOLE_GAME_MONTHS.
+ * Acceptance target: 100 seeds × 600 months, reached only after the
+ * 1/3/10/25-seed gates pass. Every finished seed is written atomically to an
+ * independently reusable shard. A shard is reused only when its absolute seed,
+ * horizon and source/content fingerprint still match.
  *
  * Run:
- *   pnpm calibrate:whole-game
- *   pnpm calibrate:whole-game:smoke
- *   WHOLE_GAME_SEEDS=5 WHOLE_GAME_MONTHS=60 pnpm calibrate:whole-game
+ *   pnpm calibrate:game --seed-start=0 --seed-count=3 --months=600 --resume
+ *   pnpm calibrate:game --seed-start=3 --seed-count=7 --months=600 --resume
+ *   pnpm calibrate:whole-game:aggregate --seed-count=10 --months=600 --require-complete
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
@@ -50,11 +61,17 @@ function numericFlag(name: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+function stringFlag(name: string): string | null {
+  return process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3) ?? null;
+}
+
 const skipDeterminism = process.argv.includes("--skip-determinism");
 const childMode = process.argv.includes("--calibration-child");
+const resume = process.argv.includes("--resume");
 
 const seeds = Number(
-  numericFlag("seeds") ??
+  numericFlag("seed-count") ??
+    numericFlag("seeds") ??
     process.env.WHOLE_GAME_SEEDS ??
     (smoke ? SMOKE_SEEDS : ACCEPTANCE_SEEDS),
 );
@@ -74,15 +91,47 @@ if (!Number.isFinite(months) || months < 1) {
 }
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const outFlag = process.argv.find((arg) => arg.startsWith("--out="))?.slice("--out=".length);
+const outFlag = stringFlag("output") ?? stringFlag("out");
 const outPath = outFlag
   ? resolve(outFlag)
   : resolve(repoRoot, "docs/qa/phase11_3/whole_game_calibration.json");
+const shardDir = resolve(
+  stringFlag("shard-dir") ??
+    join(repoRoot, ".calibration/phase11_3/shards", `${months}m`),
+);
+
+function sourceFingerprint(): string {
+  const hash = createHash("sha256");
+  const roots = [
+    "packages/sim/src",
+    "packages/election-math/src",
+    "packages/content-loader/src",
+    "data",
+  ];
+  const visit = (relativeDir: string): void => {
+    const absoluteDir = resolve(repoRoot, relativeDir);
+    if (!existsSync(absoluteDir)) return;
+    for (const entry of readdirSync(absoluteDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const relative = join(relativeDir, entry.name);
+      if (entry.isDirectory()) visit(relative);
+      else if (/\.(?:ts|json|ya?ml|geojson)$/i.test(entry.name)) {
+        hash.update(relative.replace(/\\/g, "/"));
+        hash.update(readFileSync(resolve(repoRoot, relative)));
+      }
+    }
+  };
+  for (const root of roots) visit(root);
+  hash.update(readFileSync(fileURLToPath(import.meta.url)));
+  return hash.digest("hex");
+}
+
+export const calibrationSourceFingerprint = sourceFingerprint();
 
 type NationalSnap = {
   outputIndex: number;
   employmentIndex: number;
   priceIndex: number;
+  realWageIndex: number;
   housingIndex: number;
   confidenceIndex: number;
 };
@@ -129,7 +178,7 @@ type CareerTransition = {
   status: string;
 };
 
-type RunTelemetry = {
+export type RunTelemetry = {
   seed: string;
   seedIndex: number;
   monthsRequested: number;
@@ -148,12 +197,24 @@ type RunTelemetry = {
     delta: Partial<NationalSnap> | null;
     outputSignChanges: number;
     outputDirectionChanges: number;
+    outputMinimum: number;
+    outputMaximum: number;
+    expansionMonths: number;
+    contractionMonths: number;
+    recoveryMonths: number;
+    inflationPressureMonths: number;
+    wageSqueezeMonths: number;
+    housingImprovementMonths: number;
+    housingWeakeningMonths: number;
   };
   regionalEconomy: {
     provinceCount: number;
     rankingChurn: number;
     top5Start: string[];
     top5End: string[];
+    startSpread: number;
+    endSpread: number;
+    largestSpread: number;
   };
   legislative: {
     billsIntroduced: number;
@@ -162,6 +223,11 @@ type RunTelemetry = {
     billsByStatus: Record<string, number>;
     historyIntroduced: number;
     historySigned: number;
+    amendmentsProposed: number;
+    amendmentsAdopted: number;
+    crossPartyFloorPasses: number;
+    meanPartyCohesion: number;
+    meanWhipCompliance: number;
   };
   institutions: {
     provincialSeats: number;
@@ -175,9 +241,25 @@ type RunTelemetry = {
     provincialVetoes: number;
     provincialOverrides: number;
     provincialVotes: number;
+    provincialCrossPartyPasses: number;
+    provincialMeanPartyCohesion: number;
+    provincialDividedGovernmentBills: number;
+    provincialDividedGovernmentSigned: number;
+    provincialDividedGovernmentVetoed: number;
+    provincialLeadershipTurnover: number;
     provincialLegislators: number;
+    provincialLegislatorsGenerated: number;
     provincialPromotions: number;
     generatedNationalPoliticians: number;
+    federalAssemblyCandidates: number;
+    minimumFederalCandidateSurplus: number;
+    activeOriginalPoliticians: number;
+    activeGovernors: number;
+    activePartyLeaders: number;
+    activeCaucusLeaders: number;
+    meanActivePoliticalAge: number;
+    politiciansRetired: number;
+    politiciansDied: number;
     partyLeadershipContests: number;
     factionChairContests: number;
     partyContestsResolved: number;
@@ -187,11 +269,17 @@ type RunTelemetry = {
     constitutionalAssemblyPassed: number;
     constitutionalRatified: number;
     constitutionalFailed: number;
+    constitutionalByRule: Record<string, number>;
+    constitutionalByTrigger: Record<string, number>;
     courtDecisions: number;
     federalProvincialCases: number;
     organizationActions: number;
     organizationEndorsements: number;
     organizationRelationships: number;
+    organizationMeetings: number;
+    organizationPolicyTalks: number;
+    organizationEndorsementWithdrawals: number;
+    organizationBillPositions: number;
     candidateShortageEvents: number;
   };
   careers: {
@@ -222,6 +310,64 @@ type RunTelemetry = {
   saveGrowth: Array<{ month: number; date: string; bytes: number }>;
 };
 
+type RunShard = {
+  formatVersion: 1;
+  sourceFingerprint: string;
+  contentVersion: string;
+  generatedAt: string;
+  seed: string;
+  seedIndex: number;
+  months: number;
+  run: RunTelemetry;
+};
+
+function runShardPath(seedIndex: number): string {
+  return join(
+    shardDir,
+    `seed-${String(seedIndex).padStart(3, "0")}-${String(months).padStart(3, "0")}m.json`,
+  );
+}
+
+function reusableRunShard(seedIndex: number, contentVersion: string): RunTelemetry | null {
+  const path = runShardPath(seedIndex);
+  if (!resume || !existsSync(path)) return null;
+  try {
+    const shard = JSON.parse(readFileSync(path, "utf8")) as Partial<RunShard>;
+    if (
+      shard.formatVersion !== 1 ||
+      shard.sourceFingerprint !== calibrationSourceFingerprint ||
+      shard.contentVersion !== contentVersion ||
+      shard.seedIndex !== seedIndex ||
+      shard.seed !== seedLabel(seedIndex) ||
+      shard.months !== months ||
+      shard.run?.monthsRequested !== months
+    ) {
+      return null;
+    }
+    return shard.run;
+  } catch {
+    return null;
+  }
+}
+
+function persistRunShard(run: RunTelemetry, contentVersion: string): void {
+  const path = runShardPath(run.seedIndex);
+  const shard: RunShard = {
+    formatVersion: 1,
+    sourceFingerprint: calibrationSourceFingerprint,
+    contentVersion,
+    generatedAt: new Date().toISOString(),
+    seed: run.seed,
+    seedIndex: run.seedIndex,
+    months,
+    run,
+  };
+  mkdirSync(dirname(path), { recursive: true });
+  const temporary = `${path}.${process.pid}.tmp`;
+  writeFileSync(temporary, `${JSON.stringify(shard)}\n`, "utf8");
+  renameSync(temporary, path);
+}
+
 function seedLabel(index: number): string {
   return `P113-WG-${String(index).padStart(3, "0")}`;
 }
@@ -251,6 +397,7 @@ function nationalSnap(state: SimState): NationalSnap {
     outputIndex: n.outputIndex,
     employmentIndex: n.employmentIndex,
     priceIndex: n.priceIndex,
+    realWageIndex: n.realWageIndex,
     housingIndex: n.housingIndex,
     confidenceIndex: n.confidenceIndex,
   };
@@ -420,6 +567,40 @@ function legislativeTelemetry(state: SimState) {
   }
   const historyIntroduced = state.history.filter((e) => e.type === "BILL_INTRODUCED").length;
   const historySigned = state.history.filter((e) => e.type === "BILL_SIGNED").length;
+  const floorVotes = Object.values(state.legislatureRuntime.legislativeVotes).filter(
+    (vote) => vote.stage === "floor",
+  );
+  const cohesionSamples: number[] = [];
+  const complianceSamples: number[] = [];
+  let crossPartyFloorPasses = 0;
+  for (const vote of floorVotes) {
+    const byParty = new Map<string, Array<"yes" | "no" | "abstain">>();
+    for (const [politicianId, choice] of Object.entries(vote.votes)) {
+      const partyId = state.politicians[politicianId]?.partyId ?? "independent";
+      const row = byParty.get(partyId) ?? [];
+      row.push(choice);
+      byParty.set(partyId, row);
+    }
+    if (vote.passed && [...byParty.values()].filter((choices) => choices.includes("yes")).length > 1) {
+      crossPartyFloorPasses += 1;
+    }
+    for (const [partyId, choices] of byParty) {
+      const cast = choices.filter((choice) => choice !== "abstain");
+      if (cast.length > 1) {
+        const yes = cast.filter((choice) => choice === "yes").length;
+        cohesionSamples.push(Math.max(yes, cast.length - yes) / cast.length);
+      }
+      const recommendation = state.legislatureRuntime.partyRecommendations[`${partyId}:${vote.billId}`];
+      if (recommendation?.stance === "support" || recommendation?.stance === "oppose") {
+        const aligned = choices.filter((choice) =>
+          recommendation.stance === "support" ? choice === "yes" : choice === "no",
+        ).length;
+        complianceSamples.push(aligned / Math.max(1, choices.length));
+      }
+    }
+  }
+  const mean = (values: number[]) =>
+    values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
   return {
     billsIntroduced: bills.filter((b) => b.introducedDate != null).length,
     billsEnactedOrSigned: bills.filter(
@@ -434,7 +615,26 @@ function legislativeTelemetry(state: SimState) {
     billsByStatus,
     historyIntroduced,
     historySigned,
+    amendmentsProposed: Object.keys(state.legislatureRuntime.amendments).length,
+    amendmentsAdopted: Object.values(state.legislatureRuntime.amendments).filter(
+      (amendment) => amendment.status === "adopted",
+    ).length,
+    crossPartyFloorPasses,
+    meanPartyCohesion: mean(cohesionSamples),
+    meanWhipCompliance: mean(complianceSamples),
   };
+}
+
+function sumRecords(records: Array<Record<string, number>>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const record of records) {
+    for (const [key, value] of Object.entries(record)) out[key] = (out[key] ?? 0) + value;
+  }
+  return Object.fromEntries(Object.entries(out).sort((a, b) => a[0].localeCompare(b[0])));
+}
+
+function numericSpread(values: number[]): number {
+  return values.length ? Math.max(...values) - Math.min(...values) : 0;
 }
 
 function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry["institutions"] {
@@ -446,6 +646,82 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
   const amendments = Object.values(state.provincialRuntime.constitutionalAmendments);
   const organizations = Object.values(state.organizationRuntime.actors);
   const worldPoliticians = new Set(world.politicians.map((politician) => politician.id));
+  const billVotes = Object.values(state.provincialRuntime.votes).filter(
+    (vote) => vote.subjectKind === "bill",
+  );
+  const cohesionSamples: number[] = [];
+  let provincialCrossPartyPasses = 0;
+  for (const vote of billVotes) {
+    const byParty = new Map<string, Array<"yes" | "no" | "abstain">>();
+    for (const [legislatorId, choice] of Object.entries(vote.votes)) {
+      const partyId = state.provincialRuntime.legislators[legislatorId]?.partyId ?? "independent";
+      const row = byParty.get(partyId) ?? [];
+      row.push(choice);
+      byParty.set(partyId, row);
+    }
+    if (vote.passed && [...byParty.values()].filter((choices) => choices.includes("yes")).length > 1) {
+      provincialCrossPartyPasses += 1;
+    }
+    for (const choices of byParty.values()) {
+      const cast = choices.filter((choice) => choice !== "abstain");
+      if (cast.length < 2) continue;
+      const yes = cast.filter((choice) => choice === "yes").length;
+      cohesionSamples.push(Math.max(yes, cast.length - yes) / cast.length);
+    }
+  }
+  const currentGovernorParty = (provinceId: string): string | null => {
+    const holder = Object.values(state.officeTerms).find((term) => {
+      const office = world.offices[term.officeId];
+      return office?.kind === "governor" && office.provinceId === provinceId &&
+        (term.status === "active" || term.status === "suspended");
+    })?.holderId;
+    return holder ? state.politicians[holder]?.partyId ?? null : null;
+  };
+  const pluralityParty = (provinceId: string): string | null =>
+    Object.entries(state.provincialRuntime.assemblies[provinceId]?.partySeats ?? {})
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+  const dividedBills = Object.values(state.provincialRuntime.bills).filter((bill) => {
+    const governorParty = currentGovernorParty(bill.provinceId);
+    const chamberParty = pluralityParty(bill.provinceId);
+    return governorParty != null && chamberParty != null && governorParty !== chamberParty;
+  });
+  let leadershipTurnover = 0;
+  for (const assembly of assemblies) {
+    const prior = new Map<string, string>();
+    for (const record of [...(assembly.leadershipHistory ?? [])].sort(
+      (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
+    )) {
+      if (!record.winnerId) continue;
+      const key = `${record.role}:${record.partyId ?? "assembly"}`;
+      const old = prior.get(key);
+      if (old && old !== record.winnerId) leadershipTurnover += 1;
+      prior.set(key, record.winnerId);
+    }
+  }
+  const resolvedFederalFields = Object.values(state.elections)
+    .filter((election) => election.type === "assembly" && election.status === "resolved")
+    .flatMap((election) => Object.values(election.assembly?.constituencyFields ?? {}));
+  const candidateSurpluses = resolvedFederalFields.map(
+    (field) => field.candidateIds.length - field.magnitude,
+  );
+  const activeAges = [
+    ...Object.values(state.provincialRuntime.legislators)
+      .filter((politician) => politician.active && politician.fullPoliticianId == null)
+      .map((politician) => Number(state.currentDate.slice(0, 4)) - politician.birthYear),
+    ...Object.entries(state.politicians)
+      .filter(([, politician]) => politician.alive && !politician.retired)
+      .flatMap(([id]) => {
+        const birthDate = state.generatedAgentProfiles[id]?.birthDate ?? world.agentProfiles[id]?.birthDate;
+        return birthDate ? [Number(state.currentDate.slice(0, 4)) - Number(birthDate.slice(0, 4))] : [];
+      }),
+  ].filter((age) => age >= 18 && age <= 110);
+  const constitutionalByRule: Record<string, number> = {};
+  const constitutionalByTrigger: Record<string, number> = {};
+  for (const amendment of amendments) {
+    constitutionalByRule[amendment.ruleId] = (constitutionalByRule[amendment.ruleId] ?? 0) + 1;
+    constitutionalByTrigger[amendment.proposalTrigger] =
+      (constitutionalByTrigger[amendment.proposalTrigger] ?? 0) + 1;
+  }
   return {
     provincialSeats: seatCounts.reduce((sum, seats) => sum + seats, 0),
     provincialSeatMin: seatCounts.length ? Math.min(...seatCounts) : 0,
@@ -458,9 +734,30 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
     provincialVetoes: eventCount("PROVINCIAL_BILL_VETOED"),
     provincialOverrides: eventCount("PROVINCIAL_VETO_OVERRIDDEN"),
     provincialVotes: Object.values(state.provincialRuntime.votes).filter((vote) => !vote.id.startsWith("pending:")).length,
+    provincialCrossPartyPasses,
+    provincialMeanPartyCohesion: cohesionSamples.length
+      ? cohesionSamples.reduce((sum, value) => sum + value, 0) / cohesionSamples.length
+      : 0,
+    provincialDividedGovernmentBills: dividedBills.length,
+    provincialDividedGovernmentSigned: dividedBills.filter((bill) => ["signed", "override_passed"].includes(bill.status)).length,
+    provincialDividedGovernmentVetoed: dividedBills.filter((bill) => ["vetoed", "override_failed"].includes(bill.status)).length,
+    provincialLeadershipTurnover: leadershipTurnover,
     provincialLegislators: Object.keys(state.provincialRuntime.legislators).length,
+    provincialLegislatorsGenerated: Object.values(state.provincialRuntime.legislators).filter((politician) => politician.source === "recruited").length,
     provincialPromotions: Object.keys(state.provincialRuntime.promotions).length,
     generatedNationalPoliticians: Object.keys(state.politicians).filter((id) => !worldPoliticians.has(id)).length,
+    federalAssemblyCandidates: resolvedFederalFields.reduce((sum, field) => sum + field.candidateIds.length, 0),
+    minimumFederalCandidateSurplus: candidateSurpluses.length ? Math.min(...candidateSurpluses) : 0,
+    activeOriginalPoliticians: world.politicians.filter((politician) => {
+      const runtime = state.politicians[politician.id];
+      return runtime?.alive && !runtime.retired;
+    }).length,
+    activeGovernors: Object.values(state.officeTerms).filter((term) => world.offices[term.officeId]?.kind === "governor" && (term.status === "active" || term.status === "suspended")).length,
+    activePartyLeaders: new Set(Object.values(state.partyStates).map((party) => party.leaderId).filter(Boolean)).size,
+    activeCaucusLeaders: new Set(Object.values(state.legislatureRuntime.caucusLeadership).flatMap((leadership) => [leadership.floorLeaderId, leadership.whipId]).filter(Boolean)).size,
+    meanActivePoliticalAge: activeAges.length ? activeAges.reduce((sum, age) => sum + age, 0) / activeAges.length : 0,
+    politiciansRetired: eventCount("POLITICIAN_RETIRED"),
+    politiciansDied: eventCount("POLITICIAN_DIED"),
     partyLeadershipContests: partyContests.filter((contest) => contest.type === "party_leadership").length,
     factionChairContests: partyContests.filter((contest) => contest.type === "faction_chair").length,
     partyContestsResolved: partyContests.filter((contest) => contest.status === "resolved").length,
@@ -470,11 +767,17 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
     constitutionalAssemblyPassed: amendments.filter((amendment) => ["ratifying", "ratified"].includes(amendment.status)).length,
     constitutionalRatified: amendments.filter((amendment) => amendment.status === "ratified").length,
     constitutionalFailed: amendments.filter((amendment) => ["assembly_failed", "failed"].includes(amendment.status)).length,
+    constitutionalByRule,
+    constitutionalByTrigger,
     courtDecisions: Object.keys(state.constitutionalRuntime.courtDecisions).length,
     federalProvincialCases: Object.values(state.constitutionalRuntime.courtCases).filter((courtCase) => courtCase.caseType === "FEDERAL_PROVINCIAL_DISPUTE").length,
     organizationActions: organizations.reduce((sum, organization) => sum + organization.recentActions.length, 0),
     organizationEndorsements: organizations.reduce((sum, organization) => sum + organization.endorsements.length, 0),
     organizationRelationships: organizations.reduce((sum, organization) => sum + Object.keys(organization.relationships).length, 0),
+    organizationMeetings: eventCount("ORGANIZATION_MEETING"),
+    organizationPolicyTalks: eventCount("ORGANIZATION_POLICY_TALK"),
+    organizationEndorsementWithdrawals: eventCount("ORGANIZATION_ENDORSEMENT_WITHDRAWN"),
+    organizationBillPositions: organizations.reduce((sum, organization) => sum + organization.billPressure.length, 0),
     candidateShortageEvents: state.history.filter((event) => /CANDIDATE_SHORTAGE|INSUFFICIENT_CANDIDATES/.test(event.type)).length,
   };
 }
@@ -584,6 +887,9 @@ function runOneSeed(args: {
   const startState = sim.getSnapshot();
   const startEconomy = nationalSnap(startState);
   const startRanking = provinceRanking(startState);
+  const startSpread = numericSpread(
+    Object.values(startState.economyRuntime.provinces).map((row) => row.conditionsIndex),
+  );
   const turnMs: number[] = [];
   const saveGrowth: RunTelemetry["saveGrowth"] = [];
 
@@ -592,6 +898,16 @@ function runOneSeed(args: {
   let monthsCompleted = 0;
   let error: string | null = null;
   const outputSeries: number[] = [startEconomy.outputIndex];
+  let expansionMonths = 0;
+  let contractionMonths = 0;
+  let recoveryMonths = 0;
+  let inflationPressureMonths = 0;
+  let wageSqueezeMonths = 0;
+  let housingImprovementMonths = 0;
+  let housingWeakeningMonths = 0;
+  let largestSpread = startSpread;
+  let previousNational = { ...startEconomy };
+  let previousOutputDelta = 0;
 
   try {
     for (let month = 1; month <= months; month += 1) {
@@ -600,13 +916,24 @@ function runOneSeed(args: {
       turnMs.push(performance.now() - t0);
       monthsCompleted = month;
 
-      const snap = sim.getSnapshot();
-      outputSeries.push(snap.economyRuntime.national.outputIndex);
+      const telemetry = sim.getTelemetrySnapshot();
+      outputSeries.push(telemetry.national.outputIndex);
+      const outputDelta = telemetry.national.outputIndex - previousNational.outputIndex;
+      if (outputDelta > 0.04) expansionMonths += 1;
+      if (outputDelta < -0.04) contractionMonths += 1;
+      if (outputDelta > 0.04 && previousOutputDelta < -0.04) recoveryMonths += 1;
+      if (telemetry.national.priceIndex - previousNational.priceIndex > 0.18) inflationPressureMonths += 1;
+      if (telemetry.national.realWageIndex - previousNational.realWageIndex < -0.12) wageSqueezeMonths += 1;
+      if (telemetry.national.housingIndex - previousNational.housingIndex > 0.12) housingImprovementMonths += 1;
+      if (telemetry.national.housingIndex - previousNational.housingIndex < -0.12) housingWeakeningMonths += 1;
+      largestSpread = Math.max(largestSpread, numericSpread(Object.values(telemetry.provinceConditions)));
+      previousOutputDelta = outputDelta;
+      previousNational = { ...telemetry.national };
 
       if (shouldCaptureSave(month)) {
         saveGrowth.push({
           month,
-          date: snap.currentDate,
+          date: telemetry.currentDate,
           bytes: saveBytes(sim),
         });
       }
@@ -660,18 +987,33 @@ function runOneSeed(args: {
             outputIndex: endEconomy.outputIndex - startEconomy.outputIndex,
             employmentIndex: endEconomy.employmentIndex - startEconomy.employmentIndex,
             priceIndex: endEconomy.priceIndex - startEconomy.priceIndex,
+            realWageIndex: endEconomy.realWageIndex - startEconomy.realWageIndex,
             housingIndex: endEconomy.housingIndex - startEconomy.housingIndex,
             confidenceIndex: endEconomy.confidenceIndex - startEconomy.confidenceIndex,
           }
         : null,
       outputSignChanges: cycle.outputSignChanges,
       outputDirectionChanges: cycle.outputDirectionChanges,
+      outputMinimum: Math.min(...outputSeries),
+      outputMaximum: Math.max(...outputSeries),
+      expansionMonths,
+      contractionMonths,
+      recoveryMonths,
+      inflationPressureMonths,
+      wageSqueezeMonths,
+      housingImprovementMonths,
+      housingWeakeningMonths,
     },
     regionalEconomy: {
       provinceCount: startRanking.length,
       rankingChurn: rankingChurn(startRanking, endRanking),
       top5Start: startRanking.slice(0, 5),
       top5End: endRanking.slice(0, 5),
+      startSpread,
+      endSpread: endState
+        ? numericSpread(Object.values(endState.economyRuntime.provinces).map((row) => row.conditionsIndex))
+        : startSpread,
+      largestSpread,
     },
     legislative: endState
       ? legislativeTelemetry(endState)
@@ -682,6 +1024,11 @@ function runOneSeed(args: {
           billsByStatus: {},
           historyIntroduced: 0,
           historySigned: 0,
+          amendmentsProposed: 0,
+          amendmentsAdopted: 0,
+          crossPartyFloorPasses: 0,
+          meanPartyCohesion: 0,
+          meanWhipCompliance: 0,
         },
     institutions: endState
       ? institutionTelemetry(world, endState)
@@ -697,9 +1044,25 @@ function runOneSeed(args: {
           provincialVetoes: 0,
           provincialOverrides: 0,
           provincialVotes: 0,
+          provincialCrossPartyPasses: 0,
+          provincialMeanPartyCohesion: 0,
+          provincialDividedGovernmentBills: 0,
+          provincialDividedGovernmentSigned: 0,
+          provincialDividedGovernmentVetoed: 0,
+          provincialLeadershipTurnover: 0,
           provincialLegislators: 0,
+          provincialLegislatorsGenerated: 0,
           provincialPromotions: 0,
           generatedNationalPoliticians: 0,
+          federalAssemblyCandidates: 0,
+          minimumFederalCandidateSurplus: 0,
+          activeOriginalPoliticians: 0,
+          activeGovernors: 0,
+          activePartyLeaders: 0,
+          activeCaucusLeaders: 0,
+          meanActivePoliticalAge: 0,
+          politiciansRetired: 0,
+          politiciansDied: 0,
           partyLeadershipContests: 0,
           factionChairContests: 0,
           partyContestsResolved: 0,
@@ -709,11 +1072,17 @@ function runOneSeed(args: {
           constitutionalAssemblyPassed: 0,
           constitutionalRatified: 0,
           constitutionalFailed: 0,
+          constitutionalByRule: {},
+          constitutionalByTrigger: {},
           courtDecisions: 0,
           federalProvincialCases: 0,
           organizationActions: 0,
           organizationEndorsements: 0,
           organizationRelationships: 0,
+          organizationMeetings: 0,
+          organizationPolicyTalks: 0,
+          organizationEndorsementWithdrawals: 0,
+          organizationBillPositions: 0,
           candidateShortageEvents: 0,
         },
     careers: endState
@@ -812,7 +1181,7 @@ function runDeterminismChecks(world: KernelWorld): {
   }
 }
 
-function aggregateRuns(runs: RunTelemetry[]) {
+export function aggregateRuns(runs: RunTelemetry[], requestedMonths = months) {
   const catastrophicTotal = runs.reduce((sum, run) => sum + run.catastrophicFailureCount, 0);
   const catastrophicByCode: Record<string, number> = {};
   for (const run of runs) {
@@ -825,7 +1194,7 @@ function aggregateRuns(runs: RunTelemetry[]) {
   const asmSeatOnly =
     Object.keys(catastrophicByCode).length === 1 && catastrophicByCode.ASM_SEAT_COUNT != null;
   const earlyHorizonAsmNote =
-    months < 30 && asmSeatOnly
+    requestedMonths < 30 && asmSeatOnly
       ? "ASM_SEAT_COUNT alone at <30 months is a known early-horizon seating gap before the first Assembly election; re-check at ≥36 months / full 600."
       : null;
 
@@ -864,7 +1233,7 @@ function aggregateRuns(runs: RunTelemetry[]) {
     .filter((v): v is number => v != null);
 
   return {
-    runsCompleted: runs.filter((r) => r.error == null && r.monthsCompleted === months).length,
+    runsCompleted: runs.filter((r) => r.error == null && r.monthsCompleted === requestedMonths).length,
     runsWithErrors: runs.filter((r) => r.error != null).length,
     catastrophic: {
       totalFailures: catastrophicTotal,
@@ -897,14 +1266,31 @@ function aggregateRuns(runs: RunTelemetry[]) {
       outputDelta: summarize(outputDeltas),
       meanOutputSignChanges: summarize(runs.map((r) => r.economy.outputSignChanges)),
       meanOutputDirectionChanges: summarize(runs.map((r) => r.economy.outputDirectionChanges)),
+      outputMinimum: summarize(runs.map((r) => r.economy.outputMinimum)),
+      outputMaximum: summarize(runs.map((r) => r.economy.outputMaximum)),
+      expansionMonths: summarize(runs.map((r) => r.economy.expansionMonths)),
+      contractionMonths: summarize(runs.map((r) => r.economy.contractionMonths)),
+      recoveryMonths: summarize(runs.map((r) => r.economy.recoveryMonths)),
+      inflationPressureMonths: summarize(runs.map((r) => r.economy.inflationPressureMonths)),
+      wageSqueezeMonths: summarize(runs.map((r) => r.economy.wageSqueezeMonths)),
+      housingImprovementMonths: summarize(runs.map((r) => r.economy.housingImprovementMonths)),
+      housingWeakeningMonths: summarize(runs.map((r) => r.economy.housingWeakeningMonths)),
     },
     regionalEconomy: {
       rankingChurn: summarize(rankingChurns),
+      startSpread: summarize(runs.map((r) => r.regionalEconomy.startSpread)),
+      endSpread: summarize(runs.map((r) => r.regionalEconomy.endSpread)),
+      largestSpread: summarize(runs.map((r) => r.regionalEconomy.largestSpread)),
     },
     legislative: {
       billsIntroduced: summarize(runs.map((r) => r.legislative.billsIntroduced)),
       billsEnactedOrSigned: summarize(runs.map((r) => r.legislative.billsEnactedOrSigned)),
       billsReturnedByPresident: summarize(runs.map((r) => r.legislative.billsReturnedByPresident)),
+      amendmentsProposed: summarize(runs.map((r) => r.legislative.amendmentsProposed)),
+      amendmentsAdopted: summarize(runs.map((r) => r.legislative.amendmentsAdopted)),
+      crossPartyFloorPasses: summarize(runs.map((r) => r.legislative.crossPartyFloorPasses)),
+      meanPartyCohesion: summarize(runs.map((r) => r.legislative.meanPartyCohesion)),
+      meanWhipCompliance: summarize(runs.map((r) => r.legislative.meanWhipCompliance)),
     },
     institutions: {
       provincialSeats: summarize(runs.map((r) => r.institutions.provincialSeats)),
@@ -914,17 +1300,39 @@ function aggregateRuns(runs: RunTelemetry[]) {
       provincialBillsSigned: summarize(runs.map((r) => r.institutions.provincialBillsSigned)),
       provincialVetoes: summarize(runs.map((r) => r.institutions.provincialVetoes)),
       provincialOverrides: summarize(runs.map((r) => r.institutions.provincialOverrides)),
+      provincialCrossPartyPasses: summarize(runs.map((r) => r.institutions.provincialCrossPartyPasses)),
+      provincialMeanPartyCohesion: summarize(runs.map((r) => r.institutions.provincialMeanPartyCohesion)),
+      provincialDividedGovernmentBills: summarize(runs.map((r) => r.institutions.provincialDividedGovernmentBills)),
+      provincialDividedGovernmentSigned: summarize(runs.map((r) => r.institutions.provincialDividedGovernmentSigned)),
+      provincialDividedGovernmentVetoed: summarize(runs.map((r) => r.institutions.provincialDividedGovernmentVetoed)),
+      provincialLeadershipTurnover: summarize(runs.map((r) => r.institutions.provincialLeadershipTurnover)),
       provincialLegislators: summarize(runs.map((r) => r.institutions.provincialLegislators)),
+      provincialLegislatorsGenerated: summarize(runs.map((r) => r.institutions.provincialLegislatorsGenerated)),
       provincialPromotions: summarize(runs.map((r) => r.institutions.provincialPromotions)),
       generatedNationalPoliticians: summarize(runs.map((r) => r.institutions.generatedNationalPoliticians)),
+      federalAssemblyCandidates: summarize(runs.map((r) => r.institutions.federalAssemblyCandidates)),
+      minimumFederalCandidateSurplus: summarize(runs.map((r) => r.institutions.minimumFederalCandidateSurplus)),
+      activeOriginalPoliticians: summarize(runs.map((r) => r.institutions.activeOriginalPoliticians)),
+      activeGovernors: summarize(runs.map((r) => r.institutions.activeGovernors)),
+      activePartyLeaders: summarize(runs.map((r) => r.institutions.activePartyLeaders)),
+      activeCaucusLeaders: summarize(runs.map((r) => r.institutions.activeCaucusLeaders)),
+      meanActivePoliticalAge: summarize(runs.map((r) => r.institutions.meanActivePoliticalAge)),
+      politiciansRetired: summarize(runs.map((r) => r.institutions.politiciansRetired)),
+      politiciansDied: summarize(runs.map((r) => r.institutions.politiciansDied)),
       partyLeadershipContests: summarize(runs.map((r) => r.institutions.partyLeadershipContests)),
       factionChairContests: summarize(runs.map((r) => r.institutions.factionChairContests)),
       caucusContests: summarize(runs.map((r) => r.institutions.caucusContests)),
       constitutionalProposed: summarize(runs.map((r) => r.institutions.constitutionalProposed)),
       constitutionalRatified: summarize(runs.map((r) => r.institutions.constitutionalRatified)),
+      constitutionalByRule: sumRecords(runs.map((r) => r.institutions.constitutionalByRule)),
+      constitutionalByTrigger: sumRecords(runs.map((r) => r.institutions.constitutionalByTrigger)),
       courtDecisions: summarize(runs.map((r) => r.institutions.courtDecisions)),
       organizationActions: summarize(runs.map((r) => r.institutions.organizationActions)),
       organizationRelationships: summarize(runs.map((r) => r.institutions.organizationRelationships)),
+      organizationMeetings: summarize(runs.map((r) => r.institutions.organizationMeetings)),
+      organizationPolicyTalks: summarize(runs.map((r) => r.institutions.organizationPolicyTalks)),
+      organizationEndorsementWithdrawals: summarize(runs.map((r) => r.institutions.organizationEndorsementWithdrawals)),
+      organizationBillPositions: summarize(runs.map((r) => r.institutions.organizationBillPositions)),
       candidateShortageEvents: summarize(runs.map((r) => r.institutions.candidateShortageEvents)),
     },
     foreign: {
@@ -994,6 +1402,31 @@ function printConsoleSummary(payload: {
   console.log("");
 }
 
+function outputPayload(
+  meta: Record<string, unknown>,
+  aggregate: ReturnType<typeof aggregateRuns>,
+  determinism: ReturnType<typeof runDeterminismChecks>,
+  runs: RunTelemetry[],
+  includeRuns: boolean,
+) {
+  const base = {
+    meta,
+    aggregate,
+    determinism,
+    runIndex: runs.map((run) => ({
+      seed: run.seed,
+      seedIndex: run.seedIndex,
+      monthsCompleted: run.monthsCompleted,
+      finalDate: run.finalDate,
+      finalHash: run.finalHash,
+      error: run.error,
+      catastrophicFailureCount: run.catastrophicFailureCount,
+      shard: runShardPath(run.seedIndex).replace(`${repoRoot}\\`, "").replace(/\\/g, "/"),
+    })),
+  };
+  return includeRuns ? { ...base, runs } : base;
+}
+
 async function main(): Promise<void> {
   if (parallel > 1 && !childMode && seeds > 1) {
     await runParallelCalibration();
@@ -1008,12 +1441,22 @@ async function main(): Promise<void> {
     playerPoliticianId: PLAYER_ID,
     seed: seedLabel(seedStart),
   });
-  const careerSample = pickCareerSample(probe.getSnapshot());
+  const probeSnapshot = probe.getSnapshot();
+  const contentVersion = probeSnapshot.contentVersion;
+  const careerSample = pickCareerSample(probeSnapshot);
 
   const runs: RunTelemetry[] = [];
   for (let index = 0; index < seeds; index += 1) {
     const absoluteIndex = seedStart + index;
     const seed = seedLabel(absoluteIndex);
+    const cached = reusableRunShard(absoluteIndex, contentVersion);
+    if (cached) {
+      console.log(
+        `  seed ${seed} (${index + 1}/${seeds}) resumed ${cached.monthsCompleted}/${months}m hash=${cached.finalHash?.slice(0, 8) ?? "n/a"} cat=${cached.catastrophicFailureCount}${cached.error ? ` ERR ${cached.error}` : ""}`,
+      );
+      runs.push(cached);
+      continue;
+    }
     process.stdout.write(`  seed ${seed} (${index + 1}/${seeds})… `);
     const started = performance.now();
     const run = runOneSeed({ world, seed, seedIndex: absoluteIndex, careerSample });
@@ -1021,6 +1464,7 @@ async function main(): Promise<void> {
     console.log(
       `${run.monthsCompleted}/${months}m hash=${run.finalHash?.slice(0, 8) ?? "n/a"} cat=${run.catastrophicFailureCount} ${elapsedSec}s${run.error ? ` ERR ${run.error}` : ""}`,
     );
+    persistRunShard(run, contentVersion);
     runs.push(run);
     if (index % 2 === 1) {
       await new Promise<void>((resolveYield) => setTimeout(resolveYield, 0));
@@ -1042,33 +1486,32 @@ async function main(): Promise<void> {
     : runDeterminismChecks(world);
   const aggregate = aggregateRuns(runs);
 
-  const payload = {
-    meta: {
-      phase: "11.3",
-      harness: "whole-game-calibration",
-      generatedAt: new Date().toISOString(),
-      smoke,
-      seeds,
-      months,
-      seedStart,
-      parallel: childMode ? 1 : parallel,
-      acceptanceTarget: { seeds: ACCEPTANCE_SEEDS, months: ACCEPTANCE_MONTHS },
-      playerPoliticianId: PLAYER_ID,
-      contentVersion: probe.getSnapshot().contentVersion,
-      env: {
-        WHOLE_GAME_SEEDS: process.env.WHOLE_GAME_SEEDS ?? null,
-        WHOLE_GAME_MONTHS: process.env.WHOLE_GAME_MONTHS ?? null,
-        WHOLE_GAME_SMOKE: process.env.WHOLE_GAME_SMOKE ?? null,
-      },
+  const meta = {
+    phase: "11.3",
+    harness: "whole-game-calibration",
+    generatedAt: new Date().toISOString(),
+    smoke,
+    seeds,
+    months,
+    seedStart,
+    parallel: childMode ? 1 : parallel,
+    resume,
+    sourceFingerprint: calibrationSourceFingerprint,
+    shardDirectory: shardDir.replace(`${repoRoot}\\`, "").replace(/\\/g, "/"),
+    acceptanceTarget: { seeds: ACCEPTANCE_SEEDS, months: ACCEPTANCE_MONTHS },
+    playerPoliticianId: PLAYER_ID,
+    contentVersion,
+    env: {
+      WHOLE_GAME_SEEDS: process.env.WHOLE_GAME_SEEDS ?? null,
+      WHOLE_GAME_MONTHS: process.env.WHOLE_GAME_MONTHS ?? null,
+      WHOLE_GAME_SMOKE: process.env.WHOLE_GAME_SMOKE ?? null,
     },
-    aggregate,
-    determinism,
-    runs,
   };
+  const payload = outputPayload(meta, aggregate, determinism, runs, childMode);
 
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-  printConsoleSummary({ meta: payload.meta, aggregate, determinism });
+  printConsoleSummary({ meta, aggregate, determinism });
 }
 
 async function runParallelCalibration(): Promise<void> {
@@ -1087,12 +1530,14 @@ async function runParallelCalibration(): Promise<void> {
     const childArgs = [
       ...process.execArgv,
       fileURLToPath(import.meta.url),
-      `--seeds=${count}`,
+      `--seed-count=${count}`,
       `--months=${months}`,
       `--seed-start=${start}`,
       `--out=${chunkPath}`,
+      `--shard-dir=${shardDir}`,
       "--skip-determinism",
       "--calibration-child",
+      ...(resume ? ["--resume"] : []),
     ];
     jobs.push(new Promise<string>((resolveJob, rejectJob) => {
       const child = spawn(process.execPath, childArgs, { stdio: "inherit", windowsHide: true });
@@ -1128,7 +1573,7 @@ async function runParallelCalibration(): Promise<void> {
           error: "skipped by --skip-determinism",
         }
       : runDeterminismChecks(world);
-    const aggregate = aggregateRuns(runs);
+    const aggregate = aggregateRuns(runs, months);
     const meta = {
       phase: "11.3",
       harness: "whole-game-calibration",
@@ -1138,6 +1583,9 @@ async function runParallelCalibration(): Promise<void> {
       months,
       seedStart,
       parallel: workerCount,
+      resume,
+      sourceFingerprint: calibrationSourceFingerprint,
+      shardDirectory: shardDir.replace(`${repoRoot}\\`, "").replace(/\\/g, "/"),
       acceptanceTarget: { seeds: ACCEPTANCE_SEEDS, months: ACCEPTANCE_MONTHS },
       playerPoliticianId: PLAYER_ID,
       contentVersion: probe.getSnapshot().contentVersion,
@@ -1147,7 +1595,7 @@ async function runParallelCalibration(): Promise<void> {
         WHOLE_GAME_SMOKE: process.env.WHOLE_GAME_SMOKE ?? null,
       },
     };
-    const payload = { meta, aggregate, determinism, runs };
+    const payload = outputPayload(meta, aggregate, determinism, runs, false);
     mkdirSync(dirname(outPath), { recursive: true });
     writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
     printConsoleSummary({ meta, aggregate, determinism });
@@ -1156,7 +1604,9 @@ async function runParallelCalibration(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exitCode = 1;
-});
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  });
+}

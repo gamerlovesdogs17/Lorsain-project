@@ -151,7 +151,7 @@ export function PoliticianProfile(props: {
               {props.party}
             </span>
           ) : null}
-          {props.faction && props.faction !== "No faction" ? (
+          {props.faction && props.faction !== "No caucus" ? (
             <span className="chip">{props.faction}</span>
           ) : null}
         </div>

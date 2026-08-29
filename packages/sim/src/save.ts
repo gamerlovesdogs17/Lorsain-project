@@ -1453,3 +1453,109 @@ export function migrateSaveV12ToV13(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 12, toSchema: 13, migrate: migrateSaveV12ToV13 });
+
+/**
+ * Phase 11.3 closeout makes Provincial Assembly campaigns, list rankings,
+ * career terms, cosponsorship and party positions explicit. Migration adds
+ * only structural defaults to existing records; it creates no election,
+ * legislative or career history that was not already present.
+ */
+export function migrateSaveV13ToV14(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 14 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 14 };
+  const provincial = isRecord(sim.provincialRuntime) ? { ...sim.provincialRuntime } : {};
+
+  const legislators: Record<string, unknown> = {};
+  if (isRecord(provincial.legislators)) {
+    for (const [id, value] of Object.entries(provincial.legislators)) {
+      if (!isRecord(value)) {
+        legislators[id] = value;
+        continue;
+      }
+      const serviceStartDate = typeof value.serviceStartDate === "string" ? value.serviceStartDate : null;
+      const serviceEndDate = typeof value.serviceEndDate === "string" ? value.serviceEndDate : null;
+      legislators[id] = {
+        ...value,
+        serviceTerms: Array.isArray(value.serviceTerms)
+          ? value.serviceTerms
+          : serviceStartDate
+            ? [{ startDate: serviceStartDate, endDate: serviceEndDate, electionId: null }]
+            : [],
+        electionIds: isStringArray(value.electionIds) ? value.electionIds : [],
+        sponsoredBillIds: isStringArray(value.sponsoredBillIds) ? value.sponsoredBillIds : [],
+        cosponsoredBillIds: isStringArray(value.cosponsoredBillIds) ? value.cosponsoredBillIds : [],
+      };
+    }
+  }
+
+  const assemblyElections: Record<string, unknown> = {};
+  if (isRecord(provincial.assemblyElections)) {
+    for (const [id, value] of Object.entries(provincial.assemblyElections)) {
+      assemblyElections[id] = isRecord(value)
+        ? { ...value, personalRankingsByParty: isRecord(value.personalRankingsByParty) ? value.personalRankingsByParty : {} }
+        : value;
+    }
+  }
+
+  const bills: Record<string, unknown> = {};
+  if (isRecord(provincial.bills)) {
+    for (const [id, value] of Object.entries(provincial.bills)) {
+      bills[id] = isRecord(value)
+        ? {
+            ...value,
+            cosponsorIds: isStringArray(value.cosponsorIds) ? value.cosponsorIds : [],
+            policyDirection: value.policyDirection === -1 ? -1 : 1,
+            fiscalImpact: typeof value.fiscalImpact === "number" && Number.isFinite(value.fiscalImpact)
+              ? value.fiscalImpact
+              : 0,
+            agendaSource: typeof value.agendaSource === "string" ? value.agendaSource : "legislative_agenda",
+            partyPositions: isRecord(value.partyPositions) ? value.partyPositions : {},
+          }
+        : value;
+    }
+  }
+
+  const constitutionalAmendments: Record<string, unknown> = {};
+  if (isRecord(provincial.constitutionalAmendments)) {
+    for (const [id, value] of Object.entries(provincial.constitutionalAmendments)) {
+      constitutionalAmendments[id] = isRecord(value)
+        ? {
+            ...value,
+            proposalTrigger: typeof value.proposalTrigger === "string" ? value.proposalTrigger : "legacy_proposal",
+            politicalImpetus: typeof value.politicalImpetus === "number" && Number.isFinite(value.politicalImpetus)
+              ? value.politicalImpetus
+              : 0.5,
+            ratificationDeadline: null,
+          }
+        : value;
+    }
+  }
+
+  sim.provincialRuntime = { ...provincial, legislators, assemblyElections, bills, constitutionalAmendments };
+  if (isRecord(sim.legislatureRuntime)) {
+    const legislatureRuntime = { ...sim.legislatureRuntime };
+    const caucusContests: Record<string, unknown> = {};
+    if (isRecord(legislatureRuntime.caucusContests)) {
+      for (const [id, value] of Object.entries(legislatureRuntime.caucusContests)) {
+        caucusContests[id] = isRecord(value)
+          ? {
+              ...value,
+              trigger: value.trigger === "general_election" || value.trigger === "vacancy" ||
+                value.trigger === "challenge" || value.trigger === "scheduled_review"
+                ? value.trigger
+                : "scheduled_review",
+              platforms: isRecord(value.platforms) ? value.platforms : {},
+              endorsements: isRecord(value.endorsements) ? value.endorsements : {},
+            }
+          : value;
+      }
+    }
+    sim.legislatureRuntime = { ...legislatureRuntime, caucusContests };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 13, toSchema: 14, migrate: migrateSaveV13ToV14 });

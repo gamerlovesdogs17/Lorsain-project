@@ -1,5 +1,6 @@
 import type { IsoDate } from "../calendar.js";
 import type { JsonObject } from "../json.js";
+import type { IdeologyAxis } from "../agents/types.js";
 
 export const COMMITTEE_IDS = [
   "COMMITTEE_ECONOMIC",
@@ -60,6 +61,8 @@ export type PolicyItem = {
   direction: number;
   magnitude: number;
   fiscalImpact: number | null;
+  /** Optional qualitative structure for choices that do not fit one left-right scalar. */
+  dimensionEffects?: Partial<Record<IdeologyAxis, number>>;
 };
 
 export type CommitteeState = {
@@ -187,6 +190,9 @@ export type CaucusLeadershipContest = {
   playerDecision: "declared" | "declined" | null;
   votes: Record<string, string>;
   winnerId: string | null;
+  trigger: "general_election" | "vacancy" | "challenge" | "scheduled_review";
+  platforms: Record<string, "legislative_agenda" | "party_unity" | "electoral_recovery">;
+  endorsements: Record<string, string[]>;
 };
 
 export type LegislatureRuntime = {

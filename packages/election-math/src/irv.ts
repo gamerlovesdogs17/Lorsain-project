@@ -21,7 +21,7 @@ import type {
   TransferLine,
   Uint32Source,
 } from "./types.js";
-import { serializeTotals } from "./types.js";
+import { aggregateTransferLines, serializeTotals } from "./types.js";
 
 export type IrvRound = {
   round: number;
@@ -217,7 +217,7 @@ export function countIrv(input: IrvInput, options: IrvOptions): IrvResult {
       majorityThreshold: serializeRational(majorityThreshold),
       action: "eliminate",
       eliminatedId,
-      transfers,
+      transfers: aggregateTransferLines(transfers),
       newlyExhausted: serializeRational(newlyExhausted),
       exhaustedTotal: serializeRational(exhausted),
       totalsAfter: serializeTotals(totalsAfter),

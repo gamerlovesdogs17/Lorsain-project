@@ -96,6 +96,25 @@ export function politicianDisplayName(catalog: PresentationCatalog, id: string):
   return "Unknown politician";
 }
 
+function publicPoliticalActorName(
+  catalog: PresentationCatalog,
+  world: KernelWorld,
+  state: SimState,
+  id: string,
+): string {
+  if (state.politicians[id]) return politicianDisplayName(catalog, id);
+  const caucus = world.factionDefinitions[id];
+  if (caucus) return caucus.name;
+  const provincialOrganization = world.provincialPartyOrganizations[id];
+  if (provincialOrganization) {
+    const province = catalog.places.get(provincialOrganization.provinceId)?.name ?? "provincial";
+    return `${partyDisplayName(world, provincialOrganization.partyId, state)} ${province} organization`;
+  }
+  const organization = world.interestOrganizations[id];
+  if (organization) return organization.name;
+  return "A political organization";
+}
+
 /** Deterministic public label for long-run generated Assembly candidates. */
 export function generatedAssemblyCandidateName(id: string): string {
   let hash = 2166136261;
@@ -152,7 +171,7 @@ export function factionDisplayName(
   world: KernelWorld,
   factionId: string | null | undefined,
 ): string {
-  if (!factionId) return "No faction";
+  if (!factionId) return "No caucus";
   return world.factionDefinitions[factionId]?.name ?? factionId;
 }
 
@@ -467,6 +486,7 @@ export function campaignTypeLabel(type: string): string {
   if (type === "presidential_general") return "presidential general-election campaign";
   if (type === "assembly") return "Assembly campaign";
   if (type === "gubernatorial") return "gubernatorial campaign";
+  if (type === "provincial_assembly") return "Provincial Assembly campaign";
   return type.replace(/_/g, " ");
 }
 
@@ -528,8 +548,19 @@ export function eventDisplay(
     case "FUNDRAISING_PUSH":
       return `${lead ?? "A campaign"} raises funds`;
     case "ENDORSEMENT_MADE":
-    case "ENDORSEMENT_RECEIVED":
-      return `${lead ?? "Someone"} endorses ${second ?? "a candidate"}`;
+    case "ENDORSEMENT_RECEIVED": {
+      const endorserId = typeof event.payload.endorserId === "string"
+        ? event.payload.endorserId
+        : event.actorIds[0];
+      const targetId = typeof event.payload.targetId === "string"
+        ? event.payload.targetId
+        : event.actorIds.find((id) => id !== endorserId && state.politicians[id]);
+      const endorser = endorserId
+        ? publicPoliticalActorName(catalog, world, state, endorserId)
+        : "A political organization";
+      const target = targetId ? politicianDisplayName(catalog, targetId) : "a candidate";
+      return `${endorser} endorses ${target}`;
+    }
     case "ENDORSEMENT_DECLINED":
       return `${lead ?? "Someone"} declines to endorse ${second ?? "a candidate"}`;
     case "ENDORSEMENT_SWITCHED":

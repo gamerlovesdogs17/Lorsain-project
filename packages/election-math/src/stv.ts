@@ -27,7 +27,7 @@ import type {
   TransferLine,
   Uint32Source,
 } from "./types.js";
-import { serializeTotals } from "./types.js";
+import { aggregateTransferLines, serializeTotals } from "./types.js";
 
 export type StvStep = {
   step: number;
@@ -505,7 +505,7 @@ function pushStep(args: {
     ...(args.retainedAboveQuota
       ? { retainedAboveQuota: serializeRational(args.retainedAboveQuota) }
       : {}),
-    transfers: args.transfers,
+    transfers: aggregateTransferLines(args.transfers),
     newlyExhausted: serializeRational(args.newlyExhausted),
     exhaustedTotal: serializeRational(args.exhausted),
     retainedWithElectedTotal: serializeRational(args.retainedWithElected),

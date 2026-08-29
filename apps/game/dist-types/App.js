@@ -12,6 +12,13 @@ import { catalogFromBundle, partyColor, partyDisplayName, politicianDisplayName 
 import { GameShell } from "./ui/shell.js";
 import { StatusBadge } from "./ui/kit.js";
 import { PoliticianAvatar, PoliticianCard } from "./ui/politician.js";
+const QA_SCREENS = new Set([
+    "home", "career", "office", "assembly", "party", "campaign", "elections", "executive",
+    "courts", "economy", "organizations", "news", "foreign", "terena", "archive",
+]);
+function qaScreen(value) {
+    return value != null && QA_SCREENS.has(value) ? value : "home";
+}
 export default function App() {
     const [bundle, setBundle] = useState(null);
     const [world, setWorld] = useState(null);
@@ -35,6 +42,7 @@ export default function App() {
     const [mapHover, setMapHover] = useState(null);
     const [debug, setDebug] = useState(false);
     const [globalFocus, setGlobalFocus] = useState(null);
+    const qaBooted = useRef(false);
     const feedback = useCommandFeedback();
     useEffect(() => {
         try {
@@ -46,6 +54,52 @@ export default function App() {
             setError(e instanceof Error ? e.message : String(e));
         }
     }, []);
+    useEffect(() => {
+        if (!import.meta.env.DEV || !world || qaBooted.current)
+            return;
+        const params = new URLSearchParams(window.location.search);
+        const fixture = params.get("qaFixture");
+        if (!fixture)
+            return;
+        qaBooted.current = true;
+        void fetch(`/__qa/fixtures/${encodeURIComponent(fixture)}.json`, { cache: "no-store" })
+            .then(async (response) => {
+            if (!response.ok)
+                throw new Error(`Browser QA fixture ${fixture} was not found.`);
+            return await response.json();
+        })
+            .then((save) => {
+            const playerId = params.get("qaPlayer");
+            const prepared = playerId && save.simulation.politicians[playerId]
+                ? { ...save, simulation: { ...save.simulation, playerPoliticianId: playerId } }
+                : save;
+            const parsed = parseSaveFile(prepared, world.contentVersion);
+            if (!parsed.ok)
+                throw new Error(parsed.error.message);
+            const restored = restoreSimulation(parsed.save, world);
+            const focusKind = params.get("qaFocusKind");
+            const focusId = params.get("qaFocusId");
+            setTurnEvents([]);
+            setMode("play");
+            setScreen(qaScreen(params.get("qaScreen")));
+            if (focusKind && focusId) {
+                setGlobalFocus({ kind: focusKind, id: focusId });
+                if (focusKind === "Bill")
+                    setSelectedBill(focusId);
+            }
+            refresh(restored);
+        })
+            .catch((reason) => setError(reason instanceof Error ? reason.message : String(reason)));
+    }, [world]);
+    useEffect(() => {
+        if (!import.meta.env.DEV || !sim)
+            return;
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has("qaFixture"))
+            return;
+        params.set("qaScreen", screen);
+        window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+    }, [screen, sim]);
     const figures = useMemo(() => {
         const map = new Map();
         for (const f of (bundle?.content.starting_figures.figures ?? []))
@@ -82,8 +136,29 @@ export default function App() {
         for (const provinceId of world.provinceIds) {
             entries.push({ id: provinceId, kind: "Province", label: catalog.places.get(provinceId)?.name ?? "Province", detail: "Governor, Assembly and regional statistics", screen: "terena" });
         }
+        for (const constituencyId of Object.keys(world.constituencyElectorate).sort()) {
+            const place = catalog.places.get(constituencyId);
+            entries.push({
+                id: constituencyId,
+                kind: "Constituency",
+                label: place?.name ?? "Constituency",
+                detail: `${place?.provinceName ?? "Terena"} · ${world.constituencyElectorate[constituencyId]?.seats ?? "?"} Assembly seats`,
+                screen: "terena",
+            });
+        }
+        for (const organization of Object.values(world.interestOrganizations)) {
+            entries.push({ id: organization.id, kind: "Organization", label: organization.name, detail: organization.type, screen: "organizations" });
+        }
         for (const election of Object.values(snap.elections)) {
             entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${election.type === "assembly" ? "National Assembly" : "presidential"} election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
+        }
+        for (const election of Object.values(snap.provincialRuntime.elections)) {
+            const province = catalog.places.get(election.provinceId)?.name ?? "Province";
+            entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${province} gubernatorial election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
+        }
+        for (const election of Object.values(snap.provincialRuntime.assemblyElections)) {
+            const province = catalog.places.get(election.provinceId)?.name ?? "Province";
+            entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${province} Assembly election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
         }
         for (const bill of Object.values(snap.legislatureRuntime.bills)) {
             entries.push({ id: bill.id, kind: "Bill", label: bill.title, detail: bill.status.replace(/_/g, " "), screen: "assembly" });
@@ -404,6 +479,6 @@ export default function App() {
         .find(Boolean) ?? "private_citizen";
     const interrupt = snap.pendingInterrupt;
     const decisionCount = collectPlayerActionableDecisions(world, snap).length;
-    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), searchEntries: searchEntries, onSearchSelect: selectSearchEntry, children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, askConfirm: feedback.askConfirm, globalFocus: globalFocus }), feedback.overlay()] }));
+    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), searchEntries: searchEntries, onSearchSelect: selectSearchEntry, children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, askConfirm: feedback.askConfirm, globalFocus: globalFocus }), import.meta.env.DEV ? (_jsx("output", { id: "lorsain-browser-qa-state", hidden: true, "data-ready": "true", "data-screen": screen, "data-player": snap.playerPoliticianId, "data-date": snap.currentDate, children: "Browser QA ready" })) : null, feedback.overlay()] }));
 }
 //# sourceMappingURL=App.js.map

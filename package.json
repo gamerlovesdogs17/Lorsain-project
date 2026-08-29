@@ -7,6 +7,9 @@
   "scripts": {
     "build": "pnpm -r --filter @lorsain/content-schema --filter @lorsain/election-math --filter @lorsain/sim --filter @lorsain/content-loader --filter @lorsain/map --filter @lorsain/testing --filter @lorsain/game run build",
     "test": "vitest run",
+    "test:fast": "vitest run --exclude packages/sim/src/foreign.test.ts --exclude packages/sim/src/foreign.determinism.test.ts --exclude packages/sim/src/elections.test.ts --exclude packages/sim/src/campaigns.realism.test.ts --exclude packages/sim/src/terena.integration.test.ts --exclude packages/sim/src/phase11.integration.test.ts --exclude packages/sim/src/phase11.closeout.test.ts --exclude packages/sim/src/phase11_2.governor.test.ts --exclude packages/sim/src/phase11_2.systems.test.ts --exclude packages/sim/src/phase11_3.institutions.test.ts --exclude packages/sim/src/playable-path.test.ts --exclude packages/sim/src/campaigns.vertical.test.ts --exclude packages/sim/src/legislature.vertical.test.ts --exclude packages/sim/src/agents.perf.test.ts --exclude packages/sim/src/parties.perf.test.ts --exclude packages/election-math/src/performance.test.ts --exclude scripts/dist-exports.smoke.test.ts",
+    "test:integration": "vitest run packages/sim/src/foreign.test.ts packages/sim/src/foreign.determinism.test.ts packages/sim/src/elections.test.ts packages/sim/src/campaigns.realism.test.ts packages/sim/src/terena.integration.test.ts packages/sim/src/phase11.integration.test.ts packages/sim/src/phase11.closeout.test.ts packages/sim/src/phase11_2.governor.test.ts packages/sim/src/phase11_2.systems.test.ts packages/sim/src/phase11_3.institutions.test.ts packages/sim/src/playable-path.test.ts packages/sim/src/campaigns.vertical.test.ts packages/sim/src/legislature.vertical.test.ts scripts/dist-exports.smoke.test.ts",
+    "test:long": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/whole-game-calibration.ts --seed-count=1 --months=600 --resume --skip-determinism --output=.calibration/phase11_3/long-summary.json --shard-dir=.calibration/phase11_3/shards/600m",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint . --max-warnings 0",
@@ -22,8 +25,11 @@
     "calibrate:assembly": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/assembly-calibration.ts",
     "calibrate:economy": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/economy-calibration.ts",
     "calibrate:campaign-geography": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/campaign-geography-calibration.ts",
-    "calibrate:whole-game": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/whole-game-calibration.ts",
-    "calibrate:whole-game:smoke": "pnpm --filter @lorsain/content-loader exec tsx ../../scripts/whole-game-calibration.ts --smoke"
+    "calibrate:whole-game": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/whole-game-calibration.ts",
+    "calibrate:whole-game:smoke": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/whole-game-calibration.ts --smoke",
+    "calibrate:whole-game:aggregate": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/aggregate-whole-game-calibration.ts",
+    "calibrate:game": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/whole-game-calibration.ts",
+    "measure:save": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/save-size-breakdown.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

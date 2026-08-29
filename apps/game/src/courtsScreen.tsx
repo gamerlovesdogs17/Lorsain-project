@@ -9,6 +9,7 @@ import {
   caseTitle,
   currentAssemblyMemberIds,
   currentCourtJudgeIds,
+  explicitLegalCareerLabel,
   type CommandResult,
   type KernelWorld,
   type SimState,
@@ -21,14 +22,7 @@ import { PoliticianProfile } from "./ui/politician.js";
 
 function legalCareer(world: KernelWorld, state: SimState, politicianId: string): string {
   const profile = getAgentProfile(world, state, politicianId);
-  const roles = profile?.roleTypes ?? [];
-  if (roles.some((role) => role.includes("constitutional_court"))) return "Constitutional Court justice";
-  if (roles.some((role) => role.includes("judge"))) return "Judge";
-  if (roles.some((role) => role.includes("prosecut"))) return "Prosecutor";
-  if (roles.some((role) => role.includes("defender"))) return "Public defender";
-  if (roles.some((role) => role.includes("academic"))) return "Legal academic";
-  if (roles.some((role) => role.includes("lawyer"))) return "Senior lawyer";
-  return "Senior public-law record";
+  return explicitLegalCareerLabel(profile) ?? "No qualifying legal career";
 }
 
 function publicCaseStrength(value: number): string {

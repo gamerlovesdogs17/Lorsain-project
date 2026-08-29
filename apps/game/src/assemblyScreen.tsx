@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ContentBundle } from "@lorsain/content-loader";
 import {
   collectPlayerActionableDecisions,
   CONSTITUTIONAL_RULE_IDS,
@@ -45,6 +46,7 @@ import {
   type PolicyChoiceOption,
 } from "./ui/kit.js";
 import { PoliticianProfile } from "./ui/politician.js";
+import { TerenaMap } from "./map/TerenaMap.js";
 
 type ChamberTab = "business" | "draft" | "committees" | "votes";
 type BillDetailTab = "overview" | "provisions" | "politics" | "process";
@@ -125,6 +127,7 @@ function oneLine(text: string): string {
 function formatFiscal(impact: number | null | undefined): string | undefined {
   if (impact == null) return undefined;
   if (Math.abs(impact) < 0.005) return "No fiscal change";
+  if (Math.abs(impact) < 0.05) return "Minimal fiscal effect";
   const rounded = Math.round(impact * 10) / 10;
   return impact > 0 ? `Cost +${rounded.toFixed(1)}` : `Savings ${Math.abs(rounded).toFixed(1)}`;
 }
@@ -133,7 +136,7 @@ function effectChips(effects: Partial<NationalEconomyIndices>): PolicyChoiceOpti
   return Object.entries(effects)
     .filter((entry): entry is [keyof NationalEconomyIndices, number] => {
       const value = entry[1];
-      return typeof value === "number" && Math.abs(value) >= 0.01;
+      return typeof value === "number" && Math.abs(value) >= 0.05;
     })
     .map(([key, value]) => {
       const rounded = Math.round(value * 10) / 10;
@@ -166,7 +169,8 @@ function provisionChoices(
       id: opt.id,
       label: opt.label,
       summary: oneLine(opt.change),
-      current: current ? opt.id === current.id : opt.direction === 0,
+      current: current ? opt.id === current.id : opt.current,
+      groups: opt.affectedGroups,
     };
     if (cost) choice.cost = cost;
     if (effects?.length) choice.effects = effects;
@@ -183,6 +187,7 @@ export function AssemblyPage(props: {
   world: KernelWorld;
   snap: SimState;
   sim: Simulation;
+  bundle: ContentBundle;
   catalog: PresentationCatalog;
   selectedBill: string | null;
   setSelectedBill: (id: string | null) => void;
@@ -506,20 +511,33 @@ export function AssemblyPage(props: {
                 {Object.values(props.snap.provincialRuntime.constitutionalAmendments).sort((a, b) => b.proposedDate.localeCompare(a.proposedDate)).slice(0, 8).map((amendment) => (
                   <div className="constitutional-tracker" key={amendment.id}>
                     <div><strong>{amendment.title}</strong><p>{amendment.summary}</p></div>
-                    <div className="constitutional-progress"><span>Assembly {amendment.assemblyYes}/280</span><span>Provinces {amendment.ratifiedProvinceIds.length}/13</span><StatusBadge tone={amendment.status === "ratified" ? "ok" : amendment.status.includes("failed") ? "warn" : "idle"}>{amendment.status.replace(/_/g, " ")}</StatusBadge></div>
+                    <div className="constitutional-progress"><span>Assembly {amendment.assemblyYes}/280</span><strong>{amendment.ratifiedProvinceIds.length} / 13 ratified</strong><StatusBadge tone={amendment.status === "ratified" ? "ok" : amendment.status.includes("failed") ? "warn" : "idle"}>{amendment.status.replace(/_/g, " ")}</StatusBadge></div>
                     <details className="constitutional-provinces">
-                      <summary>Provincial ratification record · 21 Assemblies</summary>
-                      <DataTable dense headers={["Province", "Status"]}>
-                        {props.world.provinceIds
-                          .slice()
-                          .sort((a, b) => (props.catalog.places.get(a)?.name ?? a).localeCompare(props.catalog.places.get(b)?.name ?? b))
-                          .map((provinceId) => {
-                            const ratified = amendment.ratifiedProvinceIds.includes(provinceId);
-                            const rejected = amendment.rejectedProvinceIds.includes(provinceId);
-                            const status = ratified ? "Ratified" : rejected ? "Rejected" : "Pending";
-                            return <tr key={provinceId}><td>{props.catalog.places.get(provinceId)?.name ?? "Unknown province"}</td><td><StatusBadge tone={ratified ? "ok" : rejected ? "warn" : "idle"}>{status}</StatusBadge></td></tr>;
-                          })}
-                      </DataTable>
+                      <summary>Ratification map and accessible record · 21 Assemblies</summary>
+                      <div className="constitutional-map-legend" aria-label="Ratification map legend"><span><i className="ratified" />Ratified</span><span><i className="rejected" />Rejected</span><span><i className="pending" />Pending</span></div>
+                      <div className="constitutional-ratification-layout">
+                        <TerenaMap
+                          bundle={props.bundle}
+                          mode="economy"
+                          showConstituencies={false}
+                          fillFor={(feature, kind) => kind !== "province" ? "transparent" : amendment.ratifiedProvinceIds.includes(feature.id) ? "#5f896c" : amendment.rejectedProvinceIds.includes(feature.id) ? "#a86460" : "#d2d6cf"}
+                          tooltipFor={(selection) => {
+                            const status = amendment.ratifiedProvinceIds.includes(selection.id) ? "Ratified" : amendment.rejectedProvinceIds.includes(selection.id) ? "Rejected" : "Pending";
+                            return <><strong>{selection.name}</strong><div>{status}</div></>;
+                          }}
+                        />
+                        <DataTable dense headers={["Province", "Status"]}>
+                          {props.world.provinceIds
+                            .slice()
+                            .sort((a, b) => (props.catalog.places.get(a)?.name ?? a).localeCompare(props.catalog.places.get(b)?.name ?? b))
+                            .map((provinceId) => {
+                              const ratified = amendment.ratifiedProvinceIds.includes(provinceId);
+                              const rejected = amendment.rejectedProvinceIds.includes(provinceId);
+                              const status = ratified ? "Ratified" : rejected ? "Rejected" : "Pending";
+                              return <tr key={provinceId}><td>{props.catalog.places.get(provinceId)?.name ?? "Unknown province"}</td><td><StatusBadge tone={ratified ? "ok" : rejected ? "warn" : "idle"}>{status}</StatusBadge></td></tr>;
+                            })}
+                        </DataTable>
+                      </div>
                     </details>
                     {mp && amendment.status === "proposed" && !amendment.assemblyVotes[props.snap.playerPoliticianId] ? <div className="row">
                       <button type="button" className="btn" onClick={() => run({ type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE", amendmentId: amendment.id, choice: "yes" })}>Aye</button>
@@ -634,7 +652,7 @@ export function AssemblyPage(props: {
                               const targetId = amendProvision || amendable[0]?.provisionId || "";
                               const target = targetId ? provisionChoices(props.snap, targetId) : null;
                               const currentItem = amendable.find((item) => item.provisionId === targetId);
-                              const selectedOption = amendOption || currentItem?.optionId || target?.definition.options.find((option) => option.direction === 0)?.id || target?.definition.options[0]?.id || "";
+                              const selectedOption = amendOption || currentItem?.optionId || target?.definition.options.find((option) => option.current)?.id || target?.definition.options[0]?.id || "";
                               return amendable.length === 0 || !target ? (
                                 <p className="muted">This legacy bill has no concrete provision that can be amended.</p>
                               ) : (
@@ -697,7 +715,7 @@ export function AssemblyPage(props: {
                               ),
                             },
                             {
-                              label: "Faction",
+                              label: "Caucus",
                               value: stanceLabel(
                                 factionStance(
                                   props.snap,
@@ -817,7 +835,7 @@ export function AssemblyPage(props: {
                     draft.provisionId,
                   );
                   const selected =
-                    definition.options.find((o) => o.id === draft.optionId) ?? definition.options[1]!;
+                    definition.options.find((o) => o.id === draft.optionId) ?? definition.options.find((o) => o.current) ?? definition.options[0]!;
                   return (
                     <div key={`${index}-${draft.provisionId}`}>
                       <label className="draft-category">

@@ -13,8 +13,10 @@ import {
   EntityHeader,
   EntityRow,
   MasterDetail,
+  MetricStrip,
   PageHeader,
   SectionDivider,
+  StatCard,
   StatusBadge,
   WorkLayout,
 } from "./ui/kit.js";
@@ -140,12 +142,12 @@ export function OrganizationsPage(props: {
                 <p className="muted">
                   Issues: {canon.issues.map((i) => issueDisplayName(props.catalog, i)).join(", ")}
                 </p>
-                <div className="metric-strip">
-                  <div><span>Relationship</span><strong>{knownLabel}</strong></div>
-                  <div><span>Trust</span><strong>{trustLabel}</strong></div>
-                  <div><span>Policy alignment</span><strong>{alignmentLabel}</strong></div>
-                  <div><span>Current stance</span><strong>{currentStance === "support" ? "Supportive" : currentStance === "oppose" ? "Opposed" : "Watching"}</strong></div>
-                </div>
+                <MetricStrip>
+                  <StatCard label="Relationship" value={knownLabel} />
+                  <StatCard label="Trust" value={trustLabel} />
+                  <StatCard label="Policy alignment" value={alignmentLabel} />
+                  <StatCard label="Current stance" value={currentStance === "support" ? "Supportive" : currentStance === "oppose" ? "Opposed" : "Watching"} />
+                </MetricStrip>
                 {relationship?.lastReason ? <p className="muted">Latest change: {relationship.lastReason}</p> : null}
                 <p className="muted">Current public positions are issue leanings, not hidden scores.</p>
 

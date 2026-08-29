@@ -38,6 +38,7 @@ import {
   StatusBadge,
   WorkLayout,
 } from "./ui/kit.js";
+import { regionalPublicEconomy } from "./presentation/economy.js";
 
 const title = (value: string) => value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -60,6 +61,7 @@ export function OfficePage(props: {
   const provinceId = governedProvinceId(props.world, props.snap, playerId);
   const province = provinceId ? props.snap.provincialRuntime.provinces[provinceId] : null;
   const economy = provinceId ? props.snap.economyRuntime.provinces[provinceId] : null;
+  const publicEconomy = provinceId ? regionalPublicEconomy(props.snap, provinceId) : null;
   const [priority, setPriority] = useState(province?.administrativePriority ?? "transport");
   const [investment, setInvestment] = useState(province?.investmentEmphasis ?? "transport");
   const [provincialBillSubject, setProvincialBillSubject] = useState<(typeof PROVINCIAL_BILL_SUBJECTS)[number]>("housing_delivery");
@@ -210,9 +212,9 @@ export function OfficePage(props: {
                 ]}
               />
               <MetricStrip>
-                <StatCard label="Conditions" value={economy.conditionsIndex.toFixed(1)} />
-                <StatCard label="Employment" value={economy.employmentIndex.toFixed(1)} />
-                <StatCard label="Housing" value={economy.housingIndex.toFixed(1)} />
+                <StatCard label="Conditions" value={publicEconomy?.conditions ?? "—"} hint={publicEconomy?.yearTrend ?? "No comparison"} />
+                <StatCard label="Labor market" value={publicEconomy ? `${publicEconomy.unemployment.toFixed(1)}% unemployed` : "—"} hint={publicEconomy?.laborMarket ?? "No regional data"} />
+                <StatCard label="Housing" value={publicEconomy?.housing ?? "—"} />
                 <StatCard
                   label="Federal relationship"
                   value={relationPublicLabel(province.federalRelationship)}

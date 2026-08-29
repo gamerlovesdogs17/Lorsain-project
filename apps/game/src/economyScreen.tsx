@@ -15,7 +15,14 @@ import {
 import { MapLegend } from "./ui/mapLegend.js";
 import { TerenaMap, type MapSelection } from "./map/TerenaMap.js";
 import type { ContentBundle } from "@lorsain/content-loader";
-import { formatIndexDelta } from "./presentation/display.js";
+import {
+  nationalPublicEconomy,
+  publicTrendLabel,
+  regionalPublicEconomy,
+  relativeSeries,
+  sectorPublicEconomy,
+  signedPercent,
+} from "./presentation/economy.js";
 
 const INDICATORS = [
   { id: "outputIndex", label: "Output" },
@@ -37,11 +44,14 @@ function chartPath(history: Array<{ date: string; value: number }>): {
   const w = 640;
   const h = 180;
   const pad = 28;
-  if (history.length === 0) return { d: "", min: 100, max: 100 };
+  if (history.length === 0) return { d: "", min: 0, max: 0 };
   const values = history.map((p) => p.value);
-  const min = Math.min(...values, 95);
-  const max = Math.max(...values, 105);
-  const span = Math.max(0.5, max - min);
+  const rawMin = Math.min(...values, 0);
+  const rawMax = Math.max(...values, 0);
+  const rawSpan = Math.max(1, rawMax - rawMin);
+  const min = rawMin - rawSpan * 0.12;
+  const max = rawMax + rawSpan * 0.12;
+  const span = max - min;
   const d = history
     .map((p, i) => {
       const x = pad + (history.length === 1 ? 0 : (i / (history.length - 1)) * (w - pad * 2));
@@ -54,17 +64,6 @@ function chartPath(history: Array<{ date: string; value: number }>): {
 
 function idx1(n: number): string {
   return n.toFixed(1);
-}
-
-function signedPercent(n: number): string {
-  return `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
-}
-
-function conditionsLabel(n: number): string {
-  if (n >= 104) return "Strong";
-  if (n >= 100) return "Firm";
-  if (n >= 96) return "Soft";
-  return "Weak";
 }
 
 function provinceNameMap(bundle: ContentBundle): Map<string, string> {
@@ -92,36 +91,27 @@ export function EconomyPage(props: {
   const history = props.snap.economyRuntime.history;
   const prev = history.length >= 2 ? history[history.length - 2]! : null;
   const yearAgo = history.length >= 13 ? history[history.length - 13]! : null;
-  const start = history[0] ?? null;
   const deltaHint = (key: IndicatorId) => {
     if (!prev) return "No prior month";
-    const m = formatIndexDelta(n[key] - prev[key]);
-    const y = yearAgo ? formatIndexDelta(n[key] - yearAgo[key]) : "—";
-    return `${m} mo · ${y} 12m`;
+    const month = publicTrendLabel(n[key] - prev[key]);
+    const year = yearAgo ? publicTrendLabel(n[key] - yearAgo[key]) : "No 12-month comparison";
+    return `${month} this month · ${year.toLowerCase()} over 12 months`;
   };
-  const series = history.map((h) => ({ date: h.date, value: h[indicator] }));
+  const series = relativeSeries(history.map((h) => ({ date: h.date, value: h[indicator] })));
   const chart = chartPath(series);
   const stories = useMemo(
     () => storiesChronological(props.snap).filter((s) => s.category === "economy").slice(0, 4),
     [props.snap],
   );
-  const current = n[indicator];
-  const currentDelta = prev ? current - prev[indicator] : 0;
-  const longDelta = start ? current - start[indicator] : 0;
   const regionSeries =
     sel?.kind === "province"
-      ? (props.snap.economyRuntime.provinceHistory[sel.id] ?? []).map((point) => ({
+      ? relativeSeries((props.snap.economyRuntime.provinceHistory[sel.id] ?? []).map((point) => ({
           date: point.date,
           value: point.conditionsIndex,
-        }))
+        })))
       : [];
   const regionChart = chartPath(regionSeries);
-  const publicMetrics = {
-    growth: yearAgo ? ((n.outputIndex / yearAgo.outputIndex) - 1) * 100 : 1.8 + (n.outputIndex - 100) * 0.12,
-    unemployment: Math.max(2.5, Math.min(14, 5.9 - (n.employmentIndex - 100) * 0.16)),
-    inflation: yearAgo ? ((n.priceIndex / yearAgo.priceIndex) - 1) * 100 : 2.3 + (n.priceIndex - 100) * 0.16,
-    realPay: yearAgo ? ((n.realWageIndex / yearAgo.realWageIndex) - 1) * 100 : (n.realWageIndex - 100) * 0.22,
-  };
+  const publicMetrics = nationalPublicEconomy(props.snap);
 
   const provinceRows = useMemo(() => {
     const placeNames = provinceNameMap(props.bundle);
@@ -134,6 +124,7 @@ export function EconomyPage(props: {
           id,
           name: placeNames.get(id) ?? "Unnamed province",
           data,
+          public: regionalPublicEconomy(props.snap, id),
           monthDelta: pPrev ? data.conditionsIndex - pPrev.conditionsIndex : null,
           yearDelta: pYear ? data.conditionsIndex - pYear.conditionsIndex : null,
         };
@@ -161,8 +152,8 @@ export function EconomyPage(props: {
             <StatCard label="Unemployment" value={`${publicMetrics.unemployment.toFixed(1)}%`} hint={deltaHint("employmentIndex")} />
             <StatCard label="Inflation" value={`${publicMetrics.inflation.toFixed(1)}%`} hint={yearAgo ? "12 months" : "Scenario pace"} />
             <StatCard label="Real pay" value={signedPercent(publicMetrics.realPay)} hint={yearAgo ? "12 months" : "Scenario position"} />
-            <StatCard label="Housing market" value={conditionsLabel(202 - n.housingIndex)} hint={deltaHint("housingIndex")} />
-            <StatCard label="Confidence" value={conditionsLabel(n.confidenceIndex)} hint={deltaHint("confidenceIndex")} />
+            <StatCard label="Housing market" value={publicMetrics.housing} hint={deltaHint("housingIndex")} />
+            <StatCard label="Confidence" value={publicMetrics.confidence} hint={publicMetrics.confidenceTrend} />
           </MetricStrip>
 
           <details className="economic-index-reference">
@@ -182,10 +173,10 @@ export function EconomyPage(props: {
               <line x1="28" y1="90" x2="612" y2="90" stroke="#d7d2c8" strokeDasharray="3 4" />
               <path d={chart.d} fill="none" stroke="#1f3a5f" strokeWidth="2" />
               <text x="28" y="18" fontSize="11" fill="#5c6570">
-                {idx1(chart.max)}
+                {signedPercent(chart.max)}
               </text>
               <text x="28" y="172" fontSize="11" fill="#5c6570">
-                {idx1(chart.min)}
+                {signedPercent(chart.min)}
               </text>
               {series[0] ? (
                 <text x="28" y="178" fontSize="10" fill="#5c6570">
@@ -202,15 +193,14 @@ export function EconomyPage(props: {
             <EmptyState>Baseline month — trend appears after the first turn.</EmptyState>
           )}
           <p>
-            {INDICATORS.find((i) => i.id === indicator)?.label}: {idx1(current)}{" "}
+            {INDICATORS.find((i) => i.id === indicator)?.label}: {signedPercent(series[series.length - 1]?.value ?? 0)} since scenario start{" "}
             <span className="muted">
-              {formatIndexDelta(currentDelta)} month ·{" "}
-              {yearAgo ? formatIndexDelta(current - yearAgo[indicator]) : "—"} 12m ·{" "}
-              {formatIndexDelta(longDelta)} since start
+              {prev ? publicTrendLabel(n[indicator] - prev[indicator]) : "No prior month"} ·{" "}
+              {yearAgo ? publicTrendLabel(n[indicator] - yearAgo[indicator]) : "No 12-month comparison"}
             </span>
           </p>
           <p className="muted">
-            Fiscal pressure {idx1(n.fiscalPressure)} · lagged policy effects{" "}
+            Fiscal pressure {publicMetrics.fiscalPressure.toLowerCase()} · lagged policy effects{" "}
             {props.snap.economyRuntime.laggedEffects.length}
           </p>
 
@@ -239,8 +229,8 @@ export function EconomyPage(props: {
           {regionalView === "table" ? (
             <DataTable
               dense
-              headers={["Province", "Conditions", "Employment", "Housing", "Mo", "12m"]}
-              caption="Provincial conditions indices"
+              headers={["Province", "Conditions", "Labor market", "Housing", "Month", "12 months"]}
+              caption="Public provincial economic conditions"
             >
               {provinceRows.map((row) => (
                 <tr
@@ -249,11 +239,11 @@ export function EconomyPage(props: {
                   onClick={() => setSel({ id: row.id, kind: "province", name: row.name })}
                 >
                   <td>{row.name}</td>
-                  <td>{idx1(row.data.conditionsIndex)}</td>
-                  <td>{idx1(row.data.employmentIndex)}</td>
-                  <td>{idx1(row.data.housingIndex)}</td>
-                  <td>{row.monthDelta == null ? "—" : formatIndexDelta(row.monthDelta)}</td>
-                  <td>{row.yearDelta == null ? "—" : formatIndexDelta(row.yearDelta)}</td>
+                  <td>{row.public?.conditions ?? "—"}</td>
+                  <td>{row.public ? `${row.public.laborMarket} · ${row.public.unemployment.toFixed(1)}% unemployed` : "—"}</td>
+                  <td>{row.public?.housing ?? "—"}</td>
+                  <td>{publicTrendLabel(row.monthDelta)}</td>
+                  <td>{publicTrendLabel(row.yearDelta)}</td>
                 </tr>
               ))}
             </DataTable>
@@ -275,13 +265,13 @@ export function EconomyPage(props: {
                       if (s.kind === "province") setSel(s);
                     }}
                     tooltipFor={(selection) => {
-                      const data = props.snap.economyRuntime.provinces[selection.id];
+                      const data = regionalPublicEconomy(props.snap, selection.id);
                       return (
                         <>
                           <strong>{selection.name}</strong>
                           <span>
                             {data
-                              ? `Conditions ${idx1(data.conditionsIndex)} · employment ${idx1(data.employmentIndex)} · housing ${idx1(data.housingIndex)}`
+                              ? data.summary
                               : "No regional data"}
                           </span>
                         </>
@@ -295,10 +285,7 @@ export function EconomyPage(props: {
                 region && sel ? (
                   <div className="regional-economy-detail">
                     <h4 className="serif-head">{sel.name}</h4>
-                    <p>
-                      Conditions {idx1(region.conditionsIndex)} · employment{" "}
-                      {idx1(region.employmentIndex)} · housing {idx1(region.housingIndex)}
-                    </p>
+                    <p>{regionalPublicEconomy(props.snap, sel.id)?.summary}</p>
                     <p className="muted">
                       {props.world.economyScenario?.provinces[sel.id]?.character ??
                         "Regional conditions respond to national and sector changes."}
@@ -329,22 +316,15 @@ export function EconomyPage(props: {
           ) : null}
 
           <SectionDivider title="Sectors" />
-          <DataTable dense headers={["Sector", "Conditions", "12m", "Since start"]}>
-            {Object.entries(props.snap.economyRuntime.sectors).map(([id, s]) => {
-              const sectorHistory = props.snap.economyRuntime.sectorHistory[id] ?? [];
-              const sectorStart = sectorHistory[0]?.conditionsIndex ?? s.conditionsIndex;
-              const sectorYear =
-                sectorHistory.length >= 13
-                  ? sectorHistory[sectorHistory.length - 13]!.conditionsIndex
-                  : null;
+          <DataTable dense headers={["Sector", "Conditions", "12 months", "Since start"]}>
+            {Object.keys(props.snap.economyRuntime.sectors).map((id) => {
+              const publicSector = sectorPublicEconomy(props.snap, id);
               return (
                 <tr key={id}>
                   <td style={{ textTransform: "capitalize" }}>{id}</td>
-                  <td>{idx1(s.conditionsIndex)}</td>
-                  <td>
-                    {sectorYear == null ? "—" : formatIndexDelta(s.conditionsIndex - sectorYear)}
-                  </td>
-                  <td>{formatIndexDelta(s.conditionsIndex - sectorStart)}</td>
+                  <td>{publicSector?.conditions ?? "—"}</td>
+                  <td>{publicSector?.yearTrend ?? "—"}</td>
+                  <td>{publicSector?.sinceStart ?? "—"}</td>
                 </tr>
               );
             })}

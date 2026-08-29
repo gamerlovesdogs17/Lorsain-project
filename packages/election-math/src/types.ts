@@ -1,5 +1,5 @@
 import type { Rational } from "./rational.js";
-import { serializeRational } from "./rational.js";
+import { add, parseRational, serializeRational, ZERO } from "./rational.js";
 
 export type CandidateId = string;
 
@@ -46,8 +46,35 @@ export type TieResolution = {
 export type TransferLine = {
   toCandidateId: CandidateId | null; // null = exhausted
   value: string; // serialized rational
+  /** Ballot-group ID in legacy archives; @aggregate:* in compact exact archives. */
   ballotGroupId: string;
 };
+
+/**
+ * Preserve exact transfer totals while avoiding one persisted line per modeled
+ * ballot group. The count itself still runs on every group; only its archive is
+ * folded by destination after the step is complete.
+ */
+export function aggregateTransferLines(lines: TransferLine[]): TransferLine[] {
+  const grouped = new Map<CandidateId | null, Rational>();
+  for (const line of lines) {
+    grouped.set(
+      line.toCandidateId,
+      add(grouped.get(line.toCandidateId) ?? ZERO, parseRational(line.value)),
+    );
+  }
+  return [...grouped.entries()]
+    .sort(([a], [b]) => {
+      if (a == null) return b == null ? 0 : 1;
+      if (b == null) return -1;
+      return a.localeCompare(b);
+    })
+    .map(([toCandidateId, value]) => ({
+      toCandidateId,
+      value: serializeRational(value),
+      ballotGroupId: `@aggregate:${toCandidateId ?? "exhausted"}`,
+    }));
+}
 
 export function serializeTotals(map: Map<CandidateId, Rational>): Record<string, string> {
   const out: Record<string, string> = {};

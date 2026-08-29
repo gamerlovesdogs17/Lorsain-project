@@ -7,6 +7,7 @@ import {
 } from "./index.js";
 import { loadTerenaWorld } from "./integration/harness.js";
 import type { Simulation } from "./engine.js";
+import { deriveProvincialPartyPositions, evaluateGovernorDisposition } from "./provinces/politics.js";
 
 function expectOk(sim: Simulation, command: Parameters<Simulation["executeCommand"]>[0]) {
   const result = sim.executeCommand(command);
@@ -107,5 +108,26 @@ describe("Phase 11.2 provincial government", () => {
         (election) => election.date === "2033-10-01",
       ),
     ).toHaveLength(21);
+  });
+
+  it("makes the same NPC Governor sign an aligned provincial bill and veto a hostile reversal", () => {
+    const world = loadTerenaWorld();
+    const governorOffice = officesOfKind(world, "governor")[0]!;
+    const governorId = world.startingTerms.find((term) => term.officeId === governorOffice.id)!.holderId;
+    const sim = createSimulation({ world, playerPoliticianId: governorId, seed: "P113-GOV-DISPOSITION" });
+    expectOk(sim, { type: "GOVERNOR_PROPOSE_PROVINCIAL_BILL", provinceId: governorOffice.provinceId!, subject: "hospital_access" });
+    const state = sim.serializeSave().simulation;
+    const alignedBill = Object.values(state.provincialRuntime.bills)[0]!;
+    const assembly = state.provincialRuntime.assemblies[governorOffice.provinceId!]!;
+    alignedBill.partyPositions = deriveProvincialPartyPositions(world, state, assembly, alignedBill);
+    const governorParty = state.politicians[governorId]!.partyId;
+    const oppositionSponsor = assembly.memberIds.find((id) => state.provincialRuntime.legislators[id]?.partyId !== governorParty)!;
+    const hostileBill = { ...alignedBill, id: `${alignedBill.id}_HOSTILE`, sponsorId: oppositionSponsor, policyDirection: (alignedBill.policyDirection === 1 ? -1 : 1) as -1 | 1, cosponsorIds: [] };
+    hostileBill.partyPositions = deriveProvincialPartyPositions(world, state, assembly, hostileBill);
+    const aligned = evaluateGovernorDisposition(world, state, governorId, alignedBill);
+    const hostile = evaluateGovernorDisposition(world, state, governorId, hostileBill);
+    expect(aligned.decision).toBe("sign");
+    expect(hostile.decision).toBe("veto");
+    expect(aligned.score - hostile.score).toBeGreaterThan(0.35);
   });
 });

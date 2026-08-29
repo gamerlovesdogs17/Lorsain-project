@@ -36,6 +36,7 @@ import {
   resolveNationalRecall,
   chooseConfirmationVote,
   chooseImpeachmentVote,
+  materializeLegalCandidates,
 } from "./courts/index.js";
 import type { ImpeachmentGrounds, JudicialVoteChoice } from "./courts/types.js";
 import { createRngService } from "./rng.js";
@@ -331,6 +332,9 @@ describe("Phase 8 courts kernel", () => {
 
   it("rejects a private citizen without a qualifying public legal record", () => {
     const world = courtHarness();
+    world.agentProfiles.CIT1!.skills.legislation = 1;
+    world.agentProfiles.CIT1!.skills.negotiation = 1;
+    world.agentProfiles.CIT1!.traits.institutionalism = 1;
     const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P8-LEGAL-BAR" });
     expectOk(sim, { type: "DEV_VACATE_OFFICE", officeId: "OFFICE_COURT_SEAT_7", reason: "test" });
     advance(sim, 1);
@@ -341,6 +345,20 @@ describe("Phase 8 courts kernel", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("LEGAL_QUALIFICATION_REQUIRED");
+  });
+
+  it("materializes named legal professionals instead of weakening the qualification bar", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "NPC002", seed: "P8-LEGAL-RENEWAL" });
+    const state = jsonClone(sim.getSnapshot());
+    const generated = materializeLegalCandidates(world, state, 8);
+    expect(Object.keys(state.constitutionalRuntime.legalCareerPool).length).toBeGreaterThan(0);
+    expect(generated.length).toBeGreaterThan(0);
+    for (const id of generated) {
+      expect(state.politicians[id]?.displayName).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
+      expect(state.politicians[id]?.description).not.toMatch(/moderate on|public-law record/i);
+      expect(judicialEligibilityError(world, state, id, officesOfKind(world, "constitutional_court_justice")[0]!.id)).toBeNull();
+    }
   });
 
   it("rejects former justices when court terms are nonrenewable", () => {
@@ -843,6 +861,7 @@ describe("Phase 8 authorized-assembly thresholds", () => {
     const seat = officesOfKind(world, "constitutional_court_justice")[0]!;
     const sitting = occupyingTerms(state, seat.id)[0];
     if (sitting) endTerm(state, sitting.id, state.currentDate, "test");
+    materializeLegalCandidates(world, state);
     const nomineeId = Object.keys(state.politicians)
       .sort()
       .find((id) => id !== state.playerPoliticianId && !judicialEligibilityError(world, state, id, seat.id));

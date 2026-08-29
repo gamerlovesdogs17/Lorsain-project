@@ -286,6 +286,7 @@ export type PolicyChoiceOption = {
   effects?: Array<{ label: string; tone?: "up" | "down" | "flat" }>;
   cost?: string;
   current?: boolean;
+  groups?: readonly string[];
 };
 
 /** Compact categorical policy chooser for current law and named legal alternatives. */
@@ -331,6 +332,7 @@ export function PolicyChoiceGroup(props: {
               </div>
             ) : null}
             {opt.cost ? <div className="policy-choice-cost muted">{opt.cost}</div> : null}
+            {opt.groups?.length ? <div className="policy-choice-groups muted">Affects: {opt.groups.join(" · ")}</div> : null}
           </button>
         ))}
       </div>

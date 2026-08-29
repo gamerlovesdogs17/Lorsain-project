@@ -175,6 +175,20 @@ export type PendingCourtPlayerVote = {
   choice: string;
 };
 
+export type LegalCareerCandidate = {
+  id: string;
+  displayName: string;
+  description: string;
+  birthDate: IsoDate;
+  provinceId: string;
+  partyId: string | null;
+  factionId: string | null;
+  careerRole: string;
+  careerStartYear: number;
+  yearsExperience: number;
+  fullPoliticianId: string | null;
+};
+
 export const GROUNDS_SOURCE_KINDS = [
   "court_finding",
   "invalidated_emergency",
@@ -213,6 +227,7 @@ export type ConstitutionalRuntime = {
   precedents: Record<string, PrecedentRecord>;
   grounds: Record<string, ConstitutionalGroundsRecord>;
   pendingPlayerVotes: Record<string, PendingCourtPlayerVote>;
+  legalCareerPool: Record<string, LegalCareerCandidate>;
   lastMonthProcessed: IsoDate | null;
 };
 
@@ -226,6 +241,7 @@ export function emptyConstitutionalRuntime(): ConstitutionalRuntime {
     precedents: {},
     grounds: {},
     pendingPlayerVotes: {},
+    legalCareerPool: {},
     lastMonthProcessed: null,
   };
 }

@@ -58,6 +58,7 @@ export {
   migrateSaveV10ToV11,
   migrateSaveV11ToV12,
   migrateSaveV12ToV13,
+  migrateSaveV13ToV14,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -204,6 +205,10 @@ export {
   judicialEligibilityError,
   createConstitutionalGrounds,
   availableImpeachmentBases,
+  explicitLegalCareerLabel,
+  hasExplicitLegalCareer,
+  ensureRenewableLegalPool,
+  materializeLegalCandidates,
 } from "./courts/index.js";
 export type {
   ConstitutionalRuntime,

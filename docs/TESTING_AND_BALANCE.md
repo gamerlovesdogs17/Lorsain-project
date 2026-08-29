@@ -115,13 +115,24 @@ Phase 11.2 additionally requires President, MP, Governor, non-incumbent, former 
 
 ### 14.1 Phase 11.3 institutional acceptance
 
-The formal whole-game gate is **100 deterministic saves × 600 monthly turns**:
+The formal whole-game gate is **100 deterministic saves × 600 monthly turns**, but it is never the first long run. Use this pyramid:
+
+- `pnpm test:fast` for deterministic unit and focused subsystem tests;
+- `pnpm test:integration` for browser-independent cross-system flows and migrations;
+- `pnpm test:long` for one resumable 600-month candidate-depletion probe;
+- `pnpm calibrate:game` for the staged 1, 3, 10, 25 and finally 100-seed gates.
+
+The 600-month gates must pass in order. A failed stage is diagnosed and rerun before expanding the sample. Do not launch the 100-seed run while any earlier gate has an execution error, catastrophic invariant failure, candidate-shortage event, determinism failure, or unexplained bound/save-growth result.
+
+Every seed writes an atomic shard as soon as it finishes. `--resume` reuses a shard only when its absolute seed index, requested horizon, content version and source fingerprint match. Interrupted processes therefore retain completed work, while code or canonical-content changes invalidate stale shards. Separate invocations can fill disjoint ranges safely:
 
 ```bash
-pnpm calibrate:whole-game -- --seeds=100 --months=600 --parallel=12
+pnpm calibrate:game --seed-start=0 --seed-count=3 --months=600 --parallel=3 --resume
+pnpm calibrate:game --seed-start=3 --seed-count=7 --months=600 --parallel=7 --resume
+pnpm calibrate:whole-game:aggregate --seed-start=0 --seed-count=10 --months=600 --require-complete
 ```
 
-The checked-in runner may divide absolute seed indices among workers, but merges results in seed order and performs a continuous/reload determinism check after aggregation. Parallelism may change wall-clock duration only; it must not change a seed's simulation result.
+The aggregator performs no gameplay draws. It rejects mixed or stale source/content revisions, sorts by absolute seed, emits a compact index rather than duplicating every raw monthly record, and can write both JSON and Markdown. The checked-in runner may divide absolute seed indices among workers, but merges results in seed order and performs a continuous/reload determinism check after aggregation. Parallelism may change wall-clock duration only; it must not change a seed's simulation result.
 
 Required telemetry covers catastrophic invariants, candidate supply and generation/promotion, party/faction/caucus leadership turnover, Provincial Assembly elections and legislation, Governor disposition/override, constitutional amendments, federal bills/amendments/roll calls, organization relationships and endorsements, career generations, economy cycles, campaign geography/outcomes, monthly/election performance and serialized save growth at 0/120/300/600 months. Acceptance requires zero catastrophic failures and identical continuous/reload hashes.
 
@@ -129,6 +140,7 @@ Targeted Phase 11.3 regressions additionally prove:
 
 - 21 chambers, 25–65 seats, unique public names and renewable legislators;
 - federal recruitment sizes the pre-filing promotion class from valid filings, running incumbents and command-layer-eligible challengers; no count-time fallback generation is permitted;
+- annual NPC lifecycle decisions are deterministic, survive save/reload, leave the player untouched, and reduce both the original active cohort and mean active age over fifty years;
 - player authority/autonomy for party, caucus, provincial, Court and constitutional commands;
 - recurring leadership contests and individual archived ballots;
 - 280 federal votes plus 13 provincial ratifications, with amendment-specific province ordering rather than P01-first scheduling;
@@ -136,7 +148,7 @@ Targeted Phase 11.3 regressions additionally prove:
 - Court federal–provincial jurisdiction, qualification and opinion authorship;
 - concrete one-to-three-provision federal bills and targeted amendments;
 - organization endorsement withdrawal and relationship change from policy behavior;
-- save schema 12→13 deterministic migration without fabricated history.
+- save schema 12→13→14 deterministic migration without fabricated history.
 
 Browser acceptance covers President, MP/Speaker, Governor, non-incumbent/former officeholder and Justice, plus limited Minister/Mayor disclosure. V6 screens are inspected at 1440, 1200, 900, 600 and 390 pixels. Required flows include party/caucus selection, chamber and roll calls, bill comparison/amendment, Court bench/docket/decision/appointment, Provincial Assembly/Governor disposition, constitutional tracker, Ground Game, Economy, Calendar, global search/profile navigation, map hover/leave/click/tap/keyboard selection and populated long-save pages. Evidence lives under `docs/qa/phase11_3/screenshots/`.
 

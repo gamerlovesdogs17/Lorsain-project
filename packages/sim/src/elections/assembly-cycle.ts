@@ -524,10 +524,10 @@ export function openAssemblyFilingIfDue(
   cycle.filingStatus = "open";
   election.status = "field_open";
   // Recruit before the public field is allocated. Every constituency should
-  // have at least one more filed candidate than seats, and the count must be
+  // have at least two more filed candidates than seats, and the count must be
   // based on actually eligible/running people rather than all living figures.
   const fieldTarget = Object.values(world.constituencyElectorate).reduce(
-    (sum, row) => sum + row.seats + 1,
+    (sum, row) => sum + row.seats + 2,
     0,
   );
   const availableBeforeRecruitment = availableAssemblyCandidateIds(state, world, election).size;
@@ -691,6 +691,21 @@ export function finalizeAssemblyFieldsIfDue(
       (cycle.constituencyFields[constituencyId]?.candidateIds.length ?? 0) < electorate.seats,
   );
   if (incomplete) {
+    // Death or another modeled withdrawal can occur after filing opens. The
+    // deadline is the last lawful point to promote an already-existing
+    // provincial politician; never wait until election resolution to patch a
+    // field. Recompute from actual live filings and restore the same reserve.
+    const fieldTarget = Object.values(world.constituencyElectorate).reduce(
+      (sum, row) => sum + row.seats + 2,
+      0,
+    );
+    const available = availableAssemblyCandidateIds(state, world, election).size;
+    recruitFederalAssemblyClass(
+      world,
+      state,
+      election.id,
+      Math.max(0, fieldTarget - available),
+    );
     const err = rebuildAssemblyAllocation(state, world, election);
     if (err) throw new Error(`${err.code}: ${err.message}`);
   }

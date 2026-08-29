@@ -29,6 +29,9 @@ export function parseConstitutionalRuntime(raw: unknown): ConstitutionalRuntime 
   if (raw == null) return emptyConstitutionalRuntime();
   if (!isRecord(raw)) return "constitutionalRuntime must be an object";
   const runtime = emptyConstitutionalRuntime();
+  if (isRecord(raw.legalCareerPool)) {
+    runtime.legalCareerPool = raw.legalCareerPool as ConstitutionalRuntime["legalCareerPool"];
+  }
   if (raw.lastMonthProcessed != null) {
     if (typeof raw.lastMonthProcessed !== "string" || !isIsoDate(raw.lastMonthProcessed)) {
       return "constitutionalRuntime.lastMonthProcessed";

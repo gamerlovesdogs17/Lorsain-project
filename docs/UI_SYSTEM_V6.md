@@ -107,7 +107,7 @@ The Assembly screen owns the constitutional tracker because the federal proposal
 - supported rule and proposed value;
 - 280-vote federal threshold;
 - federal roll call;
-- ratification deadline;
+- a proposal-specific ratification deadline only when an authorized rule supplies one;
 - Provincial Assembly votes and progress toward 13 of 21;
 - adopted, failed, or pending status;
 - the live constitutional effect after adoption.
@@ -133,7 +133,7 @@ Campaign field infrastructure is called **Ground Game** in player-facing text. I
 
 ## Economy statistics
 
-The public briefing leads with derived real-output growth, unemployment, inflation, real pay, housing conditions, and confidence. Internal reference indices remain available in a secondary disclosure and on detailed trend/region views.
+The public briefing and detailed views lead with derived real-output growth, unemployment, inflation, real pay, housing conditions, and confidence. Internal reference indices remain simulation and developer-telemetry values; ordinary player-facing screens use the centralized public-economic presentation helper.
 
 The January scenario may say “reference index 100,” but must not imply that current values equal 100 or that January 2028 defines neutrality. With no prior month, cards say that no comparison is available.
 
@@ -155,7 +155,7 @@ Selection outlines remain restrained; province boundaries are stronger than inte
 
 ## Political Calendar
 
-The calendar unifies public election dates, nomination resolutions, party and caucus contests, and constitutional ratification deadlines. Simultaneous all-province cycles appear as grouped entries rather than 42 repetitive rows. Detail pages retain province-level inspection.
+The calendar unifies public election dates, nomination resolutions, party and caucus contests, and any authorized proposal-specific constitutional deadlines. Simultaneous all-province cycles appear as grouped entries rather than 42 repetitive rows. Detail pages retain province-level inspection.
 
 ## Responsive behavior
 
@@ -175,4 +175,3 @@ V6 acceptance widths are 1440, 1200, 900, 600, and 390 pixels.
 - Color is always paired with a name, total, status, or legend.
 - Tooltips supplement rather than replace keyboard/persistent detail.
 - Focus and selected states remain visible at every supported width.
-

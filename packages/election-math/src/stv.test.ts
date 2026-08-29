@@ -137,6 +137,12 @@ describe("countStv", () => {
     const elim = result.steps.find((s) => s.action === "eliminate")!;
     expect(elim.eliminatedId).toBe("D");
     expect(elim.newlyExhausted).toBe("15/1");
+    expect(new Set(elim.transfers.map((line) => line.toCandidateId)).size).toBe(
+      elim.transfers.length,
+    );
+    expect(elim.transfers.every((line) => line.ballotGroupId.startsWith("@aggregate:"))).toBe(
+      true,
+    );
     assertStvResultConservation(result);
   });
 

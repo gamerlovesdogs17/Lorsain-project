@@ -150,14 +150,24 @@ export function CampaignPage(props: {
   const [filingConstituency, setFilingConstituency] = useState(preferredConstituency ?? "");
 
   useEffect(() => {
-    if (c?.type !== "assembly" || !c.constituencyId) return;
-    setVisitKind("constituency");
-    setOrgKind("constituency");
-    setVisitId(c.constituencyId);
-    setOrgId(c.constituencyId);
-    setAdGeo("constituency");
-    setAdGeoId(c.constituencyId);
-  }, [c?.constituencyId, c?.type]);
+    if (c?.type === "assembly" && c.constituencyId) {
+      setVisitKind("constituency");
+      setOrgKind("constituency");
+      setVisitId(c.constituencyId);
+      setOrgId(c.constituencyId);
+      setAdGeo("constituency");
+      setAdGeoId(c.constituencyId);
+      return;
+    }
+    if ((c?.type === "gubernatorial" || c?.type === "provincial_assembly") && typeof c.metadata.provinceId === "string") {
+      setVisitKind("province");
+      setOrgKind("province");
+      setVisitId(c.metadata.provinceId);
+      setOrgId(c.metadata.provinceId);
+      setAdGeo("province");
+      setAdGeoId(c.metadata.provinceId);
+    }
+  }, [c?.constituencyId, c?.metadata.provinceId, c?.type]);
 
   const endorsers = useMemo(() => {
     if (!c || !contest) return [];
@@ -303,11 +313,15 @@ export function CampaignPage(props: {
   }
 
   const rivals = activeRaceCampaigns(props.snap, c);
-  const provinces = props.world.provinceIds;
+  const campaignProvinceId = typeof c.metadata.provinceId === "string" ? c.metadata.provinceId : null;
+  const provinces = campaignProvinceId ? [campaignProvinceId] : props.world.provinceIds;
   const constituencies =
     c.type === "assembly" && c.constituencyId
       ? [c.constituencyId]
-      : Object.keys(props.world.constituencyElectorate).sort();
+      : Object.keys(props.world.constituencyElectorate)
+          .filter((constituencyId) => !campaignProvinceId || props.world.constituencyElectorate[constituencyId]?.provincePopulationShares
+            .some((share) => share.provinceId === campaignProvinceId && share.share > 0))
+          .sort();
   const issues = props.world.issueIds;
   const spendOptions = AD_SPENDS.filter((n) => n <= Math.floor(c.cashOnHand));
   const showDebate = shouldHoldDebate(props.snap.currentDate, c.type);
@@ -316,6 +330,7 @@ export function CampaignPage(props: {
   const campaignElectionDate =
     (c.electionId ? props.snap.elections[c.electionId]?.date : null) ??
     (c.electionId ? props.snap.provincialRuntime.elections[c.electionId]?.date : null) ??
+    (c.electionId ? props.snap.provincialRuntime.assemblyElections[c.electionId]?.date : null) ??
     (typeof contest?.metadata.electionDate === "string" ? contest.metadata.electionDate : null);
   const gubernatorialRace = c.electionId
     ? props.snap.provincialRuntime.elections[c.electionId]
@@ -328,12 +343,14 @@ export function CampaignPage(props: {
         ? `National Assembly · ${constituencyDisplayName(props.catalog, c.constituencyId)}`
         : c.type === "gubernatorial" && gubernatorialRace
           ? `Governor · ${props.catalog.places.get(gubernatorialRace.provinceId)?.name ?? gubernatorialRace.provinceId}`
+          : c.type === "provincial_assembly" && campaignProvinceId
+            ? `Provincial Assembly · ${props.catalog.places.get(campaignProvinceId)?.name ?? campaignProvinceId}`
           : "Political campaign";
   const poll = latestPublicPoll(props.snap);
   const recentActivity = props.snap.history
     .filter((e) =>
       e.type.startsWith("CAMPAIGN_") ||
-      e.type.startsWith("ENDORSEMENT_") ||
+      (e.type.startsWith("ENDORSEMENT_") && e.type !== "ENDORSEMENT_RECEIVED") ||
       e.type === "POLL_PUBLISHED" ||
       e.type === "DEBATE_HELD",
     )
@@ -610,7 +627,7 @@ export function CampaignPage(props: {
                 value={visitKind}
                 onChange={(e) => setVisitKind(e.target.value as typeof visitKind)}
               >
-                {c.type !== "assembly" ? <option value="national">Nationwide</option> : null}
+                {!["assembly", "gubernatorial", "provincial_assembly"].includes(c.type) ? <option value="national">Nationwide</option> : null}
                 {c.type !== "assembly" ? <option value="province">Province</option> : null}
                 <option value="constituency">Constituency</option>
               </select>
@@ -730,7 +747,7 @@ export function CampaignPage(props: {
             <label>
               Area
               <select value={adGeo} onChange={(e) => setAdGeo(e.target.value as typeof adGeo)}>
-                {c.type !== "assembly" ? <option value="national">Nationwide</option> : null}
+                {!["assembly", "gubernatorial", "provincial_assembly"].includes(c.type) ? <option value="national">Nationwide</option> : null}
                 {c.type !== "assembly" ? <option value="province">Province</option> : null}
                 <option value="constituency">Constituency</option>
               </select>

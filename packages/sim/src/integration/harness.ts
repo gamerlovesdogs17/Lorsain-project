@@ -40,6 +40,8 @@ export function loadTerenaWorld(): KernelWorld {
     presidentialEligibility: { rules: bundle.presidentialEligibility.rules },
     ...terenaElectoralFromBundle(bundle),
     ...terenaWorldFieldsFromBundle(bundle),
+    organizations: bundle.content.terena_organizations.organizations,
+    mediaOutlets: bundle.content.terena_media.outlets,
   } satisfies TerenaKernelInput;
   return buildTerenaKernelWorld(input);
 }

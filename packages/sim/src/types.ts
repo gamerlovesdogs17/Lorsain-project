@@ -64,7 +64,7 @@ import type {
 
 export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 13 as const;
+export const SAVE_SCHEMA_VERSION = 14 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -413,7 +413,8 @@ export type Command =
         | "presidential_nomination"
         | "presidential_general"
         | "assembly"
-        | "gubernatorial";
+        | "gubernatorial"
+        | "provincial_assembly";
       contestId?: string | null;
       electionId?: string | null;
       constituencyId?: string | null;
@@ -511,6 +512,11 @@ export type Command =
   | { type: "SCHEDULE_BILL"; billId: string }
   | { type: "DELAY_BILL"; billId: string }
   | { type: "DECLARE_CAUCUS_LEADERSHIP_CANDIDACY"; contestId: string }
+  | {
+      type: "CAMPAIGN_CAUCUS_LEADERSHIP";
+      contestId: string;
+      emphasis: "legislative_agenda" | "party_unity" | "electoral_recovery";
+    }
   | { type: "SET_CAUCUS_BILL_POSITION"; billId: string; stance: RecommendationStance }
   | {
       type: "PROPOSE_CONSTITUTIONAL_AMENDMENT";

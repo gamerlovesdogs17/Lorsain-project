@@ -32,6 +32,15 @@ import { GameShell, type ShellSearchEntry } from "./ui/shell.js";
 import { StatusBadge } from "./ui/kit.js";
 import { PoliticianAvatar, PoliticianCard } from "./ui/politician.js";
 
+const QA_SCREENS = new Set<Screen>([
+  "home", "career", "office", "assembly", "party", "campaign", "elections", "executive",
+  "courts", "economy", "organizations", "news", "foreign", "terena", "archive",
+]);
+
+function qaScreen(value: string | null): Screen {
+  return value != null && QA_SCREENS.has(value as Screen) ? value as Screen : "home";
+}
+
 export default function App() {
   const [bundle, setBundle] = useState<ContentBundle | null>(null);
   const [world, setWorld] = useState<KernelWorld | null>(null);
@@ -55,6 +64,7 @@ export default function App() {
   const [mapHover, setMapHover] = useState<string | null>(null);
   const [debug, setDebug] = useState(false);
   const [globalFocus, setGlobalFocus] = useState<{ kind: string; id: string } | null>(null);
+  const qaBooted = useRef(false);
   const feedback = useCommandFeedback();
 
   useEffect(() => {
@@ -66,6 +76,47 @@ export default function App() {
       setError(e instanceof Error ? e.message : String(e));
     }
   }, []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !world || qaBooted.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const fixture = params.get("qaFixture");
+    if (!fixture) return;
+    qaBooted.current = true;
+    void fetch(`/__qa/fixtures/${encodeURIComponent(fixture)}.json`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Browser QA fixture ${fixture} was not found.`);
+        return await response.json() as SaveFile;
+      })
+      .then((save) => {
+        const playerId = params.get("qaPlayer");
+        const prepared = playerId && save.simulation.politicians[playerId]
+          ? { ...save, simulation: { ...save.simulation, playerPoliticianId: playerId } }
+          : save;
+        const parsed = parseSaveFile(prepared, world.contentVersion);
+        if (!parsed.ok) throw new Error(parsed.error.message);
+        const restored = restoreSimulation(parsed.save, world);
+        const focusKind = params.get("qaFocusKind");
+        const focusId = params.get("qaFocusId");
+        setTurnEvents([]);
+        setMode("play");
+        setScreen(qaScreen(params.get("qaScreen")));
+        if (focusKind && focusId) {
+          setGlobalFocus({ kind: focusKind, id: focusId });
+          if (focusKind === "Bill") setSelectedBill(focusId);
+        }
+        refresh(restored);
+      })
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)));
+  }, [world]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !sim) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("qaFixture")) return;
+    params.set("qaScreen", screen);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }, [screen, sim]);
 
   const figures = useMemo(() => {
     const map = new Map<string, Figure>();
@@ -686,6 +737,18 @@ export default function App() {
         askConfirm={feedback.askConfirm}
         globalFocus={globalFocus}
       />
+      {import.meta.env.DEV ? (
+        <output
+          id="lorsain-browser-qa-state"
+          hidden
+          data-ready="true"
+          data-screen={screen}
+          data-player={snap.playerPoliticianId}
+          data-date={snap.currentDate}
+        >
+          Browser QA ready
+        </output>
+      ) : null}
       {feedback.overlay()}
     </GameShell>
   );

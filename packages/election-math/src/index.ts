@@ -48,7 +48,7 @@ export type {
   TieResolution,
   TransferLine,
 } from "./types.js";
-export { serializeTotals } from "./types.js";
+export { aggregateTransferLines, serializeTotals } from "./types.js";
 
 export {
   prepareBallots,

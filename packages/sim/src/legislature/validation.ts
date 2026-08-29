@@ -42,6 +42,9 @@ function parsePolicyItems(raw: unknown, path: string): PolicyItem[] | string {
       direction: item.direction,
       magnitude: item.magnitude,
       fiscalImpact: typeof item.fiscalImpact === "number" ? item.fiscalImpact : null,
+      ...(isRecord(item.dimensionEffects)
+        ? { dimensionEffects: Object.fromEntries(Object.entries(item.dimensionEffects).filter((entry): entry is [string, number] => typeof entry[1] === "number" && Number.isFinite(entry[1]))) }
+        : {}),
     });
   }
   return out;

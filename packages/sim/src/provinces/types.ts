@@ -97,6 +97,10 @@ export type ProvincialLegislator = {
   careerStartDate: IsoDate;
   serviceStartDate: IsoDate | null;
   serviceEndDate: IsoDate | null;
+  serviceTerms: Array<{ startDate: IsoDate; endDate: IsoDate | null; electionId: string | null }>;
+  electionIds: string[];
+  sponsoredBillIds: string[];
+  cosponsoredBillIds: string[];
   standing: number;
   legislativeSkill: number;
   campaignSkill: number;
@@ -150,7 +154,15 @@ export type ProvincialAssemblyElection = {
   partyVoteShares: Record<string, number>;
   partySeats: Record<string, number>;
   electedIds: string[];
+  personalRankingsByParty: Record<string, string[]>;
   turnoutRate: number | null;
+};
+
+export type ProvincialPartyBillPosition = {
+  partyId: string;
+  stance: "support" | "oppose" | "free_vote";
+  setById: string | null;
+  strength: number;
 };
 
 export type ProvincialBill = {
@@ -160,6 +172,16 @@ export type ProvincialBill = {
   summary: string;
   subject: ProvincialBillSubject;
   sponsorId: string;
+  cosponsorIds: string[];
+  policyDirection: -1 | 1;
+  fiscalImpact: number;
+  agendaSource:
+    | "governor_priority"
+    | "economic_pressure"
+    | "legislative_agenda"
+    | "organization_pressure"
+    | "election_mandate";
+  partyPositions: Record<string, ProvincialPartyBillPosition>;
   introducedDate: IsoDate;
   status:
     | "introduced"
@@ -222,6 +244,15 @@ export type ConstitutionalAmendment = {
   proposedDate: IsoDate;
   ruleId: ConstitutionalRuleId;
   proposedValue: number;
+  proposalTrigger:
+    | "player_sponsorship"
+    | "election_mandate"
+    | "institutional_conflict"
+    | "executive_legislative_conflict"
+    | "court_crisis"
+    | "reform_movement"
+    | "legacy_proposal";
+  politicalImpetus: number;
   status: "proposed" | "assembly_failed" | "ratifying" | "ratified" | "failed";
   assemblyVoteId: string | null;
   assemblyVotes: Record<string, "yes" | "no" | "abstain">;

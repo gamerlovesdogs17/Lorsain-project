@@ -1,8 +1,13 @@
 # Phase 11.3 results
 
-Date: 2026-08-24  
-Scope: institutional politics, UI System V6, legislative depth and whole-game balance  
-Baseline: `398d8e52b40c369f542dd2367fe38b86d173d719` on `main`  
+Date: 2026-08-28
+
+Scope: institutional politics, UI System V6, legislative depth and whole-game balance
+
+Interrupted-export prompt baseline: `398d8e52b40c369f542dd2367fe38b86d173d719`; actual repository HEAD at resume: `2d215a606f090690b671ba3133357cb1a32fabb`
+
+Safety checkpoint: `9031478` (`WIP: preserve interrupted Phase 11.3 institutional implementation`) on `phase11-3-institutional-resume`
+
 Acceptance artifact: `docs/qa/phase11_3/whole_game_calibration.json`
 
 Phase 11.4 has not begun.
@@ -11,11 +16,11 @@ Phase 11.4 has not begun.
 
 ### 1. Final commit hash
 
-The final immutable hash is reported in the task handoff after the closeout commit is created. A commit cannot contain its own hash. The implementation was developed from baseline `398d8e52b40c369f542dd2367fe38b86d173d719`.
+The final immutable hash is reported in the task handoff after the closeout commit is created. A commit cannot contain its own hash. The interrupted work was preserved first at `9031478`; no reset, clean, checkout, or source discard was used.
 
 ### 2. Working-tree status
 
-The task handoff records the post-commit `git status --short` result. The intended acceptance state is a clean `main` worktree with all implementation, documentation, evidence and generated type outputs committed.
+The task handoff records the post-commit `git status --short` result. The intended acceptance state is a clean `phase11-3-institutional-resume` worktree with all implementation, documentation, evidence and generated type outputs committed.
 
 ### 3. Long-run candidate-depletion fix
 
@@ -35,7 +40,7 @@ Vacancies trigger contests immediately. Otherwise, four-year January reviews beg
 
 ### 7. Caucus election rules
 
-Represented Assembly parties elect floor leaders and whips every 24 months, with one-month public contests. Sitting caucus members are the selectorate. NPC candidates are ranked by role-relevant legislative, negotiating, loyalty and pragmatic attributes; the player is never auto-entered. Named ballots, totals, winners and dates persist.
+Represented Assembly parties elect floor leaders and whips after a general election, on a vacancy, after an eligible low-cohesion challenge, or after a four-year review that is itself politically triggered. A review that does not trigger a contest advances the next review date instead of producing calendar spam. Sitting caucus members are the selectorate. NPC candidates are ranked by role-relevant legislative, negotiating, loyalty and pragmatic attributes; the player is never auto-entered. Platforms, senior/caucus endorsements, named ballots, totals, winners, triggers and dates persist.
 
 ### 8. Parliamentary leadership/whip architecture
 
@@ -99,7 +104,7 @@ Provincial laws and Governor/federal conflicts can create Constitutional Court d
 
 ### 23. Constitutional amendment procedure
 
-An amendment requires at least 280 votes in the 420-seat National Assembly, followed by ratification in at least 13 of 21 Provincial Assemblies within 18 months. The President has no sign, veto or ratification role. Province scheduling is deterministically rotated by amendment-specific hash rather than always starting with the first province IDs.
+An amendment requires at least 280 votes in the 420-seat National Assembly, followed by ratification in at least 13 of 21 Provincial Assemblies. The President has no sign, veto or ratification role. Lorsain v1 has no invented universal ratification deadline; a proposal may carry one only if a future authorized rule supplies it. Province scheduling is deterministically rotated by amendment-specific hash rather than always starting with the first province IDs.
 
 ### 24. Constitutional rules made dynamically amendable
 
@@ -115,7 +120,7 @@ An ordinary amendment targets one existing provision and substitutes one valid n
 
 ### 27. Number of major policy provisions/options added
 
-There are 30 major provision categories and 90 named legal options. Persisted option IDs are policy-specific (for example, `national_protection`) rather than universal `low/current/high`; schema-13 development saves can read the old aliases and canonicalize all new writes.
+There are 50 major provision categories and 161 named legal options. Each category has two to five alternatives, including asymmetrical institutional choices rather than a universal less/same/more scale. Persisted option IDs are policy-specific (for example, `national_protection`) rather than universal `low/current/high`; schema-13 development saves can read the old aliases and canonicalize all new writes.
 
 ### 28. Organizations redesign
 
@@ -143,7 +148,7 @@ The Terena and World maps use a compact pinned inspector so geography remains th
 
 ### 34. Political Calendar
 
-The calendar is a reusable panel rather than another permanent sidebar destination. It groups filing openings/deadlines, elections, assumptions, party/caucus leadership contests, legislative decisions, Court work and constitutional ratification deadlines, with role relevance and linked destinations.
+The calendar is a reusable panel rather than another permanent sidebar destination. It groups filing openings/deadlines, elections, assumptions, party/caucus leadership contests, legislative decisions, Court work and any authorized proposal-specific constitutional deadline, with role relevance and linked destinations.
 
 ### 35. Global search/profile navigation
 
@@ -155,7 +160,7 @@ V5's repeated dashboard-card grammar is replaced by V6 role workbenches, dense m
 
 ### 37. Screenshots
 
-Twenty-eight actual running-browser captures are stored in `docs/qa/phase11_3/screenshots/`, with a manifest in `docs/qa/phase11_3/README.md`. They cover the 420-seat chamber, bill and committee details, federal/provincial roll calls, politician record, amendment tracker, Court bench/appointment, party/caucus politics, Governor play, Ground Game, economy/maps, calendar/search and required 1440/1200/900/600/390 responsive states.
+Thirty-seven asserted running-browser JPEG captures are stored in `docs/qa/phase11_3/screenshots/`, with the fixture/assertion contract and decoded dimensions in `docs/qa/phase11_3/browser-qa-manifest.json`. They cover the 420-seat chamber, bill and committee details, federal/provincial roll calls, politician profile/record, amendment tracker, Court bench/decision/appointment, party/caucus politics, Governor play, Ground Game, economy/maps, calendar/search and required 1440/1200/900/600/390 responsive states. The browser console remained free of warnings and errors through the final role/map pass.
 
 ### 38. Full calibration sample size
 
@@ -175,7 +180,7 @@ Median party-leadership contests: `{{PARTY_CONTESTS_MEDIAN}}` per 50-year run; m
 
 ### 42. Caucus turnover statistics
 
-Median national caucus floor-leader/whip contests: `{{CAUCUS_CONTESTS_MEDIAN}}` per run. Each represented party schedules both roles every 24 months, subject to the current composition and explicit player entry.
+Median national caucus floor-leader/whip contests: `{{CAUCUS_CONTESTS_MEDIAN}}` per run. Contests follow general elections, vacancies, low-cohesion challenges and politically triggered four-year reviews, with explicit player entry.
 
 ### 43. Provincial legislative/election statistics
 
@@ -187,7 +192,7 @@ Median per run: `{{PROV_SIGNED_MEDIAN}}` provincial bills signed, `{{PROV_VETO_M
 
 ### 45. Constitutional amendment statistics
 
-Median proposed per run: `{{CONST_PROPOSED_MEDIAN}}`; total ratified: `{{CONST_RATIFIED_SUM}}`; median failed/expired: `{{CONST_FAILED_MEDIAN}}`. Every adopted amendment satisfied both federal and provincial thresholds within the deadline.
+Median proposed per run: `{{CONST_PROPOSED_MEDIAN}}`; total ratified: `{{CONST_RATIFIED_SUM}}`; median failed: `{{CONST_FAILED_MEDIAN}}`. Every adopted amendment satisfied both federal and provincial thresholds. No proposal expired under an invented universal deadline because v1 has none.
 
 ### 46. Federal legislative statistics
 
@@ -199,7 +204,7 @@ The neutral long-run harness takes no proactive player meetings, so its organiza
 
 ### 48. Career-mobility/generational statistics
 
-The harness samples 40 canonical careers per run and records every office transition. Across the full matrix, median promotions were `{{PROMOTIONS_MEDIAN}}` and median full national politicians generated from the renewable class were `{{GENERATED_NATIONAL_MEDIAN}}`; the sampled transition total was `{{CAREER_TRANSITIONS_SUM}}`. Provincial service, Assembly, Governor, leadership, Court and presidential routes remain connected over fifty years.
+The harness samples 24 canonical careers per run and records every office transition. Across the full matrix, median promotions were `{{PROMOTIONS_MEDIAN}}` and median full national politicians generated from the renewable class were `{{GENERATED_NATIONAL_MEDIAN}}`; the sampled transition total was `{{CAREER_TRANSITIONS_SUM}}`. Median NPC retirements/deaths were `{{RETIREMENTS_MEDIAN}}` / `{{DEATHS_MEDIAN}}`; median original politicians still active in 2078 were `{{ACTIVE_ORIGINAL_MEDIAN}}`, and mean active political age was `{{ACTIVE_AGE_MEDIAN}}`. Provincial service, Assembly, Governor, leadership, Court and presidential routes remain connected over fifty years.
 
 ### 49. Economic-cycle statistics
 
@@ -215,11 +220,11 @@ Formal matrix median-of-run median turn time: `{{MEDIAN_TURN_MS}} ms`; median-of
 
 ### 52. Save-size growth
 
-Median final schema-13 save after 600 months: `{{FINAL_SAVE_BYTES}}` bytes (`{{FINAL_SAVE_MIB}} MiB`); minimum `{{FINAL_SAVE_MIN_BYTES}}`, maximum `{{FINAL_SAVE_MAX_BYTES}}`. Schema migration preserves player/date/history and deterministically seeds new institutional fields without fabricating past events.
+Median final schema-14 save after 600 months: `{{FINAL_SAVE_BYTES}}` bytes (`{{FINAL_SAVE_MIB}} MiB`); minimum `{{FINAL_SAVE_MIN_BYTES}}`, maximum `{{FINAL_SAVE_MAX_BYTES}}`. Schema migration preserves player/date/history and deterministically seeds new structural fields without fabricating past events.
 
 ### 53. Deterministic save/reload results
 
-Seed `{{DETERMINISM_SEED}}`: continuous-versus-continuous match `{{DUAL_MATCH}}`; continuous-versus-midpoint-save/reload match `{{RELOAD_MATCH}}`. Final hashes: `{{DETERMINISM_HASHES}}`. The targeted former failure seed 51 also reached month 600 with uninterrupted presidential authority after the overlapping Assembly candidacy fix.
+Seed `{{DETERMINISM_SEED}}`: continuous-versus-continuous match `{{DUAL_MATCH}}`; continuous-versus-midpoint-save/reload match `{{RELOAD_MATCH}}`. Final hashes: `{{DETERMINISM_HASHES}}`. The targeted former candidate-shortage seed is `P113-WG-000`, the exact archived run that previously failed near month 358.
 
 ### 54. Remaining BLOCKERS
 

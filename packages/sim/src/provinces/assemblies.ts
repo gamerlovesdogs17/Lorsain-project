@@ -15,6 +15,12 @@ import type {
   ProvincialPromotion,
   ProvincialVote,
 } from "./types.js";
+import {
+  chooseProvincialLegislativeVote,
+  deriveProvincialPartyPositions,
+  evaluateGovernorDisposition,
+  provincialPolicy,
+} from "./politics.js";
 
 const FIRST_NAMES = [
   "Adela", "Adrian", "Alina", "Andrej", "Anika", "Bastian", "Celia", "Dara", "Dorian",
@@ -161,18 +167,21 @@ function newLegislator(
   provinceId: string,
   ordinal: number,
   source: ProvincialLegislator["source"],
+  forcedPartyId?: string | null,
 ): ProvincialLegislator {
   const provinceIndex = Math.max(0, world.provinceIds.indexOf(provinceId));
   const id = `PLEG_${provinceId}_${String(ordinal).padStart(3, "0")}`;
   const weights = provincePartyWeights(world, provinceId);
   const pick = (stableProvincialHash(`${id}:party`) % 100000) / 100000;
   let cursor = 0;
-  let partyId = weights.at(-1)?.partyId ?? null;
-  for (const row of weights) {
-    cursor += row.weight;
-    if (pick <= cursor) {
-      partyId = row.partyId;
-      break;
+  let partyId = forcedPartyId ?? weights.at(-1)?.partyId ?? null;
+  if (forcedPartyId === undefined) {
+    for (const row of weights) {
+      cursor += row.weight;
+      if (pick <= cursor) {
+        partyId = row.partyId;
+        break;
+      }
     }
   }
   const name = publicName(provinceIndex, ordinal);
@@ -192,6 +201,10 @@ function newLegislator(
     careerStartDate: state.currentDate,
     serviceStartDate: null,
     serviceEndDate: null,
+    serviceTerms: [],
+    electionIds: [],
+    sponsoredBillIds: [],
+    cosponsoredBillIds: [],
     standing: 0.25 + (stableProvincialHash(`${id}:standing`) % 46) / 100,
     legislativeSkill: 0.3 + (stableProvincialHash(`${id}:legislation`) % 56) / 100,
     campaignSkill: 0.25 + (stableProvincialHash(`${id}:campaign`) % 61) / 100,
@@ -220,8 +233,43 @@ function plannedAssemblyElection(provinceId: string, date: string): ProvincialAs
     partyVoteShares: {},
     partySeats: {},
     electedIds: [],
+    personalRankingsByParty: {},
     turnoutRate: null,
   };
+}
+
+function provincialRetirementProbability(row: ProvincialLegislator, electionYear: number): number {
+  const age = electionYear - row.birthYear;
+  if (age >= 80) return 1;
+  if (age >= 74) return Math.min(0.97, 0.4 + (age - 74) * 0.09 + (1 - row.ambition) * 0.18);
+  if (age >= 68) return 0.08 + (age - 68) * 0.045 + (1 - row.ambition) * 0.12;
+  if (age >= 62) return 0.01 + (age - 62) * 0.008 + (1 - row.ambition) * 0.05;
+  return 0;
+}
+
+function applyProvincialFilingRetirements(
+  state: SimState,
+  provinceId: string,
+  electionDate: string,
+): void {
+  const electionYear = Number(electionDate.slice(0, 4));
+  for (const row of Object.values(state.provincialRuntime.legislators)) {
+    if (row.provinceId !== provinceId || !row.active) continue;
+    if (row.id === state.playerPoliticianId || row.fullPoliticianId === state.playerPoliticianId) {
+      continue;
+    }
+    const fullPolitician = row.fullPoliticianId
+      ? state.politicians[row.fullPoliticianId]
+      : null;
+    if (fullPolitician && (!fullPolitician.alive || fullPolitician.retired)) {
+      row.active = false;
+      continue;
+    }
+    const probability = provincialRetirementProbability(row, electionYear);
+    if (probability <= 0) continue;
+    const draw = (stableProvincialHash(`${row.id}:${electionYear}:retirement`) >>> 0) / 0x1_0000_0000;
+    if (draw < probability) row.active = false;
+  }
 }
 
 function leadershipScore(
@@ -369,6 +417,7 @@ export function seedProvincialAssemblies(world: KernelWorld, state: SimState): v
       for (const id of selected) {
         const row = state.provincialRuntime.legislators[id]!;
         row.serviceStartDate = state.currentDate;
+        row.serviceTerms.push({ startDate: state.currentDate, endDate: null, electionId: null });
       }
       const nextElectionDate = `${Number(state.scenarioStartDate.slice(0, 4)) + 1}-10-01`;
       state.provincialRuntime.assemblies[provinceId] = {
@@ -427,8 +476,29 @@ function ensureProvincialReserve(world: KernelWorld, state: SimState, provinceId
   return created;
 }
 
-function openProvincialAssemblyElection(state: SimState, election: ProvincialAssemblyElection): void {
+function openProvincialAssemblyElection(
+  world: KernelWorld,
+  state: SimState,
+  election: ProvincialAssemblyElection,
+): void {
   election.status = "filing_open";
+  applyProvincialFilingRetirements(state, election.provinceId, election.date);
+  const assembly = state.provincialRuntime.assemblies[election.provinceId];
+  if (assembly) {
+    let ordinal = nextLegislatorOrdinal(state, election.provinceId);
+    for (const [partyId, seats] of Object.entries(assembly.partySeats).sort(([a], [b]) => a.localeCompare(b))) {
+      let available = Object.values(state.provincialRuntime.legislators).filter(
+        (row) => row.provinceId === election.provinceId && row.active && row.fullPoliticianId == null && row.partyId === partyId,
+      ).length;
+      const target = seats + Math.max(2, Math.ceil(seats * 0.25));
+      while (available < target) {
+        const row = newLegislator(world, state, election.provinceId, ordinal, "recruited", partyId);
+        state.provincialRuntime.legislators[row.id] = row;
+        ordinal += 1;
+        available += 1;
+      }
+    }
+  }
   election.candidateIds = Object.values(state.provincialRuntime.legislators)
     .filter((row) => row.provinceId === election.provinceId && row.active && row.fullPoliticianId == null)
     .map((row) => row.id)
@@ -452,43 +522,58 @@ function resolveProvincialAssemblyElection(
   election.partyVoteShares = Object.fromEntries(weights.map((row) => [row.partyId, row.weight / total]));
   election.partySeats = allocateSeats(assembly.seatCount, weights, election.id);
   const oldMembers = new Set(assembly.memberIds);
+  const campaignFor = (id: string) => Object.values(state.campaignRuntime.campaigns)
+    .find((campaign) => campaign.electionId === election.id && campaign.politicianId === id);
+  const leadershipIds = new Set([
+    assembly.presidingOfficerId,
+    ...Object.values(assembly.partyLeadership).flatMap((row) => [row.floorLeaderId, row.whipId]),
+  ].filter((id): id is string => Boolean(id)));
+  const endorsementCount = (id: string): number => Object.values(state.organizationRuntime.actors)
+    .reduce((count, actor) => count + actor.endorsements.filter((endorsement) =>
+      endorsement.politicianId === id && (endorsement.status ?? "active") === "active").length, 0);
+  const personalScore = (row: ProvincialLegislator): number => {
+    const campaign = campaignFor(row.id);
+    const incumbent = oldMembers.has(row.id) ? 0.13 : 0;
+    const leadership = leadershipIds.has(row.id) ? 0.08 : 0;
+    const campaignWork = campaign
+      ? campaign.fieldOrganization * 0.16 +
+        (campaign.organizationByProvince[election.provinceId] ?? 0) * 0.16 +
+        Math.min(0.06, campaign.totalSpent / 500_000)
+      : 0;
+    const endorsements = Math.min(0.08, endorsementCount(row.fullPoliticianId ?? row.id) * 0.025);
+    const variance = (stableProvincialHash(`${election.id}:${row.id}:personal`) % 1001) / 10000;
+    return row.standing * 0.39 + row.campaignSkill * 0.2 + row.legislativeSkill * 0.1 +
+      incumbent + leadership + campaignWork + endorsements + variance;
+  };
   const pool = election.candidateIds
     .map((id) => state.provincialRuntime.legislators[id])
     .filter((row): row is ProvincialLegislator => Boolean(row?.active))
-    .sort((a, b) => {
-      const aInc = oldMembers.has(a.id) ? 0.12 : 0;
-      const bInc = oldMembers.has(b.id) ? 0.12 : 0;
-      const as = a.standing * 0.48 + a.campaignSkill * 0.3 + a.legislativeSkill * 0.22 + aInc;
-      const bs = b.standing * 0.48 + b.campaignSkill * 0.3 + b.legislativeSkill * 0.22 + bInc;
-      return bs - as || stableProvincialHash(`${election.id}:${a.id}`) - stableProvincialHash(`${election.id}:${b.id}`);
-    });
+    .sort((a, b) => personalScore(b) - personalScore(a) || a.id.localeCompare(b.id));
   const elected: string[] = [];
+  election.personalRankingsByParty = {};
   for (const [partyId, count] of Object.entries(election.partySeats).sort(([a], [b]) => a.localeCompare(b))) {
-    elected.push(...pool.filter((row) => row.partyId === partyId && !elected.includes(row.id)).slice(0, count).map((row) => row.id));
+    const ranking = pool.filter((row) => row.partyId === partyId).map((row) => row.id);
+    election.personalRankingsByParty[partyId] = ranking;
+    elected.push(...ranking.slice(0, count));
   }
   elected.push(...pool.filter((row) => !elected.includes(row.id)).slice(0, assembly.seatCount - elected.length).map((row) => row.id));
-  if (election.playerDecision === "filed" && !elected.includes(state.playerPoliticianId)) {
-    const playerRow = state.provincialRuntime.legislators[state.playerPoliticianId];
-    if (playerRow && playerRow.provinceId === election.provinceId && playerRow.active) {
-      let samePartyIndex = -1;
-      for (let index = elected.length - 1; index >= 0; index -= 1) {
-        if (state.provincialRuntime.legislators[elected[index]!]?.partyId === playerRow.partyId) {
-          samePartyIndex = index;
-          break;
-        }
-      }
-      if (samePartyIndex >= 0 && playerRow.campaignSkill + playerRow.standing >= 0.9) elected[samePartyIndex] = playerRow.id;
-    }
-  }
   for (const id of assembly.memberIds) {
     const row = state.provincialRuntime.legislators[id];
-    if (row && !elected.includes(id)) row.serviceEndDate = state.currentDate;
+    if (row && !elected.includes(id)) {
+      row.serviceEndDate = state.currentDate;
+      const openTerm = row.serviceTerms.slice().reverse().find((term) => term.endDate == null);
+      if (openTerm) openTerm.endDate = state.currentDate;
+    }
   }
   for (const id of elected) {
     const row = state.provincialRuntime.legislators[id];
     if (row) {
-      row.serviceStartDate ??= state.currentDate;
+      if (!oldMembers.has(id) || row.serviceTerms.length === 0) {
+        row.serviceStartDate ??= state.currentDate;
+        row.serviceTerms.push({ startDate: state.currentDate, endDate: null, electionId: election.id });
+      }
       row.serviceEndDate = null;
+      row.electionIds = [...new Set([...row.electionIds, election.id])];
     }
   }
   assembly.memberIds = elected;
@@ -501,6 +586,11 @@ function resolveProvincialAssemblyElection(
   election.electedIds = [...elected];
   election.turnoutRate = 0.48 + rng.float01("elections") * 0.19;
   election.status = "resolved";
+  for (const campaign of Object.values(state.campaignRuntime.campaigns)) {
+    if (campaign.type !== "provincial_assembly" || campaign.electionId !== election.id) continue;
+    campaign.status = elected.includes(campaign.politicianId) ? "won" : "lost";
+    campaign.endedDate = state.currentDate;
+  }
   const next = plannedAssemblyElection(election.provinceId, assembly.nextElectionDate);
   state.provincialRuntime.assemblyElections[next.id] = next;
   return [
@@ -541,37 +631,152 @@ const BILL_COPY: Record<ProvincialBillSubject, { titles: string[]; summaries: st
   },
 };
 
-function createAnnualProvincialBill(state: SimState, provinceId: string): ProvincialBill | null {
+function agendaSubject(
+  state: SimState,
+  provinceId: string,
+): { subject: ProvincialBillSubject; source: ProvincialBill["agendaSource"] } {
+  const province = state.provincialRuntime.provinces[provinceId];
+  const pressure = province?.activePressureId
+    ? state.provincialRuntime.pressures[province.activePressureId]
+    : null;
+  if (pressure?.status === "open") {
+    if (pressure.kind === "housing_strain") return { subject: "housing_delivery", source: "economic_pressure" };
+    if (pressure.kind === "employment_loss" || pressure.kind === "transport_disruption") {
+      return { subject: "transport_service", source: "economic_pressure" };
+    }
+    return { subject: "hospital_access", source: "economic_pressure" };
+  }
+  const priorityMap: Partial<Record<string, ProvincialBillSubject>> = {
+    transport: "transport_service",
+    land_use: "housing_delivery",
+    schools: "school_capacity",
+    hospitals: "hospital_access",
+    local_revenue: "local_administration",
+  };
+  const priority = priorityMap[province?.administrativePriority ?? ""];
+  if (priority) return { subject: priority, source: "governor_priority" };
+  const subjects = Object.keys(BILL_COPY) as ProvincialBillSubject[];
+  return {
+    subject: subjects[stableProvincialHash(`${provinceId}:${state.currentDate}:agenda`) % subjects.length]!,
+    source: "legislative_agenda",
+  };
+}
+
+function restrainedBillCopy(subject: ProvincialBillSubject): { title: string; summary: string } {
+  switch (subject) {
+    case "transport_service":
+      return { title: "Local Transport Flexibility Act", summary: "Narrows provincial service mandates and gives local operators greater scheduling discretion." };
+    case "housing_delivery":
+      return { title: "Local Planning Discretion Act", summary: "Reduces provincial housing directives and returns more approval authority to municipalities." };
+    case "school_capacity":
+      return { title: "School Administration Flexibility Act", summary: "Limits new provincial capacity commitments and gives districts wider control over existing resources." };
+    case "hospital_access":
+      return { title: "Health Service Cost Control Act", summary: "Restrains new provincial care commitments while preserving essential access requirements." };
+    case "local_administration":
+      return { title: "Municipal Autonomy Act", summary: "Repeals selected provincial reporting duties and expands municipal administrative discretion." };
+  }
+}
+
+function createAgendaProvincialBill(
+  world: KernelWorld,
+  state: SimState,
+  rng: RngService,
+  provinceId: string,
+): ProvincialBill | null {
   const assembly = state.provincialRuntime.assemblies[provinceId];
   if (!assembly || assembly.memberIds.length === 0) return null;
   const year = state.currentDate.slice(0, 4);
-  if (Object.values(state.provincialRuntime.bills).some((bill) => bill.provinceId === provinceId && bill.introducedDate.slice(0, 4) === year)) return null;
-  const subjects = Object.keys(BILL_COPY) as ProvincialBillSubject[];
-  const subject = subjects[stableProvincialHash(`${provinceId}:${year}:subject`) % subjects.length]!;
+  const yearBills = Object.values(state.provincialRuntime.bills).filter(
+    (bill) => bill.provinceId === provinceId && bill.introducedDate.slice(0, 4) === year,
+  );
+  if (yearBills.length >= 2 || yearBills.some((bill) => ["introduced", "passed"].includes(bill.status))) return null;
+  const governance = state.provincialRuntime.provinces[provinceId];
+  const economy = state.economyRuntime.provinces[provinceId];
+  const openPressure = governance?.activePressureId
+    ? state.provincialRuntime.pressures[governance.activePressureId]?.status === "open"
+    : false;
+  const weakConditions = economy ? Math.max(0, 98 - Math.min(economy.conditionsIndex, economy.employmentIndex, economy.housingIndex)) / 20 : 0;
+  const electionMandate = Number(state.currentDate.slice(0, 4)) === Number(assembly.termStartDate.slice(0, 4));
+  let impetus = 0.045 + (openPressure ? 0.13 : 0) + weakConditions * 0.08 +
+    (governance?.administrativePriority ? 0.025 : 0) + (electionMandate ? 0.04 : 0);
+  if (yearBills.length === 1) impetus *= 0.32;
+  if (["07", "08", "12"].includes(state.currentDate.slice(5, 7))) impetus *= 0.2;
+  if (rng.float01("legislature") >= impetus) return null;
+
+  const agenda = agendaSubject(state, provinceId);
+  if (electionMandate && agenda.source === "legislative_agenda") agenda.source = "election_mandate";
+  const subject = agenda.subject;
+  const pluralityParty = Object.entries(assembly.partySeats)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+  const leadershipSponsor = pluralityParty ? assembly.partyLeadership[pluralityParty]?.floorLeaderId ?? null : null;
+  const sponsorId = leadershipSponsor ?? assembly.memberIds
+    .slice()
+    .sort((a, b) => {
+      const ar = state.provincialRuntime.legislators[a];
+      const br = state.provincialRuntime.legislators[b];
+      return (br?.legislativeSkill ?? 0) + (br?.standing ?? 0) * 0.5 -
+        ((ar?.legislativeSkill ?? 0) + (ar?.standing ?? 0) * 0.5) || a.localeCompare(b);
+    })[0]!;
+  const sponsorParty = state.provincialRuntime.legislators[sponsorId]?.partyId ?? null;
+  const policy = provincialPolicy(subject);
+  const partyLean = sponsorParty ? world.partyPublicIdeology[sponsorParty]?.[policy.axis] ?? 0 : 0;
+  const policyDirection: -1 | 1 = partyLean < -0.08 ? -1 : 1;
   const copy = BILL_COPY[subject];
-  const title = copy.titles[stableProvincialHash(`${provinceId}:${year}:title`) % copy.titles.length]!;
-  const summary = copy.summaries[stableProvincialHash(`${provinceId}:${year}:summary`) % copy.summaries.length]!;
-  const sponsorId = assembly.memberIds[stableProvincialHash(`${provinceId}:${year}:sponsor`) % assembly.memberIds.length]!;
-  const id = `PBILL_${provinceId}_${year}`;
+  const selectedCopy = policyDirection > 0
+    ? {
+        title: copy.titles[stableProvincialHash(`${provinceId}:${state.currentDate}:title`) % copy.titles.length]!,
+        summary: copy.summaries[stableProvincialHash(`${provinceId}:${state.currentDate}:summary`) % copy.summaries.length]!,
+      }
+    : restrainedBillCopy(subject);
+  const sequence = Object.keys(state.provincialRuntime.bills).length + 1;
+  const id = `PBILL_${String(sequence).padStart(6, "0")}`;
+  const compatibleCosponsors = assembly.memberIds
+    .filter((id) => id !== sponsorId)
+    .map((id) => state.provincialRuntime.legislators[id])
+    .filter((row): row is ProvincialLegislator => Boolean(row))
+    .filter((row) => {
+      const lean = row.partyId ? world.partyPublicIdeology[row.partyId]?.[policy.axis] ?? 0 : 0;
+      return lean * policyDirection > -0.05;
+    })
+    .sort((a, b) => b.standing + b.legislativeSkill * 0.4 - (a.standing + a.legislativeSkill * 0.4) || a.id.localeCompare(b.id));
+  const cosponsorIds: string[] = [];
+  for (const row of compatibleCosponsors) {
+    if (cosponsorIds.length >= 3) break;
+    if (row.partyId === sponsorParty && cosponsorIds.some((id) => state.provincialRuntime.legislators[id]?.partyId === sponsorParty)) continue;
+    cosponsorIds.push(row.id);
+  }
   const bill: ProvincialBill = {
     id,
     provinceId,
-    title,
-    summary,
+    title: selectedCopy.title,
+    summary: selectedCopy.summary,
     subject,
     sponsorId,
+    cosponsorIds,
+    policyDirection,
+    fiscalImpact: policyDirection * (0.08 + (stableProvincialHash(`${id}:fiscal`) % 13) / 100),
+    agendaSource: agenda.source,
+    partyPositions: {},
     introducedDate: state.currentDate,
     status: "introduced",
     voteId: null,
     governorDispositionDate: null,
     effectStrength: 0.35 + (stableProvincialHash(`${id}:effect`) % 31) / 100,
   };
+  bill.partyPositions = deriveProvincialPartyPositions(world, state, assembly, bill);
   state.provincialRuntime.bills[id] = bill;
-  assembly.agendaBillIds.push(id);
+  assembly.agendaBillIds = [...new Set([...assembly.agendaBillIds, id])];
+  const sponsor = state.provincialRuntime.legislators[sponsorId];
+  if (sponsor) sponsor.sponsoredBillIds = [...new Set([...sponsor.sponsoredBillIds, id])];
+  for (const cosponsorId of cosponsorIds) {
+    const cosponsor = state.provincialRuntime.legislators[cosponsorId];
+    if (cosponsor) cosponsor.cosponsoredBillIds = [...new Set([...cosponsor.cosponsoredBillIds, id])];
+  }
   return bill;
 }
 
 function recordProvincialVote(
+  world: KernelWorld,
   state: SimState,
   bill: ProvincialBill,
   kind: ProvincialVote["subjectKind"],
@@ -582,22 +787,24 @@ function recordProvincialVote(
   let no = 0;
   let abstain = 0;
   for (const memberId of assembly.memberIds) {
-    const row = state.provincialRuntime.legislators[memberId];
-    const support = stableProvincialHash(`${bill.id}:${kind}:${memberId}`) % 100;
     const pendingId = `pending:${kind}:${bill.id}:${memberId}`;
     const pending = state.provincialRuntime.votes[pendingId]?.votes[memberId];
-    const choice = pending ?? (memberId === state.playerPoliticianId
-      ? "abstain"
-      : support < 58 + Math.round((row?.legislativeSkill ?? 0.5) * 12)
-        ? "yes"
-        : support < 94
-          ? "no"
-          : "abstain");
+    const choice = pending ?? chooseProvincialLegislativeVote(world, state, bill, memberId, kind);
     votes[memberId] = choice;
     if (choice === "yes") yes += 1;
     else if (choice === "no") no += 1;
     else abstain += 1;
     delete state.provincialRuntime.votes[pendingId];
+    const fullPoliticianId = state.provincialRuntime.legislators[memberId]?.fullPoliticianId ??
+      (state.politicians[memberId] ? memberId : null);
+    if (fullPoliticianId) {
+      recordOrganizationPolicyBehavior(world, state, {
+        politicianId: fullPoliticianId,
+        policyItems: [provincialBillPolicyItem(bill.subject, bill.policyDirection)],
+        behavior: "vote",
+        voteChoice: choice,
+      });
+    }
   }
   const overrideFraction =
     state.provincialRuntime.constitutionalRules.veto_override_fraction?.value ?? 2 / 3;
@@ -612,7 +819,7 @@ function progressProvincialBills(world: KernelWorld, state: SimState, commandId:
   const events: SimEvent[] = [];
   for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) => a.id.localeCompare(b.id))) {
     if (bill.status === "introduced" && compareIsoDate(state.currentDate, addMonths(bill.introducedDate, 1)) >= 0) {
-      const vote = recordProvincialVote(state, bill, "bill");
+      const vote = recordProvincialVote(world, state, bill, "bill");
       bill.voteId = vote.id;
       bill.status = vote.passed ? "passed" : "failed";
       events.push(pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_BILL_VOTE", importance: 0.42, visibility: "public", actorIds: [bill.sponsorId], entityIds: [bill.id, vote.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId, yes: vote.yes, no: vote.no, abstain: vote.abstain, passed: vote.passed }, sourceScheduledEventId: null, sourceCommandId: commandId }));
@@ -624,15 +831,17 @@ function progressProvincialBills(world: KernelWorld, state: SimState, commandId:
       return term.status === "active" && office?.kind === "governor" && office.provinceId === bill.provinceId;
     })?.holderId ?? null;
     if (!governorId || governorId === state.playerPoliticianId) continue;
-    const sign = stableProvincialHash(`${bill.id}:${governorId}:disposition`) % 100 >= 24;
+    const evaluation = evaluateGovernorDisposition(world, state, governorId, bill);
+    const sign = evaluation.decision === "sign";
     bill.status = sign ? "signed" : "vetoed";
     bill.governorDispositionDate = state.currentDate;
-    events.push(pushHistory(state, { date: state.currentDate, type: sign ? "PROVINCIAL_BILL_SIGNED" : "PROVINCIAL_BILL_VETOED", importance: 0.48, visibility: "public", actorIds: [governorId, bill.sponsorId], entityIds: [bill.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+    recordOrganizationPolicyBehavior(world, state, { politicianId: governorId, policyItems: [provincialBillPolicyItem(bill.subject, bill.policyDirection)], behavior: sign ? "sign" : "veto" });
+    events.push(pushHistory(state, { date: state.currentDate, type: sign ? "PROVINCIAL_BILL_SIGNED" : "PROVINCIAL_BILL_VETOED", importance: 0.48, visibility: "public", actorIds: [governorId, bill.sponsorId], entityIds: [bill.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId, dispositionScore: Math.round(evaluation.score * 100) / 100 }, sourceScheduledEventId: null, sourceCommandId: commandId }));
   }
   for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) => a.id.localeCompare(b.id))) {
     if (bill.status !== "vetoed" || !bill.governorDispositionDate) continue;
     if (compareIsoDate(state.currentDate, addMonths(bill.governorDispositionDate, 1)) < 0) continue;
-    const vote = recordProvincialVote(state, bill, "veto_override");
+    const vote = recordProvincialVote(world, state, bill, "veto_override");
     bill.status = vote.passed ? "override_passed" : "override_failed";
     const overrideFraction = state.provincialRuntime.constitutionalRules.veto_override_fraction?.value ?? 2 / 3;
     events.push(pushHistory(state, { date: state.currentDate, type: vote.passed ? "PROVINCIAL_VETO_OVERRIDDEN" : "PROVINCIAL_VETO_SUSTAINED", importance: 0.52, visibility: "public", actorIds: [bill.sponsorId], entityIds: [bill.id, vote.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId, yes: vote.yes, no: vote.no, abstain: vote.abstain, required: Math.ceil((state.provincialRuntime.assemblies[bill.provinceId]?.seatCount ?? 0) * overrideFraction) }, sourceScheduledEventId: null, sourceCommandId: commandId }));
@@ -655,14 +864,12 @@ export function processProvincialAssembliesMonth(
     if (created > 0) events.push(pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_POLITICAL_RECRUITMENT", importance: 0.18, visibility: "system", actorIds: [], entityIds: [], payload: { recruits: created }, sourceScheduledEventId: null, sourceCommandId: commandId }));
   }
   for (const election of Object.values(state.provincialRuntime.assemblyElections).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))) {
-    if (election.status === "planned" && compareIsoDate(state.currentDate, addMonths(election.date, -5)) >= 0) openProvincialAssemblyElection(state, election);
+    if (election.status === "planned" && compareIsoDate(state.currentDate, addMonths(election.date, -5)) >= 0) openProvincialAssemblyElection(world, state, election);
     if (election.status === "filing_open" && compareIsoDate(state.currentDate, election.date) >= 0) events.push(...resolveProvincialAssemblyElection(world, state, rng, election, commandId));
   }
-  if (month === "03") {
-    for (const provinceId of world.provinceIds) {
-      const bill = createAnnualProvincialBill(state, provinceId);
-      if (bill) events.push(pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_BILL_INTRODUCED", importance: 0.32, visibility: "public", actorIds: [bill.sponsorId], entityIds: [bill.id, provinceId], payload: { billId: bill.id, provinceId, title: bill.title, subject: bill.subject }, sourceScheduledEventId: null, sourceCommandId: commandId }));
-    }
+  for (const provinceId of world.provinceIds) {
+    const bill = createAgendaProvincialBill(world, state, rng, provinceId);
+    if (bill) events.push(pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_BILL_INTRODUCED", importance: 0.32, visibility: "public", actorIds: [bill.sponsorId, ...bill.cosponsorIds], entityIds: [bill.id, provinceId], payload: { billId: bill.id, provinceId, title: bill.title, subject: bill.subject, agendaSource: bill.agendaSource, cosponsorIds: bill.cosponsorIds }, sourceScheduledEventId: null, sourceCommandId: commandId }));
   }
   events.push(...progressProvincialBills(world, state, commandId));
   return events;
@@ -696,6 +903,10 @@ export function fileProvincialAssemblyCandidacy(
     careerStartDate: state.currentDate,
     serviceStartDate: null,
     serviceEndDate: null,
+    serviceTerms: [],
+    electionIds: [],
+    sponsoredBillIds: [],
+    cosponsoredBillIds: [],
     standing: 0.5,
     legislativeSkill: 0.55,
     campaignSkill: 0.55,
@@ -855,40 +1066,59 @@ export function governorProposeProvincialBill(
   if (!copy) return { error: reject("INVALID_PROVINCIAL_SUBJECT", subject) };
   const sequence = Object.keys(state.provincialRuntime.bills).length + 1;
   const id = `PBILL_GOV_${String(sequence).padStart(6, "0")}`;
+  const governorParty = state.politicians[actorId]?.partyId ?? null;
+  const policy = provincialPolicy(subject);
+  const lean = governorParty ? world.partyPublicIdeology[governorParty]?.[policy.axis] ?? 0 : 0;
+  const policyDirection: -1 | 1 = lean < -0.08 ? -1 : 1;
+  const selectedCopy = policyDirection > 0
+    ? {
+        title: copy.titles[stableProvincialHash(`${id}:title`) % copy.titles.length]!,
+        summary: copy.summaries[stableProvincialHash(`${id}:summary`) % copy.summaries.length]!,
+      }
+    : restrainedBillCopy(subject);
   const bill: ProvincialBill = {
     id,
     provinceId,
-    title: copy.titles[stableProvincialHash(`${id}:title`) % copy.titles.length]!,
-    summary: copy.summaries[stableProvincialHash(`${id}:summary`) % copy.summaries.length]!,
+    title: selectedCopy.title,
+    summary: selectedCopy.summary,
     subject,
     sponsorId: actorId,
+    cosponsorIds: [],
+    policyDirection,
+    fiscalImpact: policyDirection * (0.1 + (stableProvincialHash(`${id}:fiscal`) % 13) / 100),
+    agendaSource: "governor_priority",
+    partyPositions: {},
     introducedDate: state.currentDate,
     status: "introduced",
     voteId: null,
     governorDispositionDate: null,
     effectStrength: 0.4 + (stableProvincialHash(`${id}:effect`) % 21) / 100,
   };
+  bill.partyPositions = deriveProvincialPartyPositions(world, state, assembly, bill);
   state.provincialRuntime.bills[id] = bill;
   assembly.agendaBillIds = [...new Set([...assembly.agendaBillIds, id])];
   recordOrganizationPolicyBehavior(world, state, {
     politicianId: actorId,
-    policyItems: [provincialBillPolicyItem(subject)],
+    policyItems: [provincialBillPolicyItem(subject, policyDirection)],
     behavior: "sponsor",
   });
   return { bill, events: [pushHistory(state, { date: state.currentDate, type: "GOVERNOR_PROVINCIAL_BILL_PROPOSED", importance: 0.48, visibility: "public", actorIds: [actorId], entityIds: [id, provinceId], payload: { billId: id, provinceId, title: bill.title, subject }, sourceScheduledEventId: null, sourceCommandId: commandId })] };
 }
 
-function provincialBillPolicyItem(subject: ProvincialBillSubject): { issueId: string; direction: number } {
+function provincialBillPolicyItem(
+  subject: ProvincialBillSubject,
+  direction: number = 1,
+): { issueId: string; direction: number } {
   switch (subject) {
     case "housing_delivery":
-      return { issueId: "ISS_HOUSING", direction: 1 };
+      return { issueId: "ISS_HOUSING", direction };
     case "school_capacity":
     case "hospital_access":
-      return { issueId: "ISS_WELFARE", direction: 1 };
+      return { issueId: "ISS_WELFARE", direction };
     case "local_administration":
-      return { issueId: "ISS_REFORM", direction: 1 };
+      return { issueId: "ISS_REFORM", direction };
     case "transport_service":
-      return { issueId: "ISS_TRADE", direction: 1 };
+      return { issueId: "ISS_TRADE", direction };
   }
 }
 

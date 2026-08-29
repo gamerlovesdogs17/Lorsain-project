@@ -43,6 +43,7 @@ import type {
   PrecedentRecord,
 } from "./types.js";
 import { MAX_ACTIVE_COURT_CASES } from "./types.js";
+import { hasExplicitLegalCareer, materializeLegalCandidates } from "./legal-careers.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -156,28 +157,10 @@ export function judicialEligibilityError(
   }
   const profile = getAgentProfile(world, state, nomineeId);
   if (!profile) return reject("LEGAL_QUALIFICATION_REQUIRED", nomineeId);
-  const explicitLegalBackground = profile.roleTypes.some((role) =>
-    [
-      "constitutional_court_justice",
-      "judge",
-      "appellate_judge",
-      "prosecutor",
-      "public_defender",
-      "constitutional_lawyer",
-      "legal_academic",
-      "senior_lawyer",
-    ].includes(role),
-  );
-  const publicLawQualification =
-    profile.skills.legislation * 0.5 +
-    profile.traits.institutionalism * 0.35 +
-    profile.skills.negotiation * 0.15;
   const birthYear = profile.birthDate ? Number(profile.birthDate.slice(0, 4)) : null;
   const age = birthYear ? Number(state.currentDate.slice(0, 4)) - birthYear : null;
   if (age != null && age < 35) return reject("INSUFFICIENT_LEGAL_EXPERIENCE", `${nomineeId} is under 35`);
-  if (!explicitLegalBackground && publicLawQualification < 0.62) {
-    return reject("LEGAL_QUALIFICATION_REQUIRED", `${nomineeId} lacks a qualifying public legal record`);
-  }
+  if (!hasExplicitLegalCareer(profile)) return reject("LEGAL_QUALIFICATION_REQUIRED", `${nomineeId} has no explicit qualifying legal career`);
   return null;
 }
 
@@ -299,12 +282,14 @@ export function openVacancyNominations(
   commandId: string | null,
 ): SimEvent[] {
   const events: SimEvent[] = [];
+  const vacancies = vacantCourtSeatIds(world, state);
+  if (vacancies.length > 0) materializeLegalCandidates(world, state);
   const open = new Set(
     Object.values(state.constitutionalRuntime.nominations)
       .filter((n) => n.status === "awaiting_nomination" || n.status === "pending_confirmation")
       .map((n) => n.seatOfficeId),
   );
-  for (const seatOfficeId of vacantCourtSeatIds(world, state)) {
+  for (const seatOfficeId of vacancies) {
     if (open.has(seatOfficeId)) continue;
     const id = allocateNominationId(state);
     const rec: CourtNomination = {

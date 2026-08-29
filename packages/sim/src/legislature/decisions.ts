@@ -1,25 +1,11 @@
-import { buildDecisionActorContext } from "../agents/context.js";
-import { chooseDecision, emptySignals, type DecisionOption } from "../agents/decisions.js";
 import { getAgentProfile } from "../agents/profile.js";
-import { goalsOwnedBy } from "../agents/goals.js";
 import type { KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import type { BillState, LegislativeVoteChoice, PolicyItem } from "./types.js";
 import { billPolicyFit, factionStance, partyStance } from "./recommendations.js";
 import { mpConstituencyId } from "./state.js";
 import { organizationPressureForBill } from "../organizations/monthly.js";
-
-function goalImpacts(state: SimState, actorId: string, n: number): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const g of goalsOwnedBy(state, actorId).filter((x) => x.status === "active")) {
-    if (g.type === "advance_party" || g.type === "advance_faction" || g.type === "issue_outcome") {
-      out[g.id] = n;
-    } else if (g.type === "career_advancement" || g.type === "increase_influence") {
-      out[g.id] = n * 0.4;
-    }
-  }
-  return out;
-}
+import { LEGISLATIVE_PROVISIONS, policyItemForProvision } from "./provisions.js";
 
 function constituencyFit(
   world: KernelWorld,
@@ -47,11 +33,17 @@ function constituencyFit(
   for (const id of blocIds) {
     const bloc = world.voterBlocs[id];
     if (!bloc) continue;
-    acc += (bloc.ideology[axis] ?? 0) * bloc.weight;
+    const fit = item.dimensionEffects && Object.keys(item.dimensionEffects).length > 0
+      ? (Object.entries(item.dimensionEffects) as Array<[keyof typeof bloc.ideology, number]>).reduce(
+          (sum, [effectAxis, effect]) => sum + (bloc.ideology[effectAxis] ?? 0) * effect,
+          0,
+        ) / Object.keys(item.dimensionEffects).length
+      : (bloc.ideology[axis] ?? 0) * item.direction;
+    acc += fit * bloc.weight;
     w += bloc.weight;
   }
   if (w <= 0) return 0;
-  return Math.max(-1, Math.min(1, (acc / w) * item.direction * item.magnitude));
+  return Math.max(-1, Math.min(1, (acc / w) * item.magnitude));
 }
 
 export function chooseLegislativeVote(
@@ -96,12 +88,25 @@ export function chooseIntroduce(
   rng: RngService,
 ): PolicyItem | null {
   if (politicianId === state.playerPoliticianId) return null;
-  const issues = world.issueIds.slice().sort();
-  if (issues.length === 0) return null;
   const profile = getAgentProfile(world, state, politicianId);
   if (!profile) return null;
-  const issueId = issues[Math.floor(rng.float01("legislature") * issues.length)]!;
-  const dim = world.issueDimensions[issueId] ?? "institutional";
+  const definitions = LEGISLATIVE_PROVISIONS.slice().sort((a, b) => a.id.localeCompare(b.id));
+  if (definitions.length === 0) return null;
+  const weighted = definitions.map((definition) => ({
+    definition,
+    weight: 0.2 + (profile.issueSalience[definition.issueId] ?? 0.25),
+  }));
+  const total = weighted.reduce((sum, row) => sum + row.weight, 0);
+  let pick = rng.float01("legislature") * total;
+  let definition = weighted.at(-1)!.definition;
+  for (const row of weighted) {
+    pick -= row.weight;
+    if (pick <= 0) {
+      definition = row.definition;
+      break;
+    }
+  }
+  const dim = world.issueDimensions[definition.issueId] ?? "institutional";
   const axis =
     dim === "economic" || dim === "economic-social"
       ? "economic"
@@ -111,11 +116,70 @@ export function chooseIntroduce(
           ? "globalism"
           : "authority";
   const v = profile.ideology[axis] ?? 0;
-  const direction = v >= 0 ? 1 : -1;
-  const magnitude = Math.min(1, 0.35 + Math.abs(v) * 0.5);
   const propensity = 0.12 + Math.abs(v) * 0.26 + profile.traits.ambition * 0.2 + profile.skills.legislation * 0.18;
   if (rng.float01("legislature") > propensity) return null;
-  return { issueId, direction, magnitude, fiscalImpact: null };
+  const alternatives = definition.options.filter((option) => !option.current);
+  const selected = alternatives.map((option) => {
+    const fit = option.dimensionEffects && Object.keys(option.dimensionEffects).length > 0
+      ? (Object.entries(option.dimensionEffects) as Array<[keyof typeof profile.ideology, number]>).reduce(
+          (sum, [effectAxis, effect]) => sum + (profile.ideology[effectAxis] ?? 0) * effect,
+          0,
+        ) / Object.keys(option.dimensionEffects).length
+      : v * option.direction;
+    return { option, score: fit * option.magnitude + rng.float01("legislature") * 0.08 };
+  }).sort((a, b) => b.score - a.score || a.option.id.localeCompare(b.option.id))[0]?.option;
+  return selected ? policyItemForProvision(definition.id, selected.id) : null;
+}
+
+export type PresidentDispositionEvaluation = {
+  decision: "sign" | "return";
+  score: number;
+  factors: {
+    policyFit: number;
+    sponsorCoalition: number;
+    assemblyMandate: number;
+    fiscal: number;
+    organizations: number;
+    institutional: number;
+  };
+};
+
+export function evaluatePresidentDisposition(
+  world: KernelWorld,
+  state: SimState,
+  presidentId: string,
+  bill: BillState,
+  boundedNoise = 0,
+): PresidentDispositionEvaluation {
+  const president = state.politicians[presidentId];
+  const profile = getAgentProfile(world, state, presidentId);
+  const policyFit = billPolicyFit(world, state, presidentId, bill);
+  const sponsorIds = [bill.sponsorId, ...bill.cosponsorIds];
+  const alignedSponsors = sponsorIds.filter((id) => president?.partyId && state.politicians[id]?.partyId === president.partyId).length;
+  const sponsorCoalition = sponsorIds.length > 0 ? (alignedSponsors / sponsorIds.length) * 2 - 1 : 0;
+  const floorVote = bill.floorVoteId ? state.legislatureRuntime.legislativeVotes[bill.floorVoteId] : null;
+  const assemblyMandate = floorVote
+    ? Math.max(-1, Math.min(1, (floorVote.yes - floorVote.no) / Math.max(1, floorVote.yes + floorVote.no + floorVote.abstain)))
+    : 0;
+  const fiscalTotal = bill.policyItems.reduce((sum, item) => sum + (item.fiscalImpact ?? 0), 0);
+  const fiscalPressure = state.economyRuntime.national.fiscalPressure;
+  const fiscal = Math.max(-1, Math.min(1, -fiscalTotal * (0.7 + fiscalPressure)));
+  const organizations = organizationPressureForBill(world, state, presidentId, bill.id);
+  const institutional = ((profile?.traits.institutionalism ?? 0.5) - 0.5) * 2;
+  const score =
+    0.08 +
+    policyFit * 0.55 +
+    sponsorCoalition * 0.18 +
+    assemblyMandate * 0.14 +
+    fiscal * 0.08 +
+    organizations * 0.18 +
+    institutional * 0.04 +
+    Math.max(-0.07, Math.min(0.07, boundedNoise));
+  return {
+    decision: score < -0.06 ? "return" : "sign",
+    score,
+    factors: { policyFit, sponsorCoalition, assemblyMandate, fiscal, organizations, institutional },
+  };
 }
 
 export function choosePresidentDisposition(
@@ -126,38 +190,5 @@ export function choosePresidentDisposition(
   rng: RngService,
 ): "sign" | "return" {
   if (presidentId === state.playerPoliticianId) return "sign";
-  const fit = billPolicyFit(world, state, presidentId, bill);
-  const options: DecisionOption[] = [
-    {
-      optionId: "SIGN",
-      actionType: "SIGN_BILL",
-      targetIds: [bill.sponsorId],
-      uncertainty: 0.15,
-      signals: emptySignals({
-        ideologicalAlignment: fit,
-        institutionalAlignment: 0.25,
-        careerBenefit: 0.2,
-        risk: 0.1,
-      }),
-      goalImpacts: goalImpacts(state, presidentId, 0.25),
-      metadata: { billId: bill.id },
-    },
-    {
-      optionId: "RETURN",
-      actionType: "RETURN_BILL",
-      targetIds: [bill.sponsorId],
-      uncertainty: 0.2,
-      signals: emptySignals({
-        ideologicalAlignment: -fit,
-        institutionalAlignment: 0.1,
-        careerBenefit: 0.15,
-        risk: 0.22,
-      }),
-      goalImpacts: goalImpacts(state, presidentId, 0.1),
-      metadata: { billId: bill.id },
-    },
-  ];
-  const ctx = buildDecisionActorContext(world, state, presidentId, [bill.sponsorId]);
-  const chosen = chooseDecision(options, ctx, rng).chosen;
-  return chosen?.optionId === "RETURN" ? "return" : "sign";
+  return evaluatePresidentDisposition(world, state, presidentId, bill, (rng.float01("npc-decisions") - 0.5) * 0.14).decision;
 }

@@ -24,6 +24,7 @@ import { mergeTurnout } from "./turnout.js";
 import { FIELD } from "../campaigns/policy.js";
 import { ensureAssemblyElectionCycle } from "./assembly-cycle.js";
 import { candidateStandingOrDefault } from "./standing.js";
+import { seedCommitteesIfNeeded } from "../legislature/state.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -530,6 +531,11 @@ export function applyAssemblyAssumption(
       source: "CALENDAR_ASSEMBLY_REGULAR",
     });
   }
+
+  // The new chamber exists immediately on assumption. Rebuild its committees
+  // in the same transaction so restoring this date does not perform a hidden
+  // reconciliation and change the save hash.
+  seedCommitteesIfNeeded(world, state);
 
   events.push(
     pushHistory(state, {

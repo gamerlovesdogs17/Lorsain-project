@@ -1,0 +1,82 @@
+{
+  "phase": "11.3",
+  "capturedAt": "2026-08-28",
+  "harness": {
+    "runtime": "Vite development server with real serialized engine fixtures",
+    "fixtureEndpoint": "/__qa/fixtures/<fixture>.json",
+    "queryParameters": ["qaFixture", "qaScreen", "qaPlayer", "qaFocusKind", "qaFocusId"],
+    "readySentinel": "#lorsain-browser-qa-state",
+    "preCaptureAssertions": [
+      "requested window.innerWidth and window.innerHeight",
+      "ready sentinel screen, player, and simulation date",
+      "URL qaScreen equals sentinel screen",
+      "expected player-facing text is present",
+      "decoded capture is JPEG with the recorded dimensions"
+    ]
+  },
+  "fixtures": {
+    "institutions": { "file": "leadership-election-browser-save.json", "date": "2029-01-01", "defaultPlayer": "NPC001" },
+    "judicial": { "file": "judicial-appointment-browser-save.json", "date": "2028-02-01", "defaultPlayer": "NPC001" }
+  },
+  "captureSets": {
+    "partyAndCareer": ["party-directory-1440.jpg", "party-caucus-1440.jpg", "party-leadership-election-1440.jpg", "politician-profile-1440.jpg", "politician-voting-record-1440.jpg", "career-opportunities-1440.jpg"],
+    "federalLegislature": ["assembly-chamber-1440.jpg", "bill-provision-builder-1440.jpg", "bill-detail-1440.jpg", "committee-detail-1440.jpg", "federal-roll-call-1440.jpg", "constitutional-amendment-tracker-1440.jpg"],
+    "provinceAndGovernor": ["governor-home-1440.jpg", "governor-province-1440.jpg", "governor-legislation-vote-1440.jpg", "provincial-roll-call-1440.jpg"],
+    "court": ["court-bench-docket-1440.jpg", "court-decision-1440.jpg", "judicial-appointment-browser-1440.jpg"],
+    "campaignEconomyAndOrganizations": ["ground-game-campaign-1440.jpg", "organizations-scorecard-1440.jpg", "economy-public-metrics-1440.jpg", "economy-regional-map-1440.jpg"],
+    "mapsAndPublicInformation": ["political-map-hover-1440.jpg", "terena-map-inspector-1440.jpg", "election-map-governor-1440.jpg", "political-calendar-1440.jpg", "global-search-1440.jpg", "president-home-1440.jpg", "news-populated-1440.jpg", "archive-populated-1440.jpg"],
+    "responsive": ["province-responsive-1200.jpg", "assembly-responsive-900.jpg", "map-responsive-600.jpg", "mobile-governor-390.jpg", "mobile-campaign-390.jpg", "mobile-map-interaction-390.jpg"]
+  },
+  "viewpoints": {
+    "NPC001": "President",
+    "NPC003": "Governor",
+    "NPC005": "active presidential candidate",
+    "NPC018": "party and politician browser",
+    "NPC020": "Constitutional Court justice"
+  },
+  "decodedPixelDimensions": {
+    "archive-populated-1440.jpg": "1440x900",
+    "assembly-chamber-1440.jpg": "1425x2299",
+    "assembly-responsive-900.jpg": "885x2575",
+    "bill-detail-1440.jpg": "1425x3154",
+    "bill-provision-builder-1440.jpg": "1425x1924",
+    "career-opportunities-1440.jpg": "1425x1072",
+    "committee-detail-1440.jpg": "1425x2710",
+    "constitutional-amendment-tracker-1440.jpg": "1425x2401",
+    "court-bench-docket-1440.jpg": "1425x1588",
+    "court-decision-1440.jpg": "1425x2223",
+    "economy-public-metrics-1440.jpg": "1425x2628",
+    "economy-regional-map-1440.jpg": "1425x2667",
+    "election-map-governor-1440.jpg": "1425x1302",
+    "federal-roll-call-1440.jpg": "1425x2971",
+    "global-search-1440.jpg": "1425x891",
+    "governor-home-1440.jpg": "1425x1837",
+    "governor-legislation-vote-1440.jpg": "1425x3340",
+    "governor-province-1440.jpg": "1425x2530",
+    "ground-game-campaign-1440.jpg": "1425x1504",
+    "judicial-appointment-browser-1440.jpg": "1425x891",
+    "map-responsive-600.jpg": "585x1476",
+    "mobile-campaign-390.jpg": "375x2802",
+    "mobile-governor-390.jpg": "375x4110",
+    "mobile-map-interaction-390.jpg": "375x812",
+    "news-populated-1440.jpg": "1425x4287",
+    "organizations-scorecard-1440.jpg": "1425x1947",
+    "party-caucus-1440.jpg": "1425x891",
+    "party-directory-1440.jpg": "1425x2343",
+    "party-leadership-election-1440.jpg": "1425x891",
+    "political-calendar-1440.jpg": "1425x1339",
+    "political-map-hover-1440.jpg": "1425x891",
+    "politician-profile-1440.jpg": "1425x6259",
+    "politician-voting-record-1440.jpg": "1425x891",
+    "president-home-1440.jpg": "1425x1837",
+    "province-responsive-1200.jpg": "1185x3569",
+    "provincial-roll-call-1440.jpg": "1425x3269",
+    "terena-map-inspector-1440.jpg": "1425x1321"
+  },
+  "interactionChecks": {
+    "map": ["hover tooltip appears", "mouse leave clears hover", "click pins selection", "keyboard pins selection", "touch-width selection does not depend on hover", "mode/election selection updates public data"],
+    "worldMap": ["Relations, Alliances, Crises, Sanctions, and Posture each activate a distinct public legend", "keyboard country selection opens the country inspector", "the pinned country remains selected across all five modes", "empty crisis and sanction modes state that no public records exist instead of fabricating data"],
+    "responsive": ["no document-level overflow at 390px", "wide tables scroll within their own container"],
+    "console": ["no browser warnings or errors after the role, map, World map, and responsive QA sequence"]
+  }
+}

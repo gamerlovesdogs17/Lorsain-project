@@ -7,8 +7,8 @@ import { applyRelationshipChange } from "./agents/relationships.js";
 import {
   changeFaction,
   changePartyMembership,
-  applyRetirementOrDeathVacancies,
 } from "./parties/membership.js";
+import { applyPoliticianExit, processPoliticalLifecycleMonth } from "./political-lifecycle.js";
 import { endorseCandidate, withdrawEndorsement } from "./parties/endorsements.js";
 import {
   createPartyContest,
@@ -28,7 +28,7 @@ import {
 } from "./parties/state.js";
 import { deepFreeze, hashCanonical, jsonClone } from "./hash.js";
 import { isJsonObject, jsonSafetyError, type JsonObject } from "./json.js";
-import { assumeOffice, endTerm, presidentOfficeId, resumeTerm, vacateOffice } from "./offices.js";
+import { assumeOffice, presidentOfficeId, resumeTerm, vacateOffice } from "./offices.js";
 import {
   STREAM_NAMES,
   createRngService,
@@ -123,6 +123,7 @@ import {
 import { upsertRecommendations } from "./legislature/recommendations.js";
 import { seedCommitteesIfNeeded } from "./legislature/state.js";
 import {
+  campaignCaucusLeadership,
   declareCaucusLeadershipCandidacy,
   seedCaucusLeadership,
   setCaucusBillPosition,
@@ -241,6 +242,19 @@ export type Simulation = {
   executeCommand(command: Command): CommandResult;
   serializeSave(): SaveFile;
   getSnapshot(): SimState;
+  /** Small immutable reading for profiling/calibration loops; never advances RNG. */
+  getTelemetrySnapshot(): {
+    currentDate: string;
+    national: {
+      outputIndex: number;
+      employmentIndex: number;
+      priceIndex: number;
+      realWageIndex: number;
+      housingIndex: number;
+      confidenceIndex: number;
+    };
+    provinceConditions: Record<string, number>;
+  };
   hashState(): string;
   world(): KernelWorld;
   /** Calibration-only foreign month driver; bypasses domestic scheduled interrupts. */
@@ -500,7 +514,7 @@ function applyScheduled(
   return { events, interrupt: null };
 }
 
-/** Month order: economy lags → organizations → campaign/legislature/executive/courts → scheduled events → media last. */
+/** Month order: lifecycle → economy/provinces/parties → organizations → campaign/legislature/executive/courts → scheduled events → media last. */
 function runTowardTarget(
   state: SimState,
   world: KernelWorld,
@@ -518,6 +532,7 @@ function runTowardTarget(
     (profile[stage] ??= []).push(performance.now() - started);
     return result;
   };
+  events.push(...timed("political_lifecycle", () => processPoliticalLifecycleMonth(state, world, commandId)));
   events.push(...timed("economy", () => processEconomyMonth(state, world, rng, commandId)));
   events.push(...timed("provincial", () => processProvincialMonth(state, world, rng, commandId)));
   events.push(...timed("party", () => processPartyInstitutionsMonth(world, state, rng, commandId)));
@@ -545,6 +560,10 @@ function runTowardTarget(
     events.push(...out.events);
     if (out.interrupt) return { events, interrupt: out.interrupt };
   }
+  // Scheduled assumptions, successions, and vacancies can change Assembly
+  // membership after the legislature's monthly pass. Reconcile in the same
+  // turn so a save restored on this date is observationally identical.
+  timed("institution_reconciliation", () => seedCommitteesIfNeeded(world, state));
   const foreignEvents = timed("foreign", () => processForeignAffairsMonth(state, world, rng, commandId));
   events.push(...foreignEvents);
   events.push(...timed("organization_foreign", () => processOrganizationForeignReactions(state, world, commandId, foreignEvents)));
@@ -795,30 +814,12 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       const p = state.politicians[command.politicianId];
       if (!p) return fail("UNKNOWN_POLITICIAN", command.politicianId);
       const commandId = nextCommandId();
-      p.alive = command.alive;
-      const events: SimEvent[] = [];
-      if (!command.alive) {
-        for (const t of Object.values(state.officeTerms)) {
-          if (t.holderId === command.politicianId && t.status !== "ended") {
-            endTerm(state, t.id, state.currentDate, "death");
-          }
-        }
-        events.push(
-          pushHistory(state, {
-            date: state.currentDate,
-            type: "POLITICIAN_DIED",
-            importance: 1,
-            visibility: "public",
-            actorIds: [command.politicianId],
-            entityIds: [command.politicianId],
-            payload: {},
-            sourceScheduledEventId: null,
-            sourceCommandId: commandId,
-          }),
-        );
-        events.push(
-          ...applyRetirementOrDeathVacancies(state, world, command.politicianId, commandId),
-        );
+      let events: SimEvent[];
+      if (command.alive) {
+        p.alive = true;
+        events = [];
+      } else {
+        events = applyPoliticianExit(state, world, command.politicianId, "death", commandId);
       }
       return { ok: true, commandId, events, interrupt: null };
     }
@@ -827,30 +828,12 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       const p = state.politicians[command.politicianId];
       if (!p) return fail("UNKNOWN_POLITICIAN", command.politicianId);
       const commandId = nextCommandId();
-      p.retired = command.retired;
-      const events: SimEvent[] = [];
+      let events: SimEvent[];
       if (command.retired) {
-        for (const t of Object.values(state.officeTerms)) {
-          if (t.holderId === command.politicianId && t.status !== "ended") {
-            endTerm(state, t.id, state.currentDate, "retirement");
-          }
-        }
-        events.push(
-          pushHistory(state, {
-            date: state.currentDate,
-            type: "POLITICIAN_RETIRED",
-            importance: 0.85,
-            visibility: "public",
-            actorIds: [command.politicianId],
-            entityIds: [command.politicianId],
-            payload: {},
-            sourceScheduledEventId: null,
-            sourceCommandId: commandId,
-          }),
-        );
-        events.push(
-          ...applyRetirementOrDeathVacancies(state, world, command.politicianId, commandId),
-        );
+        events = applyPoliticianExit(state, world, command.politicianId, "retirement", commandId);
+      } else {
+        p.retired = false;
+        events = [];
       }
       return { ok: true, commandId, events, interrupt: null };
     }
@@ -2083,14 +2066,26 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
     }
 
     if (command.type === "FILE_PROVINCIAL_ASSEMBLY_CANDIDACY") {
+      const previewState = jsonClone(state);
       const preview = fileProvincialAssemblyCandidacy(
         world,
-        jsonClone(state),
+        previewState,
         state.playerPoliticianId,
         command.electionId,
         null,
       );
       if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const previewCampaign = declareCampaign(
+        previewState,
+        world,
+        {
+          politicianId: state.playerPoliticianId,
+          type: "provincial_assembly",
+          electionId: command.electionId,
+        },
+        null,
+      );
+      if ("error" in previewCampaign) return fail(previewCampaign.error.code, previewCampaign.error.message);
       const commandId = nextCommandId();
       const out = fileProvincialAssemblyCandidacy(
         world,
@@ -2100,7 +2095,18 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         commandId,
       );
       if ("error" in out) return fail(out.error.code, out.error.message);
-      return { ok: true, commandId, events: out.events, interrupt: null };
+      const campaign = declareCampaign(
+        state,
+        world,
+        {
+          politicianId: state.playerPoliticianId,
+          type: "provincial_assembly",
+          electionId: command.electionId,
+        },
+        commandId,
+      );
+      if ("error" in campaign) return fail(campaign.error.code, campaign.error.message);
+      return { ok: true, commandId, events: [...out.events, ...campaign.events], interrupt: null };
     }
 
     if (command.type === "DECLINE_PROVINCIAL_ASSEMBLY_CANDIDACY") {
@@ -2403,6 +2409,29 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         state,
         state.playerPoliticianId,
         command.contestId,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_CAUCUS_LEADERSHIP") {
+      const preview = campaignCaucusLeadership(
+        world,
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.contestId,
+        command.emphasis,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignCaucusLeadership(
+        world,
+        state,
+        state.playerPoliticianId,
+        command.contestId,
+        command.emphasis,
         commandId,
       );
       if ("error" in out) return fail(out.error.code, out.error.message);
@@ -3128,6 +3157,25 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
     getSnapshot(): SimState {
       syncRng(state, rng);
       return deepFreeze(jsonClone(state));
+    },
+    getTelemetrySnapshot() {
+      return {
+        currentDate: state.currentDate,
+        national: {
+          outputIndex: state.economyRuntime.national.outputIndex,
+          employmentIndex: state.economyRuntime.national.employmentIndex,
+          priceIndex: state.economyRuntime.national.priceIndex,
+          realWageIndex: state.economyRuntime.national.realWageIndex,
+          housingIndex: state.economyRuntime.national.housingIndex,
+          confidenceIndex: state.economyRuntime.national.confidenceIndex,
+        },
+        provinceConditions: Object.fromEntries(
+          Object.entries(state.economyRuntime.provinces).map(([id, row]) => [
+            id,
+            row.conditionsIndex,
+          ]),
+        ),
+      };
     },
     hashState(): string {
       syncRng(state, rng);

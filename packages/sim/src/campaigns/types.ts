@@ -6,6 +6,7 @@ export const CAMPAIGN_TYPES = [
   "presidential_general",
   "assembly",
   "gubernatorial",
+  "provincial_assembly",
 ] as const;
 export type CampaignType = (typeof CAMPAIGN_TYPES)[number];
 

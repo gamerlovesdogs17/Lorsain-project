@@ -5,11 +5,12 @@ import {
   recruitFederalAssemblyClass,
   provincialAssemblySeatCount,
 } from "./provinces/assemblies.js";
-import { migrateSaveV12ToV13, parseSaveFile } from "./save.js";
+import { migrateSaveV12ToV13, migrateSaveV13ToV14, parseSaveFile } from "./save.js";
 import { addMonths } from "./calendar.js";
 import {
   processConstitutionalAmendmentsMonth,
   proposeConstitutionalAmendment,
+  constitutionalSupportScore,
 } from "./provinces/constitutional.js";
 import { currentAssemblyMemberIds } from "./legislature/state.js";
 import {
@@ -19,6 +20,9 @@ import {
 } from "./legislature/provisions.js";
 import { evaluatePresidentialEligibility } from "./parties/eligibility.js";
 import { hashCanonical } from "./hash.js";
+import { processCaucusLeadershipMonth } from "./legislature/caucus.js";
+import { syntheticAgentProfile } from "./agents/profile.js";
+import { processPoliticalLifecycleMonth } from "./political-lifecycle.js";
 
 function startingHolder(world: ReturnType<typeof loadTerenaWorld>, kind: string): string {
   const term = world.startingTerms.find((candidate) => world.offices[candidate.officeId]?.kind === kind);
@@ -27,14 +31,74 @@ function startingHolder(world: ReturnType<typeof loadTerenaWorld>, kind: string)
 }
 
 describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
+  it("renews the NPC political class deterministically without choosing the player's exit", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "governor");
+    const save = createSimulation({
+      world,
+      playerPoliticianId: player,
+      seed: "P113-POLITICAL-LIFECYCLE",
+    }).serializeSave();
+    const state = save.simulation;
+    const deceasedId = "P113_ELDER_DECEASED";
+    const retiredId = "P113_ELDER_RETIREE";
+    state.politicians[deceasedId] = {
+      id: deceasedId,
+      alive: true,
+      retired: false,
+      partyId: null,
+      factionId: null,
+      homeProvinceId: world.provinceIds[0],
+      displayName: "Mara Teston",
+      description: "A retired administrator used to exercise the deterministic lifecycle.",
+    };
+    state.politicians[retiredId] = {
+      id: retiredId,
+      alive: true,
+      retired: false,
+      partyId: null,
+      factionId: null,
+      homeProvinceId: world.provinceIds[0],
+      displayName: "Iven Teston",
+      description: "A veteran organizer used to exercise the deterministic lifecycle.",
+    };
+    state.generatedAgentProfiles[deceasedId] = syntheticAgentProfile(deceasedId, {
+      birthDate: "1928-01-01",
+      issueSalience: Object.fromEntries(world.issueIds.map((issueId) => [issueId, 0.5])),
+    });
+    state.generatedAgentProfiles[retiredId] = syntheticAgentProfile(retiredId, {
+      birthDate: "1948-01-01",
+      traits: { retirementInclination: 1 },
+      issueSalience: Object.fromEntries(world.issueIds.map((issueId) => [issueId, 0.5])),
+    });
+
+    const playerBefore = { ...state.politicians[player]! };
+    const events = processPoliticalLifecycleMonth(state, world, null);
+    expect(state.politicians[deceasedId]!.alive).toBe(false);
+    expect(state.politicians[retiredId]!.retired).toBe(true);
+    expect(state.politicians[player]).toEqual(playerBefore);
+    expect(events.filter((event) => event.type === "POLITICIAN_DIED" && event.actorIds.includes(deceasedId))).toHaveLength(1);
+    expect(events.filter((event) => event.type === "POLITICIAN_RETIRED" && event.actorIds.includes(retiredId))).toHaveLength(1);
+    expect(events.filter((event) => event.type === "POLITICAL_LIFECYCLE_REVIEWED")).toHaveLength(1);
+    expect(processPoliticalLifecycleMonth(state, world, null)).toEqual([]);
+
+    const restored = restoreSimulation(save, world);
+    expect(restored.hashState()).toBe(hashCanonical(state));
+  });
+
   it("uses policy-specific provision option identifiers while loading legacy aliases", () => {
-    expect(LEGISLATIVE_PROVISIONS).toHaveLength(30);
-    expect(LEGISLATIVE_PROVISIONS.flatMap((definition) => definition.options)).toHaveLength(90);
+    expect(LEGISLATIVE_PROVISIONS).toHaveLength(50);
+    expect(LEGISLATIVE_PROVISIONS.flatMap((definition) => definition.options)).toHaveLength(161);
+    expect(new Set(LEGISLATIVE_PROVISIONS.map((definition) => definition.options.length))).toEqual(new Set([3, 4, 5]));
     for (const definition of LEGISLATIVE_PROVISIONS) {
-      expect(definition.options).toHaveLength(3);
+      expect(definition.options.length).toBeGreaterThanOrEqual(2);
+      expect(definition.options.filter((option) => option.current)).toHaveLength(1);
+      expect(definition.options.every((option) => option.affectedGroups.length > 0)).toBe(true);
       expect(definition.options.some((option) => ["low", "current", "high"].includes(option.id))).toBe(false);
       expect(defaultProvisionOptionId(definition.id)).not.toBe("");
     }
+    expect(LEGISLATIVE_PROVISIONS.some((definition) => definition.options.length === 5)).toBe(true);
+    expect(LEGISLATIVE_PROVISIONS.flatMap((definition) => definition.options).some((option) => Object.keys(option.dimensionEffects ?? {}).length > 1)).toBe(true);
     expect(policyItemForProvision("PROV_REPRODUCTIVE_LAW", "national_protection")?.optionId).toBe("national_protection");
     expect(policyItemForProvision("PROV_REPRODUCTIVE_LAW", "high")?.optionId).toBe("national_protection");
   });
@@ -114,6 +178,52 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect(Object.keys(a.getSnapshot().provincialRuntime.assemblies)).toHaveLength(21);
   });
 
+  it("migrates schema 13 structural fields without fabricating political history", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "president");
+    const current = createSimulation({ world, playerPoliticianId: player, seed: "P113-MIGRATE-14" }).serializeSave();
+    const legacy = structuredClone(current) as unknown as Record<string, unknown>;
+    legacy.schemaVersion = 13;
+    const simulation = legacy.simulation as Record<string, unknown>;
+    simulation.schemaVersion = 13;
+
+    const historyBefore = hashCanonical(simulation.history);
+    const electionsBefore = hashCanonical(simulation.elections);
+    const officeTermsBefore = hashCanonical(simulation.officeTerms);
+    const provincial = simulation.provincialRuntime as Record<string, unknown>;
+    const legislators = provincial.legislators as Record<string, Record<string, unknown>>;
+    const firstLegislator = legislators[Object.keys(legislators).sort()[0]!]!;
+    for (const key of ["serviceTerms", "electionIds", "sponsoredBillIds", "cosponsoredBillIds"]) {
+      delete firstLegislator[key];
+    }
+
+    const migrated = migrateSaveV13ToV14(legacy) as Record<string, unknown>;
+    const migratedSimulation = migrated.simulation as Record<string, unknown>;
+    const migratedProvincial = migratedSimulation.provincialRuntime as Record<string, unknown>;
+    const migratedLegislators = migratedProvincial.legislators as Record<string, Record<string, unknown>>;
+    const migratedFirstLegislator = migratedLegislators[Object.keys(migratedLegislators).sort()[0]!]!;
+    expect(migrated.schemaVersion).toBe(14);
+    expect(migratedSimulation.schemaVersion).toBe(14);
+    expect(migratedFirstLegislator.serviceTerms).toEqual(
+      typeof firstLegislator.serviceStartDate === "string"
+        ? [{ startDate: firstLegislator.serviceStartDate, endDate: firstLegislator.serviceEndDate ?? null, electionId: null }]
+        : [],
+    );
+    expect(migratedFirstLegislator.electionIds).toEqual([]);
+    expect(migratedFirstLegislator.sponsoredBillIds).toEqual([]);
+    expect(migratedFirstLegislator.cosponsoredBillIds).toEqual([]);
+    expect(hashCanonical(migratedSimulation.history)).toBe(historyBefore);
+    expect(hashCanonical(migratedSimulation.elections)).toBe(electionsBefore);
+    expect(hashCanonical(migratedSimulation.officeTerms)).toBe(officeTermsBefore);
+
+    const parsed = parseSaveFile(migrated, world.contentVersion);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const restoredA = restoreSimulation(parsed.save, world);
+    const restoredB = restoreSimulation(parsed.save, world);
+    expect(restoredA.hashState()).toBe(restoredB.hashState());
+  });
+
   it("requires 280 federal votes and 13 Provincial Assemblies before changing a real rule", () => {
     const world = loadTerenaWorld();
     const player = startingHolder(world, "assembly_member");
@@ -173,6 +283,7 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     processConstitutionalAmendmentsMonth(world, state, "CMD_TEST");
     expect(proposed.amendment.assemblyYes).toBe(280);
     expect(proposed.amendment.status).toBe("ratifying");
+    expect(proposed.amendment.ratificationDeadline).toBeNull();
     expect(Object.keys(proposed.amendment.provincialVoteIds)).not.toEqual(world.provinceIds.slice(0, 3));
     for (let month = 0; month < 5; month += 1) {
       state.currentDate = addMonths(state.currentDate, 1);
@@ -183,6 +294,27 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect(state.provincialRuntime.constitutionalRules.presidential_term_limit?.value).toBe(1);
     state.presidential.electedTermCountByPolitician[player] = 1;
     expect(evaluatePresidentialEligibility(world, state, player).reasons[0]).toContain("1 of 1");
+  });
+
+  it("forms amendment-specific coalitions instead of reusing one constitutional vote pattern", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "assembly_member");
+    const state = createSimulation({ world, playerPoliticianId: player, seed: "P113-AMENDMENT-COALITIONS" }).serializeSave().simulation;
+    const president = startingHolder(world, "president");
+    const presidentParty = state.politicians[president]!.partyId;
+    const members = currentAssemblyMemberIds(world, state);
+    const aligned = members.find((id) => state.politicians[id]?.partyId === presidentParty && id !== player)!;
+    const opposition = members.find((id) => state.politicians[id]?.partyId !== presidentParty)!;
+    const termProposal = proposeConstitutionalAmendment(world, state, aligned, "presidential_term_limit", 3, null);
+    const courtProposal = proposeConstitutionalAmendment(world, state, aligned, "court_term_years", 15, null);
+    expect("error" in termProposal).toBe(false);
+    expect("error" in courtProposal).toBe(false);
+    if ("error" in termProposal || "error" in courtProposal) return;
+    const presidentialGap = constitutionalSupportScore(world, state, termProposal.amendment, aligned) -
+      constitutionalSupportScore(world, state, termProposal.amendment, opposition);
+    const courtGap = constitutionalSupportScore(world, state, courtProposal.amendment, aligned) -
+      constitutionalSupportScore(world, state, courtProposal.amendment, opposition);
+    expect(presidentialGap).toBeGreaterThan(courtGap + 0.12);
   });
 
   it("rejects constitutional proposal authority outside the National Assembly", () => {
@@ -240,6 +372,46 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect(restored.hashState()).toBe(sim.hashState());
   });
 
+  it("opens federal caucus contests only for real triggers and requires an explicit player campaign", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "assembly_member");
+    const save = createSimulation({ world, playerPoliticianId: player, seed: "P113-CAUCUS-CAMPAIGN" }).serializeSave();
+    const state = save.simulation;
+    const partyId = state.politicians[player]!.partyId!;
+    const leadership = state.legislatureRuntime.caucusLeadership[partyId]!;
+    leadership.floorLeaderId = null;
+    const events = processCaucusLeadershipMonth(world, state, null);
+    const open = Object.values(state.legislatureRuntime.caucusContests).find(
+      (contest) => contest.partyId === partyId && contest.status === "open",
+    )!;
+    expect(open.role).toBe("floor_leader");
+    expect(open.trigger).toBe("vacancy");
+    expect(open.candidateIds).not.toContain(player);
+    expect(events.some((event) => event.type === "CAUCUS_LEADERSHIP_ELECTION_OPENED")).toBe(true);
+    expect(Object.values(state.legislatureRuntime.caucusContests).some(
+      (contest) => contest.partyId === partyId && contest.role === "whip" && contest.status === "open",
+    )).toBe(false);
+
+    const sim = restoreSimulation(save, world);
+    expect(sim.executeCommand({ type: "DECLARE_CAUCUS_LEADERSHIP_CANDIDACY", contestId: open.id }).ok).toBe(true);
+    expect(sim.getSnapshot().legislatureRuntime.caucusContests[open.id]!.platforms[player]).toBeUndefined();
+    expect(sim.executeCommand({
+      type: "CAMPAIGN_CAUCUS_LEADERSHIP",
+      contestId: open.id,
+      emphasis: "party_unity",
+    }).ok).toBe(true);
+    const campaigned = sim.getSnapshot().legislatureRuntime.caucusContests[open.id]!;
+    expect(campaigned.platforms[player]).toBe("party_unity");
+    expect(campaigned.endorsements[player]!.length).toBeGreaterThan(0);
+    const beforeRepeat = sim.hashState();
+    expect(sim.executeCommand({
+      type: "CAMPAIGN_CAUCUS_LEADERSHIP",
+      contestId: open.id,
+      emphasis: "electoral_recovery",
+    }).ok).toBe(false);
+    expect(sim.hashState()).toBe(beforeRepeat);
+  });
+
   it("enforces new institutional authority in the command layer for every featured role", () => {
     const world = loadTerenaWorld();
     const governorTerm = world.startingTerms.find(
@@ -293,7 +465,7 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
       ).toBe(false);
       expect(sim.hashState()).toBe(beforeGovernor);
 
-      if (role.kind !== "assembly_member") {
+      if (role.kind !== "assembly_member" && role.kind !== "speaker") {
         const beforeAmendment = sim.hashState();
         expect(
           sim.executeCommand({

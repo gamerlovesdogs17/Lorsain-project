@@ -7,6 +7,7 @@ import type { LegislativeVoteChoice } from "../legislature/types.js";
 import { currentAssemblyMemberIds, currentPresidentialAuthorityId } from "../legislature/state.js";
 import type { CourtCase, ImpeachmentProceeding, JudicialVoteChoice, PrecedentRecord } from "./types.js";
 import { similarPrecedent } from "./procedure.js";
+import { hasExplicitLegalCareer } from "./legal-careers.js";
 
 export function chooseJudicialVote(
   world: KernelWorld,
@@ -68,7 +69,7 @@ export function chooseConfirmationVote(
       nomineeProfile.traits.institutionalism * 0.35 +
       nomineeProfile.skills.negotiation * 0.15
     : 0.62;
-  let score =
+  const score =
     0.08 +
     sameParty * 0.32 +
     nonpartisanNominee * 0.18 -
@@ -180,16 +181,6 @@ export function chooseJudgeNominee(
       formerJudges.add(term.holderId);
     }
   }
-  const legalRoles = new Set([
-    "constitutional_court_justice",
-    "judge",
-    "appellate_judge",
-    "prosecutor",
-    "public_defender",
-    "constitutional_lawyer",
-    "legal_academic",
-    "senior_lawyer",
-  ]);
   const currentYear = Number(state.currentDate.slice(0, 4));
   const legallyEligible = (id: string): boolean => {
     if (activeDisqualifications.has(id)) return false;
@@ -198,13 +189,7 @@ export function chooseJudgeNominee(
     if (!profile) return false;
     const birthYear = profile.birthDate ? Number(profile.birthDate.slice(0, 4)) : null;
     if (birthYear && currentYear - birthYear < 35) return false;
-    if (profile.roleTypes.some((role) => legalRoles.has(role))) return true;
-    return (
-      profile.skills.legislation * 0.5 +
-        profile.traits.institutionalism * 0.35 +
-        profile.skills.negotiation * 0.15 >=
-      0.62
-    );
+    return hasExplicitLegalCareer(profile);
   };
   const candidates = Object.values(state.politicians)
     .filter((p) => p.alive && !p.retired && p.id !== presidentId)
