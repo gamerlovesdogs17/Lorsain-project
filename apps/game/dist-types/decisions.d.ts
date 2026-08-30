@@ -8,5 +8,6 @@ export declare function DecisionPanel(props: {
     report: (result: CommandResult) => boolean;
     countingElection: boolean;
     onResolveAssembly: () => void;
+    onResolvePresidential: () => void;
 }): import("react").JSX.Element | null;
 //# sourceMappingURL=decisions.d.ts.map

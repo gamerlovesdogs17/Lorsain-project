@@ -4,6 +4,7 @@ import { jsonClone } from "./hash.js";
 import { createRngService } from "./rng.js";
 import { activeTermsForPolitician } from "./offices.js";
 import { declareCampaign } from "./campaigns/actions.js";
+import { constituencyGotvBoost } from "./campaigns/gotv.js";
 import { FIELD } from "./campaigns/policy.js";
 import {
   allocateAssemblyCandidateFields,
@@ -179,6 +180,19 @@ describe("Phase 11.1 closeout Assembly candidacy", () => {
       "CMD-FILE-MOBILIZATION",
     );
     expect("error" in filed).toBe(false);
+    const declared = declareCampaign(
+      state,
+      world,
+      {
+        politicianId: "NPC146",
+        type: "assembly",
+        electionId: election.id,
+        constituencyId: "C007",
+      },
+      null,
+    );
+    expect("error" in declared).toBe(false);
+    if ("error" in declared) return;
     state.currentDate = "2030-04-01";
     finalizeAssemblyFieldsIfDue(state, world, election, "CMD-FINALIZE-MOBILIZATION");
     const field = buildAssemblyConstituencyField(state, world, "C007", "");
@@ -207,14 +221,41 @@ describe("Phase 11.1 closeout Assembly candidacy", () => {
         ),
       },
     );
+    declared.campaign.metadata.gotvActivations = {
+      "constituency:C007": { date: election.date, magnitude: 0.2 },
+    };
+    state.currentDate = election.date;
+    const gotvBoost = constituencyGotvBoost(world, declared.campaign, "C007", state.currentDate);
+    const mobilized = resolveAssemblyConstituency(
+      world,
+      state,
+      createRngService("P11-MOBILIZATION"),
+      {
+        constituencyId: "C007",
+        ...field,
+        mobilizationByCandidate: Object.fromEntries(
+          field.candidateIds.map((id) => [
+            id,
+            id === "NPC146"
+              ? 1 + FIELD.turnoutScale + FIELD.gotvTurnoutScale * gotvBoost
+              : 1,
+          ]),
+        ),
+      },
+    );
     expect("error" in base).toBe(false);
     expect("error" in organized).toBe(false);
-    if ("error" in base || "error" in organized) return;
+    expect("error" in mobilized).toBe(false);
+    expect(gotvBoost).toBeGreaterThan(0);
+    if ("error" in base || "error" in organized || "error" in mobilized) return;
     const firstPreferences = (value: string | undefined) =>
       BigInt((value ?? "0/1").split("/")[0] ?? "0");
     expect(
       firstPreferences(organized.election.countArchive?.firstPreferences.NPC146),
     ).toBeGreaterThan(firstPreferences(base.election.countArchive?.firstPreferences.NPC146));
+    expect(
+      firstPreferences(mobilized.election.countArchive?.firstPreferences.NPC146),
+    ).toBeGreaterThan(firstPreferences(organized.election.countArchive?.firstPreferences.NPC146));
   });
 
   it("retains complete typed STV archives for every constituency", () => {

@@ -1,5 +1,6 @@
 import { formatIsoDate } from "../calendar.js";
 import { getAgentProfile, syntheticAgentProfile } from "../agents/profile.js";
+import { selectGeneratedPublicName } from "../agents/names.js";
 import type { AgentProfile } from "../agents/profile.js";
 import type { KernelWorld, SimState } from "../types.js";
 import type { LegalCareerCandidate } from "./types.js";
@@ -33,18 +34,6 @@ const GENERATED_LEGAL_ROLES = [
   "legal_academic",
   "practicing_lawyer",
   "senior_government_legal_counsel",
-] as const;
-
-const FIRST_NAMES = [
-  "Ariana", "Borek", "Celine", "Davor", "Elena", "Farid", "Gisela", "Henrik", "Ilona",
-  "Jovan", "Karina", "Levan", "Mirela", "Nadir", "Oskar", "Pavla", "Ruben", "Selma",
-  "Tomas", "Valeria", "Wiktor", "Yasmin", "Zdena",
-] as const;
-
-const LAST_NAMES = [
-  "Ardel", "Brenic", "Cavor", "Deren", "Estrel", "Falken", "Gorvic", "Hedran", "Iven",
-  "Jasker", "Korven", "Ladic", "Meran", "Novic", "Ordan", "Petren", "Radek", "Soric",
-  "Tavel", "Uldar", "Vesnic", "Woran", "Zoric",
 ] as const;
 
 function stableHash(text: string): number {
@@ -84,13 +73,12 @@ function nextOrdinal(state: SimState): number {
 }
 
 function candidateName(state: SimState, ordinal: number): string {
-  const used = new Set(Object.values(state.politicians).map((row) => row.displayName).filter(Boolean));
-  for (let attempt = 0; attempt < FIRST_NAMES.length * LAST_NAMES.length; attempt += 1) {
-    const sequence = ordinal + attempt * 17;
-    const name = `${FIRST_NAMES[sequence % FIRST_NAMES.length]} ${LAST_NAMES[Math.floor(sequence / FIRST_NAMES.length) % LAST_NAMES.length]}`;
-    if (!used.has(name)) return name;
-  }
-  return `${FIRST_NAMES[ordinal % FIRST_NAMES.length]} ${LAST_NAMES[ordinal % LAST_NAMES.length]} ${ordinal}`;
+  const existing = [
+    ...Object.values(state.politicians).map((row) => row.displayName ?? ""),
+    ...Object.values(state.provincialRuntime.legislators).map((row) => row.displayName),
+    ...Object.values(state.constitutionalRuntime.legalCareerPool).map((row) => row.displayName),
+  ];
+  return selectGeneratedPublicName(existing, `legal-career:${ordinal}`);
 }
 
 function partyAndFaction(world: KernelWorld, salt: string): { partyId: string | null; factionId: string | null } {
@@ -101,19 +89,19 @@ function partyAndFaction(world: KernelWorld, salt: string): { partyId: string | 
   return { partyId, factionId: factions[stableHash(`${salt}:faction`) % Math.max(1, factions.length)] ?? null };
 }
 
-function careerDescription(name: string, role: typeof GENERATED_LEGAL_ROLES[number]): string {
+function careerDescription(name: string, role: typeof GENERATED_LEGAL_ROLES[number], salt: string): string {
   const family = name.split(" ").at(-1) ?? name;
-  const copy: Record<typeof GENERATED_LEGAL_ROLES[number], string> = {
-    appellate_judge: `${family} serves on a provincial appellate bench, with a record in administrative law and constitutional procedure.`,
-    lower_court_judge: `${family} is a trial judge known for public-law cases and careful written rulings.`,
-    prosecutor: `${family} is a senior prosecutor whose practice includes corruption and public-integrity cases.`,
-    public_defender: `${family} is a veteran public defender with a civil-liberties and appellate practice.`,
-    constitutional_lawyer: `${family} practices constitutional and administrative law before national and provincial courts.`,
-    legal_academic: `${family} teaches constitutional law and has published widely on institutions and civil rights.`,
-    practicing_lawyer: `${family} is a senior practicing lawyer with extensive litigation and public-law experience.`,
-    senior_government_legal_counsel: `${family} is a senior government legal counsel specializing in legislation and constitutional review.`,
+  const copy: Record<typeof GENERATED_LEGAL_ROLES[number], [string, string]> = {
+    appellate_judge: [`${family} serves on a provincial appellate bench and has written extensively on administrative procedure.`, `${name} is an appellate judge whose docket has centered on public law and constitutional procedure.`],
+    lower_court_judge: [`${family} is a trial judge with a substantial record in public-law cases.`, `${name} serves on a lower court and is known for careful written rulings in disputes involving public bodies.`],
+    prosecutor: [`${family} is a senior prosecutor whose practice includes corruption and public-integrity cases.`, `${name} built a legal career prosecuting complex financial and public-integrity cases.`],
+    public_defender: [`${family} is a veteran public defender with a civil-liberties and appellate practice.`, `${name} has spent much of a legal career in public defense and appellate advocacy.`],
+    constitutional_lawyer: [`${family} practices constitutional and administrative law before national and provincial courts.`, `${name} represents public bodies and private clients in constitutional litigation.`],
+    legal_academic: [`${family} teaches constitutional law and publishes on institutions and civil rights.`, `${name} is a legal scholar whose work examines constitutional structure and civil rights.`],
+    practicing_lawyer: [`${family} is a senior practicing lawyer with extensive litigation and public-law experience.`, `${name} has a long litigation practice spanning commercial disputes and public law.`],
+    senior_government_legal_counsel: [`${family} is a senior government legal counsel specializing in legislation and constitutional review.`, `${name} advises government on legislation, administrative procedure, and constitutional risk.`],
   };
-  return copy[role];
+  return copy[role][stableHash(`${salt}:description`) % 2]!;
 }
 
 /** Maintain a lightweight, named legal profession without weakening qualification rules. */
@@ -145,7 +133,7 @@ export function ensureRenewableLegalPool(world: KernelWorld, state: SimState, ta
     const row: LegalCareerCandidate = {
       id,
       displayName: name,
-      description: careerDescription(name, role),
+      description: careerDescription(name, role, id),
       birthDate: formatIsoDate(birthYear, birthMonth, birthDay),
       provinceId,
       partyId: membership.partyId,

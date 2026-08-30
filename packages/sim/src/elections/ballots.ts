@@ -235,15 +235,19 @@ export function mergeNationalBallots(
       if (w.den !== 1n) {
         throw new Error(`ballot ${g.id} weight ${g.weight} is not an integer`);
       }
-      const prev = merged.get(g.id);
+      // A national count only needs the preference order and combined weight.
+      // Constituency/bloc IDs made identical national ballots separate groups,
+      // bloating saves and making IRV do thousands of redundant additions.
+      const key = g.rankings.join("\u001f");
+      const prev = merged.get(key);
       if (prev) prev.weight = add(prev.weight, w);
-      else merged.set(g.id, { weight: w, rankings: g.rankings });
+      else merged.set(key, { weight: w, rankings: [...g.rankings] });
     }
   }
   return [...merged.entries()]
     .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([id, v]) => ({
-      id,
+    .map(([, v], index) => ({
+      id: `national:${String(index + 1).padStart(4, "0")}`,
       weight: serializeRational(v.weight),
       rankings: v.rankings,
     }));

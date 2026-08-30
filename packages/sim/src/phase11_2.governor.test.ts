@@ -6,6 +6,7 @@ import {
   restoreSimulation,
 } from "./index.js";
 import { loadTerenaWorld } from "./integration/harness.js";
+import { assertStrictV1Invariants } from "./integration/harness.js";
 import type { Simulation } from "./engine.js";
 import { deriveProvincialPartyPositions, evaluateGovernorDisposition } from "./provinces/politics.js";
 
@@ -108,6 +109,41 @@ describe("Phase 11.2 provincial government", () => {
         (election) => election.date === "2033-10-01",
       ),
     ).toHaveLength(21);
+    const snapshot = sim.getSnapshot();
+    expect(
+      Object.values(snapshot.officeTerms).filter((term) =>
+        (term.status === "active" || term.status === "suspended") &&
+        world.offices[term.officeId]?.kind === "governor",
+      ),
+    ).toHaveLength(21);
+    expect(
+      assertStrictV1Invariants(world, snapshot).filter((failure) => failure.code.includes("GOVERNOR")),
+    ).toEqual([]);
+  });
+
+  it("makes bounded NPC end-of-term decisions instead of filing elderly incumbents forever", () => {
+    const world = loadTerenaWorld();
+    const governorIds = world.startingTerms
+      .filter((term) => world.offices[term.officeId]?.kind === "governor")
+      .map((term) => term.holderId);
+    for (const id of governorIds) {
+      const profile = world.agentProfiles[id]!;
+      profile.birthDate = "1930-01-01";
+      profile.traits.ambition = 0.1;
+      profile.traits.retirementInclination = 1;
+    }
+    const sim = createSimulation({ world, playerPoliticianId: "NPC001", seed: "P113-GOV-CAREER-DECISIONS" });
+    advance(sim, 15);
+    const elections = Object.values(sim.getSnapshot().provincialRuntime.elections)
+      .filter((election) => election.date === "2029-10-01");
+    expect(elections).toHaveLength(21);
+    expect(elections.every((election) => election.incumbentDecision != null)).toBe(true);
+    const seeking = elections.filter((election) => election.incumbentDecision === "seek_reelection");
+    expect(seeking.length).toBeLessThanOrEqual(1);
+    for (const election of elections.filter((row) => row.incumbentDecision !== "seek_reelection")) {
+      expect(election.incumbentId && election.candidates[election.incumbentId]).toBeUndefined();
+    }
+    expect(restoreSimulation(sim.serializeSave(), world).hashState()).toBe(sim.hashState());
   });
 
   it("makes the same NPC Governor sign an aligned provincial bill and veto a hostile reversal", () => {

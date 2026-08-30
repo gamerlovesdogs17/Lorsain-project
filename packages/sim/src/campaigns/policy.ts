@@ -51,6 +51,10 @@ export const FIELD = {
   organizeGain: 0.14,
   visitOrgGain: 0.05,
   turnoutScale: 0.035,
+  gotvTurnoutScale: 0.055,
+  gotvMinimumOrganization: 0.12,
+  gotvBase: 0.03,
+  gotvOrganizationWeight: 0.19,
 } as const;
 
 export const AD_SPEND = {

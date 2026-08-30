@@ -66,6 +66,7 @@ import {
   SectionDivider,
   TabBar,
   LeadStory,
+  MapDetailLayout,
   StatusBadge,
   WorkLayout,
 } from "./ui/kit.js";
@@ -127,6 +128,7 @@ type PageProps = {
   report: (r: CommandResult) => boolean;
   countingElection: boolean;
   onResolveAssembly: () => void;
+  onResolvePresidential: () => void;
   askConfirm: (opts: {
     title: string;
     body: string;
@@ -405,7 +407,7 @@ function Home(props: PageProps) {
 }
 
 function Career(props: PageProps) {
-  const [tab, setTab] = useState<"opportunities" | "overview" | "career" | "positions" | "record" | "directory">(
+  const [tab, setTab] = useState<"opportunities" | "overview" | "career" | "positions" | "record" | "directory" | "comparison" | "figures">(
     "opportunities",
   );
   const [raceGeography, setRaceGeography] = useState("");
@@ -416,11 +418,16 @@ function Career(props: PageProps) {
   const [directoryCaucus, setDirectoryCaucus] = useState("all");
   const [directoryProvince, setDirectoryProvince] = useState("all");
   const [directoryOffice, setDirectoryOffice] = useState("all");
+  const [directoryPage, setDirectoryPage] = useState(0);
+  const [comparisonIds, setComparisonIds] = useState<string[]>([]);
   useEffect(() => {
     if (props.globalFocus?.kind !== "Politician") return;
     setDirectorySelection(props.globalFocus.id);
     setTab("directory");
   }, [props.globalFocus]);
+  useEffect(() => {
+    setDirectoryPage(0);
+  }, [directoryQuery, directoryParty, directoryCaucus, directoryProvince, directoryOffice]);
   const figure = props.figures.get(props.snap.playerPoliticianId);
   const runtime = props.snap.politicians[props.snap.playerPoliticianId];
   const standingLabel = publicStandingLabel(props.world, props.snap, props.snap.playerPoliticianId);
@@ -499,6 +506,8 @@ function Career(props: PageProps) {
           { id: "positions", label: "Positions" },
           { id: "record", label: "Public record" },
           { id: "directory", label: "Politicians" },
+          { id: "comparison", label: `Compare${comparisonIds.length ? ` (${comparisonIds.length})` : ""}` },
+          { id: "figures", label: "Figures to watch" },
         ]}
         value={tab}
         onChange={setTab}
@@ -597,18 +606,16 @@ function Career(props: PageProps) {
         </SectionCard>
       ) : null}
       {tab === "record" ? (
-        <SectionCard title="Recent public events">
-          {props.snap.history
-            .filter((e) => e.actorIds.includes(props.snap.playerPoliticianId))
-            .slice(-12)
-            .map((e) => (
-              <div key={e.id} className="muted">
-                {e.date} · {eventDisplay(props.catalog, props.world, props.snap, e)}
-              </div>
-            ))}
+        <SectionCard title="Public history">
+          {props.snap.history.filter((e) => e.visibility === "public" && e.actorIds.includes(props.snap.playerPoliticianId)).length === 0 ? <EmptyState>No public career events are recorded yet.</EmptyState> : null}
+          {[...new Set(props.snap.history.filter((e) => e.visibility === "public" && e.actorIds.includes(props.snap.playerPoliticianId)).map((e) => e.date.slice(0, 4)))].sort().reverse().map((year) => <section className="profile-history-year" key={year}>
+            <strong>{year}</strong>
+            <div>{props.snap.history.filter((e) => e.visibility === "public" && e.actorIds.includes(props.snap.playerPoliticianId) && e.date.startsWith(year)).slice().reverse().map((e) => <ActivityFeedItem key={e.id} date={e.date} text={eventDisplay(props.catalog, props.world, props.snap, e)} />)}</div>
+          </section>)}
         </SectionCard>
       ) : null}
       {tab === "directory" ? (() => {
+        const PAGE_SIZE = 30;
         const query = directoryQuery.trim().toLowerCase();
         const rows = Object.values(props.snap.politicians)
           .filter((politician) => politician.alive)
@@ -627,6 +634,9 @@ function Career(props: PageProps) {
             return Object.values(props.snap.officeTerms).some((term) => term.holderId === politician.id && term.status === "active" && props.world.offices[term.officeId]?.kind === directoryOffice);
           })
           .sort((a, b) => politicianDisplayName(props.catalog, a.id).localeCompare(politicianDisplayName(props.catalog, b.id)));
+        const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+        const page = Math.min(directoryPage, pageCount - 1);
+        const visibleRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
         const selected = props.snap.politicians[directorySelection] ?? rows[0];
         const selectedTerms = selected ? Object.values(props.snap.officeTerms).filter((term) => term.holderId === selected.id) : [];
         const selectedCommittees = selected ? Object.values(props.snap.legislatureRuntime.committees).filter((committee) => committee.chairId === selected.id) : [];
@@ -646,8 +656,12 @@ function Career(props: PageProps) {
               <label className="field-label">Province<select value={directoryProvince} onChange={(event) => setDirectoryProvince(event.target.value)}><option value="all">All provinces</option>{props.world.provinceIds.slice().sort((a, b) => (props.catalog.places.get(a)?.name ?? a).localeCompare(props.catalog.places.get(b)?.name ?? b)).map((provinceId) => <option key={provinceId} value={provinceId}>{props.catalog.places.get(provinceId)?.name ?? "Province"}</option>)}</select></label>
               <label className="field-label">Office<select value={directoryOffice} onChange={(event) => setDirectoryOffice(event.target.value)}><option value="all">All offices</option><option value="assembly_member">National Assembly</option><option value="governor">Governor</option><option value="minister">Minister</option><option value="mayor">Mayor</option><option value="constitutional_court_justice">Justice</option><option value="party_leader">Party leader</option><option value="caucus_leader">Caucus chair</option></select></label>
             </div>
-            <p className="muted">{rows.length} matching public figures · showing the first 80</p>
-            <div className="entity-list">{rows.slice(0, 80).map((politician) => <PoliticianCard key={politician.id} catalog={props.catalog} world={props.world} state={props.snap} politicianId={politician.id} compact selected={politician.id === selected?.id} onSelect={() => setDirectorySelection(politician.id)} />)}</div>
+            <div className="directory-count-row"><p className="muted">{rows.length} matching public figures · {PAGE_SIZE} per page</p>{comparisonIds.length >= 2 ? <button type="button" className="btn btn-sm secondary" onClick={() => setTab("comparison")}>Compare selected ({comparisonIds.length})</button> : null}</div>
+            <div className="entity-list politician-directory-list">{visibleRows.map((politician) => <div className="politician-directory-row" key={politician.id}>
+              <PoliticianCard catalog={props.catalog} world={props.world} state={props.snap} politicianId={politician.id} compact selected={politician.id === selected?.id} onSelect={() => setDirectorySelection(politician.id)} />
+              <button type="button" className={`compare-toggle${comparisonIds.includes(politician.id) ? " selected" : ""}`} aria-pressed={comparisonIds.includes(politician.id)} disabled={!comparisonIds.includes(politician.id) && comparisonIds.length >= 3} onClick={() => setComparisonIds((ids) => ids.includes(politician.id) ? ids.filter((id) => id !== politician.id) : [...ids, politician.id].slice(0, 3))}>{comparisonIds.includes(politician.id) ? "Comparing" : "Compare"}</button>
+            </div>)}</div>
+            {pageCount > 1 ? <div className="pager"><button type="button" className="btn secondary" disabled={page === 0} onClick={() => setDirectoryPage(page - 1)}>Previous</button><span className="muted">Page {page + 1} of {pageCount}</span><button type="button" className="btn secondary" disabled={page >= pageCount - 1} onClick={() => setDirectoryPage(page + 1)}>Next</button></div> : null}
           </>}
           rail={selected ? <>
             <PoliticianProfile catalog={props.catalog} world={props.world} state={props.snap} politicianId={selected.id} party={partyDisplayName(props.world, selected.partyId, props.snap)} {...(selected.description ? { biography: selected.description } : {})} />
@@ -676,8 +690,88 @@ function Career(props: PageProps) {
                 return <tr key={vote.id}><td>{vote.date}</td><td>{bill?.title ?? "Assembly matter"}</td><td>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : "Abstain"}</td><td>{followed}</td><td>{caucusFollowed}</td></tr>;
               })}
             </DataTable>}
+            <SectionDivider title="Recent public history" />
+            {props.snap.history.filter((event) => event.visibility === "public" && event.actorIds.includes(selected.id)).slice(-8).reverse().map((event) => <ActivityFeedItem key={event.id} date={event.date} text={eventDisplay(props.catalog, props.world, props.snap, event)} />)}
+            {props.snap.history.filter((event) => event.visibility === "public" && event.actorIds.includes(selected.id)).length === 0 ? <EmptyState>No public career event is recorded.</EmptyState> : null}
           </> : <EmptyState>Select a politician.</EmptyState>}
         />;
+      })() : null}
+      {tab === "comparison" ? (() => {
+        const selected = comparisonIds.map((id) => props.snap.politicians[id]).filter((row): row is NonNullable<typeof row> => Boolean(row));
+        const activeOffice = (id: string) => Object.values(props.snap.officeTerms).filter((term) => term.holderId === id && (term.status === "active" || term.status === "suspended")).map((term) => props.world.offices[term.officeId]?.title).filter(Boolean).join(", ") || "Private citizen";
+        const publicAge = (id: string) => {
+          const birthDate = props.figures.get(id)?.birth_date ?? props.snap.generatedAgentProfiles[id]?.birthDate;
+          if (!birthDate) return "Not published";
+          const today = props.snap.currentDate;
+          const years = Number(today.slice(0, 4)) - Number(birthDate.slice(0, 4));
+          return String(years - (today.slice(5) < birthDate.slice(5) ? 1 : 0));
+        };
+        const electionRecord = (id: string) => {
+          let wins = 0;
+          let races = 0;
+          for (const election of Object.values(props.snap.elections)) {
+            if (election.candidates[id] || election.assembly?.candidacies[id]) races += 1;
+            if (election.winnerIds.includes(id)) wins += 1;
+          }
+          for (const election of Object.values(props.snap.provincialRuntime.elections)) {
+            if (election.candidates[id]) races += 1;
+            if (election.winnerId === id) wins += 1;
+          }
+          return races ? `${wins} wins in ${races} recorded races` : "No recorded election";
+        };
+        const leadership = (id: string) => {
+          const roles = [
+            ...Object.values(props.snap.partyStates).filter((party) => party.leaderId === id).map((party) => `${partyDisplayName(props.world, party.partyId, props.snap)} leader`),
+            ...Object.values(props.snap.factionStates).filter((caucus) => caucus.chairId === id).map((caucus) => `${factionDisplayName(props.world, caucus.factionId)} chair`),
+            ...Object.values(props.snap.legislatureRuntime.committees).filter((committee) => committee.chairId === id).map((committee) => `${committeeDisplayName(committee.id)} chair`),
+          ];
+          return roles.join(", ") || "No current leadership post";
+        };
+        const voteSummary = (id: string) => {
+          const choices = Object.values(props.snap.legislatureRuntime.legislativeVotes).map((vote) => vote.votes[id]).filter(Boolean);
+          if (!choices.length) return "No federal roll-call record";
+          return `${choices.filter((choice) => choice === "yes").length} aye · ${choices.filter((choice) => choice === "no").length} nay · ${choices.filter((choice) => choice === "abstain").length} abstain`;
+        };
+        const career = (id: string) => {
+          const terms = Object.values(props.snap.officeTerms).filter((term) => term.holderId === id);
+          return terms.length ? [...new Set(terms.map((term) => props.world.offices[term.officeId]?.title ?? "Public office"))].join(", ") : "No public office";
+        };
+        const rows: Array<[string, (id: string) => string]> = [
+          ["Age", publicAge], ["Current office", activeOffice], ["Party", (id) => partyDisplayName(props.world, props.snap.politicians[id]?.partyId ?? null, props.snap)], ["Caucus", (id) => factionDisplayName(props.world, props.snap.politicians[id]?.factionId ?? null)], ["Province", (id) => props.catalog.places.get(props.snap.politicians[id]?.homeProvinceId ?? props.world.politicianHomeProvince[id] ?? "")?.name ?? "Not published"], ["Public standing", (id) => publicStandingLabel(props.world, props.snap, id)], ["Career", career], ["Election record", electionRecord], ["Leadership", leadership], ["Voting record", voteSummary],
+        ];
+        return <div className="politician-comparison"><PageHeader kicker="Public record" title="Compare politicians" subtitle="Public offices, affiliations, standing, elections, leadership, and roll calls. Hidden personality and strategy are not shown." />
+          {selected.length < 2 ? <EmptyState>Select two or three politicians from the directory to compare.</EmptyState> : <DataTable headers={["Public fact", ...selected.map((politician) => politicianDisplayName(props.catalog, politician.id))]}><>{rows.map(([label, value]) => <tr key={label}><th scope="row">{label}</th>{selected.map((politician) => <td key={politician.id}>{value(politician.id)}</td>)}</tr>)}</></DataTable>}
+          {selected.length ? <div className="button-row">{selected.map((politician) => <button key={politician.id} type="button" className="btn btn-sm secondary" onClick={() => setComparisonIds((ids) => ids.filter((id) => id !== politician.id))}>Remove {politicianDisplayName(props.catalog, politician.id)}</button>)}</div> : null}
+        </div>;
+      })() : null}
+      {tab === "figures" ? (() => {
+        const activeKind = (id: string, kind: string) => Object.values(props.snap.officeTerms).some((term) => term.holderId === id && (term.status === "active" || term.status === "suspended") && props.world.offices[term.officeId]?.kind === kind);
+        const publicAchievementScore = (id: string) => {
+          const standing = publicStandingLabel(props.world, props.snap, id);
+          const standingScore = standing === "National figure" ? 6 : standing === "Prominent" ? 4 : standing === "Established" ? 2 : 0;
+          const terms = Object.values(props.snap.officeTerms).filter((term) => term.holderId === id).length;
+          const leadership = Object.values(props.snap.partyStates).some((party) => party.leaderId === id) || Object.values(props.snap.factionStates).some((caucus) => caucus.chairId === id) ? 4 : 0;
+          const legislation = Object.values(props.snap.legislatureRuntime.bills).filter((bill) => bill.sponsorId === id || bill.cosponsorIds.includes(id)).length;
+          const wins = Object.values(props.snap.elections).filter((election) => election.winnerIds.includes(id)).length + Object.values(props.snap.provincialRuntime.elections).filter((election) => election.winnerId === id).length;
+          return standingScore + Math.min(5, terms) + leadership + Math.min(4, legislation) + Math.min(5, wins);
+        };
+        const ranked = (ids: string[]) => ids.filter((id) => props.snap.politicians[id]?.alive && !props.snap.politicians[id]?.retired).sort((a, b) => publicAchievementScore(b) - publicAchievementScore(a) || politicianDisplayName(props.catalog, a).localeCompare(politicianDisplayName(props.catalog, b))).slice(0, 8);
+        const allIds = Object.keys(props.snap.politicians);
+        const provincialLeaders = new Set<string>();
+        for (const assembly of Object.values(props.snap.provincialRuntime.assemblies)) {
+          if (assembly.presidingOfficerId) provincialLeaders.add(assembly.presidingOfficerId);
+          for (const leadership of Object.values(assembly.partyLeadership)) {
+            if (leadership.floorLeaderId) provincialLeaders.add(leadership.floorLeaderId);
+            if (leadership.whipId) provincialLeaders.add(leadership.whipId);
+          }
+        }
+        const groups = [
+          { title: "Prominent Governors", ids: ranked(allIds.filter((id) => activeKind(id, "governor"))) },
+          { title: "Senior legislators", ids: ranked(allIds.filter((id) => activeKind(id, "assembly_member") || activeKind(id, "speaker"))) },
+          { title: "Emerging provincial leaders", ids: ranked([...provincialLeaders]) },
+          { title: "Major legal figures", ids: ranked(allIds.filter((id) => activeKind(id, "constitutional_court_justice") || Object.values(props.snap.constitutionalRuntime.legalCareerPool).some((career) => career.fullPoliticianId === id))) },
+        ];
+        return <div><PageHeader kicker="Political class" title="Figures to watch" subtitle="Contextual public prominence based on office, standing, electoral success, leadership, and legislative work—not hidden potential." /><div className="figures-watch-grid">{groups.map((group) => <SectionCard key={group.title} title={group.title}>{group.ids.length === 0 ? <EmptyState>No public figure currently qualifies.</EmptyState> : group.ids.map((id) => <PoliticianCard key={id} catalog={props.catalog} world={props.world} state={props.snap} politicianId={id} compact descriptor={publicStandingLabel(props.world, props.snap, id)} onSelect={() => { setDirectorySelection(id); setTab("directory"); }} />)}</SectionCard>)}</div></div>;
       })() : null}
     </div>
   );
@@ -990,35 +1084,39 @@ function Terena(props: PageProps) {
         </label>
       ) : null}
       {mode === "campaign" ? <div className="map-scale-switch" aria-label="Campaign map scale"><button type="button" className={campaignMapScale === "province" ? "active" : ""} onClick={() => { setCampaignMapScale("province"); setSel(null); }}>Provinces</button><button type="button" className={campaignMapScale === "constituency" ? "active" : ""} onClick={() => { setCampaignMapScale("constituency"); setSel(null); }}>Constituencies</button></div> : null}
-      <div className="dash dash-2">
-        <TerenaMap
-          bundle={props.bundle}
-          mode={mode}
-          selectedId={sel?.id ?? null}
-          showConstituencies={mode !== "economy" && !(mode === "election" && activeMapElection?.type !== "assembly") && !(mode === "campaign" && campaignMapScale === "province")}
-          fillFor={(f, kind) =>
-            mapFillFor(
-              mode,
-              props.world,
-              props.snap,
-              f,
-              kind,
-              props.campaign?.organizationByConstituency,
-              props.campaign?.organizationByProvince,
-              activeMapElection?.id,
-            )
-          }
-          onSelect={setSel}
-          onHover={(selection) => {
-            setHoverSel(selection);
-            props.setMapHover(selection?.id ?? null);
-          }}
-          tooltipFor={tooltip}
-        />
-        {mode === "election" && activeMapElection?.type === "presidential" ? (
-          <div className="map-legend"><div className="kicker">Legend</div><div className="legend-items"><span className="legend-item"><span className="swatch" style={{ background: "#d8d6cf" }} />No public geographic data</span></div></div>
-        ) : <MapLegend mode={mode} world={props.world} />}
-        <SectionCard title="Selection">
+      <MapDetailLayout
+        className="terena-map-workspace"
+        map={<>
+          <TerenaMap
+            bundle={props.bundle}
+            mode={mode}
+            selectedId={sel?.id ?? null}
+            showConstituencies={mode !== "economy" && !(mode === "election" && activeMapElection?.type !== "assembly") && !(mode === "campaign" && campaignMapScale === "province")}
+            fillFor={(f, kind) =>
+              mapFillFor(
+                mode,
+                props.world,
+                props.snap,
+                f,
+                kind,
+                props.campaign?.organizationByConstituency,
+                props.campaign?.organizationByProvince,
+                activeMapElection?.id,
+              )
+            }
+            onSelect={setSel}
+            onHover={(selection) => {
+              setHoverSel(selection);
+              props.setMapHover(selection?.id ?? null);
+            }}
+            tooltipFor={tooltip}
+          />
+          {mode === "election" && activeMapElection?.type === "presidential" ? (
+            <div className="map-legend"><div className="kicker">Legend</div><div className="legend-items"><span className="legend-item"><span className="swatch" style={{ background: "#d8d6cf" }} />No public geographic data</span></div></div>
+          ) : <MapLegend mode={mode} world={props.world} />}
+        </>}
+        detail={<div className="compact-map-inspector">
+          <SectionDivider title="Selection" hint={mode[0]!.toUpperCase() + mode.slice(1)} />
           {sel && place ? (
             <>
               <strong>{place.name}</strong>
@@ -1050,8 +1148,8 @@ function Terena(props: PageProps) {
                 : "Select a constituency, province, or city."}
             </EmptyState>
           )}
-        </SectionCard>
-      </div>
+        </div>}
+      />
       {hoverSel && !sel ? <p className="muted map-hover-note">Hovering {hoverSel.name}; click or tap to keep its details open.</p> : null}
     </div>
   );

@@ -23,6 +23,47 @@ function sufferedSevereAssemblyDefeat(state: SimState, partyId: string): boolean
   return (latest.assembly.previousPartySeatTotals[partyId] ?? 0) - (latest.assembly.partySeatTotals[partyId] ?? 0) >= 15;
 }
 
+function updateInstitutionalCohesion(world: KernelWorld, state: SimState): void {
+  const latestAssembly = Object.values(state.elections)
+    .filter((election) => election.type === "assembly" && election.status === "resolved" && election.assembly)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))[0];
+  for (const [partyId, party] of Object.entries(state.partyStates)) {
+    const members = partyMembers(state, partyId);
+    const meanLoyalty = members.length > 0
+      ? members.reduce((sum, id) => sum + (getAgentProfile(world, state, id)?.traits.partyLoyalty ?? 0.5), 0) / members.length
+      : 0.5;
+    const leaderProfile = party.leaderId ? getAgentProfile(world, state, party.leaderId) : null;
+    const leaderStrength = leaderProfile
+      ? (leaderProfile.skills.negotiation + leaderProfile.traits.institutionalism + leaderProfile.traits.partyLoyalty) / 3
+      : 0.25;
+    const factions = Object.values(state.factionStates).filter((row) => row.partyId === partyId && row.status === "active");
+    const factionStability = factions.length > 0
+      ? factions.reduce((sum, row) => sum + row.cohesion, 0) / factions.length
+      : 0.5;
+    const seatDelta = latestAssembly?.assembly
+      ? (latestAssembly.assembly.partySeatTotals[partyId] ?? 0) - (latestAssembly.assembly.previousPartySeatTotals[partyId] ?? 0)
+      : 0;
+    const electoralSignal = Math.max(-1, Math.min(1, seatDelta / 30));
+    const contested = Object.values(state.partyContests).some(
+      (contest) => contest.partyId === partyId && contest.type === "party_leadership" &&
+        contest.status !== "resolved" && contest.status !== "cancelled",
+    );
+    const target = Math.max(0.2, Math.min(0.92,
+      0.16 + meanLoyalty * 0.4 + leaderStrength * 0.18 + factionStability * 0.18 +
+      electoralSignal * 0.05 - (contested ? 0.1 : 0),
+    ));
+    party.cohesion = Math.max(0.2, Math.min(0.92, party.cohesion * 0.97 + target * 0.03));
+  }
+  for (const [factionId, faction] of Object.entries(state.factionStates)) {
+    if (faction.status === "split_origin") continue;
+    const members = factionMembers(state, factionId);
+    const target = members.length > 0
+      ? members.reduce((sum, id) => sum + (getAgentProfile(world, state, id)?.traits.factionLoyalty ?? 0.5), 0) / members.length
+      : 0.45;
+    faction.cohesion = Math.max(0.2, Math.min(0.94, faction.cohesion * 0.97 + target * 0.03));
+  }
+}
+
 function buildCandidateScores(world: KernelWorld, state: SimState): Map<string, number> {
   const federalMembers = new Set<string>();
   for (const term of Object.values(state.officeTerms)) {
@@ -134,6 +175,7 @@ export function processPartyInstitutionsMonth(
   commandId: string,
 ): SimEvent[] {
   const events: SimEvent[] = [];
+  updateInstitutionalCohesion(world, state);
   const year = Number(state.currentDate.slice(0, 4));
   const month = state.currentDate.slice(5, 7);
   let candidateScores: Map<string, number> | null = null;

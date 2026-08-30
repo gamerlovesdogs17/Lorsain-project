@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { serializeCountResult } from "@lorsain/election-math";
+import { add, eq, parseRational, serializeCountResult, ZERO } from "@lorsain/election-math";
 import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { createSimulation, restoreSimulation } from "./engine.js";
 import { jsonClone } from "./hash.js";
@@ -1799,20 +1799,24 @@ describe("Phase 3 history and lifecycle integrity", () => {
     ).toHaveLength(events.length);
   });
 
-  it("requires selectorSummary IDs and weights to match archived ballots", () => {
+  it("compacts identical selector rankings while preserving total selector weight", () => {
     const sim = simFor();
     const contestId = resolveLabLeadership(sim);
     const contest = sim.getSnapshot().partyContests[contestId]!;
-    expect(contest.selectorSummary.map((g) => g.id).sort()).toEqual(
-      contest.countInput!.ballots.map((b) => b.id).sort(),
+    const selectorWeight = contest.selectorSummary.reduce(
+      (sum, group) => add(sum, parseRational(group.weight)),
+      ZERO,
     );
-    for (const ballot of contest.countInput!.ballots) {
-      expect(contest.selectorSummary.find((g) => g.id === ballot.id)?.weight).toBe(ballot.weight);
-    }
+    const ballotWeight = contest.countInput!.ballots.reduce(
+      (sum, ballot) => add(sum, parseRational(ballot.weight)),
+      ZERO,
+    );
+    expect(eq(selectorWeight, ballotWeight)).toBe(true);
+    expect(contest.countInput!.ballots.length).toBeLessThanOrEqual(contest.selectorSummary.length);
     const raw = jsonClone(sim.serializeSave()) as unknown as {
-      simulation: { partyContests: Record<string, { selectorSummary: Array<{ id: string }> }> };
+      simulation: { partyContests: Record<string, { selectorSummary: Array<{ weight: string }> }> };
     };
-    raw.simulation.partyContests[contestId]!.selectorSummary[0]!.id = "g-mismatch";
+    raw.simulation.partyContests[contestId]!.selectorSummary[0]!.weight = "999/1";
     expect(parsedSave(raw).ok).toBe(false);
   });
 

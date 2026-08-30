@@ -1,6 +1,8 @@
 import { addMonths, addYears, compareIsoDate, formatIsoDate } from "../calendar.js";
 import { syntheticAgentProfile } from "../agents/profile.js";
+import { selectGeneratedPublicName } from "../agents/names.js";
 import type { RngService } from "../rng.js";
+import { provinceGotvBoost } from "../campaigns/gotv.js";
 import { pushHistory } from "../scheduler.js";
 import { recordOrganizationPolicyBehavior } from "../organizations/monthly.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
@@ -19,24 +21,9 @@ import {
   chooseProvincialLegislativeVote,
   deriveProvincialPartyPositions,
   evaluateGovernorDisposition,
+  provincialGovernmentRelation,
   provincialPolicy,
 } from "./politics.js";
-
-const FIRST_NAMES = [
-  "Adela", "Adrian", "Alina", "Andrej", "Anika", "Bastian", "Celia", "Dara", "Dorian",
-  "Elian", "Eliska", "Emil", "Farah", "Gregor", "Hana", "Ilan", "Ines", "Jarek", "Jonas",
-  "Kaja", "Kamil", "Klara", "Leona", "Lukas", "Mara", "Marek", "Mina", "Nadia", "Niko",
-  "Noemi", "Oren", "Petra", "Rafael", "Sabina", "Sami", "Soren", "Talia", "Tomas", "Vera",
-  "Viktor", "Yara", "Zora",
-] as const;
-
-const LAST_NAMES = [
-  "Aldren", "Baric", "Belen", "Cevik", "Dalen", "Dobrev", "Eris", "Faron", "Galen",
-  "Havel", "Ilyan", "Joric", "Kadar", "Kovren", "Laska", "Marin", "Narek", "Orlic",
-  "Pavelic", "Quarin", "Radan", "Selic", "Taren", "Ulen", "Varik", "Walen", "Yoric",
-  "Zelen", "Arven", "Borsic", "Cadan", "Delvar", "Esren", "Fedorin", "Gavric", "Horvat",
-  "Iskar", "Jovan", "Kresic", "Leric", "Matic", "Novak", "Ostir", "Peran", "Ristic",
-] as const;
 
 const BACKGROUNDS = [
   "municipal administrator",
@@ -152,13 +139,13 @@ function factionForParty(world: KernelWorld, partyId: string | null, salt: strin
   return ids.length > 0 ? ids[stableProvincialHash(`${salt}:faction`) % ids.length]! : null;
 }
 
-function publicName(provinceIndex: number, ordinal: number): string {
-  const unique = provinceIndex * 128 + ordinal;
-  const first = FIRST_NAMES[unique % FIRST_NAMES.length]!;
-  const familyCycle = Math.floor(unique / (FIRST_NAMES.length * LAST_NAMES.length));
-  const suffix = ["", "a", "en", "ic"][familyCycle % 4]!;
-  const last = `${LAST_NAMES[Math.floor(unique / FIRST_NAMES.length) % LAST_NAMES.length]!}${suffix}`;
-  return `${first} ${last}`;
+function publicName(state: SimState, provinceId: string, ordinal: number): string {
+  const existing = [
+    ...Object.values(state.politicians).map((row) => row.displayName ?? ""),
+    ...Object.values(state.provincialRuntime.legislators).map((row) => row.displayName),
+    ...Object.values(state.constitutionalRuntime.legalCareerPool).map((row) => row.displayName),
+  ];
+  return selectGeneratedPublicName(existing, `provincial:${provinceId}:${ordinal}`);
 }
 
 function newLegislator(
@@ -169,7 +156,6 @@ function newLegislator(
   source: ProvincialLegislator["source"],
   forcedPartyId?: string | null,
 ): ProvincialLegislator {
-  const provinceIndex = Math.max(0, world.provinceIds.indexOf(provinceId));
   const id = `PLEG_${provinceId}_${String(ordinal).padStart(3, "0")}`;
   const weights = provincePartyWeights(world, provinceId);
   const pick = (stableProvincialHash(`${id}:party`) % 100000) / 100000;
@@ -184,14 +170,22 @@ function newLegislator(
       }
     }
   }
-  const name = publicName(provinceIndex, ordinal);
+  const name = publicName(state, provinceId, ordinal);
   const familyName = name.split(" ").at(-1) ?? name;
   const background = BACKGROUNDS[stableProvincialHash(`${id}:background`) % BACKGROUNDS.length]!;
   const priority = PRIORITIES[stableProvincialHash(`${id}:priority`) % PRIORITIES.length]!;
+  const biographyStyle = stableProvincialHash(`${id}:biography-style`) % 4;
+  const description = biographyStyle === 0
+    ? `${name} worked as a ${background} before entering provincial politics. ${familyName} focuses on ${priority}.`
+    : biographyStyle === 1
+      ? `Before election, ${name} was a ${background}. The center of ${familyName}'s provincial record is ${priority}.`
+      : biographyStyle === 2
+        ? `${name}, formerly a ${background}, built a public profile around ${priority}.`
+        : `${name} came to the Provincial Assembly from work as a ${background}, with ${priority} as a consistent priority.`;
   return {
     id,
     displayName: name,
-    description: `${name} entered public life after working as a ${background}. ${familyName}'s record centers on ${priority}.`,
+    description,
     provinceId,
     partyId,
     factionId: factionForParty(world, partyId, id),
@@ -538,6 +532,7 @@ function resolveProvincialAssemblyElection(
     const campaignWork = campaign
       ? campaign.fieldOrganization * 0.16 +
         (campaign.organizationByProvince[election.provinceId] ?? 0) * 0.16 +
+        provinceGotvBoost(campaign, election.provinceId, state.currentDate) * 0.12 +
         Math.min(0.06, campaign.totalSpent / 500_000)
       : 0;
     const endorsements = Math.min(0.08, endorsementCount(row.fullPoliticianId ?? row.id) * 0.025);
@@ -820,9 +815,10 @@ function progressProvincialBills(world: KernelWorld, state: SimState, commandId:
   for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) => a.id.localeCompare(b.id))) {
     if (bill.status === "introduced" && compareIsoDate(state.currentDate, addMonths(bill.introducedDate, 1)) >= 0) {
       const vote = recordProvincialVote(world, state, bill, "bill");
+      const governmentRelation = provincialGovernmentRelation(world, state, bill.provinceId);
       bill.voteId = vote.id;
       bill.status = vote.passed ? "passed" : "failed";
-      events.push(pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_BILL_VOTE", importance: 0.42, visibility: "public", actorIds: [bill.sponsorId], entityIds: [bill.id, vote.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId, yes: vote.yes, no: vote.no, abstain: vote.abstain, passed: vote.passed }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+      events.push(pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_BILL_VOTE", importance: 0.42, visibility: "public", actorIds: [bill.sponsorId], entityIds: [bill.id, vote.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId, yes: vote.yes, no: vote.no, abstain: vote.abstain, passed: vote.passed, governmentRelation }, sourceScheduledEventId: null, sourceCommandId: commandId }));
       continue;
     }
     if (bill.status !== "passed") continue;

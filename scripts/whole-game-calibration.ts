@@ -34,12 +34,15 @@ import { createSimulation, restoreSimulation, type Simulation } from "../package
 import {
   advanceIntegrated,
   assertCatastrophicInvariants,
+  assertStrictV1Invariants,
   loadTerenaWorld,
   type CatastrophicInvariantFailure,
+  type StrictV1InvariantFailure,
 } from "../packages/sim/src/integration/harness.js";
 import type { IrvResult } from "../packages/election-math/src/irv.js";
 import type { KernelWorld, SimState } from "../packages/sim/src/types.js";
 import type { ElectionState } from "../packages/sim/src/elections/types.js";
+import { auditGeneratedPersonQuality } from "../packages/sim/src/agents/generated-quality.js";
 
 const ACCEPTANCE_SEEDS = 100;
 const ACCEPTANCE_MONTHS = 600;
@@ -188,6 +191,8 @@ export type RunTelemetry = {
   error: string | null;
   catastrophicFailures: CatastrophicInvariantFailure[];
   catastrophicFailureCount: number;
+  strictV1Failures: StrictV1InvariantFailure[];
+  strictV1FailureCount: number;
   presidential: PresidentialRaceTelemetry[];
   assembly: AssemblyRaceTelemetry[];
   governors: GovernorRaceTelemetry[];
@@ -237,6 +242,8 @@ export type RunTelemetry = {
     provincialLeadershipElections: number;
     provincialBillsIntroduced: number;
     provincialBillsPassed: number;
+    provincialBillsFailed: number;
+    provincialPassageByGovernment: Record<"friendly" | "divided" | "hostile", { votes: number; passed: number }>;
     provincialBillsSigned: number;
     provincialVetoes: number;
     provincialOverrides: number;
@@ -251,6 +258,10 @@ export type RunTelemetry = {
     provincialLegislatorsGenerated: number;
     provincialPromotions: number;
     generatedNationalPoliticians: number;
+    generatedPersonQualityErrors: number;
+    generatedPersonQualityWarnings: number;
+    generatedLargestFirstNameShare: number;
+    generatedLargestFamilyNameShare: number;
     federalAssemblyCandidates: number;
     minimumFederalCandidateSurplus: number;
     activeOriginalPoliticians: number;
@@ -646,9 +657,21 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
   const amendments = Object.values(state.provincialRuntime.constitutionalAmendments);
   const organizations = Object.values(state.organizationRuntime.actors);
   const worldPoliticians = new Set(world.politicians.map((politician) => politician.id));
+  const generatedQuality = auditGeneratedPersonQuality(world, state);
   const billVotes = Object.values(state.provincialRuntime.votes).filter(
     (vote) => vote.subjectKind === "bill",
   );
+  const passageByGovernment: RunTelemetry["institutions"]["provincialPassageByGovernment"] = {
+    friendly: { votes: 0, passed: 0 },
+    divided: { votes: 0, passed: 0 },
+    hostile: { votes: 0, passed: 0 },
+  };
+  for (const event of state.history.filter((row) => row.type === "PROVINCIAL_BILL_VOTE")) {
+    const relation = event.payload.governmentRelation;
+    if (relation !== "friendly" && relation !== "divided" && relation !== "hostile") continue;
+    passageByGovernment[relation].votes += 1;
+    if (event.payload.passed === true) passageByGovernment[relation].passed += 1;
+  }
   const cohesionSamples: number[] = [];
   let provincialCrossPartyPasses = 0;
   for (const vote of billVotes) {
@@ -729,7 +752,9 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
     provincialElections: Object.values(state.provincialRuntime.assemblyElections).filter((election) => election.status === "resolved").length,
     provincialLeadershipElections: assemblies.reduce((sum, assembly) => sum + (assembly.leadershipHistory?.length ?? 0), 0),
     provincialBillsIntroduced: eventCount("PROVINCIAL_BILL_INTRODUCED") + eventCount("GOVERNOR_PROVINCIAL_BILL_PROPOSED"),
-    provincialBillsPassed: eventCount("PROVINCIAL_BILL_VOTE"),
+    provincialBillsPassed: billVotes.filter((vote) => vote.passed).length,
+    provincialBillsFailed: billVotes.filter((vote) => !vote.passed).length,
+    provincialPassageByGovernment: passageByGovernment,
     provincialBillsSigned: eventCount("PROVINCIAL_BILL_SIGNED"),
     provincialVetoes: eventCount("PROVINCIAL_BILL_VETOED"),
     provincialOverrides: eventCount("PROVINCIAL_VETO_OVERRIDDEN"),
@@ -746,6 +771,10 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
     provincialLegislatorsGenerated: Object.values(state.provincialRuntime.legislators).filter((politician) => politician.source === "recruited").length,
     provincialPromotions: Object.keys(state.provincialRuntime.promotions).length,
     generatedNationalPoliticians: Object.keys(state.politicians).filter((id) => !worldPoliticians.has(id)).length,
+    generatedPersonQualityErrors: generatedQuality.errors.length,
+    generatedPersonQualityWarnings: generatedQuality.warnings.length,
+    generatedLargestFirstNameShare: generatedQuality.largestFirstNameShare,
+    generatedLargestFamilyNameShare: generatedQuality.largestFamilyNameShare,
     federalAssemblyCandidates: resolvedFederalFields.reduce((sum, field) => sum + field.candidateIds.length, 0),
     minimumFederalCandidateSurplus: candidateSurpluses.length ? Math.min(...candidateSurpluses) : 0,
     activeOriginalPoliticians: world.politicians.filter((politician) => {
@@ -953,6 +982,9 @@ function runOneSeed(args: {
   const catastrophicFailures = endState
     ? assertCatastrophicInvariants(world, endState)
     : [{ code: "NO_SNAPSHOT", message: error ?? "simulation ended without snapshot" }];
+  const strictV1Failures = endState
+    ? assertStrictV1Invariants(world, endState)
+    : [{ code: "NO_SNAPSHOT", message: error ?? "simulation ended without snapshot" }];
 
   const endEconomy = endState ? nationalSnap(endState) : null;
   const endRanking = endState ? provinceRanking(endState) : startRanking;
@@ -976,6 +1008,8 @@ function runOneSeed(args: {
     error,
     catastrophicFailures,
     catastrophicFailureCount: catastrophicFailures.length,
+    strictV1Failures,
+    strictV1FailureCount: strictV1Failures.length,
     presidential: endState ? presidentialTelemetry(endState) : [],
     assembly: endState ? assemblyTelemetry(endState) : [],
     governors: endState ? governorTelemetry(endState) : [],
@@ -1040,6 +1074,12 @@ function runOneSeed(args: {
           provincialLeadershipElections: 0,
           provincialBillsIntroduced: 0,
           provincialBillsPassed: 0,
+          provincialBillsFailed: 0,
+          provincialPassageByGovernment: {
+            friendly: { votes: 0, passed: 0 },
+            divided: { votes: 0, passed: 0 },
+            hostile: { votes: 0, passed: 0 },
+          },
           provincialBillsSigned: 0,
           provincialVetoes: 0,
           provincialOverrides: 0,
@@ -1054,6 +1094,10 @@ function runOneSeed(args: {
           provincialLegislatorsGenerated: 0,
           provincialPromotions: 0,
           generatedNationalPoliticians: 0,
+          generatedPersonQualityErrors: 0,
+          generatedPersonQualityWarnings: 0,
+          generatedLargestFirstNameShare: 0,
+          generatedLargestFamilyNameShare: 0,
           federalAssemblyCandidates: 0,
           minimumFederalCandidateSurplus: 0,
           activeOriginalPoliticians: 0,
@@ -1189,6 +1233,13 @@ export function aggregateRuns(runs: RunTelemetry[], requestedMonths = months) {
       catastrophicByCode[failure.code] = (catastrophicByCode[failure.code] ?? 0) + 1;
     }
   }
+  const strictTotal = runs.reduce((sum, run) => sum + run.strictV1FailureCount, 0);
+  const strictByCode: Record<string, number> = {};
+  for (const run of runs) {
+    for (const failure of run.strictV1Failures) {
+      strictByCode[failure.code] = (strictByCode[failure.code] ?? 0) + 1;
+    }
+  }
   // Pre–June 2030 horizons often report ASM_SEAT_COUNT (vacant seats before the
   // first national Assembly cycle seats). Do not weaken the invariant — surface it.
   const asmSeatOnly =
@@ -1241,6 +1292,13 @@ export function aggregateRuns(runs: RunTelemetry[], requestedMonths = months) {
       byCode: catastrophicByCode,
       nearZero: catastrophicTotal === 0,
       earlyHorizonAsmNote,
+    },
+    strictV1: {
+      totalFailures: strictTotal,
+      failedRuns: runs.filter((run) => run.strictV1FailureCount > 0).length,
+      failureRate: runs.filter((run) => run.strictV1FailureCount > 0).length / Math.max(1, runs.length),
+      byCode: strictByCode,
+      passed: strictTotal === 0,
     },
     presidential: {
       races: presidentialRaces,
@@ -1297,6 +1355,15 @@ export function aggregateRuns(runs: RunTelemetry[], requestedMonths = months) {
       provincialElections: summarize(runs.map((r) => r.institutions.provincialElections)),
       provincialLeadershipElections: summarize(runs.map((r) => r.institutions.provincialLeadershipElections)),
       provincialBillsIntroduced: summarize(runs.map((r) => r.institutions.provincialBillsIntroduced)),
+      provincialBillsPassed: summarize(runs.map((r) => r.institutions.provincialBillsPassed)),
+      provincialBillsFailed: summarize(runs.map((r) => r.institutions.provincialBillsFailed)),
+      provincialPassageByGovernment: Object.fromEntries(
+        (["friendly", "divided", "hostile"] as const).map((relation) => {
+          const votes = runs.reduce((sum, run) => sum + run.institutions.provincialPassageByGovernment[relation].votes, 0);
+          const passed = runs.reduce((sum, run) => sum + run.institutions.provincialPassageByGovernment[relation].passed, 0);
+          return [relation, { votes, passed, passageRate: votes > 0 ? passed / votes : null }];
+        }),
+      ),
       provincialBillsSigned: summarize(runs.map((r) => r.institutions.provincialBillsSigned)),
       provincialVetoes: summarize(runs.map((r) => r.institutions.provincialVetoes)),
       provincialOverrides: summarize(runs.map((r) => r.institutions.provincialOverrides)),
@@ -1310,6 +1377,10 @@ export function aggregateRuns(runs: RunTelemetry[], requestedMonths = months) {
       provincialLegislatorsGenerated: summarize(runs.map((r) => r.institutions.provincialLegislatorsGenerated)),
       provincialPromotions: summarize(runs.map((r) => r.institutions.provincialPromotions)),
       generatedNationalPoliticians: summarize(runs.map((r) => r.institutions.generatedNationalPoliticians)),
+      generatedPersonQualityErrors: summarize(runs.map((r) => r.institutions.generatedPersonQualityErrors)),
+      generatedPersonQualityWarnings: summarize(runs.map((r) => r.institutions.generatedPersonQualityWarnings)),
+      generatedLargestFirstNameShare: summarize(runs.map((r) => r.institutions.generatedLargestFirstNameShare)),
+      generatedLargestFamilyNameShare: summarize(runs.map((r) => r.institutions.generatedLargestFamilyNameShare)),
       federalAssemblyCandidates: summarize(runs.map((r) => r.institutions.federalAssemblyCandidates)),
       minimumFederalCandidateSurplus: summarize(runs.map((r) => r.institutions.minimumFederalCandidateSurplus)),
       activeOriginalPoliticians: summarize(runs.map((r) => r.institutions.activeOriginalPoliticians)),
@@ -1364,6 +1435,9 @@ function printConsoleSummary(payload: {
   );
   console.log(
     `completed=${aggregate.runsCompleted}/${meta.seeds} errors=${aggregate.runsWithErrors} catastrophic=${aggregate.catastrophic.totalFailures} (nearZero=${aggregate.catastrophic.nearZero})`,
+  );
+  console.log(
+    `strict-v1 failures=${aggregate.strictV1.totalFailures} failedRuns=${aggregate.strictV1.failedRuns} rate=${aggregate.strictV1.failureRate.toFixed(4)} passed=${aggregate.strictV1.passed}`,
   );
   if (aggregate.catastrophic.earlyHorizonAsmNote) {
     console.log(`note: ${aggregate.catastrophic.earlyHorizonAsmNote}`);
@@ -1421,6 +1495,7 @@ function outputPayload(
       finalHash: run.finalHash,
       error: run.error,
       catastrophicFailureCount: run.catastrophicFailureCount,
+      strictV1FailureCount: run.strictV1FailureCount,
       shard: runShardPath(run.seedIndex).replace(`${repoRoot}\\`, "").replace(/\\/g, "/"),
     })),
   };

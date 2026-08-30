@@ -38,6 +38,7 @@ type PageProps = {
     report: (r: CommandResult) => boolean;
     countingElection: boolean;
     onResolveAssembly: () => void;
+    onResolvePresidential: () => void;
     askConfirm: (opts: {
         title: string;
         body: string;

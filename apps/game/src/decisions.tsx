@@ -36,6 +36,7 @@ export function DecisionPanel(props: {
   report: (result: CommandResult) => boolean;
   countingElection: boolean;
   onResolveAssembly: () => void;
+  onResolvePresidential: () => void;
 }) {
   const { snap, sim, world } = props;
   const interrupt = snap.pendingInterrupt;
@@ -74,10 +75,7 @@ export function DecisionPanel(props: {
             <button
               type="button"
               className="btn"
-              onClick={() => {
-                run({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
-                run({ type: "RESUME_TURN" });
-              }}
+              onClick={props.onResolvePresidential}
             >
               Resolve presidential election
             </button>

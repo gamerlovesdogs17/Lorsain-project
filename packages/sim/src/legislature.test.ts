@@ -10,6 +10,7 @@ import { absoluteMajorityNeeded, legislativeConstitutionFromSeats } from "./legi
 import { processLegislatureMonth } from "./legislature/monthly.js";
 import { recordAmendmentVote } from "./legislature/procedure.js";
 import { whipEstimate } from "./legislature/whip.js";
+import { parliamentaryDiscipline } from "./legislature/discipline.js";
 import { currentAssemblyMemberIds, currentPresidentId } from "./legislature/state.js";
 import { evaluatePresidentDisposition } from "./legislature/decisions.js";
 import { getAgentProfile } from "./agents/profile.js";
@@ -47,12 +48,32 @@ function playerCommitteeIssue(world: KernelWorld, sim: Simulation, playerId = "M
 }
 
 describe("Phase 6 legislature kernel", () => {
+  it("derives distinct public parliamentary-discipline categories from evolving party institutions", () => {
+    const world = legislativeHarnessWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "DISCIPLINE-PUBLIC" });
+    const low = sim.serializeSave().simulation;
+    const partyId = Object.keys(low.partyStates).sort()[0]!;
+    low.partyStates[partyId]!.cohesion = 0.2;
+    for (const faction of Object.values(low.factionStates)) {
+      if (faction.partyId === partyId) faction.cohesion = 0.2;
+    }
+    const high = jsonClone(low);
+    high.partyStates[partyId]!.cohesion = 0.92;
+    for (const faction of Object.values(high.factionStates)) {
+      if (faction.partyId === partyId) faction.cohesion = 0.92;
+    }
+    const loose = parliamentaryDiscipline(world, low, partyId);
+    const strong = parliamentaryDiscipline(world, high, partyId);
+    expect(strong.score).toBeGreaterThan(loose.score + 0.2);
+    expect(strong.label).not.toBe(loose.label);
+    expect(strong.publicReasons.length).toBeGreaterThan(0);
+  });
   it("uses schemaVersion 6, derived Assembly membership, and functional committees", () => {
     const world = legislativeHarnessWorld();
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "P6-SEED" });
     const snap = sim.getSnapshot();
     expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(SAVE_SCHEMA_VERSION).toBe(14);
+    expect(SAVE_SCHEMA_VERSION).toBe(15);
     expect(currentAssemblyMemberIds(world, snap)).toHaveLength(36);
     expect(Object.keys(snap.legislatureRuntime.committees).sort()).toEqual([
       "COMMITTEE_ECONOMIC",

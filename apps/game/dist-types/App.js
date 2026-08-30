@@ -1,14 +1,14 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { collectPlayerActionableDecisions, addMonths, createSimulation, nominationCalendarDates, parseSaveFile, restoreSimulation, } from "@lorsain/sim";
+import { collectPlayerActionableDecisions, addMonths, createSimulation, governedProvinceId, nominationCalendarDates, parseSaveFile, restoreSimulation, } from "@lorsain/sim";
 import { loadBrowserContentBundle } from "./content/browserReader.js";
 import { kernelWorldFromBundle } from "./content/world.js";
 import { downloadSave, getSave, listSaves, putSave, readImportedSave, } from "./saves.js";
-import { playerCampaign, playerOffices, politicianName } from "./format.js";
+import { playerCampaign, playerOffices, politicianName, publicStandingLabel } from "./format.js";
 import { GamePages } from "./pages.js";
 import { DecisionPanel } from "./decisions.js";
 import { useCommandFeedback } from "./feedback.js";
-import { catalogFromBundle, partyColor, partyDisplayName, politicianDisplayName } from "./presentation.js";
+import { catalogFromBundle, eventDisplay, partyColor, partyDisplayName, politicianDisplayName } from "./presentation.js";
 import { GameShell } from "./ui/shell.js";
 import { StatusBadge } from "./ui/kit.js";
 import { PoliticianAvatar, PoliticianCard } from "./ui/politician.js";
@@ -42,6 +42,18 @@ export default function App() {
     const [mapHover, setMapHover] = useState(null);
     const [debug, setDebug] = useState(false);
     const [globalFocus, setGlobalFocus] = useState(null);
+    const [watchlist, setWatchlist] = useState(() => {
+        if (typeof window === "undefined")
+            return [];
+        try {
+            const raw = JSON.parse(window.localStorage.getItem("lorsain-watchlist") ?? "[]");
+            return Array.isArray(raw) ? raw.filter((value) => typeof value === "string") : [];
+        }
+        catch {
+            return [];
+        }
+    });
+    const [lastSavedAt, setLastSavedAt] = useState(null);
     const qaBooted = useRef(false);
     const feedback = useCommandFeedback();
     useEffect(() => {
@@ -91,6 +103,9 @@ export default function App() {
         })
             .catch((reason) => setError(reason instanceof Error ? reason.message : String(reason)));
     }, [world]);
+    useEffect(() => {
+        window.localStorage.setItem("lorsain-watchlist", JSON.stringify(watchlist));
+    }, [watchlist]);
     useEffect(() => {
         if (!import.meta.env.DEV || !sim)
             return;
@@ -194,15 +209,31 @@ export default function App() {
     async function saveGame() {
         if (!sim || !snap)
             return;
+        const savedAt = new Date().toISOString();
         await putSave({
             id: `${snap.playerPoliticianId}-${Date.now()}`,
             name: `${politicianName(figures, snap.playerPoliticianId, snap)} ${snap.currentDate}`,
-            savedAt: new Date().toISOString(),
+            savedAt,
             playerName: politicianName(figures, snap.playerPoliticianId, snap),
             date: snap.currentDate,
             save: sim.serializeSave(),
         });
+        setLastSavedAt(savedAt);
         setSaves(await listSaves());
+    }
+    async function checkpointAutosave(reason) {
+        if (!sim || !snap)
+            return;
+        const savedAt = new Date().toISOString();
+        await putSave({
+            id: `autosave-${snap.playerPoliticianId}`,
+            name: `Autosave · ${reason}`,
+            savedAt,
+            playerName: politicianName(figures, snap.playerPoliticianId, snap),
+            date: snap.currentDate,
+            save: sim.serializeSave(),
+        });
+        setLastSavedAt(savedAt);
     }
     function loadFile(save) {
         if (!world)
@@ -224,10 +255,18 @@ export default function App() {
         const restored = restoreSimulation(save, world);
         refresh(restored);
     }
-    function resolveAssemblyElection() {
+    async function resolveAssemblyElection() {
         if (!sim || !world || busy || countingElection)
             return;
         setCountingElection(true);
+        try {
+            await checkpointAutosave("before Assembly count");
+        }
+        catch {
+            feedback.setNotice("The pre-count autosave could not be written. The count has not started.");
+            setCountingElection(false);
+            return;
+        }
         const worker = new Worker(new URL("./electionWorker.ts", import.meta.url), { type: "module" });
         worker.onmessage = (event) => {
             worker.terminate();
@@ -255,7 +294,39 @@ export default function App() {
         };
         worker.postMessage({ save: sim.serializeSave(), world });
     }
-    function endTurn() {
+    async function resolvePresidentialElection() {
+        if (!sim || busyRef.current || countingElection)
+            return;
+        busyRef.current = true;
+        setBusyLabel("Counting presidential ballots…");
+        setBusy(true);
+        const before = sim.getSnapshot().history.length;
+        try {
+            await checkpointAutosave("before presidential count");
+        }
+        catch {
+            feedback.setNotice("The pre-count autosave could not be written. The count has not started.");
+            busyRef.current = false;
+            setBusy(false);
+            return;
+        }
+        try {
+            const result = sim.executeCommand({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
+            feedback.report(result);
+            if (result.ok) {
+                const resumed = sim.executeCommand({ type: "RESUME_TURN" });
+                if (!resumed.ok)
+                    feedback.report(resumed);
+                setTurnEvents(sim.getSnapshot().history.slice(before));
+            }
+            refresh(sim);
+        }
+        finally {
+            busyRef.current = false;
+            setBusy(false);
+        }
+    }
+    async function endTurn() {
         if (!sim || !world || busyRef.current || countingElection)
             return;
         busyRef.current = true;
@@ -273,6 +344,15 @@ export default function App() {
         });
         setBusyLabel(nominationDue ? "Counting nominations…" : "Processing…");
         setBusy(true);
+        try {
+            await checkpointAutosave(nominationDue ? "before nomination count" : "before turn");
+        }
+        catch {
+            feedback.setNotice("Autosave failed, so the turn was not advanced.");
+            busyRef.current = false;
+            setBusy(false);
+            return;
+        }
         const worker = new Worker(new URL("./turnWorker.ts", import.meta.url), { type: "module" });
         worker.onmessage = (event) => {
             worker.terminate();
@@ -478,7 +558,71 @@ export default function App() {
         .map((term) => world.offices[term.officeId]?.kind)
         .find(Boolean) ?? "private_citizen";
     const interrupt = snap.pendingInterrupt;
-    const decisionCount = collectPlayerActionableDecisions(world, snap).length;
-    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: decisionCount, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: endTurn, onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), searchEntries: searchEntries, onSearchSelect: selectSearchEntry, children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, askConfirm: feedback.askConfirm, globalFocus: globalFocus }), import.meta.env.DEV ? (_jsx("output", { id: "lorsain-browser-qa-state", hidden: true, "data-ready": "true", "data-screen": screen, "data-player": snap.playerPoliticianId, "data-date": snap.currentDate, children: "Browser QA ready" })) : null, feedback.overlay()] }));
+    const playerDecisions = collectPlayerActionableDecisions(world, snap);
+    const decisionScreen = (kind) => {
+        if (kind === "assembly_filing")
+            return "career";
+        if (kind === "judicial_vote" || kind === "confirmation_vote" || kind === "impeachment_vote" || kind === "recall_vote")
+            return "courts";
+        if (kind === "foreign_presidential_action" || kind === "incoming_treaty" || kind === "incoming_summit" || kind === "war_powers")
+            return "foreign";
+        if (kind === "sign_bill")
+            return "executive";
+        if (kind === "interrupt" && interrupt?.code.includes("ELECTION"))
+            return "elections";
+        return "assembly";
+    };
+    const attentionItems = playerDecisions.map((decision) => ({
+        id: decision.key,
+        label: decision.label,
+        detail: decision.kind === "interrupt" ? "The turn cannot continue until this is resolved." : "Your affirmative choice is required.",
+        screen: decisionScreen(decision.kind),
+        tone: decision.kind === "interrupt" ? "urgent" : "soon",
+    }));
+    for (const election of Object.values(snap.provincialRuntime.elections)) {
+        if (election.status !== "filing_open" || election.playerDecision != null)
+            continue;
+        const playerHome = player.homeProvinceId ?? world.politicianHomeProvince[player.id];
+        if (election.provinceId !== playerHome && election.incumbentId !== player.id)
+            continue;
+        attentionItems.push({ id: `governor-filing:${election.id}`, label: `Governor filing is open in ${catalog.places.get(election.provinceId)?.name ?? "your province"}.`, detail: `Deadline ${election.filingDeadlineDate}`, screen: "career", tone: "soon" });
+    }
+    for (const election of Object.values(snap.provincialRuntime.assemblyElections)) {
+        if (election.status !== "filing_open" || election.playerDecision != null)
+            continue;
+        const playerHome = player.homeProvinceId ?? world.politicianHomeProvince[player.id];
+        if (election.provinceId !== playerHome)
+            continue;
+        attentionItems.push({ id: `provincial-filing:${election.id}`, label: `Provincial Assembly filing is open in ${catalog.places.get(election.provinceId)?.name ?? "your province"}.`, detail: `Election ${election.date}`, screen: "career", tone: "soon" });
+    }
+    const watchedIds = new Set(watchlist.map((entry) => entry.slice(entry.indexOf(":") + 1)));
+    const publicTurnEvents = turnEvents.filter((event) => event.visibility === "public" && event.type !== "TURN_COMPLETED");
+    const meaningfulTurnEvents = publicTurnEvents.filter((event) => event.importance >= 0.45);
+    const briefingSource = (meaningfulTurnEvents.length ? meaningfulTurnEvents : publicTurnEvents).slice(-10).reverse();
+    const briefingItems = briefingSource.map((event) => ({
+        id: event.id,
+        date: event.date,
+        label: eventDisplay(catalog, world, snap, event),
+        watched: [...event.actorIds, ...event.entityIds].some((id) => watchedIds.has(id)) || [...watchedIds].some((id) => JSON.stringify(event.payload).includes(id)),
+    }));
+    const activeCampaign = playerCampaign(snap);
+    const campaignDate = activeCampaign?.electionId
+        ? snap.elections[activeCampaign.electionId]?.date ?? snap.provincialRuntime.elections[activeCampaign.electionId]?.date ?? snap.provincialRuntime.assemblyElections[activeCampaign.electionId]?.date
+        : activeCampaign?.contestId && typeof snap.partyContests[activeCampaign.contestId]?.metadata.electionDate === "string"
+            ? snap.partyContests[activeCampaign.contestId].metadata.electionDate
+            : null;
+    const monthsRemaining = campaignDate ? Math.max(0, (Number(campaignDate.slice(0, 4)) - Number(snap.currentDate.slice(0, 4))) * 12 + Number(campaignDate.slice(5, 7)) - Number(snap.currentDate.slice(5, 7))) : null;
+    const provinceId = governedProvinceId(world, snap, player.id);
+    const roleActions = activeCampaign?.actionPointsRemaining ?? (provinceId ? snap.provincialRuntime.provinces[provinceId]?.actionPointsRemaining : null);
+    const statusSegments = [
+        `Standing: ${publicStandingLabel(world, snap, player.id)}`,
+        ...(roleActions != null ? [`${roleActions} action${roleActions === 1 ? "" : "s"}`] : []),
+        ...(activeCampaign && monthsRemaining != null ? [`${monthsRemaining} month${monthsRemaining === 1 ? "" : "s"} to election`] : []),
+    ];
+    const lastSavedLabel = lastSavedAt ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Autosave runs before every turn and national count.";
+    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: attentionItems.length, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: () => void endTurn(), onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), searchEntries: searchEntries, onSearchSelect: selectSearchEntry, attentionItems: attentionItems, briefingItems: briefingItems, watchlist: watchlist, onToggleWatch: (entry) => {
+            const key = `${entry.kind}:${entry.id}`;
+            setWatchlist((items) => items.includes(key) ? items.filter((item) => item !== key) : [...items, key]);
+        }, statusSegments: statusSegments, lastSavedLabel: lastSavedLabel, children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection() }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm, globalFocus: globalFocus }), import.meta.env.DEV ? (_jsx("output", { id: "lorsain-browser-qa-state", hidden: true, "data-ready": "true", "data-screen": screen, "data-player": snap.playerPoliticianId, "data-date": snap.currentDate, children: "Browser QA ready" })) : null, feedback.overlay()] }));
 }
 //# sourceMappingURL=App.js.map

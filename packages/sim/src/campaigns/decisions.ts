@@ -6,7 +6,7 @@ import type { KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import { pollAverage } from "../elections/polls.js";
 import { WITHDRAW } from "./policy.js";
-import { contestPollShare, constituenciesInProvince } from "./actions.js";
+import { campaignMonthsRemaining, contestPollShare, constituenciesInProvince } from "./actions.js";
 import { ownSkill, ownTrait, standingPublicScore } from "./effects.js";
 import { nominationQualificationNeed } from "./qualification.js";
 import {
@@ -144,6 +144,31 @@ export function campaignDecisionOptions(
       metadata: { campaignId: campaign.id },
     },
   ];
+  const monthsRemaining = campaignMonthsRemaining(state, campaign);
+  const campaignProvince = typeof campaign.metadata.provinceId === "string" ? campaign.metadata.provinceId : null;
+  const gotvGeography = campaign.type === "assembly" && campaign.constituencyId
+    ? { kind: "constituency" as const, id: campaign.constituencyId }
+    : { kind: "province" as const, id: campaignProvince ?? home };
+  const gotvOrganization = gotvGeography.kind === "constituency" && gotvGeography.id
+    ? campaign.organizationByConstituency[gotvGeography.id] ?? 0
+    : gotvGeography.id
+      ? campaign.organizationByProvince[gotvGeography.id] ?? 0
+      : 0;
+  if (monthsRemaining != null && monthsRemaining >= 0 && monthsRemaining <= 1 && gotvGeography.id && gotvOrganization >= 0.12) {
+    opts.push({
+      optionId: `GOTV:${gotvGeography.kind}:${gotvGeography.id}`,
+      actionType: "CAMPAIGN_GOTV",
+      targetIds: [],
+      uncertainty: 0.1,
+      signals: emptySignals({
+        careerBenefit: 0.42,
+        pragmaticEffectiveness: 0.75 + gotvOrganization * 0.2,
+        risk: 0.05,
+      }),
+      goalImpacts: goalImpacts(state, id, 0.35),
+      metadata: { campaignId: campaign.id, geography: gotvGeography },
+    });
+  }
   if (leader) {
     opts.push({
       optionId: `ATTACK:${leader}`,

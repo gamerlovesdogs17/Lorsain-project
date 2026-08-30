@@ -64,7 +64,7 @@ import type {
 
 export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 14 as const;
+export const SAVE_SCHEMA_VERSION = 15 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -453,6 +453,12 @@ export type Command =
   | { type: "CAMPAIGN_SEEK_ENDORSEMENT"; campaignId: string; endorserId?: string }
   | { type: "CAMPAIGN_SEEK_NOMINATION_SUPPORT"; campaignId: string }
   | { type: "CAMPAIGN_PREPARE_DEBATE"; campaignId: string }
+  | {
+      type: "CAMPAIGN_GOTV";
+      campaignId: string;
+      geographyKind: "province" | "constituency";
+      geographyId: string;
+    }
   | { type: "WITHDRAW_CAMPAIGN"; campaignId: string }
   | {
       type: "FILE_GUBERNATORIAL_CANDIDACY";

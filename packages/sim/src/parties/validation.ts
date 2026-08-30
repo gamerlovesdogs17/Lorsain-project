@@ -1,4 +1,4 @@
-import { isPositive, parseRational } from "@lorsain/election-math";
+import { add, eq, isPositive, parseRational, ZERO } from "@lorsain/election-math";
 import type { IrvResult } from "@lorsain/election-math";
 import { compareIsoDate, isIsoDate } from "../calendar.js";
 import { parseCanonicalAllocatedId } from "../ids.js";
@@ -133,16 +133,16 @@ function selectorCountCorrespondence(
   if (selectorSummary.length === 0 || countInput.ballots.length === 0) {
     return `${label} resolved contest requires nonempty selectorSummary and countInput`;
   }
-  const summaryIds = selectorSummary.map((g) => g.id).sort();
-  const ballotIds = countInput.ballots.map((b) => b.id).sort();
-  if (JSON.stringify(summaryIds) !== JSON.stringify(ballotIds)) {
-    return `${label} selectorSummary IDs must equal countInput ballot IDs`;
+  let selectorWeight = ZERO;
+  for (const group of selectorSummary) {
+    selectorWeight = add(selectorWeight, parseRational(group.weight));
   }
-  const weights = new Map(selectorSummary.map((g) => [g.id, g.weight]));
+  let ballotWeight = ZERO;
   for (const ballot of countInput.ballots) {
-    if (weights.get(ballot.id) !== ballot.weight) {
-      return `${label} selectorSummary weight mismatch for ${ballot.id}`;
-    }
+    ballotWeight = add(ballotWeight, parseRational(ballot.weight));
+  }
+  if (!eq(selectorWeight, ballotWeight)) {
+    return `${label} selectorSummary and countInput total weights differ`;
   }
   return null;
 }

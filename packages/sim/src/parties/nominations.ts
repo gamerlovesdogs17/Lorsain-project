@@ -1,4 +1,11 @@
-import { countIrv, type BallotGroupInput, type IrvResult } from "@lorsain/election-math";
+import {
+  add,
+  countIrv,
+  parseRational,
+  serializeRational,
+  type BallotGroupInput,
+  type IrvResult,
+} from "@lorsain/election-math";
 import type { CommandError, KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import { activeEndorsementsForContest } from "./endorsements.js";
@@ -134,11 +141,29 @@ export function resolveContestCount(
     return { error: reject("EMPTY_SELECTORATE", "no legitimate selectors") };
   }
   clearSelectoratePublicCache(state);
-  const ballots: BallotGroupInput[] = groups.map((g) => ({
+  const selectorBallots: BallotGroupInput[] = groups.map((g) => ({
     id: g.id,
     rankings: rankCandidatesForGroup(world, state, contest, g, candidates, rng),
     weight: g.weight,
   }));
+  const grouped = new Map<
+    string,
+    { weight: ReturnType<typeof parseRational>; rankings: string[] }
+  >();
+  for (const ballot of selectorBallots) {
+    const key = ballot.rankings.join("\u001f");
+    const weight = parseRational(ballot.weight);
+    const prior = grouped.get(key);
+    if (prior) prior.weight = add(prior.weight, weight);
+    else grouped.set(key, { weight, rankings: [...ballot.rankings] });
+  }
+  const ballots: BallotGroupInput[] = [...grouped.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([, ballot], index) => ({
+      id: `aggregate:${String(index + 1).padStart(4, "0")}`,
+      rankings: ballot.rankings,
+      weight: serializeRational(ballot.weight),
+    }));
   const countInput: ContestCountInput = {
     candidateIds: candidates,
     ballots: ballots.map((b, i) => ({

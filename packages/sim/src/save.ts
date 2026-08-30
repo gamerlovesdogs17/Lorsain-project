@@ -1559,3 +1559,40 @@ export function migrateSaveV13ToV14(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 13, toSchema: 14, migrate: migrateSaveV13ToV14 });
+
+/**
+ * Phase 11.3 strict-institution closeout records gubernatorial career decisions
+ * and explicit vacancy state. Migration adds current structural defaults only;
+ * it does not infer a past Governor decision or fabricate a vacancy event.
+ */
+export function migrateSaveV14ToV15(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 15 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 15 };
+  const provincial = isRecord(sim.provincialRuntime) ? { ...sim.provincialRuntime } : {};
+  const elections: Record<string, unknown> = {};
+  if (isRecord(provincial.elections)) {
+    for (const [id, value] of Object.entries(provincial.elections)) {
+      elections[id] = isRecord(value)
+        ? {
+            ...value,
+            cycleKind: value.cycleKind === "special" ? "special" : "regular",
+            incumbentDecision:
+              typeof value.incumbentDecision === "string" ? value.incumbentDecision : null,
+          }
+        : value;
+    }
+  }
+  sim.provincialRuntime = {
+    ...provincial,
+    elections,
+    governorVacancies: isRecord(provincial.governorVacancies)
+      ? provincial.governorVacancies
+      : {},
+  };
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 14, toSchema: 15, migrate: migrateSaveV14ToV15 });

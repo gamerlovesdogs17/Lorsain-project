@@ -1,4 +1,5 @@
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
+import { addMonths, compareIsoDate, type IsoDate } from "../calendar.js";
 import type { JsonObject } from "../json.js";
 import type { RngService } from "../rng.js";
 import { pushHistory } from "../scheduler.js";
@@ -49,6 +50,7 @@ import type {
   CampaignState,
   CampaignType,
 } from "./types.js";
+import { campaignMonthDistance, gotvActivations } from "./gotv.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -103,6 +105,19 @@ function requireActor(
     return reject("WRONG_ACTOR", "only the candidate may execute this campaign action");
   }
   return null;
+}
+
+function campaignActionsClosed(state: SimState, campaign: CampaignState): boolean {
+  const contestStatus = campaign.contestId ? state.partyContests[campaign.contestId]?.status : null;
+  if (contestStatus === "resolved" || contestStatus === "cancelled") return true;
+  if (!campaign.electionId) return false;
+  const nationalStatus = state.elections[campaign.electionId]?.status;
+  if (nationalStatus === "voting" || nationalStatus === "resolved" || nationalStatus === "cancelled") {
+    return true;
+  }
+  const governorStatus = state.provincialRuntime.elections[campaign.electionId]?.status;
+  if (governorStatus === "resolved" || governorStatus === "assumed") return true;
+  return state.provincialRuntime.assemblyElections[campaign.electionId]?.status === "resolved";
 }
 
 export function declareCampaign(
@@ -374,6 +389,9 @@ function beginAction(
   if ("error" in campaign) return campaign;
   const actorErr = requireActor(state, campaign, actorId);
   if (actorErr) return { error: actorErr };
+  if (campaignActionsClosed(state, campaign)) {
+    return { error: reject("CAMPAIGN_ACTIONS_CLOSED", "Campaign actions close when voting and counting begin") };
+  }
   ensureActionPoints(world, state, campaign);
   const ap = spendActionPoint(campaign);
   if (ap) return { error: ap };
@@ -503,6 +521,117 @@ function addConstituencyOrganization(
 ): void {
   const previous = campaign.organizationByConstituency[constituencyId] ?? 0;
   campaign.organizationByConstituency[constituencyId] = Math.min(1, previous + gain);
+}
+
+export function campaignTargetDate(state: SimState, campaign: CampaignState): IsoDate | null {
+  if (campaign.type === "presidential_nomination" && campaign.contestId) {
+    const electionDate = state.partyContests[campaign.contestId]?.metadata.electionDate;
+    return typeof electionDate === "string" ? addMonths(electionDate, -2) : null;
+  }
+  if (!campaign.electionId) return null;
+  return (
+    state.elections[campaign.electionId]?.date ??
+    state.provincialRuntime.elections[campaign.electionId]?.date ??
+    state.provincialRuntime.assemblyElections[campaign.electionId]?.date ??
+    null
+  );
+}
+
+export function campaignMonthsRemaining(state: SimState, campaign: CampaignState): number | null {
+  const target = campaignTargetDate(state, campaign);
+  return target ? campaignMonthDistance(state.currentDate, target) : null;
+}
+
+function campaignGeographyScopeError(
+  world: KernelWorld,
+  campaign: CampaignState,
+  geography: CampaignGeography,
+): CommandError | null {
+  if (!geography.id) return reject("INVALID_GEOGRAPHY", "mobilization requires a place");
+  if (campaign.type === "assembly") {
+    if (geography.kind !== "constituency" || geography.id !== campaign.constituencyId) {
+      return reject("INVALID_GEOGRAPHY", "Assembly mobilization must remain in the filed constituency");
+    }
+  }
+  const provinceId = typeof campaign.metadata.provinceId === "string" ? campaign.metadata.provinceId : null;
+  if (provinceId && geography.kind === "province" && geography.id !== provinceId) {
+    return reject("INVALID_GEOGRAPHY", "provincial campaign cannot mobilize outside its province");
+  }
+  if (
+    provinceId &&
+    geography.kind === "constituency" &&
+    !(world.constituencyElectorate[geography.id]?.provincePopulationShares.some(
+      (share) => share.provinceId === provinceId && share.share > 0,
+    ) ?? false)
+  ) {
+    return reject("INVALID_GEOGRAPHY", "constituency is outside the campaign province");
+  }
+  return null;
+}
+
+export function campaignGotv(
+  world: KernelWorld,
+  state: SimState,
+  args: { campaignId: string; geography: CampaignGeography; actorId?: string },
+  commandId: string | null,
+): { events: SimEvent[] } | { error: CommandError } {
+  const existing = requireActiveCampaign(state, args.campaignId);
+  if ("error" in existing) return existing;
+  const actorErr = requireActor(state, existing, args.actorId);
+  if (actorErr) return { error: actorErr };
+  const geoErr = campaignGeographyError(world, args.geography);
+  if (geoErr || args.geography.kind === "national") {
+    return { error: geoErr ?? reject("INVALID_GEOGRAPHY", "GOTV requires a province or constituency") };
+  }
+  const scopeErr = campaignGeographyScopeError(world, existing, args.geography);
+  if (scopeErr) return { error: scopeErr };
+  const targetDate = campaignTargetDate(state, existing);
+  const months = campaignMonthsRemaining(state, existing);
+  if (!targetDate || months == null || months < 0 || months > 1 || compareIsoDate(state.currentDate, targetDate) > 0) {
+    return { error: reject("GOTV_WINDOW_CLOSED", "GOTV opens during the final two campaign months") };
+  }
+  const geographyId = args.geography.id!;
+  const organization = args.geography.kind === "province"
+    ? (existing.organizationByProvince[geographyId] ?? 0) + existing.fieldOrganization * 0.25
+    : (existing.organizationByConstituency[geographyId] ?? 0) + existing.fieldOrganization * 0.2;
+  if (organization < FIELD.gotvMinimumOrganization) {
+    return { error: reject("INSUFFICIENT_ORGANIZATION", "Build a Ground Game here before mobilizing voters") };
+  }
+  const key = `${args.geography.kind}:${geographyId}`;
+  const prior = gotvActivations(existing)[key];
+  if (prior?.date === state.currentDate) {
+    return { error: reject("ALREADY_MOBILIZED", "GOTV is already active here this month") };
+  }
+  const campaign = beginAction(world, state, args.campaignId, args.actorId);
+  if ("error" in campaign) return campaign;
+  const magnitude = Math.min(0.25, FIELD.gotvBase + organization * FIELD.gotvOrganizationWeight);
+  campaign.metadata.gotvActivations = {
+    ...gotvActivations(campaign),
+    [key]: { date: state.currentDate, magnitude },
+  };
+  applyStandingDelta(world, state, campaign.politicianId, {
+    enthusiasm: Math.min(0.012, magnitude * 0.06),
+  });
+  pushEffect(campaign, {
+    date: state.currentDate,
+    kind: `gotv:${key}`,
+    geographyId,
+    targetId: null,
+    magnitude,
+  });
+  return {
+    events: [
+      event(
+        state,
+        "CAMPAIGN_GOTV",
+        [campaign.politicianId],
+        [campaign.id, geographyId],
+        { campaignId: campaign.id, geography: args.geography, readiness: magnitude },
+        commandId,
+        0.55,
+      ),
+    ],
+  };
 }
 
 export function campaignVisit(
@@ -1160,6 +1289,9 @@ export function withdrawCampaign(
   if ("error" in campaign) return campaign;
   const actorErr = requireActor(state, campaign, args.actorId);
   if (actorErr) return { error: actorErr };
+  if (campaignActionsClosed(state, campaign)) {
+    return { error: reject("CAMPAIGN_ACTIONS_CLOSED", "Withdrawal closes when voting and counting begin") };
+  }
   campaign.status = "withdrawn";
   campaign.endedDate = state.currentDate;
   const events: SimEvent[] = [];

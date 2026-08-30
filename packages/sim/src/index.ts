@@ -133,6 +133,9 @@ export {
   emptyCampaignRuntime,
   campaignDecisionOptions,
   chooseCampaignAction,
+  campaignTargetDate,
+  campaignMonthsRemaining,
+  gotvActivations,
 } from "./campaigns/index.js";
 export type { CampaignState, CampaignRuntime, DebateState } from "./campaigns/types.js";
 export {
@@ -156,6 +159,8 @@ export {
   processLegislatureMonth,
   emptyLegislatureRuntime,
   whipEstimate,
+  parliamentaryDiscipline,
+  PARLIAMENTARY_DISCIPLINE_LABELS,
   absoluteMajorityNeeded,
   COMMITTEE_NAMES,
   LEGISLATIVE_PROVISIONS,

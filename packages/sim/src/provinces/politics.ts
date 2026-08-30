@@ -42,6 +42,25 @@ export function provincialPolicy(subject: ProvincialBillSubject): ProvincialPoli
   return SUBJECT_POLICY[subject];
 }
 
+export type ProvincialGovernmentRelation = "friendly" | "divided" | "hostile";
+
+export function provincialGovernmentRelation(
+  world: KernelWorld,
+  state: SimState,
+  provinceId: string,
+): ProvincialGovernmentRelation {
+  const governorId = currentGovernorId(world, state, provinceId);
+  const governorParty = governorId ? state.politicians[governorId]?.partyId ?? null : null;
+  const assembly = state.provincialRuntime.assemblies[provinceId];
+  if (!governorParty || !assembly) return "divided";
+  const share = (assembly.partySeats[governorParty] ?? 0) / Math.max(1, assembly.seatCount);
+  const plurality = Object.entries(assembly.partySeats)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+  if (share >= 0.5 || (plurality === governorParty && share >= 0.36)) return "friendly";
+  if (share < 0.22 && plurality !== governorParty) return "hostile";
+  return "divided";
+}
+
 function partyIdeology(world: KernelWorld, partyId: string | null, axis: IdeologyAxis): number {
   return partyId ? world.partyPublicIdeology[partyId]?.[axis] ?? 0 : 0;
 }
@@ -110,14 +129,31 @@ export function deriveProvincialPartyPositions(
     const interest = provincialInterest(state, bill);
     const sponsorCoalition = [bill.sponsorId, ...bill.cosponsorIds].some(
       (id) => state.provincialRuntime.legislators[id]?.partyId === partyId || state.politicians[id]?.partyId === partyId,
-    ) ? 0.18 : 0;
-    const score = ideology * 0.62 + interest * 0.2 + sponsorCoalition;
-    const stance = score > 0.09 ? "support" : score < -0.09 ? "oppose" : "free_vote";
+    ) ? 1 : 0;
+    const sponsor = state.provincialRuntime.legislators[bill.sponsorId];
+    const sponsorStrength = sponsor ? (sponsor.legislativeSkill + sponsor.standing) / 2 : 0.5;
+    const fiscalPressure = Math.max(0, Math.min(1, state.economyRuntime.national.fiscalPressure));
+    const fiscal = Math.max(-1, Math.min(1, -bill.fiscalImpact * (2 + fiscalPressure * 2)));
+    const organizations = organizationSignal(world, bill);
+    const relation = provincialGovernmentRelation(world, state, bill.provinceId);
+    const governorId = currentGovernorId(world, state, bill.provinceId);
+    const governorParty = governorId ? state.politicians[governorId]?.partyId ?? null : null;
+    const governorAgenda = bill.agendaSource === "governor_priority"
+      ? partyId === governorParty ? 0.12 : relation === "hostile" ? -0.12 : -0.04
+      : 0;
+    const score =
+      ideology * 0.52 +
+      interest * 0.12 +
+      sponsorCoalition * (0.06 + sponsorStrength * 0.07) +
+      fiscal * 0.16 +
+      organizations * 0.12 +
+      governorAgenda;
+    const stance = score > 0.16 ? "support" : score < -0.12 ? "oppose" : "free_vote";
     positions[partyId] = {
       partyId,
       stance,
       setById: leadership?.floorLeaderId ?? null,
-      strength: Math.max(0.25, Math.min(0.92, 0.42 + Math.abs(score) * 0.45)),
+      strength: Math.max(0.22, Math.min(0.88, 0.32 + Math.abs(score) * 0.5)),
     };
   }
   return positions;
@@ -138,6 +174,8 @@ export function chooseProvincialLegislativeVote(
   const partyPosition = bill.partyPositions[member.partyId ?? ""];
   const partyPush = partyPosition?.stance === "support" ? 1 : partyPosition?.stance === "oppose" ? -1 : 0;
   const loyalty = memberPartyLoyalty(world, state, member);
+  const partyCohesion = member.partyId ? state.partyStates[member.partyId]?.cohesion ?? 0.5 : 0;
+  const discipline = Math.max(0.22, Math.min(0.9, 0.28 + partyCohesion * 0.52));
   const governorId = currentGovernorId(world, state, bill.provinceId);
   const governorParty = governorId ? state.politicians[governorId]?.partyId ?? null : null;
   const governorSponsor = governorId === bill.sponsorId ? 1 : 0;
@@ -145,23 +183,34 @@ export function chooseProvincialLegislativeVote(
   const overrideSignal = kind === "veto_override" ? -governorPartySignal * loyalty : 0;
   const constituencyInterest = provincialInterest(state, bill);
   const orgSignal = organizationSignal(world, bill);
+  const relation = provincialGovernmentRelation(world, state, bill.provinceId);
+  const sponsor = state.provincialRuntime.legislators[bill.sponsorId];
+  const sponsorStrength = sponsor ? (sponsor.legislativeSkill + sponsor.standing - 1) : 0;
+  const fiscalPressure = Math.max(0, Math.min(1, state.economyRuntime.national.fiscalPressure));
+  const fiscalSignal = Math.max(-1, Math.min(1, -bill.fiscalImpact * (2 + fiscalPressure * 2.2)));
+  const issueDissent = bill.subject === "local_administration" ? 0.16
+    : bill.subject === "housing_delivery" ? 0.1
+      : 0.06;
   const independence = 1 - loyalty;
   const personalMandate =
     (((provincialPoliticalHash(`${bill.id}:${kind}:${memberId}:mandate`) % 1001) - 500) / 2500) *
     independence;
-  const noise = ((provincialPoliticalHash(`${bill.id}:${kind}:${memberId}:noise`) % 1001) - 500) / 6600;
+  const noise = ((provincialPoliticalHash(`${bill.id}:${kind}:${memberId}:noise`) % 1001) - 500) / 3900;
   const score =
-    ideology * 0.44 +
-    partyPush * loyalty * (partyPosition?.strength ?? 0.4) * 0.36 +
-    constituencyInterest * 0.18 +
-    orgSignal * 0.08 +
-    governorSponsor * governorPartySignal * 0.08 +
-    overrideSignal * 0.2 +
-    (member.legislativeSkill - 0.5) * independence * 0.08 +
-    personalMandate +
+    ideology * 0.42 +
+    partyPush * loyalty * discipline * (partyPosition?.strength ?? 0.35) * 0.32 +
+    constituencyInterest * 0.2 +
+    orgSignal * 0.12 +
+    fiscalSignal * 0.13 +
+    governorSponsor * governorPartySignal * (relation === "friendly" ? 0.09 : 0.04) +
+    governorSponsor * (relation === "hostile" && !governorPartySignal ? -0.08 : 0) +
+    overrideSignal * 0.22 +
+    sponsorStrength * 0.06 +
+    (member.legislativeSkill - 0.5) * independence * 0.1 +
+    personalMandate * (1 + issueDissent) +
     noise;
-  if (score > 0.045) return "yes";
-  if (score < -0.045) return "no";
+  if (score > 0.07) return "yes";
+  if (score < -0.07) return "no";
   return "abstain";
 }
 

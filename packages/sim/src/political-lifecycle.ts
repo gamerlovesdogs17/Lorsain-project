@@ -38,12 +38,21 @@ function protectedFromMidtermExit(state: SimState, world: KernelWorld, politicia
 }
 
 function hasLiveFiledCandidacy(state: SimState, politicianId: string): boolean {
-  return Object.values(state.elections).some((election) => {
+  const national = Object.values(state.elections).some((election) => {
     if (election.status === "resolved" || election.status === "cancelled") return false;
     const candidate = election.candidates[politicianId];
     if (candidate && !candidate.withdrawn) return true;
     return election.assembly?.candidacies[politicianId]?.status === "filed";
   });
+  if (national) return true;
+  const gubernatorial = Object.values(state.provincialRuntime.elections).some((election) => {
+    if (election.status === "assumed") return false;
+    return Boolean(election.candidates[politicianId] && !election.candidates[politicianId]!.withdrawn);
+  });
+  if (gubernatorial) return true;
+  return Object.values(state.provincialRuntime.assemblyElections).some(
+    (election) => election.status === "filing_open" && election.candidateIds.includes(politicianId),
+  );
 }
 
 /**

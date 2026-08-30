@@ -68,6 +68,40 @@ function conceptualBreakdown(state: SimState): Record<string, number> {
   });
 }
 
+function nationalElectionBreakdown(state: SimState): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.values(state.elections)
+      .map((election) => {
+        const assembly = election.assembly;
+        const resultRows = Object.values(assembly?.constituencyResults ?? {});
+        return [
+          election.id,
+          {
+            totalBytes: bytes(election),
+            type: election.type,
+            date: election.date,
+            status: election.status,
+            candidatesBytes: bytes(election.candidates),
+            countInputBytes: bytes(election.countInput),
+            countArchiveBytes: bytes(election.countArchive),
+            assemblyCandidaciesBytes: bytes(assembly?.candidacies ?? {}),
+            assemblyFieldsBytes: bytes(assembly?.constituencyFields ?? {}),
+            assemblyResultsBytes: bytes(assembly?.constituencyResults ?? {}),
+            assemblyResultArchivesBytes: resultRows.reduce(
+              (sum, result) => sum + bytes(result.countArchive),
+              0,
+            ),
+            assemblyResultFirstPreferencesBytes: resultRows.reduce(
+              (sum, result) => sum + bytes(result.firstPreferences),
+              0,
+            ),
+          },
+        ] as const;
+      })
+      .sort(([, a], [, b]) => b.totalBytes - a.totalBytes),
+  );
+}
+
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const months = numericFlag("months", 600);
 const seedIndex = numericFlag("seed", 0);
@@ -106,6 +140,7 @@ for (const checkpoint of checkpoints) {
     hashMatches,
     conceptualBytes: conceptualBreakdown(save.simulation),
     topLevelBytes: sortedSizes(save.simulation as unknown as Record<string, unknown>),
+    nationalElectionBytes: nationalElectionBreakdown(save.simulation),
   });
   console.log(
     `${checkpoint}m ${save.simulation.currentDate}: ${(totalBytes / 1_048_576).toFixed(2)} MiB, restore ${restoreMs.toFixed(0)}ms, hash=${hashMatches}`,

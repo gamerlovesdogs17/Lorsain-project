@@ -9,7 +9,13 @@ import { miniElectorateWorld } from "./mini-electorate-world.js";
 import { kernelOffice } from "./synthetic-world.js";
 import { SAVE_SCHEMA_VERSION, type Command, type KernelWorld } from "./types.js";
 import { chooseCampaignAction, campaignDecisionOptions } from "./campaigns/decisions.js";
-import { campaignFundraise } from "./campaigns/actions.js";
+import {
+  campaignFundraise,
+  campaignGotv,
+  campaignMonthsRemaining,
+  campaignOrganize,
+} from "./campaigns/actions.js";
+import { constituencyGotvBoost } from "./campaigns/gotv.js";
 import { holdDebate } from "./campaigns/debates.js";
 import { contestPollAverage } from "./elections/polls.js";
 import { publicElectabilitySignal } from "./elections/electability.js";
@@ -612,5 +618,105 @@ describe("Phase 7.1 campaign action-point month refresh", () => {
     expect(next.actionPointsRemaining).toBe(next.actionPointsMax);
     expect(next.actionPointsRemaining).toBe(max);
     expect(next.actionPointsMonth).toBe(sim.getSnapshot().currentDate.slice(0, 7) + "-01");
+  });
+});
+
+describe("Phase 11.3 final-stretch GOTV", () => {
+  it("requires built organization, rejects wrong actors, persists exactly, and closes after counting", () => {
+    const world = campaignTestWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P113-GOTV" });
+    declarePlayerAssembly(sim);
+    const early = jsonClone(sim.getSnapshot());
+    const campaignId = playerCampaign(sim).id;
+    const earlyHash = JSON.stringify(early);
+    const tooSoon = campaignGotv(
+      world,
+      early,
+      {
+        campaignId,
+        actorId: "P1",
+        geography: { kind: "constituency", id: "C001" },
+      },
+      null,
+    );
+    expect("error" in tooSoon && tooSoon.error.code).toBe("GOTV_WINDOW_CLOSED");
+    expect(JSON.stringify(early)).toBe(earlyHash);
+
+    early.currentDate = "2000-06-01";
+    early.completedTurns = 5;
+    expect(campaignMonthsRemaining(early, early.campaignRuntime.campaigns[campaignId]!)).toBe(1);
+    const organized = campaignOrganize(
+      world,
+      early,
+      {
+        campaignId,
+        actorId: "P1",
+        geography: { kind: "constituency", id: "C001" },
+      },
+      null,
+    );
+    expect("error" in organized).toBe(false);
+
+    const wrongActorHash = JSON.stringify(early);
+    const wrongActor = campaignGotv(
+      world,
+      early,
+      {
+        campaignId,
+        actorId: "P2",
+        geography: { kind: "constituency", id: "C001" },
+      },
+      null,
+    );
+    expect("error" in wrongActor && wrongActor.error.code).toBe("WRONG_ACTOR");
+    expect(JSON.stringify(early)).toBe(wrongActorHash);
+
+    const beforeAp = early.campaignRuntime.campaigns[campaignId]!.actionPointsRemaining;
+    const activated = campaignGotv(
+      world,
+      early,
+      {
+        campaignId,
+        actorId: "P1",
+        geography: { kind: "constituency", id: "C001" },
+      },
+      null,
+    );
+    expect("error" in activated).toBe(false);
+    const campaign = early.campaignRuntime.campaigns[campaignId]!;
+    expect(campaign.actionPointsRemaining).toBe(beforeAp - 1);
+    expect(constituencyGotvBoost(world, campaign, "C001", early.currentDate)).toBeGreaterThan(0);
+
+    const duplicateHash = JSON.stringify(early);
+    const duplicate = campaignGotv(
+      world,
+      early,
+      {
+        campaignId,
+        actorId: "P1",
+        geography: { kind: "constituency", id: "C001" },
+      },
+      null,
+    );
+    expect("error" in duplicate && duplicate.error.code).toBe("ALREADY_MOBILIZED");
+    expect(JSON.stringify(early)).toBe(duplicateHash);
+
+    const save = jsonClone(sim.serializeSave());
+    save.simulation = early;
+    const restored = restoreSimulation(save, world);
+    expect(
+      restored.getSnapshot().campaignRuntime.campaigns[campaignId]!.metadata.gotvActivations,
+    ).toEqual(early.campaignRuntime.campaigns[campaignId]!.metadata.gotvActivations);
+
+    const restoredState = jsonClone(restored.getSnapshot());
+    restoredState.elections[early.campaignRuntime.campaigns[campaignId]!.electionId!]!.status = "voting";
+    const closed = campaignFundraise(
+      world,
+      restoredState,
+      restoreRngService(restoredState.rng),
+      { campaignId, actorId: "P1" },
+      null,
+    );
+    expect("error" in closed && closed.error.code).toBe("CAMPAIGN_ACTIONS_CLOSED");
   });
 });

@@ -5,7 +5,7 @@ import {
   recruitFederalAssemblyClass,
   provincialAssemblySeatCount,
 } from "./provinces/assemblies.js";
-import { migrateSaveV12ToV13, migrateSaveV13ToV14, parseSaveFile } from "./save.js";
+import { migrateSaveV12ToV13, migrateSaveV13ToV14, migrateSaveV14ToV15, parseSaveFile } from "./save.js";
 import { addMonths } from "./calendar.js";
 import {
   processConstitutionalAmendmentsMonth,
@@ -23,6 +23,7 @@ import { hashCanonical } from "./hash.js";
 import { processCaucusLeadershipMonth } from "./legislature/caucus.js";
 import { syntheticAgentProfile } from "./agents/profile.js";
 import { processPoliticalLifecycleMonth } from "./political-lifecycle.js";
+import { auditGeneratedPersonQuality } from "./agents/generated-quality.js";
 
 function startingHolder(world: ReturnType<typeof loadTerenaWorld>, kind: string): string {
   const term = world.startingTerms.find((candidate) => world.offices[candidate.officeId]?.kind === kind);
@@ -131,6 +132,10 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect(legislators.length).toBeGreaterThan(sizes.reduce((sum, value) => sum + value, 0));
     expect(new Set(legislators.map((row) => row.displayName)).size).toBe(legislators.length);
     expect(legislators.every((row) => !/PLEG_|moderate on/i.test(`${row.displayName} ${row.description}`))).toBe(true);
+    const quality = auditGeneratedPersonQuality(world, snap);
+    expect(quality.errors).toEqual([]);
+    expect(quality.largestFirstNameShare).toBeLessThan(0.04);
+    expect(quality.largestFamilyNameShare).toBeLessThan(0.04);
   });
 
   it("promotes pre-existing provincial legislators before a federal filing allocation", () => {
@@ -222,6 +227,29 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     const restoredA = restoreSimulation(parsed.save, world);
     const restoredB = restoreSimulation(parsed.save, world);
     expect(restoredA.hashState()).toBe(restoredB.hashState());
+  });
+
+  it("migrates schema 14 gubernatorial structure without inventing history", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "president");
+    const current = createSimulation({ world, playerPoliticianId: player, seed: "P113-MIGRATE-15" }).serializeSave();
+    const legacy = structuredClone(current) as unknown as Record<string, unknown>;
+    legacy.schemaVersion = 14;
+    const simulation = legacy.simulation as Record<string, unknown>;
+    simulation.schemaVersion = 14;
+    const historyBefore = hashCanonical(simulation.history);
+    const provincial = simulation.provincialRuntime as Record<string, unknown>;
+    delete provincial.governorVacancies;
+    const elections = provincial.elections as Record<string, Record<string, unknown>>;
+    for (const election of Object.values(elections)) delete election.incumbentDecision;
+    const migrated = migrateSaveV14ToV15(legacy) as Record<string, unknown>;
+    const migratedSimulation = migrated.simulation as Record<string, unknown>;
+    expect(migrated.schemaVersion).toBe(15);
+    expect(migratedSimulation.schemaVersion).toBe(15);
+    expect(hashCanonical(migratedSimulation.history)).toBe(historyBefore);
+    expect((migratedSimulation.provincialRuntime as Record<string, unknown>).governorVacancies).toEqual({});
+    const parsed = parseSaveFile(migrated, world.contentVersion);
+    expect(parsed.ok).toBe(true);
   });
 
   it("requires 280 federal votes and 13 Provincial Assemblies before changing a real rule", () => {

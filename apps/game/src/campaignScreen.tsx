@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import {
   activeRaceCampaigns,
+  campaignMonthsRemaining,
+  campaignTargetDate,
+  gotvActivations,
   isDeclaredContestCandidate,
   politiciansAreActiveRaceRivals,
   shouldHoldDebate,
+  type CampaignState,
   type Command,
   type CommandResult,
   type KernelWorld,
@@ -38,7 +42,7 @@ import { TerenaMap, type MapSelection } from "./map/TerenaMap.js";
 import { mapFillFor } from "./map/fills.js";
 
 const AD_SPENDS = [5_000, 10_000, 25_000, 50_000, 100_000];
-type ActionKind = "visit" | "organize" | "advertise" | "message" | "attack" | "endorsement" | null;
+type ActionKind = "visit" | "organize" | "advertise" | "message" | "attack" | "endorsement" | "gotv" | null;
 
 function run(
   sim: Simulation,
@@ -92,6 +96,8 @@ export function CampaignPage(props: {
   const [visitId, setVisitId] = useState("");
   const [orgKind, setOrgKind] = useState<"province" | "constituency">("province");
   const [orgId, setOrgId] = useState(props.world.provinceIds[0] ?? "");
+  const [gotvKind, setGotvKind] = useState<"province" | "constituency">("province");
+  const [gotvId, setGotvId] = useState(props.world.provinceIds[0] ?? "");
   const [adType, setAdType] = useState<"positive" | "contrast" | "negative">("positive");
   const [adIssue, setAdIssue] = useState(props.world.issueIds[0] ?? "");
   const [adGeo, setAdGeo] = useState<"national" | "province" | "constituency">("national");
@@ -155,6 +161,8 @@ export function CampaignPage(props: {
       setOrgKind("constituency");
       setVisitId(c.constituencyId);
       setOrgId(c.constituencyId);
+      setGotvKind("constituency");
+      setGotvId(c.constituencyId);
       setAdGeo("constituency");
       setAdGeoId(c.constituencyId);
       return;
@@ -164,6 +172,8 @@ export function CampaignPage(props: {
       setOrgKind("province");
       setVisitId(c.metadata.provinceId);
       setOrgId(c.metadata.provinceId);
+      setGotvKind("province");
+      setGotvId(c.metadata.provinceId);
       setAdGeo("province");
       setAdGeoId(c.metadata.provinceId);
     }
@@ -327,11 +337,25 @@ export function CampaignPage(props: {
   const showDebate = shouldHoldDebate(props.snap.currentDate, c.type);
   const noActions = c.actionPointsRemaining <= 0;
   const playerPol = props.snap.politicians[props.snap.playerPoliticianId];
-  const campaignElectionDate =
-    (c.electionId ? props.snap.elections[c.electionId]?.date : null) ??
-    (c.electionId ? props.snap.provincialRuntime.elections[c.electionId]?.date : null) ??
-    (c.electionId ? props.snap.provincialRuntime.assemblyElections[c.electionId]?.date : null) ??
-    (typeof contest?.metadata.electionDate === "string" ? contest.metadata.electionDate : null);
+  const campaignElectionDate = campaignTargetDate(props.snap, c);
+  const monthsRemaining = campaignMonthsRemaining(props.snap, c);
+  const finalStretch = monthsRemaining != null && monthsRemaining >= 0 && monthsRemaining <= 1;
+  const nationalElectionStatus = c.electionId ? props.snap.elections[c.electionId]?.status : null;
+  const governorElectionStatus = c.electionId
+    ? props.snap.provincialRuntime.elections[c.electionId]?.status
+    : null;
+  const provincialAssemblyElectionStatus = c.electionId
+    ? props.snap.provincialRuntime.assemblyElections[c.electionId]?.status
+    : null;
+  const actionClosed =
+    contest?.status === "resolved" ||
+    contest?.status === "cancelled" ||
+    nationalElectionStatus === "voting" ||
+    nationalElectionStatus === "resolved" ||
+    nationalElectionStatus === "cancelled" ||
+    governorElectionStatus === "resolved" ||
+    governorElectionStatus === "assumed" ||
+    provincialAssemblyElectionStatus === "resolved";
   const gubernatorialRace = c.electionId
     ? props.snap.provincialRuntime.elections[c.electionId]
     : null;
@@ -356,6 +380,39 @@ export function CampaignPage(props: {
     )
     .slice(-8)
     .reverse();
+  const groundGameActivity = c.recentEffects
+    .filter((effect) =>
+      effect.kind.startsWith("organize:") ||
+      effect.kind.startsWith("visit:") ||
+      effect.kind.startsWith("gotv:"),
+    )
+    .slice(-6)
+    .reverse();
+  const activeEndorsements = contest
+    ? Object.values(props.snap.endorsements)
+        .filter(
+          (endorsement) =>
+            endorsement.contestId === contest.id &&
+            endorsement.targetId === c.politicianId &&
+            endorsement.status === "active" &&
+            endorsement.public,
+        )
+        .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id))
+    : [];
+  const activeGotv = gotvActivations(c);
+  const gotvOrganization = gotvKind === "province"
+    ? (c.organizationByProvince[gotvId] ?? 0) + c.fieldOrganization * 0.25
+    : (c.organizationByConstituency[gotvId] ?? 0) + c.fieldOrganization * 0.2;
+  const gotvReady = gotvOrganization >= 0.12;
+  const gotvAlreadyActive = activeGotv[`${gotvKind}:${gotvId}`]?.date === props.snap.currentDate;
+  const provinceTargets = provinces
+    .map((id) => ({ id, strength: c.organizationByProvince[id] ?? 0 }))
+    .sort((a, b) => a.strength - b.strength || a.id.localeCompare(b.id))
+    .slice(0, 3);
+  const constituencyTargets = constituencies
+    .map((id) => ({ id, strength: c.organizationByConstituency[id] ?? 0 }))
+    .sort((a, b) => a.strength - b.strength || a.id.localeCompare(b.id))
+    .slice(0, 3);
 
   function geoOptions(kind: "national" | "province" | "constituency") {
     if (kind === "national") return [] as string[];
@@ -363,8 +420,30 @@ export function CampaignPage(props: {
     return constituencies;
   }
 
+  function publicEndorserName(endorserType: string, endorserId: string): string {
+    if (endorserType === "politician") return politicianDisplayName(props.catalog, endorserId);
+    if (endorserType === "faction") {
+      return props.world.factionDefinitions[endorserId]?.name ?? "Party caucus";
+    }
+    const provincial = props.world.provincialPartyOrganizations[endorserId];
+    if (provincial) {
+      const province = props.catalog.places.get(provincial.provinceId)?.name ?? "Provincial";
+      return `${province} party organization`;
+    }
+    return props.world.interestOrganizations[endorserId]?.name ?? "Political organization";
+  }
+
+  function groundGameEffectLabel(effect: CampaignState["recentEffects"][number]): string {
+    const place = effect.geographyId
+      ? constituencyDisplayName(props.catalog, effect.geographyId)
+      : "National campaign";
+    if (effect.kind.startsWith("gotv:")) return `GOTV activated · ${place}`;
+    if (effect.kind.startsWith("organize:")) return `Field organizing · ${place}`;
+    return `Campaign visit · ${place}`;
+  }
+
   function openAction(kind: ActionKind) {
-    if (noActions && kind !== null) return;
+    if ((noActions || actionClosed) && kind !== null) return;
     setActiveAction(kind);
   }
 
@@ -372,8 +451,14 @@ export function CampaignPage(props: {
     <button
       type="button"
       className="campaign-action-btn"
-      disabled={noActions || disabled}
-      title={noActions ? "No campaign actions remaining this month" : undefined}
+      disabled={noActions || actionClosed || disabled}
+      title={
+        actionClosed
+          ? "Campaign actions have closed for voting and counting"
+          : noActions
+            ? "No campaign actions remaining this month"
+            : undefined
+      }
       onClick={() => openAction(kind)}
     >
       {label}
@@ -390,6 +475,23 @@ export function CampaignPage(props: {
         subtitle={`${raceDescription} · Election ${campaignElectionDate ?? "upcoming"}`}
         actions={<StatusBadge tone={noActions ? "warn" : "ok"}>{c.status}</StatusBadge>}
       />
+
+      {actionClosed ? (
+        <div className="campaign-stage-ribbon counting">
+          <strong>Voting and counting</strong>
+          <span>Campaign actions and withdrawals are closed. Follow the race in Elections.</span>
+        </div>
+      ) : finalStretch ? (
+        <div className="campaign-stage-ribbon final">
+          <strong>Final stretch · {monthsRemaining === 0 ? "Election month" : "One month remaining"}</strong>
+          <span>Built Ground Game can now be activated for GOTV. It is not a free turnout boost.</span>
+        </div>
+      ) : (
+        <div className="campaign-stage-ribbon">
+          <strong>{monthsRemaining == null ? "Campaign underway" : `${monthsRemaining} months remaining`}</strong>
+          <span>Build durable organization now; voter mobilization opens only in the final two months.</span>
+        </div>
+      )}
 
       <div className="campaign-command-v5">
         <aside className="campaign-left">
@@ -422,6 +524,9 @@ export function CampaignPage(props: {
           </div>
           {noActions ? (
             <p className="muted campaign-actions-note">Monthly actions spent. End turn to refresh.</p>
+          ) : null}
+          {actionClosed ? (
+            <p className="muted campaign-actions-note">The field operation is locked for counting.</p>
           ) : null}
           <SectionDivider title="Rivals" {...(rivals.length ? {} : { hint: "No active rivals" })} />
           {rivals.length === 0 ? <EmptyState>Field is clear for now.</EmptyState> : null}
@@ -510,6 +615,9 @@ export function CampaignPage(props: {
 
         <aside className="campaign-right">
           <SectionDivider title="Actions" hint="1 AP each" />
+          <p className="muted campaign-action-purpose">
+            Visits build attention, organizing builds lasting field strength, and advertising trades cash for reach.
+          </p>
           <div className="campaign-actions-grid">
             {actionBtn("visit", "Visit")}
             {actionBtn("organize", "Organize")}
@@ -517,8 +625,8 @@ export function CampaignPage(props: {
             <button
               type="button"
               className="campaign-action-btn"
-              disabled={noActions}
-              title={noActions ? "No campaign actions remaining this month" : undefined}
+              disabled={noActions || actionClosed}
+              title={actionClosed ? "Campaign actions have closed" : noActions ? "No campaign actions remaining this month" : undefined}
               onClick={() =>
                 run(
                   props.sim,
@@ -532,14 +640,18 @@ export function CampaignPage(props: {
             </button>
             {actionBtn("message", "Message")}
             {actionBtn("endorsement", "Endorse", !contest)}
+            {actionBtn("gotv", "Activate GOTV", !finalStretch)}
           </div>
+          {!finalStretch && !actionClosed ? (
+            <p className="muted campaign-actions-note">GOTV unlocks in the final two campaign months.</p>
+          ) : null}
           <SectionDivider title="Utilities" />
           <div className="row campaign-util">
             {c.type === "presidential_nomination" ? (
               <button
                 type="button"
                 className="btn secondary"
-                disabled={noActions}
+                disabled={noActions || actionClosed}
                 onClick={() =>
                   run(
                     props.sim,
@@ -557,7 +669,7 @@ export function CampaignPage(props: {
               <button
                 type="button"
                 className="btn secondary"
-                disabled={noActions}
+                disabled={noActions || actionClosed}
                 onClick={() =>
                   run(
                     props.sim,
@@ -573,6 +685,7 @@ export function CampaignPage(props: {
             <button
               type="button"
               className="btn danger quiet"
+              disabled={actionClosed}
               onClick={() =>
                 props.askConfirm({
                   title: "Withdraw campaign",
@@ -595,6 +708,86 @@ export function CampaignPage(props: {
       </div>
 
       <div className="campaign-footer">
+        <SectionDivider title="Strategy board" hint="Public campaign information only" />
+        <div className="campaign-strategy-grid">
+          <SectionCard title="Ground Game priorities">
+            <p className="muted">Lowest-strength areas in your own field operation. This is not a forecast of support.</p>
+            <div className="campaign-target-columns">
+              {c.type !== "assembly" ? (
+                <div>
+                  <div className="kicker">Provinces needing attention</div>
+                  {provinceTargets.map((target) => (
+                    <button
+                      key={target.id}
+                      type="button"
+                      className="campaign-target-row"
+                      onClick={() => {
+                        setMapScale("province");
+                        setMapSel({
+                          id: target.id,
+                          kind: "province",
+                          name: constituencyDisplayName(props.catalog, target.id),
+                        });
+                      }}
+                    >
+                      <span>{constituencyDisplayName(props.catalog, target.id)}</span>
+                      <strong>{groundGameStrength(target.strength)}/100</strong>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <div>
+                <div className="kicker">Constituencies needing attention</div>
+                {constituencyTargets.map((target) => (
+                  <button
+                    key={target.id}
+                    type="button"
+                    className="campaign-target-row"
+                    onClick={() => {
+                      setMapScale("constituency");
+                      setMapSel({
+                        id: target.id,
+                        kind: "constituency",
+                        name: constituencyDisplayName(props.catalog, target.id),
+                      });
+                    }}
+                  >
+                    <span>{constituencyDisplayName(props.catalog, target.id)}</span>
+                    <strong>{groundGameStrength(target.strength)}/100</strong>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Field history">
+            {groundGameActivity.length === 0 ? (
+              <EmptyState>No field activity recorded yet.</EmptyState>
+            ) : (
+              groundGameActivity.map((effect, index) => (
+                <div className="campaign-field-history" key={`${effect.date}:${effect.kind}:${index}`}>
+                  <span>{effect.date}</span>
+                  <strong>{groundGameEffectLabel(effect)}</strong>
+                </div>
+              ))
+            )}
+          </SectionCard>
+          <SectionCard title="Endorsement network">
+            {!contest ? (
+              <EmptyState>This race does not use a party nomination endorsement ledger.</EmptyState>
+            ) : activeEndorsements.length === 0 ? (
+              <EmptyState>No active public endorsements yet.</EmptyState>
+            ) : (
+              activeEndorsements.map((endorsement) => (
+                <EntityRow
+                  key={endorsement.id}
+                  title={publicEndorserName(endorsement.endorserType, endorsement.endorserId)}
+                  meta={`${endorsement.endorserType === "politician" ? "Political endorsement" : "Organization endorsement"} · ${endorsement.date}`}
+                  status={<StatusBadge tone="ok">Active</StatusBadge>}
+                />
+              ))
+            )}
+          </SectionCard>
+        </div>
         <SectionDivider title="Recent campaign activity" />
         {recentActivity.length === 0 ? (
           <EmptyState>No recent campaign events in the public record.</EmptyState>
@@ -899,6 +1092,66 @@ export function CampaignPage(props: {
               }}
             >
               Attack (1 AP)
+            </button>
+          </div>
+        </ActionDrawer>
+      ) : null}
+
+      {activeAction === "gotv" && finalStretch ? (
+        <ActionDrawer title="Activate GOTV" onClose={() => setActiveAction(null)}>
+          <p className="muted">
+            Mobilization converts field organization you already built into a final turnout effort. Weak organization cannot be activated.
+          </p>
+          <div className="form-stack">
+            <label>
+              Level
+              <select
+                value={gotvKind}
+                disabled={c.type === "assembly"}
+                onChange={(event) => {
+                  const kind = event.target.value as typeof gotvKind;
+                  setGotvKind(kind);
+                  setGotvId(kind === "province" ? (provinces[0] ?? "") : (constituencies[0] ?? ""));
+                }}
+              >
+                {c.type !== "assembly" ? <option value="province">Province</option> : null}
+                <option value="constituency">Constituency</option>
+              </select>
+            </label>
+            <label>
+              {gotvKind === "province" ? "Province" : "Constituency"}
+              <select value={gotvId} onChange={(event) => setGotvId(event.target.value)}>
+                {(gotvKind === "province" ? provinces : constituencies).map((id) => (
+                  <option key={id} value={id}>
+                    {constituencyDisplayName(props.catalog, id)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className={`campaign-gotv-readiness ${gotvReady ? "ready" : "weak"}`}>
+              <strong>{gotvReady ? "Field operation ready" : "Ground Game too weak"}</strong>
+              <span>{gotvAlreadyActive ? "GOTV is already active here this month." : "Requires established local organization."}</span>
+            </div>
+            <button
+              type="button"
+              className="btn"
+              disabled={!gotvId || !gotvReady || gotvAlreadyActive}
+              onClick={() => {
+                run(
+                  props.sim,
+                  {
+                    type: "CAMPAIGN_GOTV",
+                    campaignId: c.id,
+                    geographyKind: gotvKind,
+                    geographyId: gotvId,
+                  },
+                  props.report,
+                  props.onDone,
+                );
+                setActiveAction(null);
+              }}
+            >
+              Activate GOTV (1 AP)
             </button>
           </div>
         </ActionDrawer>

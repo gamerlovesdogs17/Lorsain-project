@@ -88,6 +88,7 @@ import {
   campaignAdvertise,
   campaignAttack,
   campaignFundraise,
+  campaignGotv,
   campaignMessage,
   campaignOrganize,
   campaignPrepareDebate,
@@ -2016,6 +2017,22 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         { campaignId: command.campaignId, actorId: state.playerPoliticianId },
         commandId,
       );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "CAMPAIGN_GOTV") {
+      const owned = playerOwnsCampaign(state, command.campaignId);
+      if (owned) return owned;
+      const args = {
+        campaignId: command.campaignId,
+        geography: { kind: command.geographyKind, id: command.geographyId } as const,
+        actorId: state.playerPoliticianId,
+      };
+      const preview = campaignGotv(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = campaignGotv(world, state, args, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }

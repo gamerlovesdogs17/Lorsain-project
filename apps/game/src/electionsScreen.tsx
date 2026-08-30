@@ -42,6 +42,7 @@ type Props = {
   report: (result: CommandResult) => boolean;
   countingElection: boolean;
   onResolveAssembly: () => void;
+  onResolvePresidential: () => void;
 };
 
 function voteWeight(raw: unknown): number {
@@ -53,8 +54,11 @@ function voteWeight(raw: unknown): number {
 function statusLabel(status: string): string {
   if (status === "field_open") return "Filing open";
   if (status === "field_finalized") return "Ballot finalized";
-  if (status === "qualification") return "Qualification";
-  if (status === "resolved") return "Completed";
+  if (status === "qualification") return "Qualification underway";
+  if (status === "qualified") return "Qualified";
+  if (status === "declared") return "Declared";
+  if (status === "voting") return "Voting / counting";
+  if (status === "resolved") return "Certified";
   if (status === "planned") return "Upcoming";
   if (status === "filing_open") return "Filing open";
   if (status === "assumed") return "Assumed";
@@ -67,13 +71,36 @@ function statusTone(status: string): "ok" | "warn" | "idle" {
   return "idle";
 }
 
+function ElectionNightPanel(props: {
+  phase: "ready" | "counting" | "certified";
+  title: string;
+  detail: string;
+  outcome?: string | null;
+}) {
+  return (
+    <section className={`election-night-workspace ${props.phase}`} aria-live="polite">
+      <div>
+        <div className="kicker">Election Night</div>
+        <h3>{props.title}</h3>
+        <p>{props.detail}</p>
+      </div>
+      <div className="election-night-state">
+        <StatusBadge tone={props.phase === "certified" ? "ok" : "warn"}>
+          {props.phase === "ready" ? "Polls closed" : props.phase === "counting" ? "Counting" : "Certified"}
+        </StatusBadge>
+        {props.outcome ? <strong>{props.outcome}</strong> : null}
+      </div>
+    </section>
+  );
+}
+
 export function ElectionsPage(props: Props) {
   const elections = Object.values(props.snap.elections);
   const presidentialDue = props.snap.pendingInterrupt?.code === "PRESIDENTIAL_ELECTION_DUE";
   const assemblyDue = props.snap.pendingInterrupt?.code === "ASSEMBLY_ELECTION_DUE";
   const poll = latestPublicPoll(props.snap);
   const [selection, setSelection] = useState<MapSelection | null>(null);
-  const [tab, setTab] = useState<"presidential" | "assembly" | "gubernatorial" | "nominations" | "calendar">(
+  const [tab, setTab] = useState<"presidential" | "assembly" | "provincial_assembly" | "gubernatorial" | "internal" | "calendar">(
     "presidential",
   );
 
@@ -94,6 +121,21 @@ export function ElectionsPage(props: Props) {
       const bDate = typeof b.metadata.electionDate === "string" ? b.metadata.electionDate : "";
       return bDate.localeCompare(aDate) || a.partyId.localeCompare(b.partyId);
     });
+  const internalPartyContests = Object.values(props.snap.partyContests).sort((a, b) => {
+    const aLive = a.status !== "resolved" && a.status !== "cancelled";
+    const bLive = b.status !== "resolved" && b.status !== "cancelled";
+    return Number(bLive) - Number(aLive) || (b.resolvedDate ?? b.createdDate).localeCompare(a.resolvedDate ?? a.createdDate) || a.id.localeCompare(b.id);
+  });
+  const internalCaucusContests = Object.values(props.snap.legislatureRuntime.caucusContests).sort(
+    (a, b) => Number(b.status === "open") - Number(a.status === "open") || b.closeDate.localeCompare(a.closeDate) || a.id.localeCompare(b.id),
+  );
+  const [internalSelection, setInternalSelection] = useState(
+    internalPartyContests[0]
+      ? `party:${internalPartyContests[0].id}`
+      : internalCaucusContests[0]
+        ? `caucus:${internalCaucusContests[0].id}`
+        : "",
+  );
   const [assemblyId, setAssemblyId] = useState(assembly[0]?.id ?? "");
   const selectedAssembly = assembly.find((e) => e.id === assemblyId) ?? assembly[0] ?? null;
   const gubernatorial = Object.values(props.snap.provincialRuntime.elections).sort((a, b) => {
@@ -111,6 +153,19 @@ export function ElectionsPage(props: Props) {
     gubernatorial.find((race) => race.id === governorElectionId) ??
     gubernatorial.find((race) => race.provinceId === homeProvince) ??
     gubernatorial[0] ??
+    null;
+  const provincialAssembly = Object.values(props.snap.provincialRuntime.assemblyElections).sort(
+    (a, b) => {
+      const aa = a.status !== "resolved" ? 1 : 0;
+      const ba = b.status !== "resolved" ? 1 : 0;
+      return ba - aa || (aa ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)) || a.provinceId.localeCompare(b.provinceId);
+    },
+  );
+  const [provincialAssemblyElectionId, setProvincialAssemblyElectionId] = useState("");
+  const selectedProvincialAssembly =
+    provincialAssembly.find((race) => race.id === provincialAssemblyElectionId) ??
+    provincialAssembly.find((race) => race.provinceId === homeProvince) ??
+    provincialAssembly[0] ??
     null;
   const groupProvincialCycles = <T extends { date: string; status: string }>(
     rows: T[],
@@ -149,13 +204,6 @@ export function ElectionsPage(props: Props) {
     ...Object.values(props.snap.provincialRuntime.constitutionalAmendments).flatMap((amendment) => amendment.ratificationDeadline ? [{ date: amendment.ratificationDeadline, title: `${amendment.title} ratification deadline`, detail: `${amendment.ratifiedProvinceIds.length} of 13 provinces` }] : []),
   ].sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
 
-  function resolvePresidential() {
-    const result = props.sim.executeCommand({ type: "RESOLVE_PRESIDENTIAL_ELECTION" });
-    props.report(result);
-    if (result.ok) props.sim.executeCommand({ type: "RESUME_TURN" });
-    props.onDone();
-  }
-
   function presidentialView(election: (typeof elections)[number]) {
     const firstPreferences =
       election.countArchive && "firstPreferences" in election.countArchive
@@ -181,6 +229,28 @@ export function ElectionsPage(props: Props) {
 
     return (
       <article key={election.id} className="election-pres-block">
+        {presidentialDue && election.status !== "resolved" ? (
+          <ElectionNightPanel
+            phase={election.status === "voting" ? "counting" : "ready"}
+            title="The national vote is ready to count"
+            detail="The official ranked-choice tally has not been run. No projection or invented progress is shown."
+          />
+        ) : election.status === "resolved" ? (
+          <ElectionNightPanel
+            phase="certified"
+            title={winnerId ? `${politicianDisplayName(props.catalog, winnerId)} elected President` : "Presidential result certified"}
+            detail="The result below is the certified national ranked-choice count."
+            outcome={
+              winnerId === props.snap.playerPoliticianId
+                ? "You won the presidency."
+                : election.candidates[props.snap.playerPoliticianId]
+                  ? "Your campaign was defeated."
+                  : winnerId
+                    ? `${partyDisplayName(props.world, election.candidates[winnerId]?.partyId ?? null, props.snap)} victory`
+                    : null
+            }
+          />
+        ) : null}
         <div className="election-pres-layout">
           <div>
             <SectionDivider
@@ -223,7 +293,7 @@ export function ElectionsPage(props: Props) {
               }
             />
             {presidentialDue && election.status !== "resolved" ? (
-              <button type="button" className="btn" onClick={resolvePresidential}>
+              <button type="button" className="btn" onClick={props.onResolvePresidential}>
                 Resolve election
               </button>
             ) : null}
@@ -334,9 +404,29 @@ export function ElectionsPage(props: Props) {
       );
     };
     const steps = result?.countArchive?.steps ?? [];
+    const playerFiled = Object.values(fields).some((entry) =>
+      entry.candidateIds.includes(props.snap.playerPoliticianId),
+    );
+    const playerElected = Object.values(results).some((entry) =>
+      entry.electedIds.includes(props.snap.playerPoliticianId),
+    );
 
     return (
       <div className="assembly-election-view">
+        {assemblyDue && election.status !== "resolved" ? (
+          <ElectionNightPanel
+            phase={props.countingElection || election.status === "voting" ? "counting" : "ready"}
+            title={props.countingElection ? "The national STV count is underway" : "All constituency ballots are ready"}
+            detail={props.countingElection ? "The count is running off the main interface. Results appear only when the exact count finishes." : "Begin the official count when ready. The count cannot be run twice."}
+          />
+        ) : election.status === "resolved" ? (
+          <ElectionNightPanel
+            phase="certified"
+            title={majority ? `${partyDisplayName(props.world, majority.partyId, props.snap)} wins an Assembly majority` : "No party wins an Assembly majority"}
+            detail="Certified constituency STV results and the national party composition are shown below."
+            outcome={playerFiled ? (playerElected ? "You were elected." : "You were not elected.") : null}
+          />
+        ) : null}
         <SectionDivider
           title={electionDisplayName(election.id)}
           hint={`Election date ${election.date}`}
@@ -383,6 +473,23 @@ export function ElectionsPage(props: Props) {
                 </tr>
               ))}
             </DataTable>
+            <SectionDivider title="Constituency result desk" hint="Highest-turnout certified counts" />
+            <div className="election-result-feed">
+              {Object.values(results)
+                .sort((a, b) => b.turnout.turnoutRate - a.turnout.turnoutRate || a.constituencyId.localeCompare(b.constituencyId))
+                .slice(0, 8)
+                .map((constituency) => (
+                  <button
+                    type="button"
+                    key={constituency.constituencyId}
+                    onClick={() => setSelection({ id: constituency.constituencyId, kind: "constituency", name: constituencyDisplayName(props.catalog, constituency.constituencyId) })}
+                  >
+                    <strong>{constituencyDisplayName(props.catalog, constituency.constituencyId)}</strong>
+                    <span>{constituency.electedIds.map((id) => politicianDisplayName(props.catalog, id)).join(", ")}</span>
+                    <small>Turnout {formatPublicPercent(constituency.turnout.turnoutRate)}</small>
+                  </button>
+                ))}
+            </div>
           </>
         ) : (
           <p className="muted">
@@ -529,6 +636,227 @@ export function ElectionsPage(props: Props) {
     );
   }
 
+  function provincialAssemblyView(election: (typeof provincialAssembly)[number]) {
+    const sameCycle = provincialAssembly.filter((candidate) => candidate.date.slice(0, 4) === election.date.slice(0, 4));
+    const pluralityParty = (race: (typeof provincialAssembly)[number]): string | null =>
+      Object.entries(race.partySeats).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+    const partyRows = [...new Set([...Object.keys(election.partySeats), ...Object.keys(election.partyVoteShares)])]
+      .map((partyId) => ({
+        partyId,
+        seats: election.partySeats[partyId] ?? 0,
+        voteShare: election.partyVoteShares[partyId],
+      }))
+      .sort((a, b) => b.seats - a.seats || (b.voteShare ?? 0) - (a.voteShare ?? 0) || a.partyId.localeCompare(b.partyId));
+    const leadingParty = partyRows[0] ?? null;
+    const playerFiled = election.candidateIds.includes(props.snap.playerPoliticianId);
+    const playerElected = election.electedIds.includes(props.snap.playerPoliticianId);
+
+    return (
+      <div className="provincial-assembly-election-view">
+        {election.status === "resolved" ? (
+          <ElectionNightPanel
+            phase="certified"
+            title={leadingParty ? `${partyDisplayName(props.world, leadingParty.partyId, props.snap)} leads the ${props.catalog.places.get(election.provinceId)?.name ?? "provincial"} Assembly` : "Provincial Assembly result certified"}
+            detail="The party vote, seat allocation, and elected slate below are the certified province-wide result."
+            outcome={playerFiled ? (playerElected ? "You won a seat." : "You were not elected.") : null}
+          />
+        ) : null}
+        <label className="election-cycle-picker">
+          Province
+          <select value={election.id} onChange={(event) => setProvincialAssemblyElectionId(event.target.value)}>
+            {provincialAssembly.map((race) => (
+              <option key={race.id} value={race.id}>
+                {props.catalog.places.get(race.provinceId)?.name ?? "Province"} · {race.date.slice(0, 4)} · {statusLabel(race.status)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <MapDetailLayout
+          className="provincial-election-layout"
+          map={
+            <>
+              <SectionDivider title="Provincial Assembly map" hint={`${election.date.slice(0, 4)} cycle`} />
+              <TerenaMap
+                bundle={props.bundle}
+                mode="election"
+                selectedId={election.provinceId}
+                showConstituencies={false}
+                fillFor={(feature, kind) => {
+                  if (kind !== "province") return "transparent";
+                  const race = sameCycle.find((candidate) => candidate.provinceId === feature.id);
+                  return race?.status === "resolved" ? partyColor(props.world, pluralityParty(race)) : "#d8d6cf";
+                }}
+                onSelect={(selected) => {
+                  if (selected.kind !== "province") return;
+                  const race = sameCycle.find((candidate) => candidate.provinceId === selected.id);
+                  if (race) setProvincialAssemblyElectionId(race.id);
+                }}
+                tooltipFor={(selected) => {
+                  const race = sameCycle.find((candidate) => candidate.provinceId === selected.id);
+                  const partyId = race ? pluralityParty(race) : null;
+                  return (
+                    <>
+                      <strong>{selected.name}</strong>
+                      <span>{race?.status === "resolved" && partyId ? `${partyDisplayName(props.world, partyId, props.snap)} holds the largest bloc` : race ? statusLabel(race.status) : "No race in this cycle"}</span>
+                    </>
+                  );
+                }}
+              />
+              <p className="muted">Certified provinces are colored by the party holding the largest Assembly bloc, not by a fictional single winner.</p>
+            </>
+          }
+          detail={
+            <>
+              <SectionDivider
+                title={`${props.catalog.places.get(election.provinceId)?.name ?? "Province"} Assembly`}
+                hint={`${election.date} · ${props.snap.provincialRuntime.assemblies[election.provinceId]?.seatCount ?? election.electedIds.length} seats`}
+                actions={<StatusBadge tone={statusTone(election.status)}>{statusLabel(election.status)}</StatusBadge>}
+              />
+              {election.turnoutRate != null ? <p className="muted">Turnout {formatPublicPercent(election.turnoutRate)}</p> : null}
+              {partyRows.length ? (
+                <DataTable headers={["Party", "Vote", "Seats"]} dense>
+                  {partyRows.map((row) => (
+                    <tr key={row.partyId}>
+                      <td><span className="party-swatch" style={{ background: partyColor(props.world, row.partyId) }} aria-hidden /> {partyDisplayName(props.world, row.partyId, props.snap)}</td>
+                      <td>{row.voteShare == null ? "—" : formatPublicPercent(row.voteShare)}</td>
+                      <td>{row.seats}</td>
+                    </tr>
+                  ))}
+                </DataTable>
+              ) : <EmptyState>The provincial party field has not been finalized.</EmptyState>}
+              {election.electedIds.length ? (
+                <details className="elected-slate">
+                  <summary>View elected members ({election.electedIds.length})</summary>
+                  <div className="compact-result-list">
+                    {election.electedIds.map((id) => (
+                      <EntityRow key={id} title={politicianDisplayName(props.catalog, id)} meta={partyDisplayName(props.world, props.snap.politicians[id]?.partyId ?? null, props.snap)} status={<StatusBadge tone="ok">Elected</StatusBadge>} />
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+            </>
+          }
+        />
+      </div>
+    );
+  }
+
+  function internalElectionView() {
+    const selectedPartyId = internalSelection.startsWith("party:") ? internalSelection.slice(6) : null;
+    const selectedCaucusId = internalSelection.startsWith("caucus:") ? internalSelection.slice(7) : null;
+    const partyContest = internalPartyContests.find((contest) => contest.id === selectedPartyId) ?? null;
+    const caucusContest = internalCaucusContests.find((contest) => contest.id === selectedCaucusId) ?? null;
+    const provincialLeadership = Object.values(props.snap.provincialRuntime.assemblies)
+      .flatMap((assemblyState) => assemblyState.leadershipHistory)
+      .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id))
+      .slice(0, 30);
+    const caucusTallies = caucusContest
+      ? Object.values(caucusContest.votes).reduce<Record<string, number>>((totals, candidateId) => {
+          totals[candidateId] = (totals[candidateId] ?? 0) + 1;
+          return totals;
+        }, {})
+      : {};
+
+    return (
+      <div className="internal-election-view">
+        <div className="internal-election-picker">
+          <label>
+            Contest
+            <select value={internalSelection} onChange={(event) => setInternalSelection(event.target.value)}>
+              <optgroup label="Party and nomination contests">
+                {internalPartyContests.map((contest) => (
+                  <option key={contest.id} value={`party:${contest.id}`}>
+                    {contestDisplayName(props.snap, props.world, contest.id)} · {statusLabel(contest.status)}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Assembly caucus elections">
+                {internalCaucusContests.map((contest) => (
+                  <option key={contest.id} value={`caucus:${contest.id}`}>
+                    {partyDisplayName(props.world, contest.partyId, props.snap)} {contest.role.replace(/_/g, " ")} · {statusLabel(contest.status)}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </label>
+        </div>
+        {partyContest ? (
+          <SectionCard title={contestDisplayName(props.snap, props.world, partyContest.id)}>
+            {partyContest.status === "resolved" ? (
+              <ElectionNightPanel
+                phase="certified"
+                title={partyContest.winnerId ? `${politicianDisplayName(props.catalog, partyContest.winnerId)} wins` : "Internal result certified"}
+                detail="The result is drawn from the recorded selector count."
+                outcome={partyContest.entries[props.snap.playerPoliticianId] ? (partyContest.winnerId === props.snap.playerPoliticianId ? "You won." : "You were not elected.") : null}
+              />
+            ) : null}
+            <SectionDivider title="Field" hint={`${partyDisplayName(props.world, partyContest.partyId, props.snap)} · ${statusLabel(partyContest.status)}`} />
+            {Object.values(partyContest.entries)
+              .filter((entry) => entry.status !== "potential")
+              .sort((a, b) => Number(b.politicianId === partyContest.winnerId) - Number(a.politicianId === partyContest.winnerId) || a.politicianId.localeCompare(b.politicianId))
+              .map((entry) => (
+                <EntityRow
+                  key={entry.politicianId}
+                  title={politicianDisplayName(props.catalog, entry.politicianId)}
+                  meta={statusLabel(entry.status)}
+                  status={partyContest.winnerId === entry.politicianId ? <StatusBadge tone="ok">Winner</StatusBadge> : <StatusBadge>{statusLabel(entry.status)}</StatusBadge>}
+                  selected={partyContest.winnerId === entry.politicianId}
+                />
+              ))}
+            {partyContest.countArchive?.rounds.length ? (
+              <>
+                <SectionDivider title="Ranked-choice count" hint="Recorded elimination sequence" />
+                <DataTable headers={["Round", "Outcome"]} dense>
+                  {partyContest.countArchive.rounds.map((round, index) => (
+                    <tr key={index}>
+                      <td>{round.round}</td>
+                      <td>{round.eliminatedId ? `Excluded ${politicianDisplayName(props.catalog, round.eliminatedId)}` : round.electedId ? `Elected ${politicianDisplayName(props.catalog, round.electedId)}` : "Count complete"}</td>
+                    </tr>
+                  ))}
+                </DataTable>
+              </>
+            ) : null}
+          </SectionCard>
+        ) : caucusContest ? (
+          <SectionCard title={`${partyDisplayName(props.world, caucusContest.partyId, props.snap)} ${caucusContest.role.replace(/_/g, " ")} election`}>
+            {caucusContest.status === "resolved" ? (
+              <ElectionNightPanel
+                phase="certified"
+                title={caucusContest.winnerId ? `${politicianDisplayName(props.catalog, caucusContest.winnerId)} elected` : "Caucus result certified"}
+                detail="Members' recorded ballots determine this internal Assembly office."
+                outcome={caucusContest.candidateIds.includes(props.snap.playerPoliticianId) ? (caucusContest.winnerId === props.snap.playerPoliticianId ? "You won." : "You were not elected.") : null}
+              />
+            ) : null}
+            <SectionDivider title="Candidates" hint={`${caucusContest.closeDate} · ${statusLabel(caucusContest.status)}`} />
+            {caucusContest.candidateIds.map((candidateId) => (
+              <EntityRow
+                key={candidateId}
+                title={politicianDisplayName(props.catalog, candidateId)}
+                meta={(caucusContest.platforms[candidateId] ?? "No platform published").replace(/_/g, " ")}
+                trailing={caucusContest.status === "resolved" ? `${caucusTallies[candidateId] ?? 0} votes` : null}
+                status={caucusContest.winnerId === candidateId ? <StatusBadge tone="ok">Winner</StatusBadge> : <StatusBadge>{caucusContest.status === "resolved" ? "Not elected" : "Declared"}</StatusBadge>}
+              />
+            ))}
+          </SectionCard>
+        ) : (
+          <EmptyState>No internal election has been recorded.</EmptyState>
+        )}
+        <SectionDivider title="Recent provincial leadership elections" hint="Speaker, floor leader, and whip" />
+        <DataTable headers={["Date", "Province", "Office", "Winner", "Trigger"]} dense>
+          {provincialLeadership.map((record) => (
+            <tr key={record.id}>
+              <td>{record.date}</td>
+              <td>{props.catalog.places.get(record.provinceId)?.name ?? "Province"}</td>
+              <td>{record.role.replace(/_/g, " ")}</td>
+              <td>{record.winnerId ? politicianDisplayName(props.catalog, record.winnerId) : "No winner"}</td>
+              <td>{record.trigger.replace(/_/g, " ")}</td>
+            </tr>
+          ))}
+        </DataTable>
+      </div>
+    );
+  }
+
   return (
     <div className="page-tone-election">
       <PageHeader
@@ -539,9 +867,10 @@ export function ElectionsPage(props: Props) {
       <TabBar
         tabs={[
           { id: "presidential", label: "Presidential" },
-          { id: "assembly", label: "Assembly" },
+          { id: "assembly", label: "National Assembly" },
+          { id: "provincial_assembly", label: "Provincial Assemblies" },
           { id: "gubernatorial", label: "Governors" },
-          { id: "nominations", label: "Nominations" },
+          { id: "internal", label: "Internal Elections" },
           { id: "calendar", label: "Political Calendar" },
         ]}
         value={tab}
@@ -585,10 +914,31 @@ export function ElectionsPage(props: Props) {
           )}
         </div>
       ) : null}
+      {tab === "provincial_assembly" ? (
+        selectedProvincialAssembly ? (
+          provincialAssemblyView(selectedProvincialAssembly)
+        ) : (
+          <EmptyState>No Provincial Assembly election is scheduled.</EmptyState>
+        )
+      ) : null}
       {tab === "gubernatorial" ? (
         <div className="governor-election-view">
           {selectedGovernorRace ? (
             <>
+              {selectedGovernorRace.status === "resolved" || selectedGovernorRace.status === "assumed" ? (
+                <ElectionNightPanel
+                  phase="certified"
+                  title={selectedGovernorRace.winnerId ? `${politicianDisplayName(props.catalog, selectedGovernorRace.winnerId)} elected Governor` : "Gubernatorial result certified"}
+                  detail={`Certified province-wide result for ${props.catalog.places.get(selectedGovernorRace.provinceId)?.name ?? "the province"}.`}
+                  outcome={selectedGovernorRace.candidates[props.snap.playerPoliticianId] ? (selectedGovernorRace.winnerId === props.snap.playerPoliticianId ? "You won the governorship." : "Your campaign was defeated.") : null}
+                />
+              ) : selectedGovernorRace.date <= props.snap.currentDate ? (
+                <ElectionNightPanel
+                  phase="ready"
+                  title="Polls closed in the province"
+                  detail="The official result will appear when the provincial count is completed."
+                />
+              ) : null}
               <label className="election-cycle-picker">
                 Province
                 <select
@@ -729,40 +1079,7 @@ export function ElectionsPage(props: Props) {
           )}
         </div>
       ) : null}
-      {tab === "nominations" ? (
-        <div>
-          {nominations.map((contest) => (
-            <SectionCard key={contest.id} title={contestDisplayName(props.snap, props.world, contest.id)}>
-              <StatusBadge tone={statusTone(contest.status)}>{statusLabel(contest.status)}</StatusBadge>
-              <span className="muted nomination-cycle-label">
-                {typeof contest.metadata.electionDate === "string"
-                  ? ` Presidential election ${contest.metadata.electionDate}`
-                  : " Presidential nomination"}
-              </span>
-              {Object.values(contest.entries)
-                .filter((entry) => entry.status !== "potential")
-                .map((entry) => (
-                  <EntityRow
-                    key={entry.politicianId}
-                    title={politicianDisplayName(props.catalog, entry.politicianId)}
-                    meta="Nomination candidate"
-                    status={
-                      contest.winnerId === entry.politicianId ? (
-                        <StatusBadge tone="ok">Winner</StatusBadge>
-                      ) : (
-                        <StatusBadge>{entry.status.replace(/_/g, " ")}</StatusBadge>
-                      )
-                    }
-                    selected={contest.winnerId === entry.politicianId}
-                  />
-                ))}
-              {contest.winnerId ? (
-                <p>Nomination winner: {politicianDisplayName(props.catalog, contest.winnerId)}</p>
-              ) : null}
-            </SectionCard>
-          ))}
-        </div>
-      ) : null}
+      {tab === "internal" ? internalElectionView() : null}
       {tab === "calendar" ? (
         <div className="political-calendar">
           {calendarEvents.length === 0 ? <EmptyState>No political dates are scheduled.</EmptyState> : null}

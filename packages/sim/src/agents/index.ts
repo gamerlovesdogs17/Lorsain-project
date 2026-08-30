@@ -75,6 +75,12 @@ export {
 } from "./goals.js";
 export { buildDecisionActorContext, type DecisionActorContext } from "./context.js";
 export { agentMutationDateError, notBeforeExistingDateError } from "./time.js";
+export { selectGeneratedPublicName, generatedNameConcentration } from "./names.js";
+export {
+  auditGeneratedPersonQuality,
+  type GeneratedPersonQualityIssue,
+  type GeneratedPersonQualityReport,
+} from "./generated-quality.js";
 export {
   evaluateOption,
   evaluateDecision,

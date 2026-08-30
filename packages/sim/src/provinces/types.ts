@@ -58,6 +58,24 @@ export type GubernatorialCandidate = {
   withdrawn: boolean;
 };
 
+export const GUBERNATORIAL_INCUMBENT_DECISIONS = [
+  "seek_reelection",
+  "retire",
+  "seek_other_office",
+  "leave_electoral_politics",
+] as const;
+export type GubernatorialIncumbentDecision =
+  (typeof GUBERNATORIAL_INCUMBENT_DECISIONS)[number];
+
+export type GovernorVacancyState = {
+  provinceId: string;
+  status: "vacant" | "acting";
+  openedDate: IsoDate;
+  reason: string;
+  actingHolderId: string | null;
+  expectedElectionId: string | null;
+};
+
 export type GubernatorialElection = {
   id: string;
   provinceId: string;
@@ -65,8 +83,10 @@ export type GubernatorialElection = {
   filingOpenDate: IsoDate;
   filingDeadlineDate: IsoDate;
   assumptionDate: IsoDate;
+  cycleKind: "regular" | "special";
   status: "planned" | "filing_open" | "field_finalized" | "resolved" | "assumed";
   incumbentId: string | null;
+  incumbentDecision: GubernatorialIncumbentDecision | null;
   candidates: Record<string, GubernatorialCandidate>;
   playerDecision: "filed" | "declined" | null;
   winnerId: string | null;
@@ -267,6 +287,7 @@ export type ConstitutionalAmendment = {
 export type ProvincialRuntime = {
   provinces: Record<string, ProvinceGovernanceState>;
   elections: Record<string, GubernatorialElection>;
+  governorVacancies: Record<string, GovernorVacancyState>;
   actions: Record<string, ProvincialActionRecord>;
   pressures: Record<string, ProvincialPressure>;
   assemblies: Record<string, ProvincialAssemblyState>;
@@ -284,6 +305,7 @@ export function emptyProvincialRuntime(): ProvincialRuntime {
   return {
     provinces: {},
     elections: {},
+    governorVacancies: {},
     actions: {},
     pressures: {},
     assemblies: {},

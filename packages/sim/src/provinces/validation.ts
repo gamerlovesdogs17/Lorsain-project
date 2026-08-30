@@ -5,6 +5,7 @@ import {
   isProvincialPriority,
   type GubernatorialCandidate,
   type GubernatorialElection,
+  GUBERNATORIAL_INCUMBENT_DECISIONS,
   type ProvinceGovernanceState,
   type ProvincialActionRecord,
   type ProvincialPressure,
@@ -95,8 +96,14 @@ function parseElection(id: string, raw: unknown): GubernatorialElection | string
     filingOpenDate: raw.filingOpenDate as string,
     filingDeadlineDate: raw.filingDeadlineDate as string,
     assumptionDate: raw.assumptionDate as string,
+    cycleKind: raw.cycleKind === "special" ? "special" : "regular",
     status: raw.status as GubernatorialElection["status"],
     incumbentId: typeof raw.incumbentId === "string" ? raw.incumbentId : null,
+    incumbentDecision:
+      typeof raw.incumbentDecision === "string" &&
+      (GUBERNATORIAL_INCUMBENT_DECISIONS as readonly string[]).includes(raw.incumbentDecision)
+        ? raw.incumbentDecision as GubernatorialElection["incumbentDecision"]
+        : null,
     candidates,
     playerDecision: raw.playerDecision === "filed" || raw.playerDecision === "declined" ? raw.playerDecision : null,
     winnerId: typeof raw.winnerId === "string" ? raw.winnerId : null,
@@ -123,6 +130,9 @@ export function parseProvincialRuntime(raw: unknown): ProvincialRuntime | string
       if (typeof parsed === "string") return parsed;
       runtime.elections[id] = parsed;
     }
+  }
+  if (isRecord(raw.governorVacancies)) {
+    runtime.governorVacancies = raw.governorVacancies as ProvincialRuntime["governorVacancies"];
   }
   if (isRecord(raw.actions)) runtime.actions = raw.actions as Record<string, ProvincialActionRecord>;
   if (isRecord(raw.pressures)) runtime.pressures = raw.pressures as Record<string, ProvincialPressure>;

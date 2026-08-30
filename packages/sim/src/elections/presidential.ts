@@ -16,6 +16,7 @@ import { constituencyTurnout, mergeTurnout } from "./turnout.js";
 import { scheduleAssumptionIfNeeded } from "./state.js";
 import type { ElectionCandidate, ElectionState } from "./types.js";
 import { FIELD } from "../campaigns/policy.js";
+import { constituencyGotvBoost } from "../campaigns/gotv.js";
 import { presidentialNominationCycleMetadata } from "../parties/state.js";
 
 function reject(code: string, message: string): CommandError {
@@ -118,12 +119,14 @@ export function resolvePresidentialElection(
     const mobilization: Record<string, number> = {};
     for (const id of candidateIds) {
       let org = 0;
+      let gotv = 0;
       for (const camp of Object.values(state.campaignRuntime.campaigns)) {
         if (camp.politicianId !== id) continue;
         if (camp.status !== "active" || camp.type !== "presidential_general") continue;
         org = Math.max(org, camp.organizationByConstituency[cid] ?? 0);
+        gotv = Math.max(gotv, constituencyGotvBoost(world, camp, cid, state.currentDate));
       }
-      mobilization[id] = 1 + FIELD.turnoutScale * org;
+      mobilization[id] = 1 + FIELD.turnoutScale * org + FIELD.gotvTurnoutScale * gotv;
     }
     return generateConstituencyBallots(
       world,

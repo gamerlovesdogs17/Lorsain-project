@@ -22,6 +22,7 @@ import { plannedElection } from "./state.js";
 import type { ElectionCandidate, ElectionState, TurnoutRecord } from "./types.js";
 import { mergeTurnout } from "./turnout.js";
 import { FIELD } from "../campaigns/policy.js";
+import { constituencyGotvBoost } from "../campaigns/gotv.js";
 import { ensureAssemblyElectionCycle } from "./assembly-cycle.js";
 import { candidateStandingOrDefault } from "./standing.js";
 import { seedCommitteesIfNeeded } from "../legislature/state.js";
@@ -229,7 +230,9 @@ export function resolveAssemblyElection(
             (campaign.organizationByConstituency[cid] ?? 0) + campaign.fieldOrganization * 0.35,
           )
         : 0;
-      mobilizationByCandidate[id] = 1 + FIELD.turnoutScale * organization;
+      const gotv = campaign ? constituencyGotvBoost(world, campaign, cid, state.currentDate) : 0;
+      mobilizationByCandidate[id] =
+        1 + FIELD.turnoutScale * organization + FIELD.gotvTurnoutScale * gotv;
     }
     const out = resolveAssemblyConstituency(world, state, rng, {
       constituencyId: cid,

@@ -21,6 +21,7 @@ import {
   firstPreferenceTotals,
   generateConstituencyBallots,
   integerBallotWeightSum,
+  mergeNationalBallots,
 } from "./elections/ballots.js";
 import { constituencyTurnout } from "./elections/turnout.js";
 import { miniElectorateWorld } from "./mini-electorate-world.js";
@@ -109,6 +110,26 @@ describe("Phase 4 kernel electorate ingest", () => {
       (c) => c.type === "presidential_nomination" && c.status === "planned",
     );
     expect(planned.length).toBe(6);
+  });
+});
+
+describe("national ballot archive compaction", () => {
+  it("combines identical rankings without changing vote weight", () => {
+    const merged = mergeNationalBallots([
+      [
+        { id: "C001:B1", weight: "7/1", rankings: ["P1", "P2", "P3"] },
+        { id: "C001:B2", weight: "3/1", rankings: ["P2", "P1", "P3"] },
+      ],
+      [
+        { id: "C002:B9", weight: "11/1", rankings: ["P1", "P2", "P3"] },
+        { id: "C002:B8", weight: "5/1", rankings: ["P2", "P1", "P3"] },
+      ],
+    ]);
+    expect(merged).toEqual([
+      { id: "national:0001", weight: "18/1", rankings: ["P1", "P2", "P3"] },
+      { id: "national:0002", weight: "8/1", rankings: ["P2", "P1", "P3"] },
+    ]);
+    expect(integerBallotWeightSum(merged)).toBe(26n);
   });
 });
 

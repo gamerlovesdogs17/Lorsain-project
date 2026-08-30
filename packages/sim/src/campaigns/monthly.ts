@@ -10,6 +10,7 @@ import {
   campaignAdvertise,
   campaignAttack,
   campaignFundraise,
+  campaignGotv,
   campaignMessage,
   campaignOrganize,
   campaignPrepareDebate,
@@ -245,6 +246,11 @@ function applyChosenAction(
       return campaignSeekNominationSupport(world, state, rng, { campaignId, actorId }, commandId);
     case "CAMPAIGN_PREPARE_DEBATE":
       return campaignPrepareDebate(world, state, { campaignId, actorId }, commandId);
+    case "CAMPAIGN_GOTV": {
+      const geography = isCampaignGeography(meta.geography) ? meta.geography : null;
+      if (!geography) return null;
+      return campaignGotv(world, state, { campaignId, geography, actorId }, commandId);
+    }
     default:
       return null;
   }

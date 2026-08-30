@@ -6,6 +6,7 @@ import { billPolicyFit, factionStance, partyStance } from "./recommendations.js"
 import { mpConstituencyId } from "./state.js";
 import { organizationPressureForBill } from "../organizations/monthly.js";
 import { LEGISLATIVE_PROVISIONS, policyItemForProvision } from "./provisions.js";
+import { parliamentaryDiscipline } from "./discipline.js";
 
 function constituencyFit(
   world: KernelWorld,
@@ -67,15 +68,29 @@ export function chooseLegislativeVote(
   const orgPressure = organizationPressureForBill(world, state, politicianId, bill.id);
   const partyPush = party === "support" ? 1 : party === "oppose" ? -1 : 0;
   const factionPush = faction === "support" ? 1 : faction === "oppose" ? -1 : 0;
+  const discipline = pol?.partyId ? parliamentaryDiscipline(world, state, pol.partyId).score : 0;
+  const dimensions = bill.policyItems.map((item) => world.issueDimensions[item.issueId] ?? "institutional");
+  const issueDiscipline = dimensions.length === 0 ? 0.72 : dimensions.reduce((sum, dimension) => {
+    if (dimension === "social") return sum + 0.56;
+    if (dimension === "institutional") return sum + 0.66;
+    if (dimension === "economic-social") return sum + 0.62;
+    if (dimension === "foreign") return sum + 0.8;
+    return sum + 0.74;
+  }, 0) / dimensions.length;
+  const factionConflict = partyPush !== 0 && factionPush === -partyPush;
+  const constituencyConflict = partyPush !== 0 && district * partyPush < -0.06;
+  const conscienceRoom = Math.max(0.08, 1 - discipline * issueDiscipline);
+  const personalVariance = (rng.float01("legislature") - 0.5) *
+    (0.18 + conscienceRoom * 0.32 + (factionConflict ? 0.12 : 0) + (constituencyConflict ? 0.1 : 0));
   const score =
-    fit * 0.42 +
-    partyPush * partyLoyalty * 0.28 +
-    factionPush * factionLoyalty * 0.18 +
-    district * 0.16 +
-    orgPressure * 0.75 +
+    fit * 0.36 +
+    partyPush * partyLoyalty * discipline * issueDiscipline * 0.38 +
+    factionPush * factionLoyalty * (factionConflict ? 0.3 : 0.2) +
+    district * 0.22 +
+    orgPressure * 0.68 +
     (pragmatism - 0.5) * 0.06 +
     (institutionalism - 0.5) * 0.04 +
-    (rng.float01("legislature") - 0.5) * 0.22;
+    personalVariance;
   if (score > 0.045) return "yes";
   if (score < -0.045) return "no";
   return "abstain";

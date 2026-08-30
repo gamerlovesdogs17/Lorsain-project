@@ -9,6 +9,7 @@ export * from "./actions.js";
 export * from "./debates.js";
 export * from "./decisions.js";
 export * from "./monthly.js";
+export * from "./gotv.js";
 export {
   parseCampaignRuntime,
   campaignCounterError,

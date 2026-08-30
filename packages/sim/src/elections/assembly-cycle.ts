@@ -49,6 +49,9 @@ function stableHash(text: string): number {
   return hash >>> 0;
 }
 
+const ASSEMBLY_FIELD_RESERVE_TARGET = 4;
+const ASSEMBLY_FIELD_MINIMUM_RESERVE = 3;
+
 function publicIdeologyForIndependent(
   world: KernelWorld,
   politicianId: string,
@@ -362,8 +365,10 @@ export function allocateAssemblyCandidateFields(
       ),
     });
   }
-  const targetFor = (cid: string): number => world.constituencyElectorate[cid]!.seats + 1;
-  const stretchFor = (cid: string): number => world.constituencyElectorate[cid]!.seats + 2;
+  const targetFor = (cid: string): number =>
+    world.constituencyElectorate[cid]!.seats + ASSEMBLY_FIELD_MINIMUM_RESERVE;
+  const stretchFor = (cid: string): number =>
+    world.constituencyElectorate[cid]!.seats + ASSEMBLY_FIELD_RESERVE_TARGET;
 
   const choosePair = (stretch: boolean): { politicianId: string; constituencyId: string } | null => {
     let best: { politicianId: string; constituencyId: string; score: number; tie: number } | null = null;
@@ -524,10 +529,10 @@ export function openAssemblyFilingIfDue(
   cycle.filingStatus = "open";
   election.status = "field_open";
   // Recruit before the public field is allocated. Every constituency should
-  // have at least two more filed candidates than seats, and the count must be
+  // have a real reserve beyond the seats, and the count must be
   // based on actually eligible/running people rather than all living figures.
   const fieldTarget = Object.values(world.constituencyElectorate).reduce(
-    (sum, row) => sum + row.seats + 2,
+    (sum, row) => sum + row.seats + ASSEMBLY_FIELD_RESERVE_TARGET,
     0,
   );
   const availableBeforeRecruitment = availableAssemblyCandidateIds(state, world, election).size;
@@ -688,7 +693,8 @@ export function finalizeAssemblyFieldsIfDue(
   }
   const incomplete = Object.entries(world.constituencyElectorate).some(
     ([constituencyId, electorate]) =>
-      (cycle.constituencyFields[constituencyId]?.candidateIds.length ?? 0) < electorate.seats,
+      (cycle.constituencyFields[constituencyId]?.candidateIds.length ?? 0) <
+        electorate.seats + ASSEMBLY_FIELD_MINIMUM_RESERVE,
   );
   if (incomplete) {
     // Death or another modeled withdrawal can occur after filing opens. The
@@ -696,7 +702,7 @@ export function finalizeAssemblyFieldsIfDue(
     // provincial politician; never wait until election resolution to patch a
     // field. Recompute from actual live filings and restore the same reserve.
     const fieldTarget = Object.values(world.constituencyElectorate).reduce(
-      (sum, row) => sum + row.seats + 2,
+      (sum, row) => sum + row.seats + ASSEMBLY_FIELD_RESERVE_TARGET,
       0,
     );
     const available = availableAssemblyCandidateIds(state, world, election).size;
