@@ -93,7 +93,8 @@ export function mapFillFor(
   electionId?: string | null,
 ): string {
   if (mode === "economy" && kind === "province") {
-    const idx = snap.economyRuntime.provinces[feature.id]?.conditionsIndex ?? 100;
+    const idx = snap.economyRuntime.provinces[feature.id]?.conditionsIndex;
+    if (idx == null) return "#dedbd3";
     const t = Math.max(0, Math.min(1, (idx - 90) / 20));
     return `hsl(152, 22%, ${86 - t * 20}%)`;
   }
@@ -114,9 +115,18 @@ export function mapFillFor(
   }
   if (mode === "election") {
     const provincial = electionId ? snap.provincialRuntime.elections[electionId] : null;
-    if (kind === "province" && provincial?.provinceId === feature.id) {
-      const winner = provincial.winnerId;
-      return winner ? partyColor(world, provincial.candidates[winner]?.partyId ?? null) : "#dedbd3";
+    if (kind === "province" && provincial) {
+      const race = Object.values(snap.provincialRuntime.elections).find((candidate) => candidate.provinceId === feature.id && candidate.date.slice(0, 4) === provincial.date.slice(0, 4));
+      const winner = race?.winnerId;
+      return winner ? partyColor(world, race.candidates[winner]?.partyId ?? null) : "#dedbd3";
+    }
+    const provincialAssembly = electionId ? snap.provincialRuntime.assemblyElections[electionId] : null;
+    if (kind === "province" && provincialAssembly) {
+      const race = Object.values(snap.provincialRuntime.assemblyElections).find((candidate) => candidate.provinceId === feature.id && candidate.date.slice(0, 4) === provincialAssembly.date.slice(0, 4));
+      if (race?.status !== "resolved") return "#dedbd3";
+      const ranked = Object.entries(race.partySeats).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      if (ranked.length > 1 && ranked[0]![1] === ranked[1]![1]) return CONSTITUENCY_TIE_FILL;
+      return partyColor(world, ranked[0]?.[0] ?? null);
     }
     if (kind === "constituency") {
       const selected = electionId ? snap.elections[electionId] : undefined;
@@ -144,9 +154,6 @@ export function mapFillFor(
       }
       return "#dedbd3";
     }
-  }
-  if (mode === "organizations" && kind === "province") {
-    return "#e8eee8";
   }
   return kind === "province" ? "#e7efe6" : "none";
 }

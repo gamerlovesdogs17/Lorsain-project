@@ -17,4 +17,5 @@ export * from "./organizations.js";
 export * from "./eligibility.js";
 export * from "./lifecycle.js";
 export * from "./replay.js";
+export * from "./platforms.js";
 export { parsePartyRuntime, partyCounterError, validatePartyAgainstWorld } from "./validation.js";

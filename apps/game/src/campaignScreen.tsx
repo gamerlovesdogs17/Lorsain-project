@@ -366,9 +366,9 @@ export function CampaignPage(props: {
       : c.type === "assembly" && c.constituencyId
         ? `National Assembly · ${constituencyDisplayName(props.catalog, c.constituencyId)}`
         : c.type === "gubernatorial" && gubernatorialRace
-          ? `Governor · ${props.catalog.places.get(gubernatorialRace.provinceId)?.name ?? gubernatorialRace.provinceId}`
+          ? `Governor · ${props.catalog.places.get(gubernatorialRace.provinceId)?.name ?? "Province"}`
           : c.type === "provincial_assembly" && campaignProvinceId
-            ? `Provincial Assembly · ${props.catalog.places.get(campaignProvinceId)?.name ?? campaignProvinceId}`
+            ? `Provincial Assembly · ${props.catalog.places.get(campaignProvinceId)?.name ?? "Province"}`
           : "Political campaign";
   const poll = latestPublicPoll(props.snap);
   const recentActivity = props.snap.history
@@ -388,17 +388,21 @@ export function CampaignPage(props: {
     )
     .slice(-6)
     .reverse();
-  const activeEndorsements = contest
+  const contestEndorsements = contest
     ? Object.values(props.snap.endorsements)
         .filter(
           (endorsement) =>
             endorsement.contestId === contest.id &&
             endorsement.targetId === c.politicianId &&
-            endorsement.status === "active" &&
             endorsement.public,
         )
         .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id))
     : [];
+  const interestEndorsements = Object.entries(props.snap.organizationRuntime.actors)
+    .flatMap(([organizationId, actor]) => actor.endorsements
+      .filter((endorsement) => endorsement.public && endorsement.politicianId === c.politicianId && endorsement.campaignId === c.id)
+      .map((endorsement) => ({ organizationId, endorsement })))
+    .sort((a, b) => b.endorsement.date.localeCompare(a.endorsement.date) || a.organizationId.localeCompare(b.organizationId));
   const activeGotv = gotvActivations(c);
   const gotvOrganization = gotvKind === "province"
     ? (c.organizationByProvince[gotvId] ?? 0) + c.fieldOrganization * 0.25
@@ -516,12 +520,13 @@ export function CampaignPage(props: {
               <strong>{groundGameStrength(c.fieldOrganization)}/100</strong>
             </div>
             <div>
-              <div className="kicker">AP</div>
+              <div className="kicker">Monthly actions</div>
               <strong className={noActions ? "text-warn" : ""}>
                 {c.actionPointsRemaining}/{c.actionPointsMax}
               </strong>
             </div>
           </div>
+          <p className="muted campaign-actions-note">These are the major campaign choices the candidate can personally direct this month; they refresh when the month advances.</p>
           {noActions ? (
             <p className="muted campaign-actions-note">Monthly actions spent. End turn to refresh.</p>
           ) : null}
@@ -614,7 +619,7 @@ export function CampaignPage(props: {
         </div>
 
         <aside className="campaign-right">
-          <SectionDivider title="Actions" hint="1 AP each" />
+          <SectionDivider title="Actions" hint="Each uses one monthly action" />
           <p className="muted campaign-action-purpose">
             Visits build attention, organizing builds lasting field strength, and advertising trades cash for reach.
           </p>
@@ -639,7 +644,7 @@ export function CampaignPage(props: {
               Fundraise
             </button>
             {actionBtn("message", "Message")}
-            {actionBtn("endorsement", "Endorse", !contest)}
+            {actionBtn("endorsement", "Seek backing", !contest)}
             {actionBtn("gotv", "Activate GOTV", !finalStretch)}
           </div>
           {!finalStretch && !actionClosed ? (
@@ -772,20 +777,26 @@ export function CampaignPage(props: {
             )}
           </SectionCard>
           <SectionCard title="Endorsement network">
-            {!contest ? (
-              <EmptyState>This race does not use a party nomination endorsement ledger.</EmptyState>
-            ) : activeEndorsements.length === 0 ? (
-              <EmptyState>No active public endorsements yet.</EmptyState>
-            ) : (
-              activeEndorsements.map((endorsement) => (
+            {contestEndorsements.length + interestEndorsements.length === 0 ? (
+              <EmptyState>No public endorsement is recorded for this campaign.</EmptyState>
+            ) : (<>
+              {contestEndorsements.map((endorsement) => (
                 <EntityRow
                   key={endorsement.id}
                   title={publicEndorserName(endorsement.endorserType, endorsement.endorserId)}
-                  meta={`${endorsement.endorserType === "politician" ? "Political endorsement" : "Organization endorsement"} · ${endorsement.date}`}
-                  status={<StatusBadge tone="ok">Active</StatusBadge>}
+                  meta={`${endorsement.endorserType === "politician" ? "Political endorsement" : "Party endorsement"} · ${endorsement.date}`}
+                  status={<StatusBadge tone={endorsement.status === "active" ? "ok" : "idle"}>{endorsement.status === "active" ? "Current" : endorsement.status[0]!.toUpperCase() + endorsement.status.slice(1)}</StatusBadge>}
                 />
-              ))
-            )}
+              ))}
+              {interestEndorsements.map(({ organizationId, endorsement }, index) => (
+                <EntityRow
+                  key={`${organizationId}:${endorsement.campaignId ?? "campaign"}:${index}`}
+                  title={props.world.interestOrganizations[organizationId]?.name ?? "Public organization"}
+                  meta={`Interest-group endorsement · ${endorsement.date}${endorsement.withdrawnDate ? ` · withdrawn ${endorsement.withdrawnDate}` : ""}`}
+                  status={<StatusBadge tone={(endorsement.status ?? "active") === "active" ? "ok" : "idle"}>{(endorsement.status ?? "active") === "active" ? "Current" : "Withdrawn"}</StatusBadge>}
+                />
+              ))}
+            </>)}
           </SectionCard>
         </div>
         <SectionDivider title="Recent campaign activity" />
@@ -857,7 +868,7 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Visit (1 AP)
+              Visit (1 action)
             </button>
           </div>
         </ActionDrawer>
@@ -910,7 +921,7 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Organize (1 AP)
+              Organize (1 action)
             </button>
           </div>
         </ActionDrawer>
@@ -1009,7 +1020,7 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Run ad (1 AP)
+              Run ad (1 action)
             </button>
           </div>
         </ActionDrawer>
@@ -1042,7 +1053,7 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Emphasize (1 AP)
+              Emphasize (1 action)
             </button>
           </div>
         </ActionDrawer>
@@ -1091,7 +1102,7 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Attack (1 AP)
+              Attack (1 action)
             </button>
           </div>
         </ActionDrawer>
@@ -1151,7 +1162,7 @@ export function CampaignPage(props: {
                 setActiveAction(null);
               }}
             >
-              Activate GOTV (1 AP)
+              Activate GOTV (1 action)
             </button>
           </div>
         </ActionDrawer>
@@ -1202,7 +1213,7 @@ export function CampaignPage(props: {
               setActiveAction(null);
             }}
           >
-            Ask (1 AP)
+            Ask (1 action)
           </button>
         </ActionDrawer>
       ) : null}

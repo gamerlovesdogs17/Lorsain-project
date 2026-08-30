@@ -7,7 +7,7 @@ import {
 } from "@lorsain/map";
 import type { ContentBundle } from "@lorsain/content-loader";
 
-export type MapMode = "political" | "election" | "campaign" | "economy" | "organizations";
+export type MapMode = "political" | "election" | "campaign" | "economy";
 
 export type MapSelection = {
   id: string;

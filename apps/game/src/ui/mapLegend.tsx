@@ -58,10 +58,5 @@ export function MapLegend(props: {
       </div>
     );
   }
-  return (
-    <div className="map-legend">
-      <div className="kicker">Legend</div>
-      <p className="muted legend-note">Organization influence where publicly known.</p>
-    </div>
-  );
+  return null;
 }

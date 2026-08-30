@@ -3,6 +3,7 @@ import { reviewGoals } from "../agents/goals.js";
 import { recordPoliticalMemory } from "../agents/memories.js";
 import { pushHistory } from "../scheduler.js";
 import { partyMembers, factionMembers } from "./queries.js";
+import { recordPartyPlatform } from "./platforms.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -27,6 +28,7 @@ export function setPartyLeader(
   const events: SimEvent[] = [];
   party.leaderId = leaderId;
   party.status = "active";
+  if (previous !== leaderId) recordPartyPlatform(state, partyId, "leadership_change");
   if (previous && previous !== leaderId) {
     reviewGoals(state, world, previous, state.currentDate);
     recordPoliticalMemory(

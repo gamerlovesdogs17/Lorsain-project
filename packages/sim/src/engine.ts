@@ -1137,7 +1137,10 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       };
     }
 
-    if (command.type === "CHANGE_PARTY_MEMBERSHIP") {
+    if (command.type === "CHANGE_PARTY_MEMBERSHIP" || command.type === "DEV_CHANGE_PARTY_MEMBERSHIP") {
+      if (command.type === "CHANGE_PARTY_MEMBERSHIP" && command.politicianId !== state.playerPoliticianId) {
+        return fail("PLAYER_AUTHORITY", "the player may only change their own party membership");
+      }
       const preview = changePartyMembership(
         jsonClone(state),
         world,
@@ -1197,7 +1200,10 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
-    if (command.type === "CHANGE_FACTION") {
+    if (command.type === "CHANGE_FACTION" || command.type === "DEV_CHANGE_FACTION") {
+      if (command.type === "CHANGE_FACTION" && command.politicianId !== state.playerPoliticianId) {
+        return fail("PLAYER_AUTHORITY", "the player may only change their own caucus membership");
+      }
       const preview = changeFaction(
         jsonClone(state),
         world,
@@ -1212,9 +1218,15 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
-    if (command.type === "DECLARE_PARTY_CONTEST_CANDIDACY") {
-      if (command.politicianId === state.playerPoliticianId) {
-        /* player may declare explicitly */
+    if (
+      command.type === "DECLARE_PARTY_CONTEST_CANDIDACY" ||
+      command.type === "DEV_DECLARE_PARTY_CONTEST_CANDIDACY"
+    ) {
+      if (
+        command.type === "DECLARE_PARTY_CONTEST_CANDIDACY" &&
+        command.politicianId !== state.playerPoliticianId
+      ) {
+        return fail("PLAYER_AUTHORITY", "the player cannot declare candidacy for another politician");
       }
       const preview = declareCandidacy(
         jsonClone(state),
@@ -1243,7 +1255,16 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: [...out.events, ...launched], interrupt: null };
     }
 
-    if (command.type === "WITHDRAW_PARTY_CONTEST_CANDIDACY") {
+    if (
+      command.type === "WITHDRAW_PARTY_CONTEST_CANDIDACY" ||
+      command.type === "DEV_WITHDRAW_PARTY_CONTEST_CANDIDACY"
+    ) {
+      if (
+        command.type === "WITHDRAW_PARTY_CONTEST_CANDIDACY" &&
+        command.politicianId !== state.playerPoliticianId
+      ) {
+        return fail("PLAYER_AUTHORITY", "the player cannot withdraw another politician's candidacy");
+      }
       const preview = withdrawCandidacy(
         jsonClone(state),
         command.contestId,
@@ -1263,7 +1284,17 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: [...out.events, ...campaignEvents], interrupt: null };
     }
 
-    if (command.type === "ENDORSE_PARTY_CONTEST_CANDIDATE") {
+    if (
+      command.type === "ENDORSE_PARTY_CONTEST_CANDIDATE" ||
+      command.type === "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE"
+    ) {
+      if (
+        command.type === "ENDORSE_PARTY_CONTEST_CANDIDATE" &&
+        ((command.endorserType ?? "politician") !== "politician" ||
+          command.endorserId !== state.playerPoliticianId)
+      ) {
+        return fail("PLAYER_AUTHORITY", "the player may only make their own personal endorsement");
+      }
       const endorseArgs = {
         endorserType: command.endorserType ?? "politician",
         endorserId: command.endorserId,
@@ -1278,7 +1309,16 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
-    if (command.type === "WITHDRAW_ENDORSEMENT") {
+    if (command.type === "WITHDRAW_ENDORSEMENT" || command.type === "DEV_WITHDRAW_ENDORSEMENT") {
+      const endorsement = state.endorsements[command.endorsementId];
+      if (
+        command.type === "WITHDRAW_ENDORSEMENT" &&
+        (!endorsement ||
+          endorsement.endorserType !== "politician" ||
+          endorsement.endorserId !== state.playerPoliticianId)
+      ) {
+        return fail("PLAYER_AUTHORITY", "the player may only withdraw their own personal endorsement");
+      }
       const preview = withdrawEndorsement(jsonClone(state), command.endorsementId, null);
       if ("error" in preview) return fail(preview.error.code, preview.error.message);
       const commandId = nextCommandId();

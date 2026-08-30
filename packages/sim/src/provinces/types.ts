@@ -224,6 +224,8 @@ export type ProvincialVote = {
   subjectId: string;
   date: IsoDate;
   votes: Record<string, "yes" | "no" | "abstain">;
+  partyIdsAtVote?: Record<string, string | null>;
+  factionIdsAtVote?: Record<string, string | null>;
   yes: number;
   no: number;
   abstain: number;

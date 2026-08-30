@@ -5,6 +5,7 @@ import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { createPartyContest, declareCandidacy, openPartyContest, resolvePartyContest } from "./contests.js";
 import { factionMembers, partyMembers } from "./queries.js";
 import type { PartyContest, PartyContestType } from "./types.js";
+import { updatePublicPartyPlatforms } from "./platforms.js";
 
 function stableHash(text: string): number {
   let hash = 2166136261;
@@ -176,6 +177,7 @@ export function processPartyInstitutionsMonth(
 ): SimEvent[] {
   const events: SimEvent[] = [];
   updateInstitutionalCohesion(world, state);
+  events.push(...updatePublicPartyPlatforms(world, state, commandId));
   const year = Number(state.currentDate.slice(0, 4));
   const month = state.currentDate.slice(5, 7);
   let candidateScores: Map<string, number> | null = null;

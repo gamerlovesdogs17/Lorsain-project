@@ -2,6 +2,7 @@ import { getAgentProfile } from "../agents/profile.js";
 import type { KernelWorld, SimState } from "../types.js";
 import type { IdeologyAxis } from "../agents/types.js";
 import type { BillState, RecommendationStance } from "./types.js";
+import { partyPlatformFit } from "../parties/platforms.js";
 
 function axisForDimension(dimension: string): IdeologyAxis {
   if (dimension === "economic" || dimension === "economic-social") return "economic";
@@ -57,7 +58,9 @@ export function upsertRecommendations(world: KernelWorld, state: SimState, bill:
       .sort();
     let acc = 0;
     for (const id of members) acc += billPolicyFit(world, state, id, bill);
-    const fit = members.length ? acc / members.length : 0;
+    const memberFit = members.length ? acc / members.length : 0;
+    const platformFit = partyPlatformFit(state, partyId, bill);
+    const fit = memberFit * 0.6 + platformFit * 0.4;
     const key = `${partyId}:${bill.id}`;
     if (state.legislatureRuntime.partyRecommendations[key]?.source === "caucus_leadership") {
       continue;

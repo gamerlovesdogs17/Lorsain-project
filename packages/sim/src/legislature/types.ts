@@ -123,6 +123,9 @@ export type LegislativeVoteRecord = {
   date: IsoDate;
   committeeId: CommitteeId | null;
   votes: Record<string, LegislativeVoteChoice>;
+  /** Public affiliation snapshots prevent later party changes from rewriting the roll call. */
+  partyIdsAtVote?: Record<string, string | null>;
+  factionIdsAtVote?: Record<string, string | null>;
   yes: number;
   no: number;
   abstain: number;

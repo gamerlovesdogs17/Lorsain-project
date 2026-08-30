@@ -979,6 +979,37 @@ button {
 .elected-slate { margin-top: 0.75rem; border-top: 1px solid var(--line); padding-top: 0.65rem; }
 .elected-slate summary { cursor: pointer; font-weight: 700; }
 .compact-result-list { max-height: 24rem; margin-top: 0.5rem; overflow: auto; }
+.party-contest-field { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 0.45rem; margin: 0.55rem 0; }
+.player-endorsement-control { display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; margin: 0.65rem 0; padding: 0.6rem 0.7rem; border-left: 3px solid var(--accent); background: #eef3f8; font-size: 0.84rem; }
+.endorsement-network { margin: 0.6rem 0; border-top: 1px solid var(--line); padding-top: 0.55rem; }
+.endorsement-network summary { cursor: pointer; font-weight: 700; }
+.party-platform-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); margin: 0.7rem 0; }
+.party-platform-position { display: grid; gap: 0.15rem; padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--line); }
+.party-platform-position:nth-child(odd) { border-right: 1px solid var(--line); }
+.party-platform-position span { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.055em; }
+.party-platform-position strong { font-size: 0.9rem; }
+.committee-composition-strip { display: flex; min-height: 0.45rem; overflow: hidden; border-radius: 999px; background: var(--surface-muted); margin: 0.55rem 0 0.75rem; }
+.committee-composition-strip > span { min-width: 0.25rem; }
+.bill-caucus-positions { display: grid; gap: 0.45rem; margin-top: 0.55rem; }
+.platform-history { margin-top: 0.6rem; }
+.platform-history summary { cursor: pointer; font-weight: 700; }
+.constituency-pressure-list { display: grid; gap: 0.5rem; margin: 0.65rem 0; }
+.constituency-pressure-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.65rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--line); }
+.constituency-pressure-row p { margin: 0.18rem 0 0; }
+.bill-version-entry { border-bottom: 1px solid var(--line); padding-bottom: 0.45rem; }
+.bill-version-diff { display: grid; gap: 0.28rem; padding: 0.35rem 0.75rem 0.55rem; }
+.bill-version-diff-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 0.55rem; align-items: center; font-size: 0.83rem; }
+.bill-version-diff-row span:first-child { color: var(--muted); text-decoration: line-through; }
+.constitution-history-list { display: grid; gap: 0; border: 1px solid var(--line); margin-top: 0.7rem; }
+.constitution-history-row { padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--line); }
+.constitution-history-row:last-child { border-bottom: 0; }
+.constitution-history-chain { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.25rem; color: var(--muted); font-size: 0.8rem; }
+.current-law-source { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-top: 0.35rem; color: var(--muted); font-size: 0.78rem; }
+.lawbook-search { width: min(30rem, 100%); margin-bottom: 0.7rem; }
+.current-law-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.5rem; }
+.current-law-row { padding: 0.65rem; border: 1px solid var(--line); background: var(--paper); }
+.current-law-row p { margin: 0.25rem 0 0; font-size: 0.82rem; line-height: 1.35; }
+.statute-row { display: flex; justify-content: space-between; gap: 0.8rem; align-items: start; padding: 0.65rem 0; border-bottom: 1px solid var(--line); }
 .text-warn {
   color: var(--warn);
 }
@@ -2825,4 +2856,13 @@ button.entity-row:hover,
   .election-night-workspace { grid-template-columns: 1fr; }
   .election-night-state { justify-items: start; text-align: left; }
   .election-result-feed { grid-template-columns: 1fr; }
+  .party-contest-field { grid-template-columns: 1fr; }
+  .player-endorsement-control { align-items: flex-start; flex-direction: column; }
+  .party-platform-grid { grid-template-columns: 1fr; }
+  .party-platform-position:nth-child(odd) { border-right: 0; }
+  .bill-version-diff-row { grid-template-columns: 1fr; gap: 0.2rem; }
+  .bill-version-diff-row strong { display: none; }
+  .current-law-source { align-items: flex-start; flex-direction: column; }
+  .current-law-grid { grid-template-columns: 1fr; }
+  .statute-row { align-items: flex-start; flex-direction: column; }
 }

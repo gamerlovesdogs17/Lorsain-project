@@ -14,6 +14,7 @@ import { factionMembers, membershipPartyIds, resolvePartyDefinition } from "./qu
 import { contestCountReplayError } from "./replay.js";
 import { presidentialNominationCycleMetadata } from "./state.js";
 import {
+  PARTY_PLATFORM_ISSUES,
   emptyQualificationEvidence,
   isCandidateStatus,
   isContestStatus,
@@ -31,6 +32,7 @@ import {
   type EndorsementRecord,
   type FactionState,
   type PartyContest,
+  type PartyPublicPlatform,
   type PartyState,
   type QualificationEvidence,
   type SelectorGroup,
@@ -38,6 +40,61 @@ import {
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
+function parsePublicPlatform(
+  raw: unknown,
+  currentDate: string,
+  politicianIds: Set<string>,
+): PartyPublicPlatform | string {
+  if (raw == null) {
+    return {
+      updatedDate: currentDate,
+      positions: Object.fromEntries(PARTY_PLATFORM_ISSUES.map((issue) => [issue, 0])) as PartyPublicPlatform["positions"],
+      history: [],
+    };
+  }
+  if (!isRecord(raw) || typeof raw.updatedDate !== "string" || !isIsoDate(raw.updatedDate)) {
+    return "publicPlatform.updatedDate";
+  }
+  if (compareIsoDate(raw.updatedDate, currentDate) > 0) return "publicPlatform.updatedDate in future";
+  if (!isRecord(raw.positions)) return "publicPlatform.positions";
+  const positions = {} as PartyPublicPlatform["positions"];
+  for (const issue of PARTY_PLATFORM_ISSUES) {
+    const value = raw.positions[issue];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < -1 || value > 1) {
+      return `publicPlatform.positions.${issue}`;
+    }
+    positions[issue] = value;
+  }
+  if (!Array.isArray(raw.history) || raw.history.length > 12) return "publicPlatform.history";
+  const history: PartyPublicPlatform["history"] = [];
+  for (const entry of raw.history) {
+    if (!isRecord(entry) || typeof entry.date !== "string" || !isIsoDate(entry.date)) return "publicPlatform.history.date";
+    if (compareIsoDate(entry.date, currentDate) > 0) return "publicPlatform.history date in future";
+    if (!["scenario_opening", "annual_conference", "leadership_change"].includes(String(entry.reason))) {
+      return "publicPlatform.history.reason";
+    }
+    if (entry.leaderId != null && (typeof entry.leaderId !== "string" || !politicianIds.has(entry.leaderId))) {
+      return "publicPlatform.history.leaderId";
+    }
+    if (!isRecord(entry.positions)) return "publicPlatform.history.positions";
+    const snapshot = {} as PartyPublicPlatform["positions"];
+    for (const issue of PARTY_PLATFORM_ISSUES) {
+      const value = entry.positions[issue];
+      if (typeof value !== "number" || !Number.isFinite(value) || value < -1 || value > 1) {
+        return `publicPlatform.history.positions.${issue}`;
+      }
+      snapshot[issue] = value;
+    }
+    history.push({
+      date: entry.date,
+      reason: entry.reason as PartyPublicPlatform["history"][number]["reason"],
+      leaderId: entry.leaderId == null ? null : entry.leaderId,
+      positions: snapshot,
+    });
+  }
+  return { updatedDate: raw.updatedDate, positions, history };
 }
 
 const EVIDENCE_KEYS = [
@@ -390,11 +447,14 @@ export function parsePartyRuntime(
     if (rec.status === "active" && rec.leaderId == null) {
       return `partyStates.${id} active requires leaderId`;
     }
+    const publicPlatform = parsePublicPlatform(rec.publicPlatform, args.currentDate, args.politicianIds);
+    if (typeof publicPlatform === "string") return `partyStates.${id}.${publicPlatform}`;
     partyStates[id] = {
       partyId: id,
       leaderId: rec.leaderId == null ? null : rec.leaderId,
       status: rec.status,
       cohesion: rec.cohesion,
+      publicPlatform,
     };
   }
 

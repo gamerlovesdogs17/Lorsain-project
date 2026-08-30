@@ -246,6 +246,8 @@ export function processTreatyRatificationVotes(
       date: state.currentDate,
       committeeId: null,
       votes,
+      partyIdsAtVote: Object.fromEntries(Object.keys(votes).map((id) => [id, state.politicians[id]?.partyId ?? null])),
+      factionIdsAtVote: Object.fromEntries(Object.keys(votes).map((id) => [id, state.politicians[id]?.factionId ?? null])),
       yes,
       no,
       abstain,

@@ -151,11 +151,38 @@ export type DynamicPartyDefinition = {
   createdDate: IsoDate;
 };
 
+export const PARTY_PLATFORM_ISSUES = [
+  "economy",
+  "taxes",
+  "labor",
+  "housing",
+  "social_policy",
+  "environment",
+  "institutional_reform",
+  "foreign_policy",
+] as const;
+export type PartyPlatformIssue = (typeof PARTY_PLATFORM_ISSUES)[number];
+
+export type PartyPlatformHistoryEntry = {
+  date: IsoDate;
+  reason: "scenario_opening" | "annual_conference" | "leadership_change";
+  leaderId: string | null;
+  positions: Record<PartyPlatformIssue, number>;
+};
+
+export type PartyPublicPlatform = {
+  updatedDate: IsoDate;
+  positions: Record<PartyPlatformIssue, number>;
+  history: PartyPlatformHistoryEntry[];
+};
+
 export type PartyState = {
   partyId: string;
   leaderId: string | null;
   status: PartyStatus;
   cohesion: number;
+  /** Public, slowly moving issue positions. Numeric values remain simulation-internal. */
+  publicPlatform?: PartyPublicPlatform;
 };
 
 export type FactionState = {

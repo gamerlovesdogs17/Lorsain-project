@@ -64,7 +64,7 @@ import type {
 
 export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 15 as const;
+export const SAVE_SCHEMA_VERSION = 16 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -303,14 +303,30 @@ export type Command =
       politicianId: string;
       partyId: string | null;
     }
+  | {
+      type: "DEV_CHANGE_PARTY_MEMBERSHIP";
+      politicianId: string;
+      partyId: string | null;
+    }
   | { type: "CHANGE_FACTION"; politicianId: string; factionId: string | null }
+  | { type: "DEV_CHANGE_FACTION"; politicianId: string; factionId: string | null }
   | {
       type: "DECLARE_PARTY_CONTEST_CANDIDACY";
       contestId: string;
       politicianId: string;
     }
   | {
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY";
+      contestId: string;
+      politicianId: string;
+    }
+  | {
       type: "WITHDRAW_PARTY_CONTEST_CANDIDACY";
+      contestId: string;
+      politicianId: string;
+    }
+  | {
+      type: "DEV_WITHDRAW_PARTY_CONTEST_CANDIDACY";
       contestId: string;
       politicianId: string;
     }
@@ -321,7 +337,15 @@ export type Command =
       targetId: string;
       endorserType?: "politician" | "faction" | "provincial_organization";
     }
+  | {
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE";
+      contestId: string;
+      endorserId: string;
+      targetId: string;
+      endorserType?: "politician" | "faction" | "provincial_organization";
+    }
   | { type: "WITHDRAW_ENDORSEMENT"; endorsementId: string }
+  | { type: "DEV_WITHDRAW_ENDORSEMENT"; endorsementId: string }
   | {
       type: "DEV_CREATE_PARTY_CONTEST";
       contestType: "presidential_nomination" | "party_leadership" | "faction_chair";

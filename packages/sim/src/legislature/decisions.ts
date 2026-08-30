@@ -7,6 +7,7 @@ import { mpConstituencyId } from "./state.js";
 import { organizationPressureForBill } from "../organizations/monthly.js";
 import { LEGISLATIVE_PROVISIONS, policyItemForProvision } from "./provisions.js";
 import { parliamentaryDiscipline } from "./discipline.js";
+import { constituencyPressureForBill } from "./constituency.js";
 
 function constituencyFit(
   world: KernelWorld,
@@ -65,6 +66,7 @@ export function chooseLegislativeVote(
   const institutionalism = profile?.traits.institutionalism ?? 0.5;
   const pragmatism = profile?.traits.pragmatism ?? 0.5;
   const district = constituencyFit(world, state, politicianId, bill);
+  const currentLocalPressure = cidForPressure(world, state, politicianId, bill);
   const orgPressure = organizationPressureForBill(world, state, politicianId, bill.id);
   const partyPush = party === "support" ? 1 : party === "oppose" ? -1 : 0;
   const factionPush = faction === "support" ? 1 : faction === "oppose" ? -1 : 0;
@@ -87,6 +89,7 @@ export function chooseLegislativeVote(
     partyPush * partyLoyalty * discipline * issueDiscipline * 0.38 +
     factionPush * factionLoyalty * (factionConflict ? 0.3 : 0.2) +
     district * 0.22 +
+    currentLocalPressure +
     orgPressure * 0.68 +
     (pragmatism - 0.5) * 0.06 +
     (institutionalism - 0.5) * 0.04 +
@@ -94,6 +97,16 @@ export function chooseLegislativeVote(
   if (score > 0.045) return "yes";
   if (score < -0.045) return "no";
   return "abstain";
+}
+
+function cidForPressure(
+  world: KernelWorld,
+  state: SimState,
+  politicianId: string,
+  bill: BillState,
+): number {
+  const constituencyId = mpConstituencyId(world, state, politicianId);
+  return constituencyId ? constituencyPressureForBill(world, state, constituencyId, bill) : 0;
 }
 
 export function chooseIntroduce(

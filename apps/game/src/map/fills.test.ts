@@ -116,6 +116,42 @@ describe("constituency sitting plurality", () => {
     expect(fill).not.toBe("transparent");
     expect(fill).not.toBe("none");
   });
+
+  it("colors a selected historical Provincial Assembly cycle from archived seats", () => {
+    const world = worldFor([], { PARTY_LAB: "#c94b4b", PARTY_NU: "#496f9d" });
+    const snap = snapFor([], {});
+    snap.provincialRuntime = {
+      elections: {},
+      assemblyElections: {
+        PASM_P01_2030: {
+          id: "PASM_P01_2030",
+          provinceId: "P01",
+          date: "2030-10-01",
+          status: "resolved",
+          partySeats: { PARTY_LAB: 18, PARTY_NU: 12 },
+        },
+        PASM_P01_2034: {
+          id: "PASM_P01_2034",
+          provinceId: "P01",
+          date: "2034-10-01",
+          status: "resolved",
+          partySeats: { PARTY_LAB: 10, PARTY_NU: 20 },
+        },
+      },
+    } as unknown as SimState["provincialRuntime"];
+    expect(
+      mapFillFor(
+        "election",
+        world,
+        snap,
+        { id: "P01" } as never,
+        "province",
+        undefined,
+        undefined,
+        "PASM_P01_2030",
+      ),
+    ).toBe("#c94b4b");
+  });
 });
 
 describe("map constituency CSS fill", () => {

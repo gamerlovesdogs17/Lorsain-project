@@ -129,7 +129,7 @@ function runLeadership(
   )!.id;
   for (const id of ["PA", "PB", "PC"]) {
     const r = sim.executeCommand({
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId,
       politicianId: id,
     });
@@ -138,7 +138,7 @@ function runLeadership(
   if (args.endorseB) {
     for (const endorser of ["PD", "PE", "PF"]) {
       const r = sim.executeCommand({
-        type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+        type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
         contestId,
         endorserId: endorser,
         targetId: "PB",

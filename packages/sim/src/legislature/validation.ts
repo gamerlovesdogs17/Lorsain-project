@@ -178,6 +178,18 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
           if (typeof choice === "string" && isLegislativeVoteChoice(choice)) votes[pid] = choice;
         }
       }
+      const partyIdsAtVote: Record<string, string | null> = {};
+      if (isRecord(rec.partyIdsAtVote)) {
+        for (const [pid, partyId] of Object.entries(rec.partyIdsAtVote)) {
+          if (typeof partyId === "string" || partyId == null) partyIdsAtVote[pid] = partyId as string | null;
+        }
+      }
+      const factionIdsAtVote: Record<string, string | null> = {};
+      if (isRecord(rec.factionIdsAtVote)) {
+        for (const [pid, factionId] of Object.entries(rec.factionIdsAtVote)) {
+          if (typeof factionId === "string" || factionId == null) factionIdsAtVote[pid] = factionId as string | null;
+        }
+      }
       runtime.legislativeVotes[id] = {
         id,
         billId: typeof rec.billId === "string" ? rec.billId : "",
@@ -188,6 +200,8 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
             ? rec.committeeId
             : null,
         votes,
+        partyIdsAtVote,
+        factionIdsAtVote,
         yes: isInt(rec.yes) ? rec.yes : 0,
         no: isInt(rec.no) ? rec.no : 0,
         abstain: isInt(rec.abstain) ? rec.abstain : 0,

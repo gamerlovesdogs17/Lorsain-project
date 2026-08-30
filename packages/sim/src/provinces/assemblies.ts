@@ -805,7 +805,7 @@ function recordProvincialVote(
     state.provincialRuntime.constitutionalRules.veto_override_fraction?.value ?? 2 / 3;
   const required = kind === "veto_override" ? Math.ceil(assembly.seatCount * overrideFraction) : Math.floor((yes + no) / 2) + 1;
   const id = `PVOTE_${String(Object.keys(state.provincialRuntime.votes).length + 1).padStart(6, "0")}`;
-  const vote: ProvincialVote = { id, provinceId: bill.provinceId, subjectKind: kind, subjectId: bill.id, date: state.currentDate, votes, yes, no, abstain, passed: yes >= required };
+  const vote: ProvincialVote = { id, provinceId: bill.provinceId, subjectKind: kind, subjectId: bill.id, date: state.currentDate, votes, partyIdsAtVote: Object.fromEntries(assembly.memberIds.map((memberId) => [memberId, state.provincialRuntime.legislators[memberId]?.partyId ?? null])), factionIdsAtVote: Object.fromEntries(assembly.memberIds.map((memberId) => [memberId, state.provincialRuntime.legislators[memberId]?.factionId ?? null])), yes, no, abstain, passed: yes >= required };
   state.provincialRuntime.votes[id] = vote;
   return vote;
 }
@@ -1130,7 +1130,7 @@ export function castProvincialBillVote(
   const assembly = state.provincialRuntime.assemblies[bill.provinceId];
   if (!assembly?.memberIds.includes(actorId)) return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
   const id = `pending:bill:${billId}:${actorId}`;
-  state.provincialRuntime.votes[id] = { id, provinceId: bill.provinceId, subjectKind: "bill", subjectId: billId, date: state.currentDate, votes: { [actorId]: choice }, yes: choice === "yes" ? 1 : 0, no: choice === "no" ? 1 : 0, abstain: choice === "abstain" ? 1 : 0, passed: false };
+  state.provincialRuntime.votes[id] = { id, provinceId: bill.provinceId, subjectKind: "bill", subjectId: billId, date: state.currentDate, votes: { [actorId]: choice }, partyIdsAtVote: { [actorId]: state.provincialRuntime.legislators[actorId]?.partyId ?? null }, factionIdsAtVote: { [actorId]: state.provincialRuntime.legislators[actorId]?.factionId ?? null }, yes: choice === "yes" ? 1 : 0, no: choice === "no" ? 1 : 0, abstain: choice === "abstain" ? 1 : 0, passed: false };
   return {};
 }
 

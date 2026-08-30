@@ -172,7 +172,7 @@ export function factionDisplayName(
   factionId: string | null | undefined,
 ): string {
   if (!factionId) return "No caucus";
-  return world.factionDefinitions[factionId]?.name ?? factionId;
+  return world.factionDefinitions[factionId]?.name ?? "Unrecognized caucus";
 }
 
 export function constituencyDisplayName(catalog: PresentationCatalog, id: string | null): string {
@@ -456,12 +456,13 @@ export function electionDisplayName(id: string): string {
   if (id.startsWith("ELEC_PRES_")) return `Presidential election ${id.slice(10)}`;
   if (id.startsWith("ELEC_ASM_")) return `Assembly election ${id.slice(9)}`;
   if (id.startsWith("ELEC_GOV_")) return `Gubernatorial election ${id.slice(-4)}`;
-  return id;
+  if (id.startsWith("ELEC_PASM_")) return `Provincial Assembly election ${id.slice(-4)}`;
+  return "Election record";
 }
 
 export function contestDisplayName(state: SimState, world: KernelWorld, contestId: string): string {
   const contest = state.partyContests[contestId];
-  if (!contest) return contestId;
+  if (!contest) return "Political contest";
   const party = partyDisplayName(world, contest.partyId);
   if (contest.type === "presidential_nomination") return `${party} presidential nomination`;
   if (contest.type === "party_leadership") return `${party} leadership contest`;
@@ -725,14 +726,14 @@ export function pollShareLine(
   catalog: PresentationCatalog,
   world: KernelWorld,
   state: SimState,
-  shares: Array<{ politicianId: string; share: number }>,
+  shares: Array<{ politicianId: string; partyId?: string | null; share: number }>,
 ): string {
   return [...shares]
     .sort((a, b) => b.share - a.share)
     .slice(0, 5)
     .map(
       (s) =>
-        `${politicianDisplayName(catalog, s.politicianId)} (${partyDisplayName(world, state.politicians[s.politicianId]?.partyId ?? null)}) ${(s.share * 100).toFixed(1)}%`,
+        `${politicianDisplayName(catalog, s.politicianId)} (${partyDisplayName(world, s.partyId ?? null, state)}) ${(s.share * 100).toFixed(1)}%`,
     )
     .join(" · ");
 }

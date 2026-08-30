@@ -198,7 +198,7 @@ describe("Phase 5 2028 vertical slice", () => {
     );
     if (contest) {
       const declared = sim.executeCommand({
-        type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+        type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
         contestId: contest.id,
         politicianId: "NPC002",
       });

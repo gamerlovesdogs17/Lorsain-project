@@ -11,6 +11,7 @@ import {
   currentSpeakerId,
   deriveCabinet,
   governedProvinceId,
+  publicConstituencyPressures,
   type CommandResult,
   type KernelWorld,
   type SimState,
@@ -118,6 +119,9 @@ export function OfficePage(props: {
   const playerIsJustice = currentCourtJudgeIds(props.world, props.snap).includes(playerId);
   const mpConstituencyId = kinds.find((k) => k.office.kind === "assembly_member")?.office
     .constituencyId;
+  const constituencyPressures = mpConstituencyId
+    ? publicConstituencyPressures(props.world, props.snap, mpConstituencyId)
+    : [];
   const upcomingVotes = collectPlayerActionableDecisions(props.world, props.snap).filter((d) =>
     [
       "committee_vote",
@@ -162,7 +166,7 @@ export function OfficePage(props: {
       .sort((a, b) => provincialName(a[0]).localeCompare(provincialName(b[0])));
     const breakdown = new Map<string, { yes: number; no: number; abstain: number }>();
     for (const [memberId, choice] of Object.entries(vote.votes)) {
-      const partyId = props.snap.provincialRuntime.legislators[memberId]?.partyId ?? "none";
+      const partyId = vote.partyIdsAtVote?.[memberId] ?? "unrecorded";
       const count = breakdown.get(partyId) ?? { yes: 0, no: 0, abstain: 0 };
       count[choice] += 1;
       breakdown.set(partyId, count);
@@ -172,7 +176,7 @@ export function OfficePage(props: {
       <div className="roll-call-breakdown">
         {[...breakdown.entries()]
           .sort((a, b) => (b[1].yes + b[1].no + b[1].abstain) - (a[1].yes + a[1].no + a[1].abstain))
-          .map(([partyId, count]) => <span key={partyId}><strong>{partyDisplayName(props.world, partyId === "none" ? null : partyId, props.snap)}</strong> {count.yes} Aye · {count.no} Nay · {count.abstain} Abstain</span>)}
+           .map(([partyId, count]) => <span key={partyId}><strong>{partyId === "unrecorded" ? "Affiliation not archived" : partyDisplayName(props.world, partyId === "none" ? null : partyId, props.snap)}</strong> {count.yes} Aye · {count.no} Nay · {count.abstain} Abstain</span>)}
       </div>
       <div className="map-scale-switch" aria-label="Filter provincial roll call">
         {(["all", "yes", "no", "abstain"] as const).map((choice) => <button type="button" key={choice} className={provincialRollCallFilter === choice ? "active" : ""} onClick={() => setProvincialRollCallFilter(choice)}>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : choice[0]!.toUpperCase() + choice.slice(1)}</button>)}
@@ -180,8 +184,9 @@ export function OfficePage(props: {
       <div className="roll-call-scroll">
         <DataTable dense headers={["Member", "Party", "Caucus", "Vote"]}>
           {rows.map(([memberId, choice]) => {
-            const member = props.snap.provincialRuntime.legislators[memberId];
-            return <tr key={memberId}><td><button type="button" className="link-button" onClick={() => setSelectedProvincialMemberId(memberId)}>{provincialName(memberId)}</button></td><td>{partyDisplayName(props.world, member?.partyId ?? null, props.snap)}</td><td>{member?.factionId ? props.world.factionDefinitions[member.factionId]?.name ?? "—" : "—"}</td><td>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : "Abstain"}</td></tr>;
+             const historicalParty = vote.partyIdsAtVote?.[memberId];
+             const historicalFaction = vote.factionIdsAtVote?.[memberId];
+             return <tr key={memberId}><td><button type="button" className="link-button" onClick={() => setSelectedProvincialMemberId(memberId)}>{provincialName(memberId)}</button></td><td>{historicalParty === undefined ? "Not archived" : partyDisplayName(props.world, historicalParty, props.snap)}</td><td>{historicalFaction === undefined ? "Not archived" : historicalFaction ? props.world.factionDefinitions[historicalFaction]?.name ?? "Former caucus" : "—"}</td><td>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : "Abstain"}</td></tr>;
           })}
         </DataTable>
       </div>
@@ -190,6 +195,7 @@ export function OfficePage(props: {
 
   if (provinceId && province && economy) {
     const governorId = currentGovernorId(props.world, props.snap, provinceId);
+    const governingCapacity = province.politicalCapital >= 0.65 ? "Strong" : province.politicalCapital >= 0.35 ? "Usable" : province.politicalCapital >= 0.12 ? "Strained" : "Committed";
     return (
       <div className="office-page governor-office">
         <PageHeader
@@ -208,7 +214,8 @@ export function OfficePage(props: {
                   },
                   { label: "Next election", value: election?.date ?? "Not scheduled" },
                   { label: "Standing", value: standingLabel },
-                  { label: "Actions", value: province.actionPointsRemaining },
+                  { label: "Monthly actions", value: province.actionPointsRemaining },
+                  { label: "Governing capacity", value: governingCapacity },
                 ]}
               />
               <MetricStrip>
@@ -287,7 +294,8 @@ export function OfficePage(props: {
               )}
               {renderProvincialRollCall(selectedProvincialVoteId)}
 
-              <SectionDivider title="Governor's agenda" hint="Each apply costs 1 action point" />
+              <SectionDivider title="Governor's agenda" hint="Two major administrative choices each month; governing capacity recovers gradually" />
+              <p className="muted">Monthly actions represent the Governor's limited attention. Governing capacity represents the coalition and administrative room needed for sustained investment; it is not spent on routine public advocacy.</p>
               <PolicyChoiceGroup
                 title="Administrative priority"
                 currentLabel={title(province.administrativePriority)}
@@ -297,7 +305,7 @@ export function OfficePage(props: {
                   id: item,
                   label: title(item),
                   summary: `Emphasize ${title(item).toLowerCase()} in provincial administration.`,
-                  cost: "1 AP",
+                   cost: "1 monthly action",
                   current: item === province.administrativePriority,
                 }))}
                 details={
@@ -310,7 +318,7 @@ export function OfficePage(props: {
                     }
                     onClick={() => execute({ type: "GOVERNOR_SET_PRIORITY", provinceId, priority })}
                   >
-                    Apply priority (1 AP)
+                     Apply priority (1 action)
                   </button>
                 }
               />
@@ -323,7 +331,7 @@ export function OfficePage(props: {
                   id: item,
                   label: title(item),
                   summary: `Direct provincial capital toward ${title(item).toLowerCase()}.`,
-                  cost: "1 AP",
+                   cost: "1 monthly action · capacity required",
                   current: item === province.investmentEmphasis,
                 }))}
                 details={
@@ -338,7 +346,7 @@ export function OfficePage(props: {
                       execute({ type: "GOVERNOR_DIRECT_INVESTMENT", provinceId, focus: investment })
                     }
                   >
-                    Direct investment (1 AP)
+                     Direct investment (1 action)
                   </button>
                 }
               />
@@ -367,7 +375,7 @@ export function OfficePage(props: {
                       })
                     }
                   >
-                    Support (1 AP)
+                     Support (1 action)
                   </button>
                   <button
                     className="btn secondary"
@@ -382,7 +390,7 @@ export function OfficePage(props: {
                       })
                     }
                   >
-                    Oppose (1 AP)
+                     Oppose (1 action)
                   </button>
                 </div>
               </SectionCard>
@@ -823,6 +831,22 @@ export function OfficePage(props: {
               ) : (
                 <EmptyState>No constituency seat on record.</EmptyState>
               )}
+              {constituencyPressures.length ? (
+                <div className="constituency-pressure-list">
+                  {constituencyPressures.map((pressure) => (
+                    <div key={pressure.kind} className="constituency-pressure-row">
+                      <div>
+                        <strong>{pressure.label}</strong>
+                        <p className="muted">{pressure.detail}</p>
+                      </div>
+                      <StatusBadge tone={pressure.level === "urgent" ? "warn" : "idle"}>
+                        {pressure.level === "urgent" ? "Urgent" : pressure.level === "important" ? "Important" : "Watch"}
+                      </StatusBadge>
+                    </div>
+                  ))}
+                  <p className="muted">These are public local considerations, not an exact vote modifier.</p>
+                </div>
+              ) : null}
               <p className="muted">Introduce legislation and cast recorded votes in Assembly.</p>
               <button type="button" className="btn secondary" disabled>
                 Open Assembly →

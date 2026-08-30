@@ -520,7 +520,7 @@ describe("Phase 4 hardening: polls", () => {
     });
     const poll = Object.values(sim.getSnapshot().polls)[0]!;
     expectOk(sim, { type: "DEV_SET_ALIVE", politicianId: "P2", alive: false });
-    expectOk(sim, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P1", partyId: null });
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P1", partyId: null });
     expect(sim.getSnapshot().polls[poll.id]).toEqual(poll);
     const parsed = parseSaveFile(sim.serializeSave(), "0.3.1-predev");
     expect(parsed.ok).toBe(true);

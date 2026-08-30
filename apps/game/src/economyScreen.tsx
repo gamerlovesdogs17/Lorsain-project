@@ -257,7 +257,8 @@ export function EconomyPage(props: {
                     selectedId={sel?.id ?? null}
                     showConstituencies={false}
                     fillFor={(p) => {
-                      const idx = props.snap.economyRuntime.provinces[p.id]?.conditionsIndex ?? 100;
+                      const idx = props.snap.economyRuntime.provinces[p.id]?.conditionsIndex;
+                      if (idx == null) return "#dedbd3";
                       const t = Math.max(0, Math.min(1, (idx - 90) / 20));
                       return `hsl(150, 25%, ${88 - t * 22}%)`;
                     }}

@@ -433,24 +433,24 @@ describe("membership and leadership", () => {
     const sim = simFor();
     const before = sim.hashState();
     expect(
-      sim.executeCommand({ type: "CHANGE_FACTION", politicianId: "P19", factionId: "FAC_NU_A" }).ok,
+      sim.executeCommand({ type: "DEV_CHANGE_FACTION", politicianId: "P19", factionId: "FAC_NU_A" }).ok,
     ).toBe(false);
     expect(sim.hashState()).toBe(before);
-    expectOk(sim, { type: "CHANGE_FACTION", politicianId: "P19", factionId: "FAC_LAB_B" });
+    expectOk(sim, { type: "DEV_CHANGE_FACTION", politicianId: "P19", factionId: "FAC_LAB_B" });
     expect(sim.getSnapshot().politicians.P19?.factionId).toBe("FAC_LAB_B");
     const rejectInd = sim.hashState();
     expect(
       sim.executeCommand({
-        type: "CHANGE_PARTY_MEMBERSHIP",
+        type: "DEV_CHANGE_PARTY_MEMBERSHIP",
         politicianId: "P19",
         partyId: "PARTY_IND",
       }).ok,
     ).toBe(false);
     expect(sim.hashState()).toBe(rejectInd);
-    expectOk(sim, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: "PARTY_CR" });
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: "PARTY_CR" });
     expect(sim.getSnapshot().politicians.P19?.partyId).toBe("PARTY_CR");
     expect(sim.getSnapshot().politicians.P19?.factionId).toBeNull();
-    expectOk(sim, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: null });
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: null });
     expect(sim.getSnapshot().politicians.P19?.partyId).toBeNull();
     expect(sim.getSnapshot().politicians.P19?.factionId).toBeNull();
   });
@@ -459,7 +459,7 @@ describe("membership and leadership", () => {
     const sim = simFor();
     const factsBefore = publicPoliticianFacts(sim.world(), sim.getSnapshot(), "P3");
     expect(factsBefore?.partyLeaderOf).toBe("PARTY_LAB");
-    expectOk(sim, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P3", partyId: "PARTY_CR" });
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P3", partyId: "PARTY_CR" });
     const snap = sim.getSnapshot();
     expect(snap.partyStates.PARTY_LAB?.leaderId).toBeNull();
     expect(snap.partyStates.PARTY_LAB?.status).toBe("leadership_vacant");
@@ -472,7 +472,7 @@ describe("membership and leadership", () => {
 
   it("vacates faction chair on leave and on death", () => {
     const sim = simFor();
-    expectOk(sim, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P4", partyId: null });
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P4", partyId: null });
     expect(sim.getSnapshot().factionStates.FAC_LAB_B?.chairId).toBeNull();
     const sim2 = simFor();
     expectOk(sim2, { type: "DEV_SET_ALIVE", politicianId: "P12", alive: false });
@@ -482,21 +482,81 @@ describe("membership and leadership", () => {
 });
 
 describe("endorsements", () => {
-  it("creates, switches, withdraws, and rejects invalid targets without mutating on reject", () => {
-    const sim = simFor();
+  it("enforces player authority for party membership, candidacy, and endorsements", () => {
+    const sim = simFor(partyMiniWorld(), "P19");
     const contestId = createdContestId(sim, "PARTY_LAB");
     expectOk(sim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId,
       politicianId: "P3",
     });
     expectOk(sim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
+      contestId,
+      politicianId: "P4",
+    });
+
+    for (const command of [
+      { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P3", partyId: null },
+      { type: "CHANGE_FACTION", politicianId: "P3", factionId: null },
+      { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P7" },
+      { type: "WITHDRAW_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" },
+      { type: "ENDORSE_PARTY_CONTEST_CANDIDATE", contestId, endorserId: "P7", targetId: "P3" },
+    ] as const) {
+      const hash = sim.hashState();
+      const result = sim.executeCommand(command);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe("PLAYER_AUTHORITY");
+      expect(sim.hashState()).toBe(hash);
+    }
+
+    expectOk(sim, {
+      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      contestId,
+      endorserId: "P19",
+      targetId: "P3",
+    });
+    const own = Object.values(sim.getSnapshot().endorsements).find(
+      (endorsement) => endorsement.endorserId === "P19" && endorsement.status === "active",
+    );
+    expect(own).toBeDefined();
+    expectOk(sim, { type: "WITHDRAW_ENDORSEMENT", endorsementId: own!.id });
+
+    expectOk(sim, {
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
+      contestId,
+      endorserId: "FAC_LAB_A",
+      targetId: "P4",
+      endorserType: "faction",
+    });
+    const other = Object.values(sim.getSnapshot().endorsements).find(
+      (endorsement) => endorsement.endorserId === "FAC_LAB_A" && endorsement.status === "active",
+    );
+    const hash = sim.hashState();
+    const forbiddenWithdrawal = sim.executeCommand({
+      type: "WITHDRAW_ENDORSEMENT",
+      endorsementId: other!.id,
+    });
+    expect(forbiddenWithdrawal.ok).toBe(false);
+    if (!forbiddenWithdrawal.ok) expect(forbiddenWithdrawal.error.code).toBe("PLAYER_AUTHORITY");
+    expect(sim.hashState()).toBe(hash);
+  });
+
+  it("creates, switches, withdraws, and rejects invalid targets without mutating on reject", () => {
+    const sim = simFor();
+    const contestId = createdContestId(sim, "PARTY_LAB");
+    expectOk(sim, {
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
+      contestId,
+      politicianId: "P3",
+    });
+    expectOk(sim, {
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId,
       politicianId: "P4",
     });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P3",
@@ -508,7 +568,7 @@ describe("endorsements", () => {
     expect(sim.getSnapshot().history.some((e) => e.type === "ENDORSEMENT_MADE")).toBe(true);
     expect(Object.keys(sim.getSnapshot().memories).length).toBeGreaterThan(0);
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P4",
@@ -518,12 +578,12 @@ describe("endorsements", () => {
       (e) => e.endorserId === "P19" && e.status === "active",
     );
     expect(second?.targetId).toBe("P4");
-    expectOk(sim, { type: "WITHDRAW_ENDORSEMENT", endorsementId: second!.id });
+    expectOk(sim, { type: "DEV_WITHDRAW_ENDORSEMENT", endorsementId: second!.id });
     expect(sim.getSnapshot().endorsements[second!.id]?.status).toBe("withdrawn");
     const hash = sim.hashState();
     expect(
       sim.executeCommand({
-        type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+        type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
         contestId,
         endorserId: "P19",
         targetId: "P12",
@@ -538,17 +598,17 @@ describe("endorsements", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_LAB");
     expectOk(sim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId,
       politicianId: "P3",
     });
     expectOk(sim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId,
       politicianId: "P4",
     });
     const blocked = sim.executeCommand({
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P3",
       targetId: "P4",
@@ -556,12 +616,12 @@ describe("endorsements", () => {
     expect(blocked.ok).toBe(false);
     if (!blocked.ok) expect(blocked.error.code).toBe("ACTIVE_RIVAL");
     expectOk(sim, {
-      type: "WITHDRAW_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_WITHDRAW_PARTY_CONTEST_CANDIDACY",
       contestId,
       politicianId: "P3",
     });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P3",
       targetId: "P4",
@@ -581,7 +641,7 @@ function nominate(
 ) {
   const contestId = createdContestId(sim, partyId);
   for (const id of candidates) {
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: id });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: id });
   }
   extra?.(contestId);
   expectOk(sim, { type: "DEV_OPEN_PARTY_CONTEST", contestId });
@@ -622,8 +682,8 @@ describe("six nomination methods", () => {
     const sim = simFor();
     expect(memberFactionSelectorate(sim.world(), sim.getSnapshot(), "PARTY_NU").length).toBe(6);
     const contestId = createdContestId(sim, "PARTY_NU");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P5" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P6" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P5" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P6" });
     expectOk(sim, { type: "DEV_OPEN_PARTY_CONTEST", contestId });
     const caucus = assemblyCaucus(sim.world(), sim.getSnapshot(), "PARTY_NU");
     expect(caucus.length).toBe(7);
@@ -634,7 +694,7 @@ describe("six nomination methods", () => {
     expect(sim.hashState()).toBe(failHash);
     for (const endorser of ["P7", "P8"]) {
       expectOk(sim, {
-        type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+        type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
         contestId,
         endorserId: endorser,
         targetId: "P5",
@@ -642,7 +702,7 @@ describe("six nomination methods", () => {
     }
     for (const endorser of ["P9", "P10"]) {
       expectOk(sim, {
-        type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+        type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
         contestId,
         endorserId: endorser,
         targetId: "P6",
@@ -710,15 +770,15 @@ describe("six nomination methods", () => {
     const sim = simFor();
     expect(pmMemberSelectorate(sim.world(), sim.getSnapshot(), "PARTY_PM").length).toBe(6);
     const contestId = createdContestId(sim, "PARTY_PM");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P15" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P16" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P15" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P16" });
     expectOk(sim, { type: "DEV_OPEN_PARTY_CONTEST", contestId });
     const failHash = sim.hashState();
     expect(sim.executeCommand({ type: "DEV_RESOLVE_PARTY_CONTEST", contestId }).ok).toBe(false);
     expect(sim.hashState()).toBe(failHash);
     for (const prov of ["P01", "P02", "P03", "P04"]) {
       expectOk(sim, {
-        type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+        type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
         contestId,
         endorserId: provincialOrgId("PARTY_PM", prov),
         targetId: "P15",
@@ -752,8 +812,8 @@ describe("six nomination methods", () => {
   it("saves an opened contest and restores the same archive after resolve", () => {
     const sim = simFor(partyMiniWorld("REPLAY"));
     const contestId = createdContestId(sim, "PARTY_LAB");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
     expectOk(sim, {
       type: "DEV_SET_CONTEST_QUALIFICATION",
       contestId,
@@ -795,8 +855,8 @@ describe("leadership contests, splits, knowledge, player, save", () => {
     const contestId = Object.values(sim.getSnapshot().partyContests).find(
       (c) => c.type === "party_leadership",
     )!.id;
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
     expectOk(sim, { type: "DEV_OPEN_PARTY_CONTEST", contestId });
     expectOk(sim, { type: "DEV_RESOLVE_PARTY_CONTEST", contestId });
     const winner = sim.getSnapshot().partyContests[contestId]?.winnerId;
@@ -846,8 +906,8 @@ describe("leadership contests, splits, knowledge, player, save", () => {
     const c2 = createdContestId(s2, "PARTY_LAB");
     expect(c1).toBe(c2);
     for (const sim of [s1, s2]) {
-      expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c1, politicianId: "P3" });
-      expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c1, politicianId: "P4" });
+      expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c1, politicianId: "P3" });
+      expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c1, politicianId: "P4" });
     }
     const a = chooseEndorsement(
       w1,
@@ -933,10 +993,10 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
   it("rejects fake and wrong-party provincial organizations", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_PM");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P15" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P15" });
     const hash = sim.hashState();
     const fake = sim.executeCommand({
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "FAKE1",
       targetId: "P15",
@@ -945,7 +1005,7 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
     expect(fake.ok).toBe(false);
     if (!fake.ok) expect(fake.error.code).toBe("INVALID_ORGANIZATION");
     const wrong = sim.executeCommand({
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: provincialOrgId("PARTY_LAB", "P01"),
       targetId: "P15",
@@ -958,11 +1018,11 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
   it("does not let one provincial organization multiply the PM gate", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_PM");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P15" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P15" });
     expectOk(sim, { type: "DEV_OPEN_PARTY_CONTEST", contestId });
     for (let i = 0; i < 4; i++) {
       const r = sim.executeCommand({
-        type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+        type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
         contestId,
         endorserId: provincialOrgId("PARTY_PM", "P01"),
         targetId: "P15",
@@ -980,10 +1040,10 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
   it("rejects a wrong-party institutional faction endorsement", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_LAB");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
     const hash = sim.hashState();
     const r = sim.executeCommand({
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "FAC_NU_A",
       targetId: "P3",
@@ -996,10 +1056,10 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
   it("rejects duplicate same-target politician endorsements without mutation", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_LAB");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P3",
@@ -1008,7 +1068,7 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
     const rng = sim.getSnapshot().rng;
     const memories = Object.keys(sim.getSnapshot().memories).length;
     const r = sim.executeCommand({
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P3",
@@ -1023,16 +1083,16 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
   it("switches a politician endorsement to a different target once", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_LAB");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P3",
     });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P4",
@@ -1048,9 +1108,9 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
   it("does not stack same-target faction institutional endorsements", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_LAB");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "FAC_LAB_A",
       targetId: "P3",
@@ -1058,7 +1118,7 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
     });
     const hash = sim.hashState();
     const again = sim.executeCommand({
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "FAC_LAB_A",
       targetId: "P3",
@@ -1071,16 +1131,16 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
   it("ends active endorsements when the target withdraws or dies", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_LAB");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P4",
     });
     expectOk(sim, {
-      type: "WITHDRAW_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_WITHDRAW_PARTY_CONTEST_CANDIDACY",
       contestId,
       politicianId: "P4",
     });
@@ -1090,7 +1150,7 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
       ),
     ).toBe(true);
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P3",
@@ -1101,6 +1161,26 @@ describe("Phase 3 hardening: endorsements and organizations", () => {
         (e) => e.targetId !== "P3" || e.status !== "active",
       ),
     ).toBe(true);
+    expectRoundTrip(sim);
+  });
+
+  it("ends a public endorsement when the endorser leaves the contest party", () => {
+    const sim = simFor();
+    const contestId = createdContestId(sim, "PARTY_LAB");
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, {
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
+      contestId,
+      endorserId: "P19",
+      targetId: "P3",
+    });
+    const endorsement = Object.values(sim.getSnapshot().endorsements).find((row) => row.endorserId === "P19")!;
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: "PARTY_CR" });
+    const ended = sim.getSnapshot().endorsements[endorsement.id]!;
+    expect(ended.status).toBe("ended");
+    expect(ended.metadata.endReason).toBe("endorser_party_switch");
+    expect(ended.metadata.statusDate).toBe(sim.getSnapshot().currentDate);
+    expect(sim.getSnapshot().history.some((event) => event.type === "ENDORSEMENT_ENDED" && event.payload.endorsementId === endorsement.id)).toBe(true);
     expectRoundTrip(sim);
   });
 });
@@ -1153,13 +1233,13 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
     )!;
     expect(
       sim.executeCommand({
-        type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+        type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
         contestId: contest.id,
         politicianId: "P4",
       }).ok,
     ).toBe(false);
     expectOk(sim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: contest.id,
       politicianId: "P3",
     });
@@ -1170,28 +1250,28 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
   it("withdraws incompatible candidacies on party, independent, death, retirement, and faction switch", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_LAB");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P19" });
-    expectOk(sim, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: "PARTY_CR" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P19" });
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: "PARTY_CR" });
     expect(sim.getSnapshot().partyContests[contestId]?.entries.P19?.status).toBe("withdrawn");
     expectRoundTrip(sim);
 
     const sim2 = simFor();
     const c2 = createdContestId(sim2, "PARTY_LAB");
-    expectOk(sim2, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c2, politicianId: "P19" });
-    expectOk(sim2, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: null });
+    expectOk(sim2, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c2, politicianId: "P19" });
+    expectOk(sim2, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: null });
     expect(sim2.getSnapshot().partyContests[c2]?.entries.P19?.status).toBe("withdrawn");
     expectRoundTrip(sim2);
 
     const sim3 = simFor();
     const c3 = createdContestId(sim3, "PARTY_GRN");
-    expectOk(sim3, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c3, politicianId: "P13" });
+    expectOk(sim3, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c3, politicianId: "P13" });
     expectOk(sim3, { type: "DEV_SET_ALIVE", politicianId: "P13", alive: false });
     expect(sim3.getSnapshot().partyContests[c3]?.entries.P13?.status).toBe("withdrawn");
     expectRoundTrip(sim3);
 
     const sim4 = simFor();
     const c4 = createdContestId(sim4, "PARTY_GRN");
-    expectOk(sim4, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c4, politicianId: "P13" });
+    expectOk(sim4, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId: c4, politicianId: "P13" });
     expectOk(sim4, { type: "DEV_SET_RETIRED", politicianId: "P13", retired: true });
     expect(sim4.getSnapshot().partyContests[c4]?.entries.P13?.status).toBe("withdrawn");
     expectRoundTrip(sim4);
@@ -1208,11 +1288,11 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
       (c) => c.type === "faction_chair",
     )!;
     expectOk(sim5, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: chair.id,
       politicianId: "P19",
     });
-    expectOk(sim5, { type: "CHANGE_FACTION", politicianId: "P19", factionId: "FAC_LAB_B" });
+    expectOk(sim5, { type: "DEV_CHANGE_FACTION", politicianId: "P19", factionId: "FAC_LAB_B" });
     expect(sim5.getSnapshot().partyContests[chair.id]?.entries.P19?.status).toBe("withdrawn");
     expectRoundTrip(sim5);
   });
@@ -1222,8 +1302,8 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
     addPolitician(world, "P21", "PARTY_GRN", "FAC_GRN_A");
     const sim = simFor(world);
     const contestId = createdContestId(sim, "PARTY_GRN");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P13" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P21" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P13" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P21" });
     expectOk(sim, {
       type: "DEV_SET_CONTEST_QUALIFICATION",
       contestId,
@@ -1250,7 +1330,7 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
       (c) => c.partyId === "PARTY_CR" && c.type === "presidential_nomination",
     )!;
     const mara = tsim.executeCommand({
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: civic.id,
       politicianId: "NPC001",
     });
@@ -1260,17 +1340,17 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
       (c) => c.partyId === "PARTY_LAB",
     )!;
     expectOk(tsim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: labour.id,
       politicianId: "NPC003",
     });
     expectOk(tsim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: civic.id,
       politicianId: "NPC005",
     });
     expectOk(tsim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: labour.id,
       politicianId: "NPC002",
     });
@@ -1298,18 +1378,18 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
     const sim = simFor(world);
     const cr = createdContestId(sim, "PARTY_CR");
     const young = sim.executeCommand({
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: cr,
       politicianId: "PYOUNG",
     });
     expect(young.ok).toBe(false);
     const judge = sim.executeCommand({
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: cr,
       politicianId: "PJUDGE",
     });
     expect(judge.ok).toBe(false);
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId: cr, politicianId: "P12" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId: cr, politicianId: "P12" });
   });
 
   it("replays archived ballots after later political change", () => {
@@ -1325,7 +1405,7 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
       }
     });
     const archived = jsonClone(contest);
-    expectOk(sim, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P4", partyId: null });
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P4", partyId: null });
     expectOk(sim, { type: "DEV_SET_ALIVE", politicianId: "P3", alive: false });
     const replayed = replayContestCount(archived);
     expect(serializeCountResult(replayed)).toBe(serializeCountResult(archived.countArchive));
@@ -1471,7 +1551,7 @@ describe("Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save", 
     const opened = simFor();
     const cid = createdContestId(opened, "PARTY_GRN");
     expectOk(opened, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: cid,
       politicianId: "P13",
     });
@@ -1522,7 +1602,7 @@ function resolveLabLeadership(
     (c) => c.type === "party_leadership",
   )!.id;
   for (const id of candidates) {
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: id });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: id });
   }
   expectOk(sim, { type: "DEV_OPEN_PARTY_CONTEST", contestId });
   expectOk(sim, { type: "DEV_RESOLVE_PARTY_CONTEST", contestId });
@@ -1555,7 +1635,7 @@ describe("Phase 3 history and lifecycle integrity", () => {
     );
     run((sim, winner) =>
       expectOk(sim, {
-        type: "CHANGE_PARTY_MEMBERSHIP",
+        type: "DEV_CHANGE_PARTY_MEMBERSHIP",
         politicianId: winner,
         partyId: "PARTY_CR",
       }),
@@ -1567,12 +1647,12 @@ describe("Phase 3 history and lifecycle integrity", () => {
       expectOk(sim, { type: "DEV_SET_RETIRED", politicianId: loser, retired: true }),
     );
     run((sim, _, loser) =>
-      expectOk(sim, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: loser, partyId: null }),
+      expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: loser, partyId: null }),
     );
     run((sim, _, loser) => {
       const other =
         sim.getSnapshot().politicians[loser]?.factionId === "FAC_LAB_A" ? "FAC_LAB_B" : "FAC_LAB_A";
-      expectOk(sim, { type: "CHANGE_FACTION", politicianId: loser, factionId: other });
+      expectOk(sim, { type: "DEV_CHANGE_FACTION", politicianId: loser, factionId: other });
     });
   });
 
@@ -1587,10 +1667,10 @@ describe("Phase 3 history and lifecycle integrity", () => {
     const contestId = Object.values(sim.getSnapshot().partyContests).find(
       (c) => c.type === "party_leadership",
     )!.id;
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P3",
@@ -1614,7 +1694,7 @@ describe("Phase 3 history and lifecycle integrity", () => {
     expect(recs.length).toBeGreaterThan(0);
     expect(recs.every((e) => e.status === "ended")).toBe(true);
     expect(recs.every((e) => e.metadata.endReason === "contest_resolved")).toBe(true);
-    expectOk(sim, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: "PARTY_CR" });
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P19", partyId: "PARTY_CR" });
     expectRoundTrip(sim);
     expectOk(sim, { type: "DEV_SET_ALIVE", politicianId: "P19", alive: false });
     expectRoundTrip(sim);
@@ -1631,9 +1711,9 @@ describe("Phase 3 history and lifecycle integrity", () => {
     const contestId = Object.values(sim.getSnapshot().partyContests).find(
       (c) => c.type === "party_leadership",
     )!.id;
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P3",
@@ -1681,12 +1761,12 @@ describe("Phase 3 history and lifecycle integrity", () => {
       (c) => c.type === "party_leadership",
     )!.id;
     expectOk(caucus, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: caucusId,
       politicianId: "P3",
     });
     expectOk(caucus, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: caucusId,
       politicianId: "P4",
     });
@@ -1711,7 +1791,7 @@ describe("Phase 3 history and lifecycle integrity", () => {
       politicianIds: ["P4"],
     });
     const dynId = Object.keys(emptyParty.getSnapshot().dynamicParties)[0]!;
-    expectOk(emptyParty, { type: "CHANGE_PARTY_MEMBERSHIP", politicianId: "P4", partyId: null });
+    expectOk(emptyParty, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P4", partyId: null });
     expectOk(emptyParty, {
       type: "DEV_CREATE_PARTY_CONTEST",
       contestType: "party_leadership",
@@ -1743,7 +1823,7 @@ describe("Phase 3 history and lifecycle integrity", () => {
       (c) => c.type === "faction_chair",
     )!.id;
     expectOk(chair, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: chairId,
       politicianId: "P3",
     });
@@ -1761,7 +1841,7 @@ describe("Phase 3 history and lifecycle integrity", () => {
   it("rejects duplicate declaration and withdrawal without mutation", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_LAB");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
     const declaredDate = sim.getSnapshot().partyContests[contestId]!.entries.P3!.declaredDate;
     expectOk(sim, {
       type: "DEV_SET_CONTEST_QUALIFICATION",
@@ -1771,7 +1851,7 @@ describe("Phase 3 history and lifecycle integrity", () => {
     });
     const hash = sim.hashState();
     const again = sim.executeCommand({
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId,
       politicianId: "P3",
     });
@@ -1781,13 +1861,13 @@ describe("Phase 3 history and lifecycle integrity", () => {
     expect(sim.getSnapshot().partyContests[contestId]!.entries.P3!.declaredDate).toBe(declaredDate);
     expect(sim.getSnapshot().partyContests[contestId]!.entries.P3!.status).toBe("declared");
 
-    expectOk(sim, { type: "WITHDRAW_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_WITHDRAW_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
     const afterWithdraw = sim.hashState();
     const events = sim
       .getSnapshot()
       .history.filter((e) => e.type === "PARTY_CONTEST_CANDIDACY_WITHDRAWN");
     const dup = sim.executeCommand({
-      type: "WITHDRAW_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_WITHDRAW_PARTY_CONTEST_CANDIDACY",
       contestId,
       politicianId: "P3",
     });
@@ -1957,10 +2037,10 @@ describe("Phase 3 preflight A1–A4", () => {
     const contestId = Object.values(sim.getSnapshot().partyContests).find(
       (c) => c.type === "party_leadership",
     )!.id;
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P4" });
     expectOk(sim, {
-      type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+      type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
       contestId,
       endorserId: "P19",
       targetId: "P3",
@@ -1988,7 +2068,7 @@ describe("Phase 3 preflight A1–A4", () => {
   it("A3: rejects non-string seedPresidentialStatus values", () => {
     const sim = simFor();
     const contestId = createdContestId(sim, "PARTY_LAB");
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
     const raw = jsonClone(sim.serializeSave()) as {
       simulation: {
         partyContests: Record<string, { entries: Record<string, Record<string, unknown>> }>;

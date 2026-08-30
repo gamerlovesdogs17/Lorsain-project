@@ -96,7 +96,7 @@ export function endActiveEndorsementsForContest(
   for (const rec of Object.values(state.endorsements)) {
     if (rec.contestId !== contestId || rec.status !== "active") continue;
     rec.status = "ended";
-    rec.metadata = { ...rec.metadata, endReason: reason };
+    rec.metadata = { ...rec.metadata, endReason: reason, statusDate: state.currentDate };
     events.push(
       pushHistory(state, {
         date: state.currentDate,
@@ -132,7 +132,7 @@ export function endEndorsementsForTarget(
       continue;
     }
     rec.status = "ended";
-    rec.metadata = { ...rec.metadata, endReason: reason };
+    rec.metadata = { ...rec.metadata, endReason: reason, statusDate: state.currentDate };
     events.push(
       pushHistory(state, {
         date: state.currentDate,
@@ -169,6 +169,7 @@ export function endInvalidEndorsements(
     if (rec.endorserType === "politician") {
       const pol = state.politicians[rec.endorserId];
       if (!pol || !pol.alive || pol.retired) reason = "endorser_inactive";
+      else if (pol.partyId !== contest.partyId) reason = "endorser_party_switch";
     } else if (rec.endorserType === "faction") {
       const fac = state.factionStates[rec.endorserId];
       const def = world.factionDefinitions[rec.endorserId];
@@ -189,6 +190,7 @@ export function endInvalidEndorsements(
     }
     if (!reason) continue;
     rec.status = "ended";
+    rec.metadata = { ...rec.metadata, endReason: reason, statusDate: state.currentDate };
     events.push(
       pushHistory(state, {
         date: state.currentDate,

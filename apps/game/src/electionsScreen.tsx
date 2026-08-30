@@ -575,10 +575,10 @@ export function ElectionsPage(props: Props) {
                         totalFirstPreferences > 0
                           ? voteWeight(rawVotes) / totalFirstPreferences
                           : undefined;
-                      const partyId =
-                        result?.partyByCandidate[candidateId] ??
-                        props.snap.politicians[candidateId]?.partyId ??
-                        null;
+                       const partyId =
+                         result?.partyByCandidate[candidateId] ??
+                         selectedAssembly?.assembly?.candidacies[candidateId]?.partyId ??
+                         null;
                       const status = result
                         ? elected.has(candidateId)
                           ? "Elected"
@@ -729,7 +729,7 @@ export function ElectionsPage(props: Props) {
                   <summary>View elected members ({election.electedIds.length})</summary>
                   <div className="compact-result-list">
                     {election.electedIds.map((id) => (
-                      <EntityRow key={id} title={politicianDisplayName(props.catalog, id)} meta={partyDisplayName(props.world, props.snap.politicians[id]?.partyId ?? null, props.snap)} status={<StatusBadge tone="ok">Elected</StatusBadge>} />
+                      <EntityRow key={id} title={politicianDisplayName(props.catalog, id)} meta={partyDisplayName(props.world, Object.entries(election.personalRankingsByParty).find(([, candidateIds]) => candidateIds.includes(id))?.[0] ?? null, props.snap)} status={<StatusBadge tone="ok">Elected</StatusBadge>} />
                     ))}
                   </div>
                 </details>
@@ -1049,7 +1049,7 @@ export function ElectionsPage(props: Props) {
                               <td>
                                 {partyDisplayName(
                                   props.world,
-                                  props.snap.politicians[candidate.politicianId]?.partyId ?? null,
+                                   candidate.partyId,
                                   props.snap,
                                 )}
                               </td>

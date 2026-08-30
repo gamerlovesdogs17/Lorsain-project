@@ -65,6 +65,9 @@ function validateEndorser(
     if (!pol) return reject("UNKNOWN_POLITICIAN", endorserId);
     if (!pol.alive) return reject("POLITICIAN_DEAD", endorserId);
     if (pol.retired) return reject("RETIRED", `${endorserId} is retired`);
+    if (pol.partyId !== contestPartyId) {
+      return reject("INVALID_ENDORSEMENT", "politician does not belong to the contest party");
+    }
     return null;
   }
   if (endorserType === "faction") {
@@ -174,6 +177,11 @@ export function endorseCandidate(
         existing.status === "active"
       ) {
         existing.status = "superseded";
+        existing.metadata = {
+          ...existing.metadata,
+          statusDate: state.currentDate,
+          endReason: "switched_candidate",
+        };
         events.push(
           pushHistory(state, {
             date: state.currentDate,
@@ -265,6 +273,11 @@ export function withdrawEndorsement(
   if (!rec) return { error: reject("INVALID_ENDORSEMENT", endorsementId) };
   if (rec.status !== "active") return { error: reject("INVALID_ENDORSEMENT", "not active") };
   rec.status = "withdrawn";
+  rec.metadata = {
+    ...rec.metadata,
+    statusDate: state.currentDate,
+    endReason: "endorser_withdrew",
+  };
   return {
     events: [
       pushHistory(state, {

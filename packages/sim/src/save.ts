@@ -1596,3 +1596,47 @@ export function migrateSaveV14ToV15(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 14, toSchema: 15, migrate: migrateSaveV14ToV15 });
+
+/**
+ * Phase 11.3 public party platforms add bounded, slowly moving issue positions.
+ * Older saves receive a neutral current structure and no invented platform history;
+ * the normal monthly model then moves positions toward the live party coalition.
+ */
+export function migrateSaveV15ToV16(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 16 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 16 };
+  const currentDate = typeof sim.currentDate === "string" ? sim.currentDate : "2028-01-01";
+  const partyStates: Record<string, unknown> = {};
+  if (isRecord(sim.partyStates)) {
+    for (const [partyId, value] of Object.entries(sim.partyStates)) {
+      partyStates[partyId] = isRecord(value)
+        ? {
+            ...value,
+            publicPlatform: isRecord(value.publicPlatform)
+              ? value.publicPlatform
+              : {
+                  updatedDate: currentDate,
+                  positions: {
+                    economy: 0,
+                    taxes: 0,
+                    labor: 0,
+                    housing: 0,
+                    social_policy: 0,
+                    environment: 0,
+                    institutional_reform: 0,
+                    foreign_policy: 0,
+                  },
+                  history: [],
+                },
+          }
+        : value;
+    }
+  }
+  sim.partyStates = partyStates;
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 15, toSchema: 16, migrate: migrateSaveV15ToV16 });

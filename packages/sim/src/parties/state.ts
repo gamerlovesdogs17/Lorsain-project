@@ -13,6 +13,7 @@ import { evaluatePresidentialEligibility } from "./eligibility.js";
 import { PRESIDENTIAL_ENTRY_FROM_STATUS, isSeedPresidentialStatus } from "./policy.js";
 import { candidateStandingOrDefault } from "../elections/standing.js";
 import type { ElectionState } from "../elections/types.js";
+import { seedPublicPartyPlatform } from "./platforms.js";
 
 type PresidentialInterestContext = {
   officeKindsByPolitician: Map<string, Set<string>>;
@@ -102,6 +103,7 @@ export function seedPartyInstitutions(state: SimState, world: KernelWorld): void
       status: leaderId ? "active" : "leadership_vacant",
       cohesion: meanLoyalty(world, state, members, "partyLoyalty"),
     };
+    state.partyStates[partyId]!.publicPlatform = seedPublicPartyPlatform(world, state, partyId);
   }
   for (const factionId of Object.keys(world.factionDefinitions).sort()) {
     const def = world.factionDefinitions[factionId]!;

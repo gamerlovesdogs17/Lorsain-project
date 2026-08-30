@@ -322,6 +322,16 @@ function tallyChoices(votes: Record<string, LegislativeVoteChoice>): {
   return { yes, no, abstain };
 }
 
+function affiliationSnapshot(
+  state: SimState,
+  votes: Record<string, LegislativeVoteChoice>,
+): Pick<LegislativeVoteRecord, "partyIdsAtVote" | "factionIdsAtVote"> {
+  return {
+    partyIdsAtVote: Object.fromEntries(Object.keys(votes).map((id) => [id, state.politicians[id]?.partyId ?? null])),
+    factionIdsAtVote: Object.fromEntries(Object.keys(votes).map((id) => [id, state.politicians[id]?.factionId ?? null])),
+  };
+}
+
 export function recordAmendmentVote(
   world: KernelWorld,
   state: SimState,
@@ -352,6 +362,7 @@ export function recordAmendmentVote(
     date: state.currentDate,
     committeeId: args.committeeId ?? null,
     votes: { ...args.votes },
+    ...affiliationSnapshot(state, args.votes),
     yes,
     no,
     abstain,
@@ -416,6 +427,7 @@ export function recordVote(
     date: state.currentDate,
     committeeId: args.committeeId ?? null,
     votes: { ...args.votes },
+    ...affiliationSnapshot(state, args.votes),
     yes,
     no,
     abstain,

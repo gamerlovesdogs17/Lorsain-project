@@ -48,7 +48,7 @@ import {
 import { PoliticianProfile } from "./ui/politician.js";
 import { TerenaMap } from "./map/TerenaMap.js";
 
-type ChamberTab = "business" | "draft" | "committees" | "votes";
+type ChamberTab = "business" | "draft" | "committees" | "votes" | "lawbook";
 type BillDetailTab = "overview" | "provisions" | "politics" | "process";
 
 const EFFECT_LABELS: Record<keyof NationalEconomyIndices, string> = {
@@ -67,6 +67,13 @@ const AMENDMENT_VALUES = {
   court_term_years: [9, 12, 15],
   veto_override_fraction: [0.6, 2 / 3, 0.75],
 } as const;
+
+const ORIGINAL_CONSTITUTIONAL_VALUES: Record<(typeof CONSTITUTIONAL_RULE_IDS)[number], number> = {
+  assembly_term_years: 4,
+  presidential_term_limit: 2,
+  court_term_years: 12,
+  veto_override_fraction: 2 / 3,
+};
 
 function AssemblyHemicycle(props: {
   world: KernelWorld;
@@ -210,6 +217,7 @@ export function AssemblyPage(props: {
   const [selectedVoteId, setSelectedVoteId] = useState<string | null>(null);
   const [selectedCommitteeId, setSelectedCommitteeId] = useState<string | null>(null);
   const [rollCallFilter, setRollCallFilter] = useState<"all" | "yes" | "no" | "abstain">("all");
+  const [lawQuery, setLawQuery] = useState("");
   const [amendmentRule, setAmendmentRule] = useState<(typeof CONSTITUTIONAL_RULE_IDS)[number]>("assembly_term_years");
   const [amendmentValue, setAmendmentValue] = useState<number>(5);
 
@@ -234,6 +242,13 @@ export function AssemblyPage(props: {
     a.id < b.id ? 1 : -1,
   );
   const allBills = Object.values(props.snap.legislatureRuntime.bills).slice().reverse();
+  const enactedLaws = Object.values(props.snap.legislatureRuntime.enactedLaws)
+    .filter((law) => {
+      const query = lawQuery.trim().toLowerCase();
+      if (!query) return true;
+      return `${law.title} ${law.policyItems.map((item) => policyItemDisplay(props.catalog, item)).join(" ")}`.toLowerCase().includes(query);
+    })
+    .sort((a, b) => b.enactedDate.localeCompare(a.enactedDate) || b.id.localeCompare(a.id));
   const currentBusiness = allBills.filter((b) =>
     ["floor_scheduled", "repassage_scheduled", "committee"].includes(b.status),
   );
@@ -271,6 +286,7 @@ export function AssemblyPage(props: {
     ...(mp ? [{ id: "draft" as const, label: "Introduce" }] : []),
     { id: "committees", label: "Committees" },
     { id: "votes", label: "Votes" },
+    { id: "lawbook", label: "Law & Constitution" },
   ];
 
   const compositionHeader = (
@@ -733,6 +749,10 @@ export function AssemblyPage(props: {
                                   { label: "Uncertain", value: whip.uncertain },
                                 ]
                               : []),
+                            {
+                              label: "Next stage",
+                              value: bill.status === "committee" ? "Committee vote" : bill.status === "floor_scheduled" ? "Floor vote" : bill.status === "repassage_scheduled" ? "Repassage vote" : billStatusLabel(bill.status),
+                            },
                           ]}
                         />
                         {whip ? (
@@ -740,6 +760,23 @@ export function AssemblyPage(props: {
                             Likely no {whip.likelyNo} · estimate only, not a recorded whip.
                           </p>
                         ) : null}
+                        <SectionDivider title="Party positions" hint="Public recommendations; members retain their own vote" />
+                        <DataTable dense headers={["Party", "Seats", "Position"]}>
+                          {partyRanks.map(([partyId, seats]) => <tr key={partyId}><td>{partyDisplayName(props.world, partyId === "none" ? null : partyId, props.snap)}</td><td>{seats}</td><td>{stanceLabel(partyStance(props.snap, partyId === "none" ? null : partyId, bill.id))}</td></tr>)}
+                        </DataTable>
+                        <SectionDivider title="Caucus positions" />
+                        <div className="bill-caucus-positions">
+                          {Object.values(props.world.factionDefinitions)
+                            .filter((definition) => counts.has(definition.partyId))
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((definition) => <EntityRow key={definition.factionId} title={definition.name} meta={partyDisplayName(props.world, definition.partyId, props.snap)} status={<StatusBadge>{stanceLabel(factionStance(props.snap, definition.factionId, bill.id))}</StatusBadge>} />)}
+                        </div>
+                        <SectionDivider title="Organization positions" />
+                        {Object.entries(props.snap.organizationRuntime.actors)
+                          .flatMap(([organizationId, actor]) => actor.billPressure.filter((pressure) => pressure.billId === bill.id).map((pressure) => ({ organizationId, pressure })))
+                          .length === 0 ? <p className="muted">No organization has announced a position on this bill.</p> : Object.entries(props.snap.organizationRuntime.actors)
+                            .flatMap(([organizationId, actor]) => actor.billPressure.filter((pressure) => pressure.billId === bill.id).map((pressure) => ({ organizationId, pressure })))
+                            .map(({ organizationId, pressure }) => <EntityRow key={`${organizationId}:${pressure.billId}`} title={props.world.interestOrganizations[organizationId]?.name ?? "Public organization"} status={<StatusBadge tone={pressure.stance === "support" ? "ok" : "warn"}>{pressure.stance === "support" ? "Support" : "Oppose"}</StatusBadge>} />)}
                       </div>
                     ) : null}
 
@@ -801,13 +838,27 @@ export function AssemblyPage(props: {
                         ) : null}
                         <SectionDivider title="Version history" hint={`Current version ${bill.version}`} />
                         <div className="bill-version-history">
-                          {bill.versionHistory.slice().reverse().map((version) => (
-                            <EntityRow
-                              key={`${bill.id}:v${version.version}`}
-                              title={`Version ${version.version}`}
-                              meta={`${version.date} · ${version.reason === "introduced" ? "Introduced" : "Adopted amendment"} · ${version.policyItems.map((item) => policyItemDisplay(props.catalog, item)).join("; ")}`}
-                            />
-                          ))}
+                          {bill.versionHistory.slice().reverse().map((version) => {
+                            const previous = bill.versionHistory.find((candidate) => candidate.version === version.version - 1);
+                            const beforeByProvision = new Map((previous?.policyItems ?? []).map((item) => [item.provisionId ?? item.issueId, item]));
+                            const afterByProvision = new Map(version.policyItems.map((item) => [item.provisionId ?? item.issueId, item]));
+                            const changed = [...new Set([...beforeByProvision.keys(), ...afterByProvision.keys()])].flatMap((key) => {
+                              const before = beforeByProvision.get(key);
+                              const after = afterByProvision.get(key);
+                              const beforeLabel = before ? policyItemDisplay(props.catalog, before) : "Not included";
+                              const afterLabel = after ? policyItemDisplay(props.catalog, after) : "Removed";
+                              return beforeLabel === afterLabel ? [] : [{ key, beforeLabel, afterLabel }];
+                            });
+                            return <div key={`${bill.id}:v${version.version}`} className="bill-version-entry">
+                              <EntityRow
+                                title={`Version ${version.version}`}
+                                meta={`${version.date} · ${version.reason === "introduced" ? "Introduced" : "Adopted amendment"}`}
+                              />
+                              {changed.length ? <div className="bill-version-diff" aria-label={`Changes in version ${version.version}`}>
+                                {changed.map((change) => <div key={change.key} className="bill-version-diff-row"><span>{change.beforeLabel}</span><strong aria-hidden="true">→</strong><span>{change.afterLabel}</span></div>)}
+                              </div> : version.version > 1 ? <p className="muted">No operative provision changed.</p> : null}
+                            </div>;
+                          })}
                         </div>
                         {bill.cosponsorIds.length > 0 ? (
                           <p className="muted" style={{ marginTop: "0.6rem" }}>
@@ -979,6 +1030,15 @@ export function AssemblyPage(props: {
                 ))}
                 {selectedCommittee ? <>
                   <SectionDivider title={committeeDisplayName(selectedCommittee.id)} hint={`Chair · ${selectedCommittee.chairId ? politicianDisplayName(props.catalog, selectedCommittee.chairId) : "Vacant"}`} />
+                  <div className="committee-composition-strip">
+                    {[...selectedCommittee.memberIds.reduce((map, memberId) => {
+                      const partyId = props.snap.politicians[memberId]?.partyId ?? "none";
+                      map.set(partyId, (map.get(partyId) ?? 0) + 1);
+                      return map;
+                    }, new Map<string, number>()).entries()]
+                      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                      .map(([partyId, seats]) => <span key={partyId}><i className="party-dot" style={{ background: partyColor(props.world, partyId === "none" ? null : partyId) }} />{partyDisplayName(props.world, partyId === "none" ? null : partyId, props.snap)} {seats}</span>)}
+                  </div>
                   <div className="roll-call-scroll">
                     <DataTable dense headers={["Member", "Party", "Caucus"]}>
                       {selectedCommittee.memberIds.map((memberId) => <tr key={memberId} onClick={() => setSelectedMember(memberId)}><td><button type="button" className="link-button">{politicianDisplayName(props.catalog, memberId)}</button>{memberId === selectedCommittee.chairId ? " · Chair" : ""}</td><td>{partyDisplayName(props.world, props.snap.politicians[memberId]?.partyId ?? null, props.snap)}</td><td>{props.snap.politicians[memberId]?.factionId ? props.world.factionDefinitions[props.snap.politicians[memberId]!.factionId!]?.name ?? "—" : "—"}</td></tr>)}
@@ -1028,7 +1088,7 @@ export function AssemblyPage(props: {
                     .sort((a, b) => politicianDisplayName(props.catalog, a[0]).localeCompare(politicianDisplayName(props.catalog, b[0])));
                   const breakdown = new Map<string, { yes: number; no: number; abstain: number }>();
                   for (const [memberId, choice] of Object.entries(selectedVote.votes)) {
-                    const partyId = props.snap.politicians[memberId]?.partyId ?? "none";
+                     const partyId = selectedVote.partyIdsAtVote?.[memberId] ?? "unrecorded";
                     const count = breakdown.get(partyId) ?? { yes: 0, no: 0, abstain: 0 };
                     count[choice] += 1;
                     breakdown.set(partyId, count);
@@ -1036,18 +1096,107 @@ export function AssemblyPage(props: {
                   return <div className="roll-call-panel">
                     <SectionDivider title="Roll Call" hint={`${selectedVote.yes} Aye · ${selectedVote.no} Nay · ${selectedVote.abstain} Abstain`} />
                     <div className="roll-call-breakdown">
-                      {[...breakdown.entries()].sort((a, b) => (b[1].yes + b[1].no + b[1].abstain) - (a[1].yes + a[1].no + a[1].abstain)).map(([partyId, count]) => <span key={partyId}><strong>{partyDisplayName(props.world, partyId === "none" ? null : partyId, props.snap)}</strong> {count.yes} Aye · {count.no} Nay · {count.abstain} Abstain</span>)}
+                       {[...breakdown.entries()].sort((a, b) => (b[1].yes + b[1].no + b[1].abstain) - (a[1].yes + a[1].no + a[1].abstain)).map(([partyId, count]) => <span key={partyId}><strong>{partyId === "unrecorded" ? "Affiliation not archived" : partyDisplayName(props.world, partyId === "none" ? null : partyId, props.snap)}</strong> {count.yes} Aye · {count.no} Nay · {count.abstain} Abstain</span>)}
                     </div>
                     <div className="map-scale-switch" aria-label="Filter roll call">
                       {(["all", "yes", "no", "abstain"] as const).map((choice) => <button type="button" key={choice} className={rollCallFilter === choice ? "active" : ""} onClick={() => setRollCallFilter(choice)}>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : choice[0]!.toUpperCase() + choice.slice(1)}</button>)}
                     </div>
                     <div className="roll-call-scroll">
                       <DataTable dense headers={["Member", "Party", "Caucus", "Vote"]}>
-                        {rows.map(([memberId, choice]) => <tr key={memberId} onClick={() => setSelectedMember(memberId)}><td><button type="button" className="link-button">{politicianDisplayName(props.catalog, memberId)}</button></td><td>{partyDisplayName(props.world, props.snap.politicians[memberId]?.partyId ?? null, props.snap)}</td><td>{props.snap.politicians[memberId]?.factionId ? props.world.factionDefinitions[props.snap.politicians[memberId]!.factionId!]?.name ?? "—" : "—"}</td><td>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : "Abstain"}</td></tr>)}
+                         {rows.map(([memberId, choice]) => {
+                           const historicalParty = selectedVote.partyIdsAtVote?.[memberId];
+                           const historicalFaction = selectedVote.factionIdsAtVote?.[memberId];
+                           return <tr key={memberId} onClick={() => setSelectedMember(memberId)}><td><button type="button" className="link-button">{politicianDisplayName(props.catalog, memberId)}</button></td><td>{historicalParty === undefined ? "Not archived" : partyDisplayName(props.world, historicalParty, props.snap)}</td><td>{historicalFaction === undefined ? "Not archived" : historicalFaction ? props.world.factionDefinitions[historicalFaction]?.name ?? "Former caucus" : "—"}</td><td>{choice === "yes" ? "Aye" : choice === "no" ? "Nay" : "Abstain"}</td></tr>;
+                         })}
                       </DataTable>
                     </div>
                   </div>;
                 })() : null}
+              </>
+            ) : null}
+
+            {chamberTab === "lawbook" ? (
+              <>
+                <SectionDivider title="Constitution of Terena" hint="Current operative rules" />
+                <DataTable headers={["Rule", "Current value", "Last amended"]} dense>
+                  {Object.values(props.snap.provincialRuntime.constitutionalRules)
+                    .sort((a, b) => a.label.localeCompare(b.label))
+                    .map((rule) => (
+                      <tr key={rule.id}>
+                        <td>{rule.label}</td>
+                        <td>{rule.unit === "fraction" ? `${Math.round(rule.value * 100)}%` : `${rule.value} ${rule.unit}`}</td>
+                        <td>{rule.amendedDate ?? "Founding text"}</td>
+                      </tr>
+                    ))}
+                </DataTable>
+                <div className="constitution-history-list">
+                  {Object.values(props.snap.provincialRuntime.constitutionalRules)
+                    .sort((a, b) => a.label.localeCompare(b.label))
+                    .map((rule) => {
+                      const original = ORIGINAL_CONSTITUTIONAL_VALUES[rule.id];
+                      const amendments = Object.values(props.snap.provincialRuntime.constitutionalAmendments)
+                        .filter((amendment) => amendment.ruleId === rule.id && amendment.status === "ratified")
+                        .sort((a, b) => a.proposedDate.localeCompare(b.proposedDate) || a.id.localeCompare(b.id));
+                      const formatValue = (value: number) => rule.unit === "fraction" ? `${Math.round(value * 100)}%` : `${value} ${rule.unit}`;
+                      return <article key={`${rule.id}:history`} className="constitution-history-row">
+                        <strong>{rule.label}</strong>
+                        <div className="constitution-history-chain">
+                          <span>Founding text: {formatValue(original)}</span>
+                          {amendments.map((amendment) => <span key={amendment.id}>→ {amendment.title}: {formatValue(amendment.proposedValue)} ({amendment.enactedDate ?? amendment.proposedDate})</span>)}
+                          {amendments.length === 0 ? <span>→ Current rule unchanged</span> : <span>→ Current: {formatValue(rule.value)}</span>}
+                        </div>
+                      </article>;
+                    })}
+                </div>
+
+                <SectionDivider title="Current statutory position" hint="Concrete policy categories in force" />
+                <input
+                  className="search lawbook-search"
+                  value={lawQuery}
+                  onChange={(event) => setLawQuery(event.target.value)}
+                  placeholder="Search law or policy category"
+                />
+                <div className="current-law-grid">
+                  {LEGISLATIVE_PROVISIONS
+                    .filter((definition) => {
+                      const option = currentProvisionOption(props.snap, definition.id);
+                      const query = lawQuery.trim().toLowerCase();
+                      return !query || `${definition.category} ${option?.label ?? ""} ${option?.change ?? ""}`.toLowerCase().includes(query);
+                    })
+                    .slice(0, 50)
+                    .map((definition) => {
+                      const option = currentProvisionOption(props.snap, definition.id);
+                      const sourceLaws = Object.values(props.snap.legislatureRuntime.enactedLaws)
+                        .filter((law) => law.policyItems.some((item) => item.provisionId === definition.id))
+                        .sort((a, b) => b.enactedDate.localeCompare(a.enactedDate) || b.id.localeCompare(a.id));
+                      const source = sourceLaws.find((law) => law.operative) ?? null;
+                      return (
+                        <article key={definition.id} className="current-law-row">
+                          <div className="kicker">{definition.category}</div>
+                          <strong>{option?.label ?? "No operative rule recorded"}</strong>
+                          {option?.change ? <p className="muted">{option.change}</p> : null}
+                          {source ? <div className="current-law-source">
+                            <span>In force from {source.title} · {source.enactedDate}{sourceLaws.length > 1 ? ` · ${sourceLaws.length - 1} earlier amendment${sourceLaws.length === 2 ? "" : "s"}` : ""}</span>
+                            <button type="button" className="link-button" onClick={() => { setChamberTab("business"); selectBill(source.billId); setBillTab("process"); }}>Open act history</button>
+                          </div> : <span className="muted">Founding statutory position</span>}
+                        </article>
+                      );
+                    })}
+                </div>
+
+                <SectionDivider title="Statute book" hint={`${Object.keys(props.snap.legislatureRuntime.enactedLaws).length} enacted laws`} />
+                {enactedLaws.length === 0 ? <p className="muted">No enacted law matches this search.</p> : null}
+                {enactedLaws.slice(0, 30).map((law) => (
+                  <article key={law.id} className="statute-row">
+                    <div>
+                      <strong>{law.title}</strong>
+                      <div className="muted">Enacted {law.enactedDate} · Sponsor {politicianDisplayName(props.catalog, law.sponsorId)}</div>
+                      <div className="muted">{law.policyItems.map((item) => policyItemDisplay(props.catalog, item)).join("; ")}</div>
+                    </div>
+                    <StatusBadge tone={law.operative ? "ok" : "warn"}>{law.operative ? "Operative" : "Invalidated"}</StatusBadge>
+                  </article>
+                ))}
+                {enactedLaws.length > 30 ? <p className="muted">Showing the 30 most recent matching laws. Refine the search to narrow the statute book.</p> : null}
               </>
             ) : null}
           </>

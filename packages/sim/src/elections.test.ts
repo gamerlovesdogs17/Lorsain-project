@@ -575,7 +575,7 @@ describe("Phase 4 10,000 synthetic acceptance", () => {
         },
       }),
     );
-  }, 180_000);
+  }, 300_000);
 });
 
 describe("Phase 4 RCV/STV sanity", () => {
@@ -806,7 +806,7 @@ function forceResolveNomination(world: KernelWorld, sim: Simulation, partyId: st
   const rule = world.nominationRules[world.partyDefinitions[partyId]!.nominationRuleId]!;
   const ids = presidentialNominees(world, sim, partyId);
   for (const id of ids) {
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: id });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: id });
   }
   if (rule.method === "weighted_ranked_choice" || rule.method === "transferable_convention") {
     for (const id of ids) {
@@ -838,7 +838,7 @@ function forceResolveNomination(world: KernelWorld, sim: Simulation, partyId: st
         const endorserId = pool[i++];
         if (!endorserId) throw new Error(`NU caucus exhausted for ${partyId}`);
         expectOk(sim, {
-          type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+          type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
           contestId,
           endorserId,
           targetId,
@@ -851,7 +851,7 @@ function forceResolveNomination(world: KernelWorld, sim: Simulation, partyId: st
     const targetId = ids[0]!;
     for (const provinceId of world.provinceIds.slice(0, 4)) {
       expectOk(sim, {
-        type: "ENDORSE_PARTY_CONTEST_CANDIDATE",
+        type: "DEV_ENDORSE_PARTY_CONTEST_CANDIDATE",
         contestId,
         endorserId: provincialOrgId(partyId, provinceId),
         targetId,

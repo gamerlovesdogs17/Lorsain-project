@@ -5,7 +5,7 @@ import {
   recruitFederalAssemblyClass,
   provincialAssemblySeatCount,
 } from "./provinces/assemblies.js";
-import { migrateSaveV12ToV13, migrateSaveV13ToV14, migrateSaveV14ToV15, parseSaveFile } from "./save.js";
+import { migrateSaveV12ToV13, migrateSaveV13ToV14, migrateSaveV14ToV15, migrateSaveV15ToV16, parseSaveFile } from "./save.js";
 import { addMonths } from "./calendar.js";
 import {
   processConstitutionalAmendmentsMonth,
@@ -24,6 +24,9 @@ import { processCaucusLeadershipMonth } from "./legislature/caucus.js";
 import { syntheticAgentProfile } from "./agents/profile.js";
 import { processPoliticalLifecycleMonth } from "./political-lifecycle.js";
 import { auditGeneratedPersonQuality } from "./agents/generated-quality.js";
+import { PARTY_PLATFORM_ISSUES } from "./parties/types.js";
+import { constituencyPressureForBill, publicConstituencyPressures } from "./legislature/constituency.js";
+import type { BillState } from "./legislature/types.js";
 
 function startingHolder(world: ReturnType<typeof loadTerenaWorld>, kind: string): string {
   const term = world.startingTerms.find((candidate) => world.offices[candidate.officeId]?.kind === kind);
@@ -250,6 +253,77 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect((migratedSimulation.provincialRuntime as Record<string, unknown>).governorVacancies).toEqual({});
     const parsed = parseSaveFile(migrated, world.contentVersion);
     expect(parsed.ok).toBe(true);
+  });
+
+  it("migrates schema 15 party platforms without fabricating a published history", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "president");
+    const current = createSimulation({ world, playerPoliticianId: player, seed: "P113-MIGRATE-16" }).serializeSave();
+    const legacy = structuredClone(current) as unknown as Record<string, unknown>;
+    legacy.schemaVersion = 15;
+    const simulation = legacy.simulation as Record<string, unknown>;
+    simulation.schemaVersion = 15;
+    const partyStates = simulation.partyStates as Record<string, Record<string, unknown>>;
+    for (const party of Object.values(partyStates)) delete party.publicPlatform;
+    const historyBefore = hashCanonical(simulation.history);
+
+    const migrated = migrateSaveV15ToV16(legacy) as Record<string, unknown>;
+    const migratedSimulation = migrated.simulation as Record<string, unknown>;
+    const migratedParties = migratedSimulation.partyStates as Record<string, Record<string, unknown>>;
+    expect(migrated.schemaVersion).toBe(16);
+    expect(migratedSimulation.schemaVersion).toBe(16);
+    expect(hashCanonical(migratedSimulation.history)).toBe(historyBefore);
+    for (const party of Object.values(migratedParties)) {
+      const platform = party.publicPlatform as { updatedDate: string; positions: Record<string, number>; history: unknown[] };
+      expect(platform.updatedDate).toBe(simulation.currentDate);
+      expect(platform.history).toEqual([]);
+      expect(Object.keys(platform.positions).sort()).toEqual(PARTY_PLATFORM_ISSUES.slice().sort());
+      expect(Object.values(platform.positions)).toEqual(PARTY_PLATFORM_ISSUES.map(() => 0));
+    }
+    const parsed = parseSaveFile(migrated, world.contentVersion);
+    expect(parsed.ok).toBe(true);
+  });
+
+  it("moves public party platforms gradually and keeps publication history bounded", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "president");
+    const sim = createSimulation({ world, playerPoliticianId: player, seed: "P113-PLATFORM-MOTION" });
+    const before = structuredClone(sim.getSnapshot().partyStates);
+    const turn = sim.executeCommand({ type: "ADVANCE_TURN" });
+    expect(turn.ok).toBe(true);
+    const after = sim.getSnapshot().partyStates;
+    for (const [partyId, party] of Object.entries(after)) {
+      expect(party.publicPlatform).toBeTruthy();
+      for (const issue of PARTY_PLATFORM_ISSUES) {
+        const delta = Math.abs(
+          party.publicPlatform!.positions[issue] - before[partyId]!.publicPlatform!.positions[issue],
+        );
+        expect(delta).toBeLessThanOrEqual(0.012000001);
+      }
+      expect(party.publicPlatform!.history.length).toBeLessThanOrEqual(12);
+    }
+  });
+
+  it("derives public constituency pressures from regional conditions and applies only a bounded vote incentive", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "assembly_member");
+    const state = createSimulation({ world, playerPoliticianId: player, seed: "P113-CONSTITUENCY-PRESSURE" }).serializeSave().simulation;
+    const constituencyId = Object.keys(world.constituencyProvinceShares).sort()[0]!;
+    const provinceId = world.constituencyProvinceShares[constituencyId]!
+      .slice()
+      .sort((a, b) => b.share - a.share || a.provinceId.localeCompare(b.provinceId))[0]!.provinceId;
+    state.economyRuntime.provinces[provinceId]!.employmentIndex = 92;
+    state.economyRuntime.provinces[provinceId]!.housingIndex = 93;
+    const bill = {
+      policyItems: [{ issueId: "ISS_HOUSING", direction: 1, magnitude: 1, fiscalImpact: null }],
+    } as BillState;
+    const pressures = publicConstituencyPressures(world, state, constituencyId);
+    expect(pressures.some((pressure) => pressure.kind === "employment" && pressure.level === "urgent")).toBe(true);
+    expect(pressures.some((pressure) => pressure.kind === "housing" && pressure.level === "urgent")).toBe(true);
+    const incentive = constituencyPressureForBill(world, state, constituencyId, bill);
+    expect(incentive).toBeGreaterThan(0);
+    expect(incentive).toBeLessThanOrEqual(0.18);
+    expect(constituencyPressureForBill(world, state, constituencyId, { ...bill, policyItems: [{ ...bill.policyItems[0]!, direction: -1 }] })).toBeLessThan(0);
   });
 
   it("requires 280 federal votes and 13 Provincial Assemblies before changing a real rule", () => {

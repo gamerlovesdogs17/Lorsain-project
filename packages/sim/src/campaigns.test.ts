@@ -233,8 +233,8 @@ describe("Phase 5 campaign finance and actions", () => {
       partyId: "PARTY_LAB",
     });
     const contestId = Object.keys(sim.getSnapshot().partyContests)[0]!;
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P1" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P1" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
     const camp = Object.values(sim.getSnapshot().campaignRuntime.campaigns).find(
       (c) => c.politicianId === "P1" && c.status === "active",
     )!;
@@ -309,12 +309,12 @@ describe("Phase 5 campaign finance and actions", () => {
       (c) => c.partyId === "PARTY_NU",
     )!;
     expectOk(sim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: lab.id,
       politicianId: "P1",
     });
     expectOk(sim, {
-      type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+      type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY",
       contestId: nu.id,
       politicianId: "P2",
     });
@@ -402,8 +402,8 @@ describe("Phase 5 campaign finance and actions", () => {
       partyId: "PARTY_LAB",
     });
     const contestId = Object.keys(sim.getSnapshot().partyContests)[0]!;
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P1" });
-    expectOk(sim, { type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P1" });
+    expectOk(sim, { type: "DEV_DECLARE_PARTY_CONTEST_CANDIDACY", contestId, politicianId: "P3" });
     const snap = sim.getSnapshot();
     const camp = Object.values(snap.campaignRuntime.campaigns).find(
       (c) => c.politicianId === "P3",

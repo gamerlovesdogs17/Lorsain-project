@@ -126,7 +126,11 @@ export {
   publicPartyCulture,
   chooseEndorsement,
   chooseMembershipAction,
+  PARTY_PLATFORM_ISSUES,
+  partyPlatformLabel,
+  partyPlatformIssueForBillItem,
 } from "./parties/index.js";
+export type { PartyPlatformIssue, PartyPublicPlatform } from "./parties/index.js";
 export {
   processCampaignMonth,
   nominationCalendarDates,
@@ -172,7 +176,10 @@ export {
   currentProvisionOption,
   defaultProvisionOptionId,
   estimatedProvisionEffects,
+  publicConstituencyPressures,
+  constituencyPrimaryProvince,
 } from "./legislature/index.js";
+export type { PublicConstituencyPressure } from "./legislature/index.js";
 export type {
   LegislatureRuntime,
   BillState,
