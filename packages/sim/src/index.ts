@@ -147,6 +147,7 @@ export {
   governedProvinceId,
   currentGubernatorialOpportunity,
   gubernatorialEligibilityError,
+  provincialLegislatorForPolitician,
   PROVINCIAL_PRIORITIES,
   PROVINCIAL_INVESTMENTS,
   PROVINCIAL_BILL_SUBJECTS,

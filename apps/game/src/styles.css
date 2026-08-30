@@ -852,6 +852,9 @@ button {
   border-color: var(--line);
   color: var(--muted);
 }
+.decision-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0.45rem 0.8rem; margin-top: 0.65rem; }
+.decision-action-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 0.45rem; margin: 0 !important; padding: 0.45rem 0; border-top: 1px solid var(--line); }
+.decision-action-row > span { min-width: 0; line-height: 1.25; }
 .campaign-stage-ribbon {
   display: flex;
   justify-content: space-between;

@@ -1,4 +1,4 @@
-import { occupyingTerms, candidateStandingOrDefault } from "@lorsain/sim";
+import { occupyingTerms, candidateStandingOrDefault, provincialLegislatorForPolitician } from "@lorsain/sim";
 import type { KernelWorld, SimState } from "@lorsain/sim";
 import { generatedAssemblyCandidateName } from "./presentation.js";
 import {
@@ -60,6 +60,10 @@ export function playerOffices(world: KernelWorld, state: SimState, id: string): 
     if (!office) continue;
     const acting = term.holdingKind === "acting" ? " (acting)" : "";
     titles.push(`${office.title}${acting}`);
+  }
+  const provincialMember = provincialLegislatorForPolitician(state, id);
+  if (provincialMember?.serviceStartDate && provincialMember.serviceEndDate == null) {
+    titles.push("Provincial Assembly member");
   }
   return titles;
 }

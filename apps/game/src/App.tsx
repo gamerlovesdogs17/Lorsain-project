@@ -6,6 +6,7 @@ import {
   governedProvinceId,
   nominationCalendarDates,
   parseSaveFile,
+  provincialLegislatorForPolitician,
   restoreSimulation,
   type KernelWorld,
   type SaveFile,
@@ -755,10 +756,11 @@ export default function App() {
   if (!sim || !snap || !catalog) return null;
   const player = snap.politicians[snap.playerPoliticianId]!;
   const offices = playerOffices(world, snap, snap.playerPoliticianId);
+  const provincialMember = provincialLegislatorForPolitician(snap, snap.playerPoliticianId);
   const roleKind = Object.values(snap.officeTerms)
     .filter((term) => term.holderId === snap.playerPoliticianId && (term.status === "active" || term.status === "suspended"))
     .map((term) => world.offices[term.officeId]?.kind)
-    .find(Boolean) ?? "private_citizen";
+    .find(Boolean) ?? (provincialMember?.serviceStartDate && provincialMember.serviceEndDate == null ? "provincial_legislator" : "private_citizen");
   const interrupt = snap.pendingInterrupt;
   const playerDecisions = collectPlayerActionableDecisions(world, snap);
   const decisionScreen = (kind: string): Screen => {

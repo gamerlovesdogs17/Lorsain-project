@@ -6,6 +6,8 @@ import { createReadStream, existsSync } from "node:fs";
 const qaFixtures = new Map([
   ["judicial", resolve(__dirname, "../../docs/qa/phase11_3/judicial-appointment-browser-save.json")],
   ["institutions", resolve(__dirname, "../../docs/qa/phase11_3/leadership-election-browser-save.json")],
+  ["former-officeholder", resolve(__dirname, "../../docs/qa/phase11_3/former-officeholder-browser-save.json")],
+  ["election-results", resolve(__dirname, "../../docs/qa/phase11_3/election-results-browser-save.json")],
 ]);
 
 export default defineConfig({

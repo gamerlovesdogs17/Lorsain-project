@@ -12,6 +12,7 @@ import {
   isDeclaredContestCandidate,
   PARTY_PLATFORM_ISSUES,
   partyPlatformLabel,
+  provincialLegislatorForPolitician,
   publicConstituencyPressures,
   storiesChronological,
   TERENA_WORLD_ID,
@@ -209,6 +210,16 @@ function Home(props: PageProps) {
   const governorEconomy = governedProvince ? props.snap.economyRuntime.provinces[governedProvince] : null;
   const governorPublicEconomy = governedProvince ? regionalPublicEconomy(props.snap, governedProvince) : null;
   const playerIsMp = isMp(props.world, props.snap, playerId);
+  const provincialMember = provincialLegislatorForPolitician(props.snap, playerId);
+  const provincialChamber = provincialMember?.serviceStartDate && provincialMember.serviceEndDate == null
+    ? props.snap.provincialRuntime.assemblies[provincialMember.provinceId]
+    : null;
+  const provincialVotesDue = provincialMember && provincialChamber
+    ? Object.values(props.snap.provincialRuntime.bills).filter(
+        (bill) => bill.provinceId === provincialMember.provinceId && bill.status === "introduced" &&
+          !props.snap.provincialRuntime.votes[`pending:bill:${bill.id}:${provincialMember.id}`],
+      ).length
+    : 0;
   const playerConstituencyId = Object.values(props.snap.officeTerms).flatMap((term) => {
     if (term.holderId !== playerId || (term.status !== "active" && term.status !== "suspended")) return [];
     const office = props.world.offices[term.officeId];
@@ -230,6 +241,8 @@ function Home(props: PageProps) {
       ? `${props.catalog.places.get(governedProvince)?.name ?? "Province"} briefing`
       : playerIsMp
         ? "Assembly briefing"
+        : provincialMember && provincialChamber
+          ? `${props.catalog.places.get(provincialMember.provinceId)?.name ?? "Province"} Assembly briefing`
         : props.campaign
           ? "Campaign briefing"
           : "Career briefing";
@@ -263,6 +276,13 @@ function Home(props: PageProps) {
             },
             { label: "Standing", value: standingLabel },
           ]
+        : provincialMember && provincialChamber
+          ? [
+              { label: "Votes due", value: provincialVotesDue },
+              { label: "Agenda bills", value: provincialChamber.agendaBillIds.length },
+              { label: "Next election", value: provincialChamber.nextElectionDate },
+              { label: "Standing", value: standingLabel },
+            ]
         : props.campaign
           ? [
               { label: "Monthly actions", value: props.campaign.actionPointsRemaining },

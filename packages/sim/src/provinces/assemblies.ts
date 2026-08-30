@@ -939,14 +939,15 @@ export function seekProvincialLeadership(
     return { error: reject("PLAYER_AUTONOMY", "The player may only enter their own leadership contest") };
   }
   const assembly = state.provincialRuntime.assemblies[provinceId];
-  const member = state.provincialRuntime.legislators[actorId];
-  if (!assembly || !member || !member.active || !assembly.memberIds.includes(actorId)) {
+  const member = provincialLegislatorForPolitician(state, actorId);
+  const memberId = member?.id ?? null;
+  if (!assembly || !member || !memberId || !member.active || !assembly.memberIds.includes(memberId)) {
     return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
   }
   assembly.partyLeadership ??= {};
   assembly.leadershipHistory ??= [];
   if (assembly.leadershipHistory.some(
-    (record) => record.date === state.currentDate && record.role === role && record.candidateIds.includes(actorId),
+    (record) => record.date === state.currentDate && record.role === role && record.candidateIds.includes(memberId),
   )) {
     return { error: reject("LEADERSHIP_ATTEMPT_USED", "Only one contest for this role may be entered each month") };
   }
@@ -960,7 +961,7 @@ export function seekProvincialLeadership(
     role,
     partyId,
     `${provinceId}:${state.currentDate}:${role}:${partyId ?? "chamber"}`,
-    actorId,
+    memberId,
   );
   const record = leadershipRecord(
     assembly,
@@ -1128,10 +1129,23 @@ export function castProvincialBillVote(
   const bill = state.provincialRuntime.bills[billId];
   if (!bill || bill.status !== "introduced") return { error: reject("PROVINCIAL_BILL_NOT_OPEN", billId) };
   const assembly = state.provincialRuntime.assemblies[bill.provinceId];
-  if (!assembly?.memberIds.includes(actorId)) return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
-  const id = `pending:bill:${billId}:${actorId}`;
-  state.provincialRuntime.votes[id] = { id, provinceId: bill.provinceId, subjectKind: "bill", subjectId: billId, date: state.currentDate, votes: { [actorId]: choice }, partyIdsAtVote: { [actorId]: state.provincialRuntime.legislators[actorId]?.partyId ?? null }, factionIdsAtVote: { [actorId]: state.provincialRuntime.legislators[actorId]?.factionId ?? null }, yes: choice === "yes" ? 1 : 0, no: choice === "no" ? 1 : 0, abstain: choice === "abstain" ? 1 : 0, passed: false };
+  const member = provincialLegislatorForPolitician(state, actorId);
+  const memberId = member?.id ?? null;
+  if (!assembly || !member || !memberId || !assembly.memberIds.includes(memberId)) return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
+  const id = `pending:bill:${billId}:${memberId}`;
+  state.provincialRuntime.votes[id] = { id, provinceId: bill.provinceId, subjectKind: "bill", subjectId: billId, date: state.currentDate, votes: { [memberId]: choice }, partyIdsAtVote: { [memberId]: member.partyId }, factionIdsAtVote: { [memberId]: member.factionId }, yes: choice === "yes" ? 1 : 0, no: choice === "no" ? 1 : 0, abstain: choice === "abstain" ? 1 : 0, passed: false };
   return {};
+}
+
+export function provincialLegislatorForPolitician(
+  state: SimState,
+  politicianId: string,
+): ProvincialLegislator | null {
+  const direct = state.provincialRuntime.legislators[politicianId];
+  if (direct) return direct;
+  return Object.values(state.provincialRuntime.legislators).find(
+    (row) => row.fullPoliticianId === politicianId,
+  ) ?? null;
 }
 
 function promotionScore(row: ProvincialLegislator): number {

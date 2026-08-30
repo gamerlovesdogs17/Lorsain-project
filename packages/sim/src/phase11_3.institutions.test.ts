@@ -3,6 +3,8 @@ import { createSimulation, restoreSimulation } from "./engine.js";
 import { loadTerenaWorld } from "./integration/harness.js";
 import {
   recruitFederalAssemblyClass,
+  promoteProvincialCandidate,
+  provincialLegislatorForPolitician,
   provincialAssemblySeatCount,
 } from "./provinces/assemblies.js";
 import { migrateSaveV12ToV13, migrateSaveV13ToV14, migrateSaveV14ToV15, migrateSaveV15ToV16, parseSaveFile } from "./save.js";
@@ -164,6 +166,31 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     const restored = restoreSimulation(save, world);
     expect(restored.hashState()).toBe(beforeRestore);
     expect(promoted.every((id) => restored.getSnapshot().politicians[id]?.displayName)).toBe(true);
+  });
+
+  it("preserves Provincial Assembly authority through a promoted full-politician identity", () => {
+    const world = loadTerenaWorld();
+    const initialPlayer = startingHolder(world, "assembly_member");
+    const save = createSimulation({ world, playerPoliticianId: initialPlayer, seed: "P113-PROV-LINKED-PLAYER" }).serializeSave();
+    const state = save.simulation;
+    const assembly = Object.values(state.provincialRuntime.assemblies)[0]!;
+    const memberId = assembly.memberIds[0]!;
+    const promotedId = promoteProvincialCandidate(world, state, memberId, "browser_qa_role_matrix");
+    expect(promotedId).toBeTruthy();
+    if (!promotedId) return;
+    state.playerPoliticianId = promotedId;
+    expect(provincialLegislatorForPolitician(state, promotedId)?.id).toBe(memberId);
+
+    const sim = restoreSimulation(save, world);
+    const result = sim.executeCommand({
+      type: "SEEK_PROVINCIAL_LEADERSHIP",
+      provinceId: assembly.provinceId,
+      role: "speaker",
+    });
+    expect(result.ok).toBe(true);
+    const record = sim.getSnapshot().provincialRuntime.assemblies[assembly.provinceId]!.leadershipHistory.at(-1)!;
+    expect(record.candidateIds).toContain(memberId);
+    expect(record.trigger).toBe("player_challenge");
   });
 
   it("migrates schema 12 saves and deterministically seeds the new institutions on restore", () => {

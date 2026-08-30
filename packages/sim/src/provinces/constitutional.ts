@@ -9,6 +9,7 @@ import type {
   ProvincialVote,
 } from "./types.js";
 import { CONSTITUTIONAL_RULE_IDS } from "./types.js";
+import { provincialLegislatorForPolitician } from "./assemblies.js";
 
 const LEGAL_VALUES: Record<ConstitutionalRuleId, readonly number[]> = {
   assembly_term_years: [3, 4, 5],
@@ -244,16 +245,19 @@ export function castConstitutionalRatificationVote(
   if (actorId !== state.playerPoliticianId) return { error: reject("PLAYER_AUTONOMY", "Only the player stores their ratification vote") };
   const amendment = state.provincialRuntime.constitutionalAmendments[amendmentId];
   if (!amendment || amendment.status !== "ratifying") return { error: reject("AMENDMENT_NOT_RATIFYING", amendmentId) };
-  const row = state.provincialRuntime.legislators[actorId];
+  const row = provincialLegislatorForPolitician(state, actorId);
   if (!row || row.serviceEndDate != null) return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
-  const key = `pending:${amendmentId}:${row.provinceId}:${actorId}`;
+  const memberId = row.id;
+  const assembly = state.provincialRuntime.assemblies[row.provinceId];
+  if (!assembly?.memberIds.includes(memberId)) return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
+  const key = `pending:${amendmentId}:${row.provinceId}:${memberId}`;
   state.provincialRuntime.votes[key] = {
     id: key,
     provinceId: row.provinceId,
     subjectKind: "constitutional_ratification",
     subjectId: amendmentId,
     date: state.currentDate,
-    votes: { [actorId]: choice },
+    votes: { [memberId]: choice },
     yes: choice === "yes" ? 1 : 0,
     no: choice === "no" ? 1 : 0,
     abstain: choice === "abstain" ? 1 : 0,

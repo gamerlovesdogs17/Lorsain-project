@@ -116,6 +116,7 @@ export function GameShell(props: {
       : props.roleKind === "president" ? "Presidency"
         : props.roleKind === "constitutional_court_justice" ? "Judicial office"
           : props.roleKind === "assembly_member" || props.roleKind === "speaker" ? "Member's office"
+            : props.roleKind === "provincial_legislator" ? "Assembly office"
             : "Office";
   const contextual = (id: Screen) =>
     (id === "office" && props.roleKind !== "private_citizen") ||

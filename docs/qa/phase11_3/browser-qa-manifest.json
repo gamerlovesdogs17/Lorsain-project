@@ -1,6 +1,6 @@
 {
   "phase": "11.3",
-  "capturedAt": "2026-08-28",
+  "capturedAt": "2026-08-30",
   "harness": {
     "runtime": "Vite development server with real serialized engine fixtures",
     "fixtureEndpoint": "/__qa/fixtures/<fixture>.json",
@@ -16,7 +16,9 @@
   },
   "fixtures": {
     "institutions": { "file": "leadership-election-browser-save.json", "date": "2029-01-01", "defaultPlayer": "NPC001" },
-    "judicial": { "file": "judicial-appointment-browser-save.json", "date": "2028-02-01", "defaultPlayer": "NPC001" }
+    "judicial": { "file": "judicial-appointment-browser-save.json", "date": "2028-02-01", "defaultPlayer": "NPC001" },
+    "former-officeholder": { "file": "former-officeholder-browser-save.json", "date": "2029-02-01", "defaultPlayer": "NPC001" },
+    "election-results": { "file": "election-results-browser-save.json", "date": "2030-07-01", "defaultPlayer": "NPC001" }
   },
   "captureSets": {
     "partyAndCareer": ["party-directory-1440.jpg", "party-caucus-1440.jpg", "party-leadership-election-1440.jpg", "politician-profile-1440.jpg", "politician-voting-record-1440.jpg", "career-opportunities-1440.jpg"],
@@ -32,7 +34,9 @@
     "NPC003": "Governor",
     "NPC005": "active presidential candidate",
     "NPC018": "party and politician browser",
-    "NPC020": "Constitutional Court justice"
+    "NPC020": "Constitutional Court justice",
+    "POL_PLEG_FDV_004": "linked full-politician identity serving in the Federal District Provincial Assembly",
+    "NPC001@former-officeholder": "former President after the 2029 transition"
   },
   "decodedPixelDimensions": {
     "archive-populated-1440.jpg": "1440x900",
@@ -77,6 +81,15 @@
     "map": ["hover tooltip appears", "mouse leave clears hover", "click pins selection", "keyboard pins selection", "touch-width selection does not depend on hover", "mode/election selection updates public data"],
     "worldMap": ["Relations, Alliances, Crises, Sanctions, and Posture each activate a distinct public legend", "keyboard country selection opens the country inspector", "the pinned country remains selected across all five modes", "empty crisis and sanction modes state that no public records exist instead of fabricating data"],
     "responsive": ["no document-level overflow at 390px", "wide tables scroll within their own container"],
-    "console": ["no browser warnings or errors after the role, map, World map, and responsive QA sequence"]
+    "console": ["no browser warnings or errors in a fresh tab after the final role, map, election, organization, economy, and archive route sequence"]
+  },
+  "finalPass": {
+    "directory": "final",
+    "viewports": [1440, 1200, 900, 600, 390],
+    "roleMatrix": ["President", "National Assembly member", "Governor", "Provincial Assembly member", "candidate", "party leader", "caucus chair", "Constitutional Court justice", "former officeholder"],
+    "certifiedResults": ["2028 presidential", "2030 National Assembly", "2029 gubernatorial", "2029 Provincial Assembly"],
+    "mapBehavior": ["temporary tooltip on pointer hover", "tooltip clears on pointer leave", "clicked selection remains pinned", "keyboard Enter pins selection", "390px click pins selection without retained hover"],
+    "responsiveAssertions": ["no document-level horizontal overflow", "wide roll-call table scrolls inside its local 331px container", "mobile navigation and political Inbox open and close"],
+    "browserConsole": "zero warnings or errors in the clean final route sequence"
   }
 }

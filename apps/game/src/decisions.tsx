@@ -185,25 +185,27 @@ export function DecisionPanel(props: {
           </div>
         );
       })}
-      {signs.map((d) => (
-        <div key={d.key} className="row" style={{ marginTop: "0.5rem" }}>
-          <span>{d.label}</span>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => run({ type: "SIGN_BILL", billId: d.billId! })}
-          >
-            Sign
-          </button>
-          <button
-            type="button"
-            className="btn danger"
-            onClick={() => run({ type: "RETURN_BILL", billId: d.billId! })}
-          >
-            Return
-          </button>
-        </div>
-      ))}
+      {signs.length ? <div className="decision-action-grid">
+        {signs.map((d) => (
+          <div key={d.key} className="row decision-action-row">
+            <span>{d.label}</span>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => run({ type: "SIGN_BILL", billId: d.billId! })}
+            >
+              Sign
+            </button>
+            <button
+              type="button"
+              className="btn danger"
+              onClick={() => run({ type: "RETURN_BILL", billId: d.billId! })}
+            >
+              Return
+            </button>
+          </div>
+        ))}
+      </div> : null}
       <div className="decision-list">
         {votes.map((d) => {
           if (d.kind === "motion_vote") {

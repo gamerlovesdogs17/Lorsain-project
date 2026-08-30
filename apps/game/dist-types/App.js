@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { collectPlayerActionableDecisions, addMonths, createSimulation, governedProvinceId, nominationCalendarDates, parseSaveFile, restoreSimulation, } from "@lorsain/sim";
+import { collectPlayerActionableDecisions, addMonths, createSimulation, governedProvinceId, nominationCalendarDates, parseSaveFile, provincialLegislatorForPolitician, restoreSimulation, } from "@lorsain/sim";
 import { loadBrowserContentBundle } from "./content/browserReader.js";
 import { kernelWorldFromBundle } from "./content/world.js";
 import { downloadSave, getSave, listSaves, putSave, readImportedSave, } from "./saves.js";
@@ -553,10 +553,11 @@ export default function App() {
         return null;
     const player = snap.politicians[snap.playerPoliticianId];
     const offices = playerOffices(world, snap, snap.playerPoliticianId);
+    const provincialMember = provincialLegislatorForPolitician(snap, snap.playerPoliticianId);
     const roleKind = Object.values(snap.officeTerms)
         .filter((term) => term.holderId === snap.playerPoliticianId && (term.status === "active" || term.status === "suspended"))
         .map((term) => world.offices[term.officeId]?.kind)
-        .find(Boolean) ?? "private_citizen";
+        .find(Boolean) ?? (provincialMember?.serviceStartDate && provincialMember.serviceEndDate == null ? "provincial_legislator" : "private_citizen");
     const interrupt = snap.pendingInterrupt;
     const playerDecisions = collectPlayerActionableDecisions(world, snap);
     const decisionScreen = (kind) => {

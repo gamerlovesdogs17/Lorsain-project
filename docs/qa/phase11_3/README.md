@@ -1,10 +1,12 @@
 # Phase 11.3 browser QA evidence
 
-Date: 2026-08-28
+Date: 2026-08-30
 
 These JPEG captures come from the running Vite application loaded with real, replayable engine saves. They are not isolated components or mocked props. Regenerate the two fixtures with:
 
 `node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/create-judicial-qa-save.ts`
+
+The final pass adds replay points for an active Provincial Assembly member linked to the full politician directory, a former President after transition, and certified 2029–2030 provincial/federal election results. Current PNG evidence is in `final/`; the earlier full-page JPEG set remains useful for long-page inspection.
 
 The development-only QA loader accepts a fixture, destination screen, optional player viewpoint, and optional focused record. It exposes a hidden ready sentinel. Before every capture the browser pass asserted the requested viewport, fixture date, player, route, expected heading/content, and decoded image dimensions. The exact assertion contract and per-file dimensions are in `browser-qa-manifest.json`.
 
@@ -36,3 +38,9 @@ The development-only QA loader accepts a fixture, destination screen, optional p
 - `mobile-map-interaction-390.jpg`
 
 The 390-pixel checks found no document-level horizontal overflow. Wide political tables remain usable through local horizontal scrolling. Hover is supplementary: click/tap and keyboard activation create the persistent map selection.
+
+## Final role and interaction pass
+
+The 2026-08-30 pass exercised President, MP, Governor, Provincial Assembly member, active presidential candidate, party leader, caucus chair, justice, and former-officeholder perspectives. It covered 1440, 1200, 900, 600, and 390 pixel widths. A linked Provincial Assembly identity defect found during this pass was fixed in the UI and command authority layer, then protected by an engine regression test.
+
+Election evidence now includes certified Presidential, National Assembly, gubernatorial, and Provincial Assembly results. The map pass verified live tooltip appearance, leave-to-clear, persistent click selection, keyboard selection, and 390-pixel selection without a retained hover. The final clean-tab route sequence reported no console warnings or errors.

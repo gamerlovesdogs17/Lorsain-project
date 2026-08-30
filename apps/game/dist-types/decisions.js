@@ -50,7 +50,7 @@ export function DecisionPanel(props) {
                                 kind: action?.kind,
                                 targetCountryId: action?.targetCountryId ?? d.targetCountryId,
                             }), children: "Decline" })] }, d.key));
-            }), signs.map((d) => (_jsxs("div", { className: "row", style: { marginTop: "0.5rem" }, children: [_jsx("span", { children: d.label }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "SIGN_BILL", billId: d.billId }), children: "Sign" }), _jsx("button", { type: "button", className: "btn danger", onClick: () => run({ type: "RETURN_BILL", billId: d.billId }), children: "Return" })] }, d.key))), _jsx("div", { className: "decision-list", children: votes.map((d) => {
+            }), signs.length ? _jsx("div", { className: "decision-action-grid", children: signs.map((d) => (_jsxs("div", { className: "row decision-action-row", children: [_jsx("span", { children: d.label }), _jsx("button", { type: "button", className: "btn", onClick: () => run({ type: "SIGN_BILL", billId: d.billId }), children: "Sign" }), _jsx("button", { type: "button", className: "btn danger", onClick: () => run({ type: "RETURN_BILL", billId: d.billId }), children: "Return" })] }, d.key))) }) : null, _jsx("div", { className: "decision-list", children: votes.map((d) => {
                     if (d.kind === "motion_vote") {
                         return (_jsx(VoteRow, { label: d.label, onCast: (choice) => run({ type: "CAST_MOTION_VOTE", motionId: d.motionId, choice }) }, d.key));
                     }

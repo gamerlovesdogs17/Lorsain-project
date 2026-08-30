@@ -1,6 +1,6 @@
 import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useMemo, useState } from "react";
-import { caseTitle, collectPlayerActionableDecisions, assemblyCandidateEligibilityError, currentAssemblyElectionForFiling, currentAssemblyMemberIds, currentGubernatorialOpportunity, governedProvinceId, evaluatePresidentialEligibility, isDeclaredContestCandidate, PARTY_PLATFORM_ISSUES, partyPlatformLabel, publicConstituencyPressures, storiesChronological, TERENA_WORLD_ID, } from "@lorsain/sim";
+import { caseTitle, collectPlayerActionableDecisions, assemblyCandidateEligibilityError, currentAssemblyElectionForFiling, currentAssemblyMemberIds, currentGubernatorialOpportunity, governedProvinceId, evaluatePresidentialEligibility, isDeclaredContestCandidate, PARTY_PLATFORM_ISSUES, partyPlatformLabel, provincialLegislatorForPolitician, publicConstituencyPressures, storiesChronological, TERENA_WORLD_ID, } from "@lorsain/sim";
 import { AssemblyPage } from "./assemblyScreen.js";
 import { CampaignPage } from "./campaignScreen.js";
 import { CourtsPage } from "./courtsScreen.js";
@@ -90,6 +90,14 @@ function Home(props) {
     const governorEconomy = governedProvince ? props.snap.economyRuntime.provinces[governedProvince] : null;
     const governorPublicEconomy = governedProvince ? regionalPublicEconomy(props.snap, governedProvince) : null;
     const playerIsMp = isMp(props.world, props.snap, playerId);
+    const provincialMember = provincialLegislatorForPolitician(props.snap, playerId);
+    const provincialChamber = provincialMember?.serviceStartDate && provincialMember.serviceEndDate == null
+        ? props.snap.provincialRuntime.assemblies[provincialMember.provinceId]
+        : null;
+    const provincialVotesDue = provincialMember && provincialChamber
+        ? Object.values(props.snap.provincialRuntime.bills).filter((bill) => bill.provinceId === provincialMember.provinceId && bill.status === "introduced" &&
+            !props.snap.provincialRuntime.votes[`pending:bill:${bill.id}:${provincialMember.id}`]).length
+        : 0;
     const playerConstituencyId = Object.values(props.snap.officeTerms).flatMap((term) => {
         if (term.holderId !== playerId || (term.status !== "active" && term.status !== "suspended"))
             return [];
@@ -108,9 +116,11 @@ function Home(props) {
             ? `${props.catalog.places.get(governedProvince)?.name ?? "Province"} briefing`
             : playerIsMp
                 ? "Assembly briefing"
-                : props.campaign
-                    ? "Campaign briefing"
-                    : "Career briefing";
+                : provincialMember && provincialChamber
+                    ? `${props.catalog.places.get(provincialMember.provinceId)?.name ?? "Province"} Assembly briefing`
+                    : props.campaign
+                        ? "Campaign briefing"
+                        : "Career briefing";
     const briefItems = playerIsPresident
         ? [
             { label: "Bills awaiting", value: billsAwaiting },
@@ -138,24 +148,31 @@ function Home(props) {
                     },
                     { label: "Standing", value: standingLabel },
                 ]
-                : props.campaign
+                : provincialMember && provincialChamber
                     ? [
-                        { label: "Monthly actions", value: props.campaign.actionPointsRemaining },
-                        { label: "Cash", value: Math.round(props.campaign.cashOnHand).toLocaleString() },
-                        {
-                            label: "Race",
-                            value: props.campaign.electionId
-                                ? electionDisplayName(props.campaign.electionId)
-                                : campaignTypeLabel(props.campaign.type),
-                        },
+                        { label: "Votes due", value: provincialVotesDue },
+                        { label: "Agenda bills", value: provincialChamber.agendaBillIds.length },
+                        { label: "Next election", value: provincialChamber.nextElectionDate },
                         { label: "Standing", value: standingLabel },
                     ]
-                    : [
-                        { label: "Scheduled races", value: upcoming.length },
-                        { label: "Opportunities", value: "Career" },
-                        { label: "Standing", value: standingLabel },
-                        { label: "Office", value: props.offices[0] ?? "Private citizen" },
-                    ];
+                    : props.campaign
+                        ? [
+                            { label: "Monthly actions", value: props.campaign.actionPointsRemaining },
+                            { label: "Cash", value: Math.round(props.campaign.cashOnHand).toLocaleString() },
+                            {
+                                label: "Race",
+                                value: props.campaign.electionId
+                                    ? electionDisplayName(props.campaign.electionId)
+                                    : campaignTypeLabel(props.campaign.type),
+                            },
+                            { label: "Standing", value: standingLabel },
+                        ]
+                        : [
+                            { label: "Scheduled races", value: upcoming.length },
+                            { label: "Opportunities", value: "Career" },
+                            { label: "Standing", value: standingLabel },
+                            { label: "Office", value: props.offices[0] ?? "Private citizen" },
+                        ];
     return (_jsx("div", { className: "home-v5", children: _jsx(WorkLayout, { header: _jsxs(_Fragment, { children: [_jsx(PoliticianProfile, { catalog: props.catalog, world: props.world, state: props.snap, politicianId: playerId, office: props.offices[0] ?? "Private citizen", party: partyDisplayName(props.world, runtime?.partyId ?? null, props.snap), faction: factionDisplayName(props.world, runtime?.factionId ?? null), ...(figure?.home ? { home: figure.home } : {}), standing: `Public standing: ${standingLabel}`, ...((figure?.notes ?? figure?.display_summary)
                             ? { biography: figure?.notes ?? figure?.display_summary }
                             : {}) }), _jsx(SectionDivider, { title: briefTitle, hint: "What matters this month" }), _jsx(BriefStrip, { items: briefItems })] }), main: _jsxs(_Fragment, { children: [interrupt ? (_jsxs("div", { className: "briefing-urgent alert", children: [_jsx("strong", { children: "Urgent" }), _jsx("p", { children: interruptDisplay(interrupt) })] })) : null, decisions.length > 0 ? (_jsxs("div", { children: [_jsx(SectionDivider, { title: "Required decisions" }), decisions.map((d) => (_jsxs("div", { className: "decision-row", children: [_jsx("span", { children: decisionDisplayLabel(d, interrupt) }), _jsx(StatusBadge, { tone: "warn", children: "Action" })] }, d.key)))] })) : null, _jsx("div", { className: "lead-block", children: lead ? (_jsx(LeadStory, { kicker: "Lead story", headline: eventDisplay(props.catalog, props.world, props.snap, lead), date: lead.date })) : (_jsx(EmptyState, { children: "No major developments this month." })) }), terenaPublicCrisis ? (_jsxs("div", { className: "briefing-urgent alert", children: [_jsx("strong", { children: "International crisis" }), _jsxs("p", { children: ["Terena is involved in an active international crisis (", crisisStageLabel(terenaPublicCrisis.stage), " \u00B7", " ", publicSeverityLabel(terenaPublicCrisis.intensity, terenaPublicCrisis.stage), "). See Foreign Affairs."] })] })) : null, terenaLatentTension && !terenaPublicCrisis ? (_jsxs("div", { className: "briefing-note alert", children: [_jsx("strong", { children: "Strategic tension" }), _jsxs("p", { children: ["Background tension persists (", publicSeverityLabel(terenaLatentTension.intensity, terenaLatentTension.stage), "). Monitor Foreign Affairs."] })] })) : null, playerIsPresident && warTrigger ? (_jsxs("div", { className: "briefing-urgent alert", children: [_jsx("strong", { children: "War powers decision required" }), _jsx("p", { children: "Open Executive or Foreign Affairs to invoke war powers or seek Assembly authorization." })] })) : null, _jsx(SectionDivider, { title: "Recent activity" }), feed.length === 0 ? _jsx(EmptyState, { children: "Quiet month in public records." }) : null, feed.map((e) => (_jsx(ActivityFeedItem, { date: e.date, text: eventDisplay(props.catalog, props.world, props.snap, e) }, e.id))), stories.length > 0 ? (_jsxs(_Fragment, { children: [_jsx(SectionDivider, { title: "In the press" }), stories.map((s) => (_jsx(NewsItem, { headline: s.headlineKey === "Political developments" ||
