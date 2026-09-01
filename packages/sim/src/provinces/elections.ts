@@ -4,7 +4,13 @@ import { createCampaignRecord, activeCampaignFor } from "../campaigns/state.js";
 import { candidateStandingOrDefault } from "../elections/standing.js";
 import { blocSupportShares } from "../elections/support.js";
 import { registeredElectorate } from "../elections/turnout.js";
-import { activeTermsForPolitician, assumeOffice, endTerm, occupyingTerms } from "../offices.js";
+import {
+  activeTermsForPolitician,
+  assumeOffice,
+  endTerm,
+  officesAreIncompatible,
+  occupyingTerms,
+} from "../offices.js";
 import { jsonClone } from "../hash.js";
 import { applyPoliticianExit } from "../political-lifecycle.js";
 import type { RngService } from "../rng.js";
@@ -516,7 +522,10 @@ function assumeWinner(
     }
     for (const term of activeTermsForPolitician(target, election.winnerId!)) {
       const held = world.offices[term.officeId];
-      if (held && office.incompatibleWithKinds.includes(held.kind)) {
+      // Incompatibility is deliberately symmetric.  A Speaker cannot remain
+      // Speaker while becoming Governor even though the Governor definition
+      // does not need to repeat every restriction declared by the Speakership.
+      if (held && officesAreIncompatible(office, held)) {
         endTerm(target, term.id, target.currentDate, "assumed_governorship");
       }
     }
@@ -600,7 +609,8 @@ function reconcileGovernorAuthority(
     const holders = occupyingTerms(state, office.id);
     const valid = holders.filter((term) => {
       const politician = state.politicians[term.holderId];
-      return politician?.alive && !politician.retired;
+      const termCurrent = term.endDate == null || compareIsoDate(state.currentDate, term.endDate) < 0;
+      return politician?.alive && !politician.retired && termCurrent;
     });
     if (valid.length > 0) {
       if (state.provincialRuntime.governorVacancies[provinceId]) {
@@ -619,7 +629,13 @@ function reconcileGovernorAuthority(
       }
       continue;
     }
-    for (const term of holders) endTerm(state, term.id, state.currentDate, "holder_ineligible");
+    for (const term of holders) {
+      const reason =
+        term.endDate != null && compareIsoDate(state.currentDate, term.endDate) >= 0
+          ? "term_expired"
+          : "holder_ineligible";
+      endTerm(state, term.id, state.currentDate, reason);
+    }
     const futureRegular = Object.values(state.provincialRuntime.elections)
       .filter((row) => row.provinceId === provinceId && row.status !== "assumed")
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0] ?? null;

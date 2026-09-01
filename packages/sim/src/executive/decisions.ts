@@ -14,8 +14,19 @@ export function chooseMinisterAppointment(
 ): string | null {
   const president = state.politicians[presidentId];
   if (!president) return null;
+  const servingMinisters = new Set(
+    Object.values(state.officeTerms)
+      .filter(
+        (term) =>
+          (term.status === "active" || term.status === "suspended") &&
+          term.holdingKind === "substantive" &&
+          world.offices[term.officeId]?.kind === "minister",
+      )
+      .map((term) => term.holderId),
+  );
   const candidates = Object.values(state.politicians)
     .filter((p) => p.alive && !p.retired && p.id !== state.playerPoliticianId)
+    .filter((p) => !servingMinisters.has(p.id))
     .filter((p) => canAssumeOffice(state, world, officeId, p.id, "substantive") == null)
     .sort((a, b) => (a.id < b.id ? -1 : 1));
   if (candidates.length === 0) return null;

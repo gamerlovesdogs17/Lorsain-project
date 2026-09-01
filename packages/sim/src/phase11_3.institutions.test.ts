@@ -30,6 +30,9 @@ import { auditGeneratedPersonQuality } from "./agents/generated-quality.js";
 import { PARTY_PLATFORM_ISSUES } from "./parties/types.js";
 import { constituencyPressureForBill, publicConstituencyPressures } from "./legislature/constituency.js";
 import type { BillState } from "./legislature/types.js";
+import { processGubernatorialCalendar } from "./provinces/elections.js";
+import { restoreRngService } from "./rng.js";
+import { occupyingTerms } from "./offices.js";
 
 function startingHolder(world: ReturnType<typeof loadTerenaWorld>, kind: string): string {
   const term = world.startingTerms.find((candidate) => world.offices[candidate.officeId]?.kind === kind);
@@ -38,6 +41,40 @@ function startingHolder(world: ReturnType<typeof loadTerenaWorld>, kind: string)
 }
 
 describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
+  it("ends both sides of an incompatible office pair when a Speaker becomes Governor", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "governor");
+    const state = createSimulation({
+      world,
+      playerPoliticianId: player,
+      seed: "P113-GOVERNOR-SYMMETRIC-INCOMPATIBILITY",
+    }).serializeSave().simulation;
+    const speaker = startingHolder(world, "speaker");
+    const governorTerm = world.startingTerms.find(
+      (term) => world.offices[term.officeId]?.kind === "governor",
+    )!;
+    const provinceId = world.offices[governorTerm.officeId]!.provinceId!;
+    const election = Object.values(state.provincialRuntime.elections).find(
+      (row) => row.provinceId === provinceId,
+    )!;
+    election.status = "resolved";
+    election.winnerId = speaker;
+    election.assumptionDate = state.currentDate;
+    election.incumbentDecision = "run";
+
+    const events = processGubernatorialCalendar(
+      state,
+      world,
+      restoreRngService(state.rng),
+      "CMD_GOVERNOR_TRANSITION_TEST",
+    );
+    expect(election.status).toBe("assumed");
+    expect(occupyingTerms(state, governorTerm.officeId).map((term) => term.holderId)).toEqual([speaker]);
+    expect(occupyingTerms(state, "OFFICE_SPEAKER")).toHaveLength(0);
+    expect(currentAssemblyMemberIds(world, state)).not.toContain(speaker);
+    expect(events.some((event) => event.type === "GOVERNOR_ASSUMED_OFFICE")).toBe(true);
+  });
+
   it("renews the NPC political class deterministically without choosing the player's exit", () => {
     const world = loadTerenaWorld();
     const player = startingHolder(world, "governor");
@@ -91,6 +128,16 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
 
     const restored = restoreSimulation(save, world);
     expect(restored.hashState()).toBe(hashCanonical(state));
+
+    const retiredState = structuredClone(state);
+    retiredState.currentDate = "2029-01-01";
+    retiredState.generatedAgentProfiles[retiredId]!.birthDate = "1929-01-01";
+    const postRetirement = processPoliticalLifecycleMonth(retiredState, world, null);
+    expect(retiredState.politicians[retiredId]!.alive).toBe(false);
+    expect(postRetirement.some(
+      (event) => event.type === "POLITICIAN_DIED" && event.actorIds.includes(retiredId),
+    )).toBe(true);
+    expect(auditGeneratedPersonQuality(world, retiredState).errors).toEqual([]);
   });
 
   it("uses policy-specific provision option identifiers while loading legacy aliases", () => {

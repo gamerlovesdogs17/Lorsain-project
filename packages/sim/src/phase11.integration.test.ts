@@ -6,6 +6,7 @@ import { activeTermsForPolitician, occupyingTerms } from "./offices.js";
 import { CANONICAL_ASSEMBLY_ELECTION_ID } from "./elections/types.js";
 import { assemblyCandidateEligibilityError } from "./elections/assembly-cycle.js";
 import { hashCanonical } from "./hash.js";
+import { reconcileAssemblyVacancies } from "./legislature/vacancies.js";
 import { nominationQualificationNeed } from "./campaigns/qualification.js";
 import {
   advanceIntegrated,
@@ -95,6 +96,29 @@ describe("Phase 11.1 full-game integration", () => {
     expect(sim.getSnapshot().playerPoliticianId).toBe("NPC146");
     expect(occupyingTerms(sim.getSnapshot(), "OFFICE_SPEAKER").length).toBeGreaterThan(0);
     expect(assertCatastrophicInvariants(world, sim.getSnapshot())).toEqual([]);
+
+    const mutable = sim.serializeSave().simulation;
+    const vacated = Object.values(mutable.officeTerms).find(
+      (term) =>
+        term.status === "active" &&
+        world.offices[term.officeId]?.kind === "assembly_member" &&
+        term.holderId !== mutable.playerPoliticianId,
+    )!;
+    vacated.status = "ended";
+    vacated.endedDate = mutable.currentDate;
+    vacated.endedReason = "assumed_governorship";
+    expect(currentAssemblyMemberIds(world, mutable)).toHaveLength(419);
+    const vacancyEvents = reconcileAssemblyVacancies(mutable, world, null);
+    expect(currentAssemblyMemberIds(world, mutable)).toHaveLength(420);
+    expect(currentAssemblyMemberIds(world, mutable)).not.toContain(vacated.holderId);
+    expect(vacancyEvents.filter((event) => event.type === "ASSEMBLY_CASUAL_VACANCY_FILLED")).toHaveLength(1);
+    const restoredCountback = restoreSimulation(
+      { ...sim.serializeSave(), simulation: mutable },
+      world,
+    );
+    expect(restoredCountback.getSnapshot().history.some(
+      (event) => event.type === "ASSEMBLY_CASUAL_VACANCY_FILLED",
+    )).toBe(true);
 
     const save = sim.serializeSave();
     expect(restoreSimulation(save, world).hashState()).toBe(sim.hashState());

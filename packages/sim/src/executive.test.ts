@@ -113,6 +113,50 @@ describe("Phase 7 executive kernel", () => {
     expect(auto.ok).toBe(false);
   });
 
+  it("rejects duplicate portfolios without dismissing either incumbent", () => {
+    const world = executiveHarness();
+    world.offices.OFFICE_MINISTER_TRANSPORT = kernelOffice({
+      id: "OFFICE_MINISTER_TRANSPORT",
+      kind: "minister",
+      title: "Minister of Transport",
+      portfolio: "transport",
+      incompatibleWithKinds: ["president", "constitutional_court_justice", "speaker"],
+    });
+    const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P7-CAB-UNIQUE" });
+    expectOk(sim, {
+      type: "APPOINT_MINISTER",
+      officeId: "OFFICE_MINISTER_FINANCE",
+      politicianId: "MP04",
+    });
+    const rejected = sim.executeCommand({
+      type: "APPOINT_MINISTER",
+      officeId: "OFFICE_MINISTER_TRANSPORT",
+      politicianId: "MP04",
+    });
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.error.code).toBe("ALREADY_MINISTER");
+    expect(currentMinisterHolderId(world, sim.getSnapshot(), "OFFICE_MINISTER_FINANCE")).toBe("MP04");
+    expect(currentMinisterHolderId(world, sim.getSnapshot(), "OFFICE_MINISTER_TRANSPORT")).toBeNull();
+  });
+
+  it("fills multiple NPC cabinet vacancies with distinct people", () => {
+    const world = executiveHarness();
+    world.offices.OFFICE_MINISTER_TRANSPORT = kernelOffice({
+      id: "OFFICE_MINISTER_TRANSPORT",
+      kind: "minister",
+      title: "Minister of Transport",
+      portfolio: "transport",
+      incompatibleWithKinds: ["president", "constitutional_court_justice", "speaker"],
+    });
+    const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "P7-NPC-CAB-UNIQUE" });
+    advance(sim, 4);
+    const holders = deriveCabinet(world, sim.getSnapshot())
+      .map((portfolio) => portfolio.holderId)
+      .filter((id): id is string => id != null);
+    expect(holders).toHaveLength(2);
+    expect(new Set(holders).size).toBe(holders.length);
+  });
+
   it("does not auto-appoint or auto-regulate when the player is President", () => {
     const world = executiveHarness();
     const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P7-AUTONOMY" });

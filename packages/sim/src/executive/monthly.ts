@@ -1,8 +1,9 @@
-import type { KernelWorld, SimEvent, SimState } from "../types.js";
+import type { KernelWorld, OfficeTerm, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import { monthStart } from "../campaigns/effects.js";
 import { pushHistory } from "../scheduler.js";
 import { currentAssemblyMemberIds } from "../legislature/state.js";
+import { endTerm } from "../offices.js";
 import { chooseLegislativeVote } from "../legislature/decisions.js";
 import type { BillState, LegislativeVoteChoice } from "../legislature/types.js";
 import {
@@ -24,6 +25,51 @@ import {
 } from "./state.js";
 import { chooseMinisterAppointment, chooseRegulationIssue } from "./decisions.js";
 import type { AssemblyMotion } from "./types.js";
+
+function reconcileUniqueCabinet(
+  state: SimState,
+  world: KernelWorld,
+  commandId: string,
+): SimEvent[] {
+  const byHolder = new Map<string, OfficeTerm[]>();
+  for (const term of Object.values(state.officeTerms)) {
+    if (term.status !== "active" && term.status !== "suspended") continue;
+    if (term.holdingKind !== "substantive" || world.offices[term.officeId]?.kind !== "minister") {
+      continue;
+    }
+    const terms = byHolder.get(term.holderId) ?? [];
+    terms.push(term);
+    byHolder.set(term.holderId, terms);
+  }
+  const events: SimEvent[] = [];
+  for (const [holderId, terms] of [...byHolder.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    if (terms.length <= 1) continue;
+    terms.sort(
+      (a, b) =>
+        (a.startDate ?? "0000-00-00").localeCompare(b.startDate ?? "0000-00-00") ||
+        a.officeId.localeCompare(b.officeId) ||
+        a.id.localeCompare(b.id),
+    );
+    for (const duplicate of terms.slice(1)) {
+      const ended = endTerm(state, duplicate.id, state.currentDate, "cabinet_duplicate_reconciled");
+      if (!ended) continue;
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "MINISTER_TERM_ENDED",
+          importance: 0.65,
+          visibility: "public",
+          actorIds: [holderId],
+          entityIds: [duplicate.officeId, duplicate.id],
+          payload: { reason: "cabinet_duplicate_reconciled", officeId: duplicate.officeId },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
+    }
+  }
+  return events;
+}
 
 function expireClerical(state: SimState, commandId: string): SimEvent[] {
   const events: SimEvent[] = [];
@@ -277,6 +323,7 @@ export function processExecutiveMonth(
   seedMinistriesIfNeeded(world, state);
   seedContinuingBudget(world, state);
   const events: SimEvent[] = [];
+  events.push(...reconcileUniqueCabinet(state, world, commandId));
   events.push(...expireClerical(state, commandId));
   events.push(...applyContinuity(world, state, commandId));
   events.push(...npcPresidentWork(state, world, rng, commandId));

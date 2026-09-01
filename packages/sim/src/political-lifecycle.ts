@@ -145,7 +145,9 @@ export function processPoliticalLifecycleMonth(
   for (const politicianId of Object.keys(state.politicians).sort()) {
     if (politicianId === state.playerPoliticianId) continue;
     const politician = state.politicians[politicianId];
-    if (!politician?.alive || politician.retired) continue;
+    // Retirement ends an electoral career, not a life. Retired NPCs remain in
+    // the public record and continue through the ordinary mortality review.
+    if (!politician?.alive) continue;
     const profile = getAgentProfile(world, state, politicianId);
     const age = ageOnDate(profile?.birthDate ?? null, state.currentDate);
     if (age == null || age < 18) continue;
@@ -167,7 +169,7 @@ export function processPoliticalLifecycleMonth(
     // Voluntary retirement is considered only after substantive public office
     // has ended. This prevents an unmodeled vacancy while still renewing the
     // challenger, party, and former-officeholder pools.
-    if (activeTermsForPolitician(state, politicianId).length > 0) continue;
+    if (politician.retired || activeTermsForPolitician(state, politicianId).length > 0) continue;
     // Filing is itself an affirmative commitment to finish the race. A living
     // candidate may retire after the election, but not silently between the
     // filing window and count.

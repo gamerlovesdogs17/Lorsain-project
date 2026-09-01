@@ -123,6 +123,7 @@ import {
 } from "./legislature/procedure.js";
 import { upsertRecommendations } from "./legislature/recommendations.js";
 import { seedCommitteesIfNeeded } from "./legislature/state.js";
+import { reconcileAssemblyVacancies } from "./legislature/vacancies.js";
 import {
   campaignCaucusLeadership,
   declareCaucusLeadershipCandidacy,
@@ -565,6 +566,9 @@ function runTowardTarget(
   // Scheduled assumptions, successions, and vacancies can change Assembly
   // membership after the legislature's monthly pass. Reconcile in the same
   // turn so a save restored on this date is observationally identical.
+  events.push(
+    ...timed("assembly_vacancies", () => reconcileAssemblyVacancies(state, world, commandId)),
+  );
   timed("institution_reconciliation", () => seedCommitteesIfNeeded(world, state));
   const foreignEvents = timed("foreign", () => processForeignAffairsMonth(state, world, rng, commandId));
   events.push(...foreignEvents);

@@ -3,7 +3,7 @@ import type { JsonObject } from "../json.js";
 import { addDays } from "../calendar.js";
 import { monthStart } from "../campaigns/effects.js";
 import { pushHistory } from "../scheduler.js";
-import { assumeOffice, endTerm, occupyingTerms } from "../offices.js";
+import { assumeOffice, canAssumeOffice, endTerm, occupyingTerms } from "../offices.js";
 import { currentAssemblyMemberIds, currentSpeakerId } from "../legislature/state.js";
 import { getAgentProfile } from "../agents/profile.js";
 import type { LegislativeVoteChoice, PolicyItem } from "../legislature/types.js";
@@ -76,6 +76,34 @@ export function appointMinister(
   }
   const holder = state.politicians[args.politicianId];
   if (!holder) return { error: reject("UNKNOWN_POLITICIAN", args.politicianId) };
+  const existingPortfolio = Object.values(state.officeTerms).find((term) => {
+    const heldOffice = world.offices[term.officeId];
+    return (
+      term.holderId === args.politicianId &&
+      (term.status === "active" || term.status === "suspended") &&
+      term.holdingKind === "substantive" &&
+      heldOffice?.kind === "minister"
+    );
+  })?.officeId;
+  if (existingPortfolio) {
+    return {
+      error: reject(
+        "ALREADY_MINISTER",
+        `${args.politicianId} already holds ${existingPortfolio}; one person may hold only one portfolio`,
+      ),
+    };
+  }
+  // Validate before dismissing the incumbent so a rejected appointment cannot
+  // create a vacancy as a side effect.
+  const assumptionError = canAssumeOffice(
+    state,
+    world,
+    args.officeId,
+    args.politicianId,
+    "substantive",
+    { ignoreOfficeCapacity: true },
+  );
+  if (assumptionError) return { error: assumptionError };
   const events: SimEvent[] = [];
   for (const term of occupyingTerms(state, args.officeId)) {
     if (term.status !== "active" && term.status !== "suspended") continue;

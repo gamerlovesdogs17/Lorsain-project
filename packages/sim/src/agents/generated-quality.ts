@@ -62,7 +62,12 @@ export function auditGeneratedPersonQuality(
 
   for (const politician of generated) {
     const profile = state.generatedAgentProfiles[politician.id];
-    const age = ageOnDate(profile?.birthDate ?? null, state.currentDate);
+    const deathDate = politician.alive
+      ? null
+      : state.history
+          .filter((event) => event.type === "POLITICIAN_DIED" && event.actorIds.includes(politician.id))
+          .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))[0]?.date ?? null;
+    const age = ageOnDate(profile?.birthDate ?? null, deathDate ?? state.currentDate);
     const hasOfficeHistory = Object.values(state.officeTerms).some((term) => term.holderId === politician.id);
     const hasElectionHistory = Object.values(state.elections).some(
       (election) => Boolean(election.candidates[politician.id]) ||
