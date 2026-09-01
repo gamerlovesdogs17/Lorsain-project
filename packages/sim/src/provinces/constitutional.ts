@@ -40,6 +40,36 @@ function titleFor(state: SimState, ruleId: ConstitutionalRuleId): string {
   return `${label} Amendment`;
 }
 
+function documentClause(world: KernelWorld, clauseId: string) {
+  for (const article of world.constitutionalDocument?.articles ?? []) {
+    for (const section of article.sections) {
+      const clause = section.clauses.find((row) => row.id === clauseId);
+      if (clause) return { article, section, clause };
+    }
+  }
+  return null;
+}
+
+export function currentConstitutionalClauseText(
+  world: KernelWorld,
+  state: SimState,
+  clauseId: string,
+): string | null {
+  const canonical = documentClause(world, clauseId)?.clause.text ?? null;
+  return Object.values(state.provincialRuntime.constitutionalAmendments)
+    .filter(
+      (amendment) =>
+        amendment.status === "ratified" &&
+        amendment.documentClauseId === clauseId &&
+        typeof amendment.proposedText === "string",
+    )
+    .sort(
+      (a, b) =>
+        (b.enactedDate ?? b.proposedDate).localeCompare(a.enactedDate ?? a.proposedDate) ||
+        b.id.localeCompare(a.id),
+    )[0]?.proposedText ?? canonical;
+}
+
 function clamp(value: number, min = 0, max = 1): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -139,7 +169,9 @@ export function constitutionalSupportScore(
       ? "authority"
       : "economic";
   const ideology = profile?.ideology[axis] ?? (partyId ? world.partyPublicIdeology[partyId]?.[axis] ?? 0 : 0);
-  const direction = amendmentDirection(state, amendment.ruleId, amendment.proposedValue);
+  const direction = amendment.ruleId && amendment.proposedValue != null
+    ? amendmentDirection(state, amendment.ruleId, amendment.proposedValue)
+    : 0;
   const loyalty = profile?.traits.partyLoyalty ?? 0.45 + (stableHash(`${memberId}:constitutional-loyalty`) % 41) / 100;
   const institutionalism = profile?.traits.institutionalism ?? 0.52;
   const presidentId = currentPresidentId(world, state);
@@ -167,7 +199,10 @@ export function constitutionalSupportScore(
     if (amendment.ruleId === "assembly_term_years") provinceInterest += (governance?.politicalCapital ?? 0.5) < 0.35 ? -direction * 0.08 : 0;
   }
   const sponsorCoalition = partyId && sponsorPartyId && partyId === sponsorPartyId ? 0.2 * loyalty : 0;
-  const reformConsensus = (amendment.politicalImpetus - 0.5) * 0.72;
+  const textualResistance = amendment.ruleId == null
+    ? ((amendment.politicalDifficulty ?? 0.6) - 0.45) * 0.75
+    : 0;
+  const reformConsensus = (amendment.politicalImpetus - 0.5) * 0.72 - textualResistance;
   const statusQuo = (institutionalism - 0.5) * (amendment.politicalImpetus < 0.58 ? -0.18 : 0.08);
   const noise = ((stableHash(`${amendment.id}:${provinceId ?? "federal"}:${memberId}:vote`) % 1001) - 500) / 12500;
   return ideology * direction * 0.34 + sponsorCoalition + reformConsensus + statusQuo + institutionalInterest + provinceInterest + noise;
@@ -218,6 +253,70 @@ export function proposeConstitutionalAmendment(
   return {
     amendment,
     events: [pushHistory(state, { date: state.currentDate, type: "CONSTITUTIONAL_AMENDMENT_PROPOSED", importance: 0.86, visibility: "public", actorIds: [actorId], entityIds: [id, ruleId], payload: { amendmentId: id, ruleId, proposedValue, trigger: amendment.proposalTrigger, politicalImpetus: Math.round(amendment.politicalImpetus * 100) / 100 }, sourceScheduledEventId: null, sourceCommandId: commandId })],
+  };
+}
+
+export function proposeConstitutionalTextAmendment(
+  world: KernelWorld,
+  state: SimState,
+  actorId: string,
+  clauseId: string,
+  proposedText: string,
+  commandId: string | null,
+): { amendment: ConstitutionalAmendment; events: SimEvent[] } | { error: CommandError } {
+  if (!isFederalMp(world, state, actorId)) return { error: reject("NOT_ASSEMBLY_MEMBER", actorId) };
+  const entry = documentClause(world, clauseId);
+  if (!entry) return { error: reject("UNKNOWN_CONSTITUTIONAL_CLAUSE", clauseId) };
+  const currentText = currentConstitutionalClauseText(world, state, clauseId);
+  const cleanText = proposedText.replace(/\s+/g, " ").trim();
+  if (cleanText.length < 40 || cleanText.length > 1200) {
+    return { error: reject("INVALID_CONSTITUTIONAL_TEXT", "Replacement text must contain 40 to 1,200 characters.") };
+  }
+  if (cleanText === currentText) return { error: reject("NO_POLICY_CHANGE", clauseId) };
+  const open = Object.values(state.provincialRuntime.constitutionalAmendments).some(
+    (amendment) => amendment.documentClauseId === clauseId && ["proposed", "ratifying"].includes(amendment.status),
+  );
+  if (open) return { error: reject("AMENDMENT_ALREADY_PENDING", clauseId) };
+  const difficulty = entry.clause.amendment_difficulty === "foundational" ? 0.92 : entry.clause.amendment_difficulty === "substantial" ? 0.67 : 0.42;
+  const id = `CAMEND_${String(Object.keys(state.provincialRuntime.constitutionalAmendments).length + 1).padStart(4, "0")}`;
+  const amendment: ConstitutionalAmendment = {
+    id,
+    title: `Article ${entry.article.number}, Section ${entry.section.number} Amendment`,
+    summary: `Replaces clause ${entry.clause.number} of ${entry.section.title}.`,
+    sponsorId: actorId,
+    proposedDate: state.currentDate,
+    ruleId: null,
+    proposedValue: null,
+    documentClauseId: clauseId,
+    currentText,
+    proposedText: cleanText,
+    politicalDifficulty: difficulty,
+    proposalTrigger: actorId === state.playerPoliticianId ? "player_sponsorship" : "reform_movement",
+    politicalImpetus: clamp(0.72 - difficulty * 0.38),
+    status: "proposed",
+    assemblyVoteId: null,
+    assemblyVotes: {},
+    assemblyYes: 0,
+    ratificationDeadline: null,
+    provincialVoteIds: {},
+    ratifiedProvinceIds: [],
+    rejectedProvinceIds: [],
+    enactedDate: null,
+  };
+  state.provincialRuntime.constitutionalAmendments[id] = amendment;
+  return {
+    amendment,
+    events: [pushHistory(state, {
+      date: state.currentDate,
+      type: "CONSTITUTIONAL_AMENDMENT_PROPOSED",
+      importance: 0.9,
+      visibility: "public",
+      actorIds: [actorId],
+      entityIds: [id, clauseId],
+      payload: { amendmentId: id, clauseId, trigger: amendment.proposalTrigger, scope: entry.clause.amendment_difficulty },
+      sourceScheduledEventId: null,
+      sourceCommandId: commandId,
+    })],
   };
 }
 
@@ -392,13 +491,13 @@ export function processConstitutionalAmendmentsMonth(
     if (amendment.ratifiedProvinceIds.length >= 13) {
       amendment.status = "ratified";
       amendment.enactedDate = state.currentDate;
-      const rule = state.provincialRuntime.constitutionalRules[amendment.ruleId];
-      if (rule) {
+      const rule = amendment.ruleId ? state.provincialRuntime.constitutionalRules[amendment.ruleId] : null;
+      if (rule && amendment.proposedValue != null) {
         rule.value = amendment.proposedValue;
         rule.amendedDate = state.currentDate;
         rule.sourceAmendmentId = amendment.id;
       }
-      events.push(pushHistory(state, { date: state.currentDate, type: "CONSTITUTIONAL_AMENDMENT_RATIFIED", importance: 1, visibility: "public", actorIds: [amendment.sponsorId], entityIds: [amendment.id, amendment.ruleId], payload: { amendmentId: amendment.id, ruleId: amendment.ruleId, value: amendment.proposedValue, ratifyingProvinces: amendment.ratifiedProvinceIds.length }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+      events.push(pushHistory(state, { date: state.currentDate, type: "CONSTITUTIONAL_AMENDMENT_RATIFIED", importance: 1, visibility: "public", actorIds: [amendment.sponsorId], entityIds: [amendment.id, ...(amendment.ruleId ? [amendment.ruleId] : amendment.documentClauseId ? [amendment.documentClauseId] : [])], payload: { amendmentId: amendment.id, ...(amendment.ruleId ? { ruleId: amendment.ruleId, value: amendment.proposedValue ?? 0 } : { clauseId: amendment.documentClauseId ?? "unrecorded" }), ratifyingProvinces: amendment.ratifiedProvinceIds.length }, sourceScheduledEventId: null, sourceCommandId: commandId }));
     } else if (unvoted.length === 0 || (amendment.ratificationDeadline && compareIsoDate(state.currentDate, amendment.ratificationDeadline) >= 0)) {
       amendment.status = "failed";
       events.push(pushHistory(state, { date: state.currentDate, type: "CONSTITUTIONAL_AMENDMENT_FAILED", importance: 0.82, visibility: "public", actorIds: [amendment.sponsorId], entityIds: [amendment.id], payload: { amendmentId: amendment.id, stage: "provincial_ratification", ratifyingProvinces: amendment.ratifiedProvinceIds.length, required: 13 }, sourceScheduledEventId: null, sourceCommandId: commandId }));

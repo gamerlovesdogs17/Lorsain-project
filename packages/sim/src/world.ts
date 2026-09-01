@@ -156,6 +156,7 @@ export type TerenaKernelInput = {
       };
       president_elect_before_assumption?: { president_elect_becomes_acting_within_days?: number };
     };
+    document?: KernelWorld["constitutionalDocument"];
   };
   administrations?: Array<{
     id: string;
@@ -737,6 +738,7 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
       recallReferralFraction: input.constitution.recall?.assembly_referral_fraction ?? 0.6,
       recallVoteDays: 60,
     },
+    ...(input.constitution.document ? { constitutionalDocument: input.constitution.document } : {}),
     interestOrganizations: Object.fromEntries(
       (input.organizations ?? []).map((o) => [
         o.id,

@@ -59,6 +59,12 @@ export function featureId(feature: GeoJsonFeature): string {
 export function featureName(feature: GeoJsonFeature): string {
   const props = feature.properties ?? {};
   if (typeof props.name === "string" && props.name.length > 0) return props.name;
+  if (typeof props.district_number === "number" && Number.isFinite(props.district_number)) {
+    const province = typeof props.plurality_province_name === "string" && props.plurality_province_name.length > 0
+      ? ` (${props.plurality_province_name})`
+      : "";
+    return `Constituency ${props.district_number}${province}`;
+  }
   return featureId(feature);
 }
 

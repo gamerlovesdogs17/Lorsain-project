@@ -1640,3 +1640,35 @@ export function migrateSaveV15ToV16(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 15, toSchema: 16, migrate: migrateSaveV15ToV16 });
+
+/**
+ * Schema 17 records clause-targeted constitutional text amendments. Existing
+ * numeric amendments remain exactly as written and gain explicit null document
+ * fields; no historical amendment or vote is fabricated.
+ */
+export function migrateSaveV16ToV17(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 17 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 17 };
+  const provincial = isRecord(sim.provincialRuntime) ? { ...sim.provincialRuntime } : {};
+  const amendments: Record<string, unknown> = {};
+  if (isRecord(provincial.constitutionalAmendments)) {
+    for (const [id, value] of Object.entries(provincial.constitutionalAmendments)) {
+      amendments[id] = isRecord(value)
+        ? {
+            ...value,
+            documentClauseId: typeof value.documentClauseId === "string" ? value.documentClauseId : null,
+            currentText: typeof value.currentText === "string" ? value.currentText : null,
+            proposedText: typeof value.proposedText === "string" ? value.proposedText : null,
+            politicalDifficulty: typeof value.politicalDifficulty === "number" ? value.politicalDifficulty : 0.5,
+          }
+        : value;
+    }
+  }
+  sim.provincialRuntime = { ...provincial, constitutionalAmendments: amendments };
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 16, toSchema: 17, migrate: migrateSaveV16ToV17 });

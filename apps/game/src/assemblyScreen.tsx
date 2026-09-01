@@ -75,6 +75,30 @@ const ORIGINAL_CONSTITUTIONAL_VALUES: Record<(typeof CONSTITUTIONAL_RULE_IDS)[nu
   veto_override_fraction: 2 / 3,
 };
 
+type ConstitutionClause = NonNullable<KernelWorld["constitutionalDocument"]>["articles"][number]["sections"][number]["clauses"][number];
+
+function fractionWords(value: number): string {
+  if (Math.abs(value - 0.6) < 0.0001) return "three fifths";
+  if (Math.abs(value - 2 / 3) < 0.0001) return "two thirds";
+  if (Math.abs(value - 0.75) < 0.0001) return "three quarters";
+  return `${Math.round(value * 100)} percent`;
+}
+
+function currentClauseText(snap: SimState, clause: ConstitutionClause): string {
+  const latestText = Object.values(snap.provincialRuntime.constitutionalAmendments)
+    .filter((amendment) => amendment.status === "ratified" && amendment.documentClauseId === clause.id && typeof amendment.proposedText === "string")
+    .sort((a, b) => (b.enactedDate ?? b.proposedDate).localeCompare(a.enactedDate ?? a.proposedDate) || b.id.localeCompare(a.id))[0]?.proposedText;
+  let text = latestText ?? clause.text;
+  if (!clause.runtime_rule_id) return text;
+  const value = snap.provincialRuntime.constitutionalRules[clause.runtime_rule_id]?.value;
+  if (value == null) return text;
+  if (clause.runtime_rule_id === "assembly_term_years") text = text.replace(/ordinary term of the National Assembly is \w+ years/i, `ordinary term of the National Assembly is ${value} years`);
+  if (clause.runtime_rule_id === "presidential_term_limit") text = text.replace(/elected President more than \w+ times/i, `elected President more than ${value} times`);
+  if (clause.runtime_rule_id === "court_term_years") text = text.replace(/term of \w+ years/i, `term of ${value} years`);
+  if (clause.runtime_rule_id === "veto_override_fraction") text = text.replace(/fixed at [^,]+ unless amended/i, `fixed at ${fractionWords(value)} unless amended`);
+  return text;
+}
+
 function AssemblyHemicycle(props: {
   world: KernelWorld;
   snap: SimState;
@@ -220,6 +244,12 @@ export function AssemblyPage(props: {
   const [lawQuery, setLawQuery] = useState("");
   const [amendmentRule, setAmendmentRule] = useState<(typeof CONSTITUTIONAL_RULE_IDS)[number]>("assembly_term_years");
   const [amendmentValue, setAmendmentValue] = useState<number>(5);
+  const constitutionDocument = props.world.constitutionalDocument;
+  const [selectedConstitutionArticleId, setSelectedConstitutionArticleId] = useState(constitutionDocument?.articles[0]?.id ?? "");
+  const [selectedConstitutionClauseId, setSelectedConstitutionClauseId] = useState(constitutionDocument?.articles[0]?.sections[0]?.clauses[0]?.id ?? "");
+  const [constitutionalDraftText, setConstitutionalDraftText] = useState("");
+  const selectedConstitutionArticle = constitutionDocument?.articles.find((article) => article.id === selectedConstitutionArticleId) ?? constitutionDocument?.articles[0] ?? null;
+  const selectedConstitutionClause = selectedConstitutionArticle?.sections.flatMap((section) => section.clauses).find((clause) => clause.id === selectedConstitutionClauseId) ?? selectedConstitutionArticle?.sections[0]?.clauses[0] ?? null;
 
   const mps = currentAssemblyMemberIds(props.world, props.snap);
   const seatCount = props.world.legislativeConstitution.assemblySeatCount;
@@ -526,7 +556,7 @@ export function AssemblyPage(props: {
                 {Object.values(props.snap.provincialRuntime.constitutionalAmendments).length === 0 ? <p className="muted">No amendment is currently before the institutions.</p> : null}
                 {Object.values(props.snap.provincialRuntime.constitutionalAmendments).sort((a, b) => b.proposedDate.localeCompare(a.proposedDate)).slice(0, 8).map((amendment) => (
                   <div className="constitutional-tracker" key={amendment.id}>
-                    <div><strong>{amendment.title}</strong><p>{amendment.summary}</p></div>
+                    <div><strong>{amendment.title}</strong><p>{amendment.summary}</p>{amendment.currentText && amendment.proposedText ? <div className="constitutional-redline compact"><div><span>Current</span><del>{amendment.currentText}</del></div><div><span>Proposed</span><ins>{amendment.proposedText}</ins></div></div> : null}</div>
                     <div className="constitutional-progress"><span>Assembly {amendment.assemblyYes}/280</span><strong>{amendment.ratifiedProvinceIds.length} / 13 ratified</strong><StatusBadge tone={amendment.status === "ratified" ? "ok" : amendment.status.includes("failed") ? "warn" : "idle"}>{amendment.status.replace(/_/g, " ")}</StatusBadge></div>
                     <details className="constitutional-provinces">
                       <summary>Ratification map and accessible record · 21 Assemblies</summary>
@@ -1117,36 +1147,64 @@ export function AssemblyPage(props: {
 
             {chamberTab === "lawbook" ? (
               <>
-                <SectionDivider title="Constitution of Terena" hint="Current operative rules" />
-                <DataTable headers={["Rule", "Current value", "Last amended"]} dense>
-                  {Object.values(props.snap.provincialRuntime.constitutionalRules)
-                    .sort((a, b) => a.label.localeCompare(b.label))
-                    .map((rule) => (
-                      <tr key={rule.id}>
-                        <td>{rule.label}</td>
-                        <td>{rule.unit === "fraction" ? `${Math.round(rule.value * 100)}%` : `${rule.value} ${rule.unit}`}</td>
-                        <td>{rule.amendedDate ?? "Founding text"}</td>
-                      </tr>
-                    ))}
-                </DataTable>
+                <SectionDivider title="Constitution of the Republic of Terena" hint={`${constitutionDocument?.articles.length ?? 0} Articles · current annotated text`} />
+                {constitutionDocument ? <div className="constitution-browser">
+                  <aside className="constitution-toc" aria-label="Constitution table of contents">
+                    <div className="constitution-seal">TERENA<br /><small>1971</small></div>
+                    <strong>Contents</strong>
+                    {constitutionDocument.articles.map((article) => <button type="button" className={selectedConstitutionArticle?.id === article.id ? "active" : ""} key={article.id} onClick={() => {
+                      setSelectedConstitutionArticleId(article.id);
+                      setSelectedConstitutionClauseId(article.sections[0]?.clauses[0]?.id ?? "");
+                      setConstitutionalDraftText("");
+                    }}><span>Article {article.number}</span>{article.title}</button>)}
+                  </aside>
+                  <article className="constitution-document">
+                    <header>
+                      <div className="kicker">Supreme law · effective 1 July 1971</div>
+                      <h2>{constitutionDocument.title}</h2>
+                      {selectedConstitutionArticle?.id === constitutionDocument.articles[0]?.id ? <p className="constitution-preamble"><strong>Preamble</strong>{constitutionDocument.preamble}</p> : null}
+                    </header>
+                    {selectedConstitutionArticle ? <>
+                      <div className="constitution-article-heading"><span>ARTICLE {selectedConstitutionArticle.number}</span><h3>{selectedConstitutionArticle.title}</h3></div>
+                      {selectedConstitutionArticle.sections.map((section) => <section className="constitution-section" key={section.id}>
+                        <h4>Section {section.number}. {section.title}</h4>
+                        {section.clauses.map((clause) => {
+                          const currentText = currentClauseText(props.snap, clause);
+                          const amendments = Object.values(props.snap.provincialRuntime.constitutionalAmendments).filter((amendment) => amendment.status === "ratified" && (amendment.documentClauseId === clause.id || amendment.ruleId === clause.runtime_rule_id));
+                          return <button type="button" className={`constitution-clause${selectedConstitutionClause?.id === clause.id ? " selected" : ""}`} key={clause.id} onClick={() => { setSelectedConstitutionClauseId(clause.id); setConstitutionalDraftText(""); }}>
+                            <span className="clause-number">({clause.number})</span><span>{currentText}</span>
+                            <small>{amendments.length ? `${amendments.length} adopted amendment${amendments.length === 1 ? "" : "s"}` : "Founding text"}</small>
+                          </button>;
+                        })}
+                      </section>)}
+                    </> : null}
+                  </article>
+                  <aside className="constitution-annotation">
+                    {selectedConstitutionClause ? <>
+                      <div className="kicker">Selected provision</div>
+                      <h3>{selectedConstitutionArticle?.title}</h3>
+                      <p>{currentClauseText(props.snap, selectedConstitutionClause)}</p>
+                      <div className="constitutional-scope"><span>Political resistance</span><strong>{selectedConstitutionClause.amendment_difficulty === "ordinary" ? "Ordinary" : selectedConstitutionClause.amendment_difficulty === "substantial" ? "Substantial" : "Foundational"}</strong></div>
+                      {selectedConstitutionClause.runtime_rule_id ? <div className="constitution-runtime-note">This clause governs the live <strong>{props.snap.provincialRuntime.constitutionalRules[selectedConstitutionClause.runtime_rule_id]?.label}</strong> rule.</div> : <div className="constitution-runtime-note">This clause is part of the legal text. It has no separate numeric runtime switch.</div>}
+                      {Object.values(props.snap.provincialRuntime.constitutionalAmendments).filter((amendment) => amendment.documentClauseId === selectedConstitutionClause.id || amendment.ruleId === selectedConstitutionClause.runtime_rule_id).map((amendment) => <div className="constitution-annotation-amendment" key={amendment.id}><strong>{amendment.title}</strong><span>{amendment.status.replace(/_/g, " ")} · {amendment.enactedDate ?? amendment.proposedDate}</span></div>)}
+                      {mp ? <div className="constitution-draft-panel">
+                        <label>Proposed replacement text<textarea value={constitutionalDraftText} onChange={(event) => setConstitutionalDraftText(event.target.value)} placeholder={currentClauseText(props.snap, selectedConstitutionClause)} rows={7} /></label>
+                        {constitutionalDraftText.trim() ? <div className="constitutional-redline"><div><span>Current</span><del>{currentClauseText(props.snap, selectedConstitutionClause)}</del></div><div><span>Proposed</span><ins>{constitutionalDraftText.trim()}</ins></div></div> : null}
+                        <button type="button" className="btn" disabled={constitutionalDraftText.trim().length < 40} onClick={() => { run({ type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT", clauseId: selectedConstitutionClause.id, proposedText: constitutionalDraftText }); setConstitutionalDraftText(""); }}>Introduce amendment</button>
+                        <small>Formal threshold remains 280 Assembly votes and 13 Provincial Assemblies. Political resistance changes support, not the constitutional threshold.</small>
+                      </div> : <p className="muted">Only a sitting National Assembly member may introduce an amendment.</p>}
+                    </> : null}
+                  </aside>
+                </div> : <p className="muted">The structured constitutional document is unavailable.</p>}
+
+                <SectionDivider title="Constitutional rule history" hint="Founding values and adopted operational amendments" />
                 <div className="constitution-history-list">
-                  {Object.values(props.snap.provincialRuntime.constitutionalRules)
-                    .sort((a, b) => a.label.localeCompare(b.label))
-                    .map((rule) => {
-                      const original = ORIGINAL_CONSTITUTIONAL_VALUES[rule.id];
-                      const amendments = Object.values(props.snap.provincialRuntime.constitutionalAmendments)
-                        .filter((amendment) => amendment.ruleId === rule.id && amendment.status === "ratified")
-                        .sort((a, b) => a.proposedDate.localeCompare(b.proposedDate) || a.id.localeCompare(b.id));
-                      const formatValue = (value: number) => rule.unit === "fraction" ? `${Math.round(value * 100)}%` : `${value} ${rule.unit}`;
-                      return <article key={`${rule.id}:history`} className="constitution-history-row">
-                        <strong>{rule.label}</strong>
-                        <div className="constitution-history-chain">
-                          <span>Founding text: {formatValue(original)}</span>
-                          {amendments.map((amendment) => <span key={amendment.id}>→ {amendment.title}: {formatValue(amendment.proposedValue)} ({amendment.enactedDate ?? amendment.proposedDate})</span>)}
-                          {amendments.length === 0 ? <span>→ Current rule unchanged</span> : <span>→ Current: {formatValue(rule.value)}</span>}
-                        </div>
-                      </article>;
-                    })}
+                  {Object.values(props.snap.provincialRuntime.constitutionalRules).sort((a, b) => a.label.localeCompare(b.label)).map((rule) => {
+                    const original = ORIGINAL_CONSTITUTIONAL_VALUES[rule.id];
+                    const amendments = Object.values(props.snap.provincialRuntime.constitutionalAmendments).filter((amendment) => amendment.ruleId === rule.id && amendment.status === "ratified").sort((a, b) => a.proposedDate.localeCompare(b.proposedDate) || a.id.localeCompare(b.id));
+                    const formatValue = (value: number) => rule.unit === "fraction" ? `${Math.round(value * 100)}%` : `${value} ${rule.unit}`;
+                    return <article key={`${rule.id}:history`} className="constitution-history-row"><strong>{rule.label}</strong><div className="constitution-history-chain"><span>Founding: {formatValue(original)}</span>{amendments.map((amendment) => <span key={amendment.id}>→ {amendment.title}: {amendment.proposedValue == null ? "text amended" : formatValue(amendment.proposedValue)} ({amendment.enactedDate ?? amendment.proposedDate})</span>)}{amendments.length === 0 ? <span>→ Current rule unchanged</span> : <span>→ Current: {formatValue(rule.value)}</span>}</div></article>;
+                  })}
                 </div>
 
                 <SectionDivider title="Current statutory position" hint="Concrete policy categories in force" />

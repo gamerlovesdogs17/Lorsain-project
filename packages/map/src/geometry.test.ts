@@ -23,6 +23,7 @@ describe("derived Terena map geometry", () => {
     expect(citiesFile.cities).toHaveLength(18);
     expect(prepared.provinces).toHaveLength(21);
     expect(prepared.constituencies).toHaveLength(48);
+    expect(prepared.constituencies[0]?.name).toBe("Constituency 1 (Darsen)");
     expect(prepared.cities).toHaveLength(18);
     expect(prepared.provinces.every((p) => p.path.startsWith("M"))).toBe(true);
     expect(prepared.constituencies.every((p) => p.path.startsWith("M"))).toBe(true);

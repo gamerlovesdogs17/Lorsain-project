@@ -2,6 +2,236 @@
   "country_id": "TER",
   "effective_date": "1971-07-01",
   "system_name": "Dual-Mandate Republic",
+  "document": {
+    "title": "Constitution of the Republic of Terena",
+    "preamble": "We, the people of Terena, joined in equal citizenship across our provinces and communities, establish this Republic so that public authority may be democratic, lawful and answerable; so that liberty and social peace may be secured; and so that each generation may govern through institutions worthy of its trust.",
+    "articles": [
+      {
+        "id": "ARTICLE_I",
+        "number": "I",
+        "title": "The Republic and Popular Sovereignty",
+        "sections": [
+          { "id": "ARTICLE_I_SECTION_1", "number": "1", "title": "The Republic", "clauses": [
+            { "id": "ART_I_S1_C1", "number": "1", "text": "Terena is a sovereign, democratic and indivisible republic founded upon the equal dignity of its people and the rule of law.", "amendment_difficulty": "foundational" },
+            { "id": "ART_I_S1_C2", "number": "2", "text": "No person or institution may exercise public authority except under this Constitution and laws made pursuant to it.", "amendment_difficulty": "foundational" }
+          ]},
+          { "id": "ARTICLE_I_SECTION_2", "number": "2", "title": "Sovereignty", "clauses": [
+            { "id": "ART_I_S2_C1", "number": "1", "text": "Sovereignty belongs to the people, who exercise it through elections, representative institutions and the procedures established by this Constitution.", "amendment_difficulty": "foundational" },
+            { "id": "ART_I_S2_C2", "number": "2", "text": "The Constitution is the supreme law. An act inconsistent with it has no force to the extent of the inconsistency.", "amendment_difficulty": "foundational" }
+          ]},
+          { "id": "ARTICLE_I_SECTION_3", "number": "3", "title": "Public service", "clauses": [
+            { "id": "ART_I_S3_C1", "number": "1", "text": "Public office is a trust. Its powers shall be exercised for public purposes, with reasons and records where law requires them.", "amendment_difficulty": "substantial" },
+            { "id": "ART_I_S3_C2", "number": "2", "text": "Civil authority is supreme over every armed or security service of the Republic.", "amendment_difficulty": "foundational" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_II",
+        "number": "II",
+        "title": "Citizenship, Rights and Liberties",
+        "sections": [
+          { "id": "ARTICLE_II_SECTION_1", "number": "1", "title": "Citizenship and equality", "clauses": [
+            { "id": "ART_II_S1_C1", "number": "1", "text": "Citizenship of Terena is acquired and retained under law. No citizen may be arbitrarily deprived of citizenship or exiled from the Republic.", "amendment_difficulty": "foundational" },
+            { "id": "ART_II_S1_C2", "number": "2", "text": "Every person is equal before and under the law and is entitled to its equal protection without unjust discrimination.", "amendment_difficulty": "foundational" }
+          ]},
+          { "id": "ARTICLE_II_SECTION_2", "number": "2", "title": "Civil and political liberties", "clauses": [
+            { "id": "ART_II_S2_C1", "number": "1", "text": "Every person has freedom of conscience, religion, expression, peaceful assembly and association, subject only to reasonable limits prescribed by law and demonstrably necessary in a democratic society.", "amendment_difficulty": "foundational" },
+            { "id": "ART_II_S2_C2", "number": "2", "text": "The press and other public media are free. Prior restraint may be imposed only by a court under a law protecting an immediate and grave public interest.", "amendment_difficulty": "foundational" },
+            { "id": "ART_II_S2_C3", "number": "3", "text": "Every citizen of voting age has the right to vote by secret ballot, to seek public office subject to reasonable qualifications, and to take part in political parties and civic organizations.", "amendment_difficulty": "foundational" }
+          ]},
+          { "id": "ARTICLE_II_SECTION_3", "number": "3", "title": "Justice and private life", "clauses": [
+            { "id": "ART_II_S3_C1", "number": "1", "text": "No person shall be deprived of liberty except according to law, and every detained person has prompt access to a court and to counsel.", "amendment_difficulty": "foundational" },
+            { "id": "ART_II_S3_C2", "number": "2", "text": "Every person charged with an offense is presumed innocent and is entitled to a fair and public hearing before an independent court.", "amendment_difficulty": "foundational" },
+            { "id": "ART_II_S3_C3", "number": "3", "text": "The home, correspondence, personal information and family life of every person are protected against arbitrary interference.", "amendment_difficulty": "foundational" }
+          ]},
+          { "id": "ARTICLE_II_SECTION_4", "number": "4", "title": "Social obligation", "clauses": [
+            { "id": "ART_II_S4_C1", "number": "1", "text": "The Republic shall pursue access to education, health, shelter and social security through laws and resources approved by the National Assembly.", "amendment_difficulty": "substantial" },
+            { "id": "ART_II_S4_C2", "number": "2", "text": "Property is protected. It may be regulated in the public interest and taken only under law for a public purpose with just compensation.", "amendment_difficulty": "substantial" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_III",
+        "number": "III",
+        "title": "The President",
+        "sections": [
+          { "id": "ARTICLE_III_SECTION_1", "number": "1", "title": "Office and election", "clauses": [
+            { "id": "ART_III_S1_C1", "number": "1", "text": "The President is Head of State and chief executive of the Republic and shall faithfully execute this Constitution and the laws.", "amendment_difficulty": "foundational" },
+            { "id": "ART_III_S1_C2", "number": "2", "text": "The President is elected by the people in a national ranked-choice ballot for a term of five years.", "amendment_difficulty": "foundational" },
+            { "id": "ART_III_S1_C3", "number": "3", "text": "No person may be elected President more than two times. Acting service does not constitute an elected term.", "amendment_difficulty": "substantial", "runtime_rule_id": "presidential_term_limit" }
+          ]},
+          { "id": "ARTICLE_III_SECTION_2", "number": "2", "title": "Powers and limits", "clauses": [
+            { "id": "ART_III_S2_C1", "number": "1", "text": "The President appoints and dismisses Ministers, directs the executive administration, conducts foreign relations and serves as commander in chief, subject to this Constitution and law.", "amendment_difficulty": "substantial" },
+            { "id": "ART_III_S2_C2", "number": "2", "text": "The President may not dissolve the National Assembly.", "amendment_difficulty": "substantial" },
+            { "id": "ART_III_S2_C3", "number": "3", "text": "The President may return an ordinary bill once with objections, but may not permanently veto legislation repassed under Article V.", "amendment_difficulty": "substantial" }
+          ]},
+          { "id": "ARTICLE_III_SECTION_3", "number": "3", "title": "Vacancy and succession", "clauses": [
+            { "id": "ART_III_S3_C1", "number": "1", "text": "Upon a permanent vacancy, presidential authority passes in order to the Speaker of the National Assembly, the Minister of Justice, the Minister of Finance and the Minister of Foreign Affairs, each serving as Acting President while available.", "amendment_difficulty": "substantial" },
+            { "id": "ART_III_S3_C2", "number": "2", "text": "A special national ranked-choice election shall be held within ninety days when more than one hundred eighty days remain before the regular election. Its winner serves the remainder of the regular term and does not reset the constitutional calendar.", "amendment_difficulty": "substantial" },
+            { "id": "ART_III_S3_C3", "number": "3", "text": "A certified President-elect becomes Acting President within seven days if a permanent vacancy occurs before assumption, and begins the regular term on 20 January.", "amendment_difficulty": "ordinary" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_IV",
+        "number": "IV",
+        "title": "The National Assembly",
+        "sections": [
+          { "id": "ARTICLE_IV_SECTION_1", "number": "1", "title": "Composition and election", "clauses": [
+            { "id": "ART_IV_S1_C1", "number": "1", "text": "Legislative power is vested in a National Assembly of four hundred twenty members elected from forty-eight multi-member constituencies by the single transferable vote.", "amendment_difficulty": "foundational" },
+            { "id": "ART_IV_S1_C2", "number": "2", "text": "The ordinary term of the National Assembly is four years. Members remain in office until their successors assume office on 1 June following the election.", "amendment_difficulty": "substantial", "runtime_rule_id": "assembly_term_years" }
+          ]},
+          { "id": "ARTICLE_IV_SECTION_2", "number": "2", "title": "Organization", "clauses": [
+            { "id": "ART_IV_S2_C1", "number": "1", "text": "The Assembly elects a Speaker and may establish committees, rules of debate and a public legislative calendar.", "amendment_difficulty": "ordinary" },
+            { "id": "ART_IV_S2_C2", "number": "2", "text": "The Speaker schedules eligible business under fair rules that preserve a reasonable opportunity for deliberation and decision.", "amendment_difficulty": "ordinary" },
+            { "id": "ART_IV_S2_C3", "number": "3", "text": "Proceedings and recorded votes are public except where a narrowly defined security interest requires a closed sitting under law.", "amendment_difficulty": "substantial" }
+          ]},
+          { "id": "ARTICLE_IV_SECTION_3", "number": "3", "title": "Members", "clauses": [
+            { "id": "ART_IV_S3_C1", "number": "1", "text": "A member represents the Republic and the member's constituency and may not be bound by an enforceable private instruction concerning a vote.", "amendment_difficulty": "substantial" },
+            { "id": "ART_IV_S3_C2", "number": "2", "text": "Members are immune from legal liability for words spoken and votes cast in Assembly proceedings, without immunity for corruption or other crime.", "amendment_difficulty": "substantial" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_V",
+        "number": "V",
+        "title": "Legislation and Executive Accountability",
+        "sections": [
+          { "id": "ARTICLE_V_SECTION_1", "number": "1", "title": "Bills", "clauses": [
+            { "id": "ART_V_S1_C1", "number": "1", "text": "A bill becomes law when passed by the National Assembly and signed by the President, or when repassed after a presidential return as this Article provides.", "amendment_difficulty": "substantial" },
+            { "id": "ART_V_S1_C2", "number": "2", "text": "After a presidential return, the Assembly may repass the bill by the constitutional override threshold, fixed at two thirds unless amended under Article XII.", "amendment_difficulty": "substantial", "runtime_rule_id": "veto_override_fraction" },
+            { "id": "ART_V_S1_C3", "number": "3", "text": "The President has no veto or signature authority over an amendment to this Constitution.", "amendment_difficulty": "foundational" }
+          ]},
+          { "id": "ARTICLE_V_SECTION_2", "number": "2", "title": "Executive instruments", "clauses": [
+            { "id": "ART_V_S2_C1", "number": "1", "text": "Executive regulations must rest on statutory authority, be published, and remain subject to judicial review and annulment by the Assembly during the period fixed by law.", "amendment_difficulty": "ordinary" },
+            { "id": "ART_V_S2_C2", "number": "2", "text": "The Assembly may remove an individual Minister by the censure threshold established by law.", "amendment_difficulty": "ordinary" }
+          ]},
+          { "id": "ARTICLE_V_SECTION_3", "number": "3", "title": "Removal and recall", "clauses": [
+            { "id": "ART_V_S3_C1", "number": "1", "text": "The Assembly may impeach the President or another constitutional officer by a two-thirds vote for grave constitutional misconduct, subject to judgment by the Constitutional Court.", "amendment_difficulty": "foundational" },
+            { "id": "ART_V_S3_C2", "number": "2", "text": "A national recall of the President requires referral by three fifths of the Assembly and approval in a national vote.", "amendment_difficulty": "substantial" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_VI",
+        "number": "VI",
+        "title": "The Cabinet and Public Administration",
+        "sections": [
+          { "id": "ARTICLE_VI_SECTION_1", "number": "1", "title": "Cabinet", "clauses": [
+            { "id": "ART_VI_S1_C1", "number": "1", "text": "The Cabinet consists of Ministers appointed by the President to administer the departments established by law and to advise the President.", "amendment_difficulty": "ordinary" },
+            { "id": "ART_VI_S1_C2", "number": "2", "text": "A Minister exercises only authority delegated by this Constitution, statute or lawful presidential direction and remains answerable to the Assembly for administration of that authority.", "amendment_difficulty": "substantial" }
+          ]},
+          { "id": "ARTICLE_VI_SECTION_2", "number": "2", "title": "Administration", "clauses": [
+            { "id": "ART_VI_S2_C1", "number": "1", "text": "The civil service shall be professional, politically impartial in administration and recruited under fair public rules.", "amendment_difficulty": "substantial" },
+            { "id": "ART_VI_S2_C2", "number": "2", "text": "Administrative action affecting a person or organization is subject to reasons, review and remedy as provided by law.", "amendment_difficulty": "substantial" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_VII",
+        "number": "VII",
+        "title": "Elections and Political Parties",
+        "sections": [
+          { "id": "ARTICLE_VII_SECTION_1", "number": "1", "title": "Electoral administration", "clauses": [
+            { "id": "ART_VII_S1_C1", "number": "1", "text": "Elections shall be administered by an independent National Electoral Commission under public and reviewable rules.", "amendment_difficulty": "foundational" },
+            { "id": "ART_VII_S1_C2", "number": "2", "text": "Constituency boundaries are reviewed at least every ten years with equal population as the first consideration. They may cross provincial boundaries when necessary for fair representation.", "amendment_difficulty": "substantial" },
+            { "id": "ART_VII_S1_C3", "number": "3", "text": "Regular presidential elections occur on the second Saturday of October every five years; regular National Assembly elections occur on the second Sunday of May every four years.", "amendment_difficulty": "substantial" }
+          ]},
+          { "id": "ARTICLE_VII_SECTION_2", "number": "2", "title": "Political parties", "clauses": [
+            { "id": "ART_VII_S2_C1", "number": "1", "text": "Citizens may form democratic political parties and internal caucuses. Their rules, leadership and public finances shall meet standards of disclosure established by law.", "amendment_difficulty": "substantial" },
+            { "id": "ART_VII_S2_C2", "number": "2", "text": "The state shall not prescribe a party's political platform or compel a member to remain in a party or caucus.", "amendment_difficulty": "foundational" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_VIII",
+        "number": "VIII",
+        "title": "The Judiciary and Constitutional Court",
+        "sections": [
+          { "id": "ARTICLE_VIII_SECTION_1", "number": "1", "title": "Judicial power", "clauses": [
+            { "id": "ART_VIII_S1_C1", "number": "1", "text": "Judicial power is exercised by independent courts established under this Constitution and law. Judges are subject only to law and the judicial oath.", "amendment_difficulty": "foundational" },
+            { "id": "ART_VIII_S1_C2", "number": "2", "text": "Every person has access to an effective remedy for unlawful public action.", "amendment_difficulty": "foundational" }
+          ]},
+          { "id": "ARTICLE_VIII_SECTION_2", "number": "2", "title": "Constitutional Court", "clauses": [
+            { "id": "ART_VIII_S2_C1", "number": "1", "text": "The Constitutional Court consists of nine Justices appointed by the President and confirmed by three fifths of the National Assembly.", "amendment_difficulty": "foundational" },
+            { "id": "ART_VIII_S2_C2", "number": "2", "text": "A Justice serves one nonrenewable term of twelve years and may hold no party membership while serving.", "amendment_difficulty": "substantial", "runtime_rule_id": "court_term_years" },
+            { "id": "ART_VIII_S2_C3", "number": "3", "text": "The Court decides constitutional disputes, reviews laws and executive acts, judges impeachment charges and provides expedited review of emergency authority.", "amendment_difficulty": "foundational" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_IX",
+        "number": "IX",
+        "title": "Provinces and Local Government",
+        "sections": [
+          { "id": "ARTICLE_IX_SECTION_1", "number": "1", "title": "Provincial government", "clauses": [
+            { "id": "ART_IX_S1_C1", "number": "1", "text": "The Republic comprises twenty-one provinces, each governed by an elected Governor and a representative Provincial Assembly under this Constitution and law.", "amendment_difficulty": "foundational" },
+            { "id": "ART_IX_S1_C2", "number": "2", "text": "Provincial institutions direct administration, investment priorities and legislation within provincial competence without exercising the sovereign powers reserved to the Republic.", "amendment_difficulty": "substantial" }
+          ]},
+          { "id": "ARTICLE_IX_SECTION_2", "number": "2", "title": "Division of powers", "clauses": [
+            { "id": "ART_IX_S2_C1", "number": "1", "text": "National law prevails within national competence. The Constitutional Court resolves disputes concerning the division of national and provincial authority.", "amendment_difficulty": "foundational" },
+            { "id": "ART_IX_S2_C2", "number": "2", "text": "The Republic shall consult affected provinces on national measures that materially alter provincial administration or finance.", "amendment_difficulty": "ordinary" }
+          ]},
+          { "id": "ARTICLE_IX_SECTION_3", "number": "3", "title": "Municipalities", "clauses": [
+            { "id": "ART_IX_S3_C1", "number": "1", "text": "Municipalities exercise local authority under national and provincial law through elected institutions, including Mayors where law provides.", "amendment_difficulty": "ordinary" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_X",
+        "number": "X",
+        "title": "Public Finance, Emergency and Defense",
+        "sections": [
+          { "id": "ARTICLE_X_SECTION_1", "number": "1", "title": "Public finance", "clauses": [
+            { "id": "ART_X_S1_C1", "number": "1", "text": "No tax may be imposed and no public money spent except under law. The President proposes the national budget and the National Assembly controls appropriation.", "amendment_difficulty": "foundational" },
+            { "id": "ART_X_S1_C2", "number": "2", "text": "If a budget is not enacted on time, continuing appropriations maintain essential government under limits established by law.", "amendment_difficulty": "ordinary" },
+            { "id": "ART_X_S1_C3", "number": "3", "text": "Public accounts shall be audited independently and reported to the National Assembly and the people.", "amendment_difficulty": "substantial" }
+          ]},
+          { "id": "ARTICLE_X_SECTION_2", "number": "2", "title": "Emergency authority", "clauses": [
+            { "id": "ART_X_S2_C1", "number": "1", "text": "The President may declare a national emergency for fourteen days. Any extension, in periods not exceeding thirty days, requires National Assembly approval.", "amendment_difficulty": "foundational" },
+            { "id": "ART_X_S2_C2", "number": "2", "text": "The Assembly may terminate an emergency, and the Constitutional Court shall provide expedited review. Measures must be necessary, proportionate and temporary.", "amendment_difficulty": "foundational" }
+          ]},
+          { "id": "ARTICLE_X_SECTION_3", "number": "3", "title": "Defense and war powers", "clauses": [
+            { "id": "ART_X_S3_C1", "number": "1", "text": "The President may direct offensive military action for no more than thirty days without authorization by the National Assembly.", "amendment_difficulty": "foundational" },
+            { "id": "ART_X_S3_C2", "number": "2", "text": "Continued offensive action requires Assembly authorization. Defensive measures necessary to protect the Republic remain subject to prompt legislative notice and review.", "amendment_difficulty": "foundational" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_XI",
+        "number": "XI",
+        "title": "Foreign Relations",
+        "sections": [
+          { "id": "ARTICLE_XI_SECTION_1", "number": "1", "title": "Diplomacy and treaties", "clauses": [
+            { "id": "ART_XI_S1_C1", "number": "1", "text": "The President represents the Republic in foreign relations, recognizes foreign governments and negotiates treaties subject to ratification where law or this Constitution requires it.", "amendment_difficulty": "substantial" },
+            { "id": "ART_XI_S1_C2", "number": "2", "text": "A ratified treaty forms part of the law of Terena according to its terms but may not override this Constitution.", "amendment_difficulty": "foundational" }
+          ]},
+          { "id": "ARTICLE_XI_SECTION_2", "number": "2", "title": "International measures", "clauses": [
+            { "id": "ART_XI_S2_C1", "number": "1", "text": "Sanctions, alliance commitments and other international measures shall be exercised under law with due regard for the rights and economic security of the people.", "amendment_difficulty": "ordinary" }
+          ]}
+        ]
+      },
+      {
+        "id": "ARTICLE_XII",
+        "number": "XII",
+        "title": "Amendment, Continuity and Final Provisions",
+        "sections": [
+          { "id": "ARTICLE_XII_SECTION_1", "number": "1", "title": "Amendment", "clauses": [
+            { "id": "ART_XII_S1_C1", "number": "1", "text": "An amendment requires approval by at least two thirds of the authorized membership of the National Assembly and ratification by at least thirteen of the twenty-one Provincial Assemblies.", "amendment_difficulty": "foundational" },
+            { "id": "ART_XII_S1_C2", "number": "2", "text": "Every provision of this Constitution may be proposed for amendment. Political opposition to an amendment does not alter the formal thresholds stated in this Article.", "amendment_difficulty": "foundational" },
+            { "id": "ART_XII_S1_C3", "number": "3", "text": "An adopted amendment enters the constitutional text with its date and preserves the prior text in the public constitutional record.", "amendment_difficulty": "substantial" }
+          ]},
+          { "id": "ARTICLE_XII_SECTION_2", "number": "2", "title": "Continuity", "clauses": [
+            { "id": "ART_XII_S2_C1", "number": "1", "text": "Laws and offices existing when this Constitution took effect continue insofar as they are consistent with it until lawfully changed.", "amendment_difficulty": "ordinary" },
+            { "id": "ART_XII_S2_C2", "number": "2", "text": "The regular electoral calendars and terms begun under this Constitution continue without interruption following a vacancy, special election or acting appointment unless this Constitution expressly provides otherwise.", "amendment_difficulty": "substantial" }
+          ]},
+          { "id": "ARTICLE_XII_SECTION_3", "number": "3", "title": "Commencement", "clauses": [
+            { "id": "ART_XII_S3_C1", "number": "1", "text": "This Constitution took effect on 1 July 1971 upon its lawful ratification by the people and provinces of Terena.", "amendment_difficulty": "foundational" }
+          ]}
+        ]
+      }
+    ]
+  },
   "president": {
     "term_years": 5,
     "term_limit": 2,

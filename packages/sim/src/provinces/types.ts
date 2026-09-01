@@ -264,8 +264,14 @@ export type ConstitutionalAmendment = {
   summary: string;
   sponsorId: string;
   proposedDate: IsoDate;
-  ruleId: ConstitutionalRuleId;
-  proposedValue: number;
+  ruleId: ConstitutionalRuleId | null;
+  proposedValue: number | null;
+  /** Clause replacement text for document amendments without a numeric runtime rule. */
+  documentClauseId?: string | null;
+  currentText?: string | null;
+  proposedText?: string | null;
+  /** Public political resistance, not a hidden formal voting threshold. */
+  politicalDifficulty?: number;
   proposalTrigger:
     | "player_sponsorship"
     | "election_mandate"

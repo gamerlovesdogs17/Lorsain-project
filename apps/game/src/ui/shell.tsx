@@ -21,7 +21,7 @@ export type ShellSearchEntry = {
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    title: "Your politics",
+    title: "Player",
     items: [
       { id: "home", label: "Home", icon: "⌂" },
       { id: "office", label: "Office", icon: "▰" },
@@ -30,24 +30,24 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: "Terenan politics",
+    title: "Politics",
     items: [
-      { id: "party", label: "Party", icon: "◆" },
+      { id: "party", label: "Parties & Caucuses", icon: "◆" },
       { id: "elections", label: "Elections", icon: "✓" },
       { id: "assembly", label: "Assembly", icon: "▣" },
-      { id: "courts", label: "Courts", icon: "⚖" },
+      { id: "courts", label: "Constitutional Court", icon: "⚖" },
     ],
   },
   {
-    title: "Government and regions",
+    title: "Government",
     items: [
-      { id: "executive", label: "Executive", icon: "★" },
+      { id: "executive", label: "President & Cabinet", icon: "★" },
       { id: "economy", label: "Economy", icon: "↗" },
-      { id: "terena", label: "Terena map", icon: "◎" },
+      { id: "terena", label: "Provinces & Map", icon: "◎" },
     ],
   },
   {
-    title: "Political society",
+    title: "Society",
     items: [
       { id: "organizations", label: "Organizations", icon: "◎" },
       { id: "news", label: "News", icon: "▤" },
@@ -60,8 +60,8 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: "Reference",
-    items: [{ id: "archive", label: "Archive", icon: "▤" }],
+    title: "Record",
+    items: [{ id: "archive", label: "History & Archive", icon: "▤" }],
   },
 ];
 

@@ -10,6 +10,7 @@ import { ElectionsPage } from "./electionsScreen.js";
 import { ForeignAffairsPage } from "./foreignAffairsScreen.js";
 import { OrganizationsPage } from "./organizationsScreen.js";
 import { NewsPage } from "./newsScreen.js";
+import { HistoryPage } from "./historyScreen.js";
 import { OfficePage } from "./officeScreen.js";
 import { groundGameStrength, isMp, isPresident, playerCampaign, publicStandingLabel } from "./format.js";
 import { contestDisplayName, campaignTypeLabel, committeeDisplayName, countryDisplayName, crisisStageLabel, electionDisplayName, eventDisplay, factionDisplayName, isPublicCrisisStage, latentStrategicTensions, partyColor, partyDisplayName, politicianDisplayName, pollShareLine, publicSeverityLabel, mediaHeadlineForEvent, treatyStatusLabel, treatyTypeLabel, } from "./presentation.js";
@@ -60,7 +61,7 @@ export function GamePages(props) {
         return _jsx(ForeignAffairsPage, { ...props });
     if (screen === "terena")
         return _jsx(Terena, { ...props });
-    return _jsx(Archive, { ...props });
+    return _jsx(HistoryPage, { world: props.world, snap: props.snap, bundle: props.bundle, catalog: props.catalog });
 }
 function Home(props) {
     const playerId = props.snap.playerPoliticianId;

@@ -64,7 +64,7 @@ import type {
 
 export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 16 as const;
+export const SAVE_SCHEMA_VERSION = 17 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -554,6 +554,11 @@ export type Command =
       proposedValue: number;
     }
   | {
+      type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT";
+      clauseId: string;
+      proposedText: string;
+    }
+  | {
       type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE";
       amendmentId: string;
       choice: "yes" | "no" | "abstain";
@@ -763,6 +768,27 @@ export type KernelWorld = {
     confirmationFraction: number;
     recallReferralFraction: number;
     recallVoteDays: number;
+  };
+  constitutionalDocument?: {
+    title: string;
+    preamble: string;
+    articles: Array<{
+      id: string;
+      number: string;
+      title: string;
+      sections: Array<{
+        id: string;
+        number: string;
+        title: string;
+        clauses: Array<{
+          id: string;
+          number: string;
+          text: string;
+          amendment_difficulty: "ordinary" | "substantial" | "foundational";
+          runtime_rule_id?: ConstitutionalRuleId;
+        }>;
+      }>;
+    }>;
   };
   interestOrganizations: Record<string, CanonicalInterestOrganization>;
   mediaOutlets: Record<string, CanonicalMediaOutlet>;

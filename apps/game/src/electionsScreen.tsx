@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import type {
   CommandResult,
@@ -92,6 +92,53 @@ function ElectionNightPanel(props: {
       </div>
     </section>
   );
+}
+
+type ElectionNightEvent = { id: string; title: string; detail: string };
+
+function ElectionNightReplay(props: {
+  replayKey: string;
+  title: string;
+  subtitle: string;
+  events: ElectionNightEvent[];
+  unitLabel: string;
+  renderVisual: (visibleCount: number) => ReactNode;
+}) {
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [speed, setSpeed] = useState<0 | 0.5 | 1 | 2 | 4>(1);
+  useEffect(() => {
+    setVisibleCount(0);
+    setSpeed(1);
+  }, [props.replayKey]);
+  useEffect(() => {
+    if (speed === 0 || visibleCount >= props.events.length) return;
+    const timer = window.setTimeout(
+      () => setVisibleCount((count) => Math.min(props.events.length, count + 1)),
+      Math.max(150, Math.round(900 / speed)),
+    );
+    return () => window.clearTimeout(timer);
+  }, [props.events.length, speed, visibleCount]);
+  const complete = props.events.length > 0 && visibleCount >= props.events.length;
+  const phase = visibleCount === 0 ? "Polls closed" : complete ? "Certified" : "Counting";
+  const recent = props.events.slice(Math.max(0, visibleCount - 6), visibleCount).reverse();
+  return <section className="election-night-live" aria-live="polite">
+    <header className="election-night-live-head">
+      <div><div className="kicker">Election Night · replay from certified count</div><h2>{props.title}</h2><p>{props.subtitle}</p></div>
+      <div className="election-night-live-status"><StatusBadge tone={complete ? "ok" : "warn"}>{phase}</StatusBadge><strong>{visibleCount} / {props.events.length}</strong><span>{props.unitLabel}</span></div>
+    </header>
+    <div className="election-night-controls" aria-label="Election Night speed controls">
+      <button type="button" className={speed === 0 ? "active" : ""} onClick={() => setSpeed(0)}>Pause</button>
+      {([0.5, 1, 2, 4] as const).map((value) => <button type="button" className={speed === value ? "active" : ""} key={value} onClick={() => setSpeed(value)}>{value}×</button>)}
+      <button type="button" onClick={() => { setSpeed(0); setVisibleCount((count) => Math.min(props.events.length, count + 1)); }}>Step</button>
+      <button type="button" onClick={() => { setSpeed(0); setVisibleCount(props.events.length); }}>Instant</button>
+      <button type="button" onClick={() => { setVisibleCount(0); setSpeed(1); }}>Replay</button>
+    </div>
+    <div className="election-night-live-body">
+      <div className="election-night-live-visual">{props.renderVisual(visibleCount)}</div>
+      <aside className="election-night-event-log"><h3>Latest results</h3>{recent.length === 0 ? <p>Waiting for the first certified count event.</p> : recent.map((event) => <div key={event.id}><strong>{event.title}</strong><span>{event.detail}</span></div>)}</aside>
+    </div>
+    <footer>No precincts or reporting estimates are fabricated. This timeline reveals exact events derived from the archived certified count.</footer>
+  </section>;
 }
 
 export function ElectionsPage(props: Props) {
@@ -226,6 +273,17 @@ export function ElectionsPage(props: Props) {
       election.countArchive && "rounds" in election.countArchive
         ? election.countArchive.rounds
         : [];
+    const nightEvents: ElectionNightEvent[] = rounds.map((round, index) => ({
+      id: `${election.id}:round:${round.round ?? index + 1}`,
+      title: round.electedId
+        ? `${politicianDisplayName(props.catalog, round.electedId)} elected`
+        : round.eliminatedId
+          ? `${politicianDisplayName(props.catalog, round.eliminatedId)} eliminated`
+          : `Round ${round.round ?? index + 1} completed`,
+      detail: round.transfers.length
+        ? `${round.transfers.length} exact transfer destination${round.transfers.length === 1 ? "" : "s"} recorded`
+        : "No transfer was required",
+    }));
 
     return (
       <article key={election.id} className="election-pres-block">
@@ -251,6 +309,33 @@ export function ElectionsPage(props: Props) {
             }
           />
         ) : null}
+        {election.status === "resolved" && rounds.length > 0 ? <ElectionNightReplay
+          replayKey={election.id}
+          title={`${election.date.slice(0, 4)} Presidential Election`}
+          subtitle="Watch the certified national ranked-choice rounds, eliminations and exact transfers unfold."
+          events={nightEvents}
+          unitLabel="RCV rounds shown"
+          renderVisual={(visibleCount) => {
+            const shown = rounds.slice(0, visibleCount);
+            const current = shown[shown.length - 1];
+            const totals = current?.totalsAfter ?? firstPreferences;
+            const maxVote = Math.max(1, ...Object.values(totals).map(voteWeight));
+            const eliminated = new Set(shown.flatMap((round) => round.eliminatedId ? [round.eliminatedId] : []));
+            const elected = new Set(shown.flatMap((round) => round.electedId ? [round.electedId] : []));
+            return <div className="presidential-night-stage">
+              <div className="presidential-night-round"><span>{visibleCount ? `Round ${current?.round ?? visibleCount}` : "Polls closed"}</span><strong>{current?.electedId ? "Winner elected" : current?.eliminatedId ? "Lowest candidate eliminated" : "Awaiting first count"}</strong></div>
+              <div className="presidential-night-rails">{ranked.map((candidate) => {
+                const value = voteWeight(totals[candidate.politicianId]);
+                const status = elected.has(candidate.politicianId) ? "Elected" : eliminated.has(candidate.politicianId) ? "Eliminated" : "Active";
+                return <div className={`presidential-night-candidate ${status.toLowerCase()}`} key={candidate.politicianId}>
+                  <div><span className="party-swatch" style={{ background: partyColor(props.world, candidate.partyId ?? null) }} /><strong>{politicianDisplayName(props.catalog, candidate.politicianId)}</strong><small>{status}</small><b>{Math.round(value).toLocaleString()}</b></div>
+                  <span className="presidential-night-bar"><i style={{ width: `${(value / maxVote) * 100}%`, background: partyColor(props.world, candidate.partyId ?? null) }} /></span>
+                </div>;
+              })}</div>
+              {current?.transfers.length ? <div className="rcv-transfer-board"><strong>{current.eliminatedId ? `${politicianDisplayName(props.catalog, current.eliminatedId)} transfers` : "Recorded transfers"}</strong>{current.transfers.map((transfer, index) => <span key={`${transfer.toCandidateId ?? "exhausted"}:${index}`}>{formatPublicNumber(transfer.value)} → {transfer.toCandidateId ? politicianDisplayName(props.catalog, transfer.toCandidateId) : "Exhausted"}</span>)}</div> : null}
+            </div>;
+          }}
+        /> : null}
         <div className="election-pres-layout">
           <div>
             <SectionDivider
@@ -410,6 +495,16 @@ export function ElectionsPage(props: Props) {
     const playerElected = Object.values(results).some((entry) =>
       entry.electedIds.includes(props.snap.playerPoliticianId),
     );
+    const nightResultOrder = Object.values(results).slice().sort((a, b) => {
+      const aSteps = a.countArchive?.steps.length ?? Number.MAX_SAFE_INTEGER;
+      const bSteps = b.countArchive?.steps.length ?? Number.MAX_SAFE_INTEGER;
+      return aSteps - bSteps || (props.catalog.places.get(a.constituencyId)?.name ?? a.constituencyId).localeCompare(props.catalog.places.get(b.constituencyId)?.name ?? b.constituencyId);
+    });
+    const nightEvents: ElectionNightEvent[] = nightResultOrder.map((entry) => ({
+      id: `${election.id}:${entry.constituencyId}`,
+      title: props.catalog.places.get(entry.constituencyId)?.name ?? constituencyDisplayName(props.catalog, entry.constituencyId),
+      detail: `${entry.electedIds.length} seats certified · ${partyDisplayName(props.world, pluralityParty(entry.constituencyId), props.snap)} largest delegation`,
+    }));
 
     return (
       <div className="assembly-election-view">
@@ -427,6 +522,31 @@ export function ElectionsPage(props: Props) {
             outcome={playerFiled ? (playerElected ? "You were elected." : "You were not elected.") : null}
           />
         ) : null}
+        {election.status === "resolved" && nightEvents.length > 0 ? <ElectionNightReplay
+          replayKey={election.id}
+          title={`${election.date.slice(0, 4)} National Assembly Election`}
+          subtitle="Constituency STV results populate the chamber and map from the archived certified counts."
+          events={nightEvents}
+          unitLabel="constituencies completed"
+          renderVisual={(visibleCount) => {
+            const revealed = nightResultOrder.slice(0, visibleCount);
+            const revealedIds = new Set(revealed.map((entry) => entry.constituencyId));
+            const seats = new Map<string | null, number>();
+            for (const entry of revealed) for (const winner of entry.electedIds) {
+              const partyId = entry.partyByCandidate[winner] ?? null;
+              seats.set(partyId, (seats.get(partyId) ?? 0) + 1);
+            }
+            const totals = [...seats.entries()].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
+            const allocated = totals.reduce((sum, [, seatTotal]) => sum + seatTotal, 0);
+            return <div className="assembly-night-stage">
+              <div className="assembly-night-totals"><div><span>Seats allocated</span><strong>{allocated} / 420</strong></div><div><span>Majority</span><strong>211</strong></div><div><span>Constituencies</span><strong>{visibleCount} / {nightResultOrder.length}</strong></div></div>
+              <div className="assembly-night-grid">
+                <TerenaMap bundle={props.bundle} mode="election" showConstituencies fillFor={(feature, kind) => kind === "constituency" ? revealedIds.has(feature.id) ? partyColor(props.world, pluralityParty(feature.id)) : "#d9d6cf" : "#f3f0e9"} onSelect={(picked) => { if (picked.kind === "constituency") setSelection(picked); }} tooltipFor={(picked) => <><strong>{picked.name}</strong><span>{revealedIds.has(picked.id) ? `${partyDisplayName(props.world, pluralityParty(picked.id), props.snap)} largest delegation` : "Result not yet shown"}</span></>} />
+                <div className="assembly-night-party-rail">{totals.map(([partyId, seatTotal]) => <div key={partyId ?? "independent"}><span className="party-swatch" style={{ background: partyColor(props.world, partyId) }} /><strong>{partyDisplayName(props.world, partyId, props.snap)}</strong><b>{seatTotal}</b><small>{seatTotal >= 211 ? "Majority" : `${211 - seatTotal} short`}</small></div>)}</div>
+              </div>
+            </div>;
+          }}
+        /> : null}
         <SectionDivider
           title={electionDisplayName(election.id)}
           hint={`Election date ${election.date}`}
@@ -650,6 +770,11 @@ export function ElectionsPage(props: Props) {
     const leadingParty = partyRows[0] ?? null;
     const playerFiled = election.candidateIds.includes(props.snap.playerPoliticianId);
     const playerElected = election.electedIds.includes(props.snap.playerPoliticianId);
+    const resolvedCycle = sameCycle.filter((race) => race.status === "resolved").sort((a, b) => (props.catalog.places.get(a.provinceId)?.name ?? a.provinceId).localeCompare(props.catalog.places.get(b.provinceId)?.name ?? b.provinceId));
+    const nightEvents: ElectionNightEvent[] = resolvedCycle.map((race) => {
+      const leadParty = pluralityParty(race);
+      return { id: race.id, title: props.catalog.places.get(race.provinceId)?.name ?? race.provinceId, detail: `${partyDisplayName(props.world, leadParty, props.snap)} largest bloc · ${race.electedIds.length} seats certified` };
+    });
 
     return (
       <div className="provincial-assembly-election-view">
@@ -661,6 +786,13 @@ export function ElectionsPage(props: Props) {
             outcome={playerFiled ? (playerElected ? "You won a seat." : "You were not elected.") : null}
           />
         ) : null}
+        {election.status === "resolved" && nightEvents.length > 0 ? <ElectionNightReplay replayKey={`provincial-assemblies:${election.date}`} title={`${election.date.slice(0, 4)} Provincial Assembly Elections`} subtitle="Certified provincial party votes and seat allocations appear province by province." events={nightEvents} unitLabel="provincial results shown" renderVisual={(visibleCount) => {
+          const visible = resolvedCycle.slice(0, visibleCount);
+          const visibleByProvince = new Map(visible.map((race) => [race.provinceId, race]));
+          const seatTotals = new Map<string | null, number>();
+          for (const race of visible) for (const [partyId, seats] of Object.entries(race.partySeats)) seatTotals.set(partyId, (seatTotals.get(partyId) ?? 0) + seats);
+          return <div className="provincial-assembly-night-stage"><TerenaMap bundle={props.bundle} mode="election" showConstituencies={false} fillFor={(feature, kind) => kind !== "province" ? "transparent" : visibleByProvince.has(feature.id) ? partyColor(props.world, pluralityParty(visibleByProvince.get(feature.id)!)) : "#d9d6cf"} tooltipFor={(picked) => { const race = visibleByProvince.get(picked.id); return <><strong>{picked.name}</strong><span>{race ? `${partyDisplayName(props.world, pluralityParty(race), props.snap)} largest bloc` : "Result not yet shown"}</span></>; }} /><div className="provincial-night-seat-rail">{[...seatTotals.entries()].sort((a, b) => b[1] - a[1]).map(([partyId, seats]) => <div key={partyId ?? "independent"}><span className="party-swatch" style={{ background: partyColor(props.world, partyId) }} /><strong>{partyDisplayName(props.world, partyId, props.snap)}</strong><b>{seats}</b><small>seats shown</small></div>)}</div></div>;
+        }} /> : null}
         <label className="election-cycle-picker">
           Province
           <select value={election.id} onChange={(event) => setProvincialAssemblyElectionId(event.target.value)}>
@@ -939,6 +1071,32 @@ export function ElectionsPage(props: Props) {
                   detail="The official result will appear when the provincial count is completed."
                 />
               ) : null}
+              {(selectedGovernorRace.status === "resolved" || selectedGovernorRace.status === "assumed") ? (() => {
+                const sameCycle = gubernatorial.filter((race) => race.date === selectedGovernorRace.date && (race.status === "resolved" || race.status === "assumed") && race.winnerId).sort((a, b) => (props.catalog.places.get(a.provinceId)?.name ?? a.provinceId).localeCompare(props.catalog.places.get(b.provinceId)?.name ?? b.provinceId));
+                const events: ElectionNightEvent[] = sameCycle.map((race) => {
+                  const winner = race.winnerId!;
+                  const winnerParty = race.candidates[winner]?.partyId ?? props.snap.politicians[winner]?.partyId ?? null;
+                  const incumbentParty = race.incumbentId ? race.candidates[race.incumbentId]?.partyId ?? props.snap.politicians[race.incumbentId]?.partyId ?? null : null;
+                  const change = !race.incumbentId ? "Open province" : incumbentParty === winnerParty ? "Hold" : "Gain";
+                  return { id: race.id, title: props.catalog.places.get(race.provinceId)?.name ?? race.provinceId, detail: `${politicianDisplayName(props.catalog, winner)} · ${partyDisplayName(props.world, winnerParty, props.snap)} ${change.toLowerCase()}` };
+                });
+                return <ElectionNightReplay replayKey={`governors:${selectedGovernorRace.date}`} title={`${selectedGovernorRace.date.slice(0, 4)} Governor Elections`} subtitle="Province-wide certified winners appear across the twenty-one-province map." events={events} unitLabel="province results shown" renderVisual={(visibleCount) => {
+                  const visible = sameCycle.slice(0, visibleCount);
+                  const visibleByProvince = new Map(visible.map((race) => [race.provinceId, race]));
+                  const partyTotals = new Map<string | null, number>();
+                  for (const race of visible) {
+                    const winnerId = race.winnerId!;
+                    const partyId = race.candidates[winnerId]?.partyId ?? props.snap.politicians[winnerId]?.partyId ?? null;
+                    partyTotals.set(partyId, (partyTotals.get(partyId) ?? 0) + 1);
+                  }
+                  return <div className="governor-night-stage"><TerenaMap bundle={props.bundle} mode="election" showConstituencies={false} fillFor={(feature, kind) => {
+                    if (kind !== "province") return "transparent";
+                    const race = visibleByProvince.get(feature.id);
+                    if (!race?.winnerId) return "#d9d6cf";
+                    return partyColor(props.world, race.candidates[race.winnerId]?.partyId ?? props.snap.politicians[race.winnerId]?.partyId ?? null);
+                  }} tooltipFor={(picked) => { const race = visibleByProvince.get(picked.id); return <><strong>{picked.name}</strong><span>{race?.winnerId ? `Winner ${politicianDisplayName(props.catalog, race.winnerId)}` : "Result not yet shown"}</span></>; }} /><div className="governor-night-totals">{[...partyTotals.entries()].sort((a, b) => b[1] - a[1]).map(([partyId, wins]) => <div key={partyId ?? "independent"}><span className="party-swatch" style={{ background: partyColor(props.world, partyId) }} /><strong>{partyDisplayName(props.world, partyId, props.snap)}</strong><b>{wins}</b><small>governor{wins === 1 ? "" : "s"}</small></div>)}</div></div>;
+                }} />;
+              })() : null}
               <label className="election-cycle-picker">
                 Province
                 <select

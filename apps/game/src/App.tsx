@@ -39,6 +39,46 @@ const QA_SCREENS = new Set<Screen>([
   "courts", "economy", "organizations", "news", "foreign", "terena", "archive",
 ]);
 
+function monthsBetween(startDate: string, endDate: string): number {
+  return Math.max(
+    0,
+    (Number(endDate.slice(0, 4)) - Number(startDate.slice(0, 4))) * 12 +
+      Number(endDate.slice(5, 7)) -
+      Number(startDate.slice(5, 7)),
+  );
+}
+
+function savedGamePoliticalSummary(world: KernelWorld, row: SavedGameRow) {
+  const state = row.save.simulation;
+  const player = state.politicians[state.playerPoliticianId];
+  const activeTerm = Object.values(state.officeTerms).find(
+    (term) =>
+      term.holderId === state.playerPoliticianId &&
+      (term.status === "active" || term.status === "suspended"),
+  );
+  const office = activeTerm ? world.offices[activeTerm.officeId] : null;
+  const party = player?.partyId ? world.partyDefinitions[player.partyId] : null;
+  const campaign = Object.values(state.campaignRuntime.campaigns).find(
+    (row) => row.politicianId === state.playerPoliticianId && row.status === "active",
+  );
+  const context = state.pendingInterrupt?.code.includes("ELECTION")
+    ? "Election decision awaiting resolution"
+    : campaign
+      ? "Active election campaign"
+      : state.pendingInterrupt?.requiresResolution
+        ? "Political decision awaiting resolution"
+        : "Government and political calendar in progress";
+  const playedMonths = monthsBetween(state.scenarioStartDate, state.currentDate);
+  return {
+    office: office?.title ?? "Private citizen",
+    party: party?.name ?? "Independent",
+    context,
+    played: playedMonths < 12
+      ? `${playedMonths} month${playedMonths === 1 ? "" : "s"} played`
+      : `${Math.floor(playedMonths / 12)} year${Math.floor(playedMonths / 12) === 1 ? "" : "s"}, ${playedMonths % 12} months played`,
+  };
+}
+
 function qaScreen(value: string | null): Screen {
   return value != null && QA_SCREENS.has(value as Screen) ? value as Screen : "home";
 }
@@ -88,6 +128,28 @@ export default function App() {
       setError(e instanceof Error ? e.message : String(e));
     }
   }, []);
+
+  useEffect(() => {
+    if (!world) return;
+    if (import.meta.env.DEV) {
+      const fixture = new URLSearchParams(window.location.search).get("qaTitleFixture");
+      if (fixture) {
+        void fetch(`/__qa/fixtures/${encodeURIComponent(fixture)}.json`, { cache: "no-store" })
+          .then(async (response) => {
+            if (!response.ok) throw new Error(`Browser QA fixture ${fixture} was not found.`);
+            return await response.json() as SaveFile;
+          })
+          .then((save) => {
+            const player = save.simulation.politicians[save.simulation.playerPoliticianId];
+            const figureName = (bundle?.content.starting_figures.figures as Figure[] | undefined)?.find((figure) => figure.id === save.simulation.playerPoliticianId)?.name;
+            setSaves([{ id: `qa-title:${fixture}`, name: `Career of ${figureName ?? player?.displayName ?? save.simulation.playerPoliticianId}`, savedAt: `${save.simulation.currentDate}T18:00:00.000Z`, playerName: figureName ?? player?.displayName ?? save.simulation.playerPoliticianId, date: save.simulation.currentDate, save }]);
+          })
+          .catch(() => setSaves([]));
+        return;
+      }
+    }
+    void listSaves().then(setSaves).catch(() => setSaves([]));
+  }, [bundle, world]);
 
   useEffect(() => {
     if (!import.meta.env.DEV || !world || qaBooted.current) return;
@@ -152,7 +214,7 @@ export default function App() {
       ["executive", "Executive", "President, cabinet and administration"], ["courts", "Constitutional Court", "Bench, docket and decisions"],
       ["economy", "Economy", "Public national and regional indicators"], ["organizations", "Organizations", "Influence, priorities and scorecards"],
       ["foreign", "Foreign Affairs", "World relations and crises"], ["terena", "Maps", "Political, election and economic geography"],
-      ["news", "News", "Political news desk"], ["archive", "Archive", "Public political history"],
+      ["news", "News", "Political news desk"], ["archive", "History of Terena", "Political encyclopedia and election archive"],
     ];
     const entries: ShellSearchEntry[] = pages.map(([screen, label, detail]) => ({ id: screen, kind: "Page", label, detail, screen }));
     for (const politician of Object.values(snap.politicians)) {
@@ -420,67 +482,81 @@ export default function App() {
     );
   }
   if (mode === "title") {
+    const latest = saves[0] ?? null;
+    const latestSummary = latest ? savedGamePoliticalSummary(world, latest) : null;
     return (
-      <div className="app-title">
-        <div className="title-card">
-          <h1>LORSAIN</h1>
-          <p>The Dual-Mandate Republic of Terena. January 2028.</p>
-          <div className="row">
-            <button className="btn" onClick={() => setMode("select")}>
-              New Game
-            </button>
-            <button
-              className="btn secondary"
-              onClick={async () => {
-                setSaves(await listSaves());
-                setMode("load");
-              }}
-            >
-              Load Game
-            </button>
+      <div className="political-title-screen">
+        <section className="title-masthead" aria-labelledby="lorsain-title">
+          <div className="title-seal" aria-hidden="true">L</div>
+          <div className="title-wordmark">
+            <span>THE POLITICAL LIFE OF TERENA</span>
+            <h1 id="lorsain-title">LORSAIN</h1>
+            <p>Govern, legislate, campaign and build a public life in the Dual-Mandate Republic.</p>
           </div>
-        </div>
+          <div className="title-founding-line"><span>Republic founded 1971</span><span>January 2028 scenario</span></div>
+        </section>
+        <section className="title-political-desk">
+          {latest && latestSummary ? (
+            <article className="continue-dossier">
+              <div className="kicker">Continue political career</div>
+              <div className="continue-dossier-head">
+                <div>
+                  <h2>{latest.playerName}</h2>
+                  <p>{latestSummary.office}</p>
+                </div>
+                <time>{latest.date}</time>
+              </div>
+              <div className="continue-party-line">
+                <span className="continue-party-mark" style={{ background: partyColor(world, latest.save.simulation.politicians[latest.save.simulation.playerPoliticianId]?.partyId ?? null) }} />
+                <strong>{latestSummary.party}</strong>
+              </div>
+              <dl className="continue-dossier-facts">
+                <div><dt>Political context</dt><dd>{latestSummary.context}</dd></div>
+                <div><dt>Career length</dt><dd>{latestSummary.played}</dd></div>
+                <div><dt>Last saved</dt><dd>{new Date(latest.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</dd></div>
+              </dl>
+              <button className="btn title-continue" onClick={() => loadFile(latest.save)}>Continue</button>
+            </article>
+          ) : (
+            <article className="continue-dossier empty">
+              <div className="kicker">No current career</div>
+              <h2>Enter Terenan politics</h2>
+              <p>Choose a politician and begin on 1 January 2028.</p>
+              <button className="btn title-continue" onClick={() => setMode("select")}>Start a new game</button>
+            </article>
+          )}
+          <nav className="title-actions" aria-label="Main menu">
+            <button type="button" onClick={() => setMode("select")}><span>New Game</span><small>Choose a political life</small></button>
+            <button type="button" onClick={() => setMode("load")} disabled={saves.length === 0}><span>Load Game</span><small>{saves.length} saved career{saves.length === 1 ? "" : "s"}</small></button>
+            <button type="button" disabled><span>Settings</span><small>Display and accessibility</small></button>
+          </nav>
+        </section>
       </div>
     );
   }
   if (mode === "load") {
     return (
-      <div className="page">
-        <h2>Load game</h2>
-        <div className="row">
-          <button className="btn secondary" onClick={() => setMode("title")}>
-            Back
-          </button>
-          <label className="btn secondary">
-            Import
-            <input
-              type="file"
-              accept="application/json"
-              hidden
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) loadFile(await readImportedSave(file));
-              }}
-            />
-          </label>
-        </div>
-        <div className="list" style={{ marginTop: "1rem" }}>
-          {saves.map((s) => (
-            <div className="pick" key={s.id}>
-              <div>
-                <strong>{s.name}</strong>
-                <div className="muted">
-                  {s.playerName} · {s.date}
-                </div>
-              </div>
-              <button
-                className="btn"
-                onClick={() => void getSave(s.id).then((row) => row && loadFile(row.save))}
-              >
-                Load
-              </button>
-            </div>
-          ))}
+      <div className="load-career-screen">
+        <header className="load-career-head">
+          <div><div className="kicker">LORSAIN RECORDS</div><h1>Saved political careers</h1><p>Resume a career with its office, allegiance and political context intact.</p></div>
+          <div className="row">
+            <button className="btn secondary" onClick={() => setMode("title")}>Back</button>
+            <label className="btn secondary">Import save<input type="file" accept="application/json" hidden onChange={async (e) => { const file = e.target.files?.[0]; if (file) loadFile(await readImportedSave(file)); }} /></label>
+          </div>
+        </header>
+        <div className="saved-career-grid">
+          {saves.map((s) => {
+            const summary = savedGamePoliticalSummary(world, s);
+            const savedPlayer = s.save.simulation.politicians[s.save.simulation.playerPoliticianId];
+            return <article className="saved-career" key={s.id}>
+              <div className="saved-career-date"><span>{s.date}</span><small>{summary.played}</small></div>
+              <h2>{s.playerName}</h2>
+              <p className="saved-career-office">{summary.office}</p>
+              <div className="continue-party-line"><span className="continue-party-mark" style={{ background: partyColor(world, savedPlayer?.partyId ?? null) }} /><strong>{summary.party}</strong></div>
+              <p className="saved-career-context">{summary.context}</p>
+              <footer><small>Saved {new Date(s.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</small><button className="btn" onClick={() => void getSave(s.id).then((row) => row && loadFile(row.save))}>Resume</button></footer>
+            </article>;
+          })}
         </div>
       </div>
     );

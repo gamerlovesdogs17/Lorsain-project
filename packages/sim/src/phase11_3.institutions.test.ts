@@ -7,12 +7,13 @@ import {
   provincialLegislatorForPolitician,
   provincialAssemblySeatCount,
 } from "./provinces/assemblies.js";
-import { migrateSaveV12ToV13, migrateSaveV13ToV14, migrateSaveV14ToV15, migrateSaveV15ToV16, parseSaveFile } from "./save.js";
+import { migrateSaveV12ToV13, migrateSaveV13ToV14, migrateSaveV14ToV15, migrateSaveV15ToV16, migrateSaveV16ToV17, parseSaveFile } from "./save.js";
 import { addMonths } from "./calendar.js";
 import {
   processConstitutionalAmendmentsMonth,
   proposeConstitutionalAmendment,
   constitutionalSupportScore,
+  currentConstitutionalClauseText,
 } from "./provinces/constitutional.js";
 import { currentAssemblyMemberIds } from "./legislature/state.js";
 import {
@@ -311,6 +312,36 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect(parsed.ok).toBe(true);
   });
 
+  it("migrates schema 16 constitutional amendment records without fabricating text history", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "assembly_member");
+    const sim = createSimulation({ world, playerPoliticianId: player, seed: "P113-MIGRATE-17" });
+    expect(sim.executeCommand({ type: "PROPOSE_CONSTITUTIONAL_AMENDMENT", ruleId: "assembly_term_years", proposedValue: 5 }).ok).toBe(true);
+    const legacy = structuredClone(sim.serializeSave()) as unknown as Record<string, unknown>;
+    legacy.schemaVersion = 16;
+    const simulation = legacy.simulation as Record<string, unknown>;
+    simulation.schemaVersion = 16;
+    const historyBefore = hashCanonical(simulation.history);
+    const amendments = ((simulation.provincialRuntime as Record<string, unknown>).constitutionalAmendments as Record<string, Record<string, unknown>>);
+    for (const amendment of Object.values(amendments)) {
+      delete amendment.documentClauseId;
+      delete amendment.currentText;
+      delete amendment.proposedText;
+      delete amendment.politicalDifficulty;
+    }
+    const migrated = migrateSaveV16ToV17(legacy) as Record<string, unknown>;
+    const migratedSimulation = migrated.simulation as Record<string, unknown>;
+    expect(migrated.schemaVersion).toBe(17);
+    expect(migratedSimulation.schemaVersion).toBe(17);
+    expect(hashCanonical(migratedSimulation.history)).toBe(historyBefore);
+    for (const amendment of Object.values(((migratedSimulation.provincialRuntime as Record<string, unknown>).constitutionalAmendments as Record<string, Record<string, unknown>>))) {
+      expect(amendment.documentClauseId).toBeNull();
+      expect(amendment.currentText).toBeNull();
+      expect(amendment.proposedText).toBeNull();
+    }
+    expect(parseSaveFile(migrated, world.contentVersion).ok).toBe(true);
+  });
+
   it("moves public party platforms gradually and keeps publication history bounded", () => {
     const world = loadTerenaWorld();
     const player = startingHolder(world, "president");
@@ -569,6 +600,17 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
         proposedValue: 9,
       }).ok,
     ).toBe(true);
+    const clauseId = "ART_VI_S2_C2";
+    const replacement = "Administrative action affecting a person or organization shall receive written reasons, independent review and an effective remedy under law.";
+    expect(mp.executeCommand({ type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT", clauseId, proposedText: replacement }).ok).toBe(true);
+    const textAmendment = Object.values(mp.getSnapshot().provincialRuntime.constitutionalAmendments).find((amendment) => amendment.documentClauseId === clauseId)!;
+    expect(textAmendment.currentText).toContain("Administrative action affecting");
+    expect(textAmendment.proposedText).toBe(replacement);
+    const adoptedSave = mp.serializeSave();
+    adoptedSave.simulation.provincialRuntime.constitutionalAmendments[textAmendment.id]!.status = "ratified";
+    adoptedSave.simulation.provincialRuntime.constitutionalAmendments[textAmendment.id]!.enactedDate = adoptedSave.simulation.currentDate;
+    const adopted = restoreSimulation(adoptedSave, world);
+    expect(currentConstitutionalClauseText(world, adopted.getSnapshot(), clauseId)).toBe(replacement);
 
     const invalidRoles = [
       { kind: "president", id: startingHolder(world, "president") },
@@ -604,6 +646,13 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
           }).ok,
         ).toBe(false);
         expect(sim.hashState()).toBe(beforeAmendment);
+        const beforeTextAmendment = sim.hashState();
+        expect(sim.executeCommand({
+          type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT",
+          clauseId,
+          proposedText: replacement,
+        }).ok).toBe(false);
+        expect(sim.hashState()).toBe(beforeTextAmendment);
       }
       const beforeLeadership = sim.hashState();
       expect(
@@ -645,6 +694,8 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
         proposedValue: 9,
       }).ok,
     ).toBe(false);
+    expect(former.hashState()).toBe(formerHash);
+    expect(former.executeCommand({ type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT", clauseId, proposedText: replacement }).ok).toBe(false);
     expect(former.hashState()).toBe(formerHash);
   });
 });

@@ -32,6 +32,7 @@ import { ElectionsPage } from "./electionsScreen.js";
 import { ForeignAffairsPage } from "./foreignAffairsScreen.js";
 import { OrganizationsPage } from "./organizationsScreen.js";
 import { NewsPage } from "./newsScreen.js";
+import { HistoryPage } from "./historyScreen.js";
 import { OfficePage } from "./officeScreen.js";
 import { groundGameStrength, isMp, isPresident, playerCampaign, publicStandingLabel } from "./format.js";
 import {
@@ -171,7 +172,7 @@ export function GamePages(props: PageProps) {
   if (screen === "news") return <NewsPage {...props} />;
   if (screen === "foreign") return <ForeignAffairsPage {...props} />;
   if (screen === "terena") return <Terena {...props} />;
-  return <Archive {...props} />;
+  return <HistoryPage world={props.world} snap={props.snap} bundle={props.bundle} catalog={props.catalog} />;
 }
 
 function Home(props: PageProps) {

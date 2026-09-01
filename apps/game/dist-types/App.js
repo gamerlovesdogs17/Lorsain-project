@@ -16,6 +16,36 @@ const QA_SCREENS = new Set([
     "home", "career", "office", "assembly", "party", "campaign", "elections", "executive",
     "courts", "economy", "organizations", "news", "foreign", "terena", "archive",
 ]);
+function monthsBetween(startDate, endDate) {
+    return Math.max(0, (Number(endDate.slice(0, 4)) - Number(startDate.slice(0, 4))) * 12 +
+        Number(endDate.slice(5, 7)) -
+        Number(startDate.slice(5, 7)));
+}
+function savedGamePoliticalSummary(world, row) {
+    const state = row.save.simulation;
+    const player = state.politicians[state.playerPoliticianId];
+    const activeTerm = Object.values(state.officeTerms).find((term) => term.holderId === state.playerPoliticianId &&
+        (term.status === "active" || term.status === "suspended"));
+    const office = activeTerm ? world.offices[activeTerm.officeId] : null;
+    const party = player?.partyId ? world.partyDefinitions[player.partyId] : null;
+    const campaign = Object.values(state.campaignRuntime.campaigns).find((row) => row.politicianId === state.playerPoliticianId && row.status === "active");
+    const context = state.pendingInterrupt?.code.includes("ELECTION")
+        ? "Election decision awaiting resolution"
+        : campaign
+            ? "Active election campaign"
+            : state.pendingInterrupt?.requiresResolution
+                ? "Political decision awaiting resolution"
+                : "Government and political calendar in progress";
+    const playedMonths = monthsBetween(state.scenarioStartDate, state.currentDate);
+    return {
+        office: office?.title ?? "Private citizen",
+        party: party?.name ?? "Independent",
+        context,
+        played: playedMonths < 12
+            ? `${playedMonths} month${playedMonths === 1 ? "" : "s"} played`
+            : `${Math.floor(playedMonths / 12)} year${Math.floor(playedMonths / 12) === 1 ? "" : "s"}, ${playedMonths % 12} months played`,
+    };
+}
 function qaScreen(value) {
     return value != null && QA_SCREENS.has(value) ? value : "home";
 }
@@ -66,6 +96,29 @@ export default function App() {
             setError(e instanceof Error ? e.message : String(e));
         }
     }, []);
+    useEffect(() => {
+        if (!world)
+            return;
+        if (import.meta.env.DEV) {
+            const fixture = new URLSearchParams(window.location.search).get("qaTitleFixture");
+            if (fixture) {
+                void fetch(`/__qa/fixtures/${encodeURIComponent(fixture)}.json`, { cache: "no-store" })
+                    .then(async (response) => {
+                    if (!response.ok)
+                        throw new Error(`Browser QA fixture ${fixture} was not found.`);
+                    return await response.json();
+                })
+                    .then((save) => {
+                    const player = save.simulation.politicians[save.simulation.playerPoliticianId];
+                    const figureName = bundle?.content.starting_figures.figures?.find((figure) => figure.id === save.simulation.playerPoliticianId)?.name;
+                    setSaves([{ id: `qa-title:${fixture}`, name: `Career of ${figureName ?? player?.displayName ?? save.simulation.playerPoliticianId}`, savedAt: `${save.simulation.currentDate}T18:00:00.000Z`, playerName: figureName ?? player?.displayName ?? save.simulation.playerPoliticianId, date: save.simulation.currentDate, save }]);
+                })
+                    .catch(() => setSaves([]));
+                return;
+            }
+        }
+        void listSaves().then(setSaves).catch(() => setSaves([]));
+    }, [bundle, world]);
     useEffect(() => {
         if (!import.meta.env.DEV || !world || qaBooted.current)
             return;
@@ -132,7 +185,7 @@ export default function App() {
             ["executive", "Executive", "President, cabinet and administration"], ["courts", "Constitutional Court", "Bench, docket and decisions"],
             ["economy", "Economy", "Public national and regional indicators"], ["organizations", "Organizations", "Influence, priorities and scorecards"],
             ["foreign", "Foreign Affairs", "World relations and crises"], ["terena", "Maps", "Political, election and economic geography"],
-            ["news", "News", "Political news desk"], ["archive", "Archive", "Public political history"],
+            ["news", "News", "Political news desk"], ["archive", "History of Terena", "Political encyclopedia and election archive"],
         ];
         const entries = pages.map(([screen, label, detail]) => ({ id: screen, kind: "Page", label, detail, screen }));
         for (const politician of Object.values(snap.politicians)) {
@@ -391,17 +444,17 @@ export default function App() {
         return (_jsx("div", { className: "app-title", children: _jsxs("div", { className: "title-card", children: [_jsx("h1", { children: "Lorsain" }), _jsx("p", { children: "Loading Terena\u2026" })] }) }));
     }
     if (mode === "title") {
-        return (_jsx("div", { className: "app-title", children: _jsxs("div", { className: "title-card", children: [_jsx("h1", { children: "LORSAIN" }), _jsx("p", { children: "The Dual-Mandate Republic of Terena. January 2028." }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn", onClick: () => setMode("select"), children: "New Game" }), _jsx("button", { className: "btn secondary", onClick: async () => {
-                                    setSaves(await listSaves());
-                                    setMode("load");
-                                }, children: "Load Game" })] })] }) }));
+        const latest = saves[0] ?? null;
+        const latestSummary = latest ? savedGamePoliticalSummary(world, latest) : null;
+        return (_jsxs("div", { className: "political-title-screen", children: [_jsxs("section", { className: "title-masthead", "aria-labelledby": "lorsain-title", children: [_jsx("div", { className: "title-seal", "aria-hidden": "true", children: "L" }), _jsxs("div", { className: "title-wordmark", children: [_jsx("span", { children: "THE POLITICAL LIFE OF TERENA" }), _jsx("h1", { id: "lorsain-title", children: "LORSAIN" }), _jsx("p", { children: "Govern, legislate, campaign and build a public life in the Dual-Mandate Republic." })] }), _jsxs("div", { className: "title-founding-line", children: [_jsx("span", { children: "Republic founded 1971" }), _jsx("span", { children: "January 2028 scenario" })] })] }), _jsxs("section", { className: "title-political-desk", children: [latest && latestSummary ? (_jsxs("article", { className: "continue-dossier", children: [_jsx("div", { className: "kicker", children: "Continue political career" }), _jsxs("div", { className: "continue-dossier-head", children: [_jsxs("div", { children: [_jsx("h2", { children: latest.playerName }), _jsx("p", { children: latestSummary.office })] }), _jsx("time", { children: latest.date })] }), _jsxs("div", { className: "continue-party-line", children: [_jsx("span", { className: "continue-party-mark", style: { background: partyColor(world, latest.save.simulation.politicians[latest.save.simulation.playerPoliticianId]?.partyId ?? null) } }), _jsx("strong", { children: latestSummary.party })] }), _jsxs("dl", { className: "continue-dossier-facts", children: [_jsxs("div", { children: [_jsx("dt", { children: "Political context" }), _jsx("dd", { children: latestSummary.context })] }), _jsxs("div", { children: [_jsx("dt", { children: "Career length" }), _jsx("dd", { children: latestSummary.played })] }), _jsxs("div", { children: [_jsx("dt", { children: "Last saved" }), _jsx("dd", { children: new Date(latest.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) })] })] }), _jsx("button", { className: "btn title-continue", onClick: () => loadFile(latest.save), children: "Continue" })] })) : (_jsxs("article", { className: "continue-dossier empty", children: [_jsx("div", { className: "kicker", children: "No current career" }), _jsx("h2", { children: "Enter Terenan politics" }), _jsx("p", { children: "Choose a politician and begin on 1 January 2028." }), _jsx("button", { className: "btn title-continue", onClick: () => setMode("select"), children: "Start a new game" })] })), _jsxs("nav", { className: "title-actions", "aria-label": "Main menu", children: [_jsxs("button", { type: "button", onClick: () => setMode("select"), children: [_jsx("span", { children: "New Game" }), _jsx("small", { children: "Choose a political life" })] }), _jsxs("button", { type: "button", onClick: () => setMode("load"), disabled: saves.length === 0, children: [_jsx("span", { children: "Load Game" }), _jsxs("small", { children: [saves.length, " saved career", saves.length === 1 ? "" : "s"] })] }), _jsxs("button", { type: "button", disabled: true, children: [_jsx("span", { children: "Settings" }), _jsx("small", { children: "Display and accessibility" })] })] })] })] }));
     }
     if (mode === "load") {
-        return (_jsxs("div", { className: "page", children: [_jsx("h2", { children: "Load game" }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" }), _jsxs("label", { className: "btn secondary", children: ["Import", _jsx("input", { type: "file", accept: "application/json", hidden: true, onChange: async (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file)
-                                            loadFile(await readImportedSave(file));
-                                    } })] })] }), _jsx("div", { className: "list", style: { marginTop: "1rem" }, children: saves.map((s) => (_jsxs("div", { className: "pick", children: [_jsxs("div", { children: [_jsx("strong", { children: s.name }), _jsxs("div", { className: "muted", children: [s.playerName, " \u00B7 ", s.date] })] }), _jsx("button", { className: "btn", onClick: () => void getSave(s.id).then((row) => row && loadFile(row.save)), children: "Load" })] }, s.id))) })] }));
+        return (_jsxs("div", { className: "load-career-screen", children: [_jsxs("header", { className: "load-career-head", children: [_jsxs("div", { children: [_jsx("div", { className: "kicker", children: "LORSAIN RECORDS" }), _jsx("h1", { children: "Saved political careers" }), _jsx("p", { children: "Resume a career with its office, allegiance and political context intact." })] }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" }), _jsxs("label", { className: "btn secondary", children: ["Import save", _jsx("input", { type: "file", accept: "application/json", hidden: true, onChange: async (e) => { const file = e.target.files?.[0]; if (file)
+                                                loadFile(await readImportedSave(file)); } })] })] })] }), _jsx("div", { className: "saved-career-grid", children: saves.map((s) => {
+                        const summary = savedGamePoliticalSummary(world, s);
+                        const savedPlayer = s.save.simulation.politicians[s.save.simulation.playerPoliticianId];
+                        return _jsxs("article", { className: "saved-career", children: [_jsxs("div", { className: "saved-career-date", children: [_jsx("span", { children: s.date }), _jsx("small", { children: summary.played })] }), _jsx("h2", { children: s.playerName }), _jsx("p", { className: "saved-career-office", children: summary.office }), _jsxs("div", { className: "continue-party-line", children: [_jsx("span", { className: "continue-party-mark", style: { background: partyColor(world, savedPlayer?.partyId ?? null) } }), _jsx("strong", { children: summary.party })] }), _jsx("p", { className: "saved-career-context", children: summary.context }), _jsxs("footer", { children: [_jsxs("small", { children: ["Saved ", new Date(s.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })] }), _jsx("button", { className: "btn", onClick: () => void getSave(s.id).then((row) => row && loadFile(row.save)), children: "Resume" })] })] }, s.id);
+                    }) })] }));
     }
     if (mode === "select") {
         const figuresList = bundle.content.starting_figures.figures;

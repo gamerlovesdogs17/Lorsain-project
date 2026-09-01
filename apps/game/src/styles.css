@@ -2869,3 +2869,318 @@ button.entity-row:hover,
   .current-law-grid { grid-template-columns: 1fr; }
   .statute-row { align-items: flex-start; flex-direction: column; }
 }
+
+/* Political opening desk: saved careers are presented as political dossiers, not files. */
+.political-title-screen {
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: minmax(22rem, 0.9fr) minmax(28rem, 1.1fr);
+  background:
+    linear-gradient(115deg, rgba(8, 25, 43, 0.97), rgba(25, 49, 73, 0.94)),
+    repeating-linear-gradient(90deg, transparent 0 54px, rgba(255, 255, 255, 0.035) 54px 55px);
+  color: #f3eee5;
+}
+.title-masthead { position: relative; display: flex; min-height: 100vh; padding: clamp(2rem, 6vw, 6rem); flex-direction: column; justify-content: center; overflow: hidden; }
+.title-masthead::after { content: ""; position: absolute; width: 44rem; height: 44rem; right: -28rem; bottom: -22rem; border: 1px solid rgba(233, 215, 176, 0.18); border-radius: 50%; box-shadow: 0 0 0 5rem rgba(233, 215, 176, 0.025), 0 0 0 10rem rgba(233, 215, 176, 0.018); }
+.title-seal { display: grid; place-items: center; width: 4rem; height: 4rem; margin-bottom: 2rem; border: 1px solid rgba(237, 218, 176, 0.6); border-radius: 50%; color: #ecd9ad; font: 700 2rem/1 var(--serif); }
+.title-wordmark > span, .title-founding-line { color: #d3ba85; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; }
+.title-wordmark h1 { margin: 0.25rem 0 0.8rem; color: #fffaf0; font: 600 clamp(3.8rem, 7.6vw, 7.2rem)/0.84 var(--serif); letter-spacing: 0.018em; }
+.title-wordmark p { max-width: 32rem; margin: 0; color: #d6dce1; font: 1.15rem/1.55 var(--serif); }
+.title-founding-line { display: flex; gap: 1rem; margin-top: 3.5rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.14); letter-spacing: 0.09em; }
+.title-political-desk { display: grid; align-content: center; gap: 1rem; min-height: 100vh; padding: clamp(1.5rem, 5vw, 5rem); background: rgba(245, 241, 232, 0.97); color: var(--ink); box-shadow: -1rem 0 4rem rgba(0, 0, 0, 0.18); }
+.continue-dossier { position: relative; padding: clamp(1.4rem, 3vw, 2.3rem); border-top: 5px solid var(--navy); background: #fffdf8; box-shadow: 0 0.7rem 2rem rgba(16, 31, 48, 0.1); }
+.continue-dossier::before { content: "CURRENT FILE"; position: absolute; top: 0.8rem; right: 1rem; color: #9a948a; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.16em; }
+.continue-dossier h2 { margin: 0; color: var(--navy); font: 600 clamp(1.8rem, 3vw, 2.5rem)/1 var(--serif); }
+.continue-dossier p { margin: 0.35rem 0 0; color: var(--muted); }
+.continue-dossier-head { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin: 0.65rem 0 1rem; }
+.continue-dossier-head time { font-weight: 800; font-variant-numeric: tabular-nums; }
+.continue-party-line { display: flex; gap: 0.48rem; align-items: center; }
+.continue-party-mark { width: 0.65rem; height: 1.15rem; border-radius: 1px; }
+.continue-dossier-facts { display: grid; grid-template-columns: 1.25fr 0.8fr 1fr; gap: 0.7rem; margin: 1.25rem 0; padding: 0.9rem 0; border-block: 1px solid var(--line); }
+.continue-dossier-facts div { display: grid; gap: 0.15rem; }
+.continue-dossier-facts dt { color: var(--muted); font-size: 0.64rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.continue-dossier-facts dd { margin: 0; font-size: 0.8rem; line-height: 1.35; }
+.title-continue { width: 100%; min-height: 3.1rem; font-weight: 800; letter-spacing: 0.04em; }
+.title-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.55rem; }
+.title-actions button { display: grid; gap: 0.18rem; min-height: 4.6rem; padding: 0.8rem; border: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; }
+.title-actions button:hover:not(:disabled), .title-actions button:focus-visible:not(:disabled) { border-color: var(--navy); background: rgba(24, 51, 78, 0.055); }
+.title-actions button:disabled { opacity: 0.48; cursor: default; }
+.title-actions span { color: var(--navy); font-weight: 800; }
+.title-actions small { color: var(--muted); }
+.load-career-screen { min-height: 100%; padding: clamp(1.2rem, 4vw, 3.5rem); background: #eae6de; }
+.load-career-head { display: flex; max-width: 84rem; margin: 0 auto 1.5rem; align-items: end; justify-content: space-between; gap: 1.5rem; padding-bottom: 1rem; border-bottom: 3px solid var(--navy); }
+.load-career-head h1 { margin: 0.1rem 0; color: var(--navy); font: 600 clamp(2rem, 4vw, 3.4rem)/1 var(--serif); }
+.load-career-head p { margin: 0.35rem 0 0; color: var(--muted); }
+.saved-career-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 0.8rem; max-width: 84rem; margin: 0 auto; }
+.saved-career { display: grid; gap: 0.45rem; padding: 1.25rem; border-top: 4px solid var(--navy); background: var(--paper); box-shadow: 0 0.25rem 1.2rem rgba(18, 34, 50, 0.08); }
+.saved-career h2 { margin: 0.25rem 0 0; color: var(--navy); font: 600 1.55rem/1.1 var(--serif); }
+.saved-career-date, .saved-career footer { display: flex; justify-content: space-between; gap: 0.8rem; align-items: center; }
+.saved-career-date span { font-weight: 800; font-variant-numeric: tabular-nums; }
+.saved-career-date small, .saved-career footer small { color: var(--muted); }
+.saved-career-office, .saved-career-context { margin: 0; }
+.saved-career-office { font-weight: 700; }
+.saved-career-context { min-height: 2.6rem; padding: 0.65rem 0; border-block: 1px solid var(--line); color: var(--muted); font-family: var(--serif); }
+
+@media (max-width: 900px) {
+  .political-title-screen { grid-template-columns: 1fr; }
+  .title-masthead { min-height: 42vh; padding: 2.4rem; }
+  .title-wordmark h1 { font-size: clamp(3.8rem, 15vw, 6rem); }
+  .title-political-desk { min-height: 58vh; padding: 1.4rem; }
+}
+@media (max-width: 600px) {
+  .title-masthead { min-height: 34vh; padding: 1.4rem; }
+  .title-seal { width: 2.6rem; height: 2.6rem; margin-bottom: 0.8rem; font-size: 1.35rem; }
+  .title-wordmark > span { font-size: 0.55rem; }
+  .title-wordmark h1 { margin-block: 0.15rem 0.35rem; font-size: 3.6rem; }
+  .title-wordmark p { font-size: 0.9rem; }
+  .title-founding-line { margin-top: 1rem; font-size: 0.52rem; }
+  .title-political-desk { align-content: start; min-height: 66vh; padding: 0.85rem; }
+  .continue-dossier { padding: 1rem; }
+  .continue-dossier::before { display: none; }
+  .continue-dossier-facts { grid-template-columns: 1fr; gap: 0.55rem; }
+  .title-actions { grid-template-columns: 1fr 1fr; }
+  .title-actions button { min-height: 3.8rem; }
+  .title-actions button:last-child { display: none; }
+  .load-career-head { align-items: flex-start; flex-direction: column; }
+}
+
+/* Newsroom front page and article reader. */
+.news-open-story { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
+.news-open-story > span { align-self: end; padding-bottom: 0.35rem; color: var(--accent); font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
+.news-open-story:hover h3, .news-open-story:hover h4, .news-open-story:focus-visible h3, .news-open-story:focus-visible h4 { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.16em; }
+.news-open-story:focus-visible { outline: 2px solid var(--navy); outline-offset: 0.2rem; }
+.news-open-lead { display: block; }
+.news-open-lead .lead-story { width: 100%; }
+.news-open-lead > span { display: block; margin: -0.25rem 0 0.6rem; padding: 0; }
+.news-article-reader { max-width: 78rem; margin: 0 auto; border-top: 5px solid var(--navy); background: #fffdf8; box-shadow: 0 0.35rem 1.8rem rgba(19, 35, 52, 0.08); }
+.news-article-back { margin: 1rem 1.4rem 0; padding: 0.35rem 0; border: 0; border-bottom: 1px solid transparent; background: transparent; color: var(--accent); font-weight: 800; }
+.news-article-back:hover { border-color: currentColor; }
+.news-article-header { max-width: 58rem; margin: 0 auto; padding: clamp(1rem, 4vw, 3.5rem) clamp(1rem, 5vw, 4.5rem) 2rem; text-align: center; }
+.news-article-masthead { margin-bottom: 2.2rem; padding-block: 0.5rem; border-block: 2px solid var(--ink); font: 800 0.78rem/1 var(--serif); letter-spacing: 0.18em; }
+.news-article-header h1 { margin: 0.45rem auto 0.8rem; color: #172d47; font: 600 clamp(2.3rem, 6vw, 5rem)/0.98 var(--serif); letter-spacing: -0.025em; }
+.news-article-deck { max-width: 46rem; margin: 0 auto; color: #4e5863; font: 1.18rem/1.5 var(--serif); }
+.news-article-byline { margin-top: 1.35rem; color: var(--muted); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.news-article-copy { max-width: 48rem; margin: 0 auto; padding: 0 clamp(1rem, 5vw, 4rem) 4rem; font: 1.03rem/1.72 var(--serif); }
+.news-article-copy > p { max-width: 42rem; }
+.news-article-lede { font-size: 1.28rem; font-weight: 600; }
+.news-article-copy h2 { margin-top: 2.2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--navy); font-size: 1.65rem; }
+.news-article-figures { display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; margin: 1.3rem 0; padding: 0.8rem 1rem; border-left: 3px solid var(--accent); background: rgba(22, 55, 84, 0.04); font-family: var(--sans); font-size: 0.78rem; }
+.news-article-figures strong { width: 100%; color: var(--navy); text-transform: uppercase; letter-spacing: 0.05em; }
+.news-article-outlets { border-block: 1px solid var(--line); }
+.news-article-outlets section { padding: 1rem 0; border-bottom: 1px solid var(--line); }
+.news-article-outlets section:last-child { border-bottom: 0; }
+.news-article-outlets section > div { display: flex; justify-content: space-between; gap: 1rem; font-family: var(--sans); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.news-article-outlets section > div span { color: var(--muted); }
+.news-article-outlets h3 { margin: 0.35rem 0; color: var(--navy); font-size: 1.22rem; }
+.news-article-outlets p { margin: 0; color: #555e67; }
+.news-article-record { margin-top: 2rem; padding-top: 0.8rem; border-top: 2px solid var(--ink); color: var(--muted); font: 0.72rem/1.4 var(--sans); }
+
+@media (max-width: 600px) {
+  .news-article-masthead { margin-bottom: 1.2rem; }
+  .news-article-header h1 { font-size: 2.35rem; }
+  .news-article-deck { font-size: 1rem; }
+  .news-article-copy { font-size: 0.96rem; }
+}
+
+/* Generated political encyclopedia. */
+.history-wiki { display: grid; grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr); max-width: 92rem; margin: 0 auto; border: 1px solid var(--line); background: #f9f7f1; }
+.wiki-index { display: flex; min-height: 46rem; max-height: calc(100vh - 9rem); flex-direction: column; border-right: 1px solid var(--line); background: #f0ede5; }
+.wiki-index-brand { display: grid; gap: 0.12rem; padding: 1rem; border-bottom: 3px double var(--navy); }
+.wiki-index-brand strong { color: var(--navy); font: 800 1.2rem/1 var(--serif); letter-spacing: 0.12em; }
+.wiki-index-brand span { color: var(--muted); font-size: 0.7rem; }
+.wiki-index .tabbar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; padding: 0.4rem; border-bottom: 1px solid var(--line); }
+.wiki-index .tabbar button { padding: 0.4rem 0.3rem; font-size: 0.7rem; }
+.wiki-index > input { margin: 0.65rem; padding: 0.55rem; border: 1px solid var(--line); background: #fffdf8; }
+.wiki-index-results { min-height: 0; overflow: auto; }
+.wiki-index-results button { display: grid; gap: 0.18rem; width: 100%; padding: 0.62rem 0.75rem; border: 0; border-bottom: 1px solid var(--line); border-left: 4px solid transparent; background: transparent; color: inherit; text-align: left; }
+.wiki-index-results button:hover, .wiki-index-results button:focus-visible { background: rgba(22, 48, 74, 0.05); }
+.wiki-index-results button.active { border-left-color: var(--accent); background: #fffdf8; }
+.wiki-index-results strong { color: var(--navy); font-family: var(--serif); }
+.wiki-index-results span { display: -webkit-box; overflow: hidden; color: var(--muted); font-size: 0.68rem; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.wiki-article { max-height: calc(100vh - 9rem); padding: clamp(1.3rem, 4vw, 3.5rem); overflow: auto; background: #fffdf8; }
+.wiki-article > header { padding-bottom: 1.4rem; border-bottom: 1px solid var(--line); }
+.wiki-article > header h1 { margin: 0.25rem 0 0.45rem; color: #152d47; font: 600 clamp(2.3rem, 5vw, 4.4rem)/1 var(--serif); letter-spacing: -0.025em; }
+.wiki-article > header p { max-width: 50rem; margin: 0; color: var(--muted); font: 1.05rem/1.45 var(--serif); }
+.wiki-toc { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin: 1rem 0; padding: 0.65rem 0.8rem; border: 1px solid var(--line); background: rgba(22, 48, 74, 0.025); font-size: 0.72rem; }
+.wiki-toc strong { color: var(--navy); }
+.wiki-toc a { color: var(--accent); }
+.wiki-article-body { max-width: 58rem; }
+.wiki-article-body h2 { margin: 2rem 0 0.65rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--line); color: var(--navy); font: 600 1.5rem/1.2 var(--serif); }
+.wiki-lead { max-width: 49rem; color: #35414d; font: 1.16rem/1.58 var(--serif); }
+.wiki-article > footer { margin-top: 3rem; padding-top: 0.75rem; border-top: 2px solid var(--ink); color: var(--muted); font-size: 0.68rem; }
+.wiki-timeline { margin: 0; padding: 0; list-style: none; }
+.wiki-timeline li { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 0.8rem; padding: 0.55rem 0; border-bottom: 1px solid var(--line); }
+.wiki-timeline time { color: var(--muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.wiki-timeline li > span { display: grid; gap: 0.12rem; }
+.wiki-timeline small { color: var(--muted); }
+.wiki-related-link { display: grid; gap: 0.18rem; width: 100%; padding: 0.65rem 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--navy); text-align: left; }
+.wiki-related-link span { color: var(--muted); font-size: 0.72rem; }
+.wiki-plain-list { margin: 0; padding: 0; list-style: none; }
+.wiki-plain-list li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid var(--line); }
+.wiki-plain-list button { padding: 0; border: 0; background: transparent; color: var(--accent); text-align: left; }
+.wiki-plain-list span { color: var(--muted); font-size: 0.75rem; }
+.wiki-result-banner { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin: 1rem 0; padding: 1rem; border-block: 3px double var(--navy); }
+.wiki-result-banner span { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.wiki-result-banner strong { color: var(--navy); font: 600 1.35rem/1.2 var(--serif); text-align: right; }
+.wiki-composition { display: flex; width: 100%; height: 1.5rem; overflow: hidden; border: 1px solid var(--line); }
+.wiki-majority-line { color: var(--muted); font-size: 0.75rem; }
+.wiki-round-list { display: grid; gap: 0.35rem; }
+.wiki-round-list div { display: grid; grid-template-columns: 6rem 1fr; gap: 0.7rem; padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
+.wiki-platform { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; margin: 0; }
+.wiki-platform div { display: flex; justify-content: space-between; gap: 0.7rem; padding: 0.5rem; border-bottom: 1px solid var(--line); }
+.wiki-platform div:nth-child(odd) { border-right: 1px solid var(--line); }
+.wiki-platform dt { text-transform: capitalize; }
+.wiki-platform dd { margin: 0; color: var(--muted); }
+.wiki-seat-history { display: flex; height: 12rem; gap: 0.8rem; align-items: end; overflow-x: auto; padding: 0.7rem; border: 1px solid var(--line); }
+.wiki-seat-history div { display: grid; grid-template-rows: auto 1fr auto; gap: 0.2rem; height: 100%; min-width: 3.2rem; align-items: end; justify-items: center; }
+.wiki-seat-history span { width: 1.8rem; max-height: 8rem; }
+.wiki-seat-history time, .wiki-seat-history strong { font-size: 0.7rem; }
+.wiki-provisions { padding-left: 1.5rem; }
+.wiki-provisions li { padding: 0.55rem; border-bottom: 1px solid var(--line); }
+
+@media (max-width: 900px) {
+  .history-wiki { grid-template-columns: 1fr; }
+  .wiki-index { min-height: 0; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }
+  .wiki-index-results { display: flex; max-height: 10rem; overflow-x: auto; }
+  .wiki-index-results button { min-width: 15rem; border-left: 0; border-top: 4px solid transparent; }
+  .wiki-index-results button.active { border-top-color: var(--accent); }
+  .wiki-article { max-height: none; }
+}
+@media (max-width: 600px) {
+  .wiki-index .tabbar { display: flex; overflow-x: auto; }
+  .wiki-index .tabbar button { min-width: 6.5rem; }
+  .wiki-article { padding: 1rem; }
+  .wiki-article > header h1 { font-size: 2.35rem; }
+  .wiki-timeline li { grid-template-columns: 5.5rem 1fr; }
+  .wiki-platform { grid-template-columns: 1fr; }
+  .wiki-platform div:nth-child(odd) { border-right: 0; }
+  .wiki-result-banner { align-items: flex-start; flex-direction: column; }
+  .wiki-result-banner strong { text-align: left; }
+}
+
+/* Complete constitutional text, annotations and clause-targeted drafting. */
+.constitution-browser { display: grid; grid-template-columns: minmax(12rem, 15rem) minmax(26rem, 1fr) minmax(17rem, 21rem); min-height: 48rem; max-height: calc(100vh - 10rem); border: 1px solid var(--line); background: #fffdf8; }
+.constitution-toc { min-height: 0; overflow: auto; border-right: 1px solid var(--line); background: #efede7; }
+.constitution-seal { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; margin: 1.2rem auto 0.8rem; border: 2px solid var(--navy); border-radius: 50%; color: var(--navy); font: 800 0.78rem/1.1 var(--serif); text-align: center; letter-spacing: 0.12em; }
+.constitution-seal small { font-size: 0.55rem; }
+.constitution-toc > strong { display: block; padding: 0.55rem 0.75rem; border-block: 3px double var(--navy); color: var(--navy); font: 600 1rem/1 var(--serif); }
+.constitution-toc button { display: grid; gap: 0.1rem; width: 100%; padding: 0.58rem 0.7rem; border: 0; border-bottom: 1px solid var(--line); border-left: 4px solid transparent; background: transparent; color: inherit; text-align: left; font-size: 0.72rem; }
+.constitution-toc button span { color: var(--muted); font-size: 0.58rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.constitution-toc button:hover, .constitution-toc button:focus-visible { background: rgba(22, 48, 74, 0.055); }
+.constitution-toc button.active { border-left-color: var(--accent); background: #fffdf8; color: var(--navy); font-weight: 800; }
+.constitution-document { min-height: 0; padding: clamp(1rem, 3vw, 2.8rem); overflow: auto; }
+.constitution-document > header { padding-bottom: 1.2rem; border-bottom: 3px double var(--ink); text-align: center; }
+.constitution-document > header h2 { margin: 0.25rem 0; color: #172d47; font: 600 clamp(2rem, 4vw, 3.4rem)/1 var(--serif); }
+.constitution-preamble { display: grid; gap: 0.45rem; max-width: 45rem; margin: 1rem auto 0; font: italic 0.95rem/1.55 var(--serif); }
+.constitution-preamble strong { font-style: normal; text-transform: uppercase; letter-spacing: 0.08em; }
+.constitution-article-heading { margin: 2rem 0 1.3rem; text-align: center; }
+.constitution-article-heading span { color: var(--muted); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.13em; }
+.constitution-article-heading h3 { margin: 0.2rem 0; color: var(--navy); font: 600 2rem/1.1 var(--serif); }
+.constitution-section { max-width: 48rem; margin: 0 auto 1.5rem; }
+.constitution-section h4 { margin: 0 0 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--line); color: var(--navy); font: 600 1.1rem/1.2 var(--serif); }
+.constitution-clause { display: grid; grid-template-columns: 1.8rem minmax(0, 1fr) auto; gap: 0.35rem; width: 100%; padding: 0.55rem 0.45rem; border: 0; border-bottom: 1px dotted var(--line); background: transparent; color: inherit; text-align: left; font: 0.92rem/1.5 var(--serif); }
+.constitution-clause:hover, .constitution-clause:focus-visible { background: rgba(22, 48, 74, 0.045); }
+.constitution-clause.selected { box-shadow: inset 3px 0 0 var(--accent); background: rgba(22, 48, 74, 0.055); }
+.constitution-clause .clause-number { color: var(--muted); font-size: 0.76rem; }
+.constitution-clause small { align-self: start; color: var(--muted); font: 0.58rem/1.3 var(--sans); white-space: nowrap; }
+.constitution-annotation { min-height: 0; padding: 1rem; overflow: auto; border-left: 1px solid var(--line); background: #f1efe9; }
+.constitution-annotation h3 { margin: 0.2rem 0 0.55rem; color: var(--navy); font: 600 1.25rem/1.2 var(--serif); }
+.constitution-annotation > p { margin: 0; font: 0.86rem/1.5 var(--serif); }
+.constitutional-scope { display: flex; justify-content: space-between; gap: 0.7rem; margin-top: 0.8rem; padding: 0.55rem 0; border-block: 1px solid var(--line); font-size: 0.7rem; }
+.constitutional-scope span { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.constitution-runtime-note { margin: 0.75rem 0; padding: 0.55rem; border-left: 3px solid #768393; background: rgba(22, 48, 74, 0.04); color: var(--muted); font-size: 0.7rem; line-height: 1.4; }
+.constitution-annotation-amendment { display: grid; gap: 0.12rem; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.7rem; }
+.constitution-annotation-amendment span { color: var(--muted); text-transform: capitalize; }
+.constitution-draft-panel { display: grid; gap: 0.6rem; margin-top: 1rem; padding-top: 0.75rem; border-top: 3px double var(--navy); }
+.constitution-draft-panel label { display: grid; gap: 0.35rem; color: var(--navy); font-size: 0.72rem; font-weight: 800; }
+.constitution-draft-panel textarea { width: 100%; resize: vertical; padding: 0.55rem; border: 1px solid var(--line); background: #fffdf8; color: var(--ink); font: 0.78rem/1.4 var(--serif); }
+.constitution-draft-panel > small { color: var(--muted); font-size: 0.64rem; line-height: 1.4; }
+.constitutional-redline { display: grid; gap: 0.45rem; }
+.constitutional-redline > div { display: grid; gap: 0.18rem; padding: 0.5rem; border: 1px solid var(--line); background: #fffdf8; }
+.constitutional-redline span { color: var(--muted); font: 800 0.57rem/1 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; }
+.constitutional-redline del, .constitutional-redline ins { font: 0.72rem/1.4 var(--serif); text-decoration-thickness: 1px; }
+.constitutional-redline del { background: rgba(145, 55, 45, 0.08); color: #6f302b; }
+.constitutional-redline ins { background: rgba(50, 112, 72, 0.09); color: #2e6644; text-decoration: none; }
+.constitutional-redline.compact { margin-top: 0.5rem; }
+.constitutional-redline.compact > div { padding: 0.35rem; }
+
+@media (max-width: 1200px) {
+  .constitution-browser { grid-template-columns: 13rem minmax(0, 1fr); max-height: none; }
+  .constitution-annotation { grid-column: 1 / -1; max-height: none; border-top: 3px solid var(--navy); border-left: 0; }
+}
+@media (max-width: 700px) {
+  .constitution-browser { grid-template-columns: 1fr; }
+  .constitution-toc { display: flex; max-width: 100%; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .constitution-seal, .constitution-toc > strong { display: none; }
+  .constitution-toc button { min-width: 9rem; border-bottom: 0; border-left: 0; border-top: 4px solid transparent; }
+  .constitution-toc button.active { border-top-color: var(--accent); }
+  .constitution-document { padding: 1rem; }
+  .constitution-document > header h2 { font-size: 2rem; }
+  .constitution-article-heading h3 { font-size: 1.5rem; }
+  .constitution-clause { grid-template-columns: 1.6rem 1fr; }
+  .constitution-clause small { grid-column: 2; }
+}
+
+/* Truthful Election Night presentation timeline, separate from calculation. */
+.election-night-live { margin: 0.9rem 0 1.3rem; border: 1px solid #31465d; border-top: 6px solid #d0a64a; background: #112338; color: #eef2f5; box-shadow: 0 0.8rem 2.4rem rgba(10, 22, 36, 0.2); }
+.election-night-live-head { display: flex; justify-content: space-between; gap: 1rem; align-items: start; padding: 1rem 1.15rem; border-bottom: 1px solid rgba(255, 255, 255, 0.14); background: linear-gradient(100deg, #152b43, #1c3a55); }
+.election-night-live-head .kicker { color: #d6b76f; }
+.election-night-live-head h2 { margin: 0.18rem 0; color: #fff; font: 600 clamp(1.5rem, 3vw, 2.35rem)/1 var(--serif); }
+.election-night-live-head p { max-width: 48rem; margin: 0; color: #b9c5cf; font-size: 0.76rem; }
+.election-night-live-status { display: grid; min-width: 8rem; justify-items: end; text-align: right; }
+.election-night-live-status strong { margin-top: 0.25rem; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.election-night-live-status span { color: #afbdc9; font-size: 0.65rem; }
+.election-night-controls { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.5rem 0.65rem; border-bottom: 1px solid rgba(255, 255, 255, 0.12); background: #0d1d2f; }
+.election-night-controls button { min-width: 3.4rem; padding: 0.35rem 0.55rem; border: 1px solid #40566d; background: #182d43; color: #dce4ea; font-size: 0.7rem; font-weight: 800; }
+.election-night-controls button:hover, .election-night-controls button:focus-visible, .election-night-controls button.active { border-color: #d4b25f; background: #31475d; color: #fff; }
+.election-night-live-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem); min-height: 24rem; }
+.election-night-live-visual { min-width: 0; padding: 0.8rem; }
+.election-night-event-log { padding: 0.75rem; border-left: 1px solid rgba(255, 255, 255, 0.14); background: #0d1d2f; }
+.election-night-event-log h3 { margin: 0 0 0.45rem; color: #d6b76f; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.election-night-event-log > p { color: #9eacb9; font-size: 0.72rem; }
+.election-night-event-log > div { display: grid; gap: 0.12rem; padding: 0.48rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.11); }
+.election-night-event-log strong { font: 600 0.84rem/1.2 var(--serif); }
+.election-night-event-log span { color: #aebbc6; font-size: 0.65rem; line-height: 1.35; }
+.election-night-live > footer { padding: 0.5rem 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.12); color: #91a1af; font-size: 0.61rem; }
+.presidential-night-round { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.6rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.13); }
+.presidential-night-round span { color: #d6b76f; font-weight: 800; }
+.presidential-night-round strong { font-family: var(--serif); }
+.presidential-night-rails { display: grid; gap: 0.38rem; }
+.presidential-night-candidate { padding: 0.48rem; border: 1px solid rgba(255, 255, 255, 0.14); background: #182d43; transition: opacity 0.25s ease, transform 0.25s ease; }
+.presidential-night-candidate.eliminated { opacity: 0.47; transform: translateX(0.25rem); }
+.presidential-night-candidate.elected { border-color: #d6b76f; background: #263c51; }
+.presidential-night-candidate > div { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 0.45rem; align-items: center; }
+.presidential-night-candidate small { color: #aebbc6; font-size: 0.62rem; text-transform: uppercase; }
+.presidential-night-candidate b { font-variant-numeric: tabular-nums; }
+.presidential-night-bar { display: block; height: 0.35rem; margin-top: 0.35rem; background: rgba(255, 255, 255, 0.09); }
+.presidential-night-bar i { display: block; height: 100%; transition: width 0.45s ease; }
+.rcv-transfer-board { display: flex; flex-wrap: wrap; gap: 0.3rem 0.7rem; margin-top: 0.6rem; padding: 0.55rem; border-left: 3px solid #d6b76f; background: rgba(255, 255, 255, 0.055); font-size: 0.67rem; }
+.rcv-transfer-board strong { width: 100%; color: #d6b76f; }
+.assembly-night-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin-bottom: 0.55rem; }
+.assembly-night-totals div { display: grid; gap: 0.1rem; padding: 0.48rem; border: 1px solid rgba(255, 255, 255, 0.14); }
+.assembly-night-totals span { color: #aebbc6; font-size: 0.62rem; text-transform: uppercase; }
+.assembly-night-totals strong { font-size: 1.15rem; }
+.assembly-night-grid, .governor-night-stage, .provincial-assembly-night-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem); gap: 0.7rem; }
+.election-night-live .terena-map { min-height: 21rem; max-height: 31rem; background: #e9e7df; }
+.assembly-night-party-rail, .governor-night-totals, .provincial-night-seat-rail { display: grid; align-content: start; gap: 0.28rem; max-height: 28rem; overflow: auto; }
+.assembly-night-party-rail > div, .governor-night-totals > div, .provincial-night-seat-rail > div { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.4rem; align-items: center; padding: 0.42rem; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.assembly-night-party-rail b, .governor-night-totals b, .provincial-night-seat-rail b { font-size: 1rem; }
+.assembly-night-party-rail small, .governor-night-totals small, .provincial-night-seat-rail small { grid-column: 2 / -1; color: #aebbc6; font-size: 0.6rem; }
+
+@media (max-width: 900px) {
+  .election-night-live-body { grid-template-columns: 1fr; }
+  .election-night-event-log { border-top: 1px solid rgba(255, 255, 255, 0.14); border-left: 0; }
+  .election-night-event-log { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 0.7rem; }
+  .election-night-event-log h3, .election-night-event-log > p { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .election-night-live-head { flex-direction: column; }
+  .election-night-live-status { justify-items: start; text-align: left; }
+  .election-night-controls button { flex: 1; }
+  .assembly-night-totals { grid-template-columns: 1fr 1fr; }
+  .assembly-night-grid, .governor-night-stage, .provincial-assembly-night-stage { grid-template-columns: 1fr; }
+  .election-night-live .terena-map { min-height: 18rem; }
+  .presidential-night-candidate > div { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .presidential-night-candidate small { grid-column: 2; }
+  .election-night-event-log { grid-template-columns: 1fr; }
+}
