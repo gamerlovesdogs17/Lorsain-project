@@ -422,6 +422,91 @@ function maybePublicPolls(
       fieldEnd: state.currentDate,
       publicationDate: state.currentDate,
     });
+
+    // One rotating provincial sample gives the public a legitimate geographic
+    // window without pretending that every province is polled every quarter.
+    const provinceId = world.provinceIds.slice().sort()[
+      stableCampaignHash(`${election.id}:${state.currentDate.slice(0, 7)}:province-poll`) %
+        Math.max(1, world.provinceIds.length)
+    ];
+    if (provinceId) {
+      const regional = createPoll(world, state, rng, {
+        pollsterId: p.id,
+        electionId: election.id,
+        geographyKind: "province",
+        provinceId,
+        candidateIds: ids,
+        partyByCandidate,
+        fieldStart: state.currentDate,
+        fieldEnd: state.currentDate,
+        publicationDate: state.currentDate,
+      });
+      if (!("error" in regional)) regional.poll.metadata.purpose = "presidential_province";
+    }
+  }
+
+
+  const assemblyElection = Object.values(state.elections)
+    .filter((candidate) => candidate.type === "assembly" && candidate.status !== "resolved" && candidate.status !== "cancelled" && candidate.assembly)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+  const constituencyFields = Object.values(assemblyElection?.assembly?.constituencyFields ?? {})
+    .filter((field) => field.candidateIds.length >= 2)
+    .sort((a, b) => {
+      const aHash = stableCampaignHash(`${assemblyElection?.id}:${a.constituencyId}:public-poll`);
+      const bHash = stableCampaignHash(`${assemblyElection?.id}:${b.constituencyId}:public-poll`);
+      return aHash - bHash || a.constituencyId.localeCompare(b.constituencyId);
+    });
+  const constituencyField = constituencyFields[
+    stableCampaignHash(`${state.currentDate.slice(0, 7)}:constituency-poll`) % Math.max(1, constituencyFields.length)
+  ];
+  if (assemblyElection && constituencyField) {
+    const partyByCandidate = Object.fromEntries(
+      constituencyField.candidateIds.map((candidateId) => [
+        candidateId,
+        assemblyElection.assembly?.candidacies[candidateId]?.partyId ?? state.politicians[candidateId]?.partyId ?? null,
+      ]),
+    );
+    const local = createPoll(world, state, rng, {
+      pollsterId: pollsters[0]!.id,
+      electionId: null,
+      geographyKind: "constituency",
+      constituencyId: constituencyField.constituencyId,
+      candidateIds: constituencyField.candidateIds,
+      partyByCandidate,
+      fieldStart: state.currentDate,
+      fieldEnd: state.currentDate,
+      publicationDate: state.currentDate,
+    });
+    if (!("error" in local)) {
+      local.poll.metadata.electionId = assemblyElection.id;
+      local.poll.metadata.purpose = "assembly_constituency";
+    }
+  }
+
+  const governorRace = Object.values(state.provincialRuntime.elections)
+    .filter((race) => race.status === "field_finalized" && Object.values(race.candidates).filter((candidate) => !candidate.withdrawn).length >= 2)
+    .sort((a, b) => {
+      const aHash = stableCampaignHash(`${a.id}:${state.currentDate.slice(0, 7)}:governor-poll`);
+      const bHash = stableCampaignHash(`${b.id}:${state.currentDate.slice(0, 7)}:governor-poll`);
+      return aHash - bHash || a.id.localeCompare(b.id);
+    })[0];
+  if (governorRace) {
+    const candidates = Object.values(governorRace.candidates).filter((candidate) => !candidate.withdrawn);
+    const local = createPoll(world, state, rng, {
+      pollsterId: pollsters[0]!.id,
+      electionId: null,
+      geographyKind: "province",
+      provinceId: governorRace.provinceId,
+      candidateIds: candidates.map((candidate) => candidate.politicianId),
+      partyByCandidate: Object.fromEntries(candidates.map((candidate) => [candidate.politicianId, candidate.partyId])),
+      fieldStart: state.currentDate,
+      fieldEnd: state.currentDate,
+      publicationDate: state.currentDate,
+    });
+    if (!("error" in local)) {
+      local.poll.metadata.electionId = governorRace.id;
+      local.poll.metadata.purpose = "gubernatorial_province";
+    }
   }
   return events;
 }

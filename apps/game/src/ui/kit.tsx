@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export function PageHeader(props: {
   kicker?: string;
@@ -181,24 +181,62 @@ export function WorkLayout(props: {
   );
 }
 
-/** Map + selected-entity detail (desktop map-first). */
-export function MapDetailLayout(props: {
+/**
+ * Shared political-map workbench. The map always keeps the canvas; a click
+ * pins a compact result card and the full record opens only on request.
+ */
+export function PoliticalMapWorkspace(props: {
   toolbar?: ReactNode;
   map: ReactNode;
   detail: ReactNode;
+  detailVisible?: boolean;
   legend?: ReactNode;
   className?: string;
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailVisible = props.detailVisible !== false;
+  useEffect(() => {
+    if (!detailVisible) setDetailsOpen(false);
+  }, [detailVisible]);
   return (
-    <div className={`map-detail-layout${props.className ? ` ${props.className}` : ""}`}>
+    <div className={`political-map-workspace map-detail-layout${props.className ? ` ${props.className}` : ""}`}>
       {props.toolbar ? <div className="map-detail-toolbar">{props.toolbar}</div> : null}
       <div className="map-detail-body">
-        <div className="map-detail-map">{props.map}</div>
-        <aside className="map-detail-panel">{props.detail}</aside>
+        <div className="map-detail-map">
+          {props.map}
+          {detailVisible ? <aside className="map-pinned-card" aria-label="Selected map result">
+            <div className="map-pinned-card-preview">{props.detail}</div>
+            <button type="button" className="btn secondary btn-sm" onClick={() => setDetailsOpen(true)}>
+              View full result
+            </button>
+          </aside> : null}
+        </div>
       </div>
       {props.legend ? <div className="map-detail-legend">{props.legend}</div> : null}
+      {detailVisible && detailsOpen ? (
+        <div className="map-detail-drawer-backdrop" role="presentation" onMouseDown={() => setDetailsOpen(false)}>
+          <aside
+            className="map-detail-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Full map result"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="map-detail-drawer-head">
+              <strong>Selected result</strong>
+              <button type="button" className="btn quiet" aria-label="Close full result" onClick={() => setDetailsOpen(false)}>×</button>
+            </div>
+            <div className="map-detail-drawer-content">{props.detail}</div>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+/** Compatibility name for existing callers while they converge on one workspace. */
+export function MapDetailLayout(props: Parameters<typeof PoliticalMapWorkspace>[0]) {
+  return <PoliticalMapWorkspace {...props} />;
 }
 
 /** List/table + inspector for directories, bills, organizations. */

@@ -258,6 +258,20 @@ export type RuntimeConstitutionalRule = {
   sourceAmendmentId: string | null;
 };
 
+export const CONSTITUTIONAL_AMENDMENT_INTENTS = [
+  "technical_clarification",
+  "expand_individual_rights",
+  "restrict_individual_rights",
+  "devolve_national_power",
+  "centralize_national_power",
+  "strengthen_executive",
+  "constrain_executive",
+  "reform_elections",
+  "alter_office_terms",
+  "judicial_structure",
+] as const;
+export type ConstitutionalAmendmentIntent = (typeof CONSTITUTIONAL_AMENDMENT_INTENTS)[number];
+
 export type ConstitutionalAmendment = {
   id: string;
   title: string;
@@ -270,6 +284,10 @@ export type ConstitutionalAmendment = {
   documentClauseId?: string | null;
   currentText?: string | null;
   proposedText?: string | null;
+  /** Public legal-policy purpose selected before text is drafted. */
+  intent: ConstitutionalAmendmentIntent;
+  /** Whether ratification changes a modeled rule or only the authoritative document text. */
+  runtimeEffect: "modeled_rule" | "text_only";
   /** Public political resistance, not a hidden formal voting threshold. */
   politicalDifficulty?: number;
   proposalTrigger:

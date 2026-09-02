@@ -59,6 +59,14 @@ export function TerenaMap(props: {
     viewY: number;
     moved: boolean;
   } | null>(null);
+  const suppressClickRef = useRef(false);
+  const select = (selection: MapSelection) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    props.onSelect?.(selection);
+  };
   const reset = () => setView({
     x: prepared.transform.minX,
     y: prepared.transform.minY,
@@ -106,6 +114,7 @@ export function TerenaMap(props: {
             viewY: view.y,
             moved: false,
           };
+          suppressClickRef.current = false;
         }}
         onPointerMove={(event) => {
           const drag = dragRef.current;
@@ -114,12 +123,17 @@ export function TerenaMap(props: {
           if (!drag.moved) {
             if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 4) return;
             drag.moved = true;
+            suppressClickRef.current = true;
             event.currentTarget.setPointerCapture(event.pointerId);
           }
           setView((current) => ({ ...current, x: drag.viewX - (event.clientX - drag.x) * (current.width / bounds.width), y: drag.viewY - (event.clientY - drag.y) * (current.height / bounds.height) }));
         }}
         onPointerUp={(event) => {
-          if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+          if (dragRef.current?.pointerId === event.pointerId) {
+            const moved = dragRef.current.moved;
+            dragRef.current = null;
+            if (moved) window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+          }
         }}
         onWheel={(event) => {
           event.preventDefault();
@@ -140,7 +154,7 @@ export function TerenaMap(props: {
             className={`map-province${props.selectedId === p.id ? " is-selected" : ""}`}
             data-id={p.id}
             fill={props.fillFor?.(p, "province") ?? "#e7efe6"}
-            onClick={() => props.onSelect?.({ id: p.id, kind: "province", name: p.name })}
+            onClick={() => select({ id: p.id, kind: "province", name: p.name })}
             tabIndex={0}
             role="button"
             aria-label={p.name}
@@ -158,7 +172,7 @@ export function TerenaMap(props: {
                 className={`map-constituency${props.selectedId === c.id ? " is-selected" : ""}`}
                 data-id={c.id}
                 fill={props.fillFor?.(c, "constituency") ?? "transparent"}
-                onClick={() => props.onSelect?.({ id: c.id, kind: "constituency", name: c.name })}
+                onClick={() => select({ id: c.id, kind: "constituency", name: c.name })}
                 tabIndex={0}
                 role="button"
                 aria-label={c.name}
@@ -173,7 +187,7 @@ export function TerenaMap(props: {
           <g
             key={city.id}
             className="map-city"
-            onClick={() => props.onSelect?.({ id: city.id, kind: "city", name: city.name })}
+            onClick={() => select({ id: city.id, kind: "city", name: city.name })}
             tabIndex={0}
             role="button"
             aria-label={city.name}

@@ -59,6 +59,7 @@ export {
   migrateSaveV11ToV12,
   migrateSaveV12ToV13,
   migrateSaveV13ToV14,
+  migrateSaveV17ToV18,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -142,6 +143,7 @@ export {
   gotvActivations,
 } from "./campaigns/index.js";
 export type { CampaignState, CampaignRuntime, DebateState } from "./campaigns/types.js";
+export type { PollRecord } from "./elections/types.js";
 export {
   currentGovernorId,
   governedProvinceId,
@@ -152,6 +154,7 @@ export {
   PROVINCIAL_INVESTMENTS,
   PROVINCIAL_BILL_SUBJECTS,
   CONSTITUTIONAL_RULE_IDS,
+  CONSTITUTIONAL_AMENDMENT_INTENTS,
 } from "./provinces/index.js";
 export type {
   ProvincialRuntime,
@@ -159,6 +162,7 @@ export type {
   GubernatorialElection,
   ProvincialBillSubject,
   ConstitutionalRuleId,
+  ConstitutionalAmendmentIntent,
 } from "./provinces/types.js";
 export {
   processLegislatureMonth,

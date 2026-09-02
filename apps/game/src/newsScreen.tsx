@@ -76,12 +76,13 @@ export function NewsPage(props: {
   catalog: PresentationCatalog;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("all");
+  const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [page, setPage] = useState(0);
   const [selectedStoryKey, setSelectedStoryKey] = useState<string | null>(null);
 
   const groups = useMemo(() => {
     const all = storiesChronological(props.snap).filter((s) =>
-      tab === "all" ? true : s.category === tab,
+      (tab === "all" || s.category === tab) && (selectedOutletId === "all" || s.outletId === selectedOutletId),
     );
     const map = new Map<string, StoryGroup>();
     for (const s of all) {
@@ -102,7 +103,10 @@ export function NewsPage(props: {
       if (b.importance !== a.importance) return b.importance - a.importance;
       return b.date < a.date ? -1 : b.date > a.date ? 1 : 0;
     });
-  }, [props.snap, tab]);
+  }, [props.snap, selectedOutletId, tab]);
+
+  const outlets = Object.values(props.world.mediaOutlets).sort((a, b) => a.name.localeCompare(b.name));
+  const selectedOutlet = selectedOutletId === "all" ? null : props.world.mediaOutlets[selectedOutletId] ?? null;
 
   const lead = groups[0] ?? null;
   const secondary = groups.slice(1, 3);
@@ -154,12 +158,12 @@ export function NewsPage(props: {
     const relatedPoliticians = primary.subjectIds.filter((id) => Boolean(props.snap.politicians[id]));
     return (
       <WorkLayout
-        header={<PageHeader kicker="News desk" title="Article" subtitle="One public event, with each outlet's framing kept distinct from the underlying facts." />}
+        header={<PageHeader kicker={selectedOutlet?.name ?? "News desk"} title="Article" subtitle={selectedOutlet ? `An article from the ${selectedOutlet.name} archive; its framing remains distinct from the public fact.` : "One public event, with each outlet's framing kept distinct from the underlying facts."} />}
         main={
           <article className="news-article-reader">
             <button type="button" className="news-article-back" onClick={() => setSelectedStoryKey(null)}>← Back to front page</button>
             <header className="news-article-header">
-              <div className="news-article-masthead">THE TERENA POLITICAL DESK</div>
+              <div className="news-article-masthead">{selectedOutlet?.name.toUpperCase() ?? "THE TERENA POLITICAL DESK"}</div>
               <div className="kicker">{selectedGroup.category} · {selectedGroup.date}</div>
               <h1>{storyHeadline(props.catalog, props.world, props.snap, primary)}</h1>
               <p className="news-article-deck">{articleDeck(selectedGroup)}</p>
@@ -190,12 +194,16 @@ export function NewsPage(props: {
       header={
         <PageHeader
           kicker="Press"
-          title="News"
-          subtitle="Coverage selected from public events. Outlets may frame, not invent."
+          title={selectedOutlet?.name ?? "News"}
+          subtitle={selectedOutlet ? `${selectedOutlet.name} front page and archive. Headlines reflect its public framing; recorded events remain unchanged.` : "Coverage selected from public events. Outlets may frame, not invent."}
         />
       }
       main={
         <>
+          <nav className="news-outlet-switcher" aria-label="News outlet front pages">
+            <button type="button" className={selectedOutletId === "all" ? "active" : ""} onClick={() => { setSelectedOutletId("all"); setPage(0); setSelectedStoryKey(null); }}>All Press</button>
+            {outlets.map((outlet) => <button type="button" className={selectedOutletId === outlet.id ? "active" : ""} key={outlet.id} onClick={() => { setSelectedOutletId(outlet.id); setPage(0); setSelectedStoryKey(null); }}>{outlet.name}</button>)}
+          </nav>
           <TabBar
             tabs={TABS.map((id) => ({ id, label: id }))}
             value={tab}

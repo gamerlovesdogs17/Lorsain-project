@@ -3,6 +3,9 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import { createReadStream, existsSync } from "node:fs";
 
+const productionBase = process.env.VITE_BASE_PATH ??
+  (process.env.GITHUB_ACTIONS ? "/Lorsain-project/" : "/");
+
 const qaFixtures = new Map([
   ["judicial", resolve(__dirname, "../../docs/qa/phase11_3/judicial-appointment-browser-save.json")],
   ["institutions", resolve(__dirname, "../../docs/qa/phase11_3/leadership-election-browser-save.json")],
@@ -11,6 +14,11 @@ const qaFixtures = new Map([
 ]);
 
 export default defineConfig({
+  // GitHub Pages serves this repository below /Lorsain-project/. Vite rewrites
+  // the entry module, imported chunks, and Worker module URLs from this base.
+  // Local development remains rooted at / unless a production-subpath smoke
+  // test explicitly supplies VITE_BASE_PATH.
+  base: productionBase,
   plugins: [
     react(),
     {

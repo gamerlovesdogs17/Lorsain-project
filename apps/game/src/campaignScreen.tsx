@@ -21,6 +21,7 @@ import {
   constituencyDisplayName,
   eventDisplay,
   issueDisplayName,
+  partyColor,
   partyDisplayName,
   politicianDisplayName,
   pollShareLine,
@@ -40,6 +41,12 @@ import { PoliticianCard, PoliticianProfile } from "./ui/politician.js";
 import { MapLegend } from "./ui/mapLegend.js";
 import { TerenaMap, type MapSelection } from "./map/TerenaMap.js";
 import { mapFillFor } from "./map/fills.js";
+import {
+  publicForecast,
+  publicPolling,
+  previousPublicResult,
+  type CampaignMapLayer,
+} from "./map/publicLayers.js";
 
 const AD_SPENDS = [5_000, 10_000, 25_000, 50_000, 100_000];
 type ActionKind = "visit" | "organize" | "advertise" | "message" | "attack" | "endorsement" | "gotv" | null;
@@ -112,6 +119,7 @@ export function CampaignPage(props: {
   const [mapSel, setMapSel] = useState<MapSelection | null>(null);
   const [hoverSel, setHoverSel] = useState<MapSelection | null>(null);
   const [mapScale, setMapScale] = useState<"province" | "constituency">("province");
+  const [mapLayer, setMapLayer] = useState<CampaignMapLayer>("forecast");
   const contest = c?.contestId ? props.snap.partyContests[c.contestId] : null;
   const assemblyIncompatible = Object.values(props.snap.officeTerms).some((term) => {
     if (
@@ -470,6 +478,11 @@ export function CampaignPage(props: {
   );
 
   const focus = mapSel ?? hoverSel;
+  const publicMapDatum = (kind: "province" | "constituency", id: string) => {
+    if (mapLayer === "polling") return publicPolling(props.snap, c, kind, id);
+    if (mapLayer === "previous") return previousPublicResult(props.world, props.snap, c, kind, id);
+    return publicForecast(props.world, props.snap, c, kind, id);
+  };
 
   return (
     <div className="campaign-page page-tone-campaign">
@@ -550,6 +563,18 @@ export function CampaignPage(props: {
         </aside>
 
         <div className="campaign-center">
+          <div className="campaign-map-layers" aria-label="Campaign map data layer">
+            {([
+              ["forecast", "Forecast"],
+              ["polling", "Polling"],
+              ["ground_game", "Ground Game"],
+              ["previous", "Previous"],
+            ] as const).map(([id, label]) => (
+              <button type="button" key={id} className={mapLayer === id ? "active" : ""} onClick={() => { setMapLayer(id); setMapSel(null); }}>
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="map-scale-switch" aria-label="Campaign map scale">
             <button
               type="button"
@@ -577,44 +602,37 @@ export function CampaignPage(props: {
             mode="campaign"
             selectedId={mapSel?.id ?? null}
             showConstituencies={mapScale === "constituency"}
-            fillFor={(f, kind) =>
-              mapFillFor(
-                "campaign",
-                props.world,
-                props.snap,
-                f,
-                kind,
-                c.organizationByConstituency,
-                c.organizationByProvince,
-              )
-            }
+            fillFor={(f, kind) => {
+              if (mapLayer === "ground_game") {
+                return mapFillFor("campaign", props.world, props.snap, f, kind, c.organizationByConstituency, c.organizationByProvince);
+              }
+              const datum = publicMapDatum(kind, f.id);
+              return datum.leaderPartyId ? partyColor(props.world, datum.leaderPartyId) : "#d7d5cf";
+            }}
             onSelect={setMapSel}
             onHover={setHoverSel}
             tooltipFor={(selection) => (
               <>
                 <strong>{selection.name}</strong>
-                <span>
-                  {selection.kind === "province"
-                    ? `Provincial Ground Game ${groundGameStrength(c.organizationByProvince[selection.id])}/100`
-                    : selection.kind === "constituency"
-                      ? `Constituency Ground Game ${groundGameStrength(c.organizationByConstituency[selection.id])}/100`
-                      : "Campaign location"}
-                </span>
+                {selection.kind === "province" || selection.kind === "constituency" ? mapLayer === "ground_game" ? (
+                  <span>{selection.kind === "province" ? `Provincial Ground Game ${groundGameStrength(c.organizationByProvince[selection.id])}/100` : `Constituency Ground Game ${groundGameStrength(c.organizationByConstituency[selection.id])}/100`}</span>
+                ) : (() => {
+                  const datum = publicMapDatum(selection.kind, selection.id);
+                  return <><span>{datum.label}{datum.asOf ? ` · ${datum.truth === "poll" ? "Latest poll" : "As of"}: ${datum.asOf}` : ""}</span>{datum.projectedSeats?.map((row) => <small key={row.partyId ?? "independent"}>{partyDisplayName(props.world, row.partyId, props.snap)} · {row.seats} projected seat{row.seats === 1 ? "" : "s"}</small>)}<small>{datum.detail}</small></>;
+                })() : <span>Campaign location</span>}
               </>
             )}
           />
-          <MapLegend mode="campaign" world={props.world} />
+          <MapLegend mode="campaign" world={props.world} campaignLayer={mapLayer} />
           {focus ? (
             <p className="map-selection-note">
               {focus.name}
-              {focus.kind === "constituency"
-                ? ` · Ground Game ${groundGameStrength(c.organizationByConstituency[focus.id])}/100`
-                : focus.kind === "province"
-                  ? ` · Ground Game ${groundGameStrength(c.organizationByProvince[focus.id])}/100`
-                  : ""}
+              {focus.kind === "constituency" || focus.kind === "province" ? mapLayer === "ground_game"
+                ? ` · Ground Game ${groundGameStrength(focus.kind === "province" ? c.organizationByProvince[focus.id] : c.organizationByConstituency[focus.id])}/100`
+                : ` · ${publicMapDatum(focus.kind, focus.id).label}` : ""}
             </p>
           ) : (
-            <EmptyState>Your Ground Game strength — not latent voter support.</EmptyState>
+            <EmptyState>{mapLayer === "ground_game" ? "Your Ground Game strength — not latent voter support." : mapLayer === "polling" ? "Only directly sampled public polls receive a color." : mapLayer === "forecast" ? "A public model using polls and prior public results, with uncertainty stated." : "The last comparable certified geographic result."}</EmptyState>
           )}
         </div>
 

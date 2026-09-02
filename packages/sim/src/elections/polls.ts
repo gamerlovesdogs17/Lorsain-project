@@ -75,6 +75,7 @@ export function createPoll(
     pollsterId: string;
     electionId?: string | null;
     geographyKind: ElectionGeographyKind;
+    provinceId?: string | null;
     constituencyId?: string | null;
     candidateIds: string[];
     partyByCandidate: Record<string, string | null>;
@@ -116,12 +117,22 @@ export function createPoll(
       ),
     };
   }
-  if (args.geographyKind === "constituency") {
+  if (args.geographyKind === "province") {
+    if (!args.provinceId || !world.provinceIds.includes(args.provinceId)) {
+      return { error: reject("INVALID_GEOGRAPHY", String(args.provinceId)) };
+    }
+    if (args.constituencyId) {
+      return { error: reject("INVALID_GEOGRAPHY", "province poll cannot name a constituency") };
+    }
+  } else if (args.geographyKind === "constituency") {
     if (!args.constituencyId || !world.constituencyElectorate[args.constituencyId]) {
       return { error: reject("INVALID_GEOGRAPHY", String(args.constituencyId)) };
     }
-  } else if (args.constituencyId) {
-    return { error: reject("INVALID_GEOGRAPHY", "national poll cannot name a constituency") };
+    if (args.provinceId) {
+      return { error: reject("INVALID_GEOGRAPHY", "constituency poll cannot name a province") };
+    }
+  } else if (args.constituencyId || args.provinceId) {
+    return { error: reject("INVALID_GEOGRAPHY", "national poll cannot name a local geography") };
   }
   if (args.electionId) {
     const election = state.elections[args.electionId];
@@ -161,6 +172,12 @@ export function createPoll(
   const constituencyIds =
     args.geographyKind === "constituency" && args.constituencyId
       ? [args.constituencyId]
+      : args.geographyKind === "province" && args.provinceId
+        ? Object.keys(world.constituencyElectorate)
+            .filter((constituencyId) => world.constituencyElectorate[constituencyId]?.provincePopulationShares.some(
+              (share) => share.provinceId === args.provinceId && share.share > 0,
+            ))
+            .sort()
       : Object.keys(world.constituencyElectorate).sort();
   if (constituencyIds.length === 0) {
     return { error: reject("INVALID_GEOGRAPHY", "no electorate loaded") };
@@ -197,6 +214,7 @@ export function createPoll(
     pollsterId: args.pollsterId,
     electionId: args.electionId ?? null,
     geographyKind: args.geographyKind,
+    provinceId: args.provinceId ?? null,
     constituencyId: args.constituencyId ?? null,
     fieldStart: args.fieldStart,
     fieldEnd: args.fieldEnd,

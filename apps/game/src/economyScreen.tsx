@@ -249,6 +249,7 @@ export function EconomyPage(props: {
             </DataTable>
           ) : (
             <MapDetailLayout
+              detailVisible={sel?.kind === "province"}
               map={
                 <>
                   <TerenaMap

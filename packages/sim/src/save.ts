@@ -1672,3 +1672,51 @@ export function migrateSaveV16ToV17(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 16, toSchema: 17, migrate: migrateSaveV16ToV17 });
+
+/**
+ * Schema 18 records province-scoped public polls and the declared legal-policy
+ * intent/runtime reach of constitutional amendments. Existing records keep
+ * their result and text; the migration supplies only conservative metadata.
+ */
+export function migrateSaveV17ToV18(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 18 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 18 };
+
+  const polls: Record<string, unknown> = {};
+  if (isRecord(sim.polls)) {
+    for (const [id, value] of Object.entries(sim.polls)) {
+      polls[id] = isRecord(value)
+        ? { ...value, provinceId: typeof value.provinceId === "string" ? value.provinceId : null }
+        : value;
+    }
+  }
+  sim.polls = polls;
+
+  const provincial = isRecord(sim.provincialRuntime) ? { ...sim.provincialRuntime } : {};
+  const amendments: Record<string, unknown> = {};
+  if (isRecord(provincial.constitutionalAmendments)) {
+    for (const [id, value] of Object.entries(provincial.constitutionalAmendments)) {
+      const modeled = isRecord(value) && typeof value.ruleId === "string";
+      amendments[id] = isRecord(value)
+        ? {
+            ...value,
+            intent: typeof value.intent === "string"
+              ? value.intent
+              : modeled
+                ? value.ruleId === "court_term_years" ? "judicial_structure" : "alter_office_terms"
+                : "technical_clarification",
+            runtimeEffect: value.runtimeEffect === "modeled_rule" || value.runtimeEffect === "text_only"
+              ? value.runtimeEffect
+              : modeled ? "modeled_rule" : "text_only",
+          }
+        : value;
+    }
+  }
+  sim.provincialRuntime = { ...provincial, constitutionalAmendments: amendments };
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 17, toSchema: 18, migrate: migrateSaveV17ToV18 });

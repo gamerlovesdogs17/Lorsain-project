@@ -1,0 +1,839 @@
+{
+  "meta": {
+    "phase": "11.3",
+    "harness": "whole-game-calibration",
+    "generatedAt": "2026-09-01T13:12:27.933Z",
+    "smoke": false,
+    "seeds": 1,
+    "months": 600,
+    "seedStart": 0,
+    "parallel": 1,
+    "resume": true,
+    "sourceFingerprint": "bf518cbb556ac240bcc47743d0c380feddf466dcce23335693dca1b40a77b9e3",
+    "shardDirectory": ".calibration/phase11_3/final-600m",
+    "acceptanceTarget": {
+      "seeds": 100,
+      "months": 600
+    },
+    "playerPoliticianId": "NPC146",
+    "contentVersion": "0.3.1-predev",
+    "env": {
+      "WHOLE_GAME_SEEDS": null,
+      "WHOLE_GAME_MONTHS": null,
+      "WHOLE_GAME_SMOKE": null
+    }
+  },
+  "aggregate": {
+    "runsCompleted": 1,
+    "runsWithErrors": 0,
+    "catastrophic": {
+      "totalFailures": 0,
+      "meanPerRun": 0,
+      "byCode": {},
+      "nearZero": true,
+      "earlyHorizonAsmNote": null
+    },
+    "strictV1": {
+      "totalFailures": 0,
+      "failedRuns": 0,
+      "failureRate": 0,
+      "byCode": {},
+      "passed": true
+    },
+    "presidential": {
+      "races": 12,
+      "winnersByParty": {
+        "PARTY_LAB": 10,
+        "PARTY_CR": 2
+      },
+      "incumbentRetentionRate": 0.4166666666666667,
+      "marginFinalRound": {
+        "n": 12,
+        "min": 0.003593518527153487,
+        "median": 0.12000187330400693,
+        "p95": 0.2651773610546475,
+        "max": 0.3673791543073548,
+        "mean": 0.15645670363651135,
+        "sum": 1.877480443638136
+      }
+    },
+    "assembly": {
+      "races": 12,
+      "seatShiftHalf": {
+        "n": 12,
+        "min": 5,
+        "median": 12,
+        "p95": 20,
+        "max": 26,
+        "mean": 13.75,
+        "sum": 165
+      },
+      "uncontestedConstituencies": {
+        "n": 12,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      }
+    },
+    "governors": {
+      "races": 276,
+      "margin": {
+        "n": 276,
+        "min": 0.00009689960940723052,
+        "median": 0.04386213847867115,
+        "p95": 0.1675983639210929,
+        "max": 0.3465687785972667,
+        "mean": 0.06087412682442083,
+        "sum": 16.80125900354015
+      },
+      "incumbentRetentionRate": 0.4065934065934066
+    },
+    "economy": {
+      "outputDelta": {
+        "n": 1,
+        "min": 20.885065657347894,
+        "median": 20.885065657347894,
+        "p95": 20.885065657347894,
+        "max": 20.885065657347894,
+        "mean": 20.885065657347894,
+        "sum": 20.885065657347894
+      },
+      "meanOutputSignChanges": {
+        "n": 1,
+        "min": 127,
+        "median": 127,
+        "p95": 127,
+        "max": 127,
+        "mean": 127,
+        "sum": 127
+      },
+      "meanOutputDirectionChanges": {
+        "n": 1,
+        "min": 127,
+        "median": 127,
+        "p95": 127,
+        "max": 127,
+        "mean": 127,
+        "sum": 127
+      },
+      "outputMinimum": {
+        "n": 1,
+        "min": 97.8801846564314,
+        "median": 97.8801846564314,
+        "p95": 97.8801846564314,
+        "max": 97.8801846564314,
+        "mean": 97.8801846564314,
+        "sum": 97.8801846564314
+      },
+      "outputMaximum": {
+        "n": 1,
+        "min": 121.74690993738832,
+        "median": 121.74690993738832,
+        "p95": 121.74690993738832,
+        "max": 121.74690993738832,
+        "mean": 121.74690993738832,
+        "sum": 121.74690993738832
+      },
+      "expansionMonths": {
+        "n": 1,
+        "min": 290,
+        "median": 290,
+        "p95": 290,
+        "max": 290,
+        "mean": 290,
+        "sum": 290
+      },
+      "contractionMonths": {
+        "n": 1,
+        "min": 224,
+        "median": 224,
+        "p95": 224,
+        "max": 224,
+        "mean": 224,
+        "sum": 224
+      },
+      "recoveryMonths": {
+        "n": 1,
+        "min": 26,
+        "median": 26,
+        "p95": 26,
+        "max": 26,
+        "mean": 26,
+        "sum": 26
+      },
+      "inflationPressureMonths": {
+        "n": 1,
+        "min": 63,
+        "median": 63,
+        "p95": 63,
+        "max": 63,
+        "mean": 63,
+        "sum": 63
+      },
+      "wageSqueezeMonths": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      },
+      "housingImprovementMonths": {
+        "n": 1,
+        "min": 185,
+        "median": 185,
+        "p95": 185,
+        "max": 185,
+        "mean": 185,
+        "sum": 185
+      },
+      "housingWeakeningMonths": {
+        "n": 1,
+        "min": 144,
+        "median": 144,
+        "p95": 144,
+        "max": 144,
+        "mean": 144,
+        "sum": 144
+      }
+    },
+    "regionalEconomy": {
+      "rankingChurn": {
+        "n": 1,
+        "min": 0.272108843537415,
+        "median": 0.272108843537415,
+        "p95": 0.272108843537415,
+        "max": 0.272108843537415,
+        "mean": 0.272108843537415,
+        "sum": 0.272108843537415
+      },
+      "startSpread": {
+        "n": 1,
+        "min": 13.299999999999997,
+        "median": 13.299999999999997,
+        "p95": 13.299999999999997,
+        "max": 13.299999999999997,
+        "mean": 13.299999999999997,
+        "sum": 13.299999999999997
+      },
+      "endSpread": {
+        "n": 1,
+        "min": 34.728083457240075,
+        "median": 34.728083457240075,
+        "p95": 34.728083457240075,
+        "max": 34.728083457240075,
+        "mean": 34.728083457240075,
+        "sum": 34.728083457240075
+      },
+      "largestSpread": {
+        "n": 1,
+        "min": 37.921998994962905,
+        "median": 37.921998994962905,
+        "p95": 37.921998994962905,
+        "max": 37.921998994962905,
+        "mean": 37.921998994962905,
+        "sum": 37.921998994962905
+      }
+    },
+    "legislative": {
+      "billsIntroduced": {
+        "n": 1,
+        "min": 762,
+        "median": 762,
+        "p95": 762,
+        "max": 762,
+        "mean": 762,
+        "sum": 762
+      },
+      "billsEnactedOrSigned": {
+        "n": 1,
+        "min": 440,
+        "median": 440,
+        "p95": 440,
+        "max": 440,
+        "mean": 440,
+        "sum": 440
+      },
+      "billsReturnedByPresident": {
+        "n": 1,
+        "min": 43,
+        "median": 43,
+        "p95": 43,
+        "max": 43,
+        "mean": 43,
+        "sum": 43
+      },
+      "amendmentsProposed": {
+        "n": 1,
+        "min": 266,
+        "median": 266,
+        "p95": 266,
+        "max": 266,
+        "mean": 266,
+        "sum": 266
+      },
+      "amendmentsAdopted": {
+        "n": 1,
+        "min": 165,
+        "median": 165,
+        "p95": 165,
+        "max": 165,
+        "mean": 165,
+        "sum": 165
+      },
+      "crossPartyFloorPasses": {
+        "n": 1,
+        "min": 447,
+        "median": 447,
+        "p95": 447,
+        "max": 447,
+        "mean": 447,
+        "sum": 447
+      },
+      "meanPartyCohesion": {
+        "n": 1,
+        "min": 0.9005131185722605,
+        "median": 0.9005131185722605,
+        "p95": 0.9005131185722605,
+        "max": 0.9005131185722605,
+        "mean": 0.9005131185722605,
+        "sum": 0.9005131185722605
+      },
+      "meanWhipCompliance": {
+        "n": 1,
+        "min": 0.953526208739038,
+        "median": 0.953526208739038,
+        "p95": 0.953526208739038,
+        "max": 0.953526208739038,
+        "mean": 0.953526208739038,
+        "sum": 0.953526208739038
+      }
+    },
+    "institutions": {
+      "provincialSeats": {
+        "n": 1,
+        "min": 918,
+        "median": 918,
+        "p95": 918,
+        "max": 918,
+        "mean": 918,
+        "sum": 918
+      },
+      "provincialElections": {
+        "n": 1,
+        "min": 273,
+        "median": 273,
+        "p95": 273,
+        "max": 273,
+        "mean": 273,
+        "sum": 273
+      },
+      "provincialLeadershipElections": {
+        "n": 1,
+        "min": 3549,
+        "median": 3549,
+        "p95": 3549,
+        "max": 3549,
+        "mean": 3549,
+        "sum": 3549
+      },
+      "provincialBillsIntroduced": {
+        "n": 1,
+        "min": 1117,
+        "median": 1117,
+        "p95": 1117,
+        "max": 1117,
+        "mean": 1117,
+        "sum": 1117
+      },
+      "provincialBillsPassed": {
+        "n": 1,
+        "min": 578,
+        "median": 578,
+        "p95": 578,
+        "max": 578,
+        "mean": 578,
+        "sum": 578
+      },
+      "provincialBillsFailed": {
+        "n": 1,
+        "min": 539,
+        "median": 539,
+        "p95": 539,
+        "max": 539,
+        "mean": 539,
+        "sum": 539
+      },
+      "provincialPassageByGovernment": {
+        "friendly": {
+          "votes": 0,
+          "passed": 0,
+          "passageRate": null
+        },
+        "divided": {
+          "votes": 316,
+          "passed": 191,
+          "passageRate": 0.6044303797468354
+        },
+        "hostile": {
+          "votes": 801,
+          "passed": 387,
+          "passageRate": 0.48314606741573035
+        }
+      },
+      "provincialBillsSigned": {
+        "n": 1,
+        "min": 532,
+        "median": 532,
+        "p95": 532,
+        "max": 532,
+        "mean": 532,
+        "sum": 532
+      },
+      "provincialVetoes": {
+        "n": 1,
+        "min": 46,
+        "median": 46,
+        "p95": 46,
+        "max": 46,
+        "mean": 46,
+        "sum": 46
+      },
+      "provincialOverrides": {
+        "n": 1,
+        "min": 13,
+        "median": 13,
+        "p95": 13,
+        "max": 13,
+        "mean": 13,
+        "sum": 13
+      },
+      "provincialCrossPartyPasses": {
+        "n": 1,
+        "min": 578,
+        "median": 578,
+        "p95": 578,
+        "max": 578,
+        "mean": 578,
+        "sum": 578
+      },
+      "provincialMeanPartyCohesion": {
+        "n": 1,
+        "min": 0.9269507909887603,
+        "median": 0.9269507909887603,
+        "p95": 0.9269507909887603,
+        "max": 0.9269507909887603,
+        "mean": 0.9269507909887603,
+        "sum": 0.9269507909887603
+      },
+      "provincialDividedGovernmentBills": {
+        "n": 1,
+        "min": 1012,
+        "median": 1012,
+        "p95": 1012,
+        "max": 1012,
+        "mean": 1012,
+        "sum": 1012
+      },
+      "provincialDividedGovernmentSigned": {
+        "n": 1,
+        "min": 468,
+        "median": 468,
+        "p95": 468,
+        "max": 468,
+        "mean": 468,
+        "sum": 468
+      },
+      "provincialDividedGovernmentVetoed": {
+        "n": 1,
+        "min": 33,
+        "median": 33,
+        "p95": 33,
+        "max": 33,
+        "mean": 33,
+        "sum": 33
+      },
+      "provincialLeadershipTurnover": {
+        "n": 1,
+        "min": 1764,
+        "median": 1764,
+        "p95": 1764,
+        "max": 1764,
+        "mean": 1764,
+        "sum": 1764
+      },
+      "provincialLegislators": {
+        "n": 1,
+        "min": 3528,
+        "median": 3528,
+        "p95": 3528,
+        "max": 3528,
+        "mean": 3528,
+        "sum": 3528
+      },
+      "provincialLegislatorsGenerated": {
+        "n": 1,
+        "min": 2128,
+        "median": 2128,
+        "p95": 2128,
+        "max": 2128,
+        "mean": 2128,
+        "sum": 2128
+      },
+      "provincialPromotions": {
+        "n": 1,
+        "min": 815,
+        "median": 815,
+        "p95": 815,
+        "max": 815,
+        "mean": 815,
+        "sum": 815
+      },
+      "generatedNationalPoliticians": {
+        "n": 1,
+        "min": 822,
+        "median": 822,
+        "p95": 822,
+        "max": 822,
+        "mean": 822,
+        "sum": 822
+      },
+      "generatedPersonQualityErrors": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      },
+      "generatedPersonQualityWarnings": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      },
+      "generatedLargestFirstNameShare": {
+        "n": 1,
+        "min": 0.016402714932126698,
+        "median": 0.016402714932126698,
+        "p95": 0.016402714932126698,
+        "max": 0.016402714932126698,
+        "mean": 0.016402714932126698,
+        "sum": 0.016402714932126698
+      },
+      "generatedLargestFamilyNameShare": {
+        "n": 1,
+        "min": 0.016119909502262445,
+        "median": 0.016119909502262445,
+        "p95": 0.016119909502262445,
+        "max": 0.016119909502262445,
+        "mean": 0.016119909502262445,
+        "sum": 0.016119909502262445
+      },
+      "federalAssemblyCandidates": {
+        "n": 1,
+        "min": 7343,
+        "median": 7343,
+        "p95": 7343,
+        "max": 7343,
+        "mean": 7343,
+        "sum": 7343
+      },
+      "minimumFederalCandidateSurplus": {
+        "n": 1,
+        "min": 3,
+        "median": 3,
+        "p95": 3,
+        "max": 3,
+        "mean": 3,
+        "sum": 3
+      },
+      "activeOriginalPoliticians": {
+        "n": 1,
+        "min": 107,
+        "median": 107,
+        "p95": 107,
+        "max": 107,
+        "mean": 107,
+        "sum": 107
+      },
+      "activeGovernors": {
+        "n": 1,
+        "min": 21,
+        "median": 21,
+        "p95": 21,
+        "max": 21,
+        "mean": 21,
+        "sum": 21
+      },
+      "activePartyLeaders": {
+        "n": 1,
+        "min": 6,
+        "median": 6,
+        "p95": 6,
+        "max": 6,
+        "mean": 6,
+        "sum": 6
+      },
+      "activeCaucusLeaders": {
+        "n": 1,
+        "min": 12,
+        "median": 12,
+        "p95": 12,
+        "max": 12,
+        "mean": 12,
+        "sum": 12
+      },
+      "meanActivePoliticalAge": {
+        "n": 1,
+        "min": 59.50747094631987,
+        "median": 59.50747094631987,
+        "p95": 59.50747094631987,
+        "max": 59.50747094631987,
+        "mean": 59.50747094631987,
+        "sum": 59.50747094631987
+      },
+      "politiciansRetired": {
+        "n": 1,
+        "min": 646,
+        "median": 646,
+        "p95": 646,
+        "max": 646,
+        "mean": 646,
+        "sum": 646
+      },
+      "politiciansDied": {
+        "n": 1,
+        "min": 446,
+        "median": 446,
+        "p95": 446,
+        "max": 446,
+        "mean": 446,
+        "sum": 446
+      },
+      "partyLeadershipContests": {
+        "n": 1,
+        "min": 66,
+        "median": 66,
+        "p95": 66,
+        "max": 66,
+        "mean": 66,
+        "sum": 66
+      },
+      "factionChairContests": {
+        "n": 1,
+        "min": 206,
+        "median": 206,
+        "p95": 206,
+        "max": 206,
+        "mean": 206,
+        "sum": 206
+      },
+      "caucusContests": {
+        "n": 1,
+        "min": 164,
+        "median": 164,
+        "p95": 164,
+        "max": 164,
+        "mean": 164,
+        "sum": 164
+      },
+      "constitutionalProposed": {
+        "n": 1,
+        "min": 1,
+        "median": 1,
+        "p95": 1,
+        "max": 1,
+        "mean": 1,
+        "sum": 1
+      },
+      "constitutionalRatified": {
+        "n": 1,
+        "min": 1,
+        "median": 1,
+        "p95": 1,
+        "max": 1,
+        "mean": 1,
+        "sum": 1
+      },
+      "constitutionalByRule": {
+        "veto_override_fraction": 1
+      },
+      "constitutionalByTrigger": {
+        "executive_legislative_conflict": 1
+      },
+      "courtDecisions": {
+        "n": 1,
+        "min": 115,
+        "median": 115,
+        "p95": 115,
+        "max": 115,
+        "mean": 115,
+        "sum": 115
+      },
+      "organizationActions": {
+        "n": 1,
+        "min": 60,
+        "median": 60,
+        "p95": 60,
+        "max": 60,
+        "mean": 60,
+        "sum": 60
+      },
+      "organizationRelationships": {
+        "n": 1,
+        "min": 4519,
+        "median": 4519,
+        "p95": 4519,
+        "max": 4519,
+        "mean": 4519,
+        "sum": 4519
+      },
+      "organizationMeetings": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      },
+      "organizationPolicyTalks": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      },
+      "organizationEndorsementWithdrawals": {
+        "n": 1,
+        "min": 26,
+        "median": 26,
+        "p95": 26,
+        "max": 26,
+        "mean": 26,
+        "sum": 26
+      },
+      "organizationBillPositions": {
+        "n": 1,
+        "min": 9,
+        "median": 9,
+        "p95": 9,
+        "max": 9,
+        "mean": 9,
+        "sum": 9
+      },
+      "candidateShortageEvents": {
+        "n": 1,
+        "min": 0,
+        "median": 0,
+        "p95": 0,
+        "max": 0,
+        "mean": 0,
+        "sum": 0
+      }
+    },
+    "foreign": {
+      "crisesCreated": {
+        "n": 1,
+        "min": 1067,
+        "median": 1067,
+        "p95": 1067,
+        "max": 1067,
+        "mean": 1067,
+        "sum": 1067
+      },
+      "conflictsStarted": {
+        "n": 1,
+        "min": 34,
+        "median": 34,
+        "p95": 34,
+        "max": 34,
+        "mean": 34,
+        "sum": 34
+      },
+      "treatiesActive": {
+        "n": 1,
+        "min": 59,
+        "median": 59,
+        "p95": 59,
+        "max": 59,
+        "mean": 59,
+        "sum": 59
+      },
+      "treatiesRatified": {
+        "n": 1,
+        "min": 77,
+        "median": 77,
+        "p95": 77,
+        "max": 77,
+        "mean": 77,
+        "sum": 77
+      }
+    },
+    "performance": {
+      "medianTurnMs": {
+        "n": 1,
+        "min": 1274.444,
+        "median": 1274.444,
+        "p95": 1274.444,
+        "max": 1274.444,
+        "mean": 1274.444,
+        "sum": 1274.444
+      },
+      "p95TurnMs": {
+        "n": 1,
+        "min": 12583.75,
+        "median": 12583.75,
+        "p95": 12583.75,
+        "max": 12583.75,
+        "mean": 12583.75,
+        "sum": 12583.75
+      }
+    },
+    "saveGrowth": {
+      "finalBytes": {
+        "n": 1,
+        "min": 77062495,
+        "median": 77062495,
+        "p95": 77062495,
+        "max": 77062495,
+        "mean": 77062495,
+        "sum": 77062495
+      }
+    }
+  },
+  "determinism": {
+    "seed": "P113-WG-000",
+    "dualRunMatch": false,
+    "hashA": null,
+    "hashB": null,
+    "reloadMatch": false,
+    "reloadHashContinuous": null,
+    "reloadHashRestored": null,
+    "error": "skipped by --skip-determinism"
+  },
+  "runIndex": [
+    {
+      "seed": "P113-WG-000",
+      "seedIndex": 0,
+      "monthsCompleted": 600,
+      "finalDate": "2078-01-01",
+      "finalHash": "d14b6e8763604e33ed7d685d5f5648e9",
+      "error": null,
+      "catastrophicFailureCount": 0,
+      "strictV1FailureCount": 0,
+      "shard": ".calibration/phase11_3/final-600m/seed-000-600m.json"
+    }
+  ]
+}

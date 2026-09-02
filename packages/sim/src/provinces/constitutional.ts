@@ -5,6 +5,7 @@ import { pushHistory } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import type {
   ConstitutionalAmendment,
+  ConstitutionalAmendmentIntent,
   ConstitutionalRuleId,
   ProvincialVote,
 } from "./types.js";
@@ -17,6 +18,27 @@ const LEGAL_VALUES: Record<ConstitutionalRuleId, readonly number[]> = {
   court_term_years: [9, 12, 15],
   veto_override_fraction: [0.6, 2 / 3, 0.75],
 };
+
+const INTENT_POLITICS: Record<ConstitutionalAmendmentIntent, { axis: "economic" | "social" | "authority" | "globalism"; direction: number; difficulty: number; label: string }> = {
+  technical_clarification: { axis: "authority", direction: 0, difficulty: 0.28, label: "Technical clarification" },
+  expand_individual_rights: { axis: "social", direction: 1, difficulty: 0.62, label: "Expand individual rights" },
+  restrict_individual_rights: { axis: "social", direction: -1, difficulty: 0.9, label: "Restrict individual rights" },
+  devolve_national_power: { axis: "authority", direction: -1, difficulty: 0.64, label: "Devolve national power" },
+  centralize_national_power: { axis: "authority", direction: 1, difficulty: 0.7, label: "Centralize national power" },
+  strengthen_executive: { axis: "authority", direction: 1, difficulty: 0.76, label: "Strengthen the executive" },
+  constrain_executive: { axis: "authority", direction: -1, difficulty: 0.62, label: "Constrain the executive" },
+  reform_elections: { axis: "authority", direction: -0.25, difficulty: 0.72, label: "Reform elections" },
+  alter_office_terms: { axis: "authority", direction: 0, difficulty: 0.68, label: "Alter office terms" },
+  judicial_structure: { axis: "authority", direction: -0.1, difficulty: 0.74, label: "Change judicial structure" },
+};
+
+function ruleIntent(state: SimState, ruleId: ConstitutionalRuleId, proposedValue: number): ConstitutionalAmendmentIntent {
+  if (ruleId === "veto_override_fraction") {
+    const current = state.provincialRuntime.constitutionalRules[ruleId]?.value ?? proposedValue;
+    return proposedValue > current ? "strengthen_executive" : "constrain_executive";
+  }
+  return ruleId === "court_term_years" ? "judicial_structure" : "alter_office_terms";
+}
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -163,15 +185,16 @@ export function constitutionalSupportScore(
   const provincialMember = state.provincialRuntime.legislators[memberId];
   const partyId = state.politicians[memberId]?.partyId ?? provincialMember?.partyId ?? null;
   const sponsorPartyId = state.politicians[amendment.sponsorId]?.partyId ?? null;
+  const intentPolitics = INTENT_POLITICS[amendment.intent];
   const axis = amendment.ruleId === "assembly_term_years" || amendment.ruleId === "court_term_years"
     ? "authority"
     : amendment.ruleId === "presidential_term_limit" || amendment.ruleId === "veto_override_fraction"
       ? "authority"
-      : "economic";
+      : intentPolitics.axis;
   const ideology = profile?.ideology[axis] ?? (partyId ? world.partyPublicIdeology[partyId]?.[axis] ?? 0 : 0);
   const direction = amendment.ruleId && amendment.proposedValue != null
     ? amendmentDirection(state, amendment.ruleId, amendment.proposedValue)
-    : 0;
+    : intentPolitics.direction;
   const loyalty = profile?.traits.partyLoyalty ?? 0.45 + (stableHash(`${memberId}:constitutional-loyalty`) % 41) / 100;
   const institutionalism = profile?.traits.institutionalism ?? 0.52;
   const presidentId = currentPresidentId(world, state);
@@ -237,6 +260,8 @@ export function proposeConstitutionalAmendment(
     proposedDate: state.currentDate,
     ruleId,
     proposedValue,
+    intent: ruleIntent(state, ruleId, proposedValue),
+    runtimeEffect: "modeled_rule",
     proposalTrigger: politicalContext?.trigger ?? (actorId === state.playerPoliticianId ? "player_sponsorship" : "reform_movement"),
     politicalImpetus: politicalContext?.score ?? constitutionalProposalImpetus(world, state, ruleId, proposedValue).score,
     status: "proposed",
@@ -262,11 +287,17 @@ export function proposeConstitutionalTextAmendment(
   actorId: string,
   clauseId: string,
   proposedText: string,
+  intent: ConstitutionalAmendmentIntent,
   commandId: string | null,
 ): { amendment: ConstitutionalAmendment; events: SimEvent[] } | { error: CommandError } {
   if (!isFederalMp(world, state, actorId)) return { error: reject("NOT_ASSEMBLY_MEMBER", actorId) };
   const entry = documentClause(world, clauseId);
   if (!entry) return { error: reject("UNKNOWN_CONSTITUTIONAL_CLAUSE", clauseId) };
+  if (entry.clause.runtime_rule_id) {
+    return { error: reject("MODELED_RULE_REQUIRES_STRUCTURED_AMENDMENT", entry.clause.runtime_rule_id) };
+  }
+  const intentPolitics = INTENT_POLITICS[intent];
+  if (!intentPolitics) return { error: reject("INVALID_CONSTITUTIONAL_INTENT", intent) };
   const currentText = currentConstitutionalClauseText(world, state, clauseId);
   const cleanText = proposedText.replace(/\s+/g, " ").trim();
   if (cleanText.length < 40 || cleanText.length > 1200) {
@@ -277,12 +308,13 @@ export function proposeConstitutionalTextAmendment(
     (amendment) => amendment.documentClauseId === clauseId && ["proposed", "ratifying"].includes(amendment.status),
   );
   if (open) return { error: reject("AMENDMENT_ALREADY_PENDING", clauseId) };
-  const difficulty = entry.clause.amendment_difficulty === "foundational" ? 0.92 : entry.clause.amendment_difficulty === "substantial" ? 0.67 : 0.42;
+  const clauseDifficulty = entry.clause.amendment_difficulty === "foundational" ? 0.92 : entry.clause.amendment_difficulty === "substantial" ? 0.67 : 0.42;
+  const difficulty = clamp(Math.max(clauseDifficulty, intentPolitics.difficulty));
   const id = `CAMEND_${String(Object.keys(state.provincialRuntime.constitutionalAmendments).length + 1).padStart(4, "0")}`;
   const amendment: ConstitutionalAmendment = {
     id,
-    title: `Article ${entry.article.number}, Section ${entry.section.number} Amendment`,
-    summary: `Replaces clause ${entry.clause.number} of ${entry.section.title}.`,
+    title: `${intentPolitics.label}: Article ${entry.article.number}, Section ${entry.section.number}`,
+    summary: `${intentPolitics.label}. Replaces clause ${entry.clause.number} of ${entry.section.title}.`,
     sponsorId: actorId,
     proposedDate: state.currentDate,
     ruleId: null,
@@ -290,6 +322,8 @@ export function proposeConstitutionalTextAmendment(
     documentClauseId: clauseId,
     currentText,
     proposedText: cleanText,
+    intent,
+    runtimeEffect: "text_only",
     politicalDifficulty: difficulty,
     proposalTrigger: actorId === state.playerPoliticianId ? "player_sponsorship" : "reform_movement",
     politicalImpetus: clamp(0.72 - difficulty * 0.38),
@@ -313,7 +347,7 @@ export function proposeConstitutionalTextAmendment(
       visibility: "public",
       actorIds: [actorId],
       entityIds: [id, clauseId],
-      payload: { amendmentId: id, clauseId, trigger: amendment.proposalTrigger, scope: entry.clause.amendment_difficulty },
+      payload: { amendmentId: id, clauseId, trigger: amendment.proposalTrigger, scope: entry.clause.amendment_difficulty, intent, runtimeEffect: amendment.runtimeEffect },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,
     })],
@@ -447,6 +481,8 @@ export function processConstitutionalAmendmentsMonth(
           proposedDate: state.currentDate,
           ruleId: proposal.ruleId,
           proposedValue: proposal.proposedValue,
+          intent: ruleIntent(state, proposal.ruleId, proposal.proposedValue),
+          runtimeEffect: "modeled_rule",
           proposalTrigger: proposal.context.trigger,
           politicalImpetus: proposal.context.score,
           status: "proposed",

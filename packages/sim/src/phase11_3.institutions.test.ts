@@ -7,7 +7,7 @@ import {
   provincialLegislatorForPolitician,
   provincialAssemblySeatCount,
 } from "./provinces/assemblies.js";
-import { migrateSaveV12ToV13, migrateSaveV13ToV14, migrateSaveV14ToV15, migrateSaveV15ToV16, migrateSaveV16ToV17, parseSaveFile } from "./save.js";
+import { migrateSaveV12ToV13, migrateSaveV13ToV14, migrateSaveV14ToV15, migrateSaveV15ToV16, migrateSaveV16ToV17, migrateSaveV17ToV18, parseSaveFile } from "./save.js";
 import { addMonths } from "./calendar.js";
 import {
   processConstitutionalAmendmentsMonth,
@@ -153,6 +153,7 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     }
     expect(LEGISLATIVE_PROVISIONS.some((definition) => definition.options.length === 5)).toBe(true);
     expect(LEGISLATIVE_PROVISIONS.flatMap((definition) => definition.options).some((option) => Object.keys(option.dimensionEffects ?? {}).length > 1)).toBe(true);
+    expect(new Set(LEGISLATIVE_PROVISIONS.slice(0, 30).flatMap((definition) => definition.options.map((option) => option.magnitude))).size).toBeGreaterThan(8);
     expect(policyItemForProvision("PROV_REPRODUCTIVE_LAW", "national_protection")?.optionId).toBe("national_protection");
     expect(policyItemForProvision("PROV_REPRODUCTIVE_LAW", "high")?.optionId).toBe("national_protection");
   });
@@ -385,6 +386,33 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
       expect(amendment.documentClauseId).toBeNull();
       expect(amendment.currentText).toBeNull();
       expect(amendment.proposedText).toBeNull();
+    }
+    expect(parseSaveFile(migrated, world.contentVersion).ok).toBe(true);
+  });
+
+  it("migrates schema 17 poll geography and constitutional intent without changing history", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "assembly_member");
+    const sim = createSimulation({ world, playerPoliticianId: player, seed: "P113-MIGRATE-18" });
+    expect(sim.executeCommand({ type: "PROPOSE_CONSTITUTIONAL_AMENDMENT", ruleId: "assembly_term_years", proposedValue: 5 }).ok).toBe(true);
+    const legacy = structuredClone(sim.serializeSave()) as unknown as Record<string, unknown>;
+    legacy.schemaVersion = 17;
+    const simulation = legacy.simulation as Record<string, unknown>;
+    simulation.schemaVersion = 17;
+    const historyBefore = hashCanonical(simulation.history);
+    const amendments = ((simulation.provincialRuntime as Record<string, unknown>).constitutionalAmendments as Record<string, Record<string, unknown>>);
+    for (const amendment of Object.values(amendments)) {
+      delete amendment.intent;
+      delete amendment.runtimeEffect;
+    }
+    const migrated = migrateSaveV17ToV18(legacy) as Record<string, unknown>;
+    const migratedSimulation = migrated.simulation as Record<string, unknown>;
+    expect(migrated.schemaVersion).toBe(18);
+    expect(migratedSimulation.schemaVersion).toBe(18);
+    expect(hashCanonical(migratedSimulation.history)).toBe(historyBefore);
+    for (const amendment of Object.values(((migratedSimulation.provincialRuntime as Record<string, unknown>).constitutionalAmendments as Record<string, Record<string, unknown>>))) {
+      expect(amendment.intent).toBe("alter_office_terms");
+      expect(amendment.runtimeEffect).toBe("modeled_rule");
     }
     expect(parseSaveFile(migrated, world.contentVersion).ok).toBe(true);
   });
@@ -649,7 +677,7 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     ).toBe(true);
     const clauseId = "ART_VI_S2_C2";
     const replacement = "Administrative action affecting a person or organization shall receive written reasons, independent review and an effective remedy under law.";
-    expect(mp.executeCommand({ type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT", clauseId, proposedText: replacement }).ok).toBe(true);
+    expect(mp.executeCommand({ type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT", clauseId, proposedText: replacement, intent: "technical_clarification" }).ok).toBe(true);
     const textAmendment = Object.values(mp.getSnapshot().provincialRuntime.constitutionalAmendments).find((amendment) => amendment.documentClauseId === clauseId)!;
     expect(textAmendment.currentText).toContain("Administrative action affecting");
     expect(textAmendment.proposedText).toBe(replacement);
@@ -698,6 +726,7 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
           type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT",
           clauseId,
           proposedText: replacement,
+          intent: "technical_clarification",
         }).ok).toBe(false);
         expect(sim.hashState()).toBe(beforeTextAmendment);
       }
@@ -742,7 +771,7 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
       }).ok,
     ).toBe(false);
     expect(former.hashState()).toBe(formerHash);
-    expect(former.executeCommand({ type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT", clauseId, proposedText: replacement }).ok).toBe(false);
+    expect(former.executeCommand({ type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT", clauseId, proposedText: replacement, intent: "technical_clarification" }).ok).toBe(false);
     expect(former.hashState()).toBe(formerHash);
   });
 });

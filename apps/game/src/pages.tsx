@@ -143,6 +143,7 @@ type PageProps = {
     action: () => void;
   }) => void;
   globalFocus: { kind: string; id: string } | null;
+  setGlobalFocus: (focus: { kind: string; id: string } | null) => void;
 };
 
 const PARTY_PLATFORM_LABELS: Record<PartyPlatformIssue, string> = {
@@ -885,12 +886,18 @@ function Party(props: PageProps) {
     .filter((id) => id !== props.world.independentAggregatePartyId)
     .sort((a, b) => partyDisplayName(props.world, a, props.snap).localeCompare(partyDisplayName(props.world, b, props.snap)));
   const [selectedPartyId, setSelectedPartyId] = useState(playerPartyId ?? availablePartyIds[0] ?? "");
+  const [selectedFactionId, setSelectedFactionId] = useState<string | null>(
+    props.globalFocus?.kind === "Caucus" ? props.globalFocus.id : null,
+  );
   useEffect(() => {
     if (props.globalFocus?.kind === "Party" && props.world.partyDefinitions[props.globalFocus.id]) {
       setSelectedPartyId(props.globalFocus.id);
     } else if (props.globalFocus?.kind === "Caucus") {
       const partyId = props.world.factionDefinitions[props.globalFocus.id]?.partyId;
-      if (partyId) setSelectedPartyId(partyId);
+      if (partyId) {
+        setSelectedPartyId(partyId);
+        setSelectedFactionId(props.globalFocus.id);
+      }
     }
   }, [props.globalFocus, props.world]);
   const partyId = selectedPartyId || playerPartyId;
@@ -925,6 +932,48 @@ function Party(props: PageProps) {
     props.report(props.sim.executeCommand(command));
     props.onDone();
   };
+  const selectedFaction = selectedFactionId ? props.world.factionDefinitions[selectedFactionId] : null;
+  if (selectedFaction) {
+    const factionState = props.snap.factionStates[selectedFaction.factionId];
+    const factionMembers = Object.values(props.snap.politicians)
+      .filter((politician) => politician.alive && !politician.retired && politician.factionId === selectedFaction.factionId)
+      .sort((a, b) => politicianDisplayName(props.catalog, a.id).localeCompare(politicianDisplayName(props.catalog, b.id)));
+    const factionMps = members.filter((memberId) => props.snap.politicians[memberId]?.factionId === selectedFaction.factionId);
+    const partyAssemblyMembers = members.filter((memberId) => props.snap.politicians[memberId]?.partyId === selectedFaction.partyId);
+    const leadershipContests = Object.values(props.snap.partyContests).filter((contest) => contest.factionId === selectedFaction.factionId)
+      .sort((a, b) => (b.resolvedDate ?? b.createdDate).localeCompare(a.resolvedDate ?? a.createdDate));
+    return <div className="caucus-page page-tone-caucus">
+      <PageHeader kicker="Ideological caucus" title={selectedFaction.name} subtitle={`${partyDisplayName(props.world, selectedFaction.partyId, props.snap)} · organized tendency within the party, distinct from its Assembly delegation.`} actions={<button type="button" className="btn secondary" onClick={() => { setSelectedFactionId(null); props.setGlobalFocus({ kind: "Party", id: selectedFaction.partyId }); }}>Back to party</button>} />
+      <BriefStrip items={[
+        { label: "Known members", value: factionMembers.length },
+        { label: "Assembly members", value: factionMps.length },
+        { label: "Share of party MPs", value: partyAssemblyMembers.length ? `${Math.round((factionMps.length / partyAssemblyMembers.length) * 100)}%` : "—" },
+        { label: "Status", value: factionState?.status.replaceAll("_", " ") ?? "active" },
+      ]} />
+      <div className="caucus-identity-grid">
+        <SectionCard title="Caucus leadership">
+          {factionState?.chairId ? <PoliticianCard catalog={props.catalog} world={props.world} state={props.snap} politicianId={factionState.chairId} office="Caucus chair" /> : <EmptyState>The chair is vacant.</EmptyState>}
+          <p className="muted">The chair speaks for this ideological caucus. Party leadership and Assembly Delegation offices are separate institutions.</p>
+        </SectionCard>
+        <SectionCard title="Place in the party">
+          <p>{selectedFaction.name} accounts for {factionMps.length} of the party's {partyAssemblyMembers.length} sitting Assembly members.</p>
+          <div className="composition-bar" aria-label={`${selectedFaction.name} share of the party Assembly delegation`}><span className="composition-seg" style={{ width: `${partyAssemblyMembers.length ? (factionMps.length / partyAssemblyMembers.length) * 100 : 0}%`, background: partyColor(props.world, selectedFaction.partyId) }} /></div>
+          <p className="muted">This is public membership and office data, not hidden cohesion or voting intent.</p>
+        </SectionCard>
+      </div>
+      <SectionCard title="Caucus leadership elections">
+        {leadershipContests.length === 0 ? <EmptyState>No leadership election is recorded for this caucus.</EmptyState> : leadershipContests.map((contest) => <div className="contest-card" key={contest.id}>
+          <strong>{contestDisplayName(props.snap, props.world, contest.id)}</strong> <StatusBadge tone={contest.status === "open" ? "warn" : "idle"}>{contest.status.replaceAll("_", " ")}</StatusBadge>
+          <div className="party-contest-field">{Object.values(contest.entries).filter((entry) => entry.status !== "potential").map((entry) => <PoliticianCard key={entry.politicianId} catalog={props.catalog} world={props.world} state={props.snap} politicianId={entry.politicianId} compact descriptor={contest.winnerId === entry.politicianId ? "Elected chair" : entry.status.replaceAll("_", " ")} />)}</div>
+          {contest.status === "open" && selectedFaction.partyId === playerPartyId && props.snap.politicians[props.snap.playerPoliticianId]?.factionId === selectedFaction.factionId && !contest.entries[props.snap.playerPoliticianId] ? <button className="btn" onClick={() => run({ type: "DECLARE_PARTY_CONTEST_CANDIDACY", contestId: contest.id, politicianId: props.snap.playerPoliticianId })}>Stand for caucus chair</button> : null}
+        </div>)}
+      </SectionCard>
+      <SectionCard title="Members">
+        <div className="politician-card-grid">{factionMembers.slice(0, 36).map((politician) => <PoliticianCard key={politician.id} catalog={props.catalog} world={props.world} state={props.snap} politicianId={politician.id} compact />)}</div>
+        {factionMembers.length > 36 ? <p className="muted">Showing 36 of {factionMembers.length} current members.</p> : null}
+      </SectionCard>
+    </div>;
+  }
   const endorsementActorName = (type: string, id: string): string => {
     if (type === "politician") return politicianDisplayName(props.catalog, id);
     if (type === "faction") return props.world.factionDefinitions[id]?.name ?? "Party caucus";
@@ -943,7 +992,7 @@ function Party(props: PageProps) {
         {availablePartyIds.map((id) => {
           const seats = members.filter((memberId) => props.snap.politicians[memberId]?.partyId === id).length;
           const leader = props.snap.partyStates[id]?.leaderId;
-          return <button key={id} type="button" className={`party-directory-item${id === partyId ? " selected" : ""}`} style={{ borderLeftColor: partyColor(props.world, id) }} onClick={() => setSelectedPartyId(id)}>
+          return <button key={id} type="button" className={`party-directory-item${id === partyId ? " selected" : ""}`} style={{ borderLeftColor: partyColor(props.world, id) }} onClick={() => { setSelectedPartyId(id); setSelectedFactionId(null); props.setGlobalFocus({ kind: "Party", id }); }}>
             <strong>{partyDisplayName(props.world, id, props.snap)}</strong>
             <span>{seats} seats · {leader ? politicianDisplayName(props.catalog, leader) : "leadership vacant"}</span>
           </button>;
@@ -1000,33 +1049,34 @@ function Party(props: PageProps) {
             const caucusMps = members.filter((memberId) => props.snap.politicians[memberId]?.factionId === fid).length;
             const share = caucus === 0 ? 0 : Math.round((caucusMps / caucus) * 100);
             return (
-              <div key={fid} className="faction-card">
+              <button key={fid} type="button" className="faction-card faction-card-link" onClick={() => { setSelectedFactionId(fid); props.setGlobalFocus({ kind: "Caucus", id: fid }); }}>
                 <strong>{factionDisplayName(props.world, fid)}</strong>
                 <div className="muted">
                   Chair: {chair ? politicianDisplayName(props.catalog, chair) : "vacant"}
                 </div>
                 <div className="muted">{caucusMps} MPs · {share}% of party caucus · {caucusMembers.length} known politicians</div>
-              </div>
+                <span className="link-cue">Open caucus →</span>
+              </button>
             );
           })}
         </div>
       </SectionCard>
-      <SectionCard title="Assembly caucus">
+      <SectionCard title="Assembly Delegation">
         {caucusLeadership ? <div className="faction-cards">
           {caucusLeadership.floorLeaderId ? <PoliticianCard catalog={props.catalog} world={props.world} state={props.snap} politicianId={caucusLeadership.floorLeaderId} office="Floor leader" compact /> : <div className="faction-card"><strong>Floor leader</strong><div className="muted">Vacant</div></div>}
           {caucusLeadership.whipId ? <PoliticianCard catalog={props.catalog} world={props.world} state={props.snap} politicianId={caucusLeadership.whipId} office="Whip" compact /> : <div className="faction-card"><strong>Whip</strong><div className="muted">Vacant</div></div>}
-          <div className="faction-card"><strong>Next caucus election</strong><div className="muted">{caucusLeadership.nextElectionDate}</div></div>
-        </div> : <EmptyState>No sitting Assembly caucus.</EmptyState>}
+          <div className="faction-card"><strong>Next delegation election</strong><div className="muted">{caucusLeadership.nextElectionDate}</div></div>
+        </div> : <EmptyState>No sitting Assembly delegation.</EmptyState>}
         {caucusContests.filter((contest) => contest.status === "open").map((contest) => <div key={contest.id} className="decision-row">
           <div>
             <strong>{contest.role === "floor_leader" ? "Floor leader election" : "Whip election"}</strong>
-            <div className="muted">Closes {contest.closeDate} · {contest.candidateIds.length} candidates · {contest.trigger.replaceAll("_", " ")}</div>
+            <div className="muted">Assembly members voting · closes {contest.closeDate} · {contest.candidateIds.length} candidates · {contest.trigger.replaceAll("_", " ")}</div>
             {contest.playerDecision === "declared" && !contest.platforms[props.snap.playerPoliticianId] ? <div className="button-row" aria-label="Choose caucus campaign emphasis">
               <button className="btn btn-sm" onClick={() => run({ type: "CAMPAIGN_CAUCUS_LEADERSHIP", contestId: contest.id, emphasis: "legislative_agenda" })}>Legislative agenda</button>
               <button className="btn btn-sm" onClick={() => run({ type: "CAMPAIGN_CAUCUS_LEADERSHIP", contestId: contest.id, emphasis: "party_unity" })}>Party unity</button>
               <button className="btn btn-sm" onClick={() => run({ type: "CAMPAIGN_CAUCUS_LEADERSHIP", contestId: contest.id, emphasis: "electoral_recovery" })}>Electoral recovery</button>
             </div> : null}
-            {contest.platforms[props.snap.playerPoliticianId] ? <div className="muted">Your campaign: {contest.platforms[props.snap.playerPoliticianId]!.replaceAll("_", " ")} · {contest.endorsements[props.snap.playerPoliticianId]?.length ?? 0} caucus endorsements</div> : null}
+            {contest.platforms[props.snap.playerPoliticianId] ? <div className="muted">Your campaign: {contest.platforms[props.snap.playerPoliticianId]!.replaceAll("_", " ")} · {contest.endorsements[props.snap.playerPoliticianId]?.length ?? 0} delegation endorsements</div> : null}
           </div>
           {partyId === playerPartyId && contest.playerDecision == null ? <button className="btn" onClick={() => run({ type: "DECLARE_CAUCUS_LEADERSHIP_CANDIDACY", contestId: contest.id })}>Stand for election</button> : <StatusBadge>{contest.playerDecision ?? contest.status}</StatusBadge>}
         </div>)}
@@ -1286,6 +1336,7 @@ function Terena(props: PageProps) {
       {mode === "campaign" ? <div className="map-scale-switch" aria-label="Campaign map scale"><button type="button" className={campaignMapScale === "province" ? "active" : ""} onClick={() => { setCampaignMapScale("province"); setSel(null); }}>Provinces</button><button type="button" className={campaignMapScale === "constituency" ? "active" : ""} onClick={() => { setCampaignMapScale("constituency"); setSel(null); }}>Constituencies</button></div> : null}
       <MapDetailLayout
         className="terena-map-workspace"
+        detailVisible={sel != null}
         map={<>
           <TerenaMap
             bundle={props.bundle}

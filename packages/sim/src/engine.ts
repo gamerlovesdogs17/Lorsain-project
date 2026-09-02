@@ -1593,6 +1593,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         pollsterId: command.pollsterId,
         electionId: command.electionId ?? null,
         geographyKind: command.geographyKind,
+        provinceId: command.provinceId ?? null,
         constituencyId: command.constituencyId ?? null,
         candidateIds,
         partyByCandidate,
@@ -1607,6 +1608,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         pollsterId: command.pollsterId,
         electionId: command.electionId ?? null,
         geographyKind: command.geographyKind,
+        provinceId: command.provinceId ?? null,
         constituencyId: command.constituencyId ?? null,
         candidateIds,
         partyByCandidate,
@@ -2551,6 +2553,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         state.playerPoliticianId,
         command.clauseId,
         command.proposedText,
+        command.intent,
         null,
       );
       if ("error" in preview) return fail(preview.error.code, preview.error.message);
@@ -2561,6 +2564,7 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         state.playerPoliticianId,
         command.clauseId,
         command.proposedText,
+        command.intent,
         commandId,
       );
       if ("error" in out) return fail(out.error.code, out.error.message);

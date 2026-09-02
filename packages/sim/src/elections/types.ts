@@ -16,7 +16,7 @@ export const ELECTION_STATUSES = [
 ] as const;
 export type ElectionStatus = (typeof ELECTION_STATUSES)[number];
 
-export const ELECTION_GEOGRAPHIES = ["national", "constituency"] as const;
+export const ELECTION_GEOGRAPHIES = ["national", "province", "constituency"] as const;
 export type ElectionGeographyKind = (typeof ELECTION_GEOGRAPHIES)[number];
 
 export const DOMAIN_RESOLUTION_TYPES = [
@@ -214,6 +214,7 @@ export type PollRecord = {
   pollsterId: string;
   electionId: string | null;
   geographyKind: ElectionGeographyKind;
+  provinceId: string | null;
   constituencyId: string | null;
   fieldStart: IsoDate;
   fieldEnd: IsoDate;

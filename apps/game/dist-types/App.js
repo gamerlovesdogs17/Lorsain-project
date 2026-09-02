@@ -49,14 +49,36 @@ function savedGamePoliticalSummary(world, row) {
 function qaScreen(value) {
     return value != null && QA_SCREENS.has(value) ? value : "home";
 }
+function routeFromHash() {
+    if (typeof window === "undefined")
+        return { screen: "home", focus: null };
+    const parts = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+    const screen = QA_SCREENS.has(parts[0]) ? parts[0] : "home";
+    if (parts.length < 3)
+        return { screen, focus: null };
+    const kinds = {
+        politician: "Politician", party: "Party", caucus: "Caucus", province: "Province",
+        constituency: "Constituency", election: "Election", bill: "Bill", organization: "Organization",
+        "court-case": "Court case",
+    };
+    const kind = kinds[parts[1].toLowerCase()];
+    return { screen, focus: kind ? { kind, id: parts.slice(2).join("/") } : null };
+}
+function routeHash(screen, focus) {
+    if (!focus)
+        return `#/${screen}`;
+    const kind = focus.kind.toLowerCase().replace(/\s+/g, "-");
+    return `#/${screen}/${encodeURIComponent(kind)}/${encodeURIComponent(focus.id)}`;
+}
 export default function App() {
+    const initialRoute = routeFromHash();
     const [bundle, setBundle] = useState(null);
     const [world, setWorld] = useState(null);
     const [error, setError] = useState(null);
     const [mode, setMode] = useState("title");
     const [sim, setSim] = useState(null);
     const [snap, setSnap] = useState(null);
-    const [screen, setScreen] = useState("home");
+    const [screen, setScreen] = useState(initialRoute.screen);
     const [busy, setBusy] = useState(false);
     const [busyLabel, setBusyLabel] = useState("Processing…");
     const busyRef = useRef(false);
@@ -71,7 +93,7 @@ export default function App() {
     const [selectedBill, setSelectedBill] = useState(null);
     const [mapHover, setMapHover] = useState(null);
     const [debug, setDebug] = useState(false);
-    const [globalFocus, setGlobalFocus] = useState(null);
+    const [globalFocus, setGlobalFocus] = useState(initialRoute.focus);
     const [watchlist, setWatchlist] = useState(() => {
         if (typeof window === "undefined")
             return [];
@@ -160,6 +182,15 @@ export default function App() {
         window.localStorage.setItem("lorsain-watchlist", JSON.stringify(watchlist));
     }, [watchlist]);
     useEffect(() => {
+        const readRoute = () => {
+            const route = routeFromHash();
+            setScreen(route.screen);
+            setGlobalFocus(route.focus);
+        };
+        window.addEventListener("hashchange", readRoute);
+        return () => window.removeEventListener("hashchange", readRoute);
+    }, []);
+    useEffect(() => {
         if (!import.meta.env.DEV || !sim)
             return;
         const params = new URLSearchParams(window.location.search);
@@ -236,12 +267,20 @@ export default function App() {
         }
         return entries;
     }, [world, snap, catalog]);
+    useEffect(() => {
+        if (mode !== "play" || import.meta.env.DEV && new URLSearchParams(window.location.search).has("qaFixture"))
+            return;
+        const focusForScreen = globalFocus && searchEntries.some((entry) => entry.screen === screen && entry.kind === globalFocus.kind && entry.id === globalFocus.id) ? globalFocus : null;
+        const next = routeHash(screen, focusForScreen);
+        if (window.location.hash !== next)
+            window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${next}`);
+    }, [mode, screen, globalFocus, searchEntries]);
     function refresh(next) {
         setSim(next);
         setSnap(next.getSnapshot());
     }
     function selectSearchEntry(entry) {
-        setGlobalFocus({ kind: entry.kind, id: entry.id });
+        setGlobalFocus(entry.kind === "Page" ? null : { kind: entry.kind, id: entry.id });
         if (entry.kind === "Bill")
             setSelectedBill(entry.id);
         setScreen(entry.screen);
@@ -299,7 +338,9 @@ export default function App() {
         const restored = restoreSimulation(parsed.save, world);
         setTurnEvents([]);
         setMode("play");
-        setScreen("home");
+        const route = routeFromHash();
+        setScreen(route.screen);
+        setGlobalFocus(route.focus);
         refresh(restored);
     }
     function replaceSimulation(save) {
@@ -677,6 +718,6 @@ export default function App() {
     return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: attentionItems.length, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: () => void endTurn(), onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), searchEntries: searchEntries, onSearchSelect: selectSearchEntry, attentionItems: attentionItems, briefingItems: briefingItems, watchlist: watchlist, onToggleWatch: (entry) => {
             const key = `${entry.kind}:${entry.id}`;
             setWatchlist((items) => items.includes(key) ? items.filter((item) => item !== key) : [...items, key]);
-        }, statusSegments: statusSegments, lastSavedLabel: lastSavedLabel, children: [_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection() }), _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm, globalFocus: globalFocus }), import.meta.env.DEV ? (_jsx("output", { id: "lorsain-browser-qa-state", hidden: true, "data-ready": "true", "data-screen": screen, "data-player": snap.playerPoliticianId, "data-date": snap.currentDate, children: "Browser QA ready" })) : null, feedback.overlay()] }));
+        }, statusSegments: statusSegments, lastSavedLabel: lastSavedLabel, children: [screen === "home" || screen === "office" ? (_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection() })) : playerDecisions.length ? (_jsxs("button", { type: "button", className: "required-decisions-indicator", onClick: () => setScreen("home"), children: [_jsx("span", { children: "Required decisions" }), _jsx("strong", { children: playerDecisions.length }), _jsx("small", { children: "Open the political inbox on Home" })] })) : null, _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm, globalFocus: globalFocus, setGlobalFocus: setGlobalFocus }), import.meta.env.DEV ? (_jsx("output", { id: "lorsain-browser-qa-state", hidden: true, "data-ready": "true", "data-screen": screen, "data-player": snap.playerPoliticianId, "data-date": snap.currentDate, children: "Browser QA ready" })) : null, feedback.overlay()] }));
 }
 //# sourceMappingURL=App.js.map

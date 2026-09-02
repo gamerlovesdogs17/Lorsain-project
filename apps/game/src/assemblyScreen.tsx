@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import {
   collectPlayerActionableDecisions,
+  CONSTITUTIONAL_AMENDMENT_INTENTS,
   CONSTITUTIONAL_RULE_IDS,
   currentAssemblyMemberIds,
   currentProvisionOption,
@@ -14,6 +15,7 @@ import {
   policyItemForProvision,
   whipEstimate,
   type CommandResult,
+  type ConstitutionalAmendmentIntent,
   type KernelWorld,
   type NationalEconomyIndices,
   type PolicyItem,
@@ -73,6 +75,19 @@ const ORIGINAL_CONSTITUTIONAL_VALUES: Record<(typeof CONSTITUTIONAL_RULE_IDS)[nu
   presidential_term_limit: 2,
   court_term_years: 12,
   veto_override_fraction: 2 / 3,
+};
+
+const CONSTITUTIONAL_INTENT_LABELS: Record<ConstitutionalAmendmentIntent, string> = {
+  technical_clarification: "Technical clarification",
+  expand_individual_rights: "Expand individual rights",
+  restrict_individual_rights: "Restrict individual rights",
+  devolve_national_power: "Devolve national power",
+  centralize_national_power: "Centralize national power",
+  strengthen_executive: "Strengthen the executive",
+  constrain_executive: "Constrain the executive",
+  reform_elections: "Reform elections",
+  alter_office_terms: "Alter office terms",
+  judicial_structure: "Change judicial structure",
 };
 
 type ConstitutionClause = NonNullable<KernelWorld["constitutionalDocument"]>["articles"][number]["sections"][number]["clauses"][number];
@@ -248,6 +263,7 @@ export function AssemblyPage(props: {
   const [selectedConstitutionArticleId, setSelectedConstitutionArticleId] = useState(constitutionDocument?.articles[0]?.id ?? "");
   const [selectedConstitutionClauseId, setSelectedConstitutionClauseId] = useState(constitutionDocument?.articles[0]?.sections[0]?.clauses[0]?.id ?? "");
   const [constitutionalDraftText, setConstitutionalDraftText] = useState("");
+  const [constitutionalIntent, setConstitutionalIntent] = useState<ConstitutionalAmendmentIntent>("technical_clarification");
   const selectedConstitutionArticle = constitutionDocument?.articles.find((article) => article.id === selectedConstitutionArticleId) ?? constitutionDocument?.articles[0] ?? null;
   const selectedConstitutionClause = selectedConstitutionArticle?.sections.flatMap((section) => section.clauses).find((clause) => clause.id === selectedConstitutionClauseId) ?? selectedConstitutionArticle?.sections[0]?.clauses[0] ?? null;
 
@@ -318,10 +334,42 @@ export function AssemblyPage(props: {
     { id: "votes", label: "Votes" },
     { id: "lawbook", label: "Law & Constitution" },
   ];
+  const speakerHolderId = Object.values(props.snap.officeTerms).find((term) =>
+    (term.status === "active" || term.status === "suspended") && props.world.offices[term.officeId]?.kind === "speaker"
+  )?.holderId ?? null;
+  const delegationLeaders = partyRanks.slice(0, 6).flatMap(([party]) => {
+    if (party === "none") return [];
+    const leadership = props.snap.legislatureRuntime.caucusLeadership[party];
+    return leadership?.floorLeaderId ? [{ partyId: party, leaderId: leadership.floorLeaderId, whipId: leadership.whipId }] : [];
+  });
 
   const compositionHeader = (
     <>
-      <div className="composition-strip">
+      <BriefStrip
+        items={[
+          { label: "Sitting", value: `${mps.length}/${seatCount}` },
+          { label: "Majority", value: majority },
+          { label: "On floor", value: floorQueue.length },
+          { label: "Votes due", value: votesDue.length },
+        ]}
+      />
+      <section className="assembly-leadership-desk" aria-label="Assembly leadership">
+        <div className="assembly-speaker-desk">
+          <span className="kicker">Presiding officer</span>
+          <strong>{speakerHolderId ? politicianDisplayName(props.catalog, speakerHolderId) : "Speaker vacant"}</strong>
+          <small>Speaker of the National Assembly</small>
+        </div>
+        <div className="assembly-delegation-leaders">
+          {delegationLeaders.map((row) => <button type="button" key={row.partyId} onClick={() => setSelectedMember(row.leaderId)}>
+            <span className="party-swatch" style={{ background: partyColor(props.world, row.partyId) }} />
+            <strong>{partyDisplayName(props.world, row.partyId, props.snap)}</strong>
+            <small>Floor leader · {politicianDisplayName(props.catalog, row.leaderId)}{row.whipId ? ` · Whip ${politicianDisplayName(props.catalog, row.whipId)}` : ""}</small>
+          </button>)}
+        </div>
+      </section>
+      <details className="assembly-chamber-disclosure">
+        <summary><strong>Chamber composition</strong><span>420-seat seating plan and member inspector</span></summary>
+        <div className="composition-strip">
         <AssemblyHemicycle
           world={props.world}
           snap={props.snap}
@@ -357,7 +405,8 @@ export function AssemblyPage(props: {
             </span>
           ))}
         </div>
-      </div>
+        </div>
+      </details>
       {selectedMember ? (
         <div className="assembly-member-inspector">
           <PoliticianProfile
@@ -378,14 +427,6 @@ export function AssemblyPage(props: {
           <button type="button" className="btn ghost" onClick={() => setSelectedMember(null)}>Close member detail</button>
         </div>
       ) : null}
-      <BriefStrip
-        items={[
-          { label: "Sitting", value: `${mps.length}/${seatCount}` },
-          { label: "Majority", value: majority },
-          { label: "On floor", value: floorQueue.length },
-          { label: "Votes due", value: votesDue.length },
-        ]}
-      />
     </>
   );
 
@@ -556,7 +597,7 @@ export function AssemblyPage(props: {
                 {Object.values(props.snap.provincialRuntime.constitutionalAmendments).length === 0 ? <p className="muted">No amendment is currently before the institutions.</p> : null}
                 {Object.values(props.snap.provincialRuntime.constitutionalAmendments).sort((a, b) => b.proposedDate.localeCompare(a.proposedDate)).slice(0, 8).map((amendment) => (
                   <div className="constitutional-tracker" key={amendment.id}>
-                    <div><strong>{amendment.title}</strong><p>{amendment.summary}</p>{amendment.currentText && amendment.proposedText ? <div className="constitutional-redline compact"><div><span>Current</span><del>{amendment.currentText}</del></div><div><span>Proposed</span><ins>{amendment.proposedText}</ins></div></div> : null}</div>
+                    <div><strong>{amendment.title}</strong><p>{amendment.summary}</p><small>{CONSTITUTIONAL_INTENT_LABELS[amendment.intent]} · {amendment.runtimeEffect === "modeled_rule" ? "Changes a modeled constitutional rule" : "Legal-text effect only"}</small>{amendment.currentText && amendment.proposedText ? <div className="constitutional-redline compact"><div><span>Current</span><del>{amendment.currentText}</del></div><div><span>Proposed</span><ins>{amendment.proposedText}</ins></div></div> : null}</div>
                     <div className="constitutional-progress"><span>Assembly {amendment.assemblyYes}/280</span><strong>{amendment.ratifiedProvinceIds.length} / 13 ratified</strong><StatusBadge tone={amendment.status === "ratified" ? "ok" : amendment.status.includes("failed") ? "warn" : "idle"}>{amendment.status.replace(/_/g, " ")}</StatusBadge></div>
                     <details className="constitutional-provinces">
                       <summary>Ratification map and accessible record · 21 Assemblies</summary>
@@ -858,7 +899,7 @@ export function AssemblyPage(props: {
                         ) : null}
                         {playerMaySetWhip ? (
                           <div className="whip-position-controls">
-                            <SectionDivider title="Set caucus position" hint="Members retain their own vote" />
+                            <SectionDivider title="Set Assembly Delegation position" hint="Party members retain their own vote; ideological caucuses are separate" />
                             <div className="row">
                               <button type="button" className="btn" onClick={() => run({ type: "SET_CAUCUS_BILL_POSITION", billId: bill.id, stance: "support" })}>Support</button>
                               <button type="button" className="btn danger" onClick={() => run({ type: "SET_CAUCUS_BILL_POSITION", billId: bill.id, stance: "oppose" })}>Oppose</button>
@@ -1185,14 +1226,15 @@ export function AssemblyPage(props: {
                       <h3>{selectedConstitutionArticle?.title}</h3>
                       <p>{currentClauseText(props.snap, selectedConstitutionClause)}</p>
                       <div className="constitutional-scope"><span>Political resistance</span><strong>{selectedConstitutionClause.amendment_difficulty === "ordinary" ? "Ordinary" : selectedConstitutionClause.amendment_difficulty === "substantial" ? "Substantial" : "Foundational"}</strong></div>
-                      {selectedConstitutionClause.runtime_rule_id ? <div className="constitution-runtime-note">This clause governs the live <strong>{props.snap.provincialRuntime.constitutionalRules[selectedConstitutionClause.runtime_rule_id]?.label}</strong> rule.</div> : <div className="constitution-runtime-note">This clause is part of the legal text. It has no separate numeric runtime switch.</div>}
+                      {selectedConstitutionClause.runtime_rule_id ? <div className="constitution-runtime-note">This clause governs the live <strong>{props.snap.provincialRuntime.constitutionalRules[selectedConstitutionClause.runtime_rule_id]?.label}</strong> rule. Amend it through the structured rule proposal under Current business; arbitrary replacement text is disabled.</div> : <div className="constitution-runtime-note">This clause is part of the legal text. Ratification changes the authoritative text but has no additional modeled runtime consequence.</div>}
                       {Object.values(props.snap.provincialRuntime.constitutionalAmendments).filter((amendment) => amendment.documentClauseId === selectedConstitutionClause.id || amendment.ruleId === selectedConstitutionClause.runtime_rule_id).map((amendment) => <div className="constitution-annotation-amendment" key={amendment.id}><strong>{amendment.title}</strong><span>{amendment.status.replace(/_/g, " ")} · {amendment.enactedDate ?? amendment.proposedDate}</span></div>)}
-                      {mp ? <div className="constitution-draft-panel">
+                      {mp && !selectedConstitutionClause.runtime_rule_id ? <div className="constitution-draft-panel">
+                        <label>Legal-policy intent<select value={constitutionalIntent} onChange={(event) => setConstitutionalIntent(event.target.value as ConstitutionalAmendmentIntent)}>{CONSTITUTIONAL_AMENDMENT_INTENTS.map((intent) => <option value={intent} key={intent}>{CONSTITUTIONAL_INTENT_LABELS[intent]}</option>)}</select></label>
                         <label>Proposed replacement text<textarea value={constitutionalDraftText} onChange={(event) => setConstitutionalDraftText(event.target.value)} placeholder={currentClauseText(props.snap, selectedConstitutionClause)} rows={7} /></label>
                         {constitutionalDraftText.trim() ? <div className="constitutional-redline"><div><span>Current</span><del>{currentClauseText(props.snap, selectedConstitutionClause)}</del></div><div><span>Proposed</span><ins>{constitutionalDraftText.trim()}</ins></div></div> : null}
-                        <button type="button" className="btn" disabled={constitutionalDraftText.trim().length < 40} onClick={() => { run({ type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT", clauseId: selectedConstitutionClause.id, proposedText: constitutionalDraftText }); setConstitutionalDraftText(""); }}>Introduce amendment</button>
-                        <small>Formal threshold remains 280 Assembly votes and 13 Provincial Assemblies. Political resistance changes support, not the constitutional threshold.</small>
-                      </div> : <p className="muted">Only a sitting National Assembly member may introduce an amendment.</p>}
+                        <button type="button" className="btn" disabled={constitutionalDraftText.trim().length < 40} onClick={() => { run({ type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT", clauseId: selectedConstitutionClause.id, proposedText: constitutionalDraftText, intent: constitutionalIntent }); setConstitutionalDraftText(""); }}>Introduce amendment</button>
+                        <small>Formal threshold remains 280 Assembly votes and 13 Provincial Assemblies. Intent and clause scope change political resistance, not the constitutional threshold.</small>
+                      </div> : !mp ? <p className="muted">Only a sitting National Assembly member may introduce an amendment.</p> : null}
                     </> : null}
                   </aside>
                 </div> : <p className="muted">The structured constitutional document is unavailable.</p>}

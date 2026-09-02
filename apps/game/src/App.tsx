@@ -83,14 +83,35 @@ function qaScreen(value: string | null): Screen {
   return value != null && QA_SCREENS.has(value as Screen) ? value as Screen : "home";
 }
 
+function routeFromHash(): { screen: Screen; focus: { kind: string; id: string } | null } {
+  if (typeof window === "undefined") return { screen: "home", focus: null };
+  const parts = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+  const screen = QA_SCREENS.has(parts[0] as Screen) ? parts[0] as Screen : "home";
+  if (parts.length < 3) return { screen, focus: null };
+  const kinds: Record<string, string> = {
+    politician: "Politician", party: "Party", caucus: "Caucus", province: "Province",
+    constituency: "Constituency", election: "Election", bill: "Bill", organization: "Organization",
+    "court-case": "Court case",
+  };
+  const kind = kinds[parts[1]!.toLowerCase()];
+  return { screen, focus: kind ? { kind, id: parts.slice(2).join("/") } : null };
+}
+
+function routeHash(screen: Screen, focus: { kind: string; id: string } | null): string {
+  if (!focus) return `#/${screen}`;
+  const kind = focus.kind.toLowerCase().replace(/\s+/g, "-");
+  return `#/${screen}/${encodeURIComponent(kind)}/${encodeURIComponent(focus.id)}`;
+}
+
 export default function App() {
+  const initialRoute = routeFromHash();
   const [bundle, setBundle] = useState<ContentBundle | null>(null);
   const [world, setWorld] = useState<KernelWorld | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"title" | "select" | "load" | "play">("title");
   const [sim, setSim] = useState<Simulation | null>(null);
   const [snap, setSnap] = useState<SimState | null>(null);
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<Screen>(initialRoute.screen);
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState("Processing…");
   const busyRef = useRef(false);
@@ -105,7 +126,7 @@ export default function App() {
   const [selectedBill, setSelectedBill] = useState<string | null>(null);
   const [mapHover, setMapHover] = useState<string | null>(null);
   const [debug, setDebug] = useState(false);
-  const [globalFocus, setGlobalFocus] = useState<{ kind: string; id: string } | null>(null);
+  const [globalFocus, setGlobalFocus] = useState<{ kind: string; id: string } | null>(initialRoute.focus);
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -189,6 +210,16 @@ export default function App() {
   }, [watchlist]);
 
   useEffect(() => {
+    const readRoute = () => {
+      const route = routeFromHash();
+      setScreen(route.screen);
+      setGlobalFocus(route.focus);
+    };
+    window.addEventListener("hashchange", readRoute);
+    return () => window.removeEventListener("hashchange", readRoute);
+  }, []);
+
+  useEffect(() => {
     if (!import.meta.env.DEV || !sim) return;
     const params = new URLSearchParams(window.location.search);
     if (!params.has("qaFixture")) return;
@@ -264,13 +295,20 @@ export default function App() {
     return entries;
   }, [world, snap, catalog]);
 
+  useEffect(() => {
+    if (mode !== "play" || import.meta.env.DEV && new URLSearchParams(window.location.search).has("qaFixture")) return;
+    const focusForScreen = globalFocus && searchEntries.some((entry) => entry.screen === screen && entry.kind === globalFocus.kind && entry.id === globalFocus.id) ? globalFocus : null;
+    const next = routeHash(screen, focusForScreen);
+    if (window.location.hash !== next) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${next}`);
+  }, [mode, screen, globalFocus, searchEntries]);
+
   function refresh(next: Simulation) {
     setSim(next);
     setSnap(next.getSnapshot());
   }
 
   function selectSearchEntry(entry: ShellSearchEntry) {
-    setGlobalFocus({ kind: entry.kind, id: entry.id });
+    setGlobalFocus(entry.kind === "Page" ? null : { kind: entry.kind, id: entry.id });
     if (entry.kind === "Bill") setSelectedBill(entry.id);
     setScreen(entry.screen);
   }
@@ -327,7 +365,9 @@ export default function App() {
     const restored = restoreSimulation(parsed.save, world);
     setTurnEvents([]);
     setMode("play");
-    setScreen("home");
+    const route = routeFromHash();
+    setScreen(route.screen);
+    setGlobalFocus(route.focus);
     refresh(restored);
   }
 
@@ -918,16 +958,24 @@ export default function App() {
       statusSegments={statusSegments}
       lastSavedLabel={lastSavedLabel}
     >
-      <DecisionPanel
-        world={world}
-        snap={snap}
-        sim={sim}
-        onDone={() => refresh(sim)}
-        report={feedback.report}
-        countingElection={countingElection}
-        onResolveAssembly={resolveAssemblyElection}
-        onResolvePresidential={() => void resolvePresidentialElection()}
-      />
+      {screen === "home" || screen === "office" ? (
+        <DecisionPanel
+          world={world}
+          snap={snap}
+          sim={sim}
+          onDone={() => refresh(sim)}
+          report={feedback.report}
+          countingElection={countingElection}
+          onResolveAssembly={resolveAssemblyElection}
+          onResolvePresidential={() => void resolvePresidentialElection()}
+        />
+      ) : playerDecisions.length ? (
+        <button type="button" className="required-decisions-indicator" onClick={() => setScreen("home")}>
+          <span>Required decisions</span>
+          <strong>{playerDecisions.length}</strong>
+          <small>Open the political inbox on Home</small>
+        </button>
+      ) : null}
       <GamePages
         screen={screen}
         world={world}
@@ -952,6 +1000,7 @@ export default function App() {
         onResolvePresidential={() => void resolvePresidentialElection()}
         askConfirm={feedback.askConfirm}
         globalFocus={globalFocus}
+        setGlobalFocus={setGlobalFocus}
       />
       {import.meta.env.DEV ? (
         <output

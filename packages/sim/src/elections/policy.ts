@@ -169,9 +169,8 @@ export function isRecognizedPollMethod(method: string): boolean {
 
 export function pollsterAllowsGeography(
   scope: string,
-  geographyKind: "national" | "constituency",
+  geographyKind: "national" | "province" | "constituency",
 ): boolean {
   if (scope === NATIONAL_POLLSTER_SCOPE) return true;
-  void geographyKind;
-  return false;
+  return geographyKind === "province" && scope.startsWith("regional_");
 }

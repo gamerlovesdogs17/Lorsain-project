@@ -55,6 +55,7 @@ import type {
 } from "./foreign/types.js";
 import type {
   ConstitutionalRuleId,
+  ConstitutionalAmendmentIntent,
   ProvincialBillSubject,
   ProvincialInvestment,
   ProvincialLeadershipRole,
@@ -64,7 +65,7 @@ import type {
 
 export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 17 as const;
+export const SAVE_SCHEMA_VERSION = 18 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -400,7 +401,8 @@ export type Command =
       type: "DEV_CREATE_POLL";
       pollsterId: string;
       electionId?: string;
-      geographyKind: "national" | "constituency";
+      geographyKind: "national" | "province" | "constituency";
+      provinceId?: string | null;
       constituencyId?: string | null;
       candidateIds: string[];
       sampleSize?: number;
@@ -557,6 +559,7 @@ export type Command =
       type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT";
       clauseId: string;
       proposedText: string;
+      intent: ConstitutionalAmendmentIntent;
     }
   | {
       type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE";

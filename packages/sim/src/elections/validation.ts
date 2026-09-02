@@ -503,10 +503,17 @@ function parsePoll(id: string, raw: unknown): PollRecord | string {
   if (raw.constituencyId != null && typeof raw.constituencyId !== "string") {
     return `polls.${id} constituencyId`;
   }
-  if (raw.geographyKind === "constituency") {
+  if (raw.provinceId != null && typeof raw.provinceId !== "string") {
+    return `polls.${id} provinceId`;
+  }
+  if (raw.geographyKind === "province") {
+    if (!raw.provinceId) return `polls.${id} province geography missing provinceId`;
+    if (raw.constituencyId) return `polls.${id} province poll cannot name a constituency`;
+  } else if (raw.geographyKind === "constituency") {
     if (!raw.constituencyId) return `polls.${id} constituency geography missing constituencyId`;
-  } else if (raw.constituencyId) {
-    return `polls.${id} national poll cannot name a constituency`;
+    if (raw.provinceId) return `polls.${id} constituency poll cannot name a province`;
+  } else if (raw.constituencyId || raw.provinceId) {
+    return `polls.${id} national poll cannot name a local geography`;
   }
   if (!isIsoDate(raw.fieldStart) || !isIsoDate(raw.fieldEnd) || !isIsoDate(raw.publicationDate)) {
     return `polls.${id} dates`;
@@ -583,6 +590,7 @@ function parsePoll(id: string, raw: unknown): PollRecord | string {
     pollsterId: raw.pollsterId,
     electionId: raw.electionId == null ? null : raw.electionId,
     geographyKind: raw.geographyKind,
+    provinceId: raw.provinceId == null ? null : raw.provinceId,
     constituencyId: raw.constituencyId == null ? null : raw.constituencyId,
     fieldStart: raw.fieldStart,
     fieldEnd: raw.fieldEnd,

@@ -49,6 +49,10 @@ type PageProps = {
         kind: string;
         id: string;
     } | null;
+    setGlobalFocus: (focus: {
+        kind: string;
+        id: string;
+    } | null) => void;
 };
 export declare function GamePages(props: PageProps): import("react").JSX.Element;
 export {};
