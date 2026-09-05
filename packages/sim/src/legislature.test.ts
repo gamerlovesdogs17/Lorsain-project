@@ -73,7 +73,7 @@ describe("Phase 6 legislature kernel", () => {
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "P6-SEED" });
     const snap = sim.getSnapshot();
     expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(SAVE_SCHEMA_VERSION).toBe(17);
+    expect(SAVE_SCHEMA_VERSION).toBe(18);
     expect(currentAssemblyMemberIds(world, snap)).toHaveLength(36);
     expect(Object.keys(snap.legislatureRuntime.committees).sort()).toEqual([
       "COMMITTEE_ECONOMIC",
@@ -210,8 +210,12 @@ describe("Phase 6 legislature kernel", () => {
     const presidentId = currentPresidentId(world, state)!;
     const president = state.politicians[presidentId]!;
     const profile = getAgentProfile(world, state, presidentId)!;
-    const alignedSponsor = currentAssemblyMemberIds(world, state).find((id) => state.politicians[id]?.partyId === president.partyId)!;
-    const hostileSponsor = currentAssemblyMemberIds(world, state).find((id) => state.politicians[id]?.partyId !== president.partyId)!;
+    const alignedSponsor = currentAssemblyMemberIds(world, state).find(
+      (id) => state.politicians[id]?.partyId === president.partyId,
+    )!;
+    const hostileSponsor = currentAssemblyMemberIds(world, state).find(
+      (id) => state.politicians[id]?.partyId !== president.partyId,
+    )!;
     const direction = profile.ideology.economic >= 0 ? 1 : -1;
     const base: BillState = {
       id: "BILL999998",
@@ -220,7 +224,15 @@ describe("Phase 6 legislature kernel", () => {
       introducedDate: state.currentDate,
       title: "Controlled disposition bill",
       summary: "Controlled disposition test.",
-      policyItems: [{ issueId: "ISS_TAX", direction, magnitude: 1, fiscalImpact: 0, dimensionEffects: { economic: direction } }],
+      policyItems: [
+        {
+          issueId: "ISS_TAX",
+          direction,
+          magnitude: 1,
+          fiscalImpact: 0,
+          dimensionEffects: { economic: direction },
+        },
+      ],
       assignedCommitteeId: null,
       status: "sent_to_president",
       amendmentIds: [],
@@ -241,7 +253,15 @@ describe("Phase 6 legislature kernel", () => {
       id: "BILL999999",
       sponsorId: hostileSponsor,
       cosponsorIds: [hostileSponsor],
-      policyItems: [{ issueId: "ISS_TAX", direction: -direction, magnitude: 1, fiscalImpact: 0.25, dimensionEffects: { economic: -direction } }],
+      policyItems: [
+        {
+          issueId: "ISS_TAX",
+          direction: -direction,
+          magnitude: 1,
+          fiscalImpact: 0.25,
+          dimensionEffects: { economic: -direction },
+        },
+      ],
     });
     expect(aligned.decision).toBe("sign");
     expect(hostile.decision).toBe("return");

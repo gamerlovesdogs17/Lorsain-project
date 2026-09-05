@@ -49,7 +49,8 @@ import {
 } from "./map/publicLayers.js";
 
 const AD_SPENDS = [5_000, 10_000, 25_000, 50_000, 100_000];
-type ActionKind = "visit" | "organize" | "advertise" | "message" | "attack" | "endorsement" | "gotv" | null;
+type ActionKind =
+  "visit" | "organize" | "advertise" | "message" | "attack" | "endorsement" | "gotv" | null;
 
 function run(
   sim: Simulation,
@@ -152,14 +153,13 @@ export function CampaignPage(props: {
   const preferredConstituency = useMemo(() => {
     if (incumbentConstituency) return incumbentConstituency;
     const home = props.world.politicianHomeProvince[props.snap.playerPoliticianId];
-    return Object.keys(props.world.constituencyElectorate)
-      .sort((a, b) => {
-        const share = (id: string) =>
-          props.world.constituencyElectorate[id]?.provincePopulationShares.find(
-            (row) => row.provinceId === home,
-          )?.share ?? 0;
-        return share(b) - share(a) || a.localeCompare(b);
-      })[0];
+    return Object.keys(props.world.constituencyElectorate).sort((a, b) => {
+      const share = (id: string) =>
+        props.world.constituencyElectorate[id]?.provincePopulationShares.find(
+          (row) => row.provinceId === home,
+        )?.share ?? 0;
+      return share(b) - share(a) || a.localeCompare(b);
+    })[0];
   }, [incumbentConstituency, props.snap.playerPoliticianId, props.world]);
   const [filingConstituency, setFilingConstituency] = useState(preferredConstituency ?? "");
 
@@ -175,7 +175,10 @@ export function CampaignPage(props: {
       setAdGeoId(c.constituencyId);
       return;
     }
-    if ((c?.type === "gubernatorial" || c?.type === "provincial_assembly") && typeof c.metadata.provinceId === "string") {
+    if (
+      (c?.type === "gubernatorial" || c?.type === "provincial_assembly") &&
+      typeof c.metadata.provinceId === "string"
+    ) {
       setVisitKind("province");
       setOrgKind("province");
       setVisitId(c.metadata.provinceId);
@@ -301,7 +304,9 @@ export function CampaignPage(props: {
         {open ? (
           <SectionCard title="Enter the race">
             <p className="muted">
-              {contest ? "A nomination contest is open in your party." : "Declare when you are ready."}
+              {contest
+                ? "A nomination contest is open in your party."
+                : "Declare when you are ready."}
             </p>
             <button
               type="button"
@@ -331,14 +336,20 @@ export function CampaignPage(props: {
   }
 
   const rivals = activeRaceCampaigns(props.snap, c);
-  const campaignProvinceId = typeof c.metadata.provinceId === "string" ? c.metadata.provinceId : null;
+  const campaignProvinceId =
+    typeof c.metadata.provinceId === "string" ? c.metadata.provinceId : null;
   const provinces = campaignProvinceId ? [campaignProvinceId] : props.world.provinceIds;
   const constituencies =
     c.type === "assembly" && c.constituencyId
       ? [c.constituencyId]
       : Object.keys(props.world.constituencyElectorate)
-          .filter((constituencyId) => !campaignProvinceId || props.world.constituencyElectorate[constituencyId]?.provincePopulationShares
-            .some((share) => share.provinceId === campaignProvinceId && share.share > 0))
+          .filter(
+            (constituencyId) =>
+              !campaignProvinceId ||
+              props.world.constituencyElectorate[constituencyId]?.provincePopulationShares.some(
+                (share) => share.provinceId === campaignProvinceId && share.share > 0,
+              ),
+          )
           .sort();
   const issues = props.world.issueIds;
   const spendOptions = AD_SPENDS.filter((n) => n <= Math.floor(c.cashOnHand));
@@ -367,32 +378,35 @@ export function CampaignPage(props: {
   const gubernatorialRace = c.electionId
     ? props.snap.provincialRuntime.elections[c.electionId]
     : null;
-  const raceDescription = c.type === "presidential_nomination"
-    ? `${partyDisplayName(props.world, playerPol?.partyId ?? null, props.snap)} nomination · National`
-    : c.type === "presidential_general"
-      ? "President of Terena · National"
-      : c.type === "assembly" && c.constituencyId
-        ? `National Assembly · ${constituencyDisplayName(props.catalog, c.constituencyId)}`
-        : c.type === "gubernatorial" && gubernatorialRace
-          ? `Governor · ${props.catalog.places.get(gubernatorialRace.provinceId)?.name ?? "Province"}`
-          : c.type === "provincial_assembly" && campaignProvinceId
-            ? `Provincial Assembly · ${props.catalog.places.get(campaignProvinceId)?.name ?? "Province"}`
-          : "Political campaign";
+  const raceDescription =
+    c.type === "presidential_nomination"
+      ? `${partyDisplayName(props.world, playerPol?.partyId ?? null, props.snap)} nomination · National`
+      : c.type === "presidential_general"
+        ? "President of Terena · National"
+        : c.type === "assembly" && c.constituencyId
+          ? `National Assembly · ${constituencyDisplayName(props.catalog, c.constituencyId)}`
+          : c.type === "gubernatorial" && gubernatorialRace
+            ? `Governor · ${props.catalog.places.get(gubernatorialRace.provinceId)?.name ?? "Province"}`
+            : c.type === "provincial_assembly" && campaignProvinceId
+              ? `Provincial Assembly · ${props.catalog.places.get(campaignProvinceId)?.name ?? "Province"}`
+              : "Political campaign";
   const poll = latestPublicPoll(props.snap);
   const recentActivity = props.snap.history
-    .filter((e) =>
-      e.type.startsWith("CAMPAIGN_") ||
-      (e.type.startsWith("ENDORSEMENT_") && e.type !== "ENDORSEMENT_RECEIVED") ||
-      e.type === "POLL_PUBLISHED" ||
-      e.type === "DEBATE_HELD",
+    .filter(
+      (e) =>
+        e.type.startsWith("CAMPAIGN_") ||
+        (e.type.startsWith("ENDORSEMENT_") && e.type !== "ENDORSEMENT_RECEIVED") ||
+        e.type === "POLL_PUBLISHED" ||
+        e.type === "DEBATE_HELD",
     )
     .slice(-8)
     .reverse();
   const groundGameActivity = c.recentEffects
-    .filter((effect) =>
-      effect.kind.startsWith("organize:") ||
-      effect.kind.startsWith("visit:") ||
-      effect.kind.startsWith("gotv:"),
+    .filter(
+      (effect) =>
+        effect.kind.startsWith("organize:") ||
+        effect.kind.startsWith("visit:") ||
+        effect.kind.startsWith("gotv:"),
     )
     .slice(-6)
     .reverse();
@@ -407,14 +421,26 @@ export function CampaignPage(props: {
         .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id))
     : [];
   const interestEndorsements = Object.entries(props.snap.organizationRuntime.actors)
-    .flatMap(([organizationId, actor]) => actor.endorsements
-      .filter((endorsement) => endorsement.public && endorsement.politicianId === c.politicianId && endorsement.campaignId === c.id)
-      .map((endorsement) => ({ organizationId, endorsement })))
-    .sort((a, b) => b.endorsement.date.localeCompare(a.endorsement.date) || a.organizationId.localeCompare(b.organizationId));
+    .flatMap(([organizationId, actor]) =>
+      actor.endorsements
+        .filter(
+          (endorsement) =>
+            endorsement.public &&
+            endorsement.politicianId === c.politicianId &&
+            endorsement.campaignId === c.id,
+        )
+        .map((endorsement) => ({ organizationId, endorsement })),
+    )
+    .sort(
+      (a, b) =>
+        b.endorsement.date.localeCompare(a.endorsement.date) ||
+        a.organizationId.localeCompare(b.organizationId),
+    );
   const activeGotv = gotvActivations(c);
-  const gotvOrganization = gotvKind === "province"
-    ? (c.organizationByProvince[gotvId] ?? 0) + c.fieldOrganization * 0.25
-    : (c.organizationByConstituency[gotvId] ?? 0) + c.fieldOrganization * 0.2;
+  const gotvOrganization =
+    gotvKind === "province"
+      ? (c.organizationByProvince[gotvId] ?? 0) + c.fieldOrganization * 0.25
+      : (c.organizationByConstituency[gotvId] ?? 0) + c.fieldOrganization * 0.2;
   const gotvReady = gotvOrganization >= 0.12;
   const gotvAlreadyActive = activeGotv[`${gotvKind}:${gotvId}`]?.date === props.snap.currentDate;
   const provinceTargets = provinces
@@ -500,13 +526,21 @@ export function CampaignPage(props: {
         </div>
       ) : finalStretch ? (
         <div className="campaign-stage-ribbon final">
-          <strong>Final stretch · {monthsRemaining === 0 ? "Election month" : "One month remaining"}</strong>
-          <span>Built Ground Game can now be activated for GOTV. It is not a free turnout boost.</span>
+          <strong>
+            Final stretch · {monthsRemaining === 0 ? "Election month" : "One month remaining"}
+          </strong>
+          <span>
+            Built Ground Game can now be activated for GOTV. It is not a free turnout boost.
+          </span>
         </div>
       ) : (
         <div className="campaign-stage-ribbon">
-          <strong>{monthsRemaining == null ? "Campaign underway" : `${monthsRemaining} months remaining`}</strong>
-          <span>Build durable organization now; voter mobilization opens only in the final two months.</span>
+          <strong>
+            {monthsRemaining == null ? "Campaign underway" : `${monthsRemaining} months remaining`}
+          </strong>
+          <span>
+            Build durable organization now; voter mobilization opens only in the final two months.
+          </span>
         </div>
       )}
 
@@ -539,12 +573,19 @@ export function CampaignPage(props: {
               </strong>
             </div>
           </div>
-          <p className="muted campaign-actions-note">These are the major campaign choices the candidate can personally direct this month; they refresh when the month advances.</p>
+          <p className="muted campaign-actions-note">
+            These are the major campaign choices the candidate can personally direct this month;
+            they refresh when the month advances.
+          </p>
           {noActions ? (
-            <p className="muted campaign-actions-note">Monthly actions spent. End turn to refresh.</p>
+            <p className="muted campaign-actions-note">
+              Monthly actions spent. End turn to refresh.
+            </p>
           ) : null}
           {actionClosed ? (
-            <p className="muted campaign-actions-note">The field operation is locked for counting.</p>
+            <p className="muted campaign-actions-note">
+              The field operation is locked for counting.
+            </p>
           ) : null}
           <SectionDivider title="Rivals" {...(rivals.length ? {} : { hint: "No active rivals" })} />
           {rivals.length === 0 ? <EmptyState>Field is clear for now.</EmptyState> : null}
@@ -564,13 +605,23 @@ export function CampaignPage(props: {
 
         <div className="campaign-center">
           <div className="campaign-map-layers" aria-label="Campaign map data layer">
-            {([
-              ["forecast", "Forecast"],
-              ["polling", "Polling"],
-              ["ground_game", "Ground Game"],
-              ["previous", "Previous"],
-            ] as const).map(([id, label]) => (
-              <button type="button" key={id} className={mapLayer === id ? "active" : ""} onClick={() => { setMapLayer(id); setMapSel(null); }}>
+            {(
+              [
+                ["forecast", "Forecast"],
+                ["polling", "Polling"],
+                ["ground_game", "Ground Game"],
+                ["previous", "Previous"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                type="button"
+                key={id}
+                className={mapLayer === id ? "active" : ""}
+                onClick={() => {
+                  setMapLayer(id);
+                  setMapSel(null);
+                }}
+              >
                 {label}
               </button>
             ))}
@@ -604,7 +655,15 @@ export function CampaignPage(props: {
             showConstituencies={mapScale === "constituency"}
             fillFor={(f, kind) => {
               if (mapLayer === "ground_game") {
-                return mapFillFor("campaign", props.world, props.snap, f, kind, c.organizationByConstituency, c.organizationByProvince);
+                return mapFillFor(
+                  "campaign",
+                  props.world,
+                  props.snap,
+                  f,
+                  kind,
+                  c.organizationByConstituency,
+                  c.organizationByProvince,
+                );
               }
               const datum = publicMapDatum(kind, f.id);
               return datum.leaderPartyId ? partyColor(props.world, datum.leaderPartyId) : "#d7d5cf";
@@ -614,12 +673,38 @@ export function CampaignPage(props: {
             tooltipFor={(selection) => (
               <>
                 <strong>{selection.name}</strong>
-                {selection.kind === "province" || selection.kind === "constituency" ? mapLayer === "ground_game" ? (
-                  <span>{selection.kind === "province" ? `Provincial Ground Game ${groundGameStrength(c.organizationByProvince[selection.id])}/100` : `Constituency Ground Game ${groundGameStrength(c.organizationByConstituency[selection.id])}/100`}</span>
-                ) : (() => {
-                  const datum = publicMapDatum(selection.kind, selection.id);
-                  return <><span>{datum.label}{datum.asOf ? ` · ${datum.truth === "poll" ? "Latest poll" : "As of"}: ${datum.asOf}` : ""}</span>{datum.projectedSeats?.map((row) => <small key={row.partyId ?? "independent"}>{partyDisplayName(props.world, row.partyId, props.snap)} · {row.seats} projected seat{row.seats === 1 ? "" : "s"}</small>)}<small>{datum.detail}</small></>;
-                })() : <span>Campaign location</span>}
+                {selection.kind === "province" || selection.kind === "constituency" ? (
+                  mapLayer === "ground_game" ? (
+                    <span>
+                      {selection.kind === "province"
+                        ? `Provincial Ground Game ${groundGameStrength(c.organizationByProvince[selection.id])}/100`
+                        : `Constituency Ground Game ${groundGameStrength(c.organizationByConstituency[selection.id])}/100`}
+                    </span>
+                  ) : (
+                    (() => {
+                      const datum = publicMapDatum(selection.kind, selection.id);
+                      return (
+                        <>
+                          <span>
+                            {datum.label}
+                            {datum.asOf
+                              ? ` · ${datum.truth === "poll" ? "Latest poll" : "As of"}: ${datum.asOf}`
+                              : ""}
+                          </span>
+                          {datum.projectedSeats?.map((row) => (
+                            <small key={row.partyId ?? "independent"}>
+                              {partyDisplayName(props.world, row.partyId, props.snap)} · {row.seats}{" "}
+                              projected seat{row.seats === 1 ? "" : "s"}
+                            </small>
+                          ))}
+                          <small>{datum.detail}</small>
+                        </>
+                      );
+                    })()
+                  )
+                ) : (
+                  <span>Campaign location</span>
+                )}
               </>
             )}
           />
@@ -627,19 +712,30 @@ export function CampaignPage(props: {
           {focus ? (
             <p className="map-selection-note">
               {focus.name}
-              {focus.kind === "constituency" || focus.kind === "province" ? mapLayer === "ground_game"
-                ? ` · Ground Game ${groundGameStrength(focus.kind === "province" ? c.organizationByProvince[focus.id] : c.organizationByConstituency[focus.id])}/100`
-                : ` · ${publicMapDatum(focus.kind, focus.id).label}` : ""}
+              {focus.kind === "constituency" || focus.kind === "province"
+                ? mapLayer === "ground_game"
+                  ? ` · Ground Game ${groundGameStrength(focus.kind === "province" ? c.organizationByProvince[focus.id] : c.organizationByConstituency[focus.id])}/100`
+                  : ` · ${publicMapDatum(focus.kind, focus.id).label}`
+                : ""}
             </p>
           ) : (
-            <EmptyState>{mapLayer === "ground_game" ? "Your Ground Game strength — not latent voter support." : mapLayer === "polling" ? "Only directly sampled public polls receive a color." : mapLayer === "forecast" ? "A public model using polls and prior public results, with uncertainty stated." : "The last comparable certified geographic result."}</EmptyState>
+            <EmptyState>
+              {mapLayer === "ground_game"
+                ? "Your Ground Game strength — not latent voter support."
+                : mapLayer === "polling"
+                  ? "Only directly sampled public polls receive a color."
+                  : mapLayer === "forecast"
+                    ? "A labeled public model estimate — not a published poll and not a certified result."
+                    : "The last comparable certified geographic result."}
+            </EmptyState>
           )}
         </div>
 
         <aside className="campaign-right">
           <SectionDivider title="Actions" hint="Each uses one monthly action" />
           <p className="muted campaign-action-purpose">
-            Visits build attention, organizing builds lasting field strength, and advertising trades cash for reach.
+            Visits build attention, organizing builds lasting field strength, and advertising trades
+            cash for reach.
           </p>
           <div className="campaign-actions-grid">
             {actionBtn("visit", "Visit")}
@@ -649,7 +745,13 @@ export function CampaignPage(props: {
               type="button"
               className="campaign-action-btn"
               disabled={noActions || actionClosed}
-              title={actionClosed ? "Campaign actions have closed" : noActions ? "No campaign actions remaining this month" : undefined}
+              title={
+                actionClosed
+                  ? "Campaign actions have closed"
+                  : noActions
+                    ? "No campaign actions remaining this month"
+                    : undefined
+              }
               onClick={() =>
                 run(
                   props.sim,
@@ -666,7 +768,9 @@ export function CampaignPage(props: {
             {actionBtn("gotv", "Activate GOTV", !finalStretch)}
           </div>
           {!finalStretch && !actionClosed ? (
-            <p className="muted campaign-actions-note">GOTV unlocks in the final two campaign months.</p>
+            <p className="muted campaign-actions-note">
+              GOTV unlocks in the final two campaign months.
+            </p>
           ) : null}
           <SectionDivider title="Utilities" />
           <div className="row campaign-util">
@@ -734,7 +838,9 @@ export function CampaignPage(props: {
         <SectionDivider title="Strategy board" hint="Public campaign information only" />
         <div className="campaign-strategy-grid">
           <SectionCard title="Ground Game priorities">
-            <p className="muted">Lowest-strength areas in your own field operation. This is not a forecast of support.</p>
+            <p className="muted">
+              Lowest-strength areas in your own field operation. This is not a forecast of support.
+            </p>
             <div className="campaign-target-columns">
               {c.type !== "assembly" ? (
                 <div>
@@ -787,7 +893,10 @@ export function CampaignPage(props: {
               <EmptyState>No field activity recorded yet.</EmptyState>
             ) : (
               groundGameActivity.map((effect, index) => (
-                <div className="campaign-field-history" key={`${effect.date}:${effect.kind}:${index}`}>
+                <div
+                  className="campaign-field-history"
+                  key={`${effect.date}:${effect.kind}:${index}`}
+                >
                   <span>{effect.date}</span>
                   <strong>{groundGameEffectLabel(effect)}</strong>
                 </div>
@@ -797,24 +906,41 @@ export function CampaignPage(props: {
           <SectionCard title="Endorsement network">
             {contestEndorsements.length + interestEndorsements.length === 0 ? (
               <EmptyState>No public endorsement is recorded for this campaign.</EmptyState>
-            ) : (<>
-              {contestEndorsements.map((endorsement) => (
-                <EntityRow
-                  key={endorsement.id}
-                  title={publicEndorserName(endorsement.endorserType, endorsement.endorserId)}
-                  meta={`${endorsement.endorserType === "politician" ? "Political endorsement" : "Party endorsement"} · ${endorsement.date}`}
-                  status={<StatusBadge tone={endorsement.status === "active" ? "ok" : "idle"}>{endorsement.status === "active" ? "Current" : endorsement.status[0]!.toUpperCase() + endorsement.status.slice(1)}</StatusBadge>}
-                />
-              ))}
-              {interestEndorsements.map(({ organizationId, endorsement }, index) => (
-                <EntityRow
-                  key={`${organizationId}:${endorsement.campaignId ?? "campaign"}:${index}`}
-                  title={props.world.interestOrganizations[organizationId]?.name ?? "Public organization"}
-                  meta={`Interest-group endorsement · ${endorsement.date}${endorsement.withdrawnDate ? ` · withdrawn ${endorsement.withdrawnDate}` : ""}`}
-                  status={<StatusBadge tone={(endorsement.status ?? "active") === "active" ? "ok" : "idle"}>{(endorsement.status ?? "active") === "active" ? "Current" : "Withdrawn"}</StatusBadge>}
-                />
-              ))}
-            </>)}
+            ) : (
+              <>
+                {contestEndorsements.map((endorsement) => (
+                  <EntityRow
+                    key={endorsement.id}
+                    title={publicEndorserName(endorsement.endorserType, endorsement.endorserId)}
+                    meta={`${endorsement.endorserType === "politician" ? "Political endorsement" : "Party endorsement"} · ${endorsement.date}`}
+                    status={
+                      <StatusBadge tone={endorsement.status === "active" ? "ok" : "idle"}>
+                        {endorsement.status === "active"
+                          ? "Current"
+                          : endorsement.status[0]!.toUpperCase() + endorsement.status.slice(1)}
+                      </StatusBadge>
+                    }
+                  />
+                ))}
+                {interestEndorsements.map(({ organizationId, endorsement }, index) => (
+                  <EntityRow
+                    key={`${organizationId}:${endorsement.campaignId ?? "campaign"}:${index}`}
+                    title={
+                      props.world.interestOrganizations[organizationId]?.name ??
+                      "Public organization"
+                    }
+                    meta={`Interest-group endorsement · ${endorsement.date}${endorsement.withdrawnDate ? ` · withdrawn ${endorsement.withdrawnDate}` : ""}`}
+                    status={
+                      <StatusBadge
+                        tone={(endorsement.status ?? "active") === "active" ? "ok" : "idle"}
+                      >
+                        {(endorsement.status ?? "active") === "active" ? "Current" : "Withdrawn"}
+                      </StatusBadge>
+                    }
+                  />
+                ))}
+              </>
+            )}
           </SectionCard>
         </div>
         <SectionDivider title="Recent campaign activity" />
@@ -849,7 +975,9 @@ export function CampaignPage(props: {
                 value={visitKind}
                 onChange={(e) => setVisitKind(e.target.value as typeof visitKind)}
               >
-                {!["assembly", "gubernatorial", "provincial_assembly"].includes(c.type) ? <option value="national">Nationwide</option> : null}
+                {!["assembly", "gubernatorial", "provincial_assembly"].includes(c.type) ? (
+                  <option value="national">Nationwide</option>
+                ) : null}
                 {c.type !== "assembly" ? <option value="province">Province</option> : null}
                 <option value="constituency">Constituency</option>
               </select>
@@ -969,7 +1097,9 @@ export function CampaignPage(props: {
             <label>
               Area
               <select value={adGeo} onChange={(e) => setAdGeo(e.target.value as typeof adGeo)}>
-                {!["assembly", "gubernatorial", "provincial_assembly"].includes(c.type) ? <option value="national">Nationwide</option> : null}
+                {!["assembly", "gubernatorial", "provincial_assembly"].includes(c.type) ? (
+                  <option value="national">Nationwide</option>
+                ) : null}
                 {c.type !== "assembly" ? <option value="province">Province</option> : null}
                 <option value="constituency">Constituency</option>
               </select>
@@ -1129,7 +1259,8 @@ export function CampaignPage(props: {
       {activeAction === "gotv" && finalStretch ? (
         <ActionDrawer title="Activate GOTV" onClose={() => setActiveAction(null)}>
           <p className="muted">
-            Mobilization converts field organization you already built into a final turnout effort. Weak organization cannot be activated.
+            Mobilization converts field organization you already built into a final turnout effort.
+            Weak organization cannot be activated.
           </p>
           <div className="form-stack">
             <label>
@@ -1159,7 +1290,11 @@ export function CampaignPage(props: {
             </label>
             <div className={`campaign-gotv-readiness ${gotvReady ? "ready" : "weak"}`}>
               <strong>{gotvReady ? "Field operation ready" : "Ground Game too weak"}</strong>
-              <span>{gotvAlreadyActive ? "GOTV is already active here this month." : "Requires established local organization."}</span>
+              <span>
+                {gotvAlreadyActive
+                  ? "GOTV is already active here this month."
+                  : "Requires established local organization."}
+              </span>
             </div>
             <button
               type="button"

@@ -111,14 +111,18 @@ describe("Phase 11.1 full-game integration", () => {
     const vacancyEvents = reconcileAssemblyVacancies(mutable, world, null);
     expect(currentAssemblyMemberIds(world, mutable)).toHaveLength(420);
     expect(currentAssemblyMemberIds(world, mutable)).not.toContain(vacated.holderId);
-    expect(vacancyEvents.filter((event) => event.type === "ASSEMBLY_CASUAL_VACANCY_FILLED")).toHaveLength(1);
+    expect(
+      vacancyEvents.filter((event) => event.type === "ASSEMBLY_CASUAL_VACANCY_FILLED"),
+    ).toHaveLength(1);
     const restoredCountback = restoreSimulation(
       { ...sim.serializeSave(), simulation: mutable },
       world,
     );
-    expect(restoredCountback.getSnapshot().history.some(
-      (event) => event.type === "ASSEMBLY_CASUAL_VACANCY_FILLED",
-    )).toBe(true);
+    expect(
+      restoredCountback
+        .getSnapshot()
+        .history.some((event) => event.type === "ASSEMBLY_CASUAL_VACANCY_FILLED"),
+    ).toBe(true);
 
     const save = sim.serializeSave();
     expect(restoreSimulation(save, world).hashState()).toBe(sim.hashState());
@@ -160,9 +164,8 @@ describe("Phase 11.1 full-game integration", () => {
     const due = await advanceResponsive(sim, 12, "ASSEMBLY_ELECTION_DUE");
     expect(due).toBe("ASSEMBLY_ELECTION_DUE");
     expect(
-      sim
-        .getSnapshot()
-        .elections[CANONICAL_ASSEMBLY_ELECTION_ID]?.assembly?.constituencyFields.C007?.candidateIds,
+      sim.getSnapshot().elections[CANONICAL_ASSEMBLY_ELECTION_ID]?.assembly?.constituencyFields.C007
+        ?.candidateIds,
     ).toContain("NPC146");
     const reloaded = restoreSimulation(sim.serializeSave(), world);
     expectOk(sim, { type: "RESOLVE_ASSEMBLY_ELECTION" });
@@ -326,9 +329,19 @@ describe("Phase 11.1 full-game integration", () => {
         (contest) => contest.metadata.electionId === "ELEC_PRES_2028",
       ),
     );
-    const hit = await advanceResponsive(continuous, 64, "PRESIDENTIAL_ELECTION_DUE");
+    // Mid-term presidential vacancies can schedule special elections (e.g. 2030).
+    // Auto-resolve those on the way to the regular 2033 cycle instead of stopping early.
+    await advanceToDateResponsive(continuous, "2033-10-01");
+    const hit = await advanceResponsive(continuous, 12, "PRESIDENTIAL_ELECTION_DUE");
     expect(hit).toBe("PRESIDENTIAL_ELECTION_DUE");
     expect(continuous.getSnapshot().currentDate).toBe("2033-10-08");
+    // PendingInterrupt no longer embeds payload; resolve election via scheduled event.
+    const dueInterrupt = continuous.getSnapshot().pendingInterrupt;
+    expect(dueInterrupt?.code).toBe("PRESIDENTIAL_ELECTION_DUE");
+    const dueScheduled = continuous
+      .getSnapshot()
+      .scheduler.events.find((event) => event.id === dueInterrupt?.scheduledEventId);
+    expect(dueScheduled?.payload?.electionId).toBe("ELEC_PRES_2033");
     const election = continuous.getSnapshot().elections.ELEC_PRES_2033!;
     expect(election.fieldFinalized).toBe(true);
     expect(Object.keys(election.candidates).length).toBeGreaterThanOrEqual(2);
@@ -336,8 +349,9 @@ describe("Phase 11.1 full-game integration", () => {
       (contest) => contest.metadata.electionId === election.id,
     );
     expect(cycleContests).toHaveLength(6);
-    expect(cycleContests.every((contest) => contest.metadata.candidateSource === "runtime_politics"))
-      .toBe(true);
+    expect(
+      cycleContests.every((contest) => contest.metadata.candidateSource === "runtime_politics"),
+    ).toBe(true);
     expect(cycleContests.every((contest) => !contest.entries.NPC146)).toBe(true);
 
     const restored = restoreSimulation(continuous.serializeSave(), world);
@@ -367,9 +381,7 @@ describe("Phase 11.1 full-game integration", () => {
     expect(
       Object.values(continuous.getSnapshot().elections).some(
         (next) =>
-          next.type === "presidential" &&
-          next.status === "planned" &&
-          next.date > "2033-10-08",
+          next.type === "presidential" && next.status === "planned" && next.date > "2033-10-08",
       ),
     ).toBe(true);
     expect(
@@ -378,7 +390,9 @@ describe("Phase 11.1 full-game integration", () => {
       ),
     ).toEqual([]);
     console.log(
-      JSON.stringify({ phase11Perf: { presidential2033ResolveMs: Math.round(presidentialResolveMs) } }),
+      JSON.stringify({
+        phase11Perf: { presidential2033ResolveMs: Math.round(presidentialResolveMs) },
+      }),
     );
   }, 600_000);
 

@@ -19,20 +19,82 @@ const LEGAL_VALUES: Record<ConstitutionalRuleId, readonly number[]> = {
   veto_override_fraction: [0.6, 2 / 3, 0.75],
 };
 
-const INTENT_POLITICS: Record<ConstitutionalAmendmentIntent, { axis: "economic" | "social" | "authority" | "globalism"; direction: number; difficulty: number; label: string }> = {
-  technical_clarification: { axis: "authority", direction: 0, difficulty: 0.28, label: "Technical clarification" },
-  expand_individual_rights: { axis: "social", direction: 1, difficulty: 0.62, label: "Expand individual rights" },
-  restrict_individual_rights: { axis: "social", direction: -1, difficulty: 0.9, label: "Restrict individual rights" },
-  devolve_national_power: { axis: "authority", direction: -1, difficulty: 0.64, label: "Devolve national power" },
-  centralize_national_power: { axis: "authority", direction: 1, difficulty: 0.7, label: "Centralize national power" },
-  strengthen_executive: { axis: "authority", direction: 1, difficulty: 0.76, label: "Strengthen the executive" },
-  constrain_executive: { axis: "authority", direction: -1, difficulty: 0.62, label: "Constrain the executive" },
-  reform_elections: { axis: "authority", direction: -0.25, difficulty: 0.72, label: "Reform elections" },
-  alter_office_terms: { axis: "authority", direction: 0, difficulty: 0.68, label: "Alter office terms" },
-  judicial_structure: { axis: "authority", direction: -0.1, difficulty: 0.74, label: "Change judicial structure" },
+const INTENT_POLITICS: Record<
+  ConstitutionalAmendmentIntent,
+  {
+    axis: "economic" | "social" | "authority" | "globalism";
+    direction: number;
+    difficulty: number;
+    label: string;
+  }
+> = {
+  technical_clarification: {
+    axis: "authority",
+    direction: 0,
+    difficulty: 0.28,
+    label: "Technical clarification",
+  },
+  expand_individual_rights: {
+    axis: "social",
+    direction: 1,
+    difficulty: 0.62,
+    label: "Expand individual rights",
+  },
+  restrict_individual_rights: {
+    axis: "social",
+    direction: -1,
+    difficulty: 0.9,
+    label: "Restrict individual rights",
+  },
+  devolve_national_power: {
+    axis: "authority",
+    direction: -1,
+    difficulty: 0.64,
+    label: "Devolve national power",
+  },
+  centralize_national_power: {
+    axis: "authority",
+    direction: 1,
+    difficulty: 0.7,
+    label: "Centralize national power",
+  },
+  strengthen_executive: {
+    axis: "authority",
+    direction: 1,
+    difficulty: 0.76,
+    label: "Strengthen the executive",
+  },
+  constrain_executive: {
+    axis: "authority",
+    direction: -1,
+    difficulty: 0.62,
+    label: "Constrain the executive",
+  },
+  reform_elections: {
+    axis: "authority",
+    direction: -0.25,
+    difficulty: 0.72,
+    label: "Reform elections",
+  },
+  alter_office_terms: {
+    axis: "authority",
+    direction: 0,
+    difficulty: 0.68,
+    label: "Alter office terms",
+  },
+  judicial_structure: {
+    axis: "authority",
+    direction: -0.1,
+    difficulty: 0.74,
+    label: "Change judicial structure",
+  },
 };
 
-function ruleIntent(state: SimState, ruleId: ConstitutionalRuleId, proposedValue: number): ConstitutionalAmendmentIntent {
+function ruleIntent(
+  state: SimState,
+  ruleId: ConstitutionalRuleId,
+  proposedValue: number,
+): ConstitutionalAmendmentIntent {
   if (ruleId === "veto_override_fraction") {
     const current = state.provincialRuntime.constitutionalRules[ruleId]?.value ?? proposedValue;
     return proposedValue > current ? "strengthen_executive" : "constrain_executive";
@@ -58,7 +120,8 @@ function stableHash(text: string): number {
 }
 
 function titleFor(state: SimState, ruleId: ConstitutionalRuleId): string {
-  const label = state.provincialRuntime.constitutionalRules[ruleId]?.label ?? ruleId.replace(/_/g, " ");
+  const label =
+    state.provincialRuntime.constitutionalRules[ruleId]?.label ?? ruleId.replace(/_/g, " ");
   return `${label} Amendment`;
 }
 
@@ -78,18 +141,20 @@ export function currentConstitutionalClauseText(
   clauseId: string,
 ): string | null {
   const canonical = documentClause(world, clauseId)?.clause.text ?? null;
-  return Object.values(state.provincialRuntime.constitutionalAmendments)
-    .filter(
-      (amendment) =>
-        amendment.status === "ratified" &&
-        amendment.documentClauseId === clauseId &&
-        typeof amendment.proposedText === "string",
-    )
-    .sort(
-      (a, b) =>
-        (b.enactedDate ?? b.proposedDate).localeCompare(a.enactedDate ?? a.proposedDate) ||
-        b.id.localeCompare(a.id),
-    )[0]?.proposedText ?? canonical;
+  return (
+    Object.values(state.provincialRuntime.constitutionalAmendments)
+      .filter(
+        (amendment) =>
+          amendment.status === "ratified" &&
+          amendment.documentClauseId === clauseId &&
+          typeof amendment.proposedText === "string",
+      )
+      .sort(
+        (a, b) =>
+          (b.enactedDate ?? b.proposedDate).localeCompare(a.enactedDate ?? a.proposedDate) ||
+          b.id.localeCompare(a.id),
+      )[0]?.proposedText ?? canonical
+  );
 }
 
 function clamp(value: number, min = 0, max = 1): number {
@@ -104,7 +169,11 @@ function monthsSince(currentDate: string, earlierDate: string): number {
   return monthNumber(currentDate) - monthNumber(earlierDate);
 }
 
-function amendmentDirection(state: SimState, ruleId: ConstitutionalRuleId, proposedValue: number): number {
+function amendmentDirection(
+  state: SimState,
+  ruleId: ConstitutionalRuleId,
+  proposedValue: number,
+): number {
   const current = state.provincialRuntime.constitutionalRules[ruleId]?.value ?? proposedValue;
   const values = LEGAL_VALUES[ruleId];
   const span = Math.max(...values) - Math.min(...values);
@@ -113,7 +182,10 @@ function amendmentDirection(state: SimState, ruleId: ConstitutionalRuleId, propo
 
 type ProposalContext = {
   score: number;
-  trigger: Exclude<ConstitutionalAmendment["proposalTrigger"], "player_sponsorship" | "legacy_proposal">;
+  trigger: Exclude<
+    ConstitutionalAmendment["proposalTrigger"],
+    "player_sponsorship" | "legacy_proposal"
+  >;
 };
 
 /** Political demand for a specific rule change. This is pure and consumes no gameplay RNG. */
@@ -125,53 +197,97 @@ export function constitutionalProposalImpetus(
 ): ProposalContext {
   const direction = amendmentDirection(state, ruleId, proposedValue);
   const presidentId = currentPresidentId(world, state);
-  const presidentStanding = presidentId ? state.candidateStanding[presidentId]?.favorability ?? 0 : 0;
-  const presidentTerms = presidentId ? state.presidential.electedTermCountByPolitician[presidentId] ?? 0 : 0;
-  const averageCohesion = Object.values(state.partyStates).length > 0
-    ? Object.values(state.partyStates).reduce((sum, party) => sum + party.cohesion, 0) / Object.values(state.partyStates).length
-    : 0.65;
+  const presidentStanding = presidentId
+    ? (state.candidateStanding[presidentId]?.favorability ?? 0)
+    : 0;
+  const presidentTerms = presidentId
+    ? (state.presidential.electedTermCountByPolitician[presidentId] ?? 0)
+    : 0;
+  const averageCohesion =
+    Object.values(state.partyStates).length > 0
+      ? Object.values(state.partyStates).reduce((sum, party) => sum + party.cohesion, 0) /
+        Object.values(state.partyStates).length
+      : 0.65;
   const confidenceStress = clamp((96 - state.economyRuntime.national.confidenceIndex) / 18);
   const recentAssemblyElection = Object.values(state.elections).some(
-    (election) => election.type === "assembly" && election.status === "resolved" && monthsSince(state.currentDate, election.date) <= 12,
+    (election) =>
+      election.type === "assembly" &&
+      election.status === "resolved" &&
+      monthsSince(state.currentDate, election.date) <= 12,
   );
   const recentReturns = Object.values(state.legislatureRuntime.bills).filter(
-    (bill) => bill.presidentialDisposition === "returned" && bill.introducedDate && monthsSince(state.currentDate, bill.introducedDate) <= 36,
+    (bill) =>
+      bill.presidentialDisposition === "returned" &&
+      bill.introducedDate &&
+      monthsSince(state.currentDate, bill.introducedDate) <= 36,
   ).length;
   const recentCourtCases = Object.values(state.constitutionalRuntime.courtCases).filter(
     (courtCase) => monthsSince(state.currentDate, courtCase.filedDate) <= 48,
   ).length;
-  const recentCourtCrisis = Object.values(state.constitutionalRuntime.impeachments).some(
-    (row) => monthsSince(state.currentDate, row.introducedDate) <= 48,
-  ) || Object.values(state.constitutionalRuntime.recalls).some(
-    (row) => monthsSince(state.currentDate, row.introducedDate) <= 48,
-  );
+  const recentCourtCrisis =
+    Object.values(state.constitutionalRuntime.impeachments).some(
+      (row) => monthsSince(state.currentDate, row.introducedDate) <= 48,
+    ) ||
+    Object.values(state.constitutionalRuntime.recalls).some(
+      (row) => monthsSince(state.currentDate, row.introducedDate) <= 48,
+    );
   const activeJudges = Object.values(state.officeTerms).filter(
-    (term) => term.status === "active" && world.offices[term.officeId]?.kind === "constitutional_court_justice",
+    (term) =>
+      term.status === "active" &&
+      world.offices[term.officeId]?.kind === "constitutional_court_justice",
   ).length;
-  const courtVacancyShare = clamp((world.courtConstitution.judges - activeJudges) / Math.max(1, world.courtConstitution.judges));
+  const courtVacancyShare = clamp(
+    (world.courtConstitution.judges - activeJudges) / Math.max(1, world.courtConstitution.judges),
+  );
 
-  let score = 0.08 + confidenceStress * 0.08 + clamp((0.62 - averageCohesion) / 0.3) * 0.12;
+  // Phase 11.3 closeout: modest base/stress lift so realistic reform pressure can
+  // clear the NPC sponsorship gate without inventing proposal quotas.
+  let score = 0.12 + confidenceStress * 0.1 + clamp((0.62 - averageCohesion) / 0.3) * 0.14;
   let trigger: ProposalContext["trigger"] = "reform_movement";
   if (ruleId === "assembly_term_years") {
-    score += (recentAssemblyElection ? 0.22 : 0) + clamp((0.58 - averageCohesion) / 0.28) * 0.24;
-    score += direction < 0 && averageCohesion < 0.52 ? 0.08 : 0;
+    score += (recentAssemblyElection ? 0.24 : 0) + clamp((0.58 - averageCohesion) / 0.28) * 0.26;
+    score += direction < 0 && averageCohesion < 0.52 ? 0.1 : 0;
     trigger = recentAssemblyElection ? "election_mandate" : "institutional_conflict";
   } else if (ruleId === "presidential_term_limit") {
-    score += clamp(presidentTerms / Math.max(1, state.provincialRuntime.constitutionalRules.presidential_term_limit?.value ?? 2)) * 0.22;
-    score += Math.abs(presidentStanding) * 0.16 + (recentCourtCrisis ? 0.22 : 0);
+    score +=
+      clamp(
+        presidentTerms /
+          Math.max(
+            1,
+            state.provincialRuntime.constitutionalRules.presidential_term_limit?.value ?? 2,
+          ),
+      ) * 0.24;
+    score += Math.abs(presidentStanding) * 0.18 + (recentCourtCrisis ? 0.24 : 0);
     score += direction * presidentStanding > 0 ? 0.1 : 0;
-    trigger = recentCourtCrisis ? "institutional_conflict" : recentAssemblyElection ? "election_mandate" : "reform_movement";
+    trigger = recentCourtCrisis
+      ? "institutional_conflict"
+      : recentAssemblyElection
+        ? "election_mandate"
+        : "reform_movement";
   } else if (ruleId === "court_term_years") {
-    score += courtVacancyShare * 0.34 + clamp(recentCourtCases / 8) * 0.2 + (recentCourtCrisis ? 0.22 : 0);
-    score += direction > 0 && courtVacancyShare > 0 ? 0.08 : 0;
-    trigger = recentCourtCrisis || courtVacancyShare > 0.2 ? "court_crisis" : "institutional_conflict";
+    score +=
+      courtVacancyShare * 0.38 +
+      clamp(recentCourtCases / 8) * 0.22 +
+      (recentCourtCrisis ? 0.24 : 0);
+    score += direction > 0 && courtVacancyShare > 0 ? 0.1 : 0;
+    trigger =
+      recentCourtCrisis || courtVacancyShare > 0.2 ? "court_crisis" : "institutional_conflict";
   } else {
-    score += clamp(recentReturns / 4) * 0.46 + (recentAssemblyElection && recentReturns > 0 ? 0.12 : 0);
-    score += direction < 0 && recentReturns >= 2 ? 0.1 : 0;
+    score +=
+      clamp(recentReturns / 4) * 0.5 + (recentAssemblyElection && recentReturns > 0 ? 0.14 : 0);
+    score += direction < 0 && recentReturns >= 2 ? 0.12 : 0;
     trigger = recentReturns > 0 ? "executive_legislative_conflict" : "institutional_conflict";
   }
   return { score: clamp(score), trigger };
 }
+
+/** Monthly NPC sponsorship probability once impetus clears the score gate. Documented closeout tune — not a quota. */
+export function npcConstitutionalSponsorshipChance(score: number): number {
+  return clamp((score - 0.36) * 0.09, 0, 0.045);
+}
+
+/** Minimum politicalImpetus before NPCs may attempt sponsorship in a quiet month. */
+export const NPC_CONSTITUTIONAL_SPONSORSHIP_SCORE_GATE = 0.4;
 
 /** Political support for the actual amendment; hash contributes only bounded final variance. */
 export function constitutionalSupportScore(
@@ -186,22 +302,32 @@ export function constitutionalSupportScore(
   const partyId = state.politicians[memberId]?.partyId ?? provincialMember?.partyId ?? null;
   const sponsorPartyId = state.politicians[amendment.sponsorId]?.partyId ?? null;
   const intentPolitics = INTENT_POLITICS[amendment.intent];
-  const axis = amendment.ruleId === "assembly_term_years" || amendment.ruleId === "court_term_years"
-    ? "authority"
-    : amendment.ruleId === "presidential_term_limit" || amendment.ruleId === "veto_override_fraction"
+  const axis =
+    amendment.ruleId === "assembly_term_years" || amendment.ruleId === "court_term_years"
       ? "authority"
-      : intentPolitics.axis;
-  const ideology = profile?.ideology[axis] ?? (partyId ? world.partyPublicIdeology[partyId]?.[axis] ?? 0 : 0);
-  const direction = amendment.ruleId && amendment.proposedValue != null
-    ? amendmentDirection(state, amendment.ruleId, amendment.proposedValue)
-    : intentPolitics.direction;
-  const loyalty = profile?.traits.partyLoyalty ?? 0.45 + (stableHash(`${memberId}:constitutional-loyalty`) % 41) / 100;
+      : amendment.ruleId === "presidential_term_limit" ||
+          amendment.ruleId === "veto_override_fraction"
+        ? "authority"
+        : intentPolitics.axis;
+  const ideology =
+    profile?.ideology[axis] ?? (partyId ? (world.partyPublicIdeology[partyId]?.[axis] ?? 0) : 0);
+  const direction =
+    amendment.ruleId && amendment.proposedValue != null
+      ? amendmentDirection(state, amendment.ruleId, amendment.proposedValue)
+      : intentPolitics.direction;
+  const loyalty =
+    profile?.traits.partyLoyalty ??
+    0.45 + (stableHash(`${memberId}:constitutional-loyalty`) % 41) / 100;
   const institutionalism = profile?.traits.institutionalism ?? 0.52;
   const presidentId = currentPresidentId(world, state);
-  const presidentPartyId = presidentId ? state.politicians[presidentId]?.partyId ?? null : null;
+  const presidentPartyId = presidentId ? (state.politicians[presidentId]?.partyId ?? null) : null;
   let institutionalInterest = 0;
-  if (amendment.ruleId === "presidential_term_limit" || amendment.ruleId === "veto_override_fraction") {
-    const alignedWithPresident = partyId && presidentPartyId && partyId === presidentPartyId ? 1 : -1;
+  if (
+    amendment.ruleId === "presidential_term_limit" ||
+    amendment.ruleId === "veto_override_fraction"
+  ) {
+    const alignedWithPresident =
+      partyId && presidentPartyId && partyId === presidentPartyId ? 1 : -1;
     institutionalInterest = alignedWithPresident * direction * 0.22;
   } else if (amendment.ruleId === "assembly_term_years") {
     institutionalInterest = direction * (profile?.traits.ambition ?? 0.5) * 0.1;
@@ -211,24 +337,45 @@ export function constitutionalSupportScore(
   let provinceInterest = 0;
   if (provinceId) {
     const governorId = Object.values(state.officeTerms).find(
-      (term) => term.status === "active" && world.offices[term.officeId]?.kind === "governor" && world.offices[term.officeId]?.provinceId === provinceId,
+      (term) =>
+        term.status === "active" &&
+        world.offices[term.officeId]?.kind === "governor" &&
+        world.offices[term.officeId]?.provinceId === provinceId,
     )?.holderId;
-    const governorPartyId = governorId ? state.politicians[governorId]?.partyId ?? null : null;
-    if (amendment.ruleId === "presidential_term_limit" || amendment.ruleId === "veto_override_fraction") {
-      provinceInterest += governorPartyId && presidentPartyId && governorPartyId === presidentPartyId ? direction * 0.13 : -direction * 0.1;
+    const governorPartyId = governorId ? (state.politicians[governorId]?.partyId ?? null) : null;
+    if (
+      amendment.ruleId === "presidential_term_limit" ||
+      amendment.ruleId === "veto_override_fraction"
+    ) {
+      provinceInterest +=
+        governorPartyId && presidentPartyId && governorPartyId === presidentPartyId
+          ? direction * 0.13
+          : -direction * 0.1;
     }
     const governance = state.provincialRuntime.provinces[provinceId];
-    if (amendment.ruleId === "veto_override_fraction") provinceInterest += -(governance?.federalRelationship ?? 0) * direction * 0.12;
-    if (amendment.ruleId === "assembly_term_years") provinceInterest += (governance?.politicalCapital ?? 0.5) < 0.35 ? -direction * 0.08 : 0;
+    if (amendment.ruleId === "veto_override_fraction")
+      provinceInterest += -(governance?.federalRelationship ?? 0) * direction * 0.12;
+    if (amendment.ruleId === "assembly_term_years")
+      provinceInterest += (governance?.politicalCapital ?? 0.5) < 0.35 ? -direction * 0.08 : 0;
   }
-  const sponsorCoalition = partyId && sponsorPartyId && partyId === sponsorPartyId ? 0.2 * loyalty : 0;
-  const textualResistance = amendment.ruleId == null
-    ? ((amendment.politicalDifficulty ?? 0.6) - 0.45) * 0.75
-    : 0;
+  const sponsorCoalition =
+    partyId && sponsorPartyId && partyId === sponsorPartyId ? 0.2 * loyalty : 0;
+  const textualResistance =
+    amendment.ruleId == null ? ((amendment.politicalDifficulty ?? 0.6) - 0.45) * 0.75 : 0;
   const reformConsensus = (amendment.politicalImpetus - 0.5) * 0.72 - textualResistance;
   const statusQuo = (institutionalism - 0.5) * (amendment.politicalImpetus < 0.58 ? -0.18 : 0.08);
-  const noise = ((stableHash(`${amendment.id}:${provinceId ?? "federal"}:${memberId}:vote`) % 1001) - 500) / 12500;
-  return ideology * direction * 0.34 + sponsorCoalition + reformConsensus + statusQuo + institutionalInterest + provinceInterest + noise;
+  const noise =
+    ((stableHash(`${amendment.id}:${provinceId ?? "federal"}:${memberId}:vote`) % 1001) - 500) /
+    12500;
+  return (
+    ideology * direction * 0.34 +
+    sponsorCoalition +
+    reformConsensus +
+    statusQuo +
+    institutionalInterest +
+    provinceInterest +
+    noise
+  );
 }
 
 export function proposeConstitutionalAmendment(
@@ -246,9 +393,11 @@ export function proposeConstitutionalAmendment(
   }
   const current = state.provincialRuntime.constitutionalRules[ruleId];
   if (!current) return { error: reject("UNKNOWN_CONSTITUTIONAL_RULE", ruleId) };
-  if (Math.abs(current.value - proposedValue) < 0.000001) return { error: reject("NO_POLICY_CHANGE", ruleId) };
+  if (Math.abs(current.value - proposedValue) < 0.000001)
+    return { error: reject("NO_POLICY_CHANGE", ruleId) };
   const open = Object.values(state.provincialRuntime.constitutionalAmendments).some(
-    (amendment) => amendment.ruleId === ruleId && ["proposed", "ratifying"].includes(amendment.status),
+    (amendment) =>
+      amendment.ruleId === ruleId && ["proposed", "ratifying"].includes(amendment.status),
   );
   if (open) return { error: reject("AMENDMENT_ALREADY_PENDING", ruleId) };
   const id = `CAMEND_${String(Object.keys(state.provincialRuntime.constitutionalAmendments).length + 1).padStart(4, "0")}`;
@@ -262,8 +411,12 @@ export function proposeConstitutionalAmendment(
     proposedValue,
     intent: ruleIntent(state, ruleId, proposedValue),
     runtimeEffect: "modeled_rule",
-    proposalTrigger: politicalContext?.trigger ?? (actorId === state.playerPoliticianId ? "player_sponsorship" : "reform_movement"),
-    politicalImpetus: politicalContext?.score ?? constitutionalProposalImpetus(world, state, ruleId, proposedValue).score,
+    proposalTrigger:
+      politicalContext?.trigger ??
+      (actorId === state.playerPoliticianId ? "player_sponsorship" : "reform_movement"),
+    politicalImpetus:
+      politicalContext?.score ??
+      constitutionalProposalImpetus(world, state, ruleId, proposedValue).score,
     status: "proposed",
     assemblyVoteId: null,
     assemblyVotes: {},
@@ -277,7 +430,25 @@ export function proposeConstitutionalAmendment(
   state.provincialRuntime.constitutionalAmendments[id] = amendment;
   return {
     amendment,
-    events: [pushHistory(state, { date: state.currentDate, type: "CONSTITUTIONAL_AMENDMENT_PROPOSED", importance: 0.86, visibility: "public", actorIds: [actorId], entityIds: [id, ruleId], payload: { amendmentId: id, ruleId, proposedValue, trigger: amendment.proposalTrigger, politicalImpetus: Math.round(amendment.politicalImpetus * 100) / 100 }, sourceScheduledEventId: null, sourceCommandId: commandId })],
+    events: [
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "CONSTITUTIONAL_AMENDMENT_PROPOSED",
+        importance: 0.86,
+        visibility: "public",
+        actorIds: [actorId],
+        entityIds: [id, ruleId],
+        payload: {
+          amendmentId: id,
+          ruleId,
+          proposedValue,
+          trigger: amendment.proposalTrigger,
+          politicalImpetus: Math.round(amendment.politicalImpetus * 100) / 100,
+        },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    ],
   };
 }
 
@@ -294,21 +465,35 @@ export function proposeConstitutionalTextAmendment(
   const entry = documentClause(world, clauseId);
   if (!entry) return { error: reject("UNKNOWN_CONSTITUTIONAL_CLAUSE", clauseId) };
   if (entry.clause.runtime_rule_id) {
-    return { error: reject("MODELED_RULE_REQUIRES_STRUCTURED_AMENDMENT", entry.clause.runtime_rule_id) };
+    return {
+      error: reject("MODELED_RULE_REQUIRES_STRUCTURED_AMENDMENT", entry.clause.runtime_rule_id),
+    };
   }
   const intentPolitics = INTENT_POLITICS[intent];
   if (!intentPolitics) return { error: reject("INVALID_CONSTITUTIONAL_INTENT", intent) };
   const currentText = currentConstitutionalClauseText(world, state, clauseId);
   const cleanText = proposedText.replace(/\s+/g, " ").trim();
   if (cleanText.length < 40 || cleanText.length > 1200) {
-    return { error: reject("INVALID_CONSTITUTIONAL_TEXT", "Replacement text must contain 40 to 1,200 characters.") };
+    return {
+      error: reject(
+        "INVALID_CONSTITUTIONAL_TEXT",
+        "Replacement text must contain 40 to 1,200 characters.",
+      ),
+    };
   }
   if (cleanText === currentText) return { error: reject("NO_POLICY_CHANGE", clauseId) };
   const open = Object.values(state.provincialRuntime.constitutionalAmendments).some(
-    (amendment) => amendment.documentClauseId === clauseId && ["proposed", "ratifying"].includes(amendment.status),
+    (amendment) =>
+      amendment.documentClauseId === clauseId &&
+      ["proposed", "ratifying"].includes(amendment.status),
   );
   if (open) return { error: reject("AMENDMENT_ALREADY_PENDING", clauseId) };
-  const clauseDifficulty = entry.clause.amendment_difficulty === "foundational" ? 0.92 : entry.clause.amendment_difficulty === "substantial" ? 0.67 : 0.42;
+  const clauseDifficulty =
+    entry.clause.amendment_difficulty === "foundational"
+      ? 0.92
+      : entry.clause.amendment_difficulty === "substantial"
+        ? 0.67
+        : 0.42;
   const difficulty = clamp(Math.max(clauseDifficulty, intentPolitics.difficulty));
   const id = `CAMEND_${String(Object.keys(state.provincialRuntime.constitutionalAmendments).length + 1).padStart(4, "0")}`;
   const amendment: ConstitutionalAmendment = {
@@ -325,7 +510,8 @@ export function proposeConstitutionalTextAmendment(
     intent,
     runtimeEffect: "text_only",
     politicalDifficulty: difficulty,
-    proposalTrigger: actorId === state.playerPoliticianId ? "player_sponsorship" : "reform_movement",
+    proposalTrigger:
+      actorId === state.playerPoliticianId ? "player_sponsorship" : "reform_movement",
     politicalImpetus: clamp(0.72 - difficulty * 0.38),
     status: "proposed",
     assemblyVoteId: null,
@@ -340,17 +526,26 @@ export function proposeConstitutionalTextAmendment(
   state.provincialRuntime.constitutionalAmendments[id] = amendment;
   return {
     amendment,
-    events: [pushHistory(state, {
-      date: state.currentDate,
-      type: "CONSTITUTIONAL_AMENDMENT_PROPOSED",
-      importance: 0.9,
-      visibility: "public",
-      actorIds: [actorId],
-      entityIds: [id, clauseId],
-      payload: { amendmentId: id, clauseId, trigger: amendment.proposalTrigger, scope: entry.clause.amendment_difficulty, intent, runtimeEffect: amendment.runtimeEffect },
-      sourceScheduledEventId: null,
-      sourceCommandId: commandId,
-    })],
+    events: [
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "CONSTITUTIONAL_AMENDMENT_PROPOSED",
+        importance: 0.9,
+        visibility: "public",
+        actorIds: [actorId],
+        entityIds: [id, clauseId],
+        payload: {
+          amendmentId: id,
+          clauseId,
+          trigger: amendment.proposalTrigger,
+          scope: entry.clause.amendment_difficulty,
+          intent,
+          runtimeEffect: amendment.runtimeEffect,
+        },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    ],
   };
 }
 
@@ -361,10 +556,12 @@ export function castConstitutionalAssemblyVote(
   amendmentId: string,
   choice: "yes" | "no" | "abstain",
 ): { error?: CommandError } {
-  if (actorId !== state.playerPoliticianId) return { error: reject("PLAYER_AUTONOMY", "Only the player stores their constitutional vote") };
+  if (actorId !== state.playerPoliticianId)
+    return { error: reject("PLAYER_AUTONOMY", "Only the player stores their constitutional vote") };
   if (!isFederalMp(world, state, actorId)) return { error: reject("NOT_ASSEMBLY_MEMBER", actorId) };
   const amendment = state.provincialRuntime.constitutionalAmendments[amendmentId];
-  if (!amendment || amendment.status !== "proposed") return { error: reject("AMENDMENT_NOT_PENDING", amendmentId) };
+  if (!amendment || amendment.status !== "proposed")
+    return { error: reject("AMENDMENT_NOT_PENDING", amendmentId) };
   amendment.assemblyVotes[actorId] = choice;
   return {};
 }
@@ -375,14 +572,18 @@ export function castConstitutionalRatificationVote(
   amendmentId: string,
   choice: "yes" | "no" | "abstain",
 ): { error?: CommandError } {
-  if (actorId !== state.playerPoliticianId) return { error: reject("PLAYER_AUTONOMY", "Only the player stores their ratification vote") };
+  if (actorId !== state.playerPoliticianId)
+    return { error: reject("PLAYER_AUTONOMY", "Only the player stores their ratification vote") };
   const amendment = state.provincialRuntime.constitutionalAmendments[amendmentId];
-  if (!amendment || amendment.status !== "ratifying") return { error: reject("AMENDMENT_NOT_RATIFYING", amendmentId) };
+  if (!amendment || amendment.status !== "ratifying")
+    return { error: reject("AMENDMENT_NOT_RATIFYING", amendmentId) };
   const row = provincialLegislatorForPolitician(state, actorId);
-  if (!row || row.serviceEndDate != null) return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
+  if (!row || row.serviceEndDate != null)
+    return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
   const memberId = row.id;
   const assembly = state.provincialRuntime.assemblies[row.provinceId];
-  if (!assembly?.memberIds.includes(memberId)) return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
+  if (!assembly?.memberIds.includes(memberId))
+    return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
   const key = `pending:${amendmentId}:${row.provinceId}:${memberId}`;
   state.provincialRuntime.votes[key] = {
     id: key,
@@ -399,7 +600,11 @@ export function castConstitutionalRatificationVote(
   return {};
 }
 
-function federalVote(world: KernelWorld, state: SimState, amendment: ConstitutionalAmendment): void {
+function federalVote(
+  world: KernelWorld,
+  state: SimState,
+  amendment: ConstitutionalAmendment,
+): void {
   const members = currentAssemblyMemberIds(world, state);
   let yes = 0;
   for (const id of members) {
@@ -426,7 +631,12 @@ function federalVote(world: KernelWorld, state: SimState, amendment: Constitutio
   }
 }
 
-function ratificationVote(world: KernelWorld, state: SimState, amendment: ConstitutionalAmendment, provinceId: string): ProvincialVote | null {
+function ratificationVote(
+  world: KernelWorld,
+  state: SimState,
+  amendment: ConstitutionalAmendment,
+  provinceId: string,
+): ProvincialVote | null {
   const assembly = state.provincialRuntime.assemblies[provinceId];
   if (!assembly || assembly.memberIds.length === 0) return null;
   const votes: ProvincialVote["votes"] = {};
@@ -437,7 +647,15 @@ function ratificationVote(world: KernelWorld, state: SimState, amendment: Consti
     const pendingKey = `pending:${amendment.id}:${provinceId}:${memberId}`;
     const pending = state.provincialRuntime.votes[pendingKey]?.votes[memberId];
     const score = constitutionalSupportScore(world, state, amendment, memberId, provinceId);
-    const choice = pending ?? (memberId === state.playerPoliticianId ? "abstain" : score >= 0.035 ? "yes" : score <= -0.05 ? "no" : "abstain");
+    const choice =
+      pending ??
+      (memberId === state.playerPoliticianId
+        ? "abstain"
+        : score >= 0.035
+          ? "yes"
+          : score <= -0.05
+            ? "no"
+            : "abstain");
     votes[memberId] = choice;
     if (choice === "yes") yes += 1;
     else if (choice === "no") no += 1;
@@ -446,7 +664,18 @@ function ratificationVote(world: KernelWorld, state: SimState, amendment: Consti
   }
   const id = `RATIFY_${amendment.id}_${provinceId}`;
   const passed = yes > no;
-  const vote: ProvincialVote = { id, provinceId, subjectKind: "constitutional_ratification", subjectId: amendment.id, date: state.currentDate, votes, yes, no, abstain, passed };
+  const vote: ProvincialVote = {
+    id,
+    provinceId,
+    subjectKind: "constitutional_ratification",
+    subjectId: amendment.id,
+    date: state.currentDate,
+    votes,
+    yes,
+    no,
+    abstain,
+    passed,
+  };
   state.provincialRuntime.votes[id] = vote;
   return vote;
 }
@@ -457,21 +686,45 @@ export function processConstitutionalAmendmentsMonth(
   commandId: string,
 ): SimEvent[] {
   const events: SimEvent[] = [];
-  const hasOpen = Object.values(state.provincialRuntime.constitutionalAmendments).some((amendment) => ["proposed", "ratifying"].includes(amendment.status));
-  const prior = Object.values(state.provincialRuntime.constitutionalAmendments)
-    .sort((a, b) => b.proposedDate.localeCompare(a.proposedDate) || b.id.localeCompare(a.id))[0];
+  const hasOpen = Object.values(state.provincialRuntime.constitutionalAmendments).some(
+    (amendment) => ["proposed", "ratifying"].includes(amendment.status),
+  );
+  const prior = Object.values(state.provincialRuntime.constitutionalAmendments).sort(
+    (a, b) => b.proposedDate.localeCompare(a.proposedDate) || b.id.localeCompare(a.id),
+  )[0];
   const cooldownSatisfied = !prior || monthsSince(state.currentDate, prior.proposedDate) >= 96;
-  if (!hasOpen && cooldownSatisfied && monthNumber(state.currentDate) - monthNumber(state.scenarioStartDate) >= 48) {
+  if (
+    !hasOpen &&
+    cooldownSatisfied &&
+    monthNumber(state.currentDate) - monthNumber(state.scenarioStartDate) >= 48
+  ) {
     const possibilities = CONSTITUTIONAL_RULE_IDS.flatMap((ruleId) => {
       const current = state.provincialRuntime.constitutionalRules[ruleId]?.value;
       return LEGAL_VALUES[ruleId]
         .filter((value) => Math.abs(value - (current ?? value)) > 0.000001)
-        .map((proposedValue) => ({ ruleId, proposedValue, context: constitutionalProposalImpetus(world, state, ruleId, proposedValue) }));
-    }).sort((a, b) => b.context.score - a.context.score || a.ruleId.localeCompare(b.ruleId) || a.proposedValue - b.proposedValue);
+        .map((proposedValue) => ({
+          ruleId,
+          proposedValue,
+          context: constitutionalProposalImpetus(world, state, ruleId, proposedValue),
+        }));
+    }).sort(
+      (a, b) =>
+        b.context.score - a.context.score ||
+        a.ruleId.localeCompare(b.ruleId) ||
+        a.proposedValue - b.proposedValue,
+    );
     const proposal = possibilities[0];
-    if (proposal && proposal.context.score >= 0.48) {
-      const chance = clamp((proposal.context.score - 0.44) * 0.035, 0, 0.018);
-      const gate = (stableHash(`${state.rng.masterSeed}:${state.currentDate}:${proposal.ruleId}:${proposal.proposedValue}:proposal`) % 10000) / 10000;
+    // Closeout tune (no quotas): gate 0.40 (was 0.48); chance (score-0.36)*0.09
+    // capped at 0.045 (was (score-0.44)*0.035 capped 0.018). High-impetus months
+    // can sponsor; calm months still usually stay quiet.
+    if (proposal && proposal.context.score >= NPC_CONSTITUTIONAL_SPONSORSHIP_SCORE_GATE) {
+      const chance = npcConstitutionalSponsorshipChance(proposal.context.score);
+      const gate =
+        (stableHash(
+          `${state.rng.masterSeed}:${state.currentDate}:${proposal.ruleId}:${proposal.proposedValue}:proposal`,
+        ) %
+          10000) /
+        10000;
       if (gate < chance) {
         const draft: ConstitutionalAmendment = {
           id: "PROSPECTIVE",
@@ -497,46 +750,152 @@ export function processConstitutionalAmendmentsMonth(
         };
         const sponsorId = currentAssemblyMemberIds(world, state)
           .filter((id) => id !== state.playerPoliticianId)
-          .sort((a, b) => constitutionalSupportScore(world, state, { ...draft, sponsorId: b }, b) - constitutionalSupportScore(world, state, { ...draft, sponsorId: a }, a) || a.localeCompare(b))[0];
-        if (sponsorId && constitutionalSupportScore(world, state, { ...draft, sponsorId }, sponsorId) > 0.05) {
-          const proposed = proposeConstitutionalAmendment(world, state, sponsorId, proposal.ruleId, proposal.proposedValue, commandId, proposal.context);
+          .sort(
+            (a, b) =>
+              constitutionalSupportScore(world, state, { ...draft, sponsorId: b }, b) -
+                constitutionalSupportScore(world, state, { ...draft, sponsorId: a }, a) ||
+              a.localeCompare(b),
+          )[0];
+        if (
+          sponsorId &&
+          constitutionalSupportScore(world, state, { ...draft, sponsorId }, sponsorId) > 0.05
+        ) {
+          const proposed = proposeConstitutionalAmendment(
+            world,
+            state,
+            sponsorId,
+            proposal.ruleId,
+            proposal.proposedValue,
+            commandId,
+            proposal.context,
+          );
           if (!("error" in proposed)) events.push(...proposed.events);
         }
       }
     }
   }
-  for (const amendment of Object.values(state.provincialRuntime.constitutionalAmendments).sort((a, b) => a.id.localeCompare(b.id))) {
-    if (amendment.status === "proposed" && compareIsoDate(state.currentDate, addMonths(amendment.proposedDate, 1)) >= 0) {
+  for (const amendment of Object.values(state.provincialRuntime.constitutionalAmendments).sort(
+    (a, b) => a.id.localeCompare(b.id),
+  )) {
+    if (
+      amendment.status === "proposed" &&
+      compareIsoDate(state.currentDate, addMonths(amendment.proposedDate, 1)) >= 0
+    ) {
       federalVote(world, state, amendment);
-      events.push(pushHistory(state, { date: state.currentDate, type: amendment.assemblyYes >= 280 ? "CONSTITUTIONAL_AMENDMENT_SENT_TO_PROVINCES" : "CONSTITUTIONAL_AMENDMENT_FAILED", importance: 0.88, visibility: "public", actorIds: [amendment.sponsorId], entityIds: [amendment.id], payload: { amendmentId: amendment.id, assemblyYes: amendment.assemblyYes, required: 280 }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type:
+            amendment.assemblyYes >= 280
+              ? "CONSTITUTIONAL_AMENDMENT_SENT_TO_PROVINCES"
+              : "CONSTITUTIONAL_AMENDMENT_FAILED",
+          importance: 0.88,
+          visibility: "public",
+          actorIds: [amendment.sponsorId],
+          entityIds: [amendment.id],
+          payload: { amendmentId: amendment.id, assemblyYes: amendment.assemblyYes, required: 280 },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
     }
     if (amendment.status !== "ratifying") continue;
     const unvoted = world.provinceIds
       .filter((provinceId) => !amendment.provincialVoteIds[provinceId])
-      .sort((a, b) =>
-        stableHash(`${amendment.id}:ratification-order:${a}`) -
-          stableHash(`${amendment.id}:ratification-order:${b}`) || a.localeCompare(b),
+      .sort(
+        (a, b) =>
+          stableHash(`${amendment.id}:ratification-order:${a}`) -
+            stableHash(`${amendment.id}:ratification-order:${b}`) || a.localeCompare(b),
       );
     for (const provinceId of unvoted.slice(0, 3)) {
       const vote = ratificationVote(world, state, amendment, provinceId);
       if (!vote) continue;
       amendment.provincialVoteIds[provinceId] = vote.id;
-      (vote.passed ? amendment.ratifiedProvinceIds : amendment.rejectedProvinceIds).push(provinceId);
-      events.push(pushHistory(state, { date: state.currentDate, type: "CONSTITUTIONAL_AMENDMENT_PROVINCIAL_VOTE", importance: 0.5, visibility: "public", actorIds: [], entityIds: [amendment.id, provinceId, vote.id], payload: { amendmentId: amendment.id, provinceId, yes: vote.yes, no: vote.no, abstain: vote.abstain, ratified: vote.passed }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+      (vote.passed ? amendment.ratifiedProvinceIds : amendment.rejectedProvinceIds).push(
+        provinceId,
+      );
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "CONSTITUTIONAL_AMENDMENT_PROVINCIAL_VOTE",
+          importance: 0.5,
+          visibility: "public",
+          actorIds: [],
+          entityIds: [amendment.id, provinceId, vote.id],
+          payload: {
+            amendmentId: amendment.id,
+            provinceId,
+            yes: vote.yes,
+            no: vote.no,
+            abstain: vote.abstain,
+            ratified: vote.passed,
+          },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
     }
     if (amendment.ratifiedProvinceIds.length >= 13) {
       amendment.status = "ratified";
       amendment.enactedDate = state.currentDate;
-      const rule = amendment.ruleId ? state.provincialRuntime.constitutionalRules[amendment.ruleId] : null;
+      const rule = amendment.ruleId
+        ? state.provincialRuntime.constitutionalRules[amendment.ruleId]
+        : null;
       if (rule && amendment.proposedValue != null) {
         rule.value = amendment.proposedValue;
         rule.amendedDate = state.currentDate;
         rule.sourceAmendmentId = amendment.id;
       }
-      events.push(pushHistory(state, { date: state.currentDate, type: "CONSTITUTIONAL_AMENDMENT_RATIFIED", importance: 1, visibility: "public", actorIds: [amendment.sponsorId], entityIds: [amendment.id, ...(amendment.ruleId ? [amendment.ruleId] : amendment.documentClauseId ? [amendment.documentClauseId] : [])], payload: { amendmentId: amendment.id, ...(amendment.ruleId ? { ruleId: amendment.ruleId, value: amendment.proposedValue ?? 0 } : { clauseId: amendment.documentClauseId ?? "unrecorded" }), ratifyingProvinces: amendment.ratifiedProvinceIds.length }, sourceScheduledEventId: null, sourceCommandId: commandId }));
-    } else if (unvoted.length === 0 || (amendment.ratificationDeadline && compareIsoDate(state.currentDate, amendment.ratificationDeadline) >= 0)) {
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "CONSTITUTIONAL_AMENDMENT_RATIFIED",
+          importance: 1,
+          visibility: "public",
+          actorIds: [amendment.sponsorId],
+          entityIds: [
+            amendment.id,
+            ...(amendment.ruleId
+              ? [amendment.ruleId]
+              : amendment.documentClauseId
+                ? [amendment.documentClauseId]
+                : []),
+          ],
+          payload: {
+            amendmentId: amendment.id,
+            ...(amendment.ruleId
+              ? { ruleId: amendment.ruleId, value: amendment.proposedValue ?? 0 }
+              : { clauseId: amendment.documentClauseId ?? "unrecorded" }),
+            ratifyingProvinces: amendment.ratifiedProvinceIds.length,
+          },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
+    } else if (
+      unvoted.length === 0 ||
+      (amendment.ratificationDeadline &&
+        compareIsoDate(state.currentDate, amendment.ratificationDeadline) >= 0)
+    ) {
       amendment.status = "failed";
-      events.push(pushHistory(state, { date: state.currentDate, type: "CONSTITUTIONAL_AMENDMENT_FAILED", importance: 0.82, visibility: "public", actorIds: [amendment.sponsorId], entityIds: [amendment.id], payload: { amendmentId: amendment.id, stage: "provincial_ratification", ratifyingProvinces: amendment.ratifiedProvinceIds.length, required: 13 }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "CONSTITUTIONAL_AMENDMENT_FAILED",
+          importance: 0.82,
+          visibility: "public",
+          actorIds: [amendment.sponsorId],
+          entityIds: [amendment.id],
+          payload: {
+            amendmentId: amendment.id,
+            stage: "provincial_ratification",
+            ratifyingProvinces: amendment.ratifiedProvinceIds.length,
+            required: 13,
+          },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
     }
   }
   return events;

@@ -53,7 +53,9 @@ function variableProvision(
   options: readonly LegislativeProvisionOption[],
 ): LegislativeProvisionDefinition {
   if (options.length < 2 || options.filter((option) => option.current).length !== 1) {
-    throw new Error(`${id} must define at least two alternatives and exactly one current-law option`);
+    throw new Error(
+      `${id} must define at least two alternatives and exactly one current-law option`,
+    );
   }
   return { id, issueId, category, currentLawLabel, options };
 }
@@ -88,267 +90,2369 @@ function option(
 
 /** Concrete, public legislative choices. Ideological issues remain evaluation dimensions, not bill text. */
 export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] = [
-  variableProvision("PROV_BARGAINING_SCOPE", "ISS_LABOR", "Collective bargaining coverage", "Workplace bargaining with voluntary sector agreements", [
-    option("workplace_agreements_only", "Workplace agreements only", "Ends statutory sector-wide bargaining and leaves agreements to individual workplaces.", "Workplace Bargaining Bill", { direction: -1, magnitude: 0.52, fiscalImpact: -0.04, affectedGroups: groupsForIssue("ISS_LABOR") }),
-    option("keep_current_coverage", "Keep current coverage", "Leaves existing workplace and voluntary sector agreements in force.", "Collective Bargaining Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_LABOR") }),
-    option("sector_bargaining_standard", "Sector bargaining standard", "Creates binding sector bargaining councils for covered industries.", "Sector Bargaining Standards Bill", { direction: 1, magnitude: 0.58, fiscalImpact: 0.08, affectedGroups: groupsForIssue("ISS_LABOR") }),
-  ]),
-  variableProvision("PROV_CHILD_BENEFIT", "ISS_WELFARE", "Child benefit eligibility", "Income-tested benefit for low- and middle-income households", [
-    option("narrow_eligibility", "Narrow eligibility", "Limits the child benefit to low-income households.", "Child Benefit Targeting Bill", { direction: -1, magnitude: 0.57, fiscalImpact: -0.12, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("keep_income_test", "Keep income test", "Retains the present income-tested child benefit.", "Family Support Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("universal_benefit", "Universal benefit", "Pays the child benefit to every household with eligible children.", "Universal Child Benefit Bill", { direction: 1, magnitude: 0.62, fiscalImpact: 0.22, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-  ]),
-  variableProvision("PROV_RAIL_OWNERSHIP", "ISS_OWNERSHIP", "National rail ownership", "Mixed public infrastructure and private train operations", [
-    option("private_concessions", "Private concessions", "Moves passenger operations to long-term private concessions.", "Passenger Rail Concessions Bill", { direction: -1, magnitude: 0.62, fiscalImpact: -0.12, affectedGroups: groupsForIssue("ISS_OWNERSHIP") }),
-    option("keep_mixed_system", "Keep mixed system", "Retains public infrastructure and private train operations.", "Rail Operations Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_OWNERSHIP") }),
-    option("public_operator", "Public operator", "Creates one public operator for interprovincial passenger rail.", "National Passenger Rail Bill", { direction: 1, magnitude: 0.66, fiscalImpact: 0.18, affectedGroups: groupsForIssue("ISS_OWNERSHIP") }),
-  ]),
-  variableProvision("PROV_STRATEGIC_TARIFFS", "ISS_TRADE", "Strategic import safeguards", "Cabinet may impose temporary safeguards after an injury finding", [
-    option("end_safeguard_power", "End safeguard power", "Repeals the temporary safeguard process for industrial imports.", "Open Markets Bill", { direction: -1, magnitude: 0.67, fiscalImpact: -0.08, affectedGroups: groupsForIssue("ISS_TRADE") }),
-    option("keep_injury_test", "Keep injury test", "Retains temporary safeguards after an independent injury finding.", "Trade Safeguards Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_TRADE") }),
-    option("broaden_safeguards", "Broaden safeguards", "Allows safeguards for designated strategic industries before severe injury occurs.", "Strategic Industries Safeguards Bill", { direction: 1, magnitude: 0.7, fiscalImpact: 0.12, affectedGroups: groupsForIssue("ISS_TRADE") }),
-  ]),
-  variableProvision("PROV_HOUSING_APPROVALS", "ISS_HOUSING", "Housing approval rules", "Provinces set approval rules within national safety law", [
-    option("province_discretion", "Province discretion", "Removes national housing-supply deadlines and leaves approvals to provinces.", "Provincial Planning Freedom Bill", { direction: -1, magnitude: 0.52, fiscalImpact: -0.05, affectedGroups: groupsForIssue("ISS_HOUSING") }),
-    option("keep_current_rules", "Keep current rules", "Retains provincial approvals under national safety law.", "Planning Administration Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_HOUSING") }),
-    option("supply_deadlines", "Supply deadlines", "Requires large cities to decide qualifying housing applications within fixed deadlines.", "Housing Approvals and Supply Bill", { direction: 1, magnitude: 0.74, fiscalImpact: 0.16, affectedGroups: groupsForIssue("ISS_HOUSING") }),
-  ]),
-  variableProvision("PROV_CLEAN_POWER", "ISS_CLIMATE", "Electricity clean-power standard", "Utilities follow a gradual national clean-power schedule", [
-    option("pause_the_schedule", "Pause the schedule", "Suspends the next clean-power requirement for four years.", "Energy Reliability Pause Bill", { direction: -1, magnitude: 0.57, fiscalImpact: -0.08, affectedGroups: groupsForIssue("ISS_CLIMATE") }),
-    option("keep_current_schedule", "Keep current schedule", "Retains the current clean-power timetable.", "Clean Power Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_CLIMATE") }),
-    option("advance_the_schedule", "Advance the schedule", "Moves the next two clean-power deadlines forward and funds grid connections.", "Clean Electricity Acceleration Bill", { direction: 1, magnitude: 0.58, fiscalImpact: 0.2, affectedGroups: groupsForIssue("ISS_CLIMATE") }),
-  ]),
-  variableProvision("PROV_REPRODUCTIVE_LAW", "ISS_LIBERTY", "Reproductive health law", "National law permits abortion within a statutory time limit", [
-    option("province_discretion", "Province discretion", "Allows each province to set abortion law, subject to emergency-care protections.", "Provincial Reproductive Law Bill", { direction: -1, magnitude: 0.62, fiscalImpact: null, affectedGroups: groupsForIssue("ISS_LIBERTY") }),
-    option("keep_statutory_limit", "Keep statutory limit", "Retains the existing national time limit and medical exceptions.", "Reproductive Health Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: null, current: true, affectedGroups: groupsForIssue("ISS_LIBERTY") }),
-    option("national_protection", "National protection", "Guarantees lawful abortion access through the national statutory limit in every province.", "Reproductive Health Protection Bill", { direction: 1, magnitude: 0.62, fiscalImpact: 0.05, affectedGroups: groupsForIssue("ISS_LIBERTY") }),
-  ]),
-  variableProvision("PROV_RESIDENCY_PATH", "ISS_IMMIGRATION", "Permanent residency eligibility", "Five-year lawful-residence route with language and civic requirements", [
-    option("longer_residency_route", "Longer residency route", "Raises the qualifying period for permanent residency to eight years.", "Residency Qualification Bill", { direction: -1, magnitude: 0.67, fiscalImpact: -0.03, affectedGroups: groupsForIssue("ISS_IMMIGRATION") }),
-    option("keep_five_year_route", "Keep five-year route", "Retains the present five-year route and civic requirements.", "Residency Law Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_IMMIGRATION") }),
-    option("shorter_residency_route", "Shorter residency route", "Reduces the qualifying period to three years for applicants meeting work and civic requirements.", "Residency Access Bill", { direction: 1, magnitude: 0.66, fiscalImpact: 0.04, affectedGroups: groupsForIssue("ISS_IMMIGRATION") }),
-  ]),
-  variableProvision("PROV_POLICE_COMPLAINTS", "ISS_POLICING", "Police misconduct review", "Provincial bodies investigate complaints under national minimum standards", [
-    option("independent_review", "Independent review", "Creates an independent national inspector with power to reopen serious cases.", "Independent Police Review Bill", { direction: -1, magnitude: 0.52, fiscalImpact: 0.09, affectedGroups: groupsForIssue("ISS_POLICING") }),
-    option("keep_provincial_review", "Keep provincial review", "Retains provincial review bodies and national minimum standards.", "Police Review Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_POLICING") }),
-    option("internal_review", "Internal review", "Returns ordinary misconduct investigations to police internal-affairs units.", "Police Discipline Bill", { direction: 1, magnitude: 0.7, fiscalImpact: -0.04, affectedGroups: groupsForIssue("ISS_POLICING") }),
-  ]),
-  variableProvision("PROV_REVENUE_DISCRETION", "ISS_DECENT", "Provincial revenue authority", "Provinces may levy a limited property surcharge", [
-    option("national_uniformity", "National uniformity", "Repeals the provincial property surcharge and replaces it with a national transfer formula.", "National Revenue Uniformity Bill", { direction: -1, magnitude: 0.57, fiscalImpact: -0.06, affectedGroups: groupsForIssue("ISS_DECENT") }),
-    option("keep_limited_surcharge", "Keep limited surcharge", "Retains the present provincial property-surcharge authority.", "Provincial Revenue Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_DECENT") }),
-    option("broader_local_authority", "Broader local authority", "Allows provinces to vary the surcharge within a wider statutory band.", "Provincial Revenue Powers Bill", { direction: 1, magnitude: 0.74, fiscalImpact: 0.03, affectedGroups: groupsForIssue("ISS_DECENT") }),
-  ]),
-  variableProvision("PROV_EMERGENCY_RENEWAL", "ISS_EXEC", "Emergency-power renewal", "Assembly approval is required after the initial emergency period", [
-    option("shorter_initial_period", "Shorter initial period", "Requires Assembly approval after seven days of emergency authority.", "Emergency Powers Safeguards Bill", { direction: -1, magnitude: 0.62, fiscalImpact: null, affectedGroups: groupsForIssue("ISS_EXEC") }),
-    option("keep_current_renewal", "Keep current renewal", "Retains the existing Assembly renewal deadline.", "Emergency Administration Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: null, current: true, affectedGroups: groupsForIssue("ISS_EXEC") }),
-    option("longer_executive_period", "Longer executive period", "Extends the President's initial emergency authority before an Assembly vote.", "Emergency Powers Extension Bill", { direction: 1, magnitude: 0.58, fiscalImpact: null, affectedGroups: groupsForIssue("ISS_EXEC") }),
-  ]),
-  variableProvision("PROV_DONOR_DISCLOSURE", "ISS_REFORM", "Campaign donor disclosure", "Large donations are published during the campaign", [
-    option("annual_disclosure", "Annual disclosure", "Moves large-donor publication to one annual filing after the election.", "Campaign Reporting Bill", { direction: -1, magnitude: 0.67, fiscalImpact: -0.02, affectedGroups: groupsForIssue("ISS_REFORM") }),
-    option("keep_current_disclosure", "Keep current disclosure", "Retains campaign-period publication of large donations.", "Election Disclosure Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_REFORM") }),
-    option("rapid_disclosure", "Rapid disclosure", "Requires publication of large donations within five working days.", "Rapid Campaign Disclosure Bill", { direction: 1, magnitude: 0.62, fiscalImpact: 0.04, affectedGroups: groupsForIssue("ISS_REFORM") }),
-  ]),
-  variableProvision("PROV_CONCORD_PROCUREMENT", "ISS_CONCORD", "Concord defense procurement", "Lorsain may join projects after separate Cabinet approval", [
-    option("domestic_preference", "Domestic preference", "Requires a domestic-source preference for major defense procurement.", "Defense Procurement Preference Bill", { direction: -1, magnitude: 0.52, fiscalImpact: -0.04, affectedGroups: groupsForIssue("ISS_CONCORD") }),
-    option("keep_project_review", "Keep project review", "Retains project-by-project participation after Cabinet review.", "Defense Cooperation Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_CONCORD") }),
-    option("joint_procurement", "Joint procurement", "Authorizes a standing framework for joint Concord procurement.", "Concord Joint Procurement Bill", { direction: 1, magnitude: 0.66, fiscalImpact: 0.08, affectedGroups: groupsForIssue("ISS_CONCORD") }),
-  ]),
-  variableProvision("PROV_VASKARA_SANCTIONS", "ISS_VASKARA", "Vaskara sanctions authority", "Targeted sanctions require a published executive finding", [
-    option("narrow_sanctions", "Narrow sanctions", "Limits new sanctions to named security officials and military suppliers.", "Targeted Sanctions Limitation Bill", { direction: -1, magnitude: 0.57, fiscalImpact: null, affectedGroups: groupsForIssue("ISS_VASKARA") }),
-    option("keep_finding_process", "Keep finding process", "Retains targeted sanctions after a published executive finding.", "Sanctions Procedure Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: null, current: true, affectedGroups: groupsForIssue("ISS_VASKARA") }),
-    option("broaden_sanctions", "Broaden sanctions", "Adds state banks and strategic exporters to the available sanctions list.", "Vaskara Strategic Sanctions Bill", { direction: 1, magnitude: 0.7, fiscalImpact: null, affectedGroups: groupsForIssue("ISS_VASKARA") }),
-  ]),
-  variableProvision("PROV_READINESS_FUND", "ISS_DEFENSE", "Defense readiness appropriation", "Readiness funding follows the enacted annual budget", [
-    option("reduce_readiness_fund", "Reduce readiness fund", "Reduces the equipment-readiness appropriation for the next two fiscal years.", "Defense Savings Bill", { direction: -1, magnitude: 0.62, fiscalImpact: -0.16, affectedGroups: groupsForIssue("ISS_DEFENSE") }),
-    option("keep_current_funding", "Keep current funding", "Retains the current equipment-readiness appropriation.", "Readiness Funding Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_DEFENSE") }),
-    option("increase_readiness_fund", "Increase readiness fund", "Adds a four-year appropriation for maintenance, reserves and equipment replacement.", "Defense Readiness Investment Bill", { direction: 1, magnitude: 0.74, fiscalImpact: 0.24, affectedGroups: groupsForIssue("ISS_DEFENSE") }),
-  ]),
-  variableProvision("PROV_PRIMARY_CARE", "ISS_WELFARE", "Primary care coverage", "National insurance covers essential primary care with limited copayments", [
-    option("higher_copayments", "Higher copayments", "Raises copayments for routine primary-care visits while preserving exemptions.", "Primary Care Contributions Bill", { direction: -1, magnitude: 0.67, fiscalImpact: -0.12, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("keep_current_coverage", "Keep current coverage", "Retains existing primary-care benefits and copayments.", "Primary Care Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("no_routine_copayment", "No routine copayment", "Removes routine primary-care copayments and expands rural clinic grants.", "Universal Primary Care Bill", { direction: 1, magnitude: 0.58, fiscalImpact: 0.24, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-  ]),
-  variableProvision("PROV_TUITION_SUPPORT", "ISS_WELFARE", "Public university tuition", "Students pay capped tuition with income-tested grants", [
-    option("higher_tuition_cap", "Higher tuition cap", "Raises the tuition cap and narrows income-tested grants.", "University Finance Bill", { direction: -1, magnitude: 0.52, fiscalImpact: -0.15, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("keep_capped_tuition", "Keep capped tuition", "Retains the current tuition cap and grant rules.", "Higher Education Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("tuition_free_first_degree", "Tuition-free first degree", "Funds a tuition-free first undergraduate degree at public universities.", "Public University Access Bill", { direction: 1, magnitude: 0.62, fiscalImpact: 0.28, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-  ]),
-  variableProvision("PROV_INCOME_TAX", "ISS_WELFARE", "Top income-tax rate", "A progressive national schedule applies to personal income", [
-    option("lower_top_rate", "Lower top rate", "Reduces the top personal income-tax rate by four points.", "Income Tax Reduction Bill", { direction: -1, magnitude: 0.57, fiscalImpact: -0.2, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("keep_current_schedule", "Keep current schedule", "Retains the current progressive income-tax schedule.", "Income Tax Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("higher_top_rate", "Higher top rate", "Raises the top rate on the highest income band by four points.", "High Income Contribution Bill", { direction: 1, magnitude: 0.66, fiscalImpact: 0.18, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-  ]),
-  variableProvision("PROV_UNEMPLOYMENT_INSURANCE", "ISS_WELFARE", "Unemployment insurance duration", "Benefits are earnings-related for a fixed insured period", [
-    option("shorter_insured_period", "Shorter insured period", "Shortens the standard insured benefit period by twelve weeks.", "Employment Insurance Targeting Bill", { direction: -1, magnitude: 0.62, fiscalImpact: -0.11, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("keep_current_duration", "Keep current duration", "Retains the present insured benefit period.", "Employment Insurance Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("extended_downturn_benefit", "Extended downturn benefit", "Adds twelve weeks of benefits when provincial unemployment rises sharply.", "Employment Security Bill", { direction: 1, magnitude: 0.7, fiscalImpact: 0.2, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-  ]),
-  variableProvision("PROV_UNION_RECOGNITION", "ISS_LABOR", "Union recognition", "Recognition normally follows a supervised workplace ballot", [
-    option("voluntary_recognition", "Voluntary recognition", "Allows an employer to recognize a union without a statutory process.", "Voluntary Recognition Bill", { direction: -1, magnitude: 0.67, fiscalImpact: null, affectedGroups: groupsForIssue("ISS_LABOR") }),
-    option("mandatory_ballot", "Mandatory ballot", "Retains the supervised workplace ballot for recognition.", "Union Ballot Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: null, current: true, affectedGroups: groupsForIssue("ISS_LABOR") }),
-    option("majority_sign_up", "Majority sign-up", "Requires recognition when a verified majority signs union cards.", "Majority Sign-Up Bill", { direction: 1, magnitude: 0.74, fiscalImpact: 0.03, affectedGroups: groupsForIssue("ISS_LABOR") }),
-  ]),
-  variableProvision("PROV_STRIKE_NOTICE", "ISS_LABOR", "Strike notice", "Unions must give seven days' notice before protected action", [
-    option("fourteen_day_notice", "Fourteen-day notice", "Requires fourteen days' notice before protected industrial action.", "Industrial Action Notice Bill", { direction: -1, magnitude: 0.52, fiscalImpact: -0.02, affectedGroups: groupsForIssue("ISS_LABOR") }),
-    option("keep_seven_days", "Keep seven days", "Retains the seven-day notice requirement.", "Strike Notice Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_LABOR") }),
-    option("three_day_notice", "Three-day notice", "Reduces the notice period for protected action to three days.", "Protected Action Bill", { direction: 1, magnitude: 0.58, fiscalImpact: 0.03, affectedGroups: groupsForIssue("ISS_LABOR") }),
-  ]),
-  variableProvision("PROV_PUBLIC_HOUSING", "ISS_HOUSING", "Public housing fund", "The national fund co-finances provincial social housing", [
-    option("smaller_capital_fund", "Smaller capital fund", "Reduces new national public-housing commitments for three years.", "Housing Fund Restraint Bill", { direction: -1, magnitude: 0.57, fiscalImpact: -0.1, affectedGroups: groupsForIssue("ISS_HOUSING") }),
-    option("keep_current_fund", "Keep current fund", "Retains current public-housing capital grants.", "Public Housing Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_HOUSING") }),
-    option("expand_capital_fund", "Expand capital fund", "Funds a five-year expansion of provincial social-housing construction.", "Public Housing Investment Bill", { direction: 1, magnitude: 0.62, fiscalImpact: 0.3, affectedGroups: groupsForIssue("ISS_HOUSING") }),
-  ]),
-  variableProvision("PROV_TRANSIT_ZONING", "ISS_HOUSING", "Transit-oriented development grants", "Cities may seek grants for housing near major transit", [
-    option("end_density_grants", "End density grants", "Ends national grants tied to housing density near transit stations.", "Local Planning Bill", { direction: -1, magnitude: 0.62, fiscalImpact: -0.04, affectedGroups: groupsForIssue("ISS_HOUSING") }),
-    option("keep_voluntary_grants", "Keep voluntary grants", "Retains voluntary grants for transit-oriented housing plans.", "Transit Housing Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_HOUSING") }),
-    option("priority_density_grants", "Priority density grants", "Prioritizes infrastructure grants for cities permitting more homes near transit.", "Transit-Oriented Housing Bill", { direction: 1, magnitude: 0.66, fiscalImpact: 0.16, affectedGroups: groupsForIssue("ISS_HOUSING") }),
-  ]),
-  variableProvision("PROV_INFRASTRUCTURE_BANK", "ISS_OWNERSHIP", "National infrastructure finance", "Large projects use ordinary appropriations and private lending", [
-    option("private_project_finance", "Private project finance", "Requires qualifying infrastructure projects to seek private finance first.", "Infrastructure Finance Bill", { direction: -1, magnitude: 0.67, fiscalImpact: -0.08, affectedGroups: groupsForIssue("ISS_OWNERSHIP") }),
-    option("keep_current_finance", "Keep current finance", "Retains ordinary appropriations and project lending.", "Infrastructure Finance Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_OWNERSHIP") }),
-    option("public_infrastructure_bank", "Public infrastructure bank", "Creates a public bank for long-term transport, water and energy loans.", "National Infrastructure Bank Bill", { direction: 1, magnitude: 0.7, fiscalImpact: 0.22, affectedGroups: groupsForIssue("ISS_OWNERSHIP") }),
-  ]),
-  variableProvision("PROV_FARM_STABILIZATION", "ISS_TRADE", "Farm income stabilization", "Emergency farm support requires a declared market disruption", [
-    option("market_insurance_only", "Market insurance only", "Replaces emergency price support with privately delivered crop insurance.", "Agricultural Risk Bill", { direction: -1, magnitude: 0.52, fiscalImpact: -0.08, affectedGroups: groupsForIssue("ISS_TRADE") }),
-    option("keep_emergency_support", "Keep emergency support", "Retains support after a declared market disruption.", "Farm Support Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_TRADE") }),
-    option("stabilization_payments", "Stabilization payments", "Creates temporary payments when designated farm prices fall below a published benchmark.", "Farm Income Stabilization Bill", { direction: 1, magnitude: 0.74, fiscalImpact: 0.18, affectedGroups: groupsForIssue("ISS_TRADE") }),
-  ]),
-  variableProvision("PROV_CARBON_PRICE", "ISS_CLIMATE", "Industrial carbon price", "Large emitters pay a nationally administered carbon levy", [
-    option("repeal_industrial_levy", "Repeal industrial levy", "Repeals the carbon levy for large industrial emitters.", "Industrial Energy Cost Bill", { direction: -1, magnitude: 0.57, fiscalImpact: -0.1, affectedGroups: groupsForIssue("ISS_CLIMATE") }),
-    option("keep_current_levy", "Keep current levy", "Retains the current levy and rebate schedule.", "Carbon Pricing Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_CLIMATE") }),
-    option("raise_and_rebate", "Raise and rebate", "Raises the levy on large emitters and returns part of the revenue to households.", "Carbon Levy and Rebate Bill", { direction: 1, magnitude: 0.58, fiscalImpact: 0.16, affectedGroups: groupsForIssue("ISS_CLIMATE") }),
-  ]),
-  variableProvision("PROV_SURVEILLANCE_WARRANT", "ISS_LIBERTY", "Digital surveillance warrants", "Police need a judicial warrant to obtain private communications", [
-    option("emergency_access_window", "Emergency access window", "Allows temporary access before a warrant in narrowly defined emergencies.", "Emergency Communications Access Bill", { direction: -1, magnitude: 0.62, fiscalImpact: null, affectedGroups: groupsForIssue("ISS_LIBERTY") }),
-    option("keep_prior_warrant", "Keep prior warrant", "Retains the prior judicial-warrant requirement.", "Communications Privacy Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: null, current: true, affectedGroups: groupsForIssue("ISS_LIBERTY") }),
-    option("stricter_warrant_test", "Stricter warrant test", "Requires a heightened necessity finding for bulk or location surveillance.", "Digital Privacy Safeguards Bill", { direction: 1, magnitude: 0.62, fiscalImpact: 0.03, affectedGroups: groupsForIssue("ISS_LIBERTY") }),
-  ]),
-  variableProvision("PROV_SENTENCING", "ISS_POLICING", "Serious repeat-offense sentencing", "Judges apply statutory ranges with stated reasons for departure", [
-    option("expanded_rehabilitation", "Expanded rehabilitation", "Expands treatment and supervised-release alternatives within statutory ranges.", "Sentencing Rehabilitation Bill", { direction: -1, magnitude: 0.67, fiscalImpact: 0.08, affectedGroups: groupsForIssue("ISS_POLICING") }),
-    option("keep_judicial_ranges", "Keep judicial ranges", "Retains current sentencing ranges and reasoned departures.", "Sentencing Continuity Bill", { direction: 0, magnitude: 0.06, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_POLICING") }),
-    option("mandatory_minimum_term", "Mandatory minimum term", "Sets a minimum custodial term for defined serious repeat offenses.", "Repeat Offender Sentencing Bill", { direction: 1, magnitude: 0.66, fiscalImpact: -0.06, affectedGroups: groupsForIssue("ISS_POLICING") }),
-  ]),
-  variableProvision("PROV_ELECTION_ADMIN", "ISS_REFORM", "National election administration", "A national commission sets standards while provinces staff polling", [
-    option("province_run_standards", "Province-run standards", "Returns polling standards and administration to provincial election offices.", "Provincial Elections Administration Bill", { direction: -1, magnitude: 0.52, fiscalImpact: -0.04, affectedGroups: groupsForIssue("ISS_REFORM") }),
-    option("keep_shared_administration", "Keep shared administration", "Retains national standards with provincial staffing.", "Election Administration Continuity Bill", { direction: 0, magnitude: 0.08, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_REFORM") }),
-    option("independent_national_service", "Independent national service", "Creates an independent national service to administer federal polling directly.", "Independent Elections Service Bill", { direction: 1, magnitude: 0.7, fiscalImpact: 0.1, affectedGroups: groupsForIssue("ISS_REFORM") }),
-  ]),
-  variableProvision("PROV_SCHOOL_MEALS", "ISS_WELFARE", "School meal eligibility", "Subsidized meals are available through an income test", [
-    option("narrow_income_test", "Narrow income test", "Limits subsidized school meals to the lowest income band.", "School Meals Targeting Bill", { direction: -1, magnitude: 0.57, fiscalImpact: -0.07, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("keep_income_test", "Keep income test", "Retains current school-meal eligibility.", "School Meals Continuity Bill", { direction: 0, magnitude: 0.1, fiscalImpact: 0, current: true, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-    option("universal_school_meals", "Universal school meals", "Funds a meal for every pupil in participating public schools.", "Universal School Meals Bill", { direction: 1, magnitude: 0.74, fiscalImpact: 0.15, affectedGroups: groupsForIssue("ISS_WELFARE") }),
-  ]),
-  variableProvision("PROV_HEALTH_INSURANCE_MODEL", "ISS_WELFARE", "Healthcare financing model", "National insurance funds essential care through public and contracted providers", [
-    option("regulated_private_insurance", "Regulated private insurance", "Replaces national insurance with mandatory regulated private plans and income-tested subsidies.", "Health Insurance Choice Bill", { direction: -0.8, fiscalImpact: -0.18, affectedGroups: ["Patients", "Insurers", "Employers"], dimensionEffects: { economic: -0.75, authority: -0.25 } }),
-    option("nonprofit_insurance_funds", "Nonprofit insurance funds", "Creates competing nonprofit sickness funds under one national benefit schedule.", "Nonprofit Health Funds Bill", { direction: -0.25, fiscalImpact: 0.04, affectedGroups: ["Patients", "Nonprofit funds", "Providers"], dimensionEffects: { economic: -0.15, authority: 0.15 } }),
-    option("national_insurance", "National insurance", "Retains national insurance with public and contracted providers.", "Health Insurance Continuity Bill", { direction: 0.15, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Patients", "Providers", "Taxpayers"], dimensionEffects: { economic: 0.2, authority: 0.1 } }),
-    option("national_health_service", "National health service", "Moves core hospitals and primary care into one publicly operated national service.", "National Health Service Bill", { direction: 0.9, fiscalImpact: 0.34, affectedGroups: ["Patients", "Health workers", "Taxpayers"], dimensionEffects: { economic: 0.9, authority: 0.5 } }),
-  ]),
-  variableProvision("PROV_MEDICINE_PRICING", "ISS_WELFARE", "Prescription medicine purchasing", "Insurers reimburse medicines after national price negotiation", [
-    option("market_pricing", "Market pricing", "Ends national price negotiation and permits insurers to set separate formularies.", "Medicines Market Bill", { direction: -0.8, fiscalImpact: -0.1, affectedGroups: ["Patients", "Drug makers", "Insurers"] }),
-    option("reference_pricing", "International reference pricing", "Caps reimbursement using prices in comparable countries.", "Fair Medicines Pricing Bill", { direction: 0.25, fiscalImpact: -0.05, affectedGroups: ["Patients", "Drug makers", "Insurers"], dimensionEffects: { economic: 0.2, globalism: 0.35 } }),
-    option("negotiated_prices", "National negotiation", "Retains national negotiation with separate insurer reimbursement.", "Medicines Purchasing Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Patients", "Drug makers", "Insurers"] }),
-    option("single_public_purchaser", "Single public purchaser", "Creates one public purchaser for covered prescription medicines.", "National Medicines Purchasing Bill", { direction: 0.85, fiscalImpact: 0.08, affectedGroups: ["Patients", "Pharmacies", "Drug makers"], dimensionEffects: { economic: 0.85, authority: 0.35 } }),
-  ]),
-  variableProvision("PROV_HOSPITAL_GOVERNANCE", "ISS_WELFARE", "Hospital governance", "Public hospital boards operate within national funding standards", [
-    option("contracted_hospital_networks", "Contracted hospital networks", "Allows provinces to contract regional hospital systems to nonprofit or private operators.", "Hospital Networks Bill", { direction: -0.6, fiscalImpact: -0.05, affectedGroups: ["Patients", "Hospital staff", "Provincial governments"], dimensionEffects: { economic: -0.45, authority: -0.3 } }),
-    option("public_hospital_boards", "Public hospital boards", "Retains locally governed public hospital boards under national standards.", "Hospital Governance Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Patients", "Hospital boards", "Provinces"] }),
-    option("integrated_regional_authorities", "Regional health authorities", "Combines hospitals and community care under elected regional health authorities.", "Regional Health Authorities Bill", { direction: 0.55, fiscalImpact: 0.14, affectedGroups: ["Patients", "Health workers", "Regional authorities"], dimensionEffects: { economic: 0.35, authority: -0.25 } }),
-  ]),
-  variableProvision("PROV_CHILDCARE_MODEL", "ISS_WELFARE", "Early-childhood care", "Income-tested childcare subsidies support licensed providers", [
-    option("tax_credit", "Childcare tax credit", "Replaces direct subsidies with a refundable household tax credit.", "Childcare Tax Credit Bill", { direction: -0.45, fiscalImpact: -0.03, affectedGroups: ["Parents", "Childcare providers", "Taxpayers"] }),
-    option("income_tested_subsidy", "Income-tested subsidy", "Retains income-tested support for licensed childcare.", "Childcare Support Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Parents", "Childcare providers", "Taxpayers"] }),
-    option("universal_fee_cap", "Universal fee cap", "Caps fees for licensed childcare and reimburses providers for eligible places.", "Affordable Childcare Bill", { direction: 0.55, fiscalImpact: 0.2, affectedGroups: ["Parents", "Children", "Childcare providers"] }),
-    option("public_childcare_network", "Public childcare network", "Builds a national network of publicly operated early-childhood centers.", "Early Childhood Service Bill", { direction: 0.9, fiscalImpact: 0.38, affectedGroups: ["Parents", "Children", "Childcare workers"], dimensionEffects: { economic: 0.85, authority: 0.4 } }),
-  ]),
-  variableProvision("PROV_VOCATIONAL_TRAINING", "ISS_LABOR", "Vocational training governance", "Employers, unions and colleges share apprenticeship standards", [
-    option("employer_led_credentials", "Employer-led credentials", "Lets accredited employer groups set occupational credentials and training hours.", "Skills Accreditation Bill", { direction: -0.55, fiscalImpact: -0.06, affectedGroups: ["Apprentices", "Employers", "Colleges"] }),
-    option("tripartite_apprenticeships", "Tripartite apprenticeships", "Retains joint employer, union and college apprenticeship standards.", "Apprenticeship Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Apprentices", "Employers", "Trade unions"] }),
-    option("public_training_guarantee", "Public training guarantee", "Guarantees a funded training place to young adults not in work or education.", "Training Guarantee Bill", { direction: 0.75, fiscalImpact: 0.24, affectedGroups: ["Young adults", "Colleges", "Employers"] }),
-  ]),
-  variableProvision("PROV_MINIMUM_WAGE", "ISS_LABOR", "Minimum-wage setting", "An independent commission recommends annual adjustments", [
-    option("province_minimums", "Provincial minimums", "Ends the national floor and leaves minimum wages to Provincial Assemblies.", "Provincial Wage Standards Bill", { direction: -0.65, fiscalImpact: -0.02, affectedGroups: ["Low-wage workers", "Employers", "Provinces"], dimensionEffects: { economic: -0.4, authority: -0.6 } }),
-    option("commission_recommendation", "Commission recommendation", "Retains annual recommendations from the independent wage commission.", "Minimum Wage Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Low-wage workers", "Employers", "Wage commission"] }),
-    option("wage_indexation", "Wage indexation", "Indexes the national minimum to median wages with an emergency review clause.", "Fair Wage Indexation Bill", { direction: 0.55, fiscalImpact: 0.04, affectedGroups: ["Low-wage workers", "Employers", "Consumers"] }),
-    option("living_wage_floor", "Living-wage floor", "Raises the floor toward a published household living-cost benchmark over three years.", "Living Wage Bill", { direction: 0.9, fiscalImpact: 0.1, affectedGroups: ["Low-wage workers", "Employers", "Households"] }),
-  ]),
-  variableProvision("PROV_PLATFORM_WORK", "ISS_LABOR", "Platform-worker status", "Status is decided case by case under the ordinary employment test", [
-    option("independent_contractor_safe_harbor", "Contractor safe harbor", "Treats platform workers as contractors when written flexibility conditions are met.", "Independent Platform Work Bill", { direction: -0.75, fiscalImpact: -0.04, affectedGroups: ["Platform workers", "Digital platforms", "Consumers"] }),
-    option("case_by_case_test", "Case-by-case test", "Retains the ordinary employment-status test for platform work.", "Platform Work Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Platform workers", "Digital platforms", "Courts"] }),
-    option("employee_presumption", "Employee presumption", "Presumes employee status unless a platform proves genuine independent enterprise.", "Platform Worker Protections Bill", { direction: 0.8, fiscalImpact: 0.05, affectedGroups: ["Platform workers", "Digital platforms", "Labor inspectors"] }),
-  ]),
-  variableProvision("PROV_PAID_LEAVE", "ISS_LABOR", "Paid family leave", "Twelve weeks of earnings-related leave are financed through social insurance", [
-    option("employer_leave", "Employer-funded leave", "Replaces social insurance with a minimum employer-funded leave duty.", "Family Leave Responsibility Bill", { direction: -0.55, fiscalImpact: -0.12, affectedGroups: ["Parents", "Employers", "Workers"] }),
-    option("twelve_week_insurance", "Twelve-week insurance", "Retains twelve weeks of earnings-related social-insurance leave.", "Family Leave Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Parents", "Employers", "Workers"] }),
-    option("sixteen_week_insurance", "Sixteen-week insurance", "Extends insured family leave to sixteen weeks.", "Family Leave Extension Bill", { direction: 0.5, fiscalImpact: 0.14, affectedGroups: ["Parents", "Children", "Employers"] }),
-    option("shared_parental_year", "Shared parental year", "Creates a year of shared leave with reserved periods for each parent.", "Shared Parental Leave Bill", { direction: 0.9, fiscalImpact: 0.32, affectedGroups: ["Parents", "Children", "Employers"] }),
-  ]),
-  variableProvision("PROV_RENT_POLICY", "ISS_HOUSING", "Rent stabilization", "Cities may cap annual increases in designated high-pressure areas", [
-    option("market_rents", "Market rents", "Repeals local rent-increase caps while preserving notice and habitability rules.", "Rental Market Bill", { direction: -0.8, fiscalImpact: -0.03, affectedGroups: ["Renters", "Landlords", "Cities"] }),
-    option("pressure_area_caps", "High-pressure area caps", "Retains local caps in designated high-pressure housing areas.", "Rent Stabilization Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Renters", "Landlords", "Cities"] }),
-    option("national_rent_stabilization", "National stabilization rule", "Limits annual increases for existing tenancies nationwide, with renovation exemptions.", "National Rent Stabilization Bill", { direction: 0.8, fiscalImpact: 0.08, affectedGroups: ["Renters", "Landlords", "Housing agencies"] }),
-  ]),
-  variableProvision("PROV_LAND_VALUE_TAX", "ISS_HOUSING", "Land taxation", "Local property tax applies to assessed land and buildings", [
-    option("building_value_tax", "Property-value tax", "Retains taxation of both land and buildings under local assessment.", "Property Tax Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Property owners", "Municipalities", "Developers"] }),
-    option("split_rate_tax", "Split-rate tax", "Taxes land at a higher rate than buildings to discourage vacant and underused sites.", "Productive Land Tax Bill", { direction: 0.35, fiscalImpact: -0.03, affectedGroups: ["Landowners", "Developers", "Municipalities"], dimensionEffects: { economic: 0.25, authority: -0.1 } }),
-    option("land_value_tax", "Land-value tax", "Replaces the building-value charge with a tax on unimproved site value.", "Land Value Tax Bill", { direction: 0.65, fiscalImpact: -0.08, affectedGroups: ["Landowners", "Developers", "Municipalities"], dimensionEffects: { economic: 0.45, authority: -0.15 } }),
-  ]),
-  variableProvision("PROV_INHERITANCE_TAX", "ISS_WELFARE", "Inheritance taxation", "Large estates pay tax above a protected family allowance", [
-    option("repeal_estate_tax", "Repeal estate tax", "Repeals inheritance tax and retains ordinary capital-gains rules on inherited assets.", "Estate Tax Repeal Bill", { direction: -0.9, fiscalImpact: -0.22, affectedGroups: ["Heirs", "Large estates", "Taxpayers"] }),
-    option("family_business_exemption", "Family-business exemption", "Exempts qualifying operating businesses while retaining tax on other large estates.", "Family Enterprise Succession Bill", { direction: -0.35, fiscalImpact: -0.1, affectedGroups: ["Family businesses", "Heirs", "Taxpayers"] }),
-    option("protected_allowance", "Protected allowance", "Retains the current protected allowance and progressive estate rates.", "Inheritance Tax Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Heirs", "Large estates", "Taxpayers"] }),
-    option("progressive_estate_rates", "Higher large-estate rates", "Adds higher bands for the largest estates and closes trust-avoidance rules.", "Large Estates Contribution Bill", { direction: 0.8, fiscalImpact: -0.18, affectedGroups: ["Large estates", "Heirs", "Public services"] }),
-  ]),
-  variableProvision("PROV_CORPORATE_TAX", "ISS_WELFARE", "Corporate tax base", "A national rate applies after investment and loss deductions", [
-    option("territorial_low_rate", "Territorial low rate", "Cuts the rate and exempts most qualifying foreign profits.", "Competitive Corporate Tax Bill", { direction: -0.85, fiscalImpact: -0.25, affectedGroups: ["Companies", "Investors", "Taxpayers"], dimensionEffects: { economic: -0.75, globalism: 0.35 } }),
-    option("investment_allowance", "Investment allowance", "Keeps the rate but accelerates deductions for new domestic capital investment.", "Business Investment Allowance Bill", { direction: -0.25, fiscalImpact: -0.12, affectedGroups: ["Companies", "Workers", "Investors"] }),
-    option("current_tax_base", "Current tax base", "Retains the national rate and current deduction rules.", "Corporate Tax Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Companies", "Investors", "Taxpayers"] }),
-    option("minimum_effective_tax", "Minimum effective tax", "Sets a minimum effective rate for large corporate groups after deductions.", "Corporate Minimum Tax Bill", { direction: 0.75, fiscalImpact: -0.18, affectedGroups: ["Large companies", "Taxpayers", "Public services"], dimensionEffects: { economic: 0.65, globalism: -0.15 } }),
-  ]),
-  variableProvision("PROV_ELECTRICITY_MARKET", "ISS_OWNERSHIP", "Electricity market structure", "Regulated utilities buy power from public and private generators", [
-    option("competitive_retail_market", "Competitive retail market", "Allows households to choose competing electricity retailers using regulated networks.", "Electricity Choice Bill", { direction: -0.85, fiscalImpact: -0.08, affectedGroups: ["Households", "Utilities", "Generators"], dimensionEffects: { economic: -0.8, authority: -0.25 } }),
-    option("regulated_private_utilities", "Regulated private utilities", "Moves distribution utilities into long-term regulated private franchises.", "Electricity Franchises Bill", { direction: -0.45, fiscalImpact: -0.12, affectedGroups: ["Households", "Utilities", "Investors"] }),
-    option("mixed_regulated_system", "Mixed regulated system", "Retains regulated utilities and mixed public-private generation.", "Electricity Market Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Households", "Utilities", "Generators"] }),
-    option("public_grid_operator", "Public grid operator", "Creates a public system operator while retaining independent generators.", "National Grid Operator Bill", { direction: 0.45, fiscalImpact: 0.14, affectedGroups: ["Households", "Grid workers", "Generators"], dimensionEffects: { economic: 0.45, authority: 0.35 } }),
-    option("public_generation_authority", "Public generation authority", "Establishes a public authority to own new strategic generation and storage.", "Public Power Authority Bill", { direction: 0.9, fiscalImpact: 0.32, affectedGroups: ["Households", "Energy workers", "Taxpayers"], dimensionEffects: { economic: 0.9, authority: 0.45, green: 0.3 } }),
-  ]),
-  variableProvision("PROV_NUCLEAR_POLICY", "ISS_CLIMATE", "Nuclear energy policy", "Existing reactors may operate while new projects require separate legislation", [
-    option("managed_phaseout", "Managed phaseout", "Closes existing reactors at the end of their licensed lives and prohibits replacement plants.", "Nuclear Phaseout Bill", { direction: -0.35, fiscalImpact: 0.12, affectedGroups: ["Energy workers", "Electricity users", "Host communities"], dimensionEffects: { green: 0.55, authority: 0.15 } }),
-    option("case_by_case_authorization", "Case-by-case authorization", "Retains separate legislative approval for each new nuclear project.", "Nuclear Energy Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Electricity users", "Regulators", "Host communities"] }),
-    option("standardized_new_build", "Standardized new build", "Creates a licensing and finance framework for a fleet of standardized reactors.", "Nuclear Generation Bill", { direction: 0.65, fiscalImpact: 0.3, affectedGroups: ["Electricity users", "Energy workers", "Taxpayers"], dimensionEffects: { green: 0.35, authority: 0.45, economic: 0.2 } }),
-  ]),
-  variableProvision("PROV_WATER_ENFORCEMENT", "ISS_CLIMATE", "Water-pollution enforcement", "Provincial inspectors enforce national discharge standards", [
-    option("province_only_enforcement", "Provincial enforcement", "Repeals national intervention powers and leaves inspections to provinces.", "Provincial Water Administration Bill", { direction: -0.6, fiscalImpact: -0.06, affectedGroups: ["Provinces", "Industry", "Water users"], dimensionEffects: { green: -0.45, authority: -0.6 } }),
-    option("shared_enforcement", "Shared enforcement", "Retains provincial inspection under national discharge standards.", "Water Standards Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Provinces", "Industry", "Water users"] }),
-    option("national_enforcement_office", "National enforcement office", "Creates a national office able to inspect major dischargers and levy civil penalties.", "Clean Water Enforcement Bill", { direction: 0.8, fiscalImpact: 0.12, affectedGroups: ["Water users", "Industry", "Environmental agencies"], dimensionEffects: { green: 0.8, authority: 0.5 } }),
-  ]),
-  variableProvision("PROV_BROADBAND", "ISS_OWNERSHIP", "Broadband infrastructure", "Private networks receive targeted rural buildout grants", [
-    option("market_only_buildout", "Market-led buildout", "Ends national buildout grants and relies on commercial network investment.", "Broadband Market Bill", { direction: -0.75, fiscalImpact: -0.14, affectedGroups: ["Rural households", "Network firms", "Taxpayers"] }),
-    option("targeted_rural_grants", "Targeted rural grants", "Retains grants for unserved rural and remote communities.", "Broadband Access Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Rural households", "Network firms", "Local governments"] }),
-    option("public_open_access_network", "Public open-access network", "Builds public fiber infrastructure leased on equal terms to retail providers.", "National Open Network Bill", { direction: 0.85, fiscalImpact: 0.3, affectedGroups: ["Households", "Network workers", "Retail providers"], dimensionEffects: { economic: 0.75, authority: 0.35 } }),
-  ]),
-  variableProvision("PROV_ASYLUM_PROCESS", "ISS_IMMIGRATION", "Asylum procedure", "Applicants receive an interview, legal review and appeal while claims are processed", [
-    option("safe_country_summary_process", "Safe-country summary process", "Uses a shortened procedure for applicants from designated safe countries, with judicial review.", "Safe Country Procedure Bill", { direction: -0.7, fiscalImpact: -0.06, affectedGroups: ["Asylum seekers", "Border officials", "Courts"], dimensionEffects: { social: -0.55, authority: 0.45, globalism: -0.4 } }),
-    option("standard_review", "Standard review", "Retains an interview, legal review and appeal during processing.", "Asylum Procedure Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Asylum seekers", "Caseworkers", "Courts"] }),
-    option("independent_case_agency", "Independent case agency", "Transfers initial decisions to an independent agency with published timeliness standards.", "Independent Asylum Decisions Bill", { direction: 0.3, fiscalImpact: 0.08, affectedGroups: ["Asylum seekers", "Caseworkers", "Courts"], dimensionEffects: { social: 0.2, authority: -0.25 } }),
-    option("right_to_work_after_six_months", "Work rights after six months", "Allows applicants to work when a first decision has not been made within six months.", "Asylum Applicant Work Rights Bill", { direction: 0.65, fiscalImpact: 0.03, affectedGroups: ["Asylum seekers", "Employers", "Local services"], dimensionEffects: { social: 0.45, economic: -0.1, globalism: 0.35 } }),
-  ]),
-  variableProvision("PROV_ELECTORAL_FORMULA", "ISS_REFORM", "Assembly electoral formula", "Multi-member constituencies elect members by single transferable vote", [
-    option("closed_party_lists", "Closed provincial lists", "Replaces constituency STV with closed provincial party lists.", "Provincial List Elections Bill", { direction: -0.2, fiscalImpact: -0.03, affectedGroups: ["Voters", "Political parties", "Election officials"], dimensionEffects: { authority: 0.55, social: -0.1 } }),
-    option("mixed_member_system", "Mixed-member system", "Elects half the Assembly locally and uses party lists to restore proportionality.", "Mixed Member Representation Bill", { direction: 0.25, fiscalImpact: 0.1, affectedGroups: ["Voters", "Candidates", "Political parties"], dimensionEffects: { authority: -0.2, social: 0.15 } }),
-    option("single_transferable_vote", "Single transferable vote", "Retains multi-member constituency elections by transferable vote.", "Electoral System Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Voters", "Candidates", "Election officials"] }),
-    option("national_compensatory_seats", "National compensatory seats", "Keeps constituency STV and adds a small national tier to correct severe disproportionality.", "Fair Representation Bill", { direction: 0.55, fiscalImpact: 0.12, affectedGroups: ["Voters", "Political parties", "Election officials"], dimensionEffects: { authority: -0.4, social: 0.2 } }),
-  ]),
-  variableProvision("PROV_FIREARMS_LICENSING", "ISS_POLICING", "Civilian firearms licensing", "Applicants pass background, training and safe-storage checks", [
-    option("basic_background_check", "Basic background check", "Removes mandatory training and renewals while retaining criminal-record checks.", "Firearms Licensing Reform Bill", { direction: -0.75, fiscalImpact: -0.04, affectedGroups: ["Firearms owners", "Police", "Communities"], dimensionEffects: { social: -0.45, authority: -0.55 } }),
-    option("training_and_storage_license", "Training and storage license", "Retains background, training, renewal and safe-storage requirements.", "Firearms Licensing Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Firearms owners", "Police", "Communities"] }),
-    option("permit_and_registration", "Permit and registration", "Adds registration and a demonstrated-need permit for restricted firearms.", "Firearms Safety Bill", { direction: 0.8, fiscalImpact: 0.08, affectedGroups: ["Firearms owners", "Police", "Communities"], dimensionEffects: { social: 0.45, authority: 0.65 } }),
-  ]),
-  variableProvision("PROV_FARMLAND_POLICY", "ISS_TRADE", "Agricultural land policy", "Provinces regulate conversion and foreign purchase of designated farmland", [
-    option("open_land_market", "Open land market", "Repeals national restrictions on large foreign purchases and leaves conversion rules to provinces.", "Agricultural Land Market Bill", { direction: -0.7, fiscalImpact: -0.03, affectedGroups: ["Farmers", "Landowners", "Investors"], dimensionEffects: { economic: -0.5, globalism: 0.55, authority: -0.35 } }),
-    option("provincial_land_controls", "Provincial land controls", "Retains provincial conversion rules and national review of large foreign purchases.", "Farmland Policy Continuity Bill", { direction: 0, magnitude: 0.2, fiscalImpact: 0, current: true, affectedGroups: ["Farmers", "Provinces", "Investors"] }),
-    option("working_farm_protection", "Working-farm protection", "Creates a national conservation covenant and right of first refusal for working farmers.", "Working Farmland Protection Bill", { direction: 0.7, fiscalImpact: 0.12, affectedGroups: ["Farmers", "Rural communities", "Landowners"], dimensionEffects: { economic: 0.35, nationalism: 0.4, green: 0.3 } }),
-  ]),
+  variableProvision(
+    "PROV_BARGAINING_SCOPE",
+    "ISS_LABOR",
+    "Collective bargaining coverage",
+    "Workplace bargaining with voluntary sector agreements",
+    [
+      option(
+        "workplace_agreements_only",
+        "Workplace agreements only",
+        "Ends statutory sector-wide bargaining and leaves agreements to individual workplaces.",
+        "Workplace Bargaining Bill",
+        {
+          direction: -1,
+          magnitude: 0.52,
+          fiscalImpact: -0.04,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+        },
+      ),
+      option(
+        "keep_current_coverage",
+        "Keep current coverage",
+        "Leaves existing workplace and voluntary sector agreements in force.",
+        "Collective Bargaining Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+        },
+      ),
+      option(
+        "sector_bargaining_standard",
+        "Sector bargaining standard",
+        "Creates binding sector bargaining councils for covered industries.",
+        "Sector Bargaining Standards Bill",
+        {
+          direction: 1,
+          magnitude: 0.58,
+          fiscalImpact: 0.08,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_CHILD_BENEFIT",
+    "ISS_WELFARE",
+    "Child benefit eligibility",
+    "Income-tested benefit for low- and middle-income households",
+    [
+      option(
+        "narrow_eligibility",
+        "Narrow eligibility",
+        "Limits the child benefit to low-income households.",
+        "Child Benefit Targeting Bill",
+        {
+          direction: -1,
+          magnitude: 0.57,
+          fiscalImpact: -0.12,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "keep_income_test",
+        "Keep income test",
+        "Retains the present income-tested child benefit.",
+        "Family Support Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "universal_benefit",
+        "Universal benefit",
+        "Pays the child benefit to every household with eligible children.",
+        "Universal Child Benefit Bill",
+        {
+          direction: 1,
+          magnitude: 0.62,
+          fiscalImpact: 0.22,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_RAIL_OWNERSHIP",
+    "ISS_OWNERSHIP",
+    "National rail ownership",
+    "Mixed public infrastructure and private train operations",
+    [
+      option(
+        "private_concessions",
+        "Private concessions",
+        "Moves passenger operations to long-term private concessions.",
+        "Passenger Rail Concessions Bill",
+        {
+          direction: -1,
+          magnitude: 0.62,
+          fiscalImpact: -0.12,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+        },
+      ),
+      option(
+        "keep_mixed_system",
+        "Keep mixed system",
+        "Retains public infrastructure and private train operations.",
+        "Rail Operations Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+        },
+      ),
+      option(
+        "public_operator",
+        "Public operator",
+        "Creates one public operator for interprovincial passenger rail.",
+        "National Passenger Rail Bill",
+        {
+          direction: 1,
+          magnitude: 0.66,
+          fiscalImpact: 0.18,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_STRATEGIC_TARIFFS",
+    "ISS_TRADE",
+    "Strategic import safeguards",
+    "Cabinet may impose temporary safeguards after an injury finding",
+    [
+      option(
+        "end_safeguard_power",
+        "End safeguard power",
+        "Repeals the temporary safeguard process for industrial imports.",
+        "Open Markets Bill",
+        {
+          direction: -1,
+          magnitude: 0.67,
+          fiscalImpact: -0.08,
+          affectedGroups: groupsForIssue("ISS_TRADE"),
+        },
+      ),
+      option(
+        "keep_injury_test",
+        "Keep injury test",
+        "Retains temporary safeguards after an independent injury finding.",
+        "Trade Safeguards Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_TRADE"),
+        },
+      ),
+      option(
+        "broaden_safeguards",
+        "Broaden safeguards",
+        "Allows safeguards for designated strategic industries before severe injury occurs.",
+        "Strategic Industries Safeguards Bill",
+        {
+          direction: 1,
+          magnitude: 0.7,
+          fiscalImpact: 0.12,
+          affectedGroups: groupsForIssue("ISS_TRADE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_HOUSING_APPROVALS",
+    "ISS_HOUSING",
+    "Housing approval rules",
+    "Provinces set approval rules within national safety law",
+    [
+      option(
+        "province_discretion",
+        "Province discretion",
+        "Removes national housing-supply deadlines and leaves approvals to provinces.",
+        "Provincial Planning Freedom Bill",
+        {
+          direction: -1,
+          magnitude: 0.52,
+          fiscalImpact: -0.05,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+        },
+      ),
+      option(
+        "keep_current_rules",
+        "Keep current rules",
+        "Retains provincial approvals under national safety law.",
+        "Planning Administration Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+        },
+      ),
+      option(
+        "supply_deadlines",
+        "Supply deadlines",
+        "Requires large cities to decide qualifying housing applications within fixed deadlines.",
+        "Housing Approvals and Supply Bill",
+        {
+          direction: 1,
+          magnitude: 0.74,
+          fiscalImpact: 0.16,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_CLEAN_POWER",
+    "ISS_CLIMATE",
+    "Electricity clean-power standard",
+    "Utilities follow a gradual national clean-power schedule",
+    [
+      option(
+        "reliability_deferral",
+        "Reliability deferral",
+        "Suspends the next clean-power requirement for four years while prioritizing grid reliability investments.",
+        "Energy Reliability Deferral Bill",
+        {
+          direction: -1,
+          magnitude: 0.57,
+          fiscalImpact: -0.08,
+          affectedGroups: groupsForIssue("ISS_CLIMATE"),
+        },
+      ),
+      option(
+        "keep_current_schedule",
+        "Keep current schedule",
+        "Retains the current clean-power timetable.",
+        "Clean Power Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_CLIMATE"),
+        },
+      ),
+      option(
+        "grid_and_deadline_package",
+        "Grid and deadline package",
+        "Advances the next two clean-power deadlines and funds transmission connections for new clean capacity.",
+        "Clean Electricity Acceleration Bill",
+        {
+          direction: 1,
+          magnitude: 0.58,
+          fiscalImpact: 0.2,
+          affectedGroups: groupsForIssue("ISS_CLIMATE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_REPRODUCTIVE_LAW",
+    "ISS_LIBERTY",
+    "Reproductive health law",
+    "National law permits abortion within a statutory time limit",
+    [
+      option(
+        "province_discretion",
+        "Province discretion",
+        "Allows each province to set abortion law, subject to emergency-care protections.",
+        "Provincial Reproductive Law Bill",
+        {
+          direction: -1,
+          magnitude: 0.62,
+          fiscalImpact: null,
+          affectedGroups: groupsForIssue("ISS_LIBERTY"),
+        },
+      ),
+      option(
+        "keep_statutory_limit",
+        "Keep statutory limit",
+        "Retains the existing national time limit and medical exceptions.",
+        "Reproductive Health Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: null,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_LIBERTY"),
+        },
+      ),
+      option(
+        "national_protection",
+        "National protection",
+        "Guarantees lawful abortion access through the national statutory limit in every province.",
+        "Reproductive Health Protection Bill",
+        {
+          direction: 1,
+          magnitude: 0.62,
+          fiscalImpact: 0.05,
+          affectedGroups: groupsForIssue("ISS_LIBERTY"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_RESIDENCY_PATH",
+    "ISS_IMMIGRATION",
+    "Permanent residency eligibility",
+    "Five-year lawful-residence route with language and civic requirements",
+    [
+      option(
+        "points_and_sponsorship",
+        "Points and sponsorship",
+        "Replaces the residence clock with a points table plus employer or family sponsorship.",
+        "Skilled Residency Points Bill",
+        {
+          direction: -1,
+          magnitude: 0.67,
+          fiscalImpact: -0.03,
+          affectedGroups: groupsForIssue("ISS_IMMIGRATION"),
+        },
+      ),
+      option(
+        "keep_five_year_route",
+        "Keep five-year route",
+        "Retains the present five-year route and civic requirements.",
+        "Residency Law Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_IMMIGRATION"),
+        },
+      ),
+      option(
+        "earned_settlement_track",
+        "Earned settlement track",
+        "Creates a three-year settlement track for applicants meeting continuous work, language and civic tests.",
+        "Earned Settlement Bill",
+        {
+          direction: 1,
+          magnitude: 0.66,
+          fiscalImpact: 0.04,
+          affectedGroups: groupsForIssue("ISS_IMMIGRATION"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_POLICE_COMPLAINTS",
+    "ISS_POLICING",
+    "Police misconduct review",
+    "Provincial bodies investigate complaints under national minimum standards",
+    [
+      option(
+        "independent_review",
+        "Independent review",
+        "Creates an independent national inspector with power to reopen serious cases.",
+        "Independent Police Review Bill",
+        {
+          direction: -1,
+          magnitude: 0.52,
+          fiscalImpact: 0.09,
+          affectedGroups: groupsForIssue("ISS_POLICING"),
+        },
+      ),
+      option(
+        "keep_provincial_review",
+        "Keep provincial review",
+        "Retains provincial review bodies and national minimum standards.",
+        "Police Review Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_POLICING"),
+        },
+      ),
+      option(
+        "internal_review",
+        "Internal review",
+        "Returns ordinary misconduct investigations to police internal-affairs units.",
+        "Police Discipline Bill",
+        {
+          direction: 1,
+          magnitude: 0.7,
+          fiscalImpact: -0.04,
+          affectedGroups: groupsForIssue("ISS_POLICING"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_REVENUE_DISCRETION",
+    "ISS_DECENT",
+    "Provincial revenue authority",
+    "Provinces may levy a limited property surcharge",
+    [
+      option(
+        "national_uniformity",
+        "National uniformity",
+        "Repeals the provincial property surcharge and replaces it with a national transfer formula.",
+        "National Revenue Uniformity Bill",
+        {
+          direction: -1,
+          magnitude: 0.57,
+          fiscalImpact: -0.06,
+          affectedGroups: groupsForIssue("ISS_DECENT"),
+        },
+      ),
+      option(
+        "keep_limited_surcharge",
+        "Keep limited surcharge",
+        "Retains the present provincial property-surcharge authority.",
+        "Provincial Revenue Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_DECENT"),
+        },
+      ),
+      option(
+        "broader_local_authority",
+        "Broader local authority",
+        "Allows provinces to vary the surcharge within a wider statutory band.",
+        "Provincial Revenue Powers Bill",
+        {
+          direction: 1,
+          magnitude: 0.74,
+          fiscalImpact: 0.03,
+          affectedGroups: groupsForIssue("ISS_DECENT"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_EMERGENCY_RENEWAL",
+    "ISS_EXEC",
+    "Emergency-power renewal",
+    "Assembly approval is required after the initial emergency period",
+    [
+      option(
+        "standing_oversight_panel",
+        "Standing oversight panel",
+        "Creates a multiparty Assembly panel that must renew emergency powers every seven days.",
+        "Emergency Oversight Panel Bill",
+        {
+          direction: -1,
+          magnitude: 0.62,
+          fiscalImpact: null,
+          affectedGroups: groupsForIssue("ISS_EXEC"),
+        },
+      ),
+      option(
+        "keep_current_renewal",
+        "Keep current renewal",
+        "Retains the existing Assembly renewal deadline.",
+        "Emergency Administration Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: null,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_EXEC"),
+        },
+      ),
+      option(
+        "cabinet_continuity_window",
+        "Cabinet continuity window",
+        "Allows Cabinet to maintain designated emergency measures for a longer initial window before a floor vote.",
+        "Emergency Continuity Bill",
+        {
+          direction: 1,
+          magnitude: 0.58,
+          fiscalImpact: null,
+          affectedGroups: groupsForIssue("ISS_EXEC"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_DONOR_DISCLOSURE",
+    "ISS_REFORM",
+    "Campaign donor disclosure",
+    "Large donations are published during the campaign",
+    [
+      option(
+        "annual_disclosure",
+        "Annual disclosure",
+        "Moves large-donor publication to one annual filing after the election.",
+        "Campaign Reporting Bill",
+        {
+          direction: -1,
+          magnitude: 0.67,
+          fiscalImpact: -0.02,
+          affectedGroups: groupsForIssue("ISS_REFORM"),
+        },
+      ),
+      option(
+        "keep_current_disclosure",
+        "Keep current disclosure",
+        "Retains campaign-period publication of large donations.",
+        "Election Disclosure Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_REFORM"),
+        },
+      ),
+      option(
+        "rapid_disclosure",
+        "Rapid disclosure",
+        "Requires publication of large donations within five working days.",
+        "Rapid Campaign Disclosure Bill",
+        {
+          direction: 1,
+          magnitude: 0.62,
+          fiscalImpact: 0.04,
+          affectedGroups: groupsForIssue("ISS_REFORM"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_CONCORD_PROCUREMENT",
+    "ISS_CONCORD",
+    "Concord defense procurement",
+    "Lorsain may join projects after separate Cabinet approval",
+    [
+      option(
+        "domestic_preference",
+        "Domestic preference",
+        "Requires a domestic-source preference for major defense procurement.",
+        "Defense Procurement Preference Bill",
+        {
+          direction: -1,
+          magnitude: 0.52,
+          fiscalImpact: -0.04,
+          affectedGroups: groupsForIssue("ISS_CONCORD"),
+        },
+      ),
+      option(
+        "keep_project_review",
+        "Keep project review",
+        "Retains project-by-project participation after Cabinet review.",
+        "Defense Cooperation Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_CONCORD"),
+        },
+      ),
+      option(
+        "joint_procurement",
+        "Joint procurement",
+        "Authorizes a standing framework for joint Concord procurement.",
+        "Concord Joint Procurement Bill",
+        {
+          direction: 1,
+          magnitude: 0.66,
+          fiscalImpact: 0.08,
+          affectedGroups: groupsForIssue("ISS_CONCORD"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_VASKARA_SANCTIONS",
+    "ISS_VASKARA",
+    "Vaskara sanctions authority",
+    "Targeted sanctions require a published executive finding",
+    [
+      option(
+        "officials_only_list",
+        "Officials-only list",
+        "Limits new sanctions to named security officials and military suppliers.",
+        "Targeted Sanctions Limitation Bill",
+        {
+          direction: -1,
+          magnitude: 0.57,
+          fiscalImpact: null,
+          affectedGroups: groupsForIssue("ISS_VASKARA"),
+        },
+      ),
+      option(
+        "keep_finding_process",
+        "Keep finding process",
+        "Retains targeted sanctions after a published executive finding.",
+        "Sanctions Procedure Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: null,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_VASKARA"),
+        },
+      ),
+      option(
+        "strategic_exporter_list",
+        "Strategic exporter list",
+        "Adds state banks and strategic exporters to the available sanctions list.",
+        "Vaskara Strategic Sanctions Bill",
+        {
+          direction: 1,
+          magnitude: 0.7,
+          fiscalImpact: null,
+          affectedGroups: groupsForIssue("ISS_VASKARA"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_READINESS_FUND",
+    "ISS_DEFENSE",
+    "Defense readiness appropriation",
+    "Readiness funding follows the enacted annual budget",
+    [
+      option(
+        "deferred_maintenance_freeze",
+        "Deferred maintenance freeze",
+        "Freezes new equipment orders and limits spending to sustainment of existing stocks for two years.",
+        "Defense Sustainment Freeze Bill",
+        {
+          direction: -1,
+          magnitude: 0.62,
+          fiscalImpact: -0.16,
+          affectedGroups: groupsForIssue("ISS_DEFENSE"),
+        },
+      ),
+      option(
+        "keep_current_funding",
+        "Keep current funding",
+        "Retains the current equipment-readiness appropriation.",
+        "Readiness Funding Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_DEFENSE"),
+        },
+      ),
+      option(
+        "reserves_and_stockpile_plan",
+        "Reserves and stockpile plan",
+        "Funds a four-year plan for maintenance, trained reserves and munitions stockpiles.",
+        "Defense Stockpile and Reserves Bill",
+        {
+          direction: 1,
+          magnitude: 0.74,
+          fiscalImpact: 0.24,
+          affectedGroups: groupsForIssue("ISS_DEFENSE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_PRIMARY_CARE",
+    "ISS_WELFARE",
+    "Primary care coverage",
+    "National insurance covers essential primary care with limited copayments",
+    [
+      option(
+        "visit_fee_schedule",
+        "Visit fee schedule",
+        "Introduces a published fee schedule for routine visits while preserving hardship exemptions.",
+        "Primary Care Fee Schedule Bill",
+        {
+          direction: -1,
+          magnitude: 0.67,
+          fiscalImpact: -0.12,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "keep_current_coverage",
+        "Keep current coverage",
+        "Retains existing primary-care benefits and copayments.",
+        "Primary Care Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "capitation_and_clinics",
+        "Capitation and clinics",
+        "Pays clinics by enrolled patients and removes routine visit fees, with rural clinic grants.",
+        "Primary Care Capitation Bill",
+        {
+          direction: 1,
+          magnitude: 0.58,
+          fiscalImpact: 0.24,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_TUITION_SUPPORT",
+    "ISS_WELFARE",
+    "Public university tuition",
+    "Students pay capped tuition with income-tested grants",
+    [
+      option(
+        "higher_tuition_cap",
+        "Higher tuition cap",
+        "Raises the tuition cap and narrows income-tested grants.",
+        "University Finance Bill",
+        {
+          direction: -1,
+          magnitude: 0.52,
+          fiscalImpact: -0.15,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "keep_capped_tuition",
+        "Keep capped tuition",
+        "Retains the current tuition cap and grant rules.",
+        "Higher Education Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "tuition_free_first_degree",
+        "Tuition-free first degree",
+        "Funds a tuition-free first undergraduate degree at public universities.",
+        "Public University Access Bill",
+        {
+          direction: 1,
+          magnitude: 0.62,
+          fiscalImpact: 0.28,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_INCOME_TAX",
+    "ISS_WELFARE",
+    "Top income-tax rate",
+    "A progressive national schedule applies to personal income",
+    [
+      option(
+        "broader_base_lower_top",
+        "Broader base, lower top",
+        "Lowers the top rate while closing major deductions used by high earners.",
+        "Income Tax Base Broadening Bill",
+        {
+          direction: -1,
+          magnitude: 0.57,
+          fiscalImpact: -0.2,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "keep_current_schedule",
+        "Keep current schedule",
+        "Retains the current progressive income-tax schedule.",
+        "Income Tax Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "millionaire_surtax",
+        "Millionaire surtax",
+        "Adds a surtax on the highest income band and publishes the yield for Assembly budgeting.",
+        "High Income Surtax Bill",
+        {
+          direction: 1,
+          magnitude: 0.66,
+          fiscalImpact: 0.18,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_UNEMPLOYMENT_INSURANCE",
+    "ISS_WELFARE",
+    "Unemployment insurance duration",
+    "Benefits are earnings-related for a fixed insured period",
+    [
+      option(
+        "shorter_insured_period",
+        "Shorter insured period",
+        "Shortens the standard insured benefit period by twelve weeks.",
+        "Employment Insurance Targeting Bill",
+        {
+          direction: -1,
+          magnitude: 0.62,
+          fiscalImpact: -0.11,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "keep_current_duration",
+        "Keep current duration",
+        "Retains the present insured benefit period.",
+        "Employment Insurance Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "extended_downturn_benefit",
+        "Extended downturn benefit",
+        "Adds twelve weeks of benefits when provincial unemployment rises sharply.",
+        "Employment Security Bill",
+        {
+          direction: 1,
+          magnitude: 0.7,
+          fiscalImpact: 0.2,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_UNION_RECOGNITION",
+    "ISS_LABOR",
+    "Union recognition",
+    "Recognition normally follows a supervised workplace ballot",
+    [
+      option(
+        "voluntary_recognition",
+        "Voluntary recognition",
+        "Allows an employer to recognize a union without a statutory process.",
+        "Voluntary Recognition Bill",
+        {
+          direction: -1,
+          magnitude: 0.67,
+          fiscalImpact: null,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+        },
+      ),
+      option(
+        "mandatory_ballot",
+        "Mandatory ballot",
+        "Retains the supervised workplace ballot for recognition.",
+        "Union Ballot Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: null,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+        },
+      ),
+      option(
+        "majority_sign_up",
+        "Majority sign-up",
+        "Requires recognition when a verified majority signs union cards.",
+        "Majority Sign-Up Bill",
+        {
+          direction: 1,
+          magnitude: 0.74,
+          fiscalImpact: 0.03,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_STRIKE_NOTICE",
+    "ISS_LABOR",
+    "Strike notice",
+    "Unions must give seven days' notice before protected action",
+    [
+      option(
+        "cooling_off_and_ballot",
+        "Cooling-off and ballot",
+        "Requires a supervised ballot plus a fourteen-day cooling-off period before protected action.",
+        "Industrial Action Procedure Bill",
+        {
+          direction: -1,
+          magnitude: 0.52,
+          fiscalImpact: -0.02,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+        },
+      ),
+      option(
+        "keep_seven_days",
+        "Keep seven days",
+        "Retains the seven-day notice requirement.",
+        "Strike Notice Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+        },
+      ),
+      option(
+        "rolling_notice_window",
+        "Rolling notice window",
+        "Allows a three-day rolling notice window once a lawful ballot has authorized action for ninety days.",
+        "Protected Action Flexibility Bill",
+        {
+          direction: 1,
+          magnitude: 0.58,
+          fiscalImpact: 0.03,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_PUBLIC_HOUSING",
+    "ISS_HOUSING",
+    "Public housing fund",
+    "The national fund co-finances provincial social housing",
+    [
+      option(
+        "voucher_shift",
+        "Voucher shift",
+        "Converts part of capital grants into portable rental vouchers for three years.",
+        "Housing Voucher Priority Bill",
+        {
+          direction: -1,
+          magnitude: 0.57,
+          fiscalImpact: -0.1,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+        },
+      ),
+      option(
+        "keep_current_fund",
+        "Keep current fund",
+        "Retains current public-housing capital grants.",
+        "Public Housing Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+        },
+      ),
+      option(
+        "build_to_rent_program",
+        "Build-to-rent program",
+        "Funds a five-year provincial build-to-rent program with public equity stakes.",
+        "Public Build-to-Rent Bill",
+        {
+          direction: 1,
+          magnitude: 0.62,
+          fiscalImpact: 0.3,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_TRANSIT_ZONING",
+    "ISS_HOUSING",
+    "Transit-oriented development grants",
+    "Cities may seek grants for housing near major transit",
+    [
+      option(
+        "end_density_grants",
+        "End density grants",
+        "Ends national grants tied to housing density near transit stations.",
+        "Local Planning Bill",
+        {
+          direction: -1,
+          magnitude: 0.62,
+          fiscalImpact: -0.04,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+        },
+      ),
+      option(
+        "keep_voluntary_grants",
+        "Keep voluntary grants",
+        "Retains voluntary grants for transit-oriented housing plans.",
+        "Transit Housing Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+        },
+      ),
+      option(
+        "priority_density_grants",
+        "Priority density grants",
+        "Prioritizes infrastructure grants for cities permitting more homes near transit.",
+        "Transit-Oriented Housing Bill",
+        {
+          direction: 1,
+          magnitude: 0.66,
+          fiscalImpact: 0.16,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_INFRASTRUCTURE_BANK",
+    "ISS_OWNERSHIP",
+    "National infrastructure finance",
+    "Large projects use ordinary appropriations and private lending",
+    [
+      option(
+        "private_project_finance",
+        "Private project finance",
+        "Requires qualifying infrastructure projects to seek private finance first.",
+        "Infrastructure Finance Bill",
+        {
+          direction: -1,
+          magnitude: 0.67,
+          fiscalImpact: -0.08,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+        },
+      ),
+      option(
+        "keep_current_finance",
+        "Keep current finance",
+        "Retains ordinary appropriations and project lending.",
+        "Infrastructure Finance Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+        },
+      ),
+      option(
+        "public_infrastructure_bank",
+        "Public infrastructure bank",
+        "Creates a public bank for long-term transport, water and energy loans.",
+        "National Infrastructure Bank Bill",
+        {
+          direction: 1,
+          magnitude: 0.7,
+          fiscalImpact: 0.22,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_FARM_STABILIZATION",
+    "ISS_TRADE",
+    "Farm income stabilization",
+    "Emergency farm support requires a declared market disruption",
+    [
+      option(
+        "market_insurance_only",
+        "Market insurance only",
+        "Replaces emergency price support with privately delivered crop insurance.",
+        "Agricultural Risk Bill",
+        {
+          direction: -1,
+          magnitude: 0.52,
+          fiscalImpact: -0.08,
+          affectedGroups: groupsForIssue("ISS_TRADE"),
+        },
+      ),
+      option(
+        "keep_emergency_support",
+        "Keep emergency support",
+        "Retains support after a declared market disruption.",
+        "Farm Support Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_TRADE"),
+        },
+      ),
+      option(
+        "stabilization_payments",
+        "Stabilization payments",
+        "Creates temporary payments when designated farm prices fall below a published benchmark.",
+        "Farm Income Stabilization Bill",
+        {
+          direction: 1,
+          magnitude: 0.74,
+          fiscalImpact: 0.18,
+          affectedGroups: groupsForIssue("ISS_TRADE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_CARBON_PRICE",
+    "ISS_CLIMATE",
+    "Industrial carbon price",
+    "Large emitters pay a nationally administered carbon levy",
+    [
+      option(
+        "repeal_industrial_levy",
+        "Repeal industrial levy",
+        "Repeals the carbon levy for large industrial emitters.",
+        "Industrial Energy Cost Bill",
+        {
+          direction: -1,
+          magnitude: 0.57,
+          fiscalImpact: -0.1,
+          affectedGroups: groupsForIssue("ISS_CLIMATE"),
+        },
+      ),
+      option(
+        "keep_current_levy",
+        "Keep current levy",
+        "Retains the current levy and rebate schedule.",
+        "Carbon Pricing Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_CLIMATE"),
+        },
+      ),
+      option(
+        "raise_and_rebate",
+        "Raise and rebate",
+        "Raises the levy on large emitters and returns part of the revenue to households.",
+        "Carbon Levy and Rebate Bill",
+        {
+          direction: 1,
+          magnitude: 0.58,
+          fiscalImpact: 0.16,
+          affectedGroups: groupsForIssue("ISS_CLIMATE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_SURVEILLANCE_WARRANT",
+    "ISS_LIBERTY",
+    "Digital surveillance warrants",
+    "Police need a judicial warrant to obtain private communications",
+    [
+      option(
+        "emergency_access_window",
+        "Emergency access window",
+        "Allows temporary access before a warrant in narrowly defined emergencies.",
+        "Emergency Communications Access Bill",
+        {
+          direction: -1,
+          magnitude: 0.62,
+          fiscalImpact: null,
+          affectedGroups: groupsForIssue("ISS_LIBERTY"),
+        },
+      ),
+      option(
+        "keep_prior_warrant",
+        "Keep prior warrant",
+        "Retains the prior judicial-warrant requirement.",
+        "Communications Privacy Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: null,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_LIBERTY"),
+        },
+      ),
+      option(
+        "stricter_warrant_test",
+        "Stricter warrant test",
+        "Requires a heightened necessity finding for bulk or location surveillance.",
+        "Digital Privacy Safeguards Bill",
+        {
+          direction: 1,
+          magnitude: 0.62,
+          fiscalImpact: 0.03,
+          affectedGroups: groupsForIssue("ISS_LIBERTY"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_SENTENCING",
+    "ISS_POLICING",
+    "Serious repeat-offense sentencing",
+    "Judges apply statutory ranges with stated reasons for departure",
+    [
+      option(
+        "expanded_rehabilitation",
+        "Expanded rehabilitation",
+        "Expands treatment and supervised-release alternatives within statutory ranges.",
+        "Sentencing Rehabilitation Bill",
+        {
+          direction: -1,
+          magnitude: 0.67,
+          fiscalImpact: 0.08,
+          affectedGroups: groupsForIssue("ISS_POLICING"),
+        },
+      ),
+      option(
+        "keep_judicial_ranges",
+        "Keep judicial ranges",
+        "Retains current sentencing ranges and reasoned departures.",
+        "Sentencing Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.06,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_POLICING"),
+        },
+      ),
+      option(
+        "mandatory_minimum_term",
+        "Mandatory minimum term",
+        "Sets a minimum custodial term for defined serious repeat offenses.",
+        "Repeat Offender Sentencing Bill",
+        {
+          direction: 1,
+          magnitude: 0.66,
+          fiscalImpact: -0.06,
+          affectedGroups: groupsForIssue("ISS_POLICING"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_ELECTION_ADMIN",
+    "ISS_REFORM",
+    "National election administration",
+    "A national commission sets standards while provinces staff polling",
+    [
+      option(
+        "province_run_standards",
+        "Province-run standards",
+        "Returns polling standards and administration to provincial election offices.",
+        "Provincial Elections Administration Bill",
+        {
+          direction: -1,
+          magnitude: 0.52,
+          fiscalImpact: -0.04,
+          affectedGroups: groupsForIssue("ISS_REFORM"),
+        },
+      ),
+      option(
+        "keep_shared_administration",
+        "Keep shared administration",
+        "Retains national standards with provincial staffing.",
+        "Election Administration Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.08,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_REFORM"),
+        },
+      ),
+      option(
+        "independent_national_service",
+        "Independent national service",
+        "Creates an independent national service to administer federal polling directly.",
+        "Independent Elections Service Bill",
+        {
+          direction: 1,
+          magnitude: 0.7,
+          fiscalImpact: 0.1,
+          affectedGroups: groupsForIssue("ISS_REFORM"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_SCHOOL_MEALS",
+    "ISS_WELFARE",
+    "School meal eligibility",
+    "Subsidized meals are available through an income test",
+    [
+      option(
+        "narrow_income_test",
+        "Narrow income test",
+        "Limits subsidized school meals to the lowest income band.",
+        "School Meals Targeting Bill",
+        {
+          direction: -1,
+          magnitude: 0.57,
+          fiscalImpact: -0.07,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "keep_income_test",
+        "Keep income test",
+        "Retains current school-meal eligibility.",
+        "School Meals Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.1,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+      option(
+        "universal_school_meals",
+        "Universal school meals",
+        "Funds a meal for every pupil in participating public schools.",
+        "Universal School Meals Bill",
+        {
+          direction: 1,
+          magnitude: 0.74,
+          fiscalImpact: 0.15,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_HEALTH_INSURANCE_MODEL",
+    "ISS_WELFARE",
+    "Healthcare financing model",
+    "National insurance funds essential care through public and contracted providers",
+    [
+      option(
+        "regulated_private_insurance",
+        "Regulated private insurance",
+        "Replaces national insurance with mandatory regulated private plans and income-tested subsidies.",
+        "Health Insurance Choice Bill",
+        {
+          direction: -0.8,
+          fiscalImpact: -0.18,
+          affectedGroups: ["Patients", "Insurers", "Employers"],
+          dimensionEffects: { economic: -0.75, authority: -0.25 },
+        },
+      ),
+      option(
+        "nonprofit_insurance_funds",
+        "Nonprofit insurance funds",
+        "Creates competing nonprofit sickness funds under one national benefit schedule.",
+        "Nonprofit Health Funds Bill",
+        {
+          direction: -0.25,
+          fiscalImpact: 0.04,
+          affectedGroups: ["Patients", "Nonprofit funds", "Providers"],
+          dimensionEffects: { economic: -0.15, authority: 0.15 },
+        },
+      ),
+      option(
+        "national_insurance",
+        "National insurance",
+        "Retains national insurance with public and contracted providers.",
+        "Health Insurance Continuity Bill",
+        {
+          direction: 0.15,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Patients", "Providers", "Taxpayers"],
+          dimensionEffects: { economic: 0.2, authority: 0.1 },
+        },
+      ),
+      option(
+        "national_health_service",
+        "National health service",
+        "Moves core hospitals and primary care into one publicly operated national service.",
+        "National Health Service Bill",
+        {
+          direction: 0.9,
+          fiscalImpact: 0.34,
+          affectedGroups: ["Patients", "Health workers", "Taxpayers"],
+          dimensionEffects: { economic: 0.9, authority: 0.5 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_MEDICINE_PRICING",
+    "ISS_WELFARE",
+    "Prescription medicine purchasing",
+    "Insurers reimburse medicines after national price negotiation",
+    [
+      option(
+        "market_pricing",
+        "Market pricing",
+        "Ends national price negotiation and permits insurers to set separate formularies.",
+        "Medicines Market Bill",
+        {
+          direction: -0.8,
+          fiscalImpact: -0.1,
+          affectedGroups: ["Patients", "Drug makers", "Insurers"],
+        },
+      ),
+      option(
+        "reference_pricing",
+        "International reference pricing",
+        "Caps reimbursement using prices in comparable countries.",
+        "Fair Medicines Pricing Bill",
+        {
+          direction: 0.25,
+          fiscalImpact: -0.05,
+          affectedGroups: ["Patients", "Drug makers", "Insurers"],
+          dimensionEffects: { economic: 0.2, globalism: 0.35 },
+        },
+      ),
+      option(
+        "negotiated_prices",
+        "National negotiation",
+        "Retains national negotiation with separate insurer reimbursement.",
+        "Medicines Purchasing Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Patients", "Drug makers", "Insurers"],
+        },
+      ),
+      option(
+        "single_public_purchaser",
+        "Single public purchaser",
+        "Creates one public purchaser for covered prescription medicines.",
+        "National Medicines Purchasing Bill",
+        {
+          direction: 0.85,
+          fiscalImpact: 0.08,
+          affectedGroups: ["Patients", "Pharmacies", "Drug makers"],
+          dimensionEffects: { economic: 0.85, authority: 0.35 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_HOSPITAL_GOVERNANCE",
+    "ISS_WELFARE",
+    "Hospital governance",
+    "Public hospital boards operate within national funding standards",
+    [
+      option(
+        "contracted_hospital_networks",
+        "Contracted hospital networks",
+        "Allows provinces to contract regional hospital systems to nonprofit or private operators.",
+        "Hospital Networks Bill",
+        {
+          direction: -0.6,
+          fiscalImpact: -0.05,
+          affectedGroups: ["Patients", "Hospital staff", "Provincial governments"],
+          dimensionEffects: { economic: -0.45, authority: -0.3 },
+        },
+      ),
+      option(
+        "public_hospital_boards",
+        "Public hospital boards",
+        "Retains locally governed public hospital boards under national standards.",
+        "Hospital Governance Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Patients", "Hospital boards", "Provinces"],
+        },
+      ),
+      option(
+        "integrated_regional_authorities",
+        "Regional health authorities",
+        "Combines hospitals and community care under elected regional health authorities.",
+        "Regional Health Authorities Bill",
+        {
+          direction: 0.55,
+          fiscalImpact: 0.14,
+          affectedGroups: ["Patients", "Health workers", "Regional authorities"],
+          dimensionEffects: { economic: 0.35, authority: -0.25 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_CHILDCARE_MODEL",
+    "ISS_WELFARE",
+    "Early-childhood care",
+    "Income-tested childcare subsidies support licensed providers",
+    [
+      option(
+        "tax_credit",
+        "Childcare tax credit",
+        "Replaces direct subsidies with a refundable household tax credit.",
+        "Childcare Tax Credit Bill",
+        {
+          direction: -0.45,
+          fiscalImpact: -0.03,
+          affectedGroups: ["Parents", "Childcare providers", "Taxpayers"],
+        },
+      ),
+      option(
+        "income_tested_subsidy",
+        "Income-tested subsidy",
+        "Retains income-tested support for licensed childcare.",
+        "Childcare Support Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Parents", "Childcare providers", "Taxpayers"],
+        },
+      ),
+      option(
+        "universal_fee_cap",
+        "Universal fee cap",
+        "Caps fees for licensed childcare and reimburses providers for eligible places.",
+        "Affordable Childcare Bill",
+        {
+          direction: 0.55,
+          fiscalImpact: 0.2,
+          affectedGroups: ["Parents", "Children", "Childcare providers"],
+        },
+      ),
+      option(
+        "public_childcare_network",
+        "Public childcare network",
+        "Builds a national network of publicly operated early-childhood centers.",
+        "Early Childhood Service Bill",
+        {
+          direction: 0.9,
+          fiscalImpact: 0.38,
+          affectedGroups: ["Parents", "Children", "Childcare workers"],
+          dimensionEffects: { economic: 0.85, authority: 0.4 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_VOCATIONAL_TRAINING",
+    "ISS_LABOR",
+    "Vocational training governance",
+    "Employers, unions and colleges share apprenticeship standards",
+    [
+      option(
+        "employer_led_credentials",
+        "Employer-led credentials",
+        "Lets accredited employer groups set occupational credentials and training hours.",
+        "Skills Accreditation Bill",
+        {
+          direction: -0.55,
+          fiscalImpact: -0.06,
+          affectedGroups: ["Apprentices", "Employers", "Colleges"],
+        },
+      ),
+      option(
+        "tripartite_apprenticeships",
+        "Tripartite apprenticeships",
+        "Retains joint employer, union and college apprenticeship standards.",
+        "Apprenticeship Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Apprentices", "Employers", "Trade unions"],
+        },
+      ),
+      option(
+        "public_training_guarantee",
+        "Public training guarantee",
+        "Guarantees a funded training place to young adults not in work or education.",
+        "Training Guarantee Bill",
+        {
+          direction: 0.75,
+          fiscalImpact: 0.24,
+          affectedGroups: ["Young adults", "Colleges", "Employers"],
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_MINIMUM_WAGE",
+    "ISS_LABOR",
+    "Minimum-wage setting",
+    "An independent commission recommends annual adjustments",
+    [
+      option(
+        "province_minimums",
+        "Provincial minimums",
+        "Ends the national floor and leaves minimum wages to Provincial Assemblies.",
+        "Provincial Wage Standards Bill",
+        {
+          direction: -0.65,
+          fiscalImpact: -0.02,
+          affectedGroups: ["Low-wage workers", "Employers", "Provinces"],
+          dimensionEffects: { economic: -0.4, authority: -0.6 },
+        },
+      ),
+      option(
+        "commission_recommendation",
+        "Commission recommendation",
+        "Retains annual recommendations from the independent wage commission.",
+        "Minimum Wage Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Low-wage workers", "Employers", "Wage commission"],
+        },
+      ),
+      option(
+        "wage_indexation",
+        "Wage indexation",
+        "Indexes the national minimum to median wages with an emergency review clause.",
+        "Fair Wage Indexation Bill",
+        {
+          direction: 0.55,
+          fiscalImpact: 0.04,
+          affectedGroups: ["Low-wage workers", "Employers", "Consumers"],
+        },
+      ),
+      option(
+        "living_wage_floor",
+        "Living-wage floor",
+        "Raises the floor toward a published household living-cost benchmark over three years.",
+        "Living Wage Bill",
+        {
+          direction: 0.9,
+          fiscalImpact: 0.1,
+          affectedGroups: ["Low-wage workers", "Employers", "Households"],
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_PLATFORM_WORK",
+    "ISS_LABOR",
+    "Platform-worker status",
+    "Status is decided case by case under the ordinary employment test",
+    [
+      option(
+        "independent_contractor_safe_harbor",
+        "Contractor safe harbor",
+        "Treats platform workers as contractors when written flexibility conditions are met.",
+        "Independent Platform Work Bill",
+        {
+          direction: -0.75,
+          fiscalImpact: -0.04,
+          affectedGroups: ["Platform workers", "Digital platforms", "Consumers"],
+        },
+      ),
+      option(
+        "case_by_case_test",
+        "Case-by-case test",
+        "Retains the ordinary employment-status test for platform work.",
+        "Platform Work Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Platform workers", "Digital platforms", "Courts"],
+        },
+      ),
+      option(
+        "employee_presumption",
+        "Employee presumption",
+        "Presumes employee status unless a platform proves genuine independent enterprise.",
+        "Platform Worker Protections Bill",
+        {
+          direction: 0.8,
+          fiscalImpact: 0.05,
+          affectedGroups: ["Platform workers", "Digital platforms", "Labor inspectors"],
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_PAID_LEAVE",
+    "ISS_LABOR",
+    "Paid family leave",
+    "Twelve weeks of earnings-related leave are financed through social insurance",
+    [
+      option(
+        "employer_leave",
+        "Employer-funded leave",
+        "Replaces social insurance with a minimum employer-funded leave duty.",
+        "Family Leave Responsibility Bill",
+        {
+          direction: -0.55,
+          fiscalImpact: -0.12,
+          affectedGroups: ["Parents", "Employers", "Workers"],
+        },
+      ),
+      option(
+        "twelve_week_insurance",
+        "Twelve-week insurance",
+        "Retains twelve weeks of earnings-related social-insurance leave.",
+        "Family Leave Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Parents", "Employers", "Workers"],
+        },
+      ),
+      option(
+        "sixteen_week_insurance",
+        "Sixteen-week insurance",
+        "Extends insured family leave to sixteen weeks.",
+        "Family Leave Extension Bill",
+        {
+          direction: 0.5,
+          fiscalImpact: 0.14,
+          affectedGroups: ["Parents", "Children", "Employers"],
+        },
+      ),
+      option(
+        "shared_parental_year",
+        "Shared parental year",
+        "Creates a year of shared leave with reserved periods for each parent.",
+        "Shared Parental Leave Bill",
+        {
+          direction: 0.9,
+          fiscalImpact: 0.32,
+          affectedGroups: ["Parents", "Children", "Employers"],
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_RENT_POLICY",
+    "ISS_HOUSING",
+    "Rent stabilization",
+    "Cities may cap annual increases in designated high-pressure areas",
+    [
+      option(
+        "market_rents",
+        "Market rents",
+        "Repeals local rent-increase caps while preserving notice and habitability rules.",
+        "Rental Market Bill",
+        {
+          direction: -0.8,
+          fiscalImpact: -0.03,
+          affectedGroups: ["Renters", "Landlords", "Cities"],
+        },
+      ),
+      option(
+        "pressure_area_caps",
+        "High-pressure area caps",
+        "Retains local caps in designated high-pressure housing areas.",
+        "Rent Stabilization Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Renters", "Landlords", "Cities"],
+        },
+      ),
+      option(
+        "national_rent_stabilization",
+        "National stabilization rule",
+        "Limits annual increases for existing tenancies nationwide, with renovation exemptions.",
+        "National Rent Stabilization Bill",
+        {
+          direction: 0.8,
+          fiscalImpact: 0.08,
+          affectedGroups: ["Renters", "Landlords", "Housing agencies"],
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_LAND_VALUE_TAX",
+    "ISS_HOUSING",
+    "Land taxation",
+    "Local property tax applies to assessed land and buildings",
+    [
+      option(
+        "building_value_tax",
+        "Property-value tax",
+        "Retains taxation of both land and buildings under local assessment.",
+        "Property Tax Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Property owners", "Municipalities", "Developers"],
+        },
+      ),
+      option(
+        "split_rate_tax",
+        "Split-rate tax",
+        "Taxes land at a higher rate than buildings to discourage vacant and underused sites.",
+        "Productive Land Tax Bill",
+        {
+          direction: 0.35,
+          fiscalImpact: -0.03,
+          affectedGroups: ["Landowners", "Developers", "Municipalities"],
+          dimensionEffects: { economic: 0.25, authority: -0.1 },
+        },
+      ),
+      option(
+        "land_value_tax",
+        "Land-value tax",
+        "Replaces the building-value charge with a tax on unimproved site value.",
+        "Land Value Tax Bill",
+        {
+          direction: 0.65,
+          fiscalImpact: -0.08,
+          affectedGroups: ["Landowners", "Developers", "Municipalities"],
+          dimensionEffects: { economic: 0.45, authority: -0.15 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_INHERITANCE_TAX",
+    "ISS_WELFARE",
+    "Inheritance taxation",
+    "Large estates pay tax above a protected family allowance",
+    [
+      option(
+        "repeal_estate_tax",
+        "Repeal estate tax",
+        "Repeals inheritance tax and retains ordinary capital-gains rules on inherited assets.",
+        "Estate Tax Repeal Bill",
+        {
+          direction: -0.9,
+          fiscalImpact: -0.22,
+          affectedGroups: ["Heirs", "Large estates", "Taxpayers"],
+        },
+      ),
+      option(
+        "family_business_exemption",
+        "Family-business exemption",
+        "Exempts qualifying operating businesses while retaining tax on other large estates.",
+        "Family Enterprise Succession Bill",
+        {
+          direction: -0.35,
+          fiscalImpact: -0.1,
+          affectedGroups: ["Family businesses", "Heirs", "Taxpayers"],
+        },
+      ),
+      option(
+        "protected_allowance",
+        "Protected allowance",
+        "Retains the current protected allowance and progressive estate rates.",
+        "Inheritance Tax Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Heirs", "Large estates", "Taxpayers"],
+        },
+      ),
+      option(
+        "progressive_estate_rates",
+        "Higher large-estate rates",
+        "Adds higher bands for the largest estates and closes trust-avoidance rules.",
+        "Large Estates Contribution Bill",
+        {
+          direction: 0.8,
+          fiscalImpact: -0.18,
+          affectedGroups: ["Large estates", "Heirs", "Public services"],
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_CORPORATE_TAX",
+    "ISS_WELFARE",
+    "Corporate tax base",
+    "A national rate applies after investment and loss deductions",
+    [
+      option(
+        "territorial_low_rate",
+        "Territorial low rate",
+        "Cuts the rate and exempts most qualifying foreign profits.",
+        "Competitive Corporate Tax Bill",
+        {
+          direction: -0.85,
+          fiscalImpact: -0.25,
+          affectedGroups: ["Companies", "Investors", "Taxpayers"],
+          dimensionEffects: { economic: -0.75, globalism: 0.35 },
+        },
+      ),
+      option(
+        "investment_allowance",
+        "Investment allowance",
+        "Keeps the rate but accelerates deductions for new domestic capital investment.",
+        "Business Investment Allowance Bill",
+        {
+          direction: -0.25,
+          fiscalImpact: -0.12,
+          affectedGroups: ["Companies", "Workers", "Investors"],
+        },
+      ),
+      option(
+        "current_tax_base",
+        "Current tax base",
+        "Retains the national rate and current deduction rules.",
+        "Corporate Tax Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Companies", "Investors", "Taxpayers"],
+        },
+      ),
+      option(
+        "minimum_effective_tax",
+        "Minimum effective tax",
+        "Sets a minimum effective rate for large corporate groups after deductions.",
+        "Corporate Minimum Tax Bill",
+        {
+          direction: 0.75,
+          fiscalImpact: -0.18,
+          affectedGroups: ["Large companies", "Taxpayers", "Public services"],
+          dimensionEffects: { economic: 0.65, globalism: -0.15 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_ELECTRICITY_MARKET",
+    "ISS_OWNERSHIP",
+    "Electricity market structure",
+    "Regulated utilities buy power from public and private generators",
+    [
+      option(
+        "competitive_retail_market",
+        "Competitive retail market",
+        "Allows households to choose competing electricity retailers using regulated networks.",
+        "Electricity Choice Bill",
+        {
+          direction: -0.85,
+          fiscalImpact: -0.08,
+          affectedGroups: ["Households", "Utilities", "Generators"],
+          dimensionEffects: { economic: -0.8, authority: -0.25 },
+        },
+      ),
+      option(
+        "regulated_private_utilities",
+        "Regulated private utilities",
+        "Moves distribution utilities into long-term regulated private franchises.",
+        "Electricity Franchises Bill",
+        {
+          direction: -0.45,
+          fiscalImpact: -0.12,
+          affectedGroups: ["Households", "Utilities", "Investors"],
+        },
+      ),
+      option(
+        "mixed_regulated_system",
+        "Mixed regulated system",
+        "Retains regulated utilities and mixed public-private generation.",
+        "Electricity Market Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Households", "Utilities", "Generators"],
+        },
+      ),
+      option(
+        "public_grid_operator",
+        "Public grid operator",
+        "Creates a public system operator while retaining independent generators.",
+        "National Grid Operator Bill",
+        {
+          direction: 0.45,
+          fiscalImpact: 0.14,
+          affectedGroups: ["Households", "Grid workers", "Generators"],
+          dimensionEffects: { economic: 0.45, authority: 0.35 },
+        },
+      ),
+      option(
+        "public_generation_authority",
+        "Public generation authority",
+        "Establishes a public authority to own new strategic generation and storage.",
+        "Public Power Authority Bill",
+        {
+          direction: 0.9,
+          fiscalImpact: 0.32,
+          affectedGroups: ["Households", "Energy workers", "Taxpayers"],
+          dimensionEffects: { economic: 0.9, authority: 0.45, green: 0.3 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_NUCLEAR_POLICY",
+    "ISS_CLIMATE",
+    "Nuclear energy policy",
+    "Existing reactors may operate while new projects require separate legislation",
+    [
+      option(
+        "managed_phaseout",
+        "Managed phaseout",
+        "Closes existing reactors at the end of their licensed lives and prohibits replacement plants.",
+        "Nuclear Phaseout Bill",
+        {
+          direction: -0.35,
+          fiscalImpact: 0.12,
+          affectedGroups: ["Energy workers", "Electricity users", "Host communities"],
+          dimensionEffects: { green: 0.55, authority: 0.15 },
+        },
+      ),
+      option(
+        "case_by_case_authorization",
+        "Case-by-case authorization",
+        "Retains separate legislative approval for each new nuclear project.",
+        "Nuclear Energy Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Electricity users", "Regulators", "Host communities"],
+        },
+      ),
+      option(
+        "standardized_new_build",
+        "Standardized new build",
+        "Creates a licensing and finance framework for a fleet of standardized reactors.",
+        "Nuclear Generation Bill",
+        {
+          direction: 0.65,
+          fiscalImpact: 0.3,
+          affectedGroups: ["Electricity users", "Energy workers", "Taxpayers"],
+          dimensionEffects: { green: 0.35, authority: 0.45, economic: 0.2 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_WATER_ENFORCEMENT",
+    "ISS_CLIMATE",
+    "Water-pollution enforcement",
+    "Provincial inspectors enforce national discharge standards",
+    [
+      option(
+        "province_only_enforcement",
+        "Provincial enforcement",
+        "Repeals national intervention powers and leaves inspections to provinces.",
+        "Provincial Water Administration Bill",
+        {
+          direction: -0.6,
+          fiscalImpact: -0.06,
+          affectedGroups: ["Provinces", "Industry", "Water users"],
+          dimensionEffects: { green: -0.45, authority: -0.6 },
+        },
+      ),
+      option(
+        "shared_enforcement",
+        "Shared enforcement",
+        "Retains provincial inspection under national discharge standards.",
+        "Water Standards Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Provinces", "Industry", "Water users"],
+        },
+      ),
+      option(
+        "national_enforcement_office",
+        "National enforcement office",
+        "Creates a national office able to inspect major dischargers and levy civil penalties.",
+        "Clean Water Enforcement Bill",
+        {
+          direction: 0.8,
+          fiscalImpact: 0.12,
+          affectedGroups: ["Water users", "Industry", "Environmental agencies"],
+          dimensionEffects: { green: 0.8, authority: 0.5 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_BROADBAND",
+    "ISS_OWNERSHIP",
+    "Broadband infrastructure",
+    "Private networks receive targeted rural buildout grants",
+    [
+      option(
+        "market_only_buildout",
+        "Market-led buildout",
+        "Ends national buildout grants and relies on commercial network investment.",
+        "Broadband Market Bill",
+        {
+          direction: -0.75,
+          fiscalImpact: -0.14,
+          affectedGroups: ["Rural households", "Network firms", "Taxpayers"],
+        },
+      ),
+      option(
+        "targeted_rural_grants",
+        "Targeted rural grants",
+        "Retains grants for unserved rural and remote communities.",
+        "Broadband Access Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Rural households", "Network firms", "Local governments"],
+        },
+      ),
+      option(
+        "public_open_access_network",
+        "Public open-access network",
+        "Builds public fiber infrastructure leased on equal terms to retail providers.",
+        "National Open Network Bill",
+        {
+          direction: 0.85,
+          fiscalImpact: 0.3,
+          affectedGroups: ["Households", "Network workers", "Retail providers"],
+          dimensionEffects: { economic: 0.75, authority: 0.35 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_ASYLUM_PROCESS",
+    "ISS_IMMIGRATION",
+    "Asylum procedure",
+    "Applicants receive an interview, legal review and appeal while claims are processed",
+    [
+      option(
+        "safe_country_summary_process",
+        "Safe-country summary process",
+        "Uses a shortened procedure for applicants from designated safe countries, with judicial review.",
+        "Safe Country Procedure Bill",
+        {
+          direction: -0.7,
+          fiscalImpact: -0.06,
+          affectedGroups: ["Asylum seekers", "Border officials", "Courts"],
+          dimensionEffects: { social: -0.55, authority: 0.45, globalism: -0.4 },
+        },
+      ),
+      option(
+        "standard_review",
+        "Standard review",
+        "Retains an interview, legal review and appeal during processing.",
+        "Asylum Procedure Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Asylum seekers", "Caseworkers", "Courts"],
+        },
+      ),
+      option(
+        "independent_case_agency",
+        "Independent case agency",
+        "Transfers initial decisions to an independent agency with published timeliness standards.",
+        "Independent Asylum Decisions Bill",
+        {
+          direction: 0.3,
+          fiscalImpact: 0.08,
+          affectedGroups: ["Asylum seekers", "Caseworkers", "Courts"],
+          dimensionEffects: { social: 0.2, authority: -0.25 },
+        },
+      ),
+      option(
+        "right_to_work_after_six_months",
+        "Work rights after six months",
+        "Allows applicants to work when a first decision has not been made within six months.",
+        "Asylum Applicant Work Rights Bill",
+        {
+          direction: 0.65,
+          fiscalImpact: 0.03,
+          affectedGroups: ["Asylum seekers", "Employers", "Local services"],
+          dimensionEffects: { social: 0.45, economic: -0.1, globalism: 0.35 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_ELECTORAL_FORMULA",
+    "ISS_REFORM",
+    "Assembly electoral formula",
+    "Multi-member constituencies elect members by single transferable vote",
+    [
+      option(
+        "closed_party_lists",
+        "Closed provincial lists",
+        "Replaces constituency STV with closed provincial party lists.",
+        "Provincial List Elections Bill",
+        {
+          direction: -0.2,
+          fiscalImpact: -0.03,
+          affectedGroups: ["Voters", "Political parties", "Election officials"],
+          dimensionEffects: { authority: 0.55, social: -0.1 },
+        },
+      ),
+      option(
+        "mixed_member_system",
+        "Mixed-member system",
+        "Elects half the Assembly locally and uses party lists to restore proportionality.",
+        "Mixed Member Representation Bill",
+        {
+          direction: 0.25,
+          fiscalImpact: 0.1,
+          affectedGroups: ["Voters", "Candidates", "Political parties"],
+          dimensionEffects: { authority: -0.2, social: 0.15 },
+        },
+      ),
+      option(
+        "single_transferable_vote",
+        "Single transferable vote",
+        "Retains multi-member constituency elections by transferable vote.",
+        "Electoral System Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Voters", "Candidates", "Election officials"],
+        },
+      ),
+      option(
+        "national_compensatory_seats",
+        "National compensatory seats",
+        "Keeps constituency STV and adds a small national tier to correct severe disproportionality.",
+        "Fair Representation Bill",
+        {
+          direction: 0.55,
+          fiscalImpact: 0.12,
+          affectedGroups: ["Voters", "Political parties", "Election officials"],
+          dimensionEffects: { authority: -0.4, social: 0.2 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_FIREARMS_LICENSING",
+    "ISS_POLICING",
+    "Civilian firearms licensing",
+    "Applicants pass background, training and safe-storage checks",
+    [
+      option(
+        "basic_background_check",
+        "Basic background check",
+        "Removes mandatory training and renewals while retaining criminal-record checks.",
+        "Firearms Licensing Reform Bill",
+        {
+          direction: -0.75,
+          fiscalImpact: -0.04,
+          affectedGroups: ["Firearms owners", "Police", "Communities"],
+          dimensionEffects: { social: -0.45, authority: -0.55 },
+        },
+      ),
+      option(
+        "training_and_storage_license",
+        "Training and storage license",
+        "Retains background, training, renewal and safe-storage requirements.",
+        "Firearms Licensing Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Firearms owners", "Police", "Communities"],
+        },
+      ),
+      option(
+        "permit_and_registration",
+        "Permit and registration",
+        "Adds registration and a demonstrated-need permit for restricted firearms.",
+        "Firearms Safety Bill",
+        {
+          direction: 0.8,
+          fiscalImpact: 0.08,
+          affectedGroups: ["Firearms owners", "Police", "Communities"],
+          dimensionEffects: { social: 0.45, authority: 0.65 },
+        },
+      ),
+    ],
+  ),
+  variableProvision(
+    "PROV_FARMLAND_POLICY",
+    "ISS_TRADE",
+    "Agricultural land policy",
+    "Provinces regulate conversion and foreign purchase of designated farmland",
+    [
+      option(
+        "open_land_market",
+        "Open land market",
+        "Repeals national restrictions on large foreign purchases and leaves conversion rules to provinces.",
+        "Agricultural Land Market Bill",
+        {
+          direction: -0.7,
+          fiscalImpact: -0.03,
+          affectedGroups: ["Farmers", "Landowners", "Investors"],
+          dimensionEffects: { economic: -0.5, globalism: 0.55, authority: -0.35 },
+        },
+      ),
+      option(
+        "provincial_land_controls",
+        "Provincial land controls",
+        "Retains provincial conversion rules and national review of large foreign purchases.",
+        "Farmland Policy Continuity Bill",
+        {
+          direction: 0,
+          magnitude: 0.2,
+          fiscalImpact: 0,
+          current: true,
+          affectedGroups: ["Farmers", "Provinces", "Investors"],
+        },
+      ),
+      option(
+        "working_farm_protection",
+        "Working-farm protection",
+        "Creates a national conservation covenant and right of first refusal for working farmers.",
+        "Working Farmland Protection Bill",
+        {
+          direction: 0.7,
+          fiscalImpact: 0.12,
+          affectedGroups: ["Farmers", "Rural communities", "Landowners"],
+          dimensionEffects: { economic: 0.35, nationalism: 0.4, green: 0.3 },
+        },
+      ),
+    ],
+  ),
 ] as const;
 
 export function legislativeProvision(id: string): LegislativeProvisionDefinition | null {
@@ -365,9 +2469,20 @@ export function legislativeProvisionOption(
   if (direct) return direct;
   // Schema-13 development saves may contain the former universal option IDs.
   // Read them as aliases, but every newly persisted choice uses its legal name.
-  if (optionId === "current") return definition.options.find((candidate) => candidate.current) ?? null;
-  if (optionId === "low") return definition.options.slice().sort((a, b) => a.direction - b.direction || a.id.localeCompare(b.id))[0] ?? null;
-  if (optionId === "high") return definition.options.slice().sort((a, b) => b.direction - a.direction || a.id.localeCompare(b.id))[0] ?? null;
+  if (optionId === "current")
+    return definition.options.find((candidate) => candidate.current) ?? null;
+  if (optionId === "low")
+    return (
+      definition.options
+        .slice()
+        .sort((a, b) => a.direction - b.direction || a.id.localeCompare(b.id))[0] ?? null
+    );
+  if (optionId === "high")
+    return (
+      definition.options
+        .slice()
+        .sort((a, b) => b.direction - a.direction || a.id.localeCompare(b.id))[0] ?? null
+    );
   return null;
 }
 
@@ -404,13 +2519,22 @@ export function optionForPolicyItem(item: PolicyItem): LegislativeProvisionOptio
   const definition = provisionForPolicyItem(item);
   if (!definition) return null;
   if (item.optionId) return legislativeProvisionOption(definition.id, item.optionId);
-  return definition.options.slice().sort((a, b) =>
-    Math.abs(a.direction - item.direction) - Math.abs(b.direction - item.direction) ||
-    Number(a.current) - Number(b.current) || a.id.localeCompare(b.id)
-  )[0] ?? null;
+  return (
+    definition.options
+      .slice()
+      .sort(
+        (a, b) =>
+          Math.abs(a.direction - item.direction) - Math.abs(b.direction - item.direction) ||
+          Number(a.current) - Number(b.current) ||
+          a.id.localeCompare(b.id),
+      )[0] ?? null
+  );
 }
 
-export function currentProvisionOption(state: SimState, provisionId: string): LegislativeProvisionOption | null {
+export function currentProvisionOption(
+  state: SimState,
+  provisionId: string,
+): LegislativeProvisionOption | null {
   const laws = Object.values(state.legislatureRuntime.enactedLaws)
     .filter((law) => law.operative)
     .sort((a, b) => b.enactedDate.localeCompare(a.enactedDate) || b.id.localeCompare(a.id));
@@ -437,8 +2561,14 @@ export function naturalBillCopy(
   const first = resolved[0];
   let title = first?.option.billTitle ?? "Public Administration Bill";
   if (resolved.length > 1) {
-    const category = resolved[0]!.definition.category.replace(/ (rules|law|eligibility|coverage|authority)$/i, "");
-    const second = resolved[1]!.definition.category.replace(/ (rules|law|eligibility|coverage|authority)$/i, "");
+    const category = resolved[0]!.definition.category.replace(
+      / (rules|law|eligibility|coverage|authority)$/i,
+      "",
+    );
+    const second = resolved[1]!.definition.category.replace(
+      / (rules|law|eligibility|coverage|authority)$/i,
+      "",
+    );
     title = `${category} and ${second} Bill`;
   }
   const used = new Set([
@@ -467,9 +2597,13 @@ export function concretePolicyItem(item: PolicyItem): PolicyItem {
   if (item.provisionId && item.optionId) return { ...item };
   const definition = provisionForPolicyItem(item);
   if (!definition) return { ...item };
-  const option = definition.options.slice().sort((a, b) =>
-    Math.abs(a.direction - item.direction) - Math.abs(b.direction - item.direction) ||
-    Number(a.current) - Number(b.current) || a.id.localeCompare(b.id)
-  )[0]!;
+  const option = definition.options
+    .slice()
+    .sort(
+      (a, b) =>
+        Math.abs(a.direction - item.direction) - Math.abs(b.direction - item.direction) ||
+        Number(a.current) - Number(b.current) ||
+        a.id.localeCompare(b.id),
+    )[0]!;
   return policyItemForProvision(definition.id, option.id) ?? { ...item };
 }

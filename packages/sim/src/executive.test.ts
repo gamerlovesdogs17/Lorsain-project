@@ -8,7 +8,11 @@ import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
+import {
+  terenaElectoralFromBundle,
+  terenaPartyFields,
+  terenaWorldFieldsFromBundle,
+} from "./terena-party-input.js";
 import { occupyingTerms, officesOfKind, endTerm } from "./offices.js";
 import { parseSaveFile } from "./save.js";
 import { currentMinisterHolderId, deriveCabinet } from "./executive/state.js";
@@ -85,7 +89,7 @@ describe("Phase 7 executive kernel", () => {
     const world = executiveHarness();
     const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P7-NEW" });
     expect(sim.getSnapshot().schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(SAVE_SCHEMA_VERSION).toBe(17);
+    expect(SAVE_SCHEMA_VERSION).toBe(18);
     expect(sim.getSnapshot().executiveRuntime.regulations).toEqual({});
     expect(sim.getSnapshot().executiveRuntime.motions).toEqual({});
     expect(currentPresidentialAuthorityId(world, sim.getSnapshot())).toBe("P1");
@@ -135,8 +139,12 @@ describe("Phase 7 executive kernel", () => {
     });
     expect(rejected.ok).toBe(false);
     if (!rejected.ok) expect(rejected.error.code).toBe("ALREADY_MINISTER");
-    expect(currentMinisterHolderId(world, sim.getSnapshot(), "OFFICE_MINISTER_FINANCE")).toBe("MP04");
-    expect(currentMinisterHolderId(world, sim.getSnapshot(), "OFFICE_MINISTER_TRANSPORT")).toBeNull();
+    expect(currentMinisterHolderId(world, sim.getSnapshot(), "OFFICE_MINISTER_FINANCE")).toBe(
+      "MP04",
+    );
+    expect(
+      currentMinisterHolderId(world, sim.getSnapshot(), "OFFICE_MINISTER_TRANSPORT"),
+    ).toBeNull();
   });
 
   it("fills multiple NPC cabinet vacancies with distinct people", () => {
@@ -276,7 +284,9 @@ describe("Phase 7 executive kernel", () => {
       term.endedDate = state.currentDate;
       term.endedReason = "test_vacancy";
     }
-    const mps = currentAssemblyMemberIds(world, state).filter((id) => id !== state.playerPoliticianId);
+    const mps = currentAssemblyMemberIds(world, state).filter(
+      (id) => id !== state.playerPoliticianId,
+    );
     const expected = mps.at(-1)!;
     for (const id of mps) {
       const profile = world.agentProfiles[id]!;

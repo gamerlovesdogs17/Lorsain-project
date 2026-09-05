@@ -21,7 +21,11 @@ import { addMonths } from "./calendar.js";
 import {
   processConstitutionalAmendmentsMonth,
   proposeConstitutionalAmendment,
+  proposeConstitutionalTextAmendment,
   constitutionalSupportScore,
+  constitutionalProposalImpetus,
+  npcConstitutionalSponsorshipChance,
+  NPC_CONSTITUTIONAL_SPONSORSHIP_SCORE_GATE,
   currentConstitutionalClauseText,
 } from "./provinces/constitutional.js";
 import { currentAssemblyMemberIds } from "./legislature/state.js";
@@ -181,6 +185,17 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
         definition.options.some((option) => ["low", "current", "high"].includes(option.id)),
       ).toBe(false);
       expect(defaultProvisionOptionId(definition.id)).not.toBe("");
+      // Competing designs: option labels must not be a pure less/same/more triad.
+      const labels = definition.options.map((option) => option.label.toLowerCase());
+      expect(
+        labels.some((label) =>
+          /^(less|more|lower|higher|increase|reduce|narrow|broaden)\b/.test(label),
+        ) &&
+          labels.filter((label) => /keep|current|retain|continuity/.test(label)).length === 1 &&
+          labels.every((label) =>
+            /^(less|more|lower|higher|increase|reduce|narrow|broaden|keep|current)\b/.test(label),
+          ),
+      ).toBe(false);
     }
     expect(LEGISLATIVE_PROVISIONS.some((definition) => definition.options.length === 5)).toBe(true);
     expect(
@@ -201,6 +216,15 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect(policyItemForProvision("PROV_REPRODUCTIVE_LAW", "high")?.optionId).toBe(
       "national_protection",
     );
+    // Remaining scalar-adjacent categories: a few fights are still partly about duration,
+    // eligibility bands, or appropriation size (e.g. unemployment weeks, school-meal income
+    // tests, donor disclosure timing). Those retain three genuine institutional designs rather
+    // than a disguised less/same/more slider.
+    expect(
+      LEGISLATIVE_PROVISIONS.find((row) => row.id === "PROV_UNEMPLOYMENT_INSURANCE")?.options.map(
+        (option) => option.id,
+      ),
+    ).toEqual(["shorter_insured_period", "keep_current_duration", "extended_downturn_benefit"]);
   });
 
   it("seeds twenty-one population-scaled chambers and a named renewable political class", () => {
@@ -285,8 +309,12 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
       (sum, assembly) => sum + 1 + Object.keys(assembly.partyLeadership).length * 2,
       0,
     );
-    expect(records.length).toBeGreaterThan(0);
+    // Same-holder reselections are not archived; incumbent stickiness further reduces churn.
     expect(records.length).toBeLessThan(allSelectedRoles);
+    const retainedSpeakers = Object.values(state.provincialRuntime.assemblies).filter(
+      (assembly) => assembly.presidingOfficerId === previous[`${assembly.provinceId}:speaker`],
+    ).length;
+    expect(retainedSpeakers).toBeGreaterThan(0);
     for (const record of records) {
       const key =
         record.role === "speaker"
@@ -793,6 +821,167 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
       "CMD_TEST",
     );
     expect("error" in result && result.error.code).toBe("NOT_ASSEMBLY_MEMBER");
+  });
+
+  it("certifies amendment impetus, passage, resistance, runtime effects, and text-only limits", () => {
+    const world = loadTerenaWorld();
+    const player = startingHolder(world, "assembly_member");
+    const state = createSimulation({
+      world,
+      playerPoliticianId: player,
+      seed: "P113-AMEND-CERT",
+    }).serializeSave().simulation;
+
+    // 1) Reform impetus can clear the NPC sponsorship gate; player path also works.
+    for (let index = 0; index < 4; index += 1) {
+      const billId = `BILL_RETURN_${index}`;
+      state.legislatureRuntime.bills[billId] = {
+        id: billId,
+        sponsorId: player,
+        cosponsorIds: [],
+        introducedDate: addMonths(state.currentDate, -6),
+        title: `Returned Measure ${index}`,
+        summary: "Returned for constitutional impetus testing.",
+        policyItems: [],
+        assignedCommitteeId: null,
+        status: "returned_by_president",
+        amendmentIds: [],
+        committeeVoteId: null,
+        floorVoteId: null,
+        presidentialDisposition: "returned",
+        repassageVoteId: null,
+        enactedDate: null,
+        enactedLawId: null,
+        stageReadyDate: addMonths(state.currentDate, -5),
+        metadata: {},
+        version: 1,
+        versionHistory: [],
+      };
+    }
+    const vetoImpetus = constitutionalProposalImpetus(world, state, "veto_override_fraction", 0.75);
+    expect(vetoImpetus.score).toBeGreaterThanOrEqual(NPC_CONSTITUTIONAL_SPONSORSHIP_SCORE_GATE);
+    expect(npcConstitutionalSponsorshipChance(vetoImpetus.score)).toBeGreaterThan(0);
+    const playerPath = proposeConstitutionalAmendment(
+      world,
+      state,
+      player,
+      "assembly_term_years",
+      5,
+      "CMD_CERT_PLAYER",
+    );
+    expect("error" in playerPath).toBe(false);
+    if ("error" in playerPath) return;
+    expect(playerPath.amendment.proposalTrigger).toBe("player_sponsorship");
+    expect(playerPath.amendment.runtimeEffect).toBe("modeled_rule");
+
+    // 2–4) Politically plausible modeled rule can pass and change runtime.
+    const passState = structuredClone(state);
+    const passProposal = proposeConstitutionalAmendment(
+      world,
+      passState,
+      player,
+      "presidential_term_limit",
+      1,
+      "CMD_CERT_PASS",
+    );
+    expect("error" in passProposal).toBe(false);
+    if ("error" in passProposal) return;
+    for (const [index, id] of currentAssemblyMemberIds(world, passState).entries()) {
+      passProposal.amendment.assemblyVotes[id] = index < 280 ? "yes" : "no";
+    }
+    for (const provinceId of world.provinceIds) {
+      for (const memberId of passState.provincialRuntime.assemblies[provinceId]!.memberIds) {
+        const key = `pending:${passProposal.amendment.id}:${provinceId}:${memberId}`;
+        passState.provincialRuntime.votes[key] = {
+          id: key,
+          provinceId,
+          subjectKind: "constitutional_ratification",
+          subjectId: passProposal.amendment.id,
+          date: passState.currentDate,
+          votes: { [memberId]: "yes" },
+          yes: 1,
+          no: 0,
+          abstain: 0,
+          passed: false,
+        };
+      }
+    }
+    passState.currentDate = addMonths(passState.currentDate, 1);
+    processConstitutionalAmendmentsMonth(world, passState, "CMD_CERT_PASS");
+    for (let month = 0; month < 8; month += 1) {
+      passState.currentDate = addMonths(passState.currentDate, 1);
+      processConstitutionalAmendmentsMonth(world, passState, "CMD_CERT_PASS");
+    }
+    expect(passProposal.amendment.status).toBe("ratified");
+    expect(passState.provincialRuntime.constitutionalRules.presidential_term_limit?.value).toBe(1);
+
+    // 3) Foundational / radical text amendment faces overwhelming resistance.
+    const radical = proposeConstitutionalTextAmendment(
+      world,
+      state,
+      player,
+      "ART_I_S1_C1",
+      "Terena shall be reconstituted as a unitary executive state in which the President may suspend the National Assembly at will and rule by decree without judicial review.",
+      "centralize_national_power",
+      "CMD_CERT_RADICAL",
+    );
+    expect("error" in radical).toBe(false);
+    if ("error" in radical) return;
+    expect(radical.amendment.runtimeEffect).toBe("text_only");
+    expect(radical.amendment.politicalDifficulty).toBeGreaterThanOrEqual(0.9);
+    state.currentDate = addMonths(state.currentDate, 1);
+    processConstitutionalAmendmentsMonth(world, state, "CMD_CERT_RADICAL");
+    expect(radical.amendment.status).toBe("assembly_failed");
+    expect(radical.amendment.assemblyYes).toBeLessThan(140);
+
+    // 5) Text-only ratification never mutates modeled runtime rules.
+    const textState = structuredClone(state);
+    textState.provincialRuntime.constitutionalAmendments = {};
+    const textOnly = proposeConstitutionalTextAmendment(
+      world,
+      textState,
+      player,
+      "ART_VI_S2_C2",
+      "Administrative action affecting a person or organization shall receive written reasons, independent review and an effective remedy under law within a published timetable.",
+      "technical_clarification",
+      "CMD_CERT_TEXT",
+    );
+    expect("error" in textOnly).toBe(false);
+    if ("error" in textOnly) return;
+    expect(textOnly.amendment.ruleId).toBeNull();
+    expect(textOnly.amendment.runtimeEffect).toBe("text_only");
+    const rulesBefore = structuredClone(textState.provincialRuntime.constitutionalRules);
+    for (const [index, id] of currentAssemblyMemberIds(world, textState).entries()) {
+      textOnly.amendment.assemblyVotes[id] = index < 280 ? "yes" : "no";
+    }
+    for (const provinceId of world.provinceIds) {
+      for (const memberId of textState.provincialRuntime.assemblies[provinceId]!.memberIds) {
+        const key = `pending:${textOnly.amendment.id}:${provinceId}:${memberId}`;
+        textState.provincialRuntime.votes[key] = {
+          id: key,
+          provinceId,
+          subjectKind: "constitutional_ratification",
+          subjectId: textOnly.amendment.id,
+          date: textState.currentDate,
+          votes: { [memberId]: "yes" },
+          yes: 1,
+          no: 0,
+          abstain: 0,
+          passed: false,
+        };
+      }
+    }
+    textState.currentDate = addMonths(textState.currentDate, 1);
+    processConstitutionalAmendmentsMonth(world, textState, "CMD_CERT_TEXT");
+    for (let month = 0; month < 8; month += 1) {
+      textState.currentDate = addMonths(textState.currentDate, 1);
+      processConstitutionalAmendmentsMonth(world, textState, "CMD_CERT_TEXT");
+    }
+    expect(textOnly.amendment.status).toBe("ratified");
+    expect(textState.provincialRuntime.constitutionalRules).toEqual(rulesBefore);
+    expect(currentConstitutionalClauseText(world, textState, "ART_VI_S2_C2")).toBe(
+      textOnly.amendment.proposedText,
+    );
   });
 
   it("lets a serving player legislator explicitly contest provincial leadership and archives the ballot", () => {

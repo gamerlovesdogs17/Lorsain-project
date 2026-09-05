@@ -38,7 +38,7 @@ Public polls support national, province, and selective constituency geography. D
 
 ### 8. Public forecast
 
-Forecast uses only observable polling, the prior certified election, public economy, incumbency, candidate standing, endorsements, campaign activity, and observable Ground Game. It labels Toss-up/Lean/Likely/Safe plus confidence and projects multi-member party seats rather than a fake two-party Assembly winner.
+Forecast uses only observable polling, the prior certified election, public economy, incumbency, materialized candidate standing, endorsements, campaign activity, and observable Ground Game. It labels Toss-up/Lean/Likely/Safe plus confidence and projects multi-member party seats rather than a fake two-party Assembly winner.
 
 ### 9. Election Night spoiler fix
 
@@ -90,7 +90,7 @@ Role-aware Home/Office/Career, stable global focus, entity navigation, compact t
 
 ### 21. Legacy policy-helper retirement
 
-All 50 provision definitions use 161 policy-specific alternatives; no authored low/middle/high option remains. Read-time aliases preserve schema-13 development saves, but new writes canonicalize to the real policy option ID. Policies carry independent fiscal, capacity, wage, housing, regional, institutional, liberty, environment, and service tradeoffs.
+All 50 provision definitions use 161 policy-specific alternatives; no authored low/middle/high option remains. Read-time aliases preserve schema-13 development saves, but new writes canonicalize to the real policy option ID. Policies carry independent fiscal, capacity, wage, housing, regional, institutional, liberty, environment, and service tradeoffs. A minority of fights remain scalar-adjacent (duration, eligibility bands, timing/appropriation size) while still offering genuine institutional designs rather than a disguised less/same/more slider.
 
 ### 22. Constitutional semantic/runtime architecture
 
@@ -98,11 +98,11 @@ Amendments carry structured intent, clause target, current/proposed legal text, 
 
 ### 23. News redesign
 
-News is outlet-driven: a lead and secondary-event front page groups coverage around underlying public facts, shows the number of outlets, and offers Read/Compare Coverage. Article facts come from a public payload whitelist while outlet framing remains visibly separate.
+News is outlet-driven: a lead and secondary-event front page groups coverage around underlying public facts, shows the number of outlets, and offers Read/Compare Coverage. Article facts come from a public payload whitelist while outlet framing remains visibly separate. Copy is modest template fact-injection plus framing labels — not authored newspaper prose (Phase 11.4 content).
 
 ### 24. History Wiki expansion
 
-The Wiki links years, politicians, parties, caucuses, provinces, administrations, laws, amendments, Court cases, elections, treaties, conflicts, and economic periods. Year articles use type-specific sections and article-specific contents rather than a universal event dump.
+The Wiki links years, politicians, parties, caucuses, provinces, administrations, laws, amendments, Court cases, elections, treaties, conflicts, and economic periods. Year articles use type-specific sections and article-specific contents rather than a universal event dump. Lead text is short template fact-injection, not rich encyclopedia prose.
 
 ### 25. GitHub Pages root cause
 
@@ -146,15 +146,15 @@ Focused tests protect compact map selection, nonblank certified/historical maps,
 
 ### 35. Current performance
 
-Current 600-month telemetry: median monthly turn `{{MEDIAN_TURN_MS}} ms`, p95 `{{P95_TURN_MS}} ms`, and maximum `{{MAX_TURN_MS}} ms`. Heavy turn and national election counts remain off the main interface Worker. Production main bundle is about 11.3 MB before gzip (2.58 MB gzip); route/data splitting is Phase 11.5 release engineering.
+Current 600-month telemetry: median monthly turn `1326 ms`, p95 `11259 ms`, and maximum `49440 ms` (shard `performance.maxTurnMs`; aggregate records median/p95 only). Heavy turn and national election counts remain off the main interface Worker. Production main bundle is about 11.3 MB before gzip (2.58 MB gzip); route/data splitting is Phase 11.5 release engineering.
 
 ### 36. Save sizes
 
-Current schema-18 seed `P113-WG-000`: start `{{SAVE_0}}`, 1 year `{{SAVE_12}}`, 4 years `{{SAVE_48}}`, 10 years `{{SAVE_120}}`, 25 years `{{SAVE_300}}`, and 50 years `{{SAVE_600}}`. Section-level attribution is stored in the current shard. Growth is large and roughly linear rather than an accidental duplicated snapshot explosion; immutable archive compaction remains release work.
+Current schema-18 seed `P113-WG-000`: start `1.84 MiB`, 1 year `2.86 MiB`, 4 years `7.34 MiB`, 10 years `14.88 MiB`, 25 years `34.56 MiB`, and 50 years `74.30 MiB`. Section-level attribution is stored in the current shard. Growth is large and roughly linear rather than an accidental duplicated snapshot explosion; immutable archive compaction remains release work.
 
 ### 37. Deterministic 1×600
 
-`P113-WG-000` completed 600/600 months to 2078-01-01 with hash `{{FINAL_HASH}}`. A separate midpoint-save/reload path produced `{{SEGMENTED_HASH}}`; continuous versus segmented match = `{{DETERMINISM_MATCH}}`. Runs with execution errors: `{{RUN_ERRORS}}`; catastrophic failures: `{{CATASTROPHIC}}`.
+`P113-WG-000` completed 600/600 months to 2078-01-01 with hash `646457c47faeb4fe505184d84b9b67e2`. A separate midpoint-save/reload path produced `646457c47faeb4fe505184d84b9b67e2`; continuous versus segmented match = `true` (`dualRunMatch` and `reloadMatch`). Runs with execution errors: `0`; catastrophic failures: `0`.
 
 ### 38. 10×600 / 25×600 result
 
@@ -162,7 +162,7 @@ Not rerun. One current-source 600-month seed takes roughly 26 minutes and produc
 
 ### 39. Strict invariant failures
 
-`{{STRICT_FAILURES}}` strict-v1 failures across the completed current-source 600-month run. Candidate-shortage events: `{{CANDIDATE_SHORTAGES}}`; active Governors at end: `{{ACTIVE_GOVERNORS}}`; generated-person quality errors/warnings: `{{PERSON_ERRORS}}` / `{{PERSON_WARNINGS}}`.
+`0` strict-v1 failures across the completed current-source 600-month run. Candidate-shortage events: `0`; active Governors at end: `21`; generated-person quality errors/warnings: `0` / `0`.
 
 ### 40. Genuine remaining blockers
 
@@ -177,6 +177,8 @@ No known code or deterministic-simulation blocker remains. Public release is not
 
 ### 42. Phase 11.3 acceptance
 
-`{{PHASE_STATUS}}`
+`CONDITIONALLY READY — pending public Pages deployment validation`
+
+Closeout full suite (current tree): **55** files / **538** tests passed; Vitest exited non-zero only on a harness `onTaskUpdate` worker RPC timeout (no failing assertions). Targeted Pages-equivalent `VITE_BASE_PATH=/Lorsain-project/` game build succeeded with `/Lorsain-project/assets/...` entry URLs.
 
 STOP. Phase 11.4 has not begun.

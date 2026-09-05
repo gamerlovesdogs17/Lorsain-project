@@ -133,6 +133,15 @@ export function NewsPage(props: {
     : null;
 
   function articleDeck(group: StoryGroup): string {
+    const primary = group.stories[0]!;
+    const sourceId = primary.sourceEventIds[0];
+    const sourceEvent = sourceId
+      ? (props.snap.history.find((event) => event.id === sourceId) ?? null)
+      : null;
+    const facts = publicEventDetails(sourceEvent);
+    if (facts.length > 0) {
+      return `${facts.slice(0, 2).join(". ")}.`;
+    }
     const category = group.category;
     if (category === "elections")
       return "The race moved into a new public phase as campaigns, parties and voters assessed the latest development.";
@@ -152,25 +161,104 @@ export function NewsPage(props: {
   function publicEventDetails(event: SimState["history"][number] | null): string[] {
     if (!event) return [];
     const details: string[] = [];
-    const winnerId = typeof event.payload.winnerId === "string" ? event.payload.winnerId : null;
-    const partyId = typeof event.payload.partyId === "string" ? event.payload.partyId : null;
-    const provinceId =
-      typeof event.payload.provinceId === "string" ? event.payload.provinceId : null;
+    const payload = event.payload;
+    const winnerId = typeof payload.winnerId === "string" ? payload.winnerId : null;
+    const partyId = typeof payload.partyId === "string" ? payload.partyId : null;
+    const provinceId = typeof payload.provinceId === "string" ? payload.provinceId : null;
+    const billId = typeof payload.billId === "string" ? payload.billId : null;
+    const lawId = typeof payload.lawId === "string" ? payload.lawId : null;
+    const electionId = typeof payload.electionId === "string" ? payload.electionId : null;
+    const officeId = typeof payload.officeId === "string" ? payload.officeId : null;
+    const amendmentId = typeof payload.amendmentId === "string" ? payload.amendmentId : null;
+    const organizationId =
+      typeof payload.organizationId === "string" ? payload.organizationId : null;
+    const countryId =
+      typeof payload.countryId === "string"
+        ? payload.countryId
+        : typeof payload.targetCountryId === "string"
+          ? payload.targetCountryId
+          : null;
     if (winnerId) details.push(`Winner: ${politicianDisplayName(props.catalog, winnerId)}`);
     if (partyId) details.push(`Party: ${partyDisplayName(props.world, partyId, props.snap)}`);
     if (provinceId)
       details.push(`Province: ${props.catalog.places.get(provinceId)?.name ?? "Province"}`);
-    if (typeof event.payload.yes === "number" && typeof event.payload.no === "number")
+    if (officeId) details.push(`Office: ${props.world.offices[officeId]?.title ?? officeId}`);
+    if (billId) {
+      const bill =
+        props.snap.legislatureRuntime.bills[billId] ??
+        props.snap.provincialRuntime.bills[billId] ??
+        null;
       details.push(
-        `Recorded vote: ${event.payload.yes} aye, ${event.payload.no} nay${typeof event.payload.abstain === "number" ? `, ${event.payload.abstain} abstaining` : ""}`,
+        `Bill: ${bill?.title ?? (typeof payload.title === "string" ? payload.title : billId)}`,
       );
-    if (typeof event.payload.seats === "number")
-      details.push(`Seats filled: ${event.payload.seats}`);
-    if (typeof event.payload.constituencies === "number")
-      details.push(`Constituencies counted: ${event.payload.constituencies}`);
-    if (typeof event.payload.turnoutRate === "number")
-      details.push(`Turnout: ${(event.payload.turnoutRate * 100).toFixed(1)}%`);
+    } else if (typeof payload.title === "string" && payload.title.length > 0) {
+      details.push(`Measure: ${payload.title}`);
+    }
+    if (lawId) {
+      const law = props.snap.legislatureRuntime.enactedLaws[lawId];
+      details.push(`Law: ${law?.title ?? lawId}`);
+    }
+    if (electionId) details.push(`Election: ${electionId}`);
+    if (amendmentId) {
+      const amendment = props.snap.provincialRuntime.constitutionalAmendments[amendmentId];
+      details.push(`Amendment: ${amendment?.title ?? amendmentId}`);
+    }
+    if (organizationId) {
+      const orgName =
+        props.world.interestOrganizations[organizationId]?.name ??
+        (typeof payload.organizationName === "string" ? payload.organizationName : organizationId);
+      details.push(`Organization: ${orgName}`);
+    }
+    if (countryId) {
+      details.push(`Foreign actor: ${props.world.worldCountries[countryId]?.name ?? countryId}`);
+    }
+    if (typeof payload.yes === "number" && typeof payload.no === "number")
+      details.push(
+        `Recorded vote: ${payload.yes} aye, ${payload.no} nay${typeof payload.abstain === "number" ? `, ${payload.abstain} abstaining` : ""}`,
+      );
+    if (typeof payload.uphold === "number" && typeof payload.invalidate === "number")
+      details.push(
+        `Court holding: ${payload.uphold}–${payload.invalidate} (${String(payload.disposition ?? "decision")})`,
+      );
+    if (typeof payload.margin === "number") details.push(`Margin: ${payload.margin}`);
+    else if (typeof payload.finalMargin === "number")
+      details.push(`Margin: ${payload.finalMargin}`);
+    if (typeof payload.seats === "number") details.push(`Seats filled: ${payload.seats}`);
+    if (typeof payload.seatCount === "number") details.push(`Seats: ${payload.seatCount}`);
+    if (typeof payload.constituencies === "number")
+      details.push(`Constituencies counted: ${payload.constituencies}`);
+    if (typeof payload.turnoutRate === "number")
+      details.push(`Turnout: ${(payload.turnoutRate * 100).toFixed(1)}%`);
+    if (typeof payload.ratifyingProvinces === "number")
+      details.push(`Provinces ratifying: ${payload.ratifyingProvinces}`);
+    if (typeof payload.role === "string")
+      details.push(`Role: ${payload.role.replaceAll("_", " ")}`);
+    if (typeof payload.behavior === "string")
+      details.push(`Organization action: ${payload.behavior.replaceAll("_", " ")}`);
     return details;
+  }
+
+  function articleBodyParagraphs(
+    group: StoryGroup,
+    sourceEvent: SimState["history"][number] | null,
+    details: string[],
+  ): string[] {
+    const lede = sourceEvent
+      ? eventDisplay(props.catalog, props.world, props.snap, sourceEvent)
+      : outletHeadline(group.stories[0]!);
+    const paragraphs = [
+      `${lede}.`,
+      `The underlying event entered the public record on ${group.date}. The facts below are saved with the event; the headlines that follow are separate editorial treatments.`,
+    ];
+    if (details.length > 0) {
+      paragraphs.push(
+        `Public facts tied to this item include ${details
+          .slice(0, 4)
+          .map((detail) => detail.replace(/^[^:]+:\s*/, "").toLowerCase())
+          .join("; ")}.`,
+      );
+    }
+    return paragraphs;
   }
 
   function renderOutlets(group: StoryGroup) {
@@ -197,6 +285,7 @@ export function NewsPage(props: {
       Boolean(props.snap.politicians[id]),
     );
     const publicDetails = publicEventDetails(sourceEvent);
+    const bodyParagraphs = articleBodyParagraphs(selectedGroup, sourceEvent, publicDetails);
     return (
       <WorkLayout
         header={
@@ -234,17 +323,14 @@ export function NewsPage(props: {
               </div>
             </header>
             <div className="news-article-copy">
-              <p className="news-article-lede">
-                {sourceEvent
-                  ? eventDisplay(props.catalog, props.world, props.snap, sourceEvent)
-                  : outletHeadline(primary)}
-                .
-              </p>
-              <p>
-                The underlying event entered the public record on {selectedGroup.date}. The facts
-                below are saved with the event; the headlines that follow are separate editorial
-                treatments.
-              </p>
+              {bodyParagraphs.map((paragraph) => (
+                <p
+                  key={paragraph}
+                  className={paragraph === bodyParagraphs[0] ? "news-article-lede" : undefined}
+                >
+                  {paragraph}
+                </p>
+              ))}
               {publicDetails.length > 0 ? (
                 <dl className="news-article-facts">
                   {publicDetails.map((detail) => {

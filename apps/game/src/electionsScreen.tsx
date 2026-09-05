@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import type {
   CommandResult,
@@ -32,7 +32,11 @@ import {
   StatusBadge,
   TabBar,
 } from "./ui/kit.js";
-import { assemblyReportingOrder, provinceReportingOrder } from "./electionNight.js";
+import {
+  assemblyReportingOrder,
+  electionNightFinalVisible,
+  provinceReportingOrder,
+} from "./electionNight.js";
 
 type Props = {
   world: KernelWorld;
@@ -115,6 +119,203 @@ function ElectionNightPanel(props: {
         {props.outcome ? <strong>{props.outcome}</strong> : null}
       </div>
     </section>
+  );
+}
+
+/** Restrained FLIP reorder when RCV candidate rails change rank by current totals. */
+function useFlipReorder(dep: string) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const priorTops = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const nextTops = new Map<string, number>();
+    for (const child of Array.from(root.children) as HTMLElement[]) {
+      const id = child.dataset.railId;
+      if (!id) continue;
+      const top = child.offsetTop;
+      nextTops.set(id, top);
+      const previous = priorTops.current.get(id);
+      if (previous == null || previous === top) continue;
+      const delta = previous - top;
+      child.style.transition = "none";
+      child.style.transform = `translateY(${delta}px)`;
+      requestAnimationFrame(() => {
+        child.style.transition = "transform 0.35s ease, opacity 0.25s ease";
+        child.style.transform = "";
+      });
+    }
+    priorTops.current = nextTops;
+  }, [dep]);
+  return ref;
+}
+
+function mixMapColor(color: string, intensity: number, neutral = "#e4e1d8"): string {
+  const t = Math.max(0.18, Math.min(1, intensity));
+  return `color-mix(in srgb, ${color} ${Math.round(t * 100)}%, ${neutral})`;
+}
+
+function compositionPatternId(constituencyId: string): string {
+  return `assembly-comp-${constituencyId.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+}
+
+function PresidentialNightVisual(props: {
+  replayKey: string;
+  visibleCount: number;
+  rounds: Array<{
+    round?: number;
+    majorityThreshold?: string;
+    continuingDenominator?: string;
+    totalsAfter?: Record<string, string>;
+    eliminatedId?: string;
+    electedId?: string;
+    transfers: Array<{ toCandidateId?: string | null; value: string | number }>;
+    exhaustedTotal?: string;
+    newlyExhausted?: string;
+  }>;
+  firstPreferences: Record<string, string>;
+  exhaustedFinal: number;
+  candidates: Array<{ politicianId: string; partyId?: string | null }>;
+  winnerId: string | null;
+  world: KernelWorld;
+  catalog: PresentationCatalog;
+}) {
+  const shown = props.rounds.slice(0, props.visibleCount);
+  const current = shown[shown.length - 1];
+  const totals = current?.totalsAfter ?? props.firstPreferences;
+  const threshold = voteWeight(current?.majorityThreshold);
+  const continuing = Math.max(
+    voteWeight(current?.continuingDenominator),
+    Object.values(totals).reduce((sum, value) => sum + voteWeight(value), 0),
+    1,
+  );
+  const scale = Math.max(continuing, threshold, 1);
+  const thresholdPct = Math.min(100, (threshold / scale) * 100);
+  const eliminated = new Set(
+    shown.flatMap((round) => (round.eliminatedId ? [round.eliminatedId] : [])),
+  );
+  const elected = new Set(shown.flatMap((round) => (round.electedId ? [round.electedId] : [])));
+  const ordered = props.candidates.slice().sort((a, b) => {
+    const aElim = eliminated.has(a.politicianId);
+    const bElim = eliminated.has(b.politicianId);
+    const aElect = elected.has(a.politicianId);
+    const bElect = elected.has(b.politicianId);
+    if (aElect !== bElect) return Number(bElect) - Number(aElect);
+    if (aElim !== bElim) return Number(aElim) - Number(bElim);
+    const votes = voteWeight(totals[b.politicianId]) - voteWeight(totals[a.politicianId]);
+    return (
+      votes || Number(a.politicianId !== props.winnerId) - Number(b.politicianId !== props.winnerId)
+    );
+  });
+  const orderKey = ordered
+    .map((row) => `${row.politicianId}:${Math.round(voteWeight(totals[row.politicianId]))}`)
+    .join("|");
+  const railRef = useFlipReorder(`${props.replayKey}:${props.visibleCount}:${orderKey}`);
+  const exhausted = voteWeight(current?.exhaustedTotal);
+  const newlyExhausted = voteWeight(current?.newlyExhausted);
+  const transferTotal = Math.max(
+    1,
+    (current?.transfers ?? []).reduce((sum, row) => sum + voteWeight(row.value), 0),
+  );
+  return (
+    <div className="presidential-night-stage">
+      <div className="presidential-night-round">
+        <span>
+          {props.visibleCount ? `Round ${current?.round ?? props.visibleCount}` : "Polls closed"}
+        </span>
+        <strong>
+          {current?.electedId
+            ? "Winner elected"
+            : current?.eliminatedId
+              ? "Lowest candidate eliminated"
+              : "Awaiting first count"}
+        </strong>
+      </div>
+      {threshold > 0 ? (
+        <div className="presidential-night-threshold" aria-label="Winner threshold">
+          <span>Majority threshold</span>
+          <strong>{Math.round(threshold).toLocaleString()}</strong>
+          <small>{formatPublicPercent(threshold / continuing)} of continuing ballots</small>
+        </div>
+      ) : null}
+      <div className="presidential-night-rails" ref={railRef}>
+        {ordered.map((candidate) => {
+          const value = voteWeight(totals[candidate.politicianId]);
+          const status = elected.has(candidate.politicianId)
+            ? "Elected"
+            : eliminated.has(candidate.politicianId)
+              ? "Eliminated"
+              : "Active";
+          return (
+            <div
+              className={`presidential-night-candidate ${status.toLowerCase()}`}
+              data-rail-id={candidate.politicianId}
+              key={candidate.politicianId}
+            >
+              <div>
+                <span
+                  className="party-swatch"
+                  style={{ background: partyColor(props.world, candidate.partyId ?? null) }}
+                />
+                <strong>{politicianDisplayName(props.catalog, candidate.politicianId)}</strong>
+                <small>{status}</small>
+                <b>{Math.round(value).toLocaleString()}</b>
+              </div>
+              <span className="presidential-night-bar">
+                {threshold > 0 ? (
+                  <em
+                    className="presidential-night-threshold-mark"
+                    style={{ left: `${thresholdPct}%` }}
+                    title="Majority threshold"
+                  />
+                ) : null}
+                <i
+                  style={{
+                    width: `${(value / scale) * 100}%`,
+                    background: partyColor(props.world, candidate.partyId ?? null),
+                  }}
+                />
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="rcv-exhausted" role="status">
+        <span>Exhausted ballots</span>
+        <strong>{Math.round(exhausted || props.exhaustedFinal).toLocaleString()}</strong>
+        {newlyExhausted > 0 ? (
+          <small>+{Math.round(newlyExhausted).toLocaleString()} this round</small>
+        ) : null}
+      </div>
+      {current?.transfers.length ? (
+        <div className="rcv-transfer-board">
+          <strong>
+            {current.eliminatedId
+              ? `${politicianDisplayName(props.catalog, current.eliminatedId)} transfers`
+              : "Recorded transfers"}
+          </strong>
+          {current.transfers.map((transfer, index) => {
+            const amount = voteWeight(transfer.value);
+            return (
+              <div
+                className={`rcv-transfer-row${transfer.toCandidateId ? "" : " exhausted"}`}
+                key={`${transfer.toCandidateId ?? "exhausted"}:${index}`}
+              >
+                <span className="rcv-transfer-dest">
+                  {transfer.toCandidateId
+                    ? politicianDisplayName(props.catalog, transfer.toCandidateId)
+                    : "Exhausted"}
+                </span>
+                <span className="rcv-transfer-track" aria-hidden>
+                  <i style={{ width: `${(amount / transferTotal) * 100}%` }} />
+                </span>
+                <b>{formatPublicNumber(transfer.value)}</b>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -480,6 +681,10 @@ export function ElectionsPage(props: Props) {
       election.countArchive && "rounds" in election.countArchive
         ? election.countArchive.rounds
         : [];
+    const exhaustedFinal =
+      election.countArchive && "exhausted" in election.countArchive
+        ? voteWeight(election.countArchive.exhausted)
+        : 0;
     const nightEvents: ElectionNightEvent[] = rounds.map((round, index) => ({
       id: `${election.id}:round:${round.round ?? index + 1}`,
       title: round.electedId
@@ -494,11 +699,15 @@ export function ElectionsPage(props: Props) {
     }));
     const replayKey = `president:${election.id}`;
     const historicalReplay = !isFreshElectionNight(election.date);
-    const finalVisible =
-      election.status !== "resolved" ||
-      nightEvents.length === 0 ||
-      historicalReplay ||
-      revealedNight[replayKey] === true;
+    const finalVisible = electionNightFinalVisible({
+      status: election.status,
+      eventCount: nightEvents.length,
+      historical: historicalReplay,
+      revealed: revealedNight[replayKey] === true,
+    });
+    const pollByCandidate = new Map(
+      (poll?.firstPreference ?? []).map((row) => [row.politicianId, row.share] as const),
+    );
 
     return (
       <article key={election.id} className="election-pres-block">
@@ -532,94 +741,24 @@ export function ElectionsPage(props: Props) {
           <ElectionNightReplay
             replayKey={replayKey}
             title={`${election.date.slice(0, 4)} Presidential Election`}
-            subtitle="Watch the certified national ranked-choice rounds, eliminations and exact transfers unfold."
+            subtitle="National ranked-choice count only. Terena publishes no province-level certified presidential returns."
             events={nightEvents}
             unitLabel="RCV rounds shown"
             historical={historicalReplay}
             onRevealChange={(complete) => revealState(replayKey, complete)}
-            renderVisual={(visibleCount) => {
-              const shown = rounds.slice(0, visibleCount);
-              const current = shown[shown.length - 1];
-              const totals = current?.totalsAfter ?? firstPreferences;
-              const maxVote = Math.max(1, ...Object.values(totals).map(voteWeight));
-              const eliminated = new Set(
-                shown.flatMap((round) => (round.eliminatedId ? [round.eliminatedId] : [])),
-              );
-              const elected = new Set(
-                shown.flatMap((round) => (round.electedId ? [round.electedId] : [])),
-              );
-              return (
-                <div className="presidential-night-stage">
-                  <div className="presidential-night-round">
-                    <span>
-                      {visibleCount ? `Round ${current?.round ?? visibleCount}` : "Polls closed"}
-                    </span>
-                    <strong>
-                      {current?.electedId
-                        ? "Winner elected"
-                        : current?.eliminatedId
-                          ? "Lowest candidate eliminated"
-                          : "Awaiting first count"}
-                    </strong>
-                  </div>
-                  <div className="presidential-night-rails">
-                    {ranked.map((candidate) => {
-                      const value = voteWeight(totals[candidate.politicianId]);
-                      const status = elected.has(candidate.politicianId)
-                        ? "Elected"
-                        : eliminated.has(candidate.politicianId)
-                          ? "Eliminated"
-                          : "Active";
-                      return (
-                        <div
-                          className={`presidential-night-candidate ${status.toLowerCase()}`}
-                          key={candidate.politicianId}
-                        >
-                          <div>
-                            <span
-                              className="party-swatch"
-                              style={{
-                                background: partyColor(props.world, candidate.partyId ?? null),
-                              }}
-                            />
-                            <strong>
-                              {politicianDisplayName(props.catalog, candidate.politicianId)}
-                            </strong>
-                            <small>{status}</small>
-                            <b>{Math.round(value).toLocaleString()}</b>
-                          </div>
-                          <span className="presidential-night-bar">
-                            <i
-                              style={{
-                                width: `${(value / maxVote) * 100}%`,
-                                background: partyColor(props.world, candidate.partyId ?? null),
-                              }}
-                            />
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {current?.transfers.length ? (
-                    <div className="rcv-transfer-board">
-                      <strong>
-                        {current.eliminatedId
-                          ? `${politicianDisplayName(props.catalog, current.eliminatedId)} transfers`
-                          : "Recorded transfers"}
-                      </strong>
-                      {current.transfers.map((transfer, index) => (
-                        <span key={`${transfer.toCandidateId ?? "exhausted"}:${index}`}>
-                          {formatPublicNumber(transfer.value)} →{" "}
-                          {transfer.toCandidateId
-                            ? politicianDisplayName(props.catalog, transfer.toCandidateId)
-                            : "Exhausted"}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            }}
+            renderVisual={(visibleCount) => (
+              <PresidentialNightVisual
+                replayKey={replayKey}
+                visibleCount={visibleCount}
+                rounds={rounds}
+                firstPreferences={firstPreferences}
+                exhaustedFinal={exhaustedFinal}
+                candidates={Object.values(election.candidates)}
+                winnerId={winnerId}
+                world={props.world}
+                catalog={props.catalog}
+              />
+            )}
           />
         ) : null}
         <div
@@ -655,21 +794,56 @@ export function ElectionsPage(props: Props) {
                   : "National result pending resolution."}
               </p>
             )}
-            {poll && election.status !== "resolved" ? (
-              <p className="muted">
-                Latest national poll {poll.publicationDate}:{" "}
-                {pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)}
+            <div className="presidential-no-geo" role="note">
+              <div className="kicker">Geography</div>
+              <strong>No geographic Presidential returns</strong>
+              <p>
+                Terena certifies the presidency from the national ranked-choice count only. There
+                are no province-level presidential returns to map.
               </p>
+            </div>
+            {poll ? (
+              <div className="presidential-poll-compare">
+                <SectionDivider
+                  title={
+                    election.status === "resolved"
+                      ? "National polling comparison"
+                      : "National public polling"
+                  }
+                  hint={
+                    election.status === "resolved"
+                      ? `Final published poll ${poll.publicationDate} vs certified first preferences`
+                      : `Published ${poll.publicationDate} · national sample, not a geographic map`
+                  }
+                />
+                {election.status === "resolved" && totalVotes > 0 ? (
+                  <DataTable
+                    headers={["Candidate", "Poll", "1st preference"]}
+                    dense
+                    caption="National first preferences compared with the last public poll"
+                  >
+                    {ranked.map((candidate) => {
+                      const actual =
+                        voteWeight(firstPreferences[candidate.politicianId]) / totalVotes;
+                      const polled = pollByCandidate.get(candidate.politicianId);
+                      return (
+                        <tr key={candidate.politicianId}>
+                          <td>{politicianDisplayName(props.catalog, candidate.politicianId)}</td>
+                          <td>{polled == null ? "—" : formatPublicPercent(polled)}</td>
+                          <td>{formatPublicPercent(actual)}</td>
+                        </tr>
+                      );
+                    })}
+                  </DataTable>
+                ) : (
+                  <p className="muted">
+                    {pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)}
+                  </p>
+                )}
+              </div>
+            ) : election.status !== "resolved" ? (
+              <p className="muted">No current national presidential poll has been published.</p>
             ) : null}
-            <TerenaMap
-              bundle={props.bundle}
-              mode="election"
-              selectedId={null}
-              showConstituencies={false}
-              fillFor={(feature, kind) =>
-                mapFillFor("election", props.world, props.snap, feature, kind)
-              }
-            />
             {presidentialDue && election.status !== "resolved" ? (
               <button type="button" className="btn" onClick={props.onResolvePresidential}>
                 Resolve election
@@ -715,7 +889,7 @@ export function ElectionsPage(props: Props) {
         {rounds.length > 0 && finalVisible ? (
           <>
             <SectionDivider title="Ranked-choice rounds" hint="Elimination and election sequence" />
-            <DataTable headers={["Round", "Outcome"]} dense caption="RCV progression">
+            <DataTable headers={["Round", "Outcome", "Exhausted"]} dense caption="RCV progression">
               {rounds.map((round, index) => (
                 <tr key={index}>
                   <td>{round.round ?? index + 1}</td>
@@ -726,6 +900,7 @@ export function ElectionsPage(props: Props) {
                         ? `Elected ${politicianDisplayName(props.catalog, round.electedId)}`
                         : "Count complete"}
                   </td>
+                  <td>{formatPublicNumber(round.exhaustedTotal)}</td>
                 </tr>
               ))}
             </DataTable>
@@ -799,6 +974,62 @@ export function ElectionsPage(props: Props) {
           )[0]?.partyId ?? null
       );
     };
+    const seatChangeMagnitude = (id: string): number => {
+      const current = results[id];
+      const previous = previousAssembly?.constituencyResults[id];
+      if (!current || !previous) return 0;
+      const old = new Map(seatRows(previous).map((row) => [row.partyId, row.seats]));
+      return Math.max(
+        0,
+        ...seatRows(current).map((row) => row.seats - (old.get(row.partyId) ?? 0)),
+      );
+    };
+    const swingMagnitude = (id: string): number => {
+      const current = results[id];
+      const previous = previousAssembly?.constituencyResults[id];
+      if (!current || !previous) return 0;
+      const now = preferenceRows(current);
+      const before = preferenceRows(previous);
+      return Math.max(
+        0,
+        ...[...now.entries()].map(([partyId, share]) => share - (before.get(partyId) ?? 0)),
+      );
+    };
+    const maxSeatChange = Math.max(1, ...Object.keys(results).map(seatChangeMagnitude));
+    const maxSwing = Math.max(0.01, ...Object.keys(results).map(swingMagnitude));
+    const compositionDefs = Object.values(results).flatMap((entry) => {
+      const seats = seatRows(entry);
+      if (seats.length < 2) return [];
+      const total = seats.reduce((sum, row) => sum + row.seats, 0) || 1;
+      const band = 12;
+      let cursor = 0;
+      return [
+        <pattern
+          id={compositionPatternId(entry.constituencyId)}
+          key={entry.constituencyId}
+          width={band * seats.length}
+          height={band}
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(35)"
+        >
+          {seats.map((row) => {
+            const width = Math.max(2, (row.seats / total) * band * seats.length);
+            const x = cursor;
+            cursor += width;
+            return (
+              <rect
+                key={`${row.partyId ?? "independent"}:${x}`}
+                x={x}
+                y={0}
+                width={width}
+                height={band}
+                fill={partyColor(props.world, row.partyId)}
+              />
+            );
+          })}
+        </pattern>,
+      ];
+    });
     const available = [...new Set([...Object.keys(results), ...Object.keys(fields)])].sort();
     const constituencyId =
       selection?.kind === "constituency" && available.includes(selection.id)
@@ -884,11 +1115,12 @@ export function ElectionsPage(props: Props) {
     });
     const replayKey = `assembly:${election.id}`;
     const historicalReplay = !isFreshElectionNight(election.date);
-    const finalVisible =
-      election.status !== "resolved" ||
-      nightEvents.length === 0 ||
-      historicalReplay ||
-      revealedNight[replayKey] === true;
+    const finalVisible = electionNightFinalVisible({
+      status: election.status,
+      eventCount: nightEvents.length,
+      historical: historicalReplay,
+      revealed: revealedNight[replayKey] === true,
+    });
 
     return (
       <div className="assembly-election-view">
@@ -1151,6 +1383,7 @@ export function ElectionsPage(props: Props) {
                   bundle={props.bundle}
                   mode="election"
                   selectedId={constituencyId}
+                  defs={assemblyMapMode === "composition" ? compositionDefs : undefined}
                   fillFor={(feature, kind) => {
                     if (kind === "province") return "#e7efe6";
                     const entry = results[feature.id];
@@ -1159,12 +1392,34 @@ export function ElectionsPage(props: Props) {
                       const rate = entry.turnout.turnoutRate;
                       return `hsl(205, 35%, ${88 - Math.max(0, Math.min(1, (rate - 0.45) / 0.35)) * 42}%)`;
                     }
-                    return partyColor(props.world, assemblyMapParty(feature.id));
+                    if (assemblyMapMode === "composition") {
+                      const seats = seatRows(entry);
+                      if (seats.length >= 2) return `url(#${compositionPatternId(feature.id)})`;
+                      return partyColor(props.world, seats[0]?.partyId ?? null);
+                    }
+                    const partyId = assemblyMapParty(feature.id);
+                    if (assemblyMapMode === "seat_change") {
+                      if (!partyId) return "#d9d6cf";
+                      return mixMapColor(
+                        partyColor(props.world, partyId),
+                        seatChangeMagnitude(feature.id) / maxSeatChange,
+                      );
+                    }
+                    if (assemblyMapMode === "swing") {
+                      if (!partyId) return "#d9d6cf";
+                      return mixMapColor(
+                        partyColor(props.world, partyId),
+                        swingMagnitude(feature.id) / maxSwing,
+                      );
+                    }
+                    return partyColor(props.world, partyId);
                   }}
                   onSelect={setSelection}
                   tooltipFor={(picked) => {
                     const entry = results[picked.id];
                     const seats = seatRows(entry);
+                    const change = seatChangeMagnitude(picked.id);
+                    const swing = swingMagnitude(picked.id);
                     return (
                       <>
                         <strong>{picked.name}</strong>
@@ -1173,6 +1428,17 @@ export function ElectionsPage(props: Props) {
                             ? `${(entry.turnout.turnoutRate * 100).toFixed(1)}% turnout`
                             : "No certified result"}
                         </span>
+                        {assemblyMapMode === "seat_change" && entry ? (
+                          <small>
+                            Largest seat gain {change > 0 ? `+${change}` : "none vs prior"}
+                          </small>
+                        ) : null}
+                        {assemblyMapMode === "swing" && entry ? (
+                          <small>
+                            Largest 1st-pref swing{" "}
+                            {swing > 0 ? `+${(swing * 100).toFixed(1)} pts` : "none"}
+                          </small>
+                        ) : null}
                         {seats.map((row) => (
                           <small key={row.partyId ?? "independent"}>
                             {partyDisplayName(props.world, row.partyId, props.snap)} · {row.seats}
@@ -1186,11 +1452,11 @@ export function ElectionsPage(props: Props) {
                   {assemblyMapMode === "largest"
                     ? "Color = largest certified seat delegation."
                     : assemblyMapMode === "composition"
-                      ? "Color = largest delegation; hover or select for the full certified multi-party seat split."
+                      ? "Stripes = certified multi-party seat split within the constituency; solid = single-party slate."
                       : assemblyMapMode === "seat_change"
-                        ? "Color = party with the largest certified seat gain from the previous comparable election; gray = no gain or no comparison."
+                        ? "Color = party with the largest certified seat gain; stronger tint = larger gain; gray = no gain or no comparison."
                         : assemblyMapMode === "swing"
-                          ? "Color = party with the largest first-preference increase from the previous comparable election."
+                          ? "Color = party with the largest first-preference increase; stronger tint = larger swing; gray = no comparison."
                           : "Darker = higher certified turnout."}
                 </p>
               </>
@@ -1336,11 +1602,12 @@ export function ElectionsPage(props: Props) {
     });
     const replayKey = `provincial-assemblies:${election.date.slice(0, 4)}`;
     const historicalReplay = !isFreshElectionNight(election.date);
-    const finalVisible =
-      election.status !== "resolved" ||
-      nightEvents.length === 0 ||
-      historicalReplay ||
-      revealedNight[replayKey] === true;
+    const finalVisible = electionNightFinalVisible({
+      status: election.status,
+      eventCount: nightEvents.length,
+      historical: historicalReplay,
+      revealed: revealedNight[replayKey] === true,
+    });
 
     return (
       <div className="provincial-assembly-election-view">
@@ -1444,6 +1711,7 @@ export function ElectionsPage(props: Props) {
           </label>
           <MapDetailLayout
             className="provincial-election-layout"
+            detailVisible
             map={
               <>
                 <SectionDivider
@@ -1986,6 +2254,7 @@ export function ElectionsPage(props: Props) {
                   </select>
                 </label>
                 <MapDetailLayout
+                  detailVisible
                   map={
                     <>
                       <SectionDivider title="Provincial election map" />

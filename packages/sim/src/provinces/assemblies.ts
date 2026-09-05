@@ -310,11 +310,16 @@ function leadershipBallot(
   partyId: string | null,
   salt: string,
   explicitCandidateId: string | null = null,
+  previousHolderId: string | null = null,
 ): { candidateIds: string[]; ballots: Record<string, number>; winnerId: string | null } {
   const members = assembly.memberIds
     .map((id) => state.provincialRuntime.legislators[id])
     .filter((row): row is ProvincialLegislator => Boolean(row?.active))
     .filter((row) => partyId == null || row.partyId === partyId);
+  const eligiblePrevious =
+    previousHolderId && members.some((row) => row.id === previousHolderId)
+      ? previousHolderId
+      : null;
   const npcCandidates = members
     .filter((row) => row.id !== state.playerPoliticianId)
     .sort((a, b) => leadershipScore(b, role) - leadershipScore(a, role) || a.id.localeCompare(b.id))
@@ -324,6 +329,9 @@ function leadershipBallot(
     ...new Set([
       ...(explicitCandidateId && members.some((row) => row.id === explicitCandidateId)
         ? [explicitCandidateId]
+        : []),
+      ...(eligiblePrevious && eligiblePrevious !== state.playerPoliticianId
+        ? [eligiblePrevious]
         : []),
       ...npcCandidates,
     ]),
@@ -336,11 +344,14 @@ function leadershipBallot(
         const candidate = state.provincialRuntime.legislators[candidateId]!;
         const factionAffinity =
           voter.factionId && voter.factionId === candidate.factionId ? 0.1 : 0;
+        // Modest incumbent stickiness: reduces routine post-election churn when the
+        // previous holder still sits, without blocking genuine challenges.
+        const incumbency = eligiblePrevious === candidateId ? 0.14 : 0;
         const localVariance =
           (stableProvincialHash(`${salt}:${voter.id}:${candidateId}`) % 1000) / 10000;
         return {
           candidateId,
-          score: leadershipScore(candidate, role) + factionAffinity + localVariance,
+          score: leadershipScore(candidate, role) + factionAffinity + incumbency + localVariance,
         };
       })
       .sort(
@@ -391,7 +402,15 @@ function assignProvincialLeadership(
   assembly.leadershipHistory ??= [];
   const previousSpeakerId = assembly.presidingOfficerId;
   const previousPartyLeadership = assembly.partyLeadership;
-  const speaker = leadershipBallot(state, assembly, "speaker", null, `${salt}:speaker`);
+  const speaker = leadershipBallot(
+    state,
+    assembly,
+    "speaker",
+    null,
+    `${salt}:speaker`,
+    null,
+    previousSpeakerId,
+  );
   assembly.presidingOfficerId = speaker.winnerId;
   if (recordElection && speaker.winnerId != null && speaker.winnerId !== previousSpeakerId) {
     assembly.leadershipHistory.push(
@@ -407,14 +426,25 @@ function assignProvincialLeadership(
   ].sort();
   const leadership: ProvincialAssemblyState["partyLeadership"] = {};
   for (const partyId of partyIds) {
+    const prior = previousPartyLeadership[partyId];
     const floor = leadershipBallot(
       state,
       assembly,
       "floor_leader",
       partyId,
       `${salt}:${partyId}:floor`,
+      null,
+      prior?.floorLeaderId ?? null,
     );
-    const whip = leadershipBallot(state, assembly, "whip", partyId, `${salt}:${partyId}:whip`);
+    const whip = leadershipBallot(
+      state,
+      assembly,
+      "whip",
+      partyId,
+      `${salt}:${partyId}:whip`,
+      null,
+      prior?.whipId ?? null,
+    );
     leadership[partyId] = {
       partyId,
       floorLeaderId: floor.winnerId,
@@ -424,11 +454,7 @@ function assignProvincialLeadership(
           : whip.winnerId,
       selectedDate: state.currentDate,
     };
-    if (
-      recordElection &&
-      floor.winnerId != null &&
-      floor.winnerId !== previousPartyLeadership[partyId]?.floorLeaderId
-    ) {
+    if (recordElection && floor.winnerId != null && floor.winnerId !== prior?.floorLeaderId) {
       assembly.leadershipHistory.push(
         leadershipRecord(
           assembly,
@@ -441,11 +467,7 @@ function assignProvincialLeadership(
       );
     }
     const selectedWhipId = leadership[partyId]!.whipId;
-    if (
-      recordElection &&
-      selectedWhipId != null &&
-      selectedWhipId !== previousPartyLeadership[partyId]?.whipId
-    ) {
+    if (recordElection && selectedWhipId != null && selectedWhipId !== prior?.whipId) {
       assembly.leadershipHistory.push(
         leadershipRecord(
           assembly,

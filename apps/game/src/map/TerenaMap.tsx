@@ -34,6 +34,7 @@ export function TerenaMap(props: {
   mode: MapMode;
   selectedId?: string | null;
   fillFor?: (feature: PreparedPath, kind: "province" | "constituency") => string | undefined;
+  defs?: ReactNode;
   onSelect?: (sel: MapSelection) => void;
   onHover?: (sel: MapSelection | null) => void;
   showConstituencies?: boolean;
@@ -166,6 +167,7 @@ export function TerenaMap(props: {
           zoom(event.deltaY > 0 ? 1.18 : 0.84);
         }}
       >
+        {props.defs ? <defs>{props.defs}</defs> : null}
         <rect
           x={prepared.transform.minX}
           y={prepared.transform.minY}

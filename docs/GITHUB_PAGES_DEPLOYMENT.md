@@ -10,13 +10,13 @@ In the GitHub repository, set **Settings → Pages → Build and deployment → 
 
 `https://gamerlovesdogs17.github.io/Lorsain-project/`
 
-Do not mark the public site validated merely because the workflow exists. Confirm the latest Actions deployment and exercise New Game, End Turn, save/reload, maps, and an election from the public address.
+Do not mark the public site validated merely because the workflow exists. Confirm the latest Actions deployment and exercise New Game, End Turn, save/reload, maps, and an election from the public address. Until that live checklist passes, public Pages remains a **RELEASE ACTION**, not a requirement **PASS**.
 
 ### Closeout status (2026-09-04)
 
 The public address returned HTTP 200 but still identified itself as the older Phase 10 site. GitHub's dynamic `pages build and deployment` job succeeded for commit `08a1086`, while the repository's explicit **Deploy game to GitHub Pages** workflow failed during its build on the then-current exact-optional-property type error in the public polling layer. That source error is fixed in the closeout worktree and the complete local workspace build passes.
 
-This combination indicates that Pages was still publishing its branch-source configuration rather than the new `apps/game/dist` workflow artifact. The remaining release action is external and deliberate: set Pages Source to **GitHub Actions**, publish the closeout commit, confirm the explicit workflow succeeds, and rerun the public-browser checklist. The faithful local subpath build is validation of the artifact, not a claim that the older public deployment has updated itself.
+This combination indicates that Pages was still publishing its branch-source configuration rather than the new `apps/game/dist` workflow artifact. The remaining release action is external and deliberate: set Pages Source to **GitHub Actions**, publish the closeout commit, confirm the explicit workflow succeeds, and rerun the public-browser checklist. The faithful local subpath build validates the artifact only — it does **not** prove the older public deployment has updated.
 
 ## Faithful local smoke test
 
