@@ -65,23 +65,17 @@ async function main() {
 
   await gotoFixture(
     page,
-    { qaFixture: "institutions", qaScreen: "campaign", qaPlayer: "NPC003" },
+    { qaFixture: "active-campaign", qaScreen: "campaign", qaPlayer: "NPC009" },
     desk,
   );
   await shot(page, "campaign-hq-1440.png");
 
   await gotoFixture(
     page,
-    { qaFixture: "election-results", qaScreen: "elections", qaPlayer: "NPC003" },
+    { qaFixture: "election-night-partial", qaScreen: "elections", qaPlayer: "NPC001" },
     desk,
   );
   await shot(page, "elections-1440.png");
-
-  await gotoFixture(
-    page,
-    { qaFixture: "election-results", qaScreen: "elections", qaPlayer: "NPC003", qaTab: "assembly" },
-    desk,
-  );
   await shot(page, "election-night-1440.png");
 
   await gotoFixture(
