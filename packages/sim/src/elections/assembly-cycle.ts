@@ -12,6 +12,8 @@ import { pushHistory } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import { emptyIdeology } from "../agents/profile.js";
 import { standingPublicScore } from "../campaigns/effects.js";
+import { partyAllowedUnderConstitution } from "../parties/state.js";
+import { assemblyElectionMode } from "../provinces/constitutionGameplay.js";
 import type {
   AssemblyCandidacy,
   AssemblyConstituencyField,
@@ -157,7 +159,10 @@ export function ensureAssemblyElectionCycle(
   world: KernelWorld,
   election: ElectionState,
 ): AssemblyElectionCycle {
-  if (election.assembly) return election.assembly;
+  if (election.assembly) {
+    election.assembly.electoralMethod = assemblyElectionMode(state);
+    return election.assembly;
+  }
   const dates = assemblyFilingDates(election.date);
   election.assembly = {
     filingStatus: "planned",
@@ -169,6 +174,7 @@ export function ensureAssemblyElectionCycle(
     constituencyResults: {},
     previousPartySeatTotals: currentPartySeatTotals(state, world),
     partySeatTotals: {},
+    electoralMethod: assemblyElectionMode(state),
   };
   return election.assembly;
 }
@@ -621,6 +627,15 @@ export function fileAssemblyCandidacy(
     args.constituencyId,
   );
   if (eligibility) return { error: eligibility };
+  const pol = state.politicians[args.politicianId];
+  if (!partyAllowedUnderConstitution(state, pol?.partyId ?? null)) {
+    return {
+      error: reject(
+        "PARTY_CONSTITUTIONALLY_BARRED",
+        `${pol?.partyId ?? "independent"} is not legal under the current Constitution`,
+      ),
+    };
+  }
   if (cycle.decisions[args.politicianId]?.decision === "declined") {
     return { error: reject("ALREADY_DECLINED", args.politicianId) };
   }

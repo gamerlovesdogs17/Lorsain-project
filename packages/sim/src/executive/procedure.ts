@@ -19,6 +19,7 @@ import {
   seedMinistriesIfNeeded,
 } from "./state.js";
 import type { AssemblyMotion, MotionKind, RegulationState } from "./types.js";
+import { emergencyDeclarationAllowed } from "../provinces/constitutionGameplay.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -648,14 +649,22 @@ export function declareEmergency(
   if (!state.executiveRuntime.emergencyTrigger) {
     return { error: reject("NO_EMERGENCY_TRIGGER", "no legitimate emergency trigger") };
   }
+  const gate = emergencyDeclarationAllowed(state, true);
+  if (!gate.allowed) {
+    return { error: reject("EMERGENCY_CONSTITUTIONALLY_BARRED", gate.reason ?? "not allowed") };
+  }
   const emergency = {
     id: allocateEmergencyId(state),
     declaredBy: args.actorId,
     declaredDate: state.currentDate,
-    expiresDate: addDays(state.currentDate, world.executiveConstitution.emergencyInitialDays),
+    expiresDate: addDays(state.currentDate, gate.initialDays),
     status: "active" as const,
     extensionCount: 0,
-    metadata: { courtReviewRequired: true },
+    metadata: {
+      courtReviewRequired: gate.courtReviewRequired,
+      requiresAssemblyConfirmation: gate.requiresAssemblyConfirmation,
+      emergencyMode: state.provincialRuntime.constitutionalOrder?.emergencyPowers ?? null,
+    },
   };
   state.executiveRuntime.emergencies[emergency.id] = emergency;
   state.executiveRuntime.emergencyTrigger = false;
@@ -669,7 +678,8 @@ export function declareEmergency(
         {
           emergencyId: emergency.id,
           expiresDate: emergency.expiresDate,
-          courtReviewRequired: true,
+          courtReviewRequired: gate.courtReviewRequired,
+          requiresAssemblyConfirmation: gate.requiresAssemblyConfirmation,
         },
         commandId,
         0.95,

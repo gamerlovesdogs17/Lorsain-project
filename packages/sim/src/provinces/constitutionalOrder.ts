@@ -101,6 +101,10 @@ export type ConstitutionalOrderState = {
   defenseControl: "civil_supremacy" | "joint_command" | "executive_command";
   /** Enacted clause text overrides keyed by clause id. */
   clauseTexts: Record<string, string>;
+  /** Accumulated metric effects from ratified amendments (applied to gameplay). */
+  orderMetrics?: ConstitutionalMetricEffects;
+  /** National referendum outcomes for amendments awaiting popular ratification. */
+  pendingReferendumAmendmentIds?: string[];
   lastAmendedDate: IsoDate | null;
 };
 
@@ -124,6 +128,16 @@ export function emptyConstitutionalOrder(): ConstitutionalOrderState {
     localGovernment: "provincial_primary",
     defenseControl: "civil_supremacy",
     clauseTexts: {},
+    orderMetrics: {
+      institutionalStability: 0,
+      politicalCompetition: 0,
+      civilLiberty: 0,
+      executiveCapacity: 0,
+      provincialAutonomy: 0,
+      judicialIndependence: 0,
+      governmentLegitimacy: 0,
+    },
+    pendingReferendumAmendmentIds: [],
     lastAmendedDate: null,
   };
 }

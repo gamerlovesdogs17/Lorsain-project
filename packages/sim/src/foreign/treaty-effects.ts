@@ -5,6 +5,7 @@ import { TERENA_WORLD_ID } from "./types.js";
 import { treatyIdentityKey } from "./treaty-identity.js";
 import { getBilateralRelation } from "./state.js";
 import { applyTradeToRelation } from "./trade.js";
+import { treatyRequiresAssemblyUnderOrder } from "../provinces/constitutionGameplay.js";
 
 export function applyActiveTreatyEffects(state: SimState, date: string): void {
   const month = monthStart(date as IsoDate);
@@ -79,7 +80,8 @@ export function deterrenceModifier(
   return Math.min(0.25, modifier);
 }
 
-export function terenaTreatyRequiresAssembly(kind: string): boolean {
+export function terenaTreatyRequiresAssembly(kind: string, state?: SimState): boolean {
+  if (state) return treatyRequiresAssemblyUnderOrder(state, kind);
   return kind !== "trade";
 }
 

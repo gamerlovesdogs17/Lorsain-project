@@ -31,6 +31,34 @@ export function partyAllowedUnderConstitution(
   return true;
 }
 
+export type PartyLegalStatus =
+  | "registered"
+  | "restricted"
+  | "sole_recognized"
+  | "prohibited"
+  | "nonpartisan_only"
+  | "defunct";
+
+export function partyLegalStatus(
+  state: SimState,
+  partyId: string | null | undefined,
+): PartyLegalStatus {
+  if (!partyId) return "registered";
+  const party = state.partyStates[partyId];
+  if (party && (party as { status?: string }).status === "defunct") return "defunct";
+  const order = state.provincialRuntime.constitutionalOrder;
+  if (!order) return "registered";
+  if (order.partySystem === "nonpartisan_candidates") {
+    return partyId === INDEPENDENT_AGGREGATE_ID ? "nonpartisan_only" : "prohibited";
+  }
+  if (order.partySystem === "single_legal_party") {
+    if (order.soleLegalPartyId == null) return "restricted";
+    return partyId === order.soleLegalPartyId ? "sole_recognized" : "prohibited";
+  }
+  if (order.partySystem === "restricted_registration") return "restricted";
+  return "registered";
+}
+
 type PresidentialInterestContext = {
   officeKindsByPolitician: Map<string, Set<string>>;
   partyLeaders: Set<string>;

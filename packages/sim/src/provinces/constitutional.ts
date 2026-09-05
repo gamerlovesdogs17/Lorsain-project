@@ -17,6 +17,10 @@ import {
   constitutionSubjectById,
 } from "./constitutionChanges.js";
 import { amendmentThresholds, emptyConstitutionalOrder } from "./constitutionalOrder.js";
+import {
+  applyAlternativeGameplayEffects,
+  referendumRequiredForAmendments,
+} from "./constitutionGameplay.js";
 import type { ConstitutionalPackageChange } from "./types.js";
 
 /**
@@ -668,8 +672,10 @@ export function applyRatifiedAmendmentEffects(
         }
       }
     }
+    applyAlternativeGameplayEffects(state, alt);
   }
   if (order.partySystem === "single_legal_party" && !order.soleLegalPartyId) {
+    // Designating Act model: sponsor party is provisionally designated until an Act names another.
     order.soleLegalPartyId = state.politicians[amendment.sponsorId]?.partyId ?? null;
   }
   if (order.partySystem !== "single_legal_party") {
@@ -762,7 +768,14 @@ function federalVote(
   const required = assemblyVotesRequired(state);
   if (yes >= required) {
     const provincesNeeded = provincesRequiredForRatification(state);
-    if (provincesNeeded <= 0) {
+    if (referendumRequiredForAmendments(state)) {
+      amendment.status = "ratifying";
+      amendment.ratificationDeadline = null;
+      const order = ensureConstitutionalOrder(state);
+      const pending = order.pendingReferendumAmendmentIds ?? [];
+      if (!pending.includes(amendment.id)) pending.push(amendment.id);
+      order.pendingReferendumAmendmentIds = pending;
+    } else if (provincesNeeded <= 0) {
       amendment.status = "ratified";
       amendment.enactedDate = state.currentDate;
       applyRatifiedAmendmentEffects(state, amendment);
@@ -949,6 +962,54 @@ export function processConstitutionalAmendmentsMonth(
       );
     }
     if (amendment.status !== "ratifying") continue;
+    if (referendumRequiredForAmendments(state) && provincesRequiredForRatification(state) <= 0) {
+      if (amendment.referendumHeldDate == null) {
+        // National referendum: rough popular support from Assembly yes-share + competition metrics.
+        const members = Math.max(1, currentAssemblyMemberIds(world, state).length);
+        const yesShare = amendment.assemblyYes / members;
+        const competition =
+          state.provincialRuntime.constitutionalOrder?.orderMetrics?.politicalCompetition ?? 0;
+        const support = Math.max(0.15, Math.min(0.85, yesShare * 0.7 + 0.25 + competition * 0.01));
+        const electorate = 10_000_000;
+        amendment.referendumYes = Math.round(electorate * support);
+        amendment.referendumNo = electorate - amendment.referendumYes;
+        amendment.referendumHeldDate = state.currentDate;
+        const passed = amendment.referendumYes > amendment.referendumNo;
+        if (passed) {
+          amendment.status = "ratified";
+          amendment.enactedDate = state.currentDate;
+          applyRatifiedAmendmentEffects(state, amendment);
+        } else {
+          amendment.status = "failed";
+        }
+        const order = ensureConstitutionalOrder(state);
+        order.pendingReferendumAmendmentIds = (order.pendingReferendumAmendmentIds ?? []).filter(
+          (id) => id !== amendment.id,
+        );
+        events.push(
+          pushHistory(state, {
+            date: state.currentDate,
+            type: passed
+              ? "CONSTITUTIONAL_AMENDMENT_RATIFIED"
+              : "CONSTITUTIONAL_AMENDMENT_FAILED",
+            importance: 1,
+            visibility: "public",
+            actorIds: [amendment.sponsorId],
+            entityIds: [amendment.id],
+            payload: {
+              amendmentId: amendment.id,
+              stage: "national_referendum",
+              referendumYes: amendment.referendumYes,
+              referendumNo: amendment.referendumNo,
+              packageSize: amendment.packageChanges?.length ?? 0,
+            },
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
+        );
+      }
+      continue;
+    }
     const unvoted = world.provinceIds
       .filter((provinceId) => !amendment.provincialVoteIds[provinceId])
       .sort(
@@ -984,7 +1045,8 @@ export function processConstitutionalAmendmentsMonth(
         }),
       );
     }
-    if (amendment.ratifiedProvinceIds.length >= provincesRequiredForRatification(state)) {
+    const provincesNeeded = provincesRequiredForRatification(state);
+    if (provincesNeeded > 0 && amendment.ratifiedProvinceIds.length >= provincesNeeded) {
       amendment.status = "ratified";
       amendment.enactedDate = state.currentDate;
       applyRatifiedAmendmentEffects(state, amendment);
@@ -1017,9 +1079,10 @@ export function processConstitutionalAmendmentsMonth(
         }),
       );
     } else if (
-      unvoted.length === 0 ||
-      (amendment.ratificationDeadline &&
-        compareIsoDate(state.currentDate, amendment.ratificationDeadline) >= 0)
+      provincesNeeded > 0 &&
+      (unvoted.length === 0 ||
+        (amendment.ratificationDeadline &&
+          compareIsoDate(state.currentDate, amendment.ratificationDeadline) >= 0))
     ) {
       amendment.status = "failed";
       events.push(

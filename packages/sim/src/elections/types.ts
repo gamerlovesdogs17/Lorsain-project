@@ -190,6 +190,8 @@ export type AssemblyElectionCycle = {
   constituencyResults: Record<string, AssemblyConstituencyResult>;
   previousPartySeatTotals: Record<string, number>;
   partySeatTotals: Record<string, number>;
+  /** Live constitutional assembly election mode applied to this cycle. */
+  electoralMethod?: import("../provinces/constitutionalOrder.js").AssemblyElectionMode;
 };
 
 export type ElectionState = {

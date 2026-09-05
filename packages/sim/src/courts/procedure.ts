@@ -18,6 +18,10 @@ import { applyPresidentialVacancy } from "../succession.js";
 import type { LegislativeVoteChoice } from "../legislature/types.js";
 import { getAgentProfile } from "../agents/profile.js";
 import {
+  adjustMeritsLeanForJudicialReview,
+  judicialReviewAllowsInvalidation,
+} from "../provinces/constitutionGameplay.js";
+import {
   allocateCaseId,
   allocateConstitutionalGroundsId,
   allocateDecisionId,
@@ -526,6 +530,7 @@ export function fileConstitutionalCase(
   }
   const judges = currentCourtJudgeIds(world, state);
   const id = allocateCaseId(state);
+  const adjustedLean = adjustMeritsLeanForJudicialReview(state, args.meritsLean);
   const rec: CourtCase = {
     id,
     filedDate: state.currentDate,
@@ -536,7 +541,7 @@ export function fileConstitutionalCase(
     challengedId: args.challengedId,
     constitutionalQuestion: args.constitutionalQuestion,
     constitutionalRule: args.constitutionalRule,
-    meritsLean: Math.max(-1, Math.min(1, args.meritsLean)),
+    meritsLean: Math.max(-1, Math.min(1, adjustedLean)),
     status: "pending",
     participatingJudgeIds: judges,
     votes: {},
@@ -612,6 +617,22 @@ export function tallyJudicialDisposition(votes: Record<string, JudicialVoteChoic
   }
   const disposition: CourtDisposition = invalidate > uphold ? "INVALIDATE" : "UPHOLD";
   return { uphold, invalidate, nonparticipation, disposition };
+}
+
+/** Apply constitutional judicial-review mode after vote tally. */
+export function applyJudicialReviewModeToDisposition(
+  state: SimState,
+  tallied: ReturnType<typeof tallyJudicialDisposition>,
+): ReturnType<typeof tallyJudicialDisposition> {
+  if (!judicialReviewAllowsInvalidation(state) && tallied.disposition === "INVALIDATE") {
+    return {
+      ...tallied,
+      disposition: "UPHOLD",
+      uphold: tallied.uphold + tallied.invalidate,
+      invalidate: 0,
+    };
+  }
+  return tallied;
 }
 
 function applyDisposition(
@@ -785,7 +806,10 @@ export function recordJudicialDecision(
   if (!courtCase || courtCase.status !== "pending") {
     return { error: reject("UNKNOWN_CASE", args.caseId) };
   }
-  const tallied = tallyJudicialDisposition(args.votes);
+  const tallied = applyJudicialReviewModeToDisposition(
+    state,
+    tallyJudicialDisposition(args.votes),
+  );
   const decisionId = allocateDecisionId(state);
   courtCase.votes = { ...args.votes };
   courtCase.disposition = tallied.disposition;

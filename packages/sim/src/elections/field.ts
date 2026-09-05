@@ -1,4 +1,5 @@
 import { evaluatePresidentialEligibility } from "../parties/eligibility.js";
+import { partyAllowedUnderConstitution } from "../parties/state.js";
 import { membershipPartyIds, resolvePartyDefinition } from "../parties/queries.js";
 import { IDEOLOGY_AXES } from "../agents/types.js";
 import type { CommandError, KernelWorld, SimState } from "../types.js";
@@ -150,6 +151,14 @@ export function addElectionCandidate(
         ),
       };
     }
+  }
+  if (!partyAllowedUnderConstitution(state, candidate.partyId ?? pol.partyId)) {
+    return {
+      error: reject(
+        "PARTY_CONSTITUTIONALLY_BARRED",
+        `${candidate.partyId ?? pol.partyId ?? "independent"} is not legal under the current Constitution`,
+      ),
+    };
   }
   if (!opts?.syntheticFixture) {
     const prov = nominationProvenanceError(state, world, candidate, election);

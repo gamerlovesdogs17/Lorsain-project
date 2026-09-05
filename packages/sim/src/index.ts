@@ -131,8 +131,9 @@ export {
   PARTY_PLATFORM_ISSUES,
   partyPlatformLabel,
   partyPlatformIssueForBillItem,
+  partyLegalStatus,
 } from "./parties/index.js";
-export type { PartyPlatformIssue, PartyPublicPlatform } from "./parties/index.js";
+export type { PartyPlatformIssue, PartyPublicPlatform, PartyLegalStatus } from "./parties/index.js";
 export {
   processCampaignMonth,
   nominationCalendarDates,
@@ -308,4 +309,4 @@ export {
 } from "./campaigns/race.js";
 export { shouldHoldDebate } from "./campaigns/debates.js";
 export { isDeclaredContestCandidate } from "./parties/lifecycle.js";
-export { partyStance, factionStance } from "./legislature/recommendations.js";
+export { partyStance, factionStance, billPolicyFit } from "./legislature/recommendations.js";

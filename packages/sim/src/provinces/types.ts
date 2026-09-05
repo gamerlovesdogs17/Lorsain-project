@@ -331,6 +331,10 @@ export type ConstitutionalAmendment = {
   provincialVoteIds: Record<string, string>;
   ratifiedProvinceIds: string[];
   rejectedProvinceIds: string[];
+  /** National referendum tally when amendmentProcess requires popular approval. */
+  referendumYes?: number;
+  referendumNo?: number;
+  referendumHeldDate?: IsoDate | null;
   enactedDate: IsoDate | null;
 };
 

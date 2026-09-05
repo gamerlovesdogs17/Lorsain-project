@@ -2,11 +2,16 @@ import { countStv } from "@lorsain/election-math";
 import { parseIsoDate } from "../calendar.js";
 import type { CommandError, KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
-import { generateConstituencyBallots, integerBallotWeightSum } from "./ballots.js";
+import {
+  firstPreferenceTotals,
+  generateConstituencyBallots,
+  integerBallotWeightSum,
+} from "./ballots.js";
 import { publicCandidateFacts } from "./support.js";
 import { constituencyTurnout } from "./turnout.js";
 import { IDEOLOGY_AXES } from "../agents/types.js";
 import type { ElectionCandidate, ElectionState } from "./types.js";
+import { assemblyElectionMode } from "../provinces/constitutionGameplay.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -80,12 +85,42 @@ export function resolveAssemblyConstituency(
       error: reject("VOTE_CONSERVATION", `weights ${validSum} != ${turnout.validVoteValue}`),
     };
   }
-  const result = countStv(
-    { candidateIds: ordered, seats: el.seats, ballots },
-    { rng: { nextUint32: () => rng.uint32("elections") } },
-  );
-  if (result.elected.length !== el.seats) {
-    return { error: reject("COUNT_FAILED", "STV did not elect magnitude seats") };
+  const method = assemblyElectionMode(state);
+  let result: ReturnType<typeof countStv>;
+  let winnerIds: string[];
+  if (method === "fptp") {
+    const totals = firstPreferenceTotals(ballots);
+    winnerIds = [...ordered]
+      .sort((a, b) => (totals[b] ?? 0) - (totals[a] ?? 0) || a.localeCompare(b))
+      .slice(0, el.seats);
+    // Archive a truncated STV run for certification compatibility when possible.
+    result = countStv(
+      {
+        candidateIds: ordered,
+        seats: el.seats,
+        ballots: ballots.map((b) => ({
+          ...b,
+          rankings: b.rankings.length > 0 ? [b.rankings[0]!] : [],
+        })),
+      },
+      { rng: { nextUint32: () => rng.uint32("elections") } },
+    );
+    // Prefer explicit plurality winners for gameplay.
+    if (result.elected.length === el.seats) {
+      // Keep STV archive but overwrite winners with plurality order for FPTP mode.
+    }
+  } else {
+    result = countStv(
+      { candidateIds: ordered, seats: el.seats, ballots },
+      { rng: { nextUint32: () => rng.uint32("elections") } },
+    );
+    if (result.elected.length !== el.seats) {
+      return { error: reject("COUNT_FAILED", "STV did not elect magnitude seats") };
+    }
+    winnerIds = [...result.elected];
+  }
+  if (winnerIds.length !== el.seats) {
+    return { error: reject("COUNT_FAILED", `${method} did not elect magnitude seats`) };
   }
   const year = parseIsoDate(state.currentDate).year;
   const election: ElectionState = {
@@ -115,10 +150,10 @@ export function resolveAssemblyConstituency(
     turnout,
     countInput: { candidateIds: ordered, ballots, seats: el.seats },
     countArchive: result,
-    winnerIds: [...result.elected],
+    winnerIds,
     resultEventId: null,
     assembly: null,
-    metadata: {},
+    metadata: { assemblyElectoralMethod: method },
   };
   return { election };
 }

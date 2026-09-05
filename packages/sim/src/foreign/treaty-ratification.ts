@@ -178,7 +178,7 @@ export function advanceTreatyAfterCounterpartyAcceptance(
   commandId: string | null,
 ): SimEvent[] {
   const needsAssembly =
-    isTerenaTreatyMember(treaty.memberIds) && terenaTreatyRequiresAssembly(treaty.kind);
+    isTerenaTreatyMember(treaty.memberIds) && terenaTreatyRequiresAssembly(treaty.kind, state);
   if (needsAssembly) return scheduleTreatyRatification(state, treaty, commandId);
   treaty.status = "active";
   treaty.signedDate = state.currentDate;
