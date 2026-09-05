@@ -184,7 +184,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title �
 
 **Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout remains ACCEPTED** (functional acceptance `f817f01`; docs tip lineage through `19f32d4`). Current-source 1×600 stability remains **VALIDATED**; evidence retained. Live public Pages path remains **VALIDATED**.
 
-**Phase 11.4 presentation/content completion is IN PROGRESS / NOT YET ACCEPTED** — Priority 0–1 corrections (truthfulness, fixtures, Constitution alternatives, Assembly chamber stage) are landed; see `docs/PHASE_11_4_RESULTS.md`. Phase 11.5 has not begun.
+**Phase 11.4 presentation/content completion is NOT YET ACCEPTED** — Priority 0–1 landed (truthfulness, fixtures, unified Constitution document inspector with red/green diffs, Assembly chamber+leadership, Campaign/Election Night evidence, repetition audit). Priority 2 depth and headline uniqueness remain incomplete; see `docs/PHASE_11_4_RESULTS.md`. Phase 11.5 has not begun.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
