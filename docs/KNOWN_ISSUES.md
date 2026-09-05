@@ -182,7 +182,9 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 
 ## Phase 11.3 notes
 
-**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is ACCEPTED** at `f817f01`. Current-source 1Ã—600 stability is **VALIDATED** (`docs/qa/phase11_3/whole_game_final_1x600.json`); evidence retained, no rerun. Live public Pages path is **VALIDATED**. Repo-wide Prettier Format debt is **FIXED**; CI Quality + Integration and Pages deploy are green on the acceptance HEAD. Screenshots regenerated into `docs/qa/phase11_3/final/`. Formal results and requirement mapping: `docs/PHASE_11_3_RESULTS.md`, `docs/PHASE_11_3_REQUIREMENT_EVIDENCE.md`. Phase 11.4 / 11.5 content and release engineering remain deferred. Phase 11.4 has not begun.
+**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout remains ACCEPTED** (functional acceptance `f817f01`; docs tip lineage through `19f32d4`). Current-source 1Ã—600 stability remains **VALIDATED**; evidence retained. Live public Pages path remains **VALIDATED**.
+
+**Phase 11.4 presentation/content/flavor depth is IMPLEMENTED** â€” see `docs/PHASE_11_4_RESULTS.md` and `docs/qa/phase11_4/`. Phase 11.5 release/performance work has not begun.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
@@ -204,7 +206,9 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P113-PROVINCIAL-LEADERSHIP-VOLUME | **FIXED** | Provincial Assemblies still select every required leader after an election, but routine reselection of the same holder no longer appends a redundant ballot history object. Closeout also adds modest incumbent stickiness so stable chambers do not churn leadership every cycle; player challenges and membership-driven turnovers remain archived. |
 | P113-CONSTITUTION-IMPETUS | **TUNED (closeout)** | NPC amendment sponsorship stays rare and non-quota: score gate 0.40 and monthly chance `(score-0.36)*0.09` capped at 0.045, with modestly higher reform impetus under veto returns / court vacancy / cohesion stress. Controlled tests cover player proposal, forced passage, foundational resistance, runtime rule changes, and text-only limits. |
 | P113-ORGANIZATIONS | **FIXED** | Relationship scorecards derive from affinity, trust, policy alignment and behavior; endorsements can be withdrawn when their campaign or relationship basis ends. |
-| P113-NEWS-HISTORY-PROSE | NONBLOCKING | News and History Wiki use modest fact-injection and outlet-framing templates (lead/secondary, Read/Compare Coverage, year/person/election articles). They do not author rich newspaper or encyclopedia prose; richer copy remains Phase 11.4 content work. |
+| P113-NEWS-HISTORY-PROSE | **IMPROVED IN 11.4 / NONBLOCKING** | Front-page News composition and wiki encyclopedia framing landed; articles remain state-templated rather than fully authored prose. |
+| P113-CONTENT-DEBT | **ADDRESSED IN 11.4 / residual** | Provincial subjects, campaign situations, court dispute families, crisis themes, org wording, and headline fingerprints landed. Residual: deeper biographies/tutorials. |
+| P113-RELEASE-ENG | DEFERRED TO 11.5 | Route/data splitting, immutable-save compaction, visual-diff CI, 100Ã—600 soak. |
 | P113-MINISTER-MAYOR | NONBLOCKING | Minister and Mayor remain deliberately labeled limited roles. Full ministry portfolio politics and municipal legislatures are outside v1. |
 | P113-NOMINATION-TOTAL | NONBLOCKING | Later-cycle formal nomination counts can still take multiple seconds of worker time as the political population grows. They run off the main thread with a truthful indeterminate state; further algorithmic work is release optimization, not a browser freeze. |
 | P113-BUNDLE-SIZE | NONBLOCKING | Canonical domestic/world geometry and content keep the production bundle large. Route/data splitting remains a Phase 11.5 release-engineering opportunity. |
@@ -212,9 +216,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P113-WHOLE-GAME-1X600 | **VALIDATED** | Continuous 600-month run completed with determinism match (dual-run + midpoint reload), 0 candidate-shortage events, 21 active Governors, 0 person-quality errors/warnings, and 0 strict/catastrophic failures. See `docs/PHASE_11_3_RESULTS.md`. |
 | P113-PAGES-PUBLISH | **VALIDATED** | Explicit Pages workflow for `6d81af6` succeeded; live `https://gamerlovesdogs17.github.io/Lorsain-project/` serves the Phase 11.3 game (assets, New Game, map, Assembly, Caucus, End Turn Worker, save/resume). Prefer keeping Pages Source as **GitHub Actions**; legacy dynamic `pages build and deployment` may still appear alongside. |
 | P113-FORMAT-CI | **FIXED / VALIDATED** | Prettier format debt cleared; CI Quality + Integration green on `f817f01` with single-fork integration config. |
-| P113-SCREENSHOT-CI | NONBLOCKING | Manual browser evidence regenerated 2026-09-04 via `scripts/phase11_3-capture-screenshots.mjs` (Playwright workspace `devDependency`); automated visual-diff CI remains Phase 11.5. |
-| P113-CONTENT-DEBT | DEFERRED TO 11.4 | Richer biographies, news/History prose, tutorials, and flavor/worldbuilding variety. |
-| P113-RELEASE-ENG | DEFERRED TO 11.5 | Route/data splitting, immutable-save compaction, visual-diff CI, public-deployment retest, 100Ã—600 soak. |
+| P113-SCREENSHOT-CI | NONBLOCKING | Manual browser evidence regenerated 2026-09-04 via `scripts/phase11_3-capture-screenshots.mjs` (Playwright workspace `devDependency`); Phase 11.4 captures via `scripts/phase11_4-capture-screenshots.mjs`. Automated visual-diff CI remains Phase 11.5. |
 | P113-DEEP-LOCAL | POST-11.5 IDEA | Provincial cabinets, detailed provincial budgets/taxes, municipal legislatures and separate provincial constitutions would overexpand v1 and are deliberately absent. |
 
 ## Phase 8 leftovers
