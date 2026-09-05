@@ -130,41 +130,126 @@ async function main() {
   await page.waitForTimeout(400);
   await page.locator(".constitution-browser").scrollIntoViewIfNeeded();
   await shot(page, "constitution-1440.png");
-  // Modeled rules live on Articles III/IV/V/VIII — leave Article I.
-  const articleClicked = await page.evaluate(() => {
+
+  // Article VII — party system + one-party preview
+  const article7Clicked = await page.evaluate(() => {
     const article = [...document.querySelectorAll(".constitution-toc button")].find((el) =>
-      /Article\s+IV|Legislature|National Assembly/i.test(el.textContent || ""),
+      /Article\s+VII|Elections|Political Parties/i.test(el.textContent || ""),
     );
     if (!article) return false;
     article.click();
     return true;
   });
-  if (!articleClicked) throw new Error("Constitution Article IV TOC entry not found");
-  await page.waitForTimeout(500);
-  const modeledClicked = await page.evaluate(() => {
-    const modeled = [...document.querySelectorAll("button.constitution-clause")].find((el) =>
-      /Modeled rule|four years|ordinary term/i.test(el.textContent || ""),
+  if (!article7Clicked) throw new Error("Constitution Article VII TOC entry not found");
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const clause = [...document.querySelectorAll("button.constitution-clause")].find((el) =>
+      /Amendable subject/i.test(el.textContent || ""),
     );
-    if (!modeled) return false;
-    modeled.click();
-    return true;
+    clause?.click();
   });
-  if (!modeledClicked) throw new Error("Modeled constitution clause not found");
-  await page.waitForSelector(".constitution-alt-option", { timeout: 10_000 });
   await page.waitForTimeout(300);
-  const altClicked = await page.evaluate(() => {
-    const alt = [...document.querySelectorAll("button.constitution-alt-option")].find(
-      (el) => !el.disabled && !el.classList.contains("current"),
+  await shot(page, "constitution-article-vii-1440.png");
+  const onePartySelected = await page.evaluate(() => {
+    const selects = [...document.querySelectorAll(".constitution-annotation select")];
+    const altSelect = selects[1];
+    if (!altSelect) return false;
+    const opt = [...altSelect.options].find((o) =>
+      /Single designated legal party/i.test(o.textContent || ""),
     );
-    if (!alt) return false;
-    alt.click();
+    if (!opt) return false;
+    altSelect.value = opt.value;
+    altSelect.dispatchEvent(new Event("change", { bubbles: true }));
     return true;
   });
-  if (!altClicked) throw new Error("Constitution alternative option not found");
+  if (!onePartySelected) throw new Error("One-party alternative not found");
   await page.waitForSelector(".constitution-text-diff", { timeout: 10_000 });
   await page.waitForTimeout(400);
-  await page.locator(".constitution-amendment-inspector").scrollIntoViewIfNeeded();
+  await page.locator(".constitution-annotation").scrollIntoViewIfNeeded();
+  await shot(page, "constitution-one-party-1440.png");
   await shot(page, "constitution-diff-1440.png");
+
+  // Article XII amendment process
+  await page.evaluate(() => {
+    const article = [...document.querySelectorAll(".constitution-toc button")].find((el) =>
+      /Article\s+XII|Amendment/i.test(el.textContent || ""),
+    );
+    article?.click();
+  });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const clause = [...document.querySelectorAll("button.constitution-clause")].find((el) =>
+      /Amendable subject/i.test(el.textContent || ""),
+    );
+    clause?.click();
+  });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const selects = [...document.querySelectorAll(".constitution-annotation select")];
+    const altSelect = selects[1];
+    if (!altSelect) return;
+    const opt = [...altSelect.options].find((o) => o.value && o.value !== altSelect.value);
+    if (opt) {
+      altSelect.value = opt.value;
+      altSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+  await page.waitForTimeout(400);
+  await shot(page, "constitution-article-xii-1440.png");
+
+  // Multi-change package staging
+  await page.evaluate(() => {
+    const add = [...document.querySelectorAll("button")].find((el) =>
+      /Add constitutional change to package/i.test(el.textContent || ""),
+    );
+    add?.click();
+  });
+  await page.waitForTimeout(300);
+  await shot(page, "constitution-package-1440.png");
+
+  // Draft legislation — assembly-worker fixture is a sitting MP
+  await gotoFixture(
+    page,
+    { qaFixture: "assembly-worker", qaScreen: "assembly" },
+    desk,
+  );
+  const draftTabClicked = await page.evaluate(() => {
+    const tab = [...document.querySelectorAll('[role="tab"],button')].find((el) =>
+      /Introduce/i.test((el.textContent || "").replace(/\s+/g, " ").trim()),
+    );
+    if (!tab) return false;
+    tab.click();
+    return true;
+  });
+  if (draftTabClicked) {
+    await page.waitForTimeout(500);
+    await shot(page, "bill-builder-1440.png");
+    await page.evaluate(() => {
+      const select = document.querySelector(".draft-category select");
+      if (!select) return;
+      const opt = [...select.options].find((o) =>
+        /Rail|Bargaining|Child|Housing|Clean/i.test(o.textContent || ""),
+      );
+      if (opt) {
+        select.value = opt.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+    await page.waitForTimeout(400);
+    await shot(page, "bill-builder-categorical-1440.png");
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => {
+        const add = [...document.querySelectorAll("button")].find((el) =>
+          /Add provision/i.test(el.textContent || ""),
+        );
+        add?.click();
+      });
+      await page.waitForTimeout(200);
+    }
+    await shot(page, "bill-builder-complex-1440.png");
+  } else {
+    console.warn("Introduce tab not available for bill-builder screenshots");
+  }
 
   await gotoFixture(
     page,

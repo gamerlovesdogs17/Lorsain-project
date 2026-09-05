@@ -1,0 +1,171 @@
+{
+  "generatedAt": "2026-09-05T17:52:07.679Z",
+  "legislation": {
+    "policySubjects": 50,
+    "foundingBaselines": 50,
+    "obsoleteCurrentTrue": 0,
+    "keepCurrentLabels": 0,
+    "keepSample": [],
+    "categorical": 49,
+    "numericalOrThreshold": 1,
+    "binary": 0,
+    "withParameters": 1,
+    "proposalOptionDistribution": {
+      "2": 34,
+      "3": 9,
+      "4": 5,
+      "5+": 2
+    },
+    "maxProposalOptions": 6,
+    "minProposalOptions": 2
+  },
+  "constitution": {
+    "articles": 12,
+    "clauses": 74,
+    "structuredSubjects": 21,
+    "allArticlesAmendable": true,
+    "articleRows": [
+      {
+        "id": "ARTICLE_I",
+        "title": "The Republic and Popular Sovereignty",
+        "clauses": 6,
+        "amendmentSubjects": 2,
+        "subjectIds": [
+          "art1_republic_form",
+          "art1_executive_authority"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_II",
+        "title": "Citizenship, Rights and Liberties",
+        "clauses": 10,
+        "amendmentSubjects": 2,
+        "subjectIds": [
+          "art2_civil_liberties",
+          "art2_citizenship_guard"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_III",
+        "title": "The President",
+        "clauses": 9,
+        "amendmentSubjects": 2,
+        "subjectIds": [
+          "art3_presidential_term_limit",
+          "art3_presidential_election_mode"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_IV",
+        "title": "The National Assembly",
+        "clauses": 7,
+        "amendmentSubjects": 2,
+        "subjectIds": [
+          "art4_assembly_term",
+          "art4_assembly_election_mode"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_V",
+        "title": "Legislation and Executive Accountability",
+        "clauses": 7,
+        "amendmentSubjects": 1,
+        "subjectIds": [
+          "art5_veto_override"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_VI",
+        "title": "The Cabinet and Public Administration",
+        "clauses": 4,
+        "amendmentSubjects": 1,
+        "subjectIds": [
+          "art6_cabinet_formation"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_VII",
+        "title": "Elections and Political Parties",
+        "clauses": 5,
+        "amendmentSubjects": 2,
+        "subjectIds": [
+          "art7_party_system",
+          "art7_press_freedom"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_VIII",
+        "title": "The Judiciary and Constitutional Court",
+        "clauses": 5,
+        "amendmentSubjects": 2,
+        "subjectIds": [
+          "art8_court_term",
+          "art8_judicial_review"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_IX",
+        "title": "Provinces and Local Government",
+        "clauses": 5,
+        "amendmentSubjects": 2,
+        "subjectIds": [
+          "art9_provincial_competence",
+          "art9_local_government"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_X",
+        "title": "Public Finance, Emergency and Defense",
+        "clauses": 7,
+        "amendmentSubjects": 2,
+        "subjectIds": [
+          "art10_emergency_powers",
+          "art10_defense_control"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_XI",
+        "title": "Foreign Relations",
+        "clauses": 3,
+        "amendmentSubjects": 1,
+        "subjectIds": [
+          "art11_treaty_approval"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      },
+      {
+        "id": "ARTICLE_XII",
+        "title": "Amendment, Continuity and Final Provisions",
+        "clauses": 6,
+        "amendmentSubjects": 2,
+        "subjectIds": [
+          "art12_amendment_process",
+          "art12_unamendable_core"
+        ],
+        "amendable": true,
+        "effect": "structured gameplay + metrics"
+      }
+    ]
+  }
+}
