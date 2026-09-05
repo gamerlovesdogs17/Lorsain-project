@@ -4,71 +4,109 @@ Date: 2026-09-05
 
 ## Phase 11.3
 
-**ACCEPTED** (unchanged). Functional acceptance remains on the `f817f01` lineage; tip docs may be later.
-
-## Previous Phase 11.4 issues corrected in this pass
-
-| Issue | Fix |
-| --- | --- |
-| Campaign screenshot showed inactive campaign | Added `active-campaign` QA fixture; capture uses it |
-| Election Night screenshot was same as Elections / certified replay | Added `election-night-partial` fixture with fresh Election Night (`isFreshElectionNight`) |
-| Campaign situations invented debates/rallies/dark-money/doubling | Rewrote titles to state-based framing; removed `debate_moment` |
-| Crisis themes invented border/expulsions/closures | Themes gated to neighbors/sanctions/trade/maritime posture; generic fallback is diplomatic confrontation |
-| Content tests asserted hardcoded strings | Tests now call `headlineFor`, `assignCrisisTheme`, and ban invented wording |
-| Constitution dual UX without shared alternatives | Unified modeled-rule alternatives (4 each) + proposed clause text + red/green diff preview |
-| Assembly leadership hidden behind disclosure | Leadership rail + tighter hemicycle shown simultaneously |
-
-## What is IMPLEMENTED (this completion pass)
-
-### Correctness / QA
-- Narrative truthfulness pass
-- Real generator tests
-- Active campaign + fresh Election Night fixtures
-- Capture script wired to those fixtures
-
-### Constitution (modeled rules)
-- `CONSTITUTIONAL_LEGAL_VALUES` with 4 options per rule
-- `constitutionAlternatives.ts` clause text + mechanical summaries
-- Proposal stores `proposedText`
-- Unlimited presidential terms (`0`)
-- Diff helper + Assembly Business preview UI
-- Text-only amendments remain only for clauses without `runtime_rule_id` (honest split: modeled vs display text)
-
-### Assembly
-- Chamber stage: hemicycle + leadership rail together
-- Tighter seat packing
-- Leadership seats outlined; click leadership highlights chamber selection
-
-## What remains incomplete (blocks full acceptance)
-
-- Full Constitution document-centric editor (left TOC / center document / right inspector) still uses Assembly Business + Lawbook tabs rather than a dedicated document workspace
-- Free-text vs modeled paths are unified for **modeled rules**, but Lawbook free-text UX is not fully retired as a competing mental model for players
-- Election Night “broadcast mode” / mid-count population fixtures beyond fresh certified first-view
-- Priority 2 political depth expansions (party postmortems, org scorecards, career memory, governing agenda, court precedent, investigations, turn summaries, global search density) are only partially present from earlier 11.4 content work
-- Representative multi-year repetition audit report artifact not yet published as a calibration JSON
+**ACCEPTED** (unchanged). Functional acceptance remains on the `f817f01` lineage.
 
 ## Determination
 
 **Phase 11.4 NOT YET ACCEPTED**
 
-Priority 0 and most Priority 1 structural requirements are landed and tested. Full acceptance waits on deeper Constitution document UX completion and broader Priority 2 political-depth playability, plus fresh reviewed screenshot evidence from the new fixtures on green CI/Pages.
+Priority 0 correctness and Priority 1 Constitution/Assembly/Campaign–Election Night evidence are substantially landed. Priority 2 political-depth coverage is still only partial (search/inbox polish + existing org scorecards; not a full career/memory/court-precedent/agenda expansion). Acceptance waits on broader Priority 2 playability depth and a cleaner multi-year headline uniqueness rate under ordinary play.
+
+## Previous Phase 11.4 issues corrected
+
+| Issue | Fix |
+| --- | --- |
+| Campaign screenshot showed inactive campaign | `active-campaign` fixture + capture |
+| Election Night ≈ Elections | `election-night-partial` fixture + cycle select + EN panel |
+| Invented campaign/crisis/headline specifics | Truthfulness rewrite + generator bans |
+| Content tests used hardcoded strings | Production generator tests |
+| Dual Constitution UX mental model | Document inspector owns alternatives + red/green diff; Business redirects proposals |
+| Assembly leadership behind disclosure | Chamber stage + leadership rail together |
+| Weak headline uniqueness | Catch-all/campaign/treaty variants + cooldown retries; audit artifact |
+
+## Implemented this completion pass (commits after `509e3c0`)
+
+### Correctness / QA
+- Narrative truthfulness (`bd667f8`)
+- Active campaign + fresh Election Night fixtures (`8192cd5`)
+- Capture script + truthful screenshots (`d222f37`, `7ad7d4d`, later recaptures)
+- Repetition audit script + JSON (`50d17ee`, `68e90fc`)
+
+### Constitution
+- Alternatives + mechanical text + eligibility `0` (`fcb75eb`)
+- Document-centric inspector with live document diff (`bac98cb`)
+- Dependency warnings helper
+- Free-text retained only for non-`runtime_rule_id` clauses
+
+### Assembly
+- Leadership + hemicycle simultaneous; tighter packing (`9a0a70d`)
+
+### Navigation / depth (partial)
+- Search indexes amendments, laws, Year-in-Terena (`873bc4e`)
+- Inbox sorted/labeled by urgency (`873bc4e`)
+
+## Repetition audit (36-month run, seed `P114-REPETITION-AUDIT-2030`)
+
+See `docs/qa/phase11_4/repetition-audit.json`.
+
+After headline diversity fix (approximate):
+- media stories: 340 total
+- exact duplicate extras: ~208 (down from 311)
+- structural duplicate extras: ~247
+- banned invented-fragment hits: 0
+- crisis themes distributed across neighbor/sanctions/trade/maritime/diplomatic fixtures
+
+Still too repetitive for full acceptance of content diversity under long play.
+
+## Screenshot evidence
+
+`docs/qa/phase11_4/final/` including:
+- `campaign-hq-1440.png` — active campaign command center
+- `election-night-1440.png` — 2030 Assembly Election Night playback
+- `assembly-1440.png` — leadership + hemicycle
+- `constitution-1440.png` — document browser
+- `constitution-diff-1440.png` — Article IV modeled rule red/green diff + alternatives
+
+## Pages / build
+
+- `pnpm --filter @lorsain/game build` succeeds (requires `pnpm --filter @lorsain/sim build` after sim export changes)
+- GitHub Pages base path remains `/Lorsain-project/`
+- Push `main` to refresh Pages when ready
+
+## Save compatibility
+
+- Additive constitutional `proposedText` / alternatives; no breaking save-format rewrite
+- Eligibility treats `presidential_term_limit === 0` as unlimited
+
+## Known problems / limitations
+
+- Headline uniqueness still high-duplicate under multi-year media generation
+- Priority 2 systems (party postmortems, career journal unification, court precedent, governing agenda, turn summary, campaign calendar day honesty, investigations) incomplete
+- Constitution history list can visually crowd the document footer on dense articles
+- Institutions fixture player is often a Governor (not MP), so Introduce amendment is correctly disabled in that QA shot
+- Map-centric global shell explicitly deferred
 
 ## Feature revert map (this pass)
 
-| Commit | Feature | Safe revert? | Dependencies |
+| Commit | Feature | Safe revert independently? | Dependencies |
 | --- | --- | --- | --- |
 | `bd667f8` | Narrative truthfulness | Yes | None |
-| `fcb75eb` | Constitution alternatives + eligibility 0 | Mostly; revert with UI commit that consumes exports | `9a0a70d` uses exports |
+| `fcb75eb` | Constitution alternatives + eligibility 0 | Prefer keep with UI | Consumed by `bac98cb` / `9a0a70d` |
 | `8192cd5` | QA fixtures | Yes | Capture script |
-| `9a0a70d` | Assembly stage + amendment preview UI | Yes if `fcb75eb` kept or UI imports adjusted | Prefers `fcb75eb` |
+| `9a0a70d` | Assembly chamber stage | Yes | Prefers `fcb75eb` exports |
+| `d222f37` / `7ad7d4d` | Capture/docs evidence | Yes | Fixtures |
+| `bac98cb` (+ typing follow-ups) | Constitution document inspector | Yes if sim exports kept | `fcb75eb` |
+| `50d17ee` | Headline diversity + audit script | Yes | None |
+| `873bc4e` | Search + inbox priority | Yes | None |
 
-Earlier Phase 11.4 commits (`26e6582`, `cd6694b`, `12f4cdc`, …) remain the foundation visual/content pass.
+Earlier foundation UI/content: `26e6582`, `cd6694b`, `12f4cdc`, …
 
-## Docs / evidence locations
+## Deferred (not Phase 11.5 started)
 
-- This file: `docs/PHASE_11_4_RESULTS.md` (supersedes prior “accepted” overclaims)
-- Fixtures: `docs/qa/phase11_4/fixtures/`
-- Screenshots: `docs/qa/phase11_4/final/` (regenerate after this tip)
-- Capture: `scripts/phase11_4-capture-screenshots.mjs`
+- Global map-centric shell
+- Full court precedent engine
+- Campaign promise tracker / implementation lag as first-class systems
+- Complete party platform evolution + mentorship RPG
+- Perfect mobile Assembly/Constitution density
 
 Phase 11.5 has not begun.

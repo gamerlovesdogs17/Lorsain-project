@@ -117,30 +117,53 @@ async function main() {
     desk,
   );
   await shot(page, "assembly-1440.png");
-  await page.evaluate(() => {
-    const tab = [...document.querySelectorAll("button,[role='tab']")].find((el) =>
-      /Law\s*&\s*Constitution|Law and Constitution/i.test(
-        (el.textContent || "").replace(/\s+/g, " "),
-      ),
+  const lawTabClicked = await page.evaluate(() => {
+    const tab = [...document.querySelectorAll('[role="tab"]')].find((el) =>
+      /Law/i.test((el.textContent || "").replace(/\s+/g, " ")),
     );
-    tab?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    if (!tab) return false;
+    tab.click();
+    return true;
   });
-  await page.waitForTimeout(900);
+  if (!lawTabClicked) throw new Error("Law & Constitution tab not found");
+  await page.waitForSelector(".constitution-browser", { timeout: 15_000 });
+  await page.waitForTimeout(400);
+  await page.locator(".constitution-browser").scrollIntoViewIfNeeded();
   await shot(page, "constitution-1440.png");
-  await page.evaluate(() => {
-    const modeled = [...document.querySelectorAll("button.constitution-clause")].find((el) =>
-      /Modeled rule/i.test(el.textContent || ""),
+  // Modeled rules live on Articles III/IV/V/VIII — leave Article I.
+  const articleClicked = await page.evaluate(() => {
+    const article = [...document.querySelectorAll(".constitution-toc button")].find((el) =>
+      /Article\s+IV|Legislature|National Assembly/i.test(el.textContent || ""),
     );
-    modeled?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    if (!article) return false;
+    article.click();
+    return true;
   });
+  if (!articleClicked) throw new Error("Constitution Article IV TOC entry not found");
   await page.waitForTimeout(500);
-  await page.evaluate(() => {
+  const modeledClicked = await page.evaluate(() => {
+    const modeled = [...document.querySelectorAll("button.constitution-clause")].find((el) =>
+      /Modeled rule|four years|ordinary term/i.test(el.textContent || ""),
+    );
+    if (!modeled) return false;
+    modeled.click();
+    return true;
+  });
+  if (!modeledClicked) throw new Error("Modeled constitution clause not found");
+  await page.waitForSelector(".constitution-alt-option", { timeout: 10_000 });
+  await page.waitForTimeout(300);
+  const altClicked = await page.evaluate(() => {
     const alt = [...document.querySelectorAll("button.constitution-alt-option")].find(
       (el) => !el.disabled && !el.classList.contains("current"),
     );
-    alt?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    if (!alt) return false;
+    alt.click();
+    return true;
   });
-  await page.waitForTimeout(700);
+  if (!altClicked) throw new Error("Constitution alternative option not found");
+  await page.waitForSelector(".constitution-text-diff", { timeout: 10_000 });
+  await page.waitForTimeout(400);
+  await page.locator(".constitution-amendment-inspector").scrollIntoViewIfNeeded();
   await shot(page, "constitution-diff-1440.png");
 
   await gotoFixture(
