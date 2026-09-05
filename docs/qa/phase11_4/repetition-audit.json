@@ -1,0 +1,191 @@
+{
+  "generatedAt": "2026-09-05T16:43:17.200Z",
+  "seed": "P114-REPETITION-AUDIT-2030",
+  "monthsAdvanced": 36,
+  "mediaStories": {
+    "total": 340,
+    "uniqueExact": 132,
+    "uniqueStructural": 93,
+    "exactDuplicateExtras": 208,
+    "structuralDuplicateExtras": 247,
+    "cooldownWindowDupes": 159,
+    "sample": [
+      "budget proposed reported",
+      "budget proposed jolts the capital",
+      "Officials address budget proposed",
+      "Election campaign activity continues",
+      "budget proposed dominates the news cycle",
+      "Developments around budget proposed",
+      "Campaign organizations keep working the field",
+      "budget proposed enters the public record",
+      "Candidates maintain their public schedules",
+      "budget proposed on 2028-01-01",
+      "Terena–United Provinces of Kraker Trade Accord ratified",
+      "Terena–United Provinces of Kraker Trade Accord ratified amid fanfare",
+      "treaty ratified on 2028-02-01",
+      "Government legislative action",
+      "treaty ratified on 2028-02-01",
+      "treaty ratified on 2028-02-01"
+    ]
+  },
+  "regeneratedHeadlines": {
+    "total": 340,
+    "uniqueExact": 80,
+    "uniqueStructural": 77,
+    "exactDuplicateExtras": 260,
+    "structuralDuplicateExtras": 263,
+    "cooldownWindowDupes": 204
+  },
+  "crisisThemes": {
+    "total": 40,
+    "uniqueExact": 5,
+    "uniqueStructural": 5,
+    "exactDuplicateExtras": 35,
+    "structuralDuplicateExtras": 35,
+    "distribution": [
+      {
+        "theme": "military posturing",
+        "count": 8
+      },
+      {
+        "theme": "sanctions dispute",
+        "count": 8
+      },
+      {
+        "theme": "trade dispute",
+        "count": 8
+      },
+      {
+        "theme": "diplomatic confrontation",
+        "count": 8
+      },
+      {
+        "theme": "border tension",
+        "count": 8
+      }
+    ]
+  },
+  "campaignSituations": {
+    "templateCount": 8,
+    "titleCount": 32,
+    "total": 32,
+    "uniqueExact": 32,
+    "uniqueStructural": 32,
+    "exactDuplicateExtras": 0,
+    "structuralDuplicateExtras": 0,
+    "sample": [
+      "Campaign faces mounting press scrutiny",
+      "Public standing softens amid campaign pressure",
+      "Message discipline becomes a campaign priority",
+      "Opponents highlight recent campaign weakness",
+      "Organizational support remains contested in the race",
+      "Interest groups watch the campaign closely",
+      "Candidate courts institutional backers",
+      "Pressure grows for clearer organizational allegiances",
+      "Field organization shows measurable strength",
+      "Ground game capacity supports wider outreach",
+      "Organized volunteers bolster the campaign footprint",
+      "Local organization remains a campaign asset"
+    ]
+  },
+  "provincialBillSubjects": {
+    "total": 12,
+    "ids": [
+      "transport_service",
+      "housing_delivery",
+      "school_capacity",
+      "hospital_access",
+      "local_administration",
+      "policing_public_safety",
+      "environmental_regulation",
+      "labor_standards",
+      "agricultural_support",
+      "utilities_infrastructure",
+      "economic_development",
+      "social_services"
+    ]
+  },
+  "constitutionAlternatives": {
+    "assembly_term_years": [
+      {
+        "value": 3,
+        "label": "Three-year legislative cycle"
+      },
+      {
+        "value": 4,
+        "label": "Four-year legislative cycle"
+      },
+      {
+        "value": 5,
+        "label": "Five-year legislative cycle"
+      },
+      {
+        "value": 6,
+        "label": "Six-year legislative cycle"
+      }
+    ],
+    "presidential_term_limit": [
+      {
+        "value": 1,
+        "label": "Single presidential term"
+      },
+      {
+        "value": 2,
+        "label": "Two-term presidential limit"
+      },
+      {
+        "value": 3,
+        "label": "Three-term presidential limit"
+      },
+      {
+        "value": 0,
+        "label": "No presidential term limit"
+      }
+    ],
+    "court_term_years": [
+      {
+        "value": 6,
+        "label": "Six-year judicial term"
+      },
+      {
+        "value": 9,
+        "label": "Nine-year judicial term"
+      },
+      {
+        "value": 12,
+        "label": "Twelve-year judicial term"
+      },
+      {
+        "value": 15,
+        "label": "Fifteen-year judicial term"
+      }
+    ],
+    "veto_override_fraction": [
+      {
+        "value": 0.55,
+        "label": "Fifty-five percent override threshold"
+      },
+      {
+        "value": 0.6,
+        "label": "Three-fifths override threshold"
+      },
+      {
+        "value": 0.6666666666666666,
+        "label": "Two-thirds override threshold"
+      },
+      {
+        "value": 0.75,
+        "label": "Three-quarters override threshold"
+      }
+    ]
+  },
+  "narrativeTruthSpotCheck": {
+    "bannedFragmentHits": 0,
+    "bannedHits": []
+  },
+  "notes": [
+    "mediaStories are unique story.headlineKey values accumulated across the run.",
+    "Exact duplicates are acceptable for recurring institutional beats; structural duplicates deserve review when concentrated.",
+    "Crisis themes are sampled across posture fixtures, not only emergent crises."
+  ]
+}

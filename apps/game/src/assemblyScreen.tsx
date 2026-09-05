@@ -2128,7 +2128,7 @@ export function AssemblyPage(props: {
                                         <strong>Gameplay effect.</strong>{" "}
                                         {selectedAlt.mechanicalSummary}
                                       </p>
-                                      {warnings.map((warning) => (
+                                      {warnings.map((warning: string) => (
                                         <p
                                           className="constitution-dependency-warning"
                                           key={warning}
