@@ -89,6 +89,8 @@ Remaining (honest):
 
 ## Acceptance
 
+Phase 11.4 tip at handoff: see `git rev-parse HEAD` on `main` (docs tip after `12f4cdc` lineage).
+
 Phase 11.4 implementation is complete for this pass when:
 
 - Phase 11.3 remains explicitly ACCEPTED
