@@ -331,20 +331,33 @@ export function GameShell(props: {
             {props.attentionItems.length === 0 ? (
               <p className="empty-state">Nothing currently requires your decision.</p>
             ) : (
-              props.attentionItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`attention-item ${item.tone ?? "info"}`}
-                  onClick={() => {
-                    props.onNavigate(item.screen);
-                    setAttentionOpen(false);
-                  }}
-                >
-                  <strong>{item.label}</strong>
-                  {item.detail ? <span>{item.detail}</span> : null}
-                </button>
-              ))
+              [...props.attentionItems]
+                .sort((a, b) => {
+                  const rank = (tone?: "urgent" | "soon" | "info") =>
+                    tone === "urgent" ? 0 : tone === "soon" ? 1 : 2;
+                  return rank(a.tone) - rank(b.tone) || a.label.localeCompare(b.label);
+                })
+                .map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`attention-item ${item.tone ?? "info"}`}
+                    onClick={() => {
+                      props.onNavigate(item.screen);
+                      setAttentionOpen(false);
+                    }}
+                  >
+                    <strong>
+                      {item.tone === "urgent"
+                        ? "Action required · "
+                        : item.tone === "soon"
+                          ? "Upcoming · "
+                          : "Background · "}
+                      {item.label}
+                    </strong>
+                    {item.detail ? <span>{item.detail}</span> : null}
+                  </button>
+                ))
             )}
             <div className="drawer-save-state">{props.lastSavedLabel}</div>
           </aside>

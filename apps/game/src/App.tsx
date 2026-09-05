@@ -420,6 +420,41 @@ export default function App() {
         screen: "courts",
       });
     }
+    entries.push({
+      id: "constitution-document",
+      kind: "Page",
+      label: "Constitution of Terena",
+      detail: "Articles, amendments and legal text",
+      screen: "assembly",
+    });
+    for (const amendment of Object.values(snap.provincialRuntime.constitutionalAmendments)) {
+      entries.push({
+        id: amendment.id,
+        kind: "Amendment",
+        label: amendment.title,
+        detail: `${amendment.status.replace(/_/g, " ")} · ${amendment.proposedDate}`,
+        screen: "assembly",
+      });
+    }
+    for (const law of Object.values(snap.legislatureRuntime.enactedLaws)) {
+      entries.push({
+        id: law.id,
+        kind: "Law",
+        label: law.title,
+        detail: `Enacted ${law.enactedDate}${law.operative ? " · in force" : ""}`,
+        screen: "assembly",
+      });
+    }
+    const year = Number(snap.currentDate.slice(0, 4));
+    for (let y = year; y >= Math.max(1971, year - 12); y -= 1) {
+      entries.push({
+        id: `year:${y}`,
+        kind: "Year",
+        label: `Year in Terena · ${y}`,
+        detail: "Historical retrospective",
+        screen: "archive",
+      });
+    }
     return entries;
   }, [world, snap, catalog]);
 
