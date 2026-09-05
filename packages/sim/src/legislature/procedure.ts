@@ -16,6 +16,7 @@ import type {
 } from "./types.js";
 import { pendingVoteKey } from "./types.js";
 import { concretePolicyItem, isNoOpProvisionChoice, naturalBillCopy } from "./provisions.js";
+import { assessBillConstitutionality, constitutionalityRejection } from "./constitutionality.js";
 import { absoluteMajorityNeeded, committeeForDimension, LEGISLATURE } from "./policy.js";
 import {
   allocateAmendmentId,
@@ -121,6 +122,11 @@ export function introduceBill(
   if (!mps.has(args.sponsorId)) return { error: reject("NOT_AN_MP", args.sponsorId) };
   const items = normalizePolicyItems(world, args.policyItems);
   if ("error" in items) return items;
+  const constitutionality = assessBillConstitutionality(state, world, items);
+  const constitutionalReject = constitutionalityRejection(constitutionality);
+  if (constitutionalReject) {
+    return { error: reject(constitutionalReject.code, constitutionalReject.message) };
+  }
   for (const item of items) {
     if (
       item.provisionId &&
@@ -153,6 +159,13 @@ export function introduceBill(
     .filter((id) => id !== args.sponsorId && mps.has(id))
     .sort();
   const copy = naturalBillCopy(state, items);
+  const billMetadata: JsonObject = {};
+  if (constitutionality.status !== "no_obvious_conflict") {
+    billMetadata.constitutionalityStatus = constitutionality.status;
+  }
+  if (Object.keys(constitutionality.itemWarnings).length > 0) {
+    billMetadata.constitutionalityWarnings = constitutionality.itemWarnings;
+  }
   const bill: BillState = {
     id: allocateBillId(state),
     sponsorId: args.sponsorId,
@@ -171,7 +184,7 @@ export function introduceBill(
     enactedDate: null,
     enactedLawId: null,
     stageReadyDate: state.currentDate,
-    metadata: {},
+    metadata: billMetadata,
     version: 1,
     versionHistory: [
       {

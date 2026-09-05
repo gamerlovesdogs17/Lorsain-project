@@ -9,6 +9,7 @@ export * from "./discipline.js";
 export * from "./caucus.js";
 export * from "./monthly.js";
 export * from "./provisions.js";
+export * from "./constitutionality.js";
 export * from "./constituency.js";
 export {
   parseLegislatureRuntime,
