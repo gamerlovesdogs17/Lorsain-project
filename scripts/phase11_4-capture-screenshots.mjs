@@ -75,7 +75,40 @@ async function main() {
     { qaFixture: "election-night-partial", qaScreen: "elections", qaPlayer: "NPC001" },
     desk,
   );
+  await page.evaluate(() => {
+    const tab = [...document.querySelectorAll("button,[role='tab']")].find((el) =>
+      /National Assembly/i.test((el.textContent || "").replace(/\s+/g, " ")),
+    );
+    tab?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await page.waitForTimeout(700);
+  await page.evaluate(() => {
+    const sel = [...document.querySelectorAll("select")].find((s) =>
+      [...s.options].some(
+        (o) => /2030/.test(o.textContent || "") || String(o.value).includes("2030"),
+      ),
+    );
+    const opt = sel
+      ? [...sel.options].find(
+          (o) => /2030/.test(o.textContent || "") || String(o.value).includes("2030"),
+        )
+      : null;
+    if (sel && opt) {
+      sel.value = opt.value;
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+  await page.waitForTimeout(900);
   await shot(page, "elections-1440.png");
+  await page.evaluate(() => {
+    const btn = [...document.querySelectorAll("button")].find((el) =>
+      /Election Night|Replay Election Night|Instant/i.test(
+        (el.textContent || "").replace(/\s+/g, " "),
+      ),
+    );
+    btn?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await page.waitForTimeout(1500);
   await shot(page, "election-night-1440.png");
 
   await gotoFixture(

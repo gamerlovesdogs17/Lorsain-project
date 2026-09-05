@@ -1,102 +1,74 @@
-# Phase 11.4 results — Presentation, Content, Flavor & Depth
+# Phase 11.4 completion status
 
 Date: 2026-09-05
 
-## Phase 11.3 status
+## Phase 11.3
 
-**Phase 11.3 remains ACCEPTED.** Sanity gate on entry HEAD `19f32d4` confirmed:
+**ACCEPTED** (unchanged). Functional acceptance remains on the `f817f01` lineage; tip docs may be later.
 
-- clean working tree
-- typecheck / format / lint green
-- `pnpm test:fast` green (pre-change baseline)
-- Pages production architecture preserved (`VITE_BASE_PATH=/Lorsain-project/`)
-- no Phase 11.3 regression blocker found before 11.4 work began
+## Previous Phase 11.4 issues corrected in this pass
 
-No 600-month rerun was performed. Existing `docs/qa/phase11_3/whole_game_final_1x600.json` evidence is retained.
-
-## Goals
-
-Make the already-working Phase 11.3 simulation look, read, and play more like a finished political world:
-
-1. Substantial UI / shell / hierarchy reconstruction
-2. State-aware content depth without engine rewrites
-3. Repetition reduction for headlines, bills, crises, and campaign flavor
-4. Representative validation and documentation
-
-## Major UI changes
-
-- New Terena “political desk” visual identity: cool slate workspace, deep ink navigation, Source Serif 4 + DM Sans, accent teal, paper raised surfaces (moved away from beige intranet cards)
-- Shell v7: branded nav mark, clearer group hierarchy, contextual active rail, calendar-forward top bar
-- Home political desk hero with role-aware briefing strip
-- Campaign HQ presentation pass (map-forward command center framing)
-- Elections hub / Election Night chrome pass
-- News front-page composition (`news-paper`)
-- History Wiki encyclopedia framing (`history-wiki-v7`)
-- Assembly leadership desk emphasis
-- Map contrast / selection polish without changing 11.3 selection contract
-
-## Screens redesigned / substantially improved
-
-| Tier | Screens |
+| Issue | Fix |
 | --- | --- |
-| Tier 1 | Title (identity tokens), Home, Campaign, Elections / Election Night, News, History Wiki |
-| Tier 2 | Assembly, Parties (shell/context), Organizations framing, Courts framing, Economy hierarchy via shared tokens |
-| Tier 3 | Foreign Affairs / secondary polish via shared chrome only |
+| Campaign screenshot showed inactive campaign | Added `active-campaign` QA fixture; capture uses it |
+| Election Night screenshot was same as Elections / certified replay | Added `election-night-partial` fixture with fresh Election Night (`isFreshElectionNight`) |
+| Campaign situations invented debates/rallies/dark-money/doubling | Rewrote titles to state-based framing; removed `debate_moment` |
+| Crisis themes invented border/expulsions/closures | Themes gated to neighbors/sanctions/trade/maritime posture; generic fallback is diplomatic confrontation |
+| Content tests asserted hardcoded strings | Tests now call `headlineFor`, `assignCrisisTheme`, and ban invented wording |
+| Constitution dual UX without shared alternatives | Unified modeled-rule alternatives (4 each) + proposed clause text + red/green diff preview |
+| Assembly leadership hidden behind disclosure | Leadership rail + tighter hemicycle shown simultaneously |
 
-Screenshots: `docs/qa/phase11_4/final/`
+## What is IMPLEMENTED (this completion pass)
 
-## Content systems expanded
+### Correctness / QA
+- Narrative truthfulness pass
+- Real generator tests
+- Active campaign + fresh Election Night fixtures
+- Capture script wired to those fixtures
 
-| System | Change |
-| --- | --- |
-| Provincial legislation | Subjects 5 → 12 with distinct titles/summaries/restrained variants; theme-weighted agendas |
-| Province themes | Explicit themes for all 21 provinces (capital metro, industrial corridor, agrarian, coastal trade, resource, university belt, border) |
-| Media headlines | Payload-aware headlines + recent fingerprint cooldown (max 24) |
-| Courts | Subject-specific federalism / competence question families (no identical “provincial authority” fallback spam) |
-| Campaigns | 8 situation templates wired into NPC monthly loop; debate notable-moment / issue emphasis flavor |
-| Foreign crises | Optional `narrativeTitle` themes (sanctions, border, naval posturing, trade corridor, alliance rupture, expulsion cycle) |
-| Organizations | Issue-aware lobby/endorsement wording and payload labels |
-| Presentation | Campaign situation titles and crisis themes surface in event display / press |
+### Constitution (modeled rules)
+- `CONSTITUTIONAL_LEGAL_VALUES` with 4 options per rule
+- `constitutionAlternatives.ts` clause text + mechanical summaries
+- Proposal stores `proposedText`
+- Unlimited presidential terms (`0`)
+- Diff helper + Assembly Business preview UI
+- Text-only amendments remain only for clauses without `runtime_rule_id` (honest split: modeled vs display text)
 
-## Repetition audit
+### Assembly
+- Chamber stage: hemicycle + leadership rail together
+- Tighter seat packing
+- Leadership seats outlined; click leadership highlights chamber selection
 
-Findings addressed:
+## What remains incomplete (blocks full acceptance)
 
-- Generic “Political developments” / identical provincial-authority court questions / thin provincial bill pool were the main visible repeats
-- Mitigations: headline fingerprints, subject-specific court questions, expanded bill copy, province theme weighting, campaign situation registry, crisis narrative titles
+- Full Constitution document-centric editor (left TOC / center document / right inspector) still uses Assembly Business + Lawbook tabs rather than a dedicated document workspace
+- Free-text vs modeled paths are unified for **modeled rules**, but Lawbook free-text UX is not fully retired as a competing mental model for players
+- Election Night “broadcast mode” / mid-count population fixtures beyond fresh certified first-view
+- Priority 2 political depth expansions (party postmortems, org scorecards, career memory, governing agenda, court precedent, investigations, turn summaries, global search density) are only partially present from earlier 11.4 content work
+- Representative multi-year repetition audit report artifact not yet published as a calibration JSON
 
-Remaining (honest):
+## Determination
 
-- News/History remain template-driven rather than authored encyclopedia prose
-- Some scalar-adjacent legislative options still exist where policy is inherently dimensional
-- Biography depth and tutorial content remain thinner than a finished commercial product
+**Phase 11.4 NOT YET ACCEPTED**
 
-## Tests
+Priority 0 and most Priority 1 structural requirements are landed and tested. Full acceptance waits on deeper Constitution document UX completion and broader Priority 2 political-depth playability, plus fresh reviewed screenshot evidence from the new fixtures on green CI/Pages.
 
-- `packages/sim/src/phase11_4.content.test.ts` (23)
-- Existing media / campaigns suites still green
-- Full `pnpm test:fast`: 430 tests passed
-- Production game build with `VITE_BASE_PATH=/Lorsain-project/` succeeded
+## Feature revert map (this pass)
 
-## Known limitations / deferred
+| Commit | Feature | Safe revert? | Dependencies |
+| --- | --- | --- | --- |
+| `bd667f8` | Narrative truthfulness | Yes | None |
+| `fcb75eb` | Constitution alternatives + eligibility 0 | Mostly; revert with UI commit that consumes exports | `9a0a70d` uses exports |
+| `8192cd5` | QA fixtures | Yes | Capture script |
+| `9a0a70d` | Assembly stage + amendment preview UI | Yes if `fcb75eb` kept or UI imports adjusted | Prefers `fcb75eb` |
 
-| Item | Status |
-| --- | --- |
-| Rich authored newspaper/encyclopedia prose | Partially improved; deeper writing still optional polish |
-| Interactive branching political events beyond existing decision patterns | Bounded situations only — no CK-style engine |
-| Bundle splitting / save compaction / 100×600 soak | Phase 11.5 |
-| Automated visual-diff CI | Phase 11.5 |
+Earlier Phase 11.4 commits (`26e6582`, `cd6694b`, `12f4cdc`, …) remain the foundation visual/content pass.
 
-## Acceptance
+## Docs / evidence locations
 
-Phase 11.4 tip at handoff: see `git rev-parse HEAD` on `main` (docs tip after `12f4cdc` lineage).
-
-Phase 11.4 implementation is complete for this pass when:
-
-- Phase 11.3 remains explicitly ACCEPTED
-- UI identity change is immediately visible
-- Content depth / repetition mitigations are landed and tested
-- working tree clean after commit
-- normal CI and Pages remain green on the Phase 11.4 tip
+- This file: `docs/PHASE_11_4_RESULTS.md` (supersedes prior “accepted” overclaims)
+- Fixtures: `docs/qa/phase11_4/fixtures/`
+- Screenshots: `docs/qa/phase11_4/final/` (regenerate after this tip)
+- Capture: `scripts/phase11_4-capture-screenshots.mjs`
 
 Phase 11.5 has not begun.
