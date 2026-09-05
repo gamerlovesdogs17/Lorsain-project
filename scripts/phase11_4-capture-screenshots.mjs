@@ -26,7 +26,7 @@ async function waitReady(page) {
     timeout: 120_000,
   });
   await page.waitForFunction(() => {
-    const el = document.getElementById("lorsain-browser-qa-state");
+    const el = globalThis.document.getElementById("lorsain-browser-qa-state");
     return el?.getAttribute("data-ready") === "true";
   });
   await page.waitForTimeout(700);
