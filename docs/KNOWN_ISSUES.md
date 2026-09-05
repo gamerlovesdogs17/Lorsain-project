@@ -182,7 +182,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title �
 
 ## Phase 11.3 notes
 
-**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is implemented.** Current-source 1×600 stability is **VALIDATED** (`docs/qa/phase11_3/whole_game_final_1x600.json`); evidence retained, no rerun. Live public Pages path is **VALIDATED** on the `6d81af6` / `6a2f5d2` lineage. Repo-wide Prettier Format debt is **FIXED** (`01ec453`); CI is split into quality vs integration jobs (`136698c`) — formal `ACCEPTED` waits on final CI green on HEAD. Screenshots regenerated into `docs/qa/phase11_3/final/` on 2026-09-04 evening. Formal results and requirement mapping: `docs/PHASE_11_3_RESULTS.md`, `docs/PHASE_11_3_REQUIREMENT_EVIDENCE.md`. Phase 11.4 / 11.5 content and release engineering remain deferred. Phase 11.4 has not begun.
+**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is ACCEPTED** at `f817f01`. Current-source 1×600 stability is **VALIDATED** (`docs/qa/phase11_3/whole_game_final_1x600.json`); evidence retained, no rerun. Live public Pages path is **VALIDATED**. Repo-wide Prettier Format debt is **FIXED**; CI Quality + Integration and Pages deploy are green on the acceptance HEAD. Screenshots regenerated into `docs/qa/phase11_3/final/`. Formal results and requirement mapping: `docs/PHASE_11_3_RESULTS.md`, `docs/PHASE_11_3_REQUIREMENT_EVIDENCE.md`. Phase 11.4 / 11.5 content and release engineering remain deferred. Phase 11.4 has not begun.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
@@ -211,7 +211,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title �
 | P113-SAVE-SIZE | NONBLOCKING | Current-source `P113-WG-000` save growth (shard): ~1.84 / 2.86 / 7.34 / 14.88 / 34.56 / 74.30 MiB at 0/1/4/10/25/50 years. Growth is roughly linear; compaction of immutable election/roll-call/history archives is Phase 11.5 release engineering and must preserve replay/history truth. |
 | P113-WHOLE-GAME-1X600 | **VALIDATED** | Continuous 600-month run completed with determinism match (dual-run + midpoint reload), 0 candidate-shortage events, 21 active Governors, 0 person-quality errors/warnings, and 0 strict/catastrophic failures. See `docs/PHASE_11_3_RESULTS.md`. |
 | P113-PAGES-PUBLISH | **VALIDATED** | Explicit Pages workflow for `6d81af6` succeeded; live `https://gamerlovesdogs17.github.io/Lorsain-project/` serves the Phase 11.3 game (assets, New Game, map, Assembly, Caucus, End Turn Worker, save/resume). Prefer keeping Pages Source as **GitHub Actions**; legacy dynamic `pages build and deployment` may still appear alongside. |
-| P113-FORMAT-CI | **FIXED / pending verify** | Prettier format debt cleared (`01ec453`); CI split into quality and integration jobs (`136698c`). Confirm green on pushed HEAD before marking Phase 11.3 `ACCEPTED`. |
+| P113-FORMAT-CI | **FIXED / VALIDATED** | Prettier format debt cleared; CI Quality + Integration green on `f817f01` with single-fork integration config. |
 | P113-SCREENSHOT-CI | NONBLOCKING | Manual browser evidence regenerated 2026-09-04 via `scripts/phase11_3-capture-screenshots.mjs` (Playwright workspace `devDependency`); automated visual-diff CI remains Phase 11.5. |
 | P113-CONTENT-DEBT | DEFERRED TO 11.4 | Richer biographies, news/History prose, tutorials, and flavor/worldbuilding variety. |
 | P113-RELEASE-ENG | DEFERRED TO 11.5 | Route/data splitting, immutable-save compaction, visual-diff CI, public-deployment retest, 100×600 soak. |

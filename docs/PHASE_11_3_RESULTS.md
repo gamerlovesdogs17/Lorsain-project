@@ -10,11 +10,11 @@ The detailed requirement mapping is in `PHASE_11_3_REQUIREMENT_EVIDENCE.md`; dep
 
 ### 1. Starting HEAD
 
-This documentation/screenshot refresh continues from `6a2f5d2` (Phase 11.3 public Pages validation). Earlier closeout lineage remains: `08a1086` → `6d81af6` → `6a2f5d2`. Formatting commit `01ec453` and CI split `136698c` sit on that line; current WIP regenerates screenshots and closeout docs for a pending final push.
+This documentation/screenshot refresh continues from `6a2f5d2` (Phase 11.3 public Pages validation). Closeout lineage: `08a1086` → `6d81af6` → `6a2f5d2` → `01ec453` (Prettier) → `136698c` (CI split) → `38769d2` (screenshots/evidence) → `f817f01` (integration Vitest harden; **ACCEPTED**).
 
 ### 2. Final Phase 11.3 HEAD
 
-The immutable acceptance hash is reported after the final push once CI is green; a commit cannot contain its own hash. Until then, treat acceptance as pending final CI green on HEAD.
+The immutable acceptance hash is `f817f01325f3955afc6cde5321e9b97d5b2646c4` (final HEAD after CI/Pages green verification).
 
 ### 3. Working-tree state
 
@@ -166,7 +166,7 @@ Not rerun. One current-source 600-month seed takes roughly 26 minutes and produc
 
 ### 40. Genuine remaining blockers
 
-No known code or deterministic-simulation blocker remains. Formal Phase 11.3 `ACCEPTED` waits on final CI green on HEAD after the Prettier + quality/integration split. Public Pages path is already validated on the closeout lineage.
+No known code or deterministic-simulation blocker remains. Phase 11.3 is **ACCEPTED** with CI and Pages green on `f817f01`. Public Pages path remains validated.
 
 ### 41. Nonblocking deferred items
 
@@ -177,8 +177,8 @@ No known code or deterministic-simulation blocker remains. Formal Phase 11.3 `AC
 
 ### 42. Phase 11.3 acceptance
 
-**Ready for acceptance after CI** — pending final CI green on HEAD.
+**ACCEPTED**
 
-Gameplay/Pages closeout through `6a2f5d2` remains validated: live public URL smoke on `6d81af6`/`6a2f5d2` lineage (title/shell, New Game, map, Assembly, Caucus, End Turn Worker, save/resume). 1×600 evidence retained; no rerun. Screenshots regenerated into `docs/qa/phase11_3/final/` on 2026-09-04 evening from CURRENT HEAD via `scripts/phase11_3-capture-screenshots.mjs`. Prettier formatting (`01ec453`) and quality/integration CI split (`136698c`) address prior Format-step failure; do not mark `ACCEPTED` until the split CI jobs are verified green on the pushed HEAD.
+Final HEAD `f817f01`. Normal CI Quality + Integration green ([run 33941810423](https://github.com/gamerlovesdogs17/Lorsain-project/actions/runs/33941810423)); Pages deploy green ([run 33941810405](https://github.com/gamerlovesdogs17/Lorsain-project/actions/runs/33941810405)). Live public URL remains the validated Phase 11.3 game. 1×600 evidence retained; screenshots regenerated into `docs/qa/phase11_3/final/`. Phase 11.4 has not begun.
 
 STOP. Phase 11.4 has not begun.
