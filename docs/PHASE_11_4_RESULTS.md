@@ -1,92 +1,80 @@
 # Phase 11.4 completion status
 
-Date: 2026-09-05
+Date: 2026-09-05 (executable Constitution + law depth pass)
 
 ## Phase 11.3
 
-**ACCEPTED** (unchanged). Functional acceptance remains on the `f817f01` lineage.
+**ACCEPTED** (unchanged).
 
 ## Determination
 
 **Phase 11.4 NOT YET ACCEPTED**
 
-This correction pass rebuilt the Constitution and legislative policy models conceptually, but acceptance still waits on:
+Core blockers advanced substantially in this pass (canonical mapping, executable order fields, law depth, constitutionality gates, Quick Amendments / Lawbook UX). Acceptance is still withheld because:
 
-- finishing catalog migration so most policy subjects leave the old two-proposal (formerly less/keep/more) shape;
-- deeper ordinary-law constitutionality gates;
-- fuller election/nomination enforcement under every constitutional order mode;
-- Priority 2 playability depth and headline uniqueness from the prior pass.
+- full screenshot QA matrix for the new flows was not regenerated against this HEAD;
+- Assembly modes `closed_list_pr` / `mixed_member` still count with STV (FPTP plurality winners are wired; others remain approximate);
+- Priority 8–17 political-depth items (promises/agendas, mentorship, crises, global search polish, etc.) remain largely deferred;
+- remote Pages must be verified against the handoff HEAD after push.
 
-## Correction pass (Constitution + Law) — what changed
+## What this pass fixed
 
-### Legislative policy model
-- `current: true` proposals removed; founding baselines use `founding: true`
-- Current law is derived from enacted state via `currentProvisionOption`
-- Fake “Keep …” proposal labels removed (audit: `keepCurrentLabels: 0`)
-- Bill max provisions raised to 8; no-op current-law choices rejected
-- Bill builder UI shows CURRENT LAW separately; effect chips use neutral `flat` tone
-- NPC introduce path skips founding / current options
-- Expanded multi-option catalogs for bargaining, rail, child benefit, trade safeguards, housing, clean power
+### Priority 0 — Canonical Constitution
+- Remapped mis-targeted amendment subjects to real clauses in `data/terena_constitution.json`
+- Founding baselines now equal canonical clause text
+- Fixed nonexistent `ART_VIII_S3_C1` → `ART_VIII_S2_C3`
+- Court founding term corrected to **12 years**; Art XII province counts use **21**
+- `constitutionValidation.ts` + tests fail loudly on bad targets / baseline mismatch
 
-### Constitutional model
-- New `ConstitutionChangeSubject` / alternatives catalog covering **all Articles I–XII** (`constitutionChanges.ts`)
-- Live `ConstitutionalOrderState` (`constitutionalOrder.ts`) with party system, election modes, amendment process, clause text overrides
-- Single amendment path: `PROPOSE_CONSTITUTIONAL_PACKAGE` (free-text path returns `STRUCTURED_CONSTITUTIONAL_AMENDMENT_REQUIRED`)
-- Document-first UI (`constitutionBrowser.tsx`): subject + alternative dropdowns, inline red/green preview, multi-change packages
-- Article VII can enact `single_legal_party`; nomination filtering via `partyAllowedUnderConstitution`
-- Article XII alternatives alter future Assembly/provincial thresholds
-- Save schema **19** with `migrateSaveV18ToV19`
+### Priority 2 — Executable Constitution
+- `metricEffects` applied to `orderMetrics` + national economy indices on ratification
+- Presidential election modes: RCV / plurality / majority runoff / **Assembly selection**
+- Judicial review modes alter merits lean; `legislative_finality` blocks invalidation
+- One-party / nonpartisan / restricted status via `partyAllowedUnderConstitution` + `partyLegalStatus` on nominations, presidential field, Assembly filing
+- Article XII thresholds dynamic; referendum path enacts/fails without provincial votes
+- Emergency declaration respects emergency power mode
+- Treaty assembly requirement reads treaty approval mode
+- Assembly cycle stores `electoralMethod`; FPTP uses plurality winners
 
-### Audits / tests
-- `scripts/audit-policy-constitution.mjs` → `docs/qa/phase11_4/policy-constitution-audit.json`
-- `packages/sim/src/phase11_4.constitution-law.test.ts`
+### Priority 1 / 6 / 7 — UX
+- Quick Amendments catalog (search + Article + topic filters) shares Document Mode builder
+- Lawbook Amend / Replace / Repeal preloads Introduce
+- Party legal status on Parties / History / Assembly
+- Delegation lean + Why factors on bill Politics tab
 
-### Remaining gaps (why still not accepted)
-- ~34 of 50 policy subjects still have only **2** proposal options after excluding founding baselines
-- Only ~1 numerical/threshold control type is richly used; more should become numeric/duration/threshold controls
-- Ordinary legislation is not yet fully blocked by constitutional competence/party-system rules in the bill introducer
-- Some constitutional order fields affect metrics/eligibility more than full election algorithms
-- Screenshot recapture for the new builder flows may still be pending after this pass
+### Priority 3–5 — Laws
+- 0 subjects with only 2 proposal options (was 34)
+- Numeric/threshold/duration/percentage controls with `parameterValue`
+- Proposal-specific economy effects before direction×magnitude fallback
+- Bill constitutionality assessment + hard reject for unavailable ordinary law
+
+## Tests (this HEAD)
+
+`packages/sim/src/phase11_4*.test.ts` — **53 passed** including:
+
+- `phase11_4.constitution-exec.test.ts` (canonical targets + gameplay behaviors)
+- `phase11_4.law-depth.test.ts` (catalog depth, constitutionality, specific effects)
 
 ## Audit snapshot
 
-See `docs/qa/phase11_4/policy-constitution-audit.json`.
+See `docs/qa/phase11_4/policy-constitution-audit.json` (regenerate via `node scripts/audit-policy-constitution.mjs`).
 
-- Legislation: 50 subjects, 0 `current:true`, 0 Keep labels, varied option counts (2 / 3 / 4 / 5+)
-- Constitution: 12/12 Articles amendable, 21 structured subjects, no Article marked text-only
+## Known limitations / deferred
 
-## Screenshot evidence
+- Closed-list PR / MMP assembly counting still STV-based
+- Screenshot matrix + Pages verification pending for this HEAD
+- Promises/agendas, Cabinet investigations, organization scorecards, Year in Terena, global search polish deferred
+- Map-centric redesign remains deferred (per brief)
 
-`docs/qa/phase11_4/final/` — prior Priority 1 shots remain; correction-pass captures include (when regenerated):
+## Feature / commit revert map
 
-- `constitution-1440.png`
-- `constitution-diff-1440.png` / `constitution-one-party-1440.png`
-- `constitution-article-vii-1440.png` / `constitution-article-xii-1440.png`
-- `constitution-package-1440.png`
-- `bill-builder-*.png`
+| Commit theme | Feature | Independently revertible? | Dependencies |
+|---|---|---|---|
+| Canonical remap + validation | Correct clause targets + tests | Yes | None |
+| Executable order gameplay | Elections/courts/parties/emergency/treaty/referendum/metrics | Partially | Remap |
+| Law catalog + effects + constitutionality | Provisions depth, economy effects, bill gates | Yes | None |
+| Game UX (Quick Amend / Lawbook / whip / party status) | UI only | Yes | Sim exports |
 
-## Save compatibility
+## Explicit verdict
 
-- Schema 18 → 19 migration seeds `constitutionalOrder` and preserves historical amendments
-- Legacy numeric `PROPOSE_CONSTITUTIONAL_AMENDMENT` still works for old four rules
-- Provision option IDs retained where renamed only for labels/founding flags
-
-## Feature revert map (correction pass)
-
-Suggested logical commits (create in order if not already split):
-
-1. Legislative founding/current-law model + procedure/UI
-2. Provision catalog expansions
-3. Constitutional order + change definitions
-4. Package proposal / ratification / one-party mechanics
-5. Constitution document UI
-6. Tests + schema 19 migration + audit/docs
-
-## Deferred (not Phase 11.5 started)
-
-- Global map-centric shell
-- Full court precedent engine
-- Complete catalog numeric redesign for all 50 subjects
-- Perfect constitutionality matrix for every ordinary law
-
-Phase 11.5 has not begun.
+> **PHASE 11.4 NOT YET ACCEPTED**
