@@ -10,15 +10,15 @@ The detailed requirement mapping is in `PHASE_11_3_REQUIREMENT_EVIDENCE.md`; dep
 
 ### 1. Starting HEAD
 
-Continuation began from `08a1086998b74ce3c511275712b1102b27bcf450` (`bnv`) on `phase11-3-institutional-resume`. Completed work in that commit and earlier checkpoints was preserved.
+This documentation/screenshot refresh continues from `6a2f5d2` (Phase 11.3 public Pages validation). Earlier closeout lineage remains: `08a1086` → `6d81af6` → `6a2f5d2`. Formatting commit `01ec453` and CI split `136698c` sit on that line; current WIP regenerates screenshots and closeout docs for a pending final push.
 
 ### 2. Final Phase 11.3 HEAD
 
-The immutable closeout hash is reported in the task handoff after the final commit; a commit cannot contain its own hash.
+The immutable acceptance hash is reported after the final push once CI is green; a commit cannot contain its own hash. Until then, treat acceptance as pending final CI green on HEAD.
 
 ### 3. Working-tree state
 
-The intended handoff is a clean worktree after implementation, generated type output, documentation, screenshots, and compact calibration artifacts are committed. No reset, clean, or destructive source discard was used.
+Closeout implementation and Pages validation are landed through `6a2f5d2`. Follow-up commits `01ec453` (Prettier) and `136698c` (quality/integration CI split) address Format/CI. Current WIP regenerates `docs/qa/phase11_3/final/*.png` (2026-09-04 evening) plus evidence docs; Playwright is a workspace `devDependency` for `scripts/phase11_3-capture-screenshots.mjs`. No reset, clean, or destructive source discard was used.
 
 ### 4. Map architecture changes
 
@@ -30,7 +30,7 @@ Click/tap/keyboard activation pins a small contextual card over the map without 
 
 ### 6. Campaign map modes
 
-Campaign HQ offers Forecast, Polling, Ground Game, Previous Election, Activity, Spending, and Endorsements when public data exists. Each mode has a literal legend and maintains province/constituency selection context.
+Campaign HQ offers Forecast, Polling, Ground Game, Previous Election, Activity, Spending, and Endorsements when public data exists. Regenerated captures show Forecast, Polling, Ground Game, and Previous as distinct modes (`campaign-forecast-1440.png`, `campaign-polling-1440.png`, `campaign-ground-game-1440.png`, `campaign-previous-1440.png`) plus HQ and mobile. Each mode has a literal legend and maintains province/constituency selection context.
 
 ### 7. Geographic polling
 
@@ -78,7 +78,7 @@ The ideological Caucus Chair contest uses caucus membership as its selectorate, 
 
 ### 18. Assembly layout and leadership changes
 
-Speaker, Floor Leaders, Whips, current bill, next votes, floor agenda, and recent vote are visible before a smaller 420-seat chamber at 1440, 1200, and 900 pixels. The chamber remains keyboard-selectable but no longer dominates the first screen.
+Speaker, Floor Leaders, Whips, and current business appear before the chamber; the chamber is a link into the full seat view rather than an inline first-screen canvas. A compact Required decisions banner replaces the old full-width queue on ordinary Assembly screens. Captures: `assembly-chamber-1440.png`, `assembly-900.png`.
 
 ### 19. Global Required Decisions cleanup
 
@@ -122,7 +122,7 @@ The Pages-style `/Lorsain-project/` build rendered with CSS/JS, title, New Game,
 
 ### 29. Real deployed-site result
 
-The public URL returned HTTP 200 but still served the older Phase 10 site during closeout. It is not claimed as the current build. Publishing the closeout commit after selecting GitHub Actions remains the external release action; see `GITHUB_PAGES_DEPLOYMENT.md`.
+Live public Pages for the `6d81af6` / `6a2f5d2` lineage was validated as the Phase 11.3 game (title/shell, New Game → Governor, map, Assembly, Caucus, End Turn Worker, save/resume). Prefer Pages Source **GitHub Actions**; see `GITHUB_PAGES_DEPLOYMENT.md`.
 
 ### 30. Worker production test
 
@@ -166,7 +166,7 @@ Not rerun. One current-source 600-month seed takes roughly 26 minutes and produc
 
 ### 40. Genuine remaining blockers
 
-No known code or deterministic-simulation blocker remains. Public release is not yet current: the repository owner must select GitHub Actions as Pages Source and publish the closeout commit, then the public URL must be retested.
+No known code or deterministic-simulation blocker remains. Formal Phase 11.3 `ACCEPTED` waits on final CI green on HEAD after the Prettier + quality/integration split. Public Pages path is already validated on the closeout lineage.
 
 ### 41. Nonblocking deferred items
 
@@ -177,8 +177,8 @@ No known code or deterministic-simulation blocker remains. Public release is not
 
 ### 42. Phase 11.3 acceptance
 
-`ACCEPTED`
+**Ready for acceptance after CI** — pending final CI green on HEAD.
 
-Closeout full suite (current tree): **55** files / **538** tests passed; Vitest exited non-zero only on a harness `onTaskUpdate` worker RPC timeout (no failing assertions). Targeted Pages-equivalent `VITE_BASE_PATH=/Lorsain-project/` game build succeeded with `/Lorsain-project/assets/...` entry URLs. Explicit **Deploy game to GitHub Pages** for `6d81af6` succeeded; live public URL validated as the Phase 11.3 game (title/shell, New Game, map, Assembly, Caucus, End Turn Worker, save/resume). CI Format step remains red on pre-existing repo-wide Prettier debt (tests skipped in that workflow).
+Gameplay/Pages closeout through `6a2f5d2` remains validated: live public URL smoke on `6d81af6`/`6a2f5d2` lineage (title/shell, New Game, map, Assembly, Caucus, End Turn Worker, save/resume). 1×600 evidence retained; no rerun. Screenshots regenerated into `docs/qa/phase11_3/final/` on 2026-09-04 evening from CURRENT HEAD via `scripts/phase11_3-capture-screenshots.mjs`. Prettier formatting (`01ec453`) and quality/integration CI split (`136698c`) address prior Format-step failure; do not mark `ACCEPTED` until the split CI jobs are verified green on the pushed HEAD.
 
 STOP. Phase 11.4 has not begun.

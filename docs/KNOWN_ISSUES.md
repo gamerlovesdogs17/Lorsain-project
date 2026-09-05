@@ -112,7 +112,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P96-PRES-MAP | **FIXED in Phase 9.6** | Presidential election tab no longer paints Assembly incumbency as presidential geography. |
 | P9-BUNDLE-SIZE | NONBLOCKING | Production game bundle ~10.5MB (GeoJSON in client). Code-split or server-side map prep in Phase 11. |
 | P9-CITY-PLACEMENT | NONBLOCKING | Canonical city JSON uses authoring x/y; runtime map places cities at province centroids + offset. Documented in `@lorsain/map`. |
-| P9-FORMAT-CRLF | NONBLOCKING | Repo-wide `format:check` may fail on pre-existing CRLF files; format only Phase 9 touched files when committing. |
+| P9-FORMAT-CRLF | **FIXED (Phase 11.3 CI pass)** | Repo-wide Prettier applied in `01ec453`; `format:check` no longer blocked by pre-existing CRLF/format debt. |
 | P9-PYTHON | NONBLOCKING | `python scripts/validate_content.py` may exit 9009 on Windows Store stub. |
 | P9-UI-POLISH | NONBLOCKING | Phase 9.6 completes V3.1 game-facing screens; chamber animation and generated newspaper copy wait for Phase 11. |
 | P96-CHAMBER-SEMICIRCLE | NONBLOCKING | Assembly overview uses a composition bar and grouped seat blocks, not a physical semicircle. |
@@ -182,7 +182,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 
 ## Phase 11.3 notes
 
-**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is implemented.** Current-source 1Ã—600 stability is **VALIDATED** (`docs/qa/phase11_3/whole_game_final_1x600.json`). Formal results and requirement mapping are in `docs/PHASE_11_3_RESULTS.md` and `docs/PHASE_11_3_REQUIREMENT_EVIDENCE.md`. Phase 11.3 is **ACCEPTED** after live public Pages validation on closeout commit `6d81af6`. Phase 11.4 has not begun.
+**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is implemented.** Current-source 1Ã—600 stability is **VALIDATED** (`docs/qa/phase11_3/whole_game_final_1x600.json`); evidence retained, no rerun. Live public Pages path is **VALIDATED** on the `6d81af6` / `6a2f5d2` lineage. Repo-wide Prettier Format debt is **FIXED** (`01ec453`); CI is split into quality vs integration jobs (`136698c`) â€” formal `ACCEPTED` waits on final CI green on HEAD. Screenshots regenerated into `docs/qa/phase11_3/final/` on 2026-09-04 evening. Formal results and requirement mapping: `docs/PHASE_11_3_RESULTS.md`, `docs/PHASE_11_3_REQUIREMENT_EVIDENCE.md`. Phase 11.4 / 11.5 content and release engineering remain deferred. Phase 11.4 has not begun.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
@@ -211,7 +211,10 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P113-SAVE-SIZE | NONBLOCKING | Current-source `P113-WG-000` save growth (shard): ~1.84 / 2.86 / 7.34 / 14.88 / 34.56 / 74.30 MiB at 0/1/4/10/25/50 years. Growth is roughly linear; compaction of immutable election/roll-call/history archives is Phase 11.5 release engineering and must preserve replay/history truth. |
 | P113-WHOLE-GAME-1X600 | **VALIDATED** | Continuous 600-month run completed with determinism match (dual-run + midpoint reload), 0 candidate-shortage events, 21 active Governors, 0 person-quality errors/warnings, and 0 strict/catastrophic failures. See `docs/PHASE_11_3_RESULTS.md`. |
 | P113-PAGES-PUBLISH | **VALIDATED** | Explicit Pages workflow for `6d81af6` succeeded; live `https://gamerlovesdogs17.github.io/Lorsain-project/` serves the Phase 11.3 game (assets, New Game, map, Assembly, Caucus, End Turn Worker, save/resume). Prefer keeping Pages Source as **GitHub Actions**; legacy dynamic `pages build and deployment` may still appear alongside. |
-| P113-SCREENSHOT-CI | NONBLOCKING | Phase 11.3 includes manual browser evidence at all required widths; automated visual-diff CI is not yet wired. |
+| P113-FORMAT-CI | **FIXED / pending verify** | Prettier format debt cleared (`01ec453`); CI split into quality and integration jobs (`136698c`). Confirm green on pushed HEAD before marking Phase 11.3 `ACCEPTED`. |
+| P113-SCREENSHOT-CI | NONBLOCKING | Manual browser evidence regenerated 2026-09-04 via `scripts/phase11_3-capture-screenshots.mjs` (Playwright workspace `devDependency`); automated visual-diff CI remains Phase 11.5. |
+| P113-CONTENT-DEBT | DEFERRED TO 11.4 | Richer biographies, news/History prose, tutorials, and flavor/worldbuilding variety. |
+| P113-RELEASE-ENG | DEFERRED TO 11.5 | Route/data splitting, immutable-save compaction, visual-diff CI, public-deployment retest, 100Ã—600 soak. |
 | P113-DEEP-LOCAL | POST-11.5 IDEA | Provincial cabinets, detailed provincial budgets/taxes, municipal legislatures and separate provincial constitutions would overexpand v1 and are deliberately absent. |
 
 ## Phase 8 leftovers

@@ -1,46 +1,76 @@
 # Phase 11.3 browser QA evidence
 
-Date: 2026-08-30
+Date: 2026-09-04
 
-These JPEG captures come from the running Vite application loaded with real, replayable engine saves. They are not isolated components or mocked props. Regenerate the two fixtures with:
+Current PNG evidence lives in `final/`. Captures were regenerated on **2026-09-04 evening** from CURRENT HEAD with:
 
-`node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/create-judicial-qa-save.ts`
+```text
+node scripts/phase11_3-capture-screenshots.mjs
+```
 
-The final pass adds replay points for an active Provincial Assembly member linked to the full politician directory, a former President after transition, and certified 2029–2030 provincial/federal election results. Current PNG evidence is in `final/`; the earlier full-page JPEG set remains useful for long-page inspection.
+Requires a running Vite game server (default `http://localhost:5174/Lorsain-project/`) and Playwright (`playwright` workspace `devDependency`). The script loads real QA fixtures through the development-only loader (`qaFixture`, `qaScreen`, optional `qaPlayer` / focused record) and writes PNGs into `final/`. An `assembly-worker` fixture is available among the Vite QA fixtures for Worker/Assembly paths.
 
-The development-only QA loader accepts a fixture, destination screen, optional player viewpoint, and optional focused record. It exposes a hidden ready sentinel. Before every capture the browser pass asserted the requested viewport, fixture date, player, route, expected heading/content, and decoded image dimensions. The exact assertion contract and per-file dimensions are in `browser-qa-manifest.json`.
+Earlier full-page JPEG captures under this directory (August 2026 pass) are **archival only** — superseded by the regenerated `final/*.png` set. Do not cite the `.jpg` names as current closeout evidence.
 
-## Institutional and role evidence
+The development-only QA loader exposes a hidden ready sentinel. Historical assertion contracts and per-file dimensions for the older JPEG pass remain in `browser-qa-manifest.json` for reference.
 
-- `party-directory-1440.jpg`, `party-caucus-1440.jpg`, `party-leadership-election-1440.jpg` — all-party/caucus navigation and live internal politics.
-- `assembly-chamber-1440.jpg`, `committee-detail-1440.jpg`, `federal-roll-call-1440.jpg` — 420-seat chamber, full committee roster, and named individual federal votes.
-- `bill-provision-builder-1440.jpg`, `bill-detail-1440.jpg` — one-to-three provision drafting, variable policy alternatives, current law, effects, affected groups, and clause-amendment UX.
-- `politician-profile-1440.jpg`, `politician-voting-record-1440.jpg`, `career-opportunities-1440.jpg` — politician identity, public record, and actionable career paths.
-- `court-bench-docket-1440.jpg`, `court-decision-1440.jpg`, `judicial-appointment-browser-1440.jpg` — nine-seat bench, structured opinions with individual votes, and candidates with explicit legal careers.
-- `governor-home-1440.jpg`, `governor-province-1440.jpg`, `governor-legislation-vote-1440.jpg`, `provincial-roll-call-1440.jpg` — role briefing, Provincial Assembly, Governor legislation, disposition, and named roll call.
-- `constitutional-amendment-tracker-1440.jpg` — federal threshold plus all 21 Provincial Assemblies in a geographic tracker and accessible table.
+## Regenerated final set (2026-09-04)
 
-## Campaign, organizations, economy, and public information
+Representative current captures (not exhaustive of every file in `final/`):
 
-- `ground-game-campaign-1440.jpg` — active campaign with provincial and constituency Ground Game.
-- `organizations-scorecard-1440.jpg` — behavior-based relationships, public positions, and scorecards.
-- `economy-public-metrics-1440.jpg`, `economy-regional-map-1440.jpg` — centralized public statistics and persistent regional variation.
-- `political-map-hover-1440.jpg`, `terena-map-inspector-1440.jpg`, `election-map-governor-1440.jpg` — temporary hover, persistent selection, truthful mode data, and a real planned gubernatorial race.
-- `political-calendar-1440.jpg`, `global-search-1440.jpg`, `news-populated-1440.jpg`, `archive-populated-1440.jpg` — cross-system navigation and populated long-lived information surfaces.
+### Shell and roles
 
-## Responsive evidence
+- `title-1440.png`, `governor-home-1440.png`, `global-shell-1440.png`, `mp-home-1440.png`, `mobile-menu-390.png`
 
-- `province-responsive-1200.jpg`
-- `assembly-responsive-900.jpg`
-- `map-responsive-600.jpg`
-- `mobile-governor-390.jpg`
-- `mobile-campaign-390.jpg`
-- `mobile-map-interaction-390.jpg`
+### Assembly / party / caucus
 
-The 390-pixel checks found no document-level horizontal overflow. Wide political tables remain usable through local horizontal scrolling. Hover is supplementary: click/tap and keyboard activation create the persistent map selection.
+- `assembly-chamber-1440.png`, `assembly-900.png` — Speaker + Floor Leaders + Whips + current business before chamber (chamber is a link); compact Required decisions banner
+- `party-leader-1440.png`, `caucus-1440.png`, `caucus-chair-1440.png`, `assembly-delegation-leadership-1440.png`
 
-## Final role and interaction pass
+### Campaign and map
 
-The 2026-08-30 pass exercised President, MP, Governor, Provincial Assembly member, active presidential candidate, party leader, caucus chair, justice, and former-officeholder perspectives. It covered 1440, 1200, 900, 600, and 390 pixel widths. A linked Provincial Assembly identity defect found during this pass was fixed in the UI and command authority layer, then protected by an engine regression test.
+- `campaign-hq-1440.png`, `campaign-forecast-1440.png`, `campaign-polling-1440.png`, `campaign-ground-game-1440.png`, `campaign-previous-1440.png`, `campaign-390.png`
+- `map-inspector-selected-1440.png`, `map-inspector-drawer-1440.png`, `mobile-map-selected-390.png`
 
-Election evidence now includes certified Presidential, National Assembly, gubernatorial, and Provincial Assembly results. The map pass verified live tooltip appearance, leave-to-clear, persistent click selection, keyboard selection, and 390-pixel selection without a retained hover. The final clean-tab route sequence reported no console warnings or errors.
+### Election Night and History
+
+- `election-night-presidential-rcv.png`, `election-night-presidential-later.png`
+- `election-night-assembly-partial.png`, `election-night-assembly-certified.png`
+- `election-night-governors.png`, `election-night-provincial-assemblies.png`
+- `history-wiki-year.png`, `history-wiki-assembly-election.png`, `history-wiki-governor-election.png`, `history-wiki-presidential-election.png`
+
+### Constitution, news, legislation
+
+- `constitution-reader.png`, `constitution-amendment-clause.png`
+- `news-front-populated.png`, `news-outlet-front.png`, `news-article-reader.png`
+- `bill-workspace-1440.png`
+
+## Archival JPEG set (2026-08-30)
+
+The following JPEG names document an earlier Vite fixture pass. They remain on disk for long-page inspection history but are superseded by `final/*.png`.
+
+### Institutional and role evidence (archival)
+
+- `party-directory-1440.jpg`, `party-caucus-1440.jpg`, `party-leadership-election-1440.jpg`
+- `assembly-chamber-1440.jpg`, `committee-detail-1440.jpg`, `federal-roll-call-1440.jpg`
+- `bill-provision-builder-1440.jpg`, `bill-detail-1440.jpg`
+- `politician-profile-1440.jpg`, `politician-voting-record-1440.jpg`, `career-opportunities-1440.jpg`
+- `court-bench-docket-1440.jpg`, `court-decision-1440.jpg`, `judicial-appointment-browser-1440.jpg`
+- `governor-home-1440.jpg`, `governor-province-1440.jpg`, `governor-legislation-vote-1440.jpg`, `provincial-roll-call-1440.jpg`
+- `constitutional-amendment-tracker-1440.jpg`
+
+### Campaign, organizations, economy, and public information (archival)
+
+- `ground-game-campaign-1440.jpg`, `organizations-scorecard-1440.jpg`
+- `economy-public-metrics-1440.jpg`, `economy-regional-map-1440.jpg`
+- `political-map-hover-1440.jpg`, `terena-map-inspector-1440.jpg`, `election-map-governor-1440.jpg`
+- `political-calendar-1440.jpg`, `global-search-1440.jpg`, `news-populated-1440.jpg`, `archive-populated-1440.jpg`
+
+### Responsive evidence (archival)
+
+- `province-responsive-1200.jpg`, `assembly-responsive-900.jpg`, `map-responsive-600.jpg`
+- `mobile-governor-390.jpg`, `mobile-campaign-390.jpg`, `mobile-map-interaction-390.jpg`
+
+## Notes from the archival 2026-08-30 pass
+
+That pass exercised President, MP, Governor, Provincial Assembly member, active presidential candidate, party leader, caucus chair, justice, and former-officeholder perspectives across 1440–390 widths. A linked Provincial Assembly identity defect found then was fixed and protected by regression tests. Prefer the 2026-09-04 `final/*.png` set when citing Phase 11.3 closeout evidence.
