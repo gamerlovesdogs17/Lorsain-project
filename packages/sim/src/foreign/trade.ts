@@ -55,10 +55,7 @@ export function deriveTradeExposure(
   return clamp01(exposure);
 }
 
-export function bilateralTradeTies(
-  a: CanonicalWorldCountry,
-  b: CanonicalWorldCountry,
-): number {
+export function bilateralTradeTies(a: CanonicalWorldCountry, b: CanonicalWorldCountry): number {
   let ties = 0.12;
   ties += neighborBonus(a, b);
   ties += alignmentTradeBonus(a, b);

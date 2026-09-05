@@ -54,7 +54,8 @@ const EVENT_CATEGORY: Record<string, MediaCategory> = {
 
 function categoryOf(type: string): MediaCategory {
   if (EVENT_CATEGORY[type]) return EVENT_CATEGORY[type]!;
-  if (type.includes("ELEC") || type.includes("CAMPAIGN") || type.includes("POLL")) return "elections";
+  if (type.includes("ELEC") || type.includes("CAMPAIGN") || type.includes("POLL"))
+    return "elections";
   if (type.includes("COURT") || type.includes("JUDGE") || type.includes("IMPEACH")) return "courts";
   if (type.includes("ORG")) return "organizations";
   if (type.includes("ECON")) return "economy";
@@ -73,7 +74,11 @@ function categoryOf(type: string): MediaCategory {
   return "politics";
 }
 
-function headlineFor(type: string, framing: MediaStory["framing"], payload?: Record<string, unknown>): string {
+function headlineFor(
+  type: string,
+  framing: MediaStory["framing"],
+  payload?: Record<string, unknown>,
+): string {
   const sensational = framing === "sensational";
   if (type === "FOREIGN_CRISIS_ESCALATED" || type === "FOREIGN_CRISIS_INCIDENT") {
     return sensational ? "Border crisis erupts abroad" : "International crisis escalates";
@@ -99,11 +104,17 @@ function headlineFor(type: string, framing: MediaStory["framing"], payload?: Rec
   if (type === "TREATY_PROPOSED" || type === "TREATY_RATIFIED") {
     return sensational ? "Diplomatic breakthrough in the wings" : "Treaty diplomacy advances";
   }
-  if (type === "MILITARY_EXERCISES" || type === "MILITARY_POSTURE_CHANGED" || type === "TERENA_POSTURE_CHANGED") {
+  if (
+    type === "MILITARY_EXERCISES" ||
+    type === "MILITARY_POSTURE_CHANGED" ||
+    type === "TERENA_POSTURE_CHANGED"
+  ) {
     return sensational ? "Military posturing raises alarms" : "Military posture shift reported";
   }
   if (type.includes("COURT") || type === "COURT_DECISION") {
-    return sensational ? "Court bombshell upends the rules" : "Constitutional Court issues a decision";
+    return sensational
+      ? "Court bombshell upends the rules"
+      : "Constitutional Court issues a decision";
   }
   if (type.includes("ELEC") || type.includes("CAMPAIGN")) {
     return sensational ? "Campaign turmoil rocks the race" : "Campaign and election developments";
@@ -206,17 +217,17 @@ export function processMediaMonth(
       const scale = 0.008 * (1.15 - outlet.factualReputation * 0.4);
       const salienceIssue =
         pick.cat === "economy"
-          ? (world.issueIds.includes("ISS_WELFARE")
-              ? "ISS_WELFARE"
-              : world.issueIds.includes("ISS_HOUSING")
-                ? "ISS_HOUSING"
-                : null)
+          ? world.issueIds.includes("ISS_WELFARE")
+            ? "ISS_WELFARE"
+            : world.issueIds.includes("ISS_HOUSING")
+              ? "ISS_HOUSING"
+              : null
           : pick.cat === "courts"
-            ? (world.issueIds.includes("ISS_EXEC")
-                ? "ISS_EXEC"
-                : world.issueIds.includes("ISS_COURTS")
-                  ? "ISS_COURTS"
-                  : null)
+            ? world.issueIds.includes("ISS_EXEC")
+              ? "ISS_EXEC"
+              : world.issueIds.includes("ISS_COURTS")
+                ? "ISS_COURTS"
+                : null
             : null;
       state.mediaRuntime.lingering.push({
         storyId: id,

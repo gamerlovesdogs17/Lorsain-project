@@ -65,7 +65,11 @@ export {
 } from "./save.js";
 export { SAVE_SCHEMA_VERSION } from "./types.js";
 export { buildTerenaKernelWorld, KernelContentError, type TerenaKernelInput } from "./world.js";
-export { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
+export {
+  terenaElectoralFromBundle,
+  terenaPartyFields,
+  terenaWorldFieldsFromBundle,
+} from "./terena-party-input.js";
 export {
   currentAssemblyMemberIds,
   currentSpeakerId,
@@ -77,10 +81,7 @@ export {
   incumbentAssemblyConstituency,
 } from "./elections/assembly-cycle.js";
 export { evaluatePresidentialEligibility } from "./parties/eligibility.js";
-export {
-  candidateStandingOrDefault,
-  ensureCandidateStanding,
-} from "./elections/standing.js";
+export { candidateStandingOrDefault, ensureCandidateStanding } from "./elections/standing.js";
 export {
   occupyingTerms,
   currentHolderIds,

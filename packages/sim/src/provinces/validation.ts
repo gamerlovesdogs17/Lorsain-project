@@ -23,24 +23,41 @@ function finite(value: unknown): value is number {
 
 function parseProvince(id: string, raw: unknown): ProvinceGovernanceState | string {
   if (!isRecord(raw) || raw.provinceId !== id) return `provincialRuntime.provinces.${id}`;
-  if (typeof raw.administrativePriority !== "string" || !isProvincialPriority(raw.administrativePriority)) {
+  if (
+    typeof raw.administrativePriority !== "string" ||
+    !isProvincialPriority(raw.administrativePriority)
+  ) {
     return `provincialRuntime.provinces.${id}.administrativePriority`;
   }
-  if (typeof raw.investmentEmphasis !== "string" || !isProvincialInvestment(raw.investmentEmphasis)) {
+  if (
+    typeof raw.investmentEmphasis !== "string" ||
+    !isProvincialInvestment(raw.investmentEmphasis)
+  ) {
     return `provincialRuntime.provinces.${id}.investmentEmphasis`;
   }
-  if (!isRecord(raw.investmentMomentum)) return `provincialRuntime.provinces.${id}.investmentMomentum`;
+  if (!isRecord(raw.investmentMomentum))
+    return `provincialRuntime.provinces.${id}.investmentMomentum`;
   const momentum = { transport: 0, housing: 0, schools: 0, hospitals: 0 };
   for (const focus of Object.keys(momentum) as Array<keyof typeof momentum>) {
     const value = raw.investmentMomentum[focus];
-    if (!finite(value) || value < 0 || value > 1) return `provincialRuntime.provinces.${id}.investmentMomentum.${focus}`;
+    if (!finite(value) || value < 0 || value > 1)
+      return `provincialRuntime.provinces.${id}.investmentMomentum.${focus}`;
     momentum[focus] = value;
   }
-  if (!finite(raw.politicalCapital) || raw.politicalCapital < 0 || raw.politicalCapital > 1) return `provincialRuntime.provinces.${id}.politicalCapital`;
-  if (!finite(raw.publicStanding) || raw.publicStanding < -1 || raw.publicStanding > 1) return `provincialRuntime.provinces.${id}.publicStanding`;
-  if (!finite(raw.federalRelationship) || raw.federalRelationship < -1 || raw.federalRelationship > 1) return `provincialRuntime.provinces.${id}.federalRelationship`;
-  if (!Number.isInteger(raw.actionPointsRemaining) || Number(raw.actionPointsRemaining) < 0) return `provincialRuntime.provinces.${id}.actionPointsRemaining`;
-  if (typeof raw.actionPointsMonth !== "string" || !isIsoDate(raw.actionPointsMonth)) return `provincialRuntime.provinces.${id}.actionPointsMonth`;
+  if (!finite(raw.politicalCapital) || raw.politicalCapital < 0 || raw.politicalCapital > 1)
+    return `provincialRuntime.provinces.${id}.politicalCapital`;
+  if (!finite(raw.publicStanding) || raw.publicStanding < -1 || raw.publicStanding > 1)
+    return `provincialRuntime.provinces.${id}.publicStanding`;
+  if (
+    !finite(raw.federalRelationship) ||
+    raw.federalRelationship < -1 ||
+    raw.federalRelationship > 1
+  )
+    return `provincialRuntime.provinces.${id}.federalRelationship`;
+  if (!Number.isInteger(raw.actionPointsRemaining) || Number(raw.actionPointsRemaining) < 0)
+    return `provincialRuntime.provinces.${id}.actionPointsRemaining`;
+  if (typeof raw.actionPointsMonth !== "string" || !isIsoDate(raw.actionPointsMonth))
+    return `provincialRuntime.provinces.${id}.actionPointsMonth`;
   return {
     provinceId: id,
     administrativePriority: raw.administrativePriority,
@@ -59,7 +76,8 @@ function parseProvince(id: string, raw: unknown): ProvinceGovernanceState | stri
 }
 
 function parseCandidate(raw: unknown): GubernatorialCandidate | null {
-  if (!isRecord(raw) || typeof raw.politicianId !== "string" || !isIsoDate(raw.filedDate)) return null;
+  if (!isRecord(raw) || typeof raw.politicianId !== "string" || !isIsoDate(raw.filedDate))
+    return null;
   if (raw.source !== "player" && raw.source !== "npc") return null;
   return {
     politicianId: raw.politicianId,
@@ -72,26 +90,36 @@ function parseCandidate(raw: unknown): GubernatorialCandidate | null {
 }
 
 function parseElection(id: string, raw: unknown): GubernatorialElection | string {
-  if (!isRecord(raw) || raw.id !== id || typeof raw.provinceId !== "string") return `provincialRuntime.elections.${id}`;
-  if (![raw.date, raw.filingOpenDate, raw.filingDeadlineDate, raw.assumptionDate].every(isIsoDate)) return `provincialRuntime.elections.${id}.dates`;
-  if (!["planned", "filing_open", "field_finalized", "resolved", "assumed"].includes(String(raw.status))) return `provincialRuntime.elections.${id}.status`;
+  if (!isRecord(raw) || raw.id !== id || typeof raw.provinceId !== "string")
+    return `provincialRuntime.elections.${id}`;
+  if (![raw.date, raw.filingOpenDate, raw.filingDeadlineDate, raw.assumptionDate].every(isIsoDate))
+    return `provincialRuntime.elections.${id}.dates`;
+  if (
+    !["planned", "filing_open", "field_finalized", "resolved", "assumed"].includes(
+      String(raw.status),
+    )
+  )
+    return `provincialRuntime.elections.${id}.status`;
   const candidates: Record<string, GubernatorialCandidate> = {};
   if (isRecord(raw.candidates)) {
     for (const [politicianId, value] of Object.entries(raw.candidates)) {
       const candidate = parseCandidate(value);
-      if (!candidate || candidate.politicianId !== politicianId) return `provincialRuntime.elections.${id}.candidates.${politicianId}`;
+      if (!candidate || candidate.politicianId !== politicianId)
+        return `provincialRuntime.elections.${id}.candidates.${politicianId}`;
       candidates[politicianId] = candidate;
     }
   }
   const voteShares: Record<string, number> = {};
   if (isRecord(raw.voteShares)) {
     for (const [politicianId, value] of Object.entries(raw.voteShares)) {
-      if (!finite(value) || value < 0 || value > 1) return `provincialRuntime.elections.${id}.voteShares.${politicianId}`;
+      if (!finite(value) || value < 0 || value > 1)
+        return `provincialRuntime.elections.${id}.voteShares.${politicianId}`;
       voteShares[politicianId] = value;
     }
   }
   const certification = parseElectionCertification(raw.certification);
-  if (typeof certification === "string") return `provincialRuntime.elections.${id}.${certification}`;
+  if (typeof certification === "string")
+    return `provincialRuntime.elections.${id}.${certification}`;
   return {
     id,
     provinceId: raw.provinceId,
@@ -105,10 +133,13 @@ function parseElection(id: string, raw: unknown): GubernatorialElection | string
     incumbentDecision:
       typeof raw.incumbentDecision === "string" &&
       (GUBERNATORIAL_INCUMBENT_DECISIONS as readonly string[]).includes(raw.incumbentDecision)
-        ? raw.incumbentDecision as GubernatorialElection["incumbentDecision"]
+        ? (raw.incumbentDecision as GubernatorialElection["incumbentDecision"])
         : null,
     candidates,
-    playerDecision: raw.playerDecision === "filed" || raw.playerDecision === "declined" ? raw.playerDecision : null,
+    playerDecision:
+      raw.playerDecision === "filed" || raw.playerDecision === "declined"
+        ? raw.playerDecision
+        : null,
     winnerId: typeof raw.winnerId === "string" ? raw.winnerId : null,
     voteShares,
     turnoutRate: finite(raw.turnoutRate) ? raw.turnoutRate : null,
@@ -138,16 +169,29 @@ export function parseProvincialRuntime(raw: unknown): ProvincialRuntime | string
   if (isRecord(raw.governorVacancies)) {
     runtime.governorVacancies = raw.governorVacancies as ProvincialRuntime["governorVacancies"];
   }
-  if (isRecord(raw.actions)) runtime.actions = raw.actions as Record<string, ProvincialActionRecord>;
-  if (isRecord(raw.pressures)) runtime.pressures = raw.pressures as Record<string, ProvincialPressure>;
-  if (isRecord(raw.assemblies)) runtime.assemblies = raw.assemblies as ProvincialRuntime["assemblies"];
-  if (isRecord(raw.legislators)) runtime.legislators = raw.legislators as ProvincialRuntime["legislators"];
-  if (isRecord(raw.assemblyElections)) runtime.assemblyElections = raw.assemblyElections as ProvincialRuntime["assemblyElections"];
+  if (isRecord(raw.actions))
+    runtime.actions = raw.actions as Record<string, ProvincialActionRecord>;
+  if (isRecord(raw.pressures))
+    runtime.pressures = raw.pressures as Record<string, ProvincialPressure>;
+  if (isRecord(raw.assemblies))
+    runtime.assemblies = raw.assemblies as ProvincialRuntime["assemblies"];
+  if (isRecord(raw.legislators))
+    runtime.legislators = raw.legislators as ProvincialRuntime["legislators"];
+  if (isRecord(raw.assemblyElections))
+    runtime.assemblyElections = raw.assemblyElections as ProvincialRuntime["assemblyElections"];
   if (isRecord(raw.bills)) runtime.bills = raw.bills as ProvincialRuntime["bills"];
   if (isRecord(raw.votes)) runtime.votes = raw.votes as ProvincialRuntime["votes"];
-  if (isRecord(raw.promotions)) runtime.promotions = raw.promotions as ProvincialRuntime["promotions"];
-  if (isRecord(raw.constitutionalRules)) runtime.constitutionalRules = raw.constitutionalRules as ProvincialRuntime["constitutionalRules"];
-  if (isRecord(raw.constitutionalAmendments)) runtime.constitutionalAmendments = raw.constitutionalAmendments as ProvincialRuntime["constitutionalAmendments"];
-  runtime.lastMonthProcessed = typeof raw.lastMonthProcessed === "string" && isIsoDate(raw.lastMonthProcessed) ? raw.lastMonthProcessed : null;
+  if (isRecord(raw.promotions))
+    runtime.promotions = raw.promotions as ProvincialRuntime["promotions"];
+  if (isRecord(raw.constitutionalRules))
+    runtime.constitutionalRules =
+      raw.constitutionalRules as ProvincialRuntime["constitutionalRules"];
+  if (isRecord(raw.constitutionalAmendments))
+    runtime.constitutionalAmendments =
+      raw.constitutionalAmendments as ProvincialRuntime["constitutionalAmendments"];
+  runtime.lastMonthProcessed =
+    typeof raw.lastMonthProcessed === "string" && isIsoDate(raw.lastMonthProcessed)
+      ? raw.lastMonthProcessed
+      : null;
   return runtime;
 }

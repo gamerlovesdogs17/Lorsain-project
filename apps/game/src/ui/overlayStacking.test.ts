@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 const stylesPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../styles.css");
 
 function readCssVar(css: string, name: string): number {
-  const match = css.match(new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:\\s*(\\d+)`));
+  const match = css.match(
+    new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*:\\s*(\\d+)`),
+  );
   if (!match) throw new Error(`Missing CSS variable ${name}`);
   return Number(match[1]);
 }

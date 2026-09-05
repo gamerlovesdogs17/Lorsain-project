@@ -709,7 +709,8 @@ describe("Phase 11.3 final-stretch GOTV", () => {
     ).toEqual(early.campaignRuntime.campaigns[campaignId]!.metadata.gotvActivations);
 
     const restoredState = jsonClone(restored.getSnapshot());
-    restoredState.elections[early.campaignRuntime.campaigns[campaignId]!.electionId!]!.status = "voting";
+    restoredState.elections[early.campaignRuntime.campaigns[campaignId]!.electionId!]!.status =
+      "voting";
     const closed = campaignFundraise(
       world,
       restoredState,

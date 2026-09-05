@@ -11,9 +11,16 @@ import { nthWeekdayOfMonth, presidentialAssumptionDate } from "./calendar.js";
 import type { KernelWorld } from "./types.js";
 import { countRelationshipEdges } from "./agents/relationships.js";
 import { SAVE_SCHEMA_VERSION } from "./types.js";
-import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
+import {
+  terenaElectoralFromBundle,
+  terenaPartyFields,
+  terenaWorldFieldsFromBundle,
+} from "./terena-party-input.js";
 import { enqueueScheduled } from "./scheduler.js";
-import { applyPresidentialAssumption, resolveUnablePresidentElect } from "./elections/resolution.js";
+import {
+  applyPresidentialAssumption,
+  resolveUnablePresidentElect,
+} from "./elections/resolution.js";
 import { ensureAssemblyElectionCycle } from "./elections/assembly-cycle.js";
 import { plannedElection } from "./elections/state.js";
 
@@ -164,7 +171,11 @@ describe("TERENA_2028 office instantiation", () => {
 describe("presidential vacancy", () => {
   it("ends a President-elect's symmetrically incompatible office before assumption", () => {
     const { world } = loadTerenaWorld();
-    const sim = createSimulation({ world, playerPoliticianId: "NPC337", seed: "P113-SPEAKER-ELECT" });
+    const sim = createSimulation({
+      world,
+      playerPoliticianId: "NPC337",
+      seed: "P113-SPEAKER-ELECT",
+    });
     const state = sim.serializeSave().simulation;
     const election = state.elections.ELEC_PRES_2028!;
     election.status = "resolved";
@@ -218,7 +229,11 @@ describe("presidential vacancy", () => {
 
   it("uses lawful succession and schedules a real special election when the President-elect cannot assume", () => {
     const { world } = loadTerenaWorld();
-    const sim = createSimulation({ world, playerPoliticianId: "NPC337", seed: "P113-ELECT-VACANCY" });
+    const sim = createSimulation({
+      world,
+      playerPoliticianId: "NPC337",
+      seed: "P113-ELECT-VACANCY",
+    });
     const state = sim.serializeSave().simulation;
     const election = state.elections.ELEC_PRES_2028!;
     election.status = "resolved";
@@ -242,12 +257,18 @@ describe("presidential vacancy", () => {
     });
     expect("error" in result).toBe(false);
     expect(state.presidential.certifiedPresidentElectId).toBeNull();
-    expect(occupyingTerms(state, "OFFICE_PRESIDENT").some((term) => term.holdingKind === "acting")).toBe(true);
-    const special = Object.values(state.elections).find((candidate) => candidate.metadata.specialElection === true);
+    expect(
+      occupyingTerms(state, "OFFICE_PRESIDENT").some((term) => term.holdingKind === "acting"),
+    ).toBe(true);
+    const special = Object.values(state.elections).find(
+      (candidate) => candidate.metadata.specialElection === true,
+    );
     expect(special).toBeTruthy();
     expect(
       state.scheduler.events.some(
-        (event) => event.eventType === "PRESIDENTIAL_ELECTION_DUE" && event.payload.electionId === special?.id,
+        (event) =>
+          event.eventType === "PRESIDENTIAL_ELECTION_DUE" &&
+          event.payload.electionId === special?.id,
       ),
     ).toBe(true);
   });

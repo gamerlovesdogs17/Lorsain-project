@@ -17,7 +17,12 @@ export function gotvActivations(campaign: CampaignState): Record<string, GotvAct
   for (const [key, value] of Object.entries(raw)) {
     if (!value || typeof value !== "object" || Array.isArray(value)) continue;
     const row = value as Record<string, unknown>;
-    if (typeof row.date !== "string" || typeof row.magnitude !== "number" || !Number.isFinite(row.magnitude)) continue;
+    if (
+      typeof row.date !== "string" ||
+      typeof row.magnitude !== "number" ||
+      !Number.isFinite(row.magnitude)
+    )
+      continue;
     out[key] = { date: row.date, magnitude: Math.max(0, Math.min(0.25, row.magnitude)) };
   }
   return out;
@@ -45,11 +50,12 @@ export function constituencyGotvBoost(
 ): number {
   const activations = gotvActivations(campaign);
   const direct = liveMagnitude(activations[`constituency:${constituencyId}`], onDate);
-  const provincial = (world.constituencyElectorate[constituencyId]?.provincePopulationShares ?? [])
-    .reduce(
-      (sum, share) =>
-        sum + share.share * liveMagnitude(activations[`province:${share.provinceId}`], onDate),
-      0,
-    );
+  const provincial = (
+    world.constituencyElectorate[constituencyId]?.provincePopulationShares ?? []
+  ).reduce(
+    (sum, share) =>
+      sum + share.share * liveMagnitude(activations[`province:${share.provinceId}`], onDate),
+    0,
+  );
   return Math.min(0.25, direct + provincial * 0.7);
 }

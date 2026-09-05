@@ -140,9 +140,7 @@ describe("countStv", () => {
     expect(new Set(elim.transfers.map((line) => line.toCandidateId)).size).toBe(
       elim.transfers.length,
     );
-    expect(elim.transfers.every((line) => line.ballotGroupId.startsWith("@aggregate:"))).toBe(
-      true,
-    );
+    expect(elim.transfers.every((line) => line.ballotGroupId.startsWith("@aggregate:"))).toBe(true);
     assertStvResultConservation(result);
   });
 

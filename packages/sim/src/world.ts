@@ -820,7 +820,10 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
     ),
     terenaWorldCountryId: "W41",
   };
-  if (Object.keys(world.worldCountries).length > 0 && Object.keys(world.worldLeaders).length === 0) {
+  if (
+    Object.keys(world.worldCountries).length > 0 &&
+    Object.keys(world.worldLeaders).length === 0
+  ) {
     synthesizeWorldLeaders(world, input.scenario.date.slice(0, 4));
   }
   applyInstitutionalPublicIdeology(world);
@@ -829,7 +832,8 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
 
 function leaderTitleForGovernment(government: string): string {
   const g = government.toLowerCase();
-  if (g.includes("monarchy") || g.includes("duchy") || g.includes("kingdom")) return "Head of Government";
+  if (g.includes("monarchy") || g.includes("duchy") || g.includes("kingdom"))
+    return "Head of Government";
   if (g.includes("president")) return "President";
   if (g.includes("federal")) return "Federal President";
   return "Head of State";

@@ -7,7 +7,11 @@ import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
+import {
+  terenaElectoralFromBundle,
+  terenaPartyFields,
+  terenaWorldFieldsFromBundle,
+} from "./terena-party-input.js";
 import { storiesChronological } from "./media/index.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");

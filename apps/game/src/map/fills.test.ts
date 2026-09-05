@@ -47,11 +47,17 @@ function snapFor(
   } as unknown as SimState;
 }
 
-function worldFor(offices: ReturnType<typeof office>[], colors: Record<string, string>): KernelWorld {
+function worldFor(
+  offices: ReturnType<typeof office>[],
+  colors: Record<string, string>,
+): KernelWorld {
   return {
     offices: Object.fromEntries(offices.map((o) => [o.id, o])),
     partyDefinitions: Object.fromEntries(
-      Object.entries(colors).map(([partyId, color]) => [partyId, { partyId, name: partyId, color }]),
+      Object.entries(colors).map(([partyId, color]) => [
+        partyId,
+        { partyId, name: partyId, color },
+      ]),
     ),
   } as unknown as KernelWorld;
 }
@@ -63,11 +69,7 @@ describe("constituency sitting plurality", () => {
       { PARTY_LAB: "#c94b4b", PARTY_NU: "#496f9d" },
     );
     const snap = snapFor(
-      [
-        term("T1", "ASM_A", "P_NU"),
-        term("T2", "ASM_B", "P_LAB"),
-        term("T3", "ASM_C", "P_LAB"),
-      ],
+      [term("T1", "ASM_A", "P_NU"), term("T2", "ASM_B", "P_LAB"), term("T3", "ASM_C", "P_LAB")],
       {
         P_NU: politician("P_NU", "PARTY_NU"),
         P_LAB: politician("P_LAB", "PARTY_LAB"),
@@ -78,40 +80,32 @@ describe("constituency sitting plurality", () => {
       { partyId: "PARTY_NU", seats: 1 },
     ]);
     expect(constituencySittingPluralityPartyId(world, snap, "C001")).toBe("PARTY_LAB");
-    expect(
-      mapFillFor("political", world, snap, { id: "C001" } as never, "constituency"),
-    ).toBe("#c94b4b");
+    expect(mapFillFor("political", world, snap, { id: "C001" } as never, "constituency")).toBe(
+      "#c94b4b",
+    );
   });
 
   it("uses a neutral fill for an exact sitting-seat tie", () => {
-    const world = worldFor(
-      [office("ASM_A", "C002"), office("ASM_B", "C002")],
-      { PARTY_LAB: "#c94b4b", PARTY_NU: "#496f9d" },
-    );
-    const snap = snapFor(
-      [term("T1", "ASM_A", "P_NU"), term("T2", "ASM_B", "P_LAB")],
-      {
-        P_NU: politician("P_NU", "PARTY_NU"),
-        P_LAB: politician("P_LAB", "PARTY_LAB"),
-      },
-    );
+    const world = worldFor([office("ASM_A", "C002"), office("ASM_B", "C002")], {
+      PARTY_LAB: "#c94b4b",
+      PARTY_NU: "#496f9d",
+    });
+    const snap = snapFor([term("T1", "ASM_A", "P_NU"), term("T2", "ASM_B", "P_LAB")], {
+      P_NU: politician("P_NU", "PARTY_NU"),
+      P_LAB: politician("P_LAB", "PARTY_LAB"),
+    });
     expect(constituencySittingPluralityPartyId(world, snap, "C002")).toBe("tie");
-    expect(
-      mapFillFor("political", world, snap, { id: "C002" } as never, "constituency"),
-    ).toBe(CONSTITUENCY_TIE_FILL);
+    expect(mapFillFor("political", world, snap, { id: "C002" } as never, "constituency")).toBe(
+      CONSTITUENCY_TIE_FILL,
+    );
   });
 
   it("campaign fills encode field organization, not party or latent support", () => {
     const world = worldFor([], {});
     const snap = snapFor([], {});
-    const fill = mapFillFor(
-      "campaign",
-      world,
-      snap,
-      { id: "C001" } as never,
-      "constituency",
-      { C001: 1 },
-    );
+    const fill = mapFillFor("campaign", world, snap, { id: "C001" } as never, "constituency", {
+      C001: 1,
+    });
     expect(fill.startsWith("rgba(31, 58, 95")).toBe(true);
     expect(fill).not.toBe("transparent");
     expect(fill).not.toBe("none");

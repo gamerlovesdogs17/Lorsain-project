@@ -101,10 +101,13 @@ export function splitFaction(
         taxes: state.partyStates[facDef.partyId]?.publicPlatform?.positions.taxes ?? 0,
         labor: state.partyStates[facDef.partyId]?.publicPlatform?.positions.labor ?? 0,
         housing: state.partyStates[facDef.partyId]?.publicPlatform?.positions.housing ?? 0,
-        social_policy: state.partyStates[facDef.partyId]?.publicPlatform?.positions.social_policy ?? 0,
+        social_policy:
+          state.partyStates[facDef.partyId]?.publicPlatform?.positions.social_policy ?? 0,
         environment: state.partyStates[facDef.partyId]?.publicPlatform?.positions.environment ?? 0,
-        institutional_reform: state.partyStates[facDef.partyId]?.publicPlatform?.positions.institutional_reform ?? 0,
-        foreign_policy: state.partyStates[facDef.partyId]?.publicPlatform?.positions.foreign_policy ?? 0,
+        institutional_reform:
+          state.partyStates[facDef.partyId]?.publicPlatform?.positions.institutional_reform ?? 0,
+        foreign_policy:
+          state.partyStates[facDef.partyId]?.publicPlatform?.positions.foreign_policy ?? 0,
       },
       history: [],
     },

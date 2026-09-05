@@ -6,8 +6,10 @@ import { currentPresidentialAuthorityId } from "../executive/state.js";
 import { allocateForeignLeaderId } from "./state.js";
 import { TERENA_WORLD_ID, type CanonicalWorldLeader } from "./types.js";
 
-const AUTHORITARIAN = /managed|theocracy|empire|autocracy|principality|one-party|military-influenced|dominant-party/i;
-const MONARCH_TITLE = /^(king|queen|emperor|empress|grand duke|grand duchess|prince|princess|duke|duchess)$/i;
+const AUTHORITARIAN =
+  /managed|theocracy|empire|autocracy|principality|one-party|military-influenced|dominant-party/i;
+const MONARCH_TITLE =
+  /^(king|queen|emperor|empress|grand duke|grand duchess|prince|princess|duke|duchess)$/i;
 
 const GIVEN = [
   "Mira",
@@ -65,7 +67,11 @@ function leadershipIntervalMonths(
   return 60;
 }
 
-function deterministicLeaderName(countryId: string, ordinal: number, avoidName: string | null): string {
+function deterministicLeaderName(
+  countryId: string,
+  ordinal: number,
+  avoidName: string | null,
+): string {
   for (let i = 0; i < 48; i += 1) {
     const a = GIVEN[(ordinal + i) % GIVEN.length]!;
     const b = FAMILY[(ordinal + i * 3 + countryId.charCodeAt(1)!) % FAMILY.length]!;
@@ -157,7 +163,11 @@ function currentLeaderTitle(
   runtime: SimState["foreignAffairsRuntime"]["countries"][string],
 ): string {
   const active = runtime.metadata.activeLeader;
-  if (active && typeof active === "object" && typeof (active as { title?: string }).title === "string") {
+  if (
+    active &&
+    typeof active === "object" &&
+    typeof (active as { title?: string }).title === "string"
+  ) {
     return (active as { title: string }).title;
   }
   if (runtime.leaderId && world.worldLeaders[runtime.leaderId]) {
@@ -171,7 +181,11 @@ function currentLeaderName(
   runtime: SimState["foreignAffairsRuntime"]["countries"][string],
 ): string | null {
   const active = runtime.metadata.activeLeader;
-  if (active && typeof active === "object" && typeof (active as { name?: string }).name === "string") {
+  if (
+    active &&
+    typeof active === "object" &&
+    typeof (active as { name?: string }).name === "string"
+  ) {
     return (active as { name: string }).name;
   }
   if (runtime.leaderId && world.worldLeaders[runtime.leaderId]) {

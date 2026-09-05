@@ -3,10 +3,7 @@ import { fileURLToPath } from "node:url";
 import { loadContentBundleFromRepo } from "../packages/content-loader/src/node.js";
 import { createSimulation } from "../packages/sim/src/engine.js";
 import { jsonClone } from "../packages/sim/src/hash.js";
-import {
-  buildTerenaKernelWorld,
-  type TerenaKernelInput,
-} from "../packages/sim/src/world.js";
+import { buildTerenaKernelWorld, type TerenaKernelInput } from "../packages/sim/src/world.js";
 import {
   terenaElectoralFromBundle,
   terenaPartyFields,
@@ -105,7 +102,9 @@ for (let index = 1; index <= 20; index += 1) {
   ).length;
 
   state.currentDate = election.date;
-  const firstField = fields.slice().sort((a, b) => a.constituencyId.localeCompare(b.constituencyId))[0]!;
+  const firstField = fields
+    .slice()
+    .sort((a, b) => a.constituencyId.localeCompare(b.constituencyId))[0]!;
   const field = buildAssemblyConstituencyField(
     state,
     world,
@@ -170,8 +169,9 @@ for (let index = 1; index <= 20; index += 1) {
     incumbentReelectionRate: incumbentCandidates > 0 ? incumbentWinners / incumbentCandidates : 0,
     partySeatChange,
     turnout: election.turnout?.turnoutRate ?? 0,
-    representedParties: Object.values(election.assembly!.partySeatTotals).filter((seats) => seats > 0)
-      .length,
+    representedParties: Object.values(election.assembly!.partySeatTotals).filter(
+      (seats) => seats > 0,
+    ).length,
   });
 }
 
@@ -179,9 +179,7 @@ const summary = {
   seeds: samples.length,
   candidates: summarize(samples.map((sample) => sample.candidates)),
   candidatesPerSeat: summarize(samples.map((sample) => sample.candidatesPerSeat)),
-  uncontestedConstituencies: summarize(
-    samples.map((sample) => sample.uncontestedConstituencies),
-  ),
+  uncontestedConstituencies: summarize(samples.map((sample) => sample.uncontestedConstituencies)),
   incumbentCandidates: summarize(samples.map((sample) => sample.incumbentCandidates)),
   incumbentWinners: summarize(samples.map((sample) => sample.incumbentWinners)),
   challengerWinners: summarize(samples.map((sample) => sample.challengerWinners)),

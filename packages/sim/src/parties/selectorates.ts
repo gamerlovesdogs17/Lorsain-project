@@ -250,7 +250,12 @@ function cachedContestPollShares(state: SimState, contestId: string): Record<str
   return shares;
 }
 
-function candidatePublicCache(world: KernelWorld, state: SimState, contest: PartyContest, candidateId: string): CandidatePublicCache {
+function candidatePublicCache(
+  world: KernelWorld,
+  state: SimState,
+  contest: PartyContest,
+  candidateId: string,
+): CandidatePublicCache {
   let cache = publicCandidateCaches.get(state);
   if (!cache) {
     cache = new Map();
@@ -266,8 +271,13 @@ function candidatePublicCache(world: KernelWorld, state: SimState, contest: Part
     prominence: entry ? publicProminence(entry) : 0,
     office: holdsAnyOffice(world, state, candidateId),
     partyLeader: state.partyStates[contest.partyId]?.leaderId === candidateId,
-    factionChair: Boolean(pol?.factionId && state.factionStates[pol.factionId]?.chairId === candidateId),
-    home: state.politicians[candidateId]?.homeProvinceId ?? world.politicianHomeProvince[candidateId] ?? null,
+    factionChair: Boolean(
+      pol?.factionId && state.factionStates[pol.factionId]?.chairId === candidateId,
+    ),
+    home:
+      state.politicians[candidateId]?.homeProvinceId ??
+      world.politicianHomeProvince[candidateId] ??
+      null,
     electability: publicElectabilitySignal(
       world,
       state,
@@ -298,9 +308,7 @@ function publicScore(
   } else if (group.factionId && pol.factionId && pol.factionId !== group.factionId) {
     score += SELECTOR_PUBLIC_WEIGHTS.crossFaction * tendencyBias(group.tendency, "cross");
   }
-  score +=
-    cached.endorsement *
-    tendencyBias(group.tendency, "endorsement");
+  score += cached.endorsement * tendencyBias(group.tendency, "endorsement");
   score +=
     cached.prominence *
     SELECTOR_PUBLIC_WEIGHTS.prominence *

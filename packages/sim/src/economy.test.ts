@@ -4,7 +4,12 @@ import { jsonClone } from "./hash.js";
 import { SAVE_SCHEMA_VERSION, type KernelWorld } from "./types.js";
 import { legislativeHarnessWorld } from "./legislature/harness.js";
 import { parseSaveFile } from "./save.js";
-import { INDEX_CEIL, INDEX_FLOOR, MAX_MONTHLY_INDEX_MOVE, policyIndexDelta } from "./economy/policy.js";
+import {
+  INDEX_CEIL,
+  INDEX_FLOOR,
+  MAX_MONTHLY_INDEX_MOVE,
+  policyIndexDelta,
+} from "./economy/policy.js";
 import { BASELINE_INDICES } from "./economy/types.js";
 import { sectorIndicesFromNational } from "./economy/monthly.js";
 import type { EnactedLawRecord } from "./legislature/types.js";
@@ -121,7 +126,9 @@ describe("Phase 9 economy", () => {
     const sim = withOperativeLaw(base, world, "ISS_HOUSING", 1);
     expect(sim.getSnapshot().economyRuntime.national.outputIndex).toBe(before);
     advance(sim, 1);
-    expect(Math.abs(sim.getSnapshot().economyRuntime.national.outputIndex - before)).toBeLessThan(3);
+    expect(Math.abs(sim.getSnapshot().economyRuntime.national.outputIndex - before)).toBeLessThan(
+      3,
+    );
     expect(sim.getSnapshot().economyRuntime.laggedEffects.length).toBeGreaterThan(0);
   });
 

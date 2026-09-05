@@ -14,9 +14,9 @@ describe("derived Terena map geometry", () => {
   it("renders all 21 admin units, 48 constituencies, and 18 cities from GeoJSON", () => {
     const provinces = loadJson<GeoJsonFeatureCollection>("data/terena_provinces.geojson");
     const constituencies = loadJson<GeoJsonFeatureCollection>("data/terena_constituencies.geojson");
-    const citiesFile = loadJson<{ cities: Array<{ id: string; name: string; province_id: string }> }>(
-      "data/terena_cities.json",
-    );
+    const citiesFile = loadJson<{
+      cities: Array<{ id: string; name: string; province_id: string }>;
+    }>("data/terena_cities.json");
     const prepared = prepareTerenaMap(provinces, constituencies, citiesFile.cities);
     expect(provinces.features).toHaveLength(21);
     expect(constituencies.features).toHaveLength(48);
@@ -41,8 +41,8 @@ describe("derived Terena map geometry", () => {
       prepared.transform.width * 0.009,
     );
     expect(hitFeature(prepared.provinces, "FDV")?.name).toMatch(/Valen/i);
-    expect(hitFeature(prepared.constituencies, prepared.constituencies[0]!.id)?.name.length).toBeGreaterThan(
-      1,
-    );
+    expect(
+      hitFeature(prepared.constituencies, prepared.constituencies[0]!.id)?.name.length,
+    ).toBeGreaterThan(1);
   });
 });

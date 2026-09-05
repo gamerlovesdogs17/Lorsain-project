@@ -50,14 +50,17 @@ function parsePublicPlatform(
   if (raw == null) {
     return {
       updatedDate: currentDate,
-      positions: Object.fromEntries(PARTY_PLATFORM_ISSUES.map((issue) => [issue, 0])) as PartyPublicPlatform["positions"],
+      positions: Object.fromEntries(
+        PARTY_PLATFORM_ISSUES.map((issue) => [issue, 0]),
+      ) as PartyPublicPlatform["positions"],
       history: [],
     };
   }
   if (!isRecord(raw) || typeof raw.updatedDate !== "string" || !isIsoDate(raw.updatedDate)) {
     return "publicPlatform.updatedDate";
   }
-  if (compareIsoDate(raw.updatedDate, currentDate) > 0) return "publicPlatform.updatedDate in future";
+  if (compareIsoDate(raw.updatedDate, currentDate) > 0)
+    return "publicPlatform.updatedDate in future";
   if (!isRecord(raw.positions)) return "publicPlatform.positions";
   const positions = {} as PartyPublicPlatform["positions"];
   for (const issue of PARTY_PLATFORM_ISSUES) {
@@ -70,12 +73,18 @@ function parsePublicPlatform(
   if (!Array.isArray(raw.history) || raw.history.length > 12) return "publicPlatform.history";
   const history: PartyPublicPlatform["history"] = [];
   for (const entry of raw.history) {
-    if (!isRecord(entry) || typeof entry.date !== "string" || !isIsoDate(entry.date)) return "publicPlatform.history.date";
+    if (!isRecord(entry) || typeof entry.date !== "string" || !isIsoDate(entry.date))
+      return "publicPlatform.history.date";
     if (compareIsoDate(entry.date, currentDate) > 0) return "publicPlatform.history date in future";
-    if (!["scenario_opening", "annual_conference", "leadership_change"].includes(String(entry.reason))) {
+    if (
+      !["scenario_opening", "annual_conference", "leadership_change"].includes(String(entry.reason))
+    ) {
       return "publicPlatform.history.reason";
     }
-    if (entry.leaderId != null && (typeof entry.leaderId !== "string" || !politicianIds.has(entry.leaderId))) {
+    if (
+      entry.leaderId != null &&
+      (typeof entry.leaderId !== "string" || !politicianIds.has(entry.leaderId))
+    ) {
       return "publicPlatform.history.leaderId";
     }
     if (!isRecord(entry.positions)) return "publicPlatform.history.positions";
@@ -447,7 +456,11 @@ export function parsePartyRuntime(
     if (rec.status === "active" && rec.leaderId == null) {
       return `partyStates.${id} active requires leaderId`;
     }
-    const publicPlatform = parsePublicPlatform(rec.publicPlatform, args.currentDate, args.politicianIds);
+    const publicPlatform = parsePublicPlatform(
+      rec.publicPlatform,
+      args.currentDate,
+      args.politicianIds,
+    );
     if (typeof publicPlatform === "string") return `partyStates.${id}.${publicPlatform}`;
     partyStates[id] = {
       partyId: id,

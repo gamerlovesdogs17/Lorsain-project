@@ -30,7 +30,8 @@ function computeInitialBalance(
   let balance = aggMil / Math.max(0.15, aggMil + defMil);
 
   const rel = getBilateralRelation(runtime, aggressorId!, defenderId);
-  if (rel) balance += rel.securityTension * 0.08 - deterrenceModifier(runtime, aggressorId!, defenderId);
+  if (rel)
+    balance += rel.securityTension * 0.08 - deterrenceModifier(runtime, aggressorId!, defenderId);
 
   for (const allyId of otherIds) {
     const ally = runtime.countries[allyId];
@@ -74,7 +75,9 @@ export function beginConflictFromCrisis(
     sortedParticipants[0] ??
     null;
   const defender =
-    sortedParticipants.find((p) => p !== aggressor) ?? sortedParticipants[1] ?? sortedParticipants[0]!;
+    sortedParticipants.find((p) => p !== aggressor) ??
+    sortedParticipants[1] ??
+    sortedParticipants[0]!;
   const others = sortedParticipants.filter((p) => p !== aggressor && p !== defender);
 
   const conflict: InternationalConflict = {
@@ -149,7 +152,9 @@ export function processConflictMonth(
     if (conflict.endedDate) continue;
 
     const capShift = capabilityDelta(state, conflict);
-    conflict.balance = clamp01(conflict.balance + capShift + (conflict.intensity > 0.5 ? 0.004 : -0.003));
+    conflict.balance = clamp01(
+      conflict.balance + capShift + (conflict.intensity > 0.5 ? 0.004 : -0.003),
+    );
 
     const tradeCost = conflict.belligerentIds.reduce((acc, id) => {
       const c = state.foreignAffairsRuntime.countries[id];
@@ -208,11 +213,15 @@ export function processConflictMonth(
   return events;
 }
 
-export function activeConflicts(runtime: SimState["foreignAffairsRuntime"]): InternationalConflict[] {
+export function activeConflicts(
+  runtime: SimState["foreignAffairsRuntime"],
+): InternationalConflict[] {
   return Object.values(runtime.conflicts).filter((c) => c.endedDate == null);
 }
 
-export function terenaActiveConflicts(runtime: SimState["foreignAffairsRuntime"]): InternationalConflict[] {
+export function terenaActiveConflicts(
+  runtime: SimState["foreignAffairsRuntime"],
+): InternationalConflict[] {
   return activeConflicts(runtime).filter((c) => c.belligerentIds.includes(TERENA_WORLD_ID));
 }
 
@@ -241,8 +250,10 @@ export function crisisConflictProbability(
   const runtimeB = state.foreignAffairsRuntime.countries[b];
   let p = 0.06 + crisis.intensity * 0.18;
   if (rel) p += rel.securityTension * 0.2 - rel.economicTies * 0.08;
-  if (runtimeA) p += (runtimeA.posture === "mobilized" ? 0.08 : 0) + runtimeA.domesticPressure * 0.05;
-  if (runtimeB) p += (runtimeB.posture === "mobilized" ? 0.08 : 0) + runtimeB.domesticPressure * 0.05;
+  if (runtimeA)
+    p += (runtimeA.posture === "mobilized" ? 0.08 : 0) + runtimeA.domesticPressure * 0.05;
+  if (runtimeB)
+    p += (runtimeB.posture === "mobilized" ? 0.08 : 0) + runtimeB.domesticPressure * 0.05;
   p -= deterrenceModifier(state.foreignAffairsRuntime, a, b);
   if (runtimeA && runtimeB) {
     const bal =

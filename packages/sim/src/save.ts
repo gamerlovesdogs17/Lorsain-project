@@ -1073,8 +1073,7 @@ export function migrateSaveV8ToV9(raw: unknown): unknown {
   const next: Record<string, unknown> = { ...raw, schemaVersion: 9 };
   if (!isRecord(raw.simulation)) return next;
   const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 9 };
-  const start =
-    typeof sim.scenarioStartDate === "string" ? sim.scenarioStartDate : "2028-01-01";
+  const start = typeof sim.scenarioStartDate === "string" ? sim.scenarioStartDate : "2028-01-01";
   sim.economyRuntime = isRecord(sim.economyRuntime)
     ? sim.economyRuntime
     : {
@@ -1230,9 +1229,7 @@ export function migrateSaveV10ToV11(raw: unknown): unknown {
       typeof election.date === "string"
     ) {
       const metadata = isRecord(election.metadata) ? election.metadata : {};
-      const winners = isRecord(metadata.constituencyWinners)
-        ? metadata.constituencyWinners
-        : {};
+      const winners = isRecord(metadata.constituencyWinners) ? metadata.constituencyWinners : {};
       const constituencyElectionIds = isRecord(metadata.constituencyElectionIds)
         ? metadata.constituencyElectionIds
         : {};
@@ -1251,7 +1248,8 @@ export function migrateSaveV10ToV11(raw: unknown): unknown {
         const partyByCandidate: Record<string, string | null> = {};
         for (const pid of electedIds) {
           const candidate = isRecord(candidates[pid]) ? candidates[pid] : null;
-          const partyId = candidate && typeof candidate.partyId === "string" ? candidate.partyId : null;
+          const partyId =
+            candidate && typeof candidate.partyId === "string" ? candidate.partyId : null;
           partyByCandidate[pid] = partyId;
           partySeatTotals[partyId ?? "independent"] =
             (partySeatTotals[partyId ?? "independent"] ?? 0) + 1;
@@ -1432,7 +1430,9 @@ export function migrateSaveV12ToV13(raw: unknown): unknown {
     bills: isRecord(provincial.bills) ? provincial.bills : {},
     votes: isRecord(provincial.votes) ? provincial.votes : {},
     promotions: isRecord(provincial.promotions) ? provincial.promotions : {},
-    constitutionalRules: isRecord(provincial.constitutionalRules) ? provincial.constitutionalRules : {},
+    constitutionalRules: isRecord(provincial.constitutionalRules)
+      ? provincial.constitutionalRules
+      : {},
     constitutionalAmendments: isRecord(provincial.constitutionalAmendments)
       ? provincial.constitutionalAmendments
       : {},
@@ -1474,7 +1474,8 @@ export function migrateSaveV13ToV14(raw: unknown): unknown {
         legislators[id] = value;
         continue;
       }
-      const serviceStartDate = typeof value.serviceStartDate === "string" ? value.serviceStartDate : null;
+      const serviceStartDate =
+        typeof value.serviceStartDate === "string" ? value.serviceStartDate : null;
       const serviceEndDate = typeof value.serviceEndDate === "string" ? value.serviceEndDate : null;
       legislators[id] = {
         ...value,
@@ -1494,7 +1495,12 @@ export function migrateSaveV13ToV14(raw: unknown): unknown {
   if (isRecord(provincial.assemblyElections)) {
     for (const [id, value] of Object.entries(provincial.assemblyElections)) {
       assemblyElections[id] = isRecord(value)
-        ? { ...value, personalRankingsByParty: isRecord(value.personalRankingsByParty) ? value.personalRankingsByParty : {} }
+        ? {
+            ...value,
+            personalRankingsByParty: isRecord(value.personalRankingsByParty)
+              ? value.personalRankingsByParty
+              : {},
+          }
         : value;
     }
   }
@@ -1507,10 +1513,12 @@ export function migrateSaveV13ToV14(raw: unknown): unknown {
             ...value,
             cosponsorIds: isStringArray(value.cosponsorIds) ? value.cosponsorIds : [],
             policyDirection: value.policyDirection === -1 ? -1 : 1,
-            fiscalImpact: typeof value.fiscalImpact === "number" && Number.isFinite(value.fiscalImpact)
-              ? value.fiscalImpact
-              : 0,
-            agendaSource: typeof value.agendaSource === "string" ? value.agendaSource : "legislative_agenda",
+            fiscalImpact:
+              typeof value.fiscalImpact === "number" && Number.isFinite(value.fiscalImpact)
+                ? value.fiscalImpact
+                : 0,
+            agendaSource:
+              typeof value.agendaSource === "string" ? value.agendaSource : "legislative_agenda",
             partyPositions: isRecord(value.partyPositions) ? value.partyPositions : {},
           }
         : value;
@@ -1523,17 +1531,25 @@ export function migrateSaveV13ToV14(raw: unknown): unknown {
       constitutionalAmendments[id] = isRecord(value)
         ? {
             ...value,
-            proposalTrigger: typeof value.proposalTrigger === "string" ? value.proposalTrigger : "legacy_proposal",
-            politicalImpetus: typeof value.politicalImpetus === "number" && Number.isFinite(value.politicalImpetus)
-              ? value.politicalImpetus
-              : 0.5,
+            proposalTrigger:
+              typeof value.proposalTrigger === "string" ? value.proposalTrigger : "legacy_proposal",
+            politicalImpetus:
+              typeof value.politicalImpetus === "number" && Number.isFinite(value.politicalImpetus)
+                ? value.politicalImpetus
+                : 0.5,
             ratificationDeadline: null,
           }
         : value;
     }
   }
 
-  sim.provincialRuntime = { ...provincial, legislators, assemblyElections, bills, constitutionalAmendments };
+  sim.provincialRuntime = {
+    ...provincial,
+    legislators,
+    assemblyElections,
+    bills,
+    constitutionalAmendments,
+  };
   if (isRecord(sim.legislatureRuntime)) {
     const legislatureRuntime = { ...sim.legislatureRuntime };
     const caucusContests: Record<string, unknown> = {};
@@ -1542,10 +1558,13 @@ export function migrateSaveV13ToV14(raw: unknown): unknown {
         caucusContests[id] = isRecord(value)
           ? {
               ...value,
-              trigger: value.trigger === "general_election" || value.trigger === "vacancy" ||
-                value.trigger === "challenge" || value.trigger === "scheduled_review"
-                ? value.trigger
-                : "scheduled_review",
+              trigger:
+                value.trigger === "general_election" ||
+                value.trigger === "vacancy" ||
+                value.trigger === "challenge" ||
+                value.trigger === "scheduled_review"
+                  ? value.trigger
+                  : "scheduled_review",
               platforms: isRecord(value.platforms) ? value.platforms : {},
               endorsements: isRecord(value.endorsements) ? value.endorsements : {},
             }
@@ -1587,9 +1606,7 @@ export function migrateSaveV14ToV15(raw: unknown): unknown {
   sim.provincialRuntime = {
     ...provincial,
     elections,
-    governorVacancies: isRecord(provincial.governorVacancies)
-      ? provincial.governorVacancies
-      : {},
+    governorVacancies: isRecord(provincial.governorVacancies) ? provincial.governorVacancies : {},
   };
   next.simulation = sim;
   return next;
@@ -1658,10 +1675,12 @@ export function migrateSaveV16ToV17(raw: unknown): unknown {
       amendments[id] = isRecord(value)
         ? {
             ...value,
-            documentClauseId: typeof value.documentClauseId === "string" ? value.documentClauseId : null,
+            documentClauseId:
+              typeof value.documentClauseId === "string" ? value.documentClauseId : null,
             currentText: typeof value.currentText === "string" ? value.currentText : null,
             proposedText: typeof value.proposedText === "string" ? value.proposedText : null,
-            politicalDifficulty: typeof value.politicalDifficulty === "number" ? value.politicalDifficulty : 0.5,
+            politicalDifficulty:
+              typeof value.politicalDifficulty === "number" ? value.politicalDifficulty : 0.5,
           }
         : value;
     }
@@ -1702,14 +1721,20 @@ export function migrateSaveV17ToV18(raw: unknown): unknown {
       amendments[id] = isRecord(value)
         ? {
             ...value,
-            intent: typeof value.intent === "string"
-              ? value.intent
-              : modeled
-                ? value.ruleId === "court_term_years" ? "judicial_structure" : "alter_office_terms"
-                : "technical_clarification",
-            runtimeEffect: value.runtimeEffect === "modeled_rule" || value.runtimeEffect === "text_only"
-              ? value.runtimeEffect
-              : modeled ? "modeled_rule" : "text_only",
+            intent:
+              typeof value.intent === "string"
+                ? value.intent
+                : modeled
+                  ? value.ruleId === "court_term_years"
+                    ? "judicial_structure"
+                    : "alter_office_terms"
+                  : "technical_clarification",
+            runtimeEffect:
+              value.runtimeEffect === "modeled_rule" || value.runtimeEffect === "text_only"
+                ? value.runtimeEffect
+                : modeled
+                  ? "modeled_rule"
+                  : "text_only",
           }
         : value;
     }

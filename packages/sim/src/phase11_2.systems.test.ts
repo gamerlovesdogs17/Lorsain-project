@@ -11,7 +11,9 @@ import { createRngService } from "./rng.js";
 import { kernelOffice, syntheticWorld } from "./synthetic-world.js";
 
 function startingHolder(world: ReturnType<typeof loadTerenaWorld>, kind: string): string {
-  const term = world.startingTerms.find((candidate) => world.offices[candidate.officeId]?.kind === kind);
+  const term = world.startingTerms.find(
+    (candidate) => world.offices[candidate.officeId]?.kind === kind,
+  );
   if (!term) throw new Error(`No starting ${kind}`);
   return term.holderId;
 }
@@ -20,11 +22,25 @@ describe("Phase 11.2 economic geography", () => {
   it("starts from canonical uneven values and preserves meaningful regional differences for four years", () => {
     const world = loadTerenaWorld();
     const player = startingHolder(world, "president");
-    const first = createSimulation({ world, playerPoliticianId: player, seed: "P112-ECON-TEST" }).serializeSave().simulation;
-    const second = createSimulation({ world, playerPoliticianId: player, seed: "P112-ECON-TEST" }).serializeSave().simulation;
-    const startNational = Object.values(first.economyRuntime.national).filter((value): value is number => typeof value === "number");
-    const startProvince = Object.values(first.economyRuntime.provinces).map((row) => row.conditionsIndex);
-    const startSector = Object.values(first.economyRuntime.sectors).map((row) => row.conditionsIndex);
+    const first = createSimulation({
+      world,
+      playerPoliticianId: player,
+      seed: "P112-ECON-TEST",
+    }).serializeSave().simulation;
+    const second = createSimulation({
+      world,
+      playerPoliticianId: player,
+      seed: "P112-ECON-TEST",
+    }).serializeSave().simulation;
+    const startNational = Object.values(first.economyRuntime.national).filter(
+      (value): value is number => typeof value === "number",
+    );
+    const startProvince = Object.values(first.economyRuntime.provinces).map(
+      (row) => row.conditionsIndex,
+    );
+    const startSector = Object.values(first.economyRuntime.sectors).map(
+      (row) => row.conditionsIndex,
+    );
     expect(new Set(startNational.map((value) => value.toFixed(1))).size).toBeGreaterThan(3);
     expect(Math.max(...startProvince) - Math.min(...startProvince)).toBeGreaterThan(10);
     expect(Math.max(...startSector) - Math.min(...startSector)).toBeGreaterThan(8);
@@ -37,17 +53,36 @@ describe("Phase 11.2 economic geography", () => {
       processEconomyMonth(second, world, rngB, `B${month}`);
     }
     expect(second.economyRuntime).toEqual(first.economyRuntime);
-    const finalProvince = Object.values(first.economyRuntime.provinces).map((row) => row.conditionsIndex);
+    const finalProvince = Object.values(first.economyRuntime.provinces).map(
+      (row) => row.conditionsIndex,
+    );
     expect(Math.max(...finalProvince) - Math.min(...finalProvince)).toBeGreaterThan(6);
     expect(first.economyRuntime.history).toHaveLength(49);
-    expect((["outputIndex", "employmentIndex", "priceIndex", "realWageIndex", "housingIndex", "confidenceIndex"] as const)
-      .every((key) => first.economyRuntime.national[key] > 40 && first.economyRuntime.national[key] < 160)).toBe(true);
+    expect(
+      (
+        [
+          "outputIndex",
+          "employmentIndex",
+          "priceIndex",
+          "realWageIndex",
+          "housingIndex",
+          "confidenceIndex",
+        ] as const
+      ).every(
+        (key) =>
+          first.economyRuntime.national[key] > 40 && first.economyRuntime.national[key] < 160,
+      ),
+    ).toBe(true);
   });
 
   it("makes trade-exposed provinces react more strongly to a trade disruption", () => {
     const world = loadTerenaWorld();
     const player = startingHolder(world, "president");
-    const control = createSimulation({ world, playerPoliticianId: player, seed: "P112-TRADE" }).serializeSave().simulation;
+    const control = createSimulation({
+      world,
+      playerPoliticianId: player,
+      seed: "P112-TRADE",
+    }).serializeSave().simulation;
     const stressed = structuredClone(control);
     stressed.economyRuntime.sectors.trade!.conditionsIndex = 75;
     control.currentDate = addMonths(control.currentDate, 1);
@@ -69,23 +104,55 @@ describe("Phase 11.2 campaign geography", () => {
   it("distributes national work beyond the first four IDs and retains decaying local infrastructure", () => {
     const world = loadTerenaWorld();
     const player = startingHolder(world, "president");
-    const state = createSimulation({ world, playerPoliticianId: player, seed: "P112-GEO-TEST" }).serializeSave().simulation;
-    const campaign = createCampaignRecord(state, world, { politicianId: player, type: "presidential_general", electionId: "ELEC_PRES_2028" });
+    const state = createSimulation({
+      world,
+      playerPoliticianId: player,
+      seed: "P112-GEO-TEST",
+    }).serializeSave().simulation;
+    const campaign = createCampaignRecord(state, world, {
+      politicianId: player,
+      type: "presidential_general",
+      electionId: "ELEC_PRES_2028",
+    });
     campaign.actionPointsRemaining = 20;
     const rng = createRngService("P112-GEO-TEST");
-    const visit = campaignVisit(world, state, rng, { campaignId: campaign.id, actorId: player, geography: { kind: "national", id: null } }, null);
+    const visit = campaignVisit(
+      world,
+      state,
+      rng,
+      { campaignId: campaign.id, actorId: player, geography: { kind: "national", id: null } },
+      null,
+    );
     expect("error" in visit).toBe(false);
     const ids = Object.keys(world.constituencyElectorate).sort();
-    expect(ids.slice(4).every((id) => (campaign.organizationByConstituency[id] ?? 0) > 0)).toBe(true);
-    expect(world.provinceIds.every((id) => (campaign.organizationByProvince[id] ?? 0) > 0)).toBe(true);
+    expect(ids.slice(4).every((id) => (campaign.organizationByConstituency[id] ?? 0) > 0)).toBe(
+      true,
+    );
+    expect(world.provinceIds.every((id) => (campaign.organizationByProvince[id] ?? 0) > 0)).toBe(
+      true,
+    );
     const provinceId = world.provinceIds.at(-1)!;
     const beforeProvince = campaign.organizationByProvince[provinceId] ?? 0;
-    const organized = campaignOrganize(world, state, { campaignId: campaign.id, actorId: player, geography: { kind: "province", id: provinceId } }, null);
+    const organized = campaignOrganize(
+      world,
+      state,
+      { campaignId: campaign.id, actorId: player, geography: { kind: "province", id: provinceId } },
+      null,
+    );
     expect("error" in organized).toBe(false);
     expect(campaign.organizationByProvince[provinceId]).toBeGreaterThan(beforeProvince);
     const constituencyId = ids[Math.floor(ids.length / 2)]!;
     campaign.actionPointsRemaining = 20;
-    campaignOrganize(world, state, { campaignId: campaign.id, actorId: player, geography: { kind: "constituency", id: constituencyId } }, null);
+    campaignOrganize(
+      world,
+      state,
+      {
+        campaignId: campaign.id,
+        actorId: player,
+        geography: { kind: "constituency", id: constituencyId },
+      },
+      null,
+    );
     const peak = campaign.organizationByConstituency[constituencyId]!;
     for (let month = 0; month < 12; month++) applyOrganizationMaintenance(campaign);
     expect(campaign.organizationByConstituency[constituencyId]).toBeLessThan(peak);
@@ -101,7 +168,9 @@ describe("Phase 11.2 concrete legislation", () => {
     const item = policyItemForProvision("PROV_REPRODUCTIVE_LAW", "high")!;
     const result = sim.executeCommand({ type: "INTRODUCE_BILL", policyItems: [item] });
     expect(result.ok).toBe(true);
-    const bill = Object.values(sim.getSnapshot().legislatureRuntime.bills).find((candidate) => candidate.sponsorId === player)!;
+    const bill = Object.values(sim.getSnapshot().legislatureRuntime.bills).find(
+      (candidate) => candidate.sponsorId === player,
+    )!;
     expect(bill.title).toBe("Reproductive Health Protection Bill");
     expect(bill.summary).toContain("Guarantees lawful abortion access");
     expect(bill.title).not.toMatch(/NPC|ISS_|moderate on/i);
@@ -152,7 +221,9 @@ describe("Phase 11.2 role authority", () => {
     const advanced = sim.executeCommand({ type: "ADVANCE_TURN" });
     expect(advanced.ok).toBe(true);
     expect(sim.getSnapshot().currentDate).toBe("2000-02-01");
-    const term = Object.values(sim.getSnapshot().officeTerms).find((candidate) => candidate.officeId === "OFFICE_COURT_TEST");
+    const term = Object.values(sim.getSnapshot().officeTerms).find(
+      (candidate) => candidate.officeId === "OFFICE_COURT_TEST",
+    );
     expect(term?.status).toBe("ended");
     expect(term?.endedReason).toBe("term_expired");
   });
@@ -164,8 +235,13 @@ describe("Phase 11.2 role authority", () => {
       playerPoliticianId: startingHolder(world, "minister"),
       seed: "P112-MINISTER",
     });
-    expect(minister.executeCommand({ type: "MINISTER_ADVISE_PRIORITY", issueId: world.issueIds[0]! }).ok).toBe(true);
-    const repeatedAdvice = minister.executeCommand({ type: "MINISTER_ADVISE_PRIORITY", issueId: world.issueIds[1]! });
+    expect(
+      minister.executeCommand({ type: "MINISTER_ADVISE_PRIORITY", issueId: world.issueIds[0]! }).ok,
+    ).toBe(true);
+    const repeatedAdvice = minister.executeCommand({
+      type: "MINISTER_ADVISE_PRIORITY",
+      issueId: world.issueIds[1]!,
+    });
     expect(repeatedAdvice.ok).toBe(false);
     if (!repeatedAdvice.ok) expect(repeatedAdvice.error.code).toBe("MONTHLY_ROLE_ACTION_USED");
 
@@ -174,8 +250,13 @@ describe("Phase 11.2 role authority", () => {
       playerPoliticianId: startingHolder(world, "mayor"),
       seed: "P112-MAYOR",
     });
-    expect(mayor.executeCommand({ type: "MAYOR_SET_CIVIC_PRIORITY", priority: "housing" }).ok).toBe(true);
-    const repeatedPriority = mayor.executeCommand({ type: "MAYOR_SET_CIVIC_PRIORITY", priority: "transport" });
+    expect(mayor.executeCommand({ type: "MAYOR_SET_CIVIC_PRIORITY", priority: "housing" }).ok).toBe(
+      true,
+    );
+    const repeatedPriority = mayor.executeCommand({
+      type: "MAYOR_SET_CIVIC_PRIORITY",
+      priority: "transport",
+    });
     expect(repeatedPriority.ok).toBe(false);
     if (!repeatedPriority.ok) expect(repeatedPriority.error.code).toBe("MONTHLY_ROLE_ACTION_USED");
   });
@@ -185,17 +266,43 @@ describe("Phase 11.2 role authority", () => {
     const governor = startingHolder(world, "governor");
     const provinceId = world.startingTerms
       .map((term) => ({ term, office: world.offices[term.officeId] }))
-      .find((row) => row.term.holderId === governor && row.office?.kind === "governor")!.office!.provinceId!;
-    for (const kind of ["president", "assembly_member", "mayor", "minister", "constitutional_court_justice"] as const) {
+      .find((row) => row.term.holderId === governor && row.office?.kind === "governor")!.office!
+      .provinceId!;
+    for (const kind of [
+      "president",
+      "assembly_member",
+      "mayor",
+      "minister",
+      "constitutional_court_justice",
+    ] as const) {
       const player = startingHolder(world, kind);
-      const sim = createSimulation({ world, playerPoliticianId: player, seed: `P112-AUTH-${kind}` });
-      const result = sim.executeCommand({ type: "GOVERNOR_SET_PRIORITY", provinceId, priority: "schools" });
+      const sim = createSimulation({
+        world,
+        playerPoliticianId: player,
+        seed: `P112-AUTH-${kind}`,
+      });
+      const result = sim.executeCommand({
+        type: "GOVERNOR_SET_PRIORITY",
+        provinceId,
+        priority: "schools",
+      });
       expect(result.ok, kind).toBe(false);
     }
     const active = new Set(world.startingTerms.map((term) => term.holderId));
-    const roster = createSimulation({ world, playerPoliticianId: governor, seed: "P112-AUTH-ROSTER" }).getSnapshot().politicians;
+    const roster = createSimulation({
+      world,
+      playerPoliticianId: governor,
+      seed: "P112-AUTH-ROSTER",
+    }).getSnapshot().politicians;
     const former = Object.keys(roster).find((id) => !active.has(id))!;
-    const formerSim = createSimulation({ world, playerPoliticianId: former, seed: "P112-AUTH-FORMER" });
-    expect(formerSim.executeCommand({ type: "GOVERNOR_SET_PRIORITY", provinceId, priority: "schools" }).ok).toBe(false);
+    const formerSim = createSimulation({
+      world,
+      playerPoliticianId: former,
+      seed: "P112-AUTH-FORMER",
+    });
+    expect(
+      formerSim.executeCommand({ type: "GOVERNOR_SET_PRIORITY", provinceId, priority: "schools" })
+        .ok,
+    ).toBe(false);
   });
 });

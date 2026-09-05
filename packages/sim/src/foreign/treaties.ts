@@ -3,11 +3,7 @@ import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { pushHistory } from "../scheduler.js";
 import { currentPresidentialAuthorityId } from "../executive/state.js";
 import type { RngService } from "../rng.js";
-import {
-  allocateTreatyId,
-  allocateIncomingDiplomacyId,
-  getBilateralRelation,
-} from "./state.js";
+import { allocateTreatyId, allocateIncomingDiplomacyId, getBilateralRelation } from "./state.js";
 import { canProposeTreaty, recordTreatyRejectionCooldown } from "./treaty-identity.js";
 import {
   advanceTreatyAfterCounterpartyAcceptance,
@@ -35,11 +31,18 @@ export function evaluateCounterpartyAcceptance(
 
   const counterparty = state.foreignAffairsRuntime.countries[counterpartyId];
   if (counterparty) {
-    if (treaty.kind === "trade" && counterparty.strategicGoals.includes("expand_trade")) score += 0.15;
-    if (treaty.kind === "mutual_defense" && counterparty.strategicGoals.includes("secure_alliance")) {
+    if (treaty.kind === "trade" && counterparty.strategicGoals.includes("expand_trade"))
+      score += 0.15;
+    if (
+      treaty.kind === "mutual_defense" &&
+      counterparty.strategicGoals.includes("secure_alliance")
+    ) {
       score += 0.12;
     }
-    if (treaty.kind === "non_aggression" && counterparty.strategicGoals.includes("regime_stability")) {
+    if (
+      treaty.kind === "non_aggression" &&
+      counterparty.strategicGoals.includes("regime_stability")
+    ) {
       score += 0.08;
     }
     if (counterparty.strategicGoals.includes("neutral_autonomy")) score -= 0.1;
@@ -48,7 +51,8 @@ export function evaluateCounterpartyAcceptance(
   if (rel && rel.securityTension > 0.5) score -= rel.securityTension * 0.2;
 
   const crises = publicActiveCrises(state.foreignAffairsRuntime).filter(
-    (c) => c.participantIds.includes(treaty.proposerId) && c.participantIds.includes(counterpartyId),
+    (c) =>
+      c.participantIds.includes(treaty.proposerId) && c.participantIds.includes(counterpartyId),
   );
   score -= crises.length * 0.12;
 
@@ -103,7 +107,12 @@ export function proposeTreaty(
   commandId: string | null,
 ): { treaty: TreatyRecord; events: SimEvent[] } | { error: { code: string; message: string } } {
   if (!args.skipDuplicateCheck) {
-    const gate = canProposeTreaty(state.foreignAffairsRuntime, args.kind, args.memberIds, state.currentDate);
+    const gate = canProposeTreaty(
+      state.foreignAffairsRuntime,
+      args.kind,
+      args.memberIds,
+      state.currentDate,
+    );
     if (!gate.ok) return { error: { code: "DUPLICATE_TREATY", message: gate.reason } };
   }
   const id = allocateTreatyId(state);
@@ -213,7 +222,9 @@ export function acceptIncomingTreaty(
   pendingId: string,
   commandId: string | null,
 ): { events: SimEvent[] } | { error: { code: string; message: string } } {
-  const idx = state.foreignAffairsRuntime.pendingIncomingDiplomacy.findIndex((p) => p.id === pendingId);
+  const idx = state.foreignAffairsRuntime.pendingIncomingDiplomacy.findIndex(
+    (p) => p.id === pendingId,
+  );
   if (idx < 0) return { error: { code: "NOT_FOUND", message: pendingId } };
   const pending = state.foreignAffairsRuntime.pendingIncomingDiplomacy[idx]!;
   if (pending.kind !== "treaty_proposal" || !pending.treatyId) {
@@ -234,7 +245,9 @@ export function rejectIncomingTreaty(
   pendingId: string,
   commandId: string | null,
 ): { events: SimEvent[] } | { error: { code: string; message: string } } {
-  const idx = state.foreignAffairsRuntime.pendingIncomingDiplomacy.findIndex((p) => p.id === pendingId);
+  const idx = state.foreignAffairsRuntime.pendingIncomingDiplomacy.findIndex(
+    (p) => p.id === pendingId,
+  );
   if (idx < 0) return { error: { code: "NOT_FOUND", message: pendingId } };
   const pending = state.foreignAffairsRuntime.pendingIncomingDiplomacy[idx]!;
   if (pending.kind !== "treaty_proposal" || !pending.treatyId) {

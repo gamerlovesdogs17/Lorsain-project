@@ -149,30 +149,38 @@ export function baselineEconomyRuntime(provinceIds: string[], asOf: IsoDate): Ec
     };
   }
   runtime.history = [{ date: asOf, ...runtime.national }];
-  for (const id of provinceIds) runtime.provinceHistory[id] = [{ date: asOf, ...runtime.provinces[id]! }];
+  for (const id of provinceIds)
+    runtime.provinceHistory[id] = [{ date: asOf, ...runtime.provinces[id]! }];
   for (const [id, sector] of Object.entries(runtime.sectors)) {
     runtime.sectorHistory[id] = [{ date: asOf, ...sector }];
   }
   return runtime;
 }
 
-export function economyRuntimeFromScenario(
-  scenario: CanonicalEconomyScenario,
-): EconomyRuntime {
+export function economyRuntimeFromScenario(scenario: CanonicalEconomyScenario): EconomyRuntime {
   const runtime = emptyEconomyRuntime();
   runtime.national = { ...scenario.national };
   runtime.provinces = Object.fromEntries(
     Object.entries(scenario.provinces).map(([id, profile]) => [id, { ...profile.starting }]),
   );
   runtime.sectors = Object.fromEntries(
-    Object.entries(scenario.sectors).map(([id, sector]) => [id, { conditionsIndex: sector.conditionsIndex }]),
+    Object.entries(scenario.sectors).map(([id, sector]) => [
+      id,
+      { conditionsIndex: sector.conditionsIndex },
+    ]),
   );
   runtime.history = [{ date: scenario.asOf, ...runtime.national }];
   runtime.provinceHistory = Object.fromEntries(
-    Object.entries(runtime.provinces).map(([id, province]) => [id, [{ date: scenario.asOf, ...province }]]),
+    Object.entries(runtime.provinces).map(([id, province]) => [
+      id,
+      [{ date: scenario.asOf, ...province }],
+    ]),
   );
   runtime.sectorHistory = Object.fromEntries(
-    Object.entries(runtime.sectors).map(([id, sector]) => [id, [{ date: scenario.asOf, ...sector }]]),
+    Object.entries(runtime.sectors).map(([id, sector]) => [
+      id,
+      [{ date: scenario.asOf, ...sector }],
+    ]),
   );
   return runtime;
 }

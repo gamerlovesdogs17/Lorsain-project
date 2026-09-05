@@ -14,7 +14,9 @@ function numericFlag(name: string, fallback: number): number {
 }
 
 function stringFlag(name: string, fallback: string): string {
-  return process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
+  return (
+    process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback
+  );
 }
 
 function bytes(value: unknown): number {

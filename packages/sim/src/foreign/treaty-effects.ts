@@ -24,7 +24,12 @@ export function applyActiveTreatyEffects(state: SimState, date: string): void {
     if (treaty.kind === "trade" && treaty.memberIds.length >= 2) {
       for (let i = 0; i < treaty.memberIds.length; i += 1) {
         for (let j = i + 1; j < treaty.memberIds.length; j += 1) {
-          applyTradeToRelation(state.foreignAffairsRuntime, treaty.memberIds[i]!, treaty.memberIds[j]!, 0.002);
+          applyTradeToRelation(
+            state.foreignAffairsRuntime,
+            treaty.memberIds[i]!,
+            treaty.memberIds[j]!,
+            0.002,
+          );
           const rel = getBilateralRelation(
             state.foreignAffairsRuntime,
             treaty.memberIds[i]!,

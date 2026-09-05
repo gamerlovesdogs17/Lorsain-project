@@ -90,12 +90,20 @@ export function seekOrganizationEndorsement(
   if (!campaign || campaign.politicianId !== args.actorId) {
     return { error: reject("UNKNOWN_CAMPAIGN", args.campaignId) };
   }
-  if (found.actor.endorsements.some(
-    (endorsement) => endorsement.politicianId === args.actorId &&
-      endorsement.campaignId === args.campaignId &&
-      (endorsement.status ?? "active") === "active",
-  )) {
-    return { error: reject("ENDORSEMENT_ALREADY_ACTIVE", "This organization already endorses the campaign") };
+  if (
+    found.actor.endorsements.some(
+      (endorsement) =>
+        endorsement.politicianId === args.actorId &&
+        endorsement.campaignId === args.campaignId &&
+        (endorsement.status ?? "active") === "active",
+    )
+  ) {
+    return {
+      error: reject(
+        "ENDORSEMENT_ALREADY_ACTIVE",
+        "This organization already endorses the campaign",
+      ),
+    };
   }
   const limit = bumpMeetings(state);
   if (limit) return { error: limit };
@@ -150,7 +158,10 @@ export function seekOrganizationEndorsement(
   const standing = ensureCandidateStanding(world, state, args.actorId);
   standing.favorability = clampUnit(standing.favorability + 0.015 * canon.strength);
   standing.enthusiasm = Math.min(1, standing.enthusiasm + 0.012 * canon.strength);
-  campaign.cashOnHand = Math.min(50_000_000, campaign.cashOnHand + Math.round(10000 * canon.strength));
+  campaign.cashOnHand = Math.min(
+    50_000_000,
+    campaign.cashOnHand + Math.round(10000 * canon.strength),
+  );
   found.actor.recentActions.unshift({
     date: state.currentDate,
     kind: "endorse",

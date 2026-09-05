@@ -43,7 +43,14 @@ function parsePolicyItems(raw: unknown, path: string): PolicyItem[] | string {
       magnitude: item.magnitude,
       fiscalImpact: typeof item.fiscalImpact === "number" ? item.fiscalImpact : null,
       ...(isRecord(item.dimensionEffects)
-        ? { dimensionEffects: Object.fromEntries(Object.entries(item.dimensionEffects).filter((entry): entry is [string, number] => typeof entry[1] === "number" && Number.isFinite(entry[1]))) }
+        ? {
+            dimensionEffects: Object.fromEntries(
+              Object.entries(item.dimensionEffects).filter(
+                (entry): entry is [string, number] =>
+                  typeof entry[1] === "number" && Number.isFinite(entry[1]),
+              ),
+            ),
+          }
         : {}),
     });
   }
@@ -181,13 +188,15 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
       const partyIdsAtVote: Record<string, string | null> = {};
       if (isRecord(rec.partyIdsAtVote)) {
         for (const [pid, partyId] of Object.entries(rec.partyIdsAtVote)) {
-          if (typeof partyId === "string" || partyId == null) partyIdsAtVote[pid] = partyId as string | null;
+          if (typeof partyId === "string" || partyId == null)
+            partyIdsAtVote[pid] = partyId as string | null;
         }
       }
       const factionIdsAtVote: Record<string, string | null> = {};
       if (isRecord(rec.factionIdsAtVote)) {
         for (const [pid, factionId] of Object.entries(rec.factionIdsAtVote)) {
-          if (typeof factionId === "string" || factionId == null) factionIdsAtVote[pid] = factionId as string | null;
+          if (typeof factionId === "string" || factionId == null)
+            factionIdsAtVote[pid] = factionId as string | null;
         }
       }
       runtime.legislativeVotes[id] = {

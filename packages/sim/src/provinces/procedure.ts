@@ -52,9 +52,7 @@ function usedMonthlyRoleAction(
   const month = state.currentDate.slice(0, 7);
   return Object.values(state.provincialRuntime.actions).some(
     (action) =>
-      action.actorId === actorId &&
-      action.kind === kind &&
-      action.date.slice(0, 7) === month,
+      action.actorId === actorId && action.kind === kind && action.date.slice(0, 7) === month,
   );
 }
 
@@ -149,7 +147,8 @@ export function takeProvincialFederalPosition(
 ) {
   const error = requireGovernor(world, state, args.actorId, args.provinceId);
   if (error) return { error };
-  if (!world.issueIds.includes(args.issueId)) return { error: reject("UNKNOWN_ISSUE", args.issueId) };
+  if (!world.issueIds.includes(args.issueId))
+    return { error: reject("UNKNOWN_ISSUE", args.issueId) };
   spendAction(state, args.provinceId);
   const province = state.provincialRuntime.provinces[args.provinceId]!;
   province.federalRelationship = Math.max(
@@ -208,12 +207,7 @@ export function respondProvincialPressure(
   return { action: recorded.action, events: [recorded.event] };
 }
 
-function heldOfficeOfKind(
-  world: KernelWorld,
-  state: SimState,
-  actorId: string,
-  kind: string,
-) {
+function heldOfficeOfKind(world: KernelWorld, state: SimState, actorId: string, kind: string) {
   return activeTermsForPolitician(state, actorId)
     .map((term) => world.offices[term.officeId])
     .find((office) => office?.kind === kind);
@@ -227,9 +221,15 @@ export function adviseMinistryPriority(
 ) {
   const office = heldOfficeOfKind(world, state, args.actorId, "minister");
   if (!office) return { error: reject("NOT_A_MINISTER", args.actorId) };
-  if (!world.issueIds.includes(args.issueId)) return { error: reject("UNKNOWN_ISSUE", args.issueId) };
+  if (!world.issueIds.includes(args.issueId))
+    return { error: reject("UNKNOWN_ISSUE", args.issueId) };
   if (usedMonthlyRoleAction(state, args.actorId, "ministry_advice")) {
-    return { error: reject("MONTHLY_ROLE_ACTION_USED", "Ministry advice has already been submitted this month") };
+    return {
+      error: reject(
+        "MONTHLY_ROLE_ACTION_USED",
+        "Ministry advice has already been submitted this month",
+      ),
+    };
   }
   const home = world.politicianHomeProvince[args.actorId];
   if (!home || !state.provincialRuntime.provinces[home]) {
@@ -257,7 +257,9 @@ export function setMayorCivicPriority(
   const office = heldOfficeOfKind(world, state, args.actorId, "mayor");
   if (!office) return { error: reject("NOT_A_MAYOR", args.actorId) };
   if (usedMonthlyRoleAction(state, args.actorId, "civic_priority")) {
-    return { error: reject("MONTHLY_ROLE_ACTION_USED", "A civic priority has already been set this month") };
+    return {
+      error: reject("MONTHLY_ROLE_ACTION_USED", "A civic priority has already been set this month"),
+    };
   }
   const provinceId = office.jurisdictionId;
   if (!state.provincialRuntime.provinces[provinceId]) {

@@ -264,7 +264,8 @@ function parseAssemblyCycle(raw: unknown): AssemblyElectionCycle | null | string
       firstPreferences: value.firstPreferences as Record<string, string>,
       electedIds: value.electedIds as string[],
       turnout,
-      countArchive: value.countArchive as AssemblyElectionCycle["constituencyResults"][string]["countArchive"],
+      countArchive:
+        value.countArchive as AssemblyElectionCycle["constituencyResults"][string]["countArchive"],
       archiveCompleteness: value.archiveCompleteness,
     };
   }
@@ -966,7 +967,10 @@ function resolvedElectionWorldError(
       }
       flat.push(...(row as string[]));
     }
-    if (flat.length !== election.winnerIds.length || flat.some((id) => !election.winnerIds.includes(id))) {
+    if (
+      flat.length !== election.winnerIds.length ||
+      flat.some((id) => !election.winnerIds.includes(id))
+    ) {
       return {
         code: "INVALID_SAVE_WORLD",
         message: `election ${election.id} constituencyWinners mismatch`,
@@ -974,7 +978,10 @@ function resolvedElectionWorldError(
     }
     const result = historyEvent(state, election.resultEventId);
     if (!result) {
-      return { code: "INVALID_SAVE_WORLD", message: `election ${election.id} result event missing` };
+      return {
+        code: "INVALID_SAVE_WORLD",
+        message: `election ${election.id} result event missing`,
+      };
     }
     if (result.type !== "ASSEMBLY_ELECTION_RESULT" || result.date !== election.date) {
       return {

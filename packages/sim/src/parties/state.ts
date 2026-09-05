@@ -23,7 +23,10 @@ type PresidentialInterestContext = {
   priorNominationCandidates: Set<string>;
 };
 
-function buildPresidentialInterestContext(state: SimState, world: KernelWorld): PresidentialInterestContext {
+function buildPresidentialInterestContext(
+  state: SimState,
+  world: KernelWorld,
+): PresidentialInterestContext {
   const officeKindsByPolitician = new Map<string, Set<string>>();
   for (const term of Object.values(state.officeTerms)) {
     if (term.status !== "active" && term.status !== "suspended") continue;
@@ -36,17 +39,25 @@ function buildPresidentialInterestContext(state: SimState, world: KernelWorld): 
   const priorGeneralCandidates = new Set<string>();
   for (const election of Object.values(state.elections)) {
     if (election.type !== "presidential" || election.status !== "resolved") continue;
-    for (const candidateId of Object.keys(election.candidates)) priorGeneralCandidates.add(candidateId);
+    for (const candidateId of Object.keys(election.candidates))
+      priorGeneralCandidates.add(candidateId);
   }
   const priorNominationCandidates = new Set<string>();
   for (const contest of Object.values(state.partyContests)) {
     if (contest.type !== "presidential_nomination" || contest.status !== "resolved") continue;
-    for (const candidateId of Object.keys(contest.entries)) priorNominationCandidates.add(candidateId);
+    for (const candidateId of Object.keys(contest.entries))
+      priorNominationCandidates.add(candidateId);
   }
   return {
     officeKindsByPolitician,
-    partyLeaders: new Set(Object.values(state.partyStates).flatMap((party) => party.leaderId ? [party.leaderId] : [])),
-    factionChairs: new Set(Object.values(state.factionStates).flatMap((faction) => faction.chairId ? [faction.chairId] : [])),
+    partyLeaders: new Set(
+      Object.values(state.partyStates).flatMap((party) => (party.leaderId ? [party.leaderId] : [])),
+    ),
+    factionChairs: new Set(
+      Object.values(state.factionStates).flatMap((faction) =>
+        faction.chairId ? [faction.chairId] : [],
+      ),
+    ),
     priorGeneralCandidates,
     priorNominationCandidates,
   };
@@ -65,7 +76,8 @@ function presidentialEligibilityFast(
   const termLimit =
     state.provincialRuntime.constitutionalRules.presidential_term_limit?.value ??
     world.presidentialEligibility.termLimitElected;
-  if ((state.presidential.electedTermCountByPolitician[politicianId] ?? 0) >= termLimit) return false;
+  if ((state.presidential.electedTermCountByPolitician[politicianId] ?? 0) >= termLimit)
+    return false;
   const held = context.officeKindsByPolitician.get(politicianId);
   return !world.presidentialEligibility.mustResignOfficeKinds.some((kind) => held?.has(kind));
 }

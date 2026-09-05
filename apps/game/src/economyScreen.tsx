@@ -78,11 +78,7 @@ function provinceNameMap(bundle: ContentBundle): Map<string, string> {
   return names;
 }
 
-export function EconomyPage(props: {
-  world: KernelWorld;
-  snap: SimState;
-  bundle: ContentBundle;
-}) {
+export function EconomyPage(props: { world: KernelWorld; snap: SimState; bundle: ContentBundle }) {
   const n = props.snap.economyRuntime.national;
   const [sel, setSel] = useState<MapSelection | null>(null);
   const [indicator, setIndicator] = useState<IndicatorId>("outputIndex");
@@ -100,15 +96,20 @@ export function EconomyPage(props: {
   const series = relativeSeries(history.map((h) => ({ date: h.date, value: h[indicator] })));
   const chart = chartPath(series);
   const stories = useMemo(
-    () => storiesChronological(props.snap).filter((s) => s.category === "economy").slice(0, 4),
+    () =>
+      storiesChronological(props.snap)
+        .filter((s) => s.category === "economy")
+        .slice(0, 4),
     [props.snap],
   );
   const regionSeries =
     sel?.kind === "province"
-      ? relativeSeries((props.snap.economyRuntime.provinceHistory[sel.id] ?? []).map((point) => ({
-          date: point.date,
-          value: point.conditionsIndex,
-        })))
+      ? relativeSeries(
+          (props.snap.economyRuntime.provinceHistory[sel.id] ?? []).map((point) => ({
+            date: point.date,
+            value: point.conditionsIndex,
+          })),
+        )
       : [];
   const regionChart = chartPath(regionSeries);
   const publicMetrics = nationalPublicEconomy(props.snap);
@@ -130,7 +131,11 @@ export function EconomyPage(props: {
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [props.bundle, props.snap.economyRuntime.provinceHistory, props.snap.economyRuntime.provinces]);
+  }, [
+    props.bundle,
+    props.snap.economyRuntime.provinceHistory,
+    props.snap.economyRuntime.provinces,
+  ]);
 
   const shocks = props.snap.economyRuntime.shocks.slice(-12).reverse();
   const lagged = props.snap.economyRuntime.laggedEffects.slice(-12).reverse();
@@ -146,20 +151,56 @@ export function EconomyPage(props: {
       }
       main={
         <>
-          <SectionDivider title="Public economic briefing" hint="Readable statistics derived consistently from the scenario series" />
+          <SectionDivider
+            title="Public economic briefing"
+            hint="Readable statistics derived consistently from the scenario series"
+          />
           <MetricStrip>
-            <StatCard label="Real output growth" value={signedPercent(publicMetrics.growth)} hint={yearAgo ? "12 months" : "Scenario pace"} />
-            <StatCard label="Unemployment" value={`${publicMetrics.unemployment.toFixed(1)}%`} hint={deltaHint("employmentIndex")} />
-            <StatCard label="Inflation" value={`${publicMetrics.inflation.toFixed(1)}%`} hint={yearAgo ? "12 months" : "Scenario pace"} />
-            <StatCard label="Real pay" value={signedPercent(publicMetrics.realPay)} hint={yearAgo ? "12 months" : "Scenario position"} />
-            <StatCard label="Housing market" value={publicMetrics.housing} hint={deltaHint("housingIndex")} />
-            <StatCard label="Confidence" value={publicMetrics.confidence} hint={publicMetrics.confidenceTrend} />
+            <StatCard
+              label="Real output growth"
+              value={signedPercent(publicMetrics.growth)}
+              hint={yearAgo ? "12 months" : "Scenario pace"}
+            />
+            <StatCard
+              label="Unemployment"
+              value={`${publicMetrics.unemployment.toFixed(1)}%`}
+              hint={deltaHint("employmentIndex")}
+            />
+            <StatCard
+              label="Inflation"
+              value={`${publicMetrics.inflation.toFixed(1)}%`}
+              hint={yearAgo ? "12 months" : "Scenario pace"}
+            />
+            <StatCard
+              label="Real pay"
+              value={signedPercent(publicMetrics.realPay)}
+              hint={yearAgo ? "12 months" : "Scenario position"}
+            />
+            <StatCard
+              label="Housing market"
+              value={publicMetrics.housing}
+              hint={deltaHint("housingIndex")}
+            />
+            <StatCard
+              label="Confidence"
+              value={publicMetrics.confidence}
+              hint={publicMetrics.confidenceTrend}
+            />
           </MetricStrip>
 
           <details className="economic-index-reference">
             <summary>Reference indices</summary>
-            <div className="compact-index-grid">{INDICATORS.map((ind) => <span key={ind.id}><strong>{ind.label}</strong> {idx1(n[ind.id])}</span>)}</div>
-            <p className="muted">Reference 100 is a comparison scale, not a percentage or a claim that January 2028 was economically neutral.</p>
+            <div className="compact-index-grid">
+              {INDICATORS.map((ind) => (
+                <span key={ind.id}>
+                  <strong>{ind.label}</strong> {idx1(n[ind.id])}
+                </span>
+              ))}
+            </div>
+            <p className="muted">
+              Reference 100 is a comparison scale, not a percentage or a claim that January 2028 was
+              economically neutral.
+            </p>
           </details>
 
           <SectionDivider title="Trends" />
@@ -169,7 +210,12 @@ export function EconomyPage(props: {
             onChange={setIndicator}
           />
           {chart.d ? (
-            <svg className="econ-chart" viewBox="0 0 640 180" role="img" aria-label="National trend">
+            <svg
+              className="econ-chart"
+              viewBox="0 0 640 180"
+              role="img"
+              aria-label="National trend"
+            >
               <line x1="28" y1="90" x2="612" y2="90" stroke="#d7d2c8" strokeDasharray="3 4" />
               <path d={chart.d} fill="none" stroke="#1f3a5f" strokeWidth="2" />
               <text x="28" y="18" fontSize="11" fill="#5c6570">
@@ -193,10 +239,13 @@ export function EconomyPage(props: {
             <EmptyState>Baseline month — trend appears after the first turn.</EmptyState>
           )}
           <p>
-            {INDICATORS.find((i) => i.id === indicator)?.label}: {signedPercent(series[series.length - 1]?.value ?? 0)} since scenario start{" "}
+            {INDICATORS.find((i) => i.id === indicator)?.label}:{" "}
+            {signedPercent(series[series.length - 1]?.value ?? 0)} since scenario start{" "}
             <span className="muted">
               {prev ? publicTrendLabel(n[indicator] - prev[indicator]) : "No prior month"} ·{" "}
-              {yearAgo ? publicTrendLabel(n[indicator] - yearAgo[indicator]) : "No 12-month comparison"}
+              {yearAgo
+                ? publicTrendLabel(n[indicator] - yearAgo[indicator])
+                : "No 12-month comparison"}
             </span>
           </p>
           <p className="muted">
@@ -240,7 +289,11 @@ export function EconomyPage(props: {
                 >
                   <td>{row.name}</td>
                   <td>{row.public?.conditions ?? "—"}</td>
-                  <td>{row.public ? `${row.public.laborMarket} · ${row.public.unemployment.toFixed(1)}% unemployed` : "—"}</td>
+                  <td>
+                    {row.public
+                      ? `${row.public.laborMarket} · ${row.public.unemployment.toFixed(1)}% unemployed`
+                      : "—"}
+                  </td>
                   <td>{row.public?.housing ?? "—"}</td>
                   <td>{publicTrendLabel(row.monthDelta)}</td>
                   <td>{publicTrendLabel(row.yearDelta)}</td>
@@ -271,11 +324,7 @@ export function EconomyPage(props: {
                       return (
                         <>
                           <strong>{selection.name}</strong>
-                          <span>
-                            {data
-                              ? data.summary
-                              : "No regional data"}
-                          </span>
+                          <span>{data ? data.summary : "No regional data"}</span>
                         </>
                       );
                     }}

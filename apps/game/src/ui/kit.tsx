@@ -170,7 +170,9 @@ export function WorkLayout(props: {
   className?: string;
 }) {
   return (
-    <div className={`work-layout${props.rail ? " work-layout-rail" : ""}${props.className ? ` ${props.className}` : ""}`}>
+    <div
+      className={`work-layout${props.rail ? " work-layout-rail" : ""}${props.className ? ` ${props.className}` : ""}`}
+    >
       {props.header ? <div className="work-layout-header">{props.header}</div> : null}
       <div className="work-layout-body">
         <div className="work-layout-main">{props.main}</div>
@@ -199,22 +201,34 @@ export function PoliticalMapWorkspace(props: {
     if (!detailVisible) setDetailsOpen(false);
   }, [detailVisible]);
   return (
-    <div className={`political-map-workspace map-detail-layout${props.className ? ` ${props.className}` : ""}`}>
+    <div
+      className={`political-map-workspace map-detail-layout${props.className ? ` ${props.className}` : ""}`}
+    >
       {props.toolbar ? <div className="map-detail-toolbar">{props.toolbar}</div> : null}
       <div className="map-detail-body">
         <div className="map-detail-map">
           {props.map}
-          {detailVisible ? <aside className="map-pinned-card" aria-label="Selected map result">
-            <div className="map-pinned-card-preview">{props.detail}</div>
-            <button type="button" className="btn secondary btn-sm" onClick={() => setDetailsOpen(true)}>
-              View full result
-            </button>
-          </aside> : null}
+          {detailVisible ? (
+            <aside className="map-pinned-card" aria-label="Selected map result">
+              <div className="map-pinned-card-preview">{props.detail}</div>
+              <button
+                type="button"
+                className="btn secondary btn-sm"
+                onClick={() => setDetailsOpen(true)}
+              >
+                View full result
+              </button>
+            </aside>
+          ) : null}
         </div>
       </div>
       {props.legend ? <div className="map-detail-legend">{props.legend}</div> : null}
       {detailVisible && detailsOpen ? (
-        <div className="map-detail-drawer-backdrop" role="presentation" onMouseDown={() => setDetailsOpen(false)}>
+        <div
+          className="map-detail-drawer-backdrop"
+          role="presentation"
+          onMouseDown={() => setDetailsOpen(false)}
+        >
           <aside
             className="map-detail-drawer"
             role="dialog"
@@ -224,7 +238,14 @@ export function PoliticalMapWorkspace(props: {
           >
             <div className="map-detail-drawer-head">
               <strong>Selected result</strong>
-              <button type="button" className="btn quiet" aria-label="Close full result" onClick={() => setDetailsOpen(false)}>×</button>
+              <button
+                type="button"
+                className="btn quiet"
+                aria-label="Close full result"
+                onClick={() => setDetailsOpen(false)}
+              >
+                ×
+              </button>
             </div>
             <div className="map-detail-drawer-content">{props.detail}</div>
           </aside>
@@ -370,7 +391,9 @@ export function PolicyChoiceGroup(props: {
               </div>
             ) : null}
             {opt.cost ? <div className="policy-choice-cost muted">{opt.cost}</div> : null}
-            {opt.groups?.length ? <div className="policy-choice-groups muted">Affects: {opt.groups.join(" · ")}</div> : null}
+            {opt.groups?.length ? (
+              <div className="policy-choice-groups muted">Affects: {opt.groups.join(" · ")}</div>
+            ) : null}
           </button>
         ))}
       </div>

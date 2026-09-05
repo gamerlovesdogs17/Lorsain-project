@@ -5,7 +5,12 @@ import type { KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import type { LegislativeVoteChoice } from "../legislature/types.js";
 import { currentAssemblyMemberIds, currentPresidentialAuthorityId } from "../legislature/state.js";
-import type { CourtCase, ImpeachmentProceeding, JudicialVoteChoice, PrecedentRecord } from "./types.js";
+import type {
+  CourtCase,
+  ImpeachmentProceeding,
+  JudicialVoteChoice,
+  PrecedentRecord,
+} from "./types.js";
 import { similarPrecedent } from "./procedure.js";
 import { hasExplicitLegalCareer } from "./legal-careers.js";
 
@@ -23,7 +28,8 @@ export function chooseJudicialVote(
   const pragmatism = profile?.traits.pragmatism ?? 0.5;
   const independence = 1 - (profile?.traits.partyLoyalty ?? 0.5) * 0.35;
   const ideology = ((profile?.ideology.authority ?? 0) + (profile?.ideology.economic ?? 0)) / 2;
-  const precedent = resolvedPrecedent === undefined ? similarPrecedent(state, courtCase) : resolvedPrecedent;
+  const precedent =
+    resolvedPrecedent === undefined ? similarPrecedent(state, courtCase) : resolvedPrecedent;
   let score = courtCase.meritsLean * 1.15;
   score -= (institutionalism - 0.5) * 0.7;
   if (precedent) {

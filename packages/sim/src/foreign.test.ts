@@ -6,7 +6,11 @@ import { createSimulation, restoreSimulation, type Simulation } from "./engine.j
 import { hashCanonical, jsonClone } from "./hash.js";
 import { parseSaveFile } from "./save.js";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
+import {
+  terenaElectoralFromBundle,
+  terenaPartyFields,
+  terenaWorldFieldsFromBundle,
+} from "./terena-party-input.js";
 import { SAVE_SCHEMA_VERSION, type Command, type KernelWorld, type SimState } from "./types.js";
 import { CANONICAL_TERENA_RELATIONS } from "./foreign/baseline.js";
 import { bilateralKey } from "./foreign/state.js";
@@ -32,10 +36,7 @@ import { checkCrisisEmergence } from "./foreign/crisis-emergence.js";
 import { beginConflictFromCrisisWithWarTrigger } from "./foreign/conflicts.js";
 import { resolveCountryLeaderDisplay, processLeadershipChanges } from "./foreign/leaders.js";
 import { resolveWarTriggerConflictId } from "./foreign/war-powers-bridge.js";
-import {
-  isSecurityCouncilVetoPower,
-  processInstitutionsMonth,
-} from "./foreign/institutions.js";
+import { isSecurityCouncilVetoPower, processInstitutionsMonth } from "./foreign/institutions.js";
 import { addMonths } from "./calendar.js";
 import { createRngService } from "./rng.js";
 import { collectPlayerActionableDecisions } from "./player-decisions.js";
@@ -361,7 +362,9 @@ describe("Phase 10 foreign affairs", () => {
       world,
     );
     advanceHandsOff(withVote, 1);
-    expect(withVote.getSnapshot().foreignAffairsRuntime.pendingPlayerTreatyVotes[treaty.id]?.choice).toBeNull();
+    expect(
+      withVote.getSnapshot().foreignAffairsRuntime.pendingPlayerTreatyVotes[treaty.id]?.choice,
+    ).toBeNull();
   });
 
   it("does not auto-sanction or auto-treaty when the player is President", () => {
@@ -375,12 +378,11 @@ describe("Phase 10 foreign affairs", () => {
     expect(Object.values(runtime.diplomaticActions).every((a) => a.initiator !== "player")).toBe(
       true,
     );
-    const playerStillPresident =
-      currentPresidentialAuthorityId(world, snap) === "NPC001";
+    const playerStillPresident = currentPresidentialAuthorityId(world, snap) === "NPC001";
     if (playerStillPresident) {
-      expect(
-        Object.values(runtime.sanctions).every((s) => s.imposerId !== TERENA_WORLD_ID),
-      ).toBe(true);
+      expect(Object.values(runtime.sanctions).every((s) => s.imposerId !== TERENA_WORLD_ID)).toBe(
+        true,
+      );
       expect(
         Object.values(runtime.treaties).every(
           (t) => t.metadata.preexisting === true || t.proposerId !== TERENA_WORLD_ID,
@@ -394,9 +396,9 @@ describe("Phase 10 foreign affairs", () => {
     const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR-INFO" });
     advanceHandsOff(sim, 24);
     const snap = sim.getSnapshot();
-    expect(Object.values(snap.foreignAffairsRuntime.countries).some((c) => c.strategicGoals.length > 0)).toBe(
-      true,
-    );
+    expect(
+      Object.values(snap.foreignAffairsRuntime.countries).some((c) => c.strategicGoals.length > 0),
+    ).toBe(true);
     assertNoStrategicGoalsInPublicEvents(world, snap);
     /**
      * Runtime shape: `foreignAffairsRuntime.countries[id].strategicGoals` is sim-internal AI
@@ -537,7 +539,9 @@ describe("Phase 10.1 foreign affairs functional completion", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({ world, playerPoliticianId: "NPC001", seed: "FOR101-AI-W41" });
     advanceHandsOff(sim, MONTHS_BEFORE_ASSEMBLY);
-    const towardTerena = Object.values(sim.getSnapshot().foreignAffairsRuntime.diplomaticActions).filter(
+    const towardTerena = Object.values(
+      sim.getSnapshot().foreignAffairsRuntime.diplomaticActions,
+    ).filter(
       (a) =>
         a.initiator === "ai" &&
         (a.targetCountryId === TERENA_WORLD_ID || a.actorCountryId === TERENA_WORLD_ID),
@@ -608,11 +612,7 @@ describe("Phase 10.1 foreign affairs functional completion", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR101-LIFT" });
     const snap = jsonClone(sim.getSnapshot());
-    imposeSanctions(
-      snap,
-      { imposerId: "W13", targetId: "W05", severity: 0.4 },
-      "CMD00001",
-    );
+    imposeSanctions(snap, { imposerId: "W13", targetId: "W05", severity: 0.4 }, "CMD00001");
     const rel = snap.foreignAffairsRuntime.bilateralRelations[bilateralKey("W13", "W05")]!;
     rel.general = 25;
     const out = liftSanctions(snap, { imposerId: "W13", targetId: "W05" }, "CMD00002");
@@ -650,14 +650,23 @@ describe("Phase 10.1 foreign affairs functional completion", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({ world, playerPoliticianId: "NPC030", seed: "FOR102-DUP" });
     const snap = jsonClone(sim.getSnapshot());
-    proposeTreatyOk(snap, {
-      proposerId: "W05",
-      kind: "trade",
-      title: "W05–W41 Trade",
-      memberIds: ["W05", TERENA_WORLD_ID],
-      requiresRatification: false,
-    }, null);
-    const gate = canProposeTreaty(snap.foreignAffairsRuntime, "trade", ["W05", TERENA_WORLD_ID], snap.currentDate);
+    proposeTreatyOk(
+      snap,
+      {
+        proposerId: "W05",
+        kind: "trade",
+        title: "W05–W41 Trade",
+        memberIds: ["W05", TERENA_WORLD_ID],
+        requiresRatification: false,
+      },
+      null,
+    );
+    const gate = canProposeTreaty(
+      snap.foreignAffairsRuntime,
+      "trade",
+      ["W05", TERENA_WORLD_ID],
+      snap.currentDate,
+    );
     expect(gate.ok).toBe(false);
     const dup = proposeTreaty(
       snap,
@@ -692,7 +701,14 @@ describe("Phase 10.1 foreign affairs functional completion", () => {
     treaty.counterpartyResponses.W13 = "accepted";
     advanceTreatyAfterCounterpartyAcceptance(snap, treaty, "CMD00001");
     expect(treaty.status).toBe("ratification_pending");
-    expect(stageIsRipe(snap, snap.foreignAffairsRuntime.treatyRatifications[Object.keys(snap.foreignAffairsRuntime.treatyRatifications)[0]!]!.voteReadyDate)).toBe(false);
+    expect(
+      stageIsRipe(
+        snap,
+        snap.foreignAffairsRuntime.treatyRatifications[
+          Object.keys(snap.foreignAffairsRuntime.treatyRatifications)[0]!
+        ]!.voteReadyDate,
+      ),
+    ).toBe(false);
     const rng = createRngService("FOR102-RAT-TIME-VOTE");
     processTreatyRatificationVotes(world, snap, rng, "CMD00002");
     expect(treaty.status).toBe("ratification_pending");
@@ -820,9 +836,7 @@ describe("Phase 10.1 foreign affairs functional completion", () => {
     );
     expect(authMotions).toHaveLength(1);
     expect(authMotions[0]!.metadata.constitutionalReferral).toBe(true);
-    expect(authMotions[0]!.sponsorId).not.toBe(
-      currentPresidentialAuthorityId(world, snap),
-    );
+    expect(authMotions[0]!.sponsorId).not.toBe(currentPresidentialAuthorityId(world, snap));
     expect(
       snap.history.some(
         (e) => e.type === "ASSEMBLY_MOTION_INTRODUCED" && e.payload.kind === "war_authorization",

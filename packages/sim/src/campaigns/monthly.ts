@@ -37,18 +37,47 @@ function stableCampaignHash(text: string): number {
   return hash >>> 0;
 }
 
-function monthlyNpcFieldPlan(world: KernelWorld, state: SimState, campaign: CampaignState): { actionType: string; metadata: Record<string, unknown> } {
+function monthlyNpcFieldPlan(
+  world: KernelWorld,
+  state: SimState,
+  campaign: CampaignState,
+): { actionType: string; metadata: Record<string, unknown> } {
   const need = nominationQualificationNeed(world, state, campaign);
-  if (need === "member" || need === "provincial") return { actionType: "CAMPAIGN_SEEK_NOMINATION_SUPPORT", metadata: {} };
-  if (campaign.contestId && (need === "caucus" || need === "orgs")) return { actionType: "CAMPAIGN_SEEK_ENDORSEMENT", metadata: {} };
+  if (need === "member" || need === "provincial")
+    return { actionType: "CAMPAIGN_SEEK_NOMINATION_SUPPORT", metadata: {} };
+  if (campaign.contestId && (need === "caucus" || need === "orgs"))
+    return { actionType: "CAMPAIGN_SEEK_ENDORSEMENT", metadata: {} };
   if (campaign.cashOnHand < 12_000) return { actionType: "CAMPAIGN_FUNDRAISE", metadata: {} };
-  const home = state.politicians[campaign.politicianId]?.homeProvinceId ?? world.politicianHomeProvince[campaign.politicianId] ?? null;
-  const geography: CampaignGeography = home ? { kind: "province", id: home } : { kind: "national", id: null };
-  if (campaign.fieldOrganization < 0.28 && home) return { actionType: "CAMPAIGN_ORGANIZE", metadata: { geography } };
+  const home =
+    state.politicians[campaign.politicianId]?.homeProvinceId ??
+    world.politicianHomeProvince[campaign.politicianId] ??
+    null;
+  const geography: CampaignGeography = home
+    ? { kind: "province", id: home }
+    : { kind: "national", id: null };
+  if (campaign.fieldOrganization < 0.28 && home)
+    return { actionType: "CAMPAIGN_ORGANIZE", metadata: { geography } };
   const rotation = stableCampaignHash(`${campaign.id}:${state.currentDate}`) % 5;
   if (rotation === 0) return { actionType: "CAMPAIGN_VISIT", metadata: { geography } };
-  if (rotation === 1) return { actionType: "CAMPAIGN_MESSAGE", metadata: { issueId: world.issueIds[stableCampaignHash(`${campaign.id}:issue`) % Math.max(1, world.issueIds.length)] ?? null } };
-  if (rotation === 2) return { actionType: "CAMPAIGN_ADVERTISE", metadata: { spend: Math.min(campaign.cashOnHand, 25_000), messageType: "positive", geography: { kind: "national", id: null } } };
+  if (rotation === 1)
+    return {
+      actionType: "CAMPAIGN_MESSAGE",
+      metadata: {
+        issueId:
+          world.issueIds[
+            stableCampaignHash(`${campaign.id}:issue`) % Math.max(1, world.issueIds.length)
+          ] ?? null,
+      },
+    };
+  if (rotation === 2)
+    return {
+      actionType: "CAMPAIGN_ADVERTISE",
+      metadata: {
+        spend: Math.min(campaign.cashOnHand, 25_000),
+        messageType: "positive",
+        geography: { kind: "national", id: null },
+      },
+    };
   if (rotation === 3) return { actionType: "CAMPAIGN_PREPARE_DEBATE", metadata: {} };
   return { actionType: "CAMPAIGN_FUNDRAISE", metadata: {} };
 }
@@ -62,8 +91,10 @@ export function processCampaignMonth(
   const month = monthStart(state.currentDate);
   if (state.campaignRuntime.lastMonthProcessed === month) return [];
   const events: SimEvent[] = [];
-  const profile = (globalThis as typeof globalThis & { __lorsainStageTimings?: Record<string, number[]> }).__lorsainStageTimings;
-  const timed = <T,>(stage: string, fn: () => T): T => {
+  const profile = (
+    globalThis as typeof globalThis & { __lorsainStageTimings?: Record<string, number[]> }
+  ).__lorsainStageTimings;
+  const timed = <T>(stage: string, fn: () => T): T => {
     if (!profile) return fn();
     const started = performance.now();
     const result = fn();
@@ -71,55 +102,61 @@ export function processCampaignMonth(
     return result;
   };
 
-  events.push(...timed("assembly_filing", () => processAssemblyFilingCalendar(state, world, commandId)));
+  events.push(
+    ...timed("assembly_filing", () => processAssemblyFilingCalendar(state, world, commandId)),
+  );
   events.push(...timed("open_contests", () => openDueNominationContests(state, world, commandId)));
   events.push(...timed("declarations", () => npcDeclarations(state, world, rng, commandId)));
 
-  timed("npc_actions", () => { for (const campaign of activeCampaigns(state)) {
-    applyOrganizationMaintenance(campaign);
-    decayMomentum(world, state, campaign.politicianId);
-    ensureActionPoints(world, state, campaign);
-    if (campaign.politicianId === state.playerPoliticianId) continue;
-    if (campaign.status !== "active") continue;
-    const monthlyChoice = monthlyNpcFieldPlan(world, state, campaign);
-    if (shouldConsiderWithdraw(world, state, campaign)) {
-      const withdrawalChoice = chooseCampaignAction(world, state, campaign, rng);
-      if (withdrawalChoice?.actionType === "WITHDRAW_CAMPAIGN") {
-        const out = withdrawCampaign(
+  timed("npc_actions", () => {
+    for (const campaign of activeCampaigns(state)) {
+      applyOrganizationMaintenance(campaign);
+      decayMomentum(world, state, campaign.politicianId);
+      ensureActionPoints(world, state, campaign);
+      if (campaign.politicianId === state.playerPoliticianId) continue;
+      if (campaign.status !== "active") continue;
+      const monthlyChoice = monthlyNpcFieldPlan(world, state, campaign);
+      if (shouldConsiderWithdraw(world, state, campaign)) {
+        const withdrawalChoice = chooseCampaignAction(world, state, campaign, rng);
+        if (withdrawalChoice?.actionType === "WITHDRAW_CAMPAIGN") {
+          const out = withdrawCampaign(
+            world,
+            state,
+            { campaignId: campaign.id, actorId: campaign.politicianId },
+            commandId,
+          );
+          if (!("error" in out)) events.push(...out.events);
+          continue;
+        }
+      }
+      if (monthlyChoice.actionType === "WITHDRAW_CAMPAIGN") continue;
+      // One composite NPC field plan per month keeps large multi-candidate cycles responsive.
+      // The player retains the full action-point interface and explicit control.
+      const steps = Math.min(1, campaign.actionPointsRemaining);
+      for (let i = 0; i < steps; i++) {
+        const live = state.campaignRuntime.campaigns[campaign.id];
+        if (!live || live.status !== "active") break;
+        if (live.actionPointsRemaining < 1) break;
+        const applied = applyChosenAction(
           world,
           state,
-          { campaignId: campaign.id, actorId: campaign.politicianId },
+          rng,
+          live.id,
+          live.politicianId,
+          monthlyChoice,
           commandId,
         );
-        if (!("error" in out)) events.push(...out.events);
-        continue;
+        if (applied && !("error" in applied)) events.push(...applied.events);
+        else break;
       }
     }
-    if (monthlyChoice.actionType === "WITHDRAW_CAMPAIGN") continue;
-    // One composite NPC field plan per month keeps large multi-candidate cycles responsive.
-    // The player retains the full action-point interface and explicit control.
-    const steps = Math.min(1, campaign.actionPointsRemaining);
-    for (let i = 0; i < steps; i++) {
-      const live = state.campaignRuntime.campaigns[campaign.id];
-      if (!live || live.status !== "active") break;
-      if (live.actionPointsRemaining < 1) break;
-      const applied = applyChosenAction(
-        world,
-        state,
-        rng,
-        live.id,
-        live.politicianId,
-        monthlyChoice,
-        commandId,
-      );
-      if (applied && !("error" in applied)) events.push(...applied.events);
-      else break;
-    }
-  }});
+  });
 
   events.push(...timed("debates", () => maybeDebates(state, world, rng, commandId)));
   events.push(...timed("polls", () => maybePublicPolls(state, world, rng, commandId)));
-  events.push(...timed("nomination_calendar", () => processNominationCalendar(state, world, rng, commandId)));
+  events.push(
+    ...timed("nomination_calendar", () => processNominationCalendar(state, world, rng, commandId)),
+  );
   state.campaignRuntime.lastMonthProcessed = month;
   return events;
 }
@@ -259,9 +296,7 @@ function applyChosenAction(
 function isCampaignGeography(value: unknown): value is CampaignGeography {
   if (value == null || typeof value !== "object") return false;
   const raw = value as { kind?: unknown; id?: unknown };
-  return (
-    (raw.kind === "province" || raw.kind === "constituency") && typeof raw.id === "string"
-  );
+  return (raw.kind === "province" || raw.kind === "constituency") && typeof raw.id === "string";
 }
 
 function maybeDebates(
@@ -445,9 +480,14 @@ function maybePublicPolls(
     }
   }
 
-
   const assemblyElection = Object.values(state.elections)
-    .filter((candidate) => candidate.type === "assembly" && candidate.status !== "resolved" && candidate.status !== "cancelled" && candidate.assembly)
+    .filter(
+      (candidate) =>
+        candidate.type === "assembly" &&
+        candidate.status !== "resolved" &&
+        candidate.status !== "cancelled" &&
+        candidate.assembly,
+    )
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
   const constituencyFields = Object.values(assemblyElection?.assembly?.constituencyFields ?? {})
     .filter((field) => field.candidateIds.length >= 2)
@@ -456,14 +496,18 @@ function maybePublicPolls(
       const bHash = stableCampaignHash(`${assemblyElection?.id}:${b.constituencyId}:public-poll`);
       return aHash - bHash || a.constituencyId.localeCompare(b.constituencyId);
     });
-  const constituencyField = constituencyFields[
-    stableCampaignHash(`${state.currentDate.slice(0, 7)}:constituency-poll`) % Math.max(1, constituencyFields.length)
-  ];
+  const constituencyField =
+    constituencyFields[
+      stableCampaignHash(`${state.currentDate.slice(0, 7)}:constituency-poll`) %
+        Math.max(1, constituencyFields.length)
+    ];
   if (assemblyElection && constituencyField) {
     const partyByCandidate = Object.fromEntries(
       constituencyField.candidateIds.map((candidateId) => [
         candidateId,
-        assemblyElection.assembly?.candidacies[candidateId]?.partyId ?? state.politicians[candidateId]?.partyId ?? null,
+        assemblyElection.assembly?.candidacies[candidateId]?.partyId ??
+          state.politicians[candidateId]?.partyId ??
+          null,
       ]),
     );
     const local = createPoll(world, state, rng, {
@@ -484,21 +528,29 @@ function maybePublicPolls(
   }
 
   const governorRace = Object.values(state.provincialRuntime.elections)
-    .filter((race) => race.status === "field_finalized" && Object.values(race.candidates).filter((candidate) => !candidate.withdrawn).length >= 2)
+    .filter(
+      (race) =>
+        race.status === "field_finalized" &&
+        Object.values(race.candidates).filter((candidate) => !candidate.withdrawn).length >= 2,
+    )
     .sort((a, b) => {
       const aHash = stableCampaignHash(`${a.id}:${state.currentDate.slice(0, 7)}:governor-poll`);
       const bHash = stableCampaignHash(`${b.id}:${state.currentDate.slice(0, 7)}:governor-poll`);
       return aHash - bHash || a.id.localeCompare(b.id);
     })[0];
   if (governorRace) {
-    const candidates = Object.values(governorRace.candidates).filter((candidate) => !candidate.withdrawn);
+    const candidates = Object.values(governorRace.candidates).filter(
+      (candidate) => !candidate.withdrawn,
+    );
     const local = createPoll(world, state, rng, {
       pollsterId: pollsters[0]!.id,
       electionId: null,
       geographyKind: "province",
       provinceId: governorRace.provinceId,
       candidateIds: candidates.map((candidate) => candidate.politicianId),
-      partyByCandidate: Object.fromEntries(candidates.map((candidate) => [candidate.politicianId, candidate.partyId])),
+      partyByCandidate: Object.fromEntries(
+        candidates.map((candidate) => [candidate.politicianId, candidate.partyId]),
+      ),
       fieldStart: state.currentDate,
       fieldEnd: state.currentDate,
       publicationDate: state.currentDate,

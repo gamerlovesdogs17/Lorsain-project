@@ -60,9 +60,10 @@ export function featureName(feature: GeoJsonFeature): string {
   const props = feature.properties ?? {};
   if (typeof props.name === "string" && props.name.length > 0) return props.name;
   if (typeof props.district_number === "number" && Number.isFinite(props.district_number)) {
-    const province = typeof props.plurality_province_name === "string" && props.plurality_province_name.length > 0
-      ? ` (${props.plurality_province_name})`
-      : "";
+    const province =
+      typeof props.plurality_province_name === "string" && props.plurality_province_name.length > 0
+        ? ` (${props.plurality_province_name})`
+        : "";
     return `Constituency ${props.district_number}${province}`;
   }
   return featureId(feature);
@@ -113,11 +114,7 @@ export function fitViewBox(bounds: BBox, padding = 0.045): ViewTransform {
 }
 
 /** Geographic lon/lat → SVG, flipping latitude so north is up. */
-export function projectLonLat(
-  lon: number,
-  lat: number,
-  transform: ViewTransform,
-): Position {
+export function projectLonLat(lon: number, lat: number, transform: ViewTransform): Position {
   const x = lon;
   const y = transform.minY + transform.height - (lat - transform.minY);
   return [x, y];
@@ -220,10 +217,7 @@ export type CanonicalCity = {
   provinceId?: string;
 };
 
-export function prepareCities(
-  cities: CanonicalCity[],
-  provinces: PreparedPath[],
-): PreparedCity[] {
+export function prepareCities(cities: CanonicalCity[], provinces: PreparedPath[]): PreparedCity[] {
   const byProvince = new Map<string, PreparedPath>();
   for (const p of provinces) byProvince.set(p.id, p);
   const counts = new Map<string, number>();
@@ -266,7 +260,13 @@ export function prepareTerenaMap(
   const bounds = boundsOfFeatures([...provinces.features, ...constituencies.features]);
   const transform = isValidBBox(bounds)
     ? fitViewBox(bounds)
-    : { minX: 0, minY: 0, width: SVG_WIDTH, height: SVG_HEIGHT, viewBox: `0 0 ${SVG_WIDTH} ${SVG_HEIGHT}` };
+    : {
+        minX: 0,
+        minY: 0,
+        width: SVG_WIDTH,
+        height: SVG_HEIGHT,
+        viewBox: `0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`,
+      };
   const provincePaths = prepareFeatures(provinces.features, transform);
   const constituencyPaths = prepareFeatures(constituencies.features, transform);
   return {

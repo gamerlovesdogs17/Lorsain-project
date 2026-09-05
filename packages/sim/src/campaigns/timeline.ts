@@ -107,8 +107,9 @@ function failUnqualifiedDeclared(
 
 function allNominationProcessesTerminal(state: SimState, electionId: string): boolean {
   const contests = nominationContests(state, electionId);
-  return contests.length > 0 && contests.every(
-    (c) => c.status === "resolved" || c.status === "cancelled",
+  return (
+    contests.length > 0 &&
+    contests.every((c) => c.status === "resolved" || c.status === "cancelled")
   );
 }
 

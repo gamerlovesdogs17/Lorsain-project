@@ -24,16 +24,22 @@ export function constituencyPrimaryProvince(
   world: KernelWorld,
   constituencyId: string,
 ): string | null {
-  return (world.constituencyProvinceShares[constituencyId] ?? [])
-    .slice()
-    .sort((a, b) => b.share - a.share || a.provinceId.localeCompare(b.provinceId))[0]?.provinceId ?? null;
+  return (
+    (world.constituencyProvinceShares[constituencyId] ?? [])
+      .slice()
+      .sort((a, b) => b.share - a.share || a.provinceId.localeCompare(b.provinceId))[0]
+      ?.provinceId ?? null
+  );
 }
 
 function dominantSector(world: KernelWorld, provinceId: string): EconomySectorId | null {
   const exposure = world.economyScenario?.provinces[provinceId]?.sectorExposure;
   if (!exposure) return null;
-  return (Object.entries(exposure) as Array<[EconomySectorId, number]>)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+  return (
+    (Object.entries(exposure) as Array<[EconomySectorId, number]>).sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+    )[0]?.[0] ?? null
+  );
 }
 
 export function publicConstituencyPressures(
@@ -94,7 +100,10 @@ export function publicConstituencyPressures(
     });
   }
   const nextElection = Object.values(state.elections)
-    .filter((election) => election.type === "assembly" && !["resolved", "cancelled"].includes(election.status))
+    .filter(
+      (election) =>
+        election.type === "assembly" && !["resolved", "cancelled"].includes(election.status),
+    )
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
   if (nextElection && compareIsoDate(nextElection.date, addMonths(state.currentDate, 18)) <= 0) {
     out.push({
@@ -121,12 +130,13 @@ export function constituencyPressureForBill(
   const employmentStress = Math.max(0, Math.min(1, (100 - economy.employmentIndex) / 10));
   const housingStress = Math.max(0, Math.min(1, (100 - economy.housingIndex) / 10));
   const total = bill.policyItems.reduce((sum, item) => {
-    const economic = ["ISS_LABOR", "ISS_WELFARE", "ISS_OWNERSHIP", "ISS_TRADE"].includes(item.issueId)
+    const economic = ["ISS_LABOR", "ISS_WELFARE", "ISS_OWNERSHIP", "ISS_TRADE"].includes(
+      item.issueId,
+    )
       ? employmentStress * item.direction * item.magnitude
       : 0;
-    const housing = item.issueId === "ISS_HOUSING"
-      ? housingStress * item.direction * item.magnitude
-      : 0;
+    const housing =
+      item.issueId === "ISS_HOUSING" ? housingStress * item.direction * item.magnitude : 0;
     return sum + economic + housing;
   }, 0);
   return Math.max(-0.18, Math.min(0.18, (total / bill.policyItems.length) * 0.18));

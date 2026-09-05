@@ -1,10 +1,19 @@
 import type { ReactNode } from "react";
 import type { KernelWorld, SimState } from "@lorsain/sim";
-import { partyColor, partyDisplayName, politicianDisplayName, type PresentationCatalog } from "../presentation.js";
+import {
+  partyColor,
+  partyDisplayName,
+  politicianDisplayName,
+  type PresentationCatalog,
+} from "../presentation.js";
 
 const officeLabelCache = new WeakMap<SimState, Map<string, string>>();
 
-function currentPublicOfficeLabel(world: KernelWorld, state: SimState, politicianId: string): string {
+function currentPublicOfficeLabel(
+  world: KernelWorld,
+  state: SimState,
+  politicianId: string,
+): string {
   let stateCache = officeLabelCache.get(state);
   if (!stateCache) {
     stateCache = new Map();
@@ -22,10 +31,15 @@ function currentPublicOfficeLabel(world: KernelWorld, state: SimState, politicia
     assembly_member: 3,
   };
   const active = Object.values(state.officeTerms)
-    .filter((term) => term.holderId === politicianId && (term.status === "active" || term.status === "suspended"))
+    .filter(
+      (term) =>
+        term.holderId === politicianId && (term.status === "active" || term.status === "suspended"),
+    )
     .map((term) => world.offices[term.officeId])
     .filter((office): office is NonNullable<typeof office> => office != null)
-    .sort((a, b) => (priority[b.kind] ?? 0) - (priority[a.kind] ?? 0) || a.title.localeCompare(b.title));
+    .sort(
+      (a, b) => (priority[b.kind] ?? 0) - (priority[a.kind] ?? 0) || a.title.localeCompare(b.title),
+    );
   const label = active[0]?.title ?? "Private citizen";
   stateCache.set(politicianId, label);
   return label;
@@ -73,9 +87,11 @@ export function PoliticianCard(props: {
     props.partyLabel ??
     partyDisplayName(props.world, props.partyId ?? pol?.partyId ?? null, props.state);
   const partyId = props.partyId ?? pol?.partyId;
-  const office = props.office ?? (props.state
-    ? currentPublicOfficeLabel(props.world, props.state, props.politicianId)
-    : "Private citizen");
+  const office =
+    props.office ??
+    (props.state
+      ? currentPublicOfficeLabel(props.world, props.state, props.politicianId)
+      : "Private citizen");
   const body = (
     <>
       <PoliticianAvatar
@@ -126,7 +142,8 @@ export function PoliticianProfile(props: {
 }) {
   const name = politicianDisplayName(props.catalog, props.politicianId);
   const pol = props.state.politicians[props.politicianId];
-  const office = props.office ?? currentPublicOfficeLabel(props.world, props.state, props.politicianId);
+  const office =
+    props.office ?? currentPublicOfficeLabel(props.world, props.state, props.politicianId);
   return (
     <header className="politician-profile">
       <PoliticianAvatar

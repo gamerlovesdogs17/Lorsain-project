@@ -242,7 +242,10 @@ export type ForeignAffairsRuntime = {
   treatyRatifications: Record<string, TreatyRatificationState>;
   pendingPresidentialActions: PendingPresidentialForeignAction[];
   pendingIncomingDiplomacy: PendingIncomingDiplomacy[];
-  pendingPlayerTreatyVotes: Record<string, { treatyId: string; choice: "yes" | "no" | "abstain" | null }>;
+  pendingPlayerTreatyVotes: Record<
+    string,
+    { treatyId: string; choice: "yes" | "no" | "abstain" | null }
+  >;
   /** treatyIdentityKey → earliest date an identical proposal may be reintroduced */
   treatyProposalCooldowns: Record<string, IsoDate>;
   institutionRuntime: InstitutionRuntimeState;

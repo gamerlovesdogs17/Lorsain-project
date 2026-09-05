@@ -100,10 +100,7 @@ export function escalateCrisis(
 }
 
 /** @deprecated Use explicit transition functions instead. */
-export function deescalateCrisis(
-  crisis: InternationalCrisis,
-  date: IsoDate,
-): CrisisStage {
+export function deescalateCrisis(crisis: InternationalCrisis, date: IsoDate): CrisisStage {
   switch (crisis.stage) {
     case "conflict":
       return transitionConflictToCeasefire(crisis, date);
@@ -122,19 +119,18 @@ export function deescalateCrisis(
 function crisisEventType(
   from: CrisisStage,
   to: CrisisStage,
-): "FOREIGN_CRISIS_INCIDENT" | "FOREIGN_CRISIS_ESCALATED" | "FOREIGN_CRISIS_DEESCALATED" | "FOREIGN_CRISIS_SETTLED" | null {
+):
+  | "FOREIGN_CRISIS_INCIDENT"
+  | "FOREIGN_CRISIS_ESCALATED"
+  | "FOREIGN_CRISIS_DEESCALATED"
+  | "FOREIGN_CRISIS_SETTLED"
+  | null {
   if (from === "latent" && to === "incident") return "FOREIGN_CRISIS_INCIDENT";
   if (to === "settled") return "FOREIGN_CRISIS_SETTLED";
-  if (
-    (from === "latent" || from === "incident") &&
-    (to === "active" || to === "conflict")
-  ) {
+  if ((from === "latent" || from === "incident") && (to === "active" || to === "conflict")) {
     return "FOREIGN_CRISIS_ESCALATED";
   }
-  if (
-    (from === "active" || from === "conflict" || from === "incident") &&
-    to === "deescalating"
-  ) {
+  if ((from === "active" || from === "conflict" || from === "incident") && to === "deescalating") {
     return "FOREIGN_CRISIS_DEESCALATED";
   }
   if (from === "deescalating" && to === "active") return "FOREIGN_CRISIS_ESCALATED";
@@ -151,11 +147,7 @@ function applyRelationDrift(
   const rel = state.foreignAffairsRuntime.bilateralRelations[crisis.focalPairKey];
   if (!rel) return;
   const tensionDelta =
-    stage === "settled" || stage === "deescalating"
-      ? -0.03
-      : stage === "conflict"
-        ? 0.08
-        : 0.02;
+    stage === "settled" || stage === "deescalating" ? -0.03 : stage === "conflict" ? 0.08 : 0.02;
   adjustRelation(rel, { securityTension: tensionDelta });
   rel.lastUpdated = date;
 }

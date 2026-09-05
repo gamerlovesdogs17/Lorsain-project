@@ -12,7 +12,12 @@ function clamp01(n: number): number {
 
 export function imposeSanctions(
   state: SimState,
-  args: { imposerId: string; targetId: string; severity: number; scope?: import("./types.js").SanctionScope },
+  args: {
+    imposerId: string;
+    targetId: string;
+    severity: number;
+    scope?: import("./types.js").SanctionScope;
+  },
   commandId: string | null,
 ): { sanction: SanctionRecord; events: SimEvent[] } | { error: { code: string; message: string } } {
   const severity = clamp01(args.severity);
@@ -61,7 +66,13 @@ export function imposeSanctions(
       visibility: "public",
       actorIds: [args.imposerId],
       entityIds: [args.targetId, id],
-      payload: { imposerId: args.imposerId, targetId: args.targetId, severity, scope, sanctionId: id },
+      payload: {
+        imposerId: args.imposerId,
+        targetId: args.targetId,
+        severity,
+        scope,
+        sanctionId: id,
+      },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,
     }),

@@ -125,7 +125,11 @@ export function WorldMap(props: {
       </svg>
       {hoveredId ? (
         <div className="map-tooltip" role="status" style={{ left: tip.x, top: tip.y }}>
-          {props.tooltipFor?.(hoveredId) ?? <strong>{paths.find((path) => path.id === hoveredId)?.name ?? "Unnamed country"}</strong>}
+          {props.tooltipFor?.(hoveredId) ?? (
+            <strong>
+              {paths.find((path) => path.id === hoveredId)?.name ?? "Unnamed country"}
+            </strong>
+          )}
         </div>
       ) : null}
     </div>

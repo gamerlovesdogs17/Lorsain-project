@@ -30,7 +30,11 @@ function annualRetirementProbability(age: number, inclination: number): number {
   return 0;
 }
 
-function protectedFromMidtermExit(state: SimState, world: KernelWorld, politicianId: string): boolean {
+function protectedFromMidtermExit(
+  state: SimState,
+  world: KernelWorld,
+  politicianId: string,
+): boolean {
   return activeTermsForPolitician(state, politicianId).some((term) => {
     const kind = world.offices[term.officeId]?.kind;
     return kind === "assembly_member" || kind === "governor";
@@ -47,7 +51,9 @@ function hasLiveFiledCandidacy(state: SimState, politicianId: string): boolean {
   if (national) return true;
   const gubernatorial = Object.values(state.provincialRuntime.elections).some((election) => {
     if (election.status === "assumed") return false;
-    return Boolean(election.candidates[politicianId] && !election.candidates[politicianId]!.withdrawn);
+    return Boolean(
+      election.candidates[politicianId] && !election.candidates[politicianId]!.withdrawn,
+    );
   });
   if (gubernatorial) return true;
   return Object.values(state.provincialRuntime.assemblyElections).some(
@@ -134,8 +140,7 @@ export function processPoliticalLifecycleMonth(
   if (state.currentDate.slice(5, 7) !== "01") return [];
   if (
     state.history.some(
-      (event) =>
-        event.type === "POLITICAL_LIFECYCLE_REVIEWED" && event.date === state.currentDate,
+      (event) => event.type === "POLITICAL_LIFECYCLE_REVIEWED" && event.date === state.currentDate,
     )
   ) {
     return [];

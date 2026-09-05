@@ -299,11 +299,7 @@ function processLtoDisputes(
   return events;
 }
 
-function processCscActions(
-  state: SimState,
-  rng: RngService,
-  commandId: string,
-): SimEvent[] {
+function processCscActions(state: SimState, rng: RngService, commandId: string): SimEvent[] {
   const events: SimEvent[] = [];
   const runtime = state.foreignAffairsRuntime;
   const inst = runtime.institutionRuntime;
@@ -348,11 +344,7 @@ function processCscActions(
   return events;
 }
 
-function processNafMediation(
-  state: SimState,
-  rng: RngService,
-  commandId: string,
-): SimEvent[] {
+function processNafMediation(state: SimState, rng: RngService, commandId: string): SimEvent[] {
   const events: SimEvent[] = [];
   const runtime = state.foreignAffairsRuntime;
   const inst = runtime.institutionRuntime;
@@ -425,10 +417,7 @@ export function bilateralDcTension(
   return rel?.securityTension ?? 0.15;
 }
 
-export function institutionMemberCount(
-  world: KernelWorld,
-  institutionId: string,
-): number {
+export function institutionMemberCount(world: KernelWorld, institutionId: string): number {
   return world.worldInstitutions[institutionId]?.memberCountryIds.length ?? 0;
 }
 

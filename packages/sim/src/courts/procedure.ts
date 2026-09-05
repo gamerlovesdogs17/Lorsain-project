@@ -159,8 +159,13 @@ export function judicialEligibilityError(
   if (!profile) return reject("LEGAL_QUALIFICATION_REQUIRED", nomineeId);
   const birthYear = profile.birthDate ? Number(profile.birthDate.slice(0, 4)) : null;
   const age = birthYear ? Number(state.currentDate.slice(0, 4)) - birthYear : null;
-  if (age != null && age < 35) return reject("INSUFFICIENT_LEGAL_EXPERIENCE", `${nomineeId} is under 35`);
-  if (!hasExplicitLegalCareer(profile)) return reject("LEGAL_QUALIFICATION_REQUIRED", `${nomineeId} has no explicit qualifying legal career`);
+  if (age != null && age < 35)
+    return reject("INSUFFICIENT_LEGAL_EXPERIENCE", `${nomineeId} is under 35`);
+  if (!hasExplicitLegalCareer(profile))
+    return reject(
+      "LEGAL_QUALIFICATION_REQUIRED",
+      `${nomineeId} has no explicit qualifying legal career`,
+    );
   return null;
 }
 
@@ -789,8 +794,7 @@ export function recordJudicialDecision(
   courtCase.status = "decided";
   const majorityVote: JudicialVoteChoice =
     tallied.disposition === "UPHOLD" ? "uphold" : "invalidate";
-  const dissentVote: JudicialVoteChoice =
-    majorityVote === "uphold" ? "invalidate" : "uphold";
+  const dissentVote: JudicialVoteChoice = majorityVote === "uphold" ? "invalidate" : "uphold";
   const benchOrder = deriveCourtBench(world, state)
     .map((seat) => seat.holderId)
     .filter((id): id is string => id != null);

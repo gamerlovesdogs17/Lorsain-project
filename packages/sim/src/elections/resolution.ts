@@ -101,7 +101,11 @@ export function applyPresidentialAssumption(
   const presidentOffice = world.offices[officeId];
   for (const t of activeTermsForPolitician(state, electId)) {
     const currentOffice = world.offices[t.officeId];
-    if (!presidentOffice || !currentOffice || !officesAreIncompatible(presidentOffice, currentOffice)) {
+    if (
+      !presidentOffice ||
+      !currentOffice ||
+      !officesAreIncompatible(presidentOffice, currentOffice)
+    ) {
       continue;
     }
     const ended = endTerm(state, t.id, args.date, "incompatible_with_presidency");
@@ -128,7 +132,8 @@ export function applyPresidentialAssumption(
       : state.presidential.nextRegularElectionDate
     : regularElectionDate(
         world.presidentialCalendar,
-        parseIsoDate(state.presidential.nextRegularElectionDate).year + world.presidentialCalendar.intervalYears,
+        parseIsoDate(state.presidential.nextRegularElectionDate).year +
+          world.presidentialCalendar.intervalYears,
       );
   const termEnd = presidentialAssumptionDate(nextElection, world.presidentialCalendar);
   const assumed = assumeOffice(state, world, {
@@ -237,7 +242,11 @@ export function resolveUnablePresidentElect(
   const src = state.scheduler.events.find((event) => event.id === args.scheduledEventId);
   const sourceElectionId = payloadElectionId(src?.payload);
   const sourceElection = sourceElectionId ? state.elections[sourceElectionId] : null;
-  if (!sourceElection || sourceElection.type !== "presidential" || sourceElection.status !== "resolved") {
+  if (
+    !sourceElection ||
+    sourceElection.type !== "presidential" ||
+    sourceElection.status !== "resolved"
+  ) {
     return { error: reject("INVALID_ELECTION", sourceElectionId ?? "missing") };
   }
   const electId = state.presidential.certifiedPresidentElectId;
@@ -285,7 +294,11 @@ export function resolveUnablePresidentElect(
     visibility: "public",
     actorIds: electId ? [electId] : [],
     entityIds: [sourceElection.id],
-    payload: { sourceElectionId: sourceElection.id, nextRegularElection, specialElectionRequired: true },
+    payload: {
+      sourceElectionId: sourceElection.id,
+      nextRegularElection,
+      specialElectionRequired: true,
+    },
     sourceScheduledEventId: args.scheduledEventId,
     sourceCommandId: args.commandId,
   });

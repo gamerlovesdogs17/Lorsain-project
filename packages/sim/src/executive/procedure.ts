@@ -366,10 +366,7 @@ export function scheduleWarAuthorizationReferral(
       const bs = (bp?.skills.legislation ?? 0) * 0.6 + (bp?.traits.institutionalism ?? 0) * 0.4;
       return bs - as || a.localeCompare(b);
     })[0];
-  const sponsorId =
-    speaker && mps.includes(speaker)
-      ? speaker
-      : institutionalSponsor ?? mps[0]!;
+  const sponsorId = speaker && mps.includes(speaker) ? speaker : (institutionalSponsor ?? mps[0]!);
   return introduceMotion(
     world,
     state,

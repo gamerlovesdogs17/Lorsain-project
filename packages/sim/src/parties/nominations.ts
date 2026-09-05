@@ -86,7 +86,9 @@ export function applyQualification(
       qualified = got >= needed;
     } else if (method === "direct_member_rcv") {
       const min = rule?.provincialOrganizationEndorsementsMin ?? 4;
-      qualified = distinctPmProvincialOrgs(world, state, contest, entry.politicianId, activeEndorsements).size >= min;
+      qualified =
+        distinctPmProvincialOrgs(world, state, contest, entry.politicianId, activeEndorsements)
+          .size >= min;
     } else if (method === "weighted_ranked_choice") {
       qualified =
         qualified &&

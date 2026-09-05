@@ -50,19 +50,21 @@ export function provincialGovernmentRelation(
   provinceId: string,
 ): ProvincialGovernmentRelation {
   const governorId = currentGovernorId(world, state, provinceId);
-  const governorParty = governorId ? state.politicians[governorId]?.partyId ?? null : null;
+  const governorParty = governorId ? (state.politicians[governorId]?.partyId ?? null) : null;
   const assembly = state.provincialRuntime.assemblies[provinceId];
   if (!governorParty || !assembly) return "divided";
   const share = (assembly.partySeats[governorParty] ?? 0) / Math.max(1, assembly.seatCount);
-  const plurality = Object.entries(assembly.partySeats)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+  const plurality =
+    Object.entries(assembly.partySeats).sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+    )[0]?.[0] ?? null;
   if (share >= 0.5 || (plurality === governorParty && share >= 0.36)) return "friendly";
   if (share < 0.22 && plurality !== governorParty) return "hostile";
   return "divided";
 }
 
 function partyIdeology(world: KernelWorld, partyId: string | null, axis: IdeologyAxis): number {
-  return partyId ? world.partyPublicIdeology[partyId]?.[axis] ?? 0 : 0;
+  return partyId ? (world.partyPublicIdeology[partyId]?.[axis] ?? 0) : 0;
 }
 
 function memberIdeology(
@@ -74,7 +76,8 @@ function memberIdeology(
   const fullId = member.fullPoliticianId ?? (state.politicians[member.id] ? member.id : null);
   const profile = fullId ? getAgentProfile(world, state, fullId) : null;
   const baseline = profile?.ideology[axis] ?? partyIdeology(world, member.partyId, axis);
-  const personalOffset = ((provincialPoliticalHash(`${member.id}:${axis}:lean`) % 361) - 180) / 1000;
+  const personalOffset =
+    ((provincialPoliticalHash(`${member.id}:${axis}:lean`) % 361) - 180) / 1000;
   return clampSigned(baseline + personalOffset);
 }
 
@@ -85,7 +88,10 @@ function memberPartyLoyalty(
 ): number {
   const fullId = member.fullPoliticianId ?? (state.politicians[member.id] ? member.id : null);
   const profile = fullId ? getAgentProfile(world, state, fullId) : null;
-  return profile?.traits.partyLoyalty ?? 0.4 + (provincialPoliticalHash(`${member.id}:loyalty`) % 46) / 100;
+  return (
+    profile?.traits.partyLoyalty ??
+    0.4 + (provincialPoliticalHash(`${member.id}:loyalty`) % 46) / 100
+  );
 }
 
 function provincialInterest(state: SimState, bill: ProvincialBill): number {
@@ -128,8 +134,12 @@ export function deriveProvincialPartyPositions(
     const ideology = partyIdeology(world, partyId, policy.axis) * bill.policyDirection;
     const interest = provincialInterest(state, bill);
     const sponsorCoalition = [bill.sponsorId, ...bill.cosponsorIds].some(
-      (id) => state.provincialRuntime.legislators[id]?.partyId === partyId || state.politicians[id]?.partyId === partyId,
-    ) ? 1 : 0;
+      (id) =>
+        state.provincialRuntime.legislators[id]?.partyId === partyId ||
+        state.politicians[id]?.partyId === partyId,
+    )
+      ? 1
+      : 0;
     const sponsor = state.provincialRuntime.legislators[bill.sponsorId];
     const sponsorStrength = sponsor ? (sponsor.legislativeSkill + sponsor.standing) / 2 : 0.5;
     const fiscalPressure = Math.max(0, Math.min(1, state.economyRuntime.national.fiscalPressure));
@@ -137,10 +147,15 @@ export function deriveProvincialPartyPositions(
     const organizations = organizationSignal(world, bill);
     const relation = provincialGovernmentRelation(world, state, bill.provinceId);
     const governorId = currentGovernorId(world, state, bill.provinceId);
-    const governorParty = governorId ? state.politicians[governorId]?.partyId ?? null : null;
-    const governorAgenda = bill.agendaSource === "governor_priority"
-      ? partyId === governorParty ? 0.12 : relation === "hostile" ? -0.12 : -0.04
-      : 0;
+    const governorParty = governorId ? (state.politicians[governorId]?.partyId ?? null) : null;
+    const governorAgenda =
+      bill.agendaSource === "governor_priority"
+        ? partyId === governorParty
+          ? 0.12
+          : relation === "hostile"
+            ? -0.12
+            : -0.04
+        : 0;
     const score =
       ideology * 0.52 +
       interest * 0.12 +
@@ -172,12 +187,13 @@ export function chooseProvincialLegislativeVote(
   const policy = provincialPolicy(bill.subject);
   const ideology = memberIdeology(world, state, member, policy.axis) * bill.policyDirection;
   const partyPosition = bill.partyPositions[member.partyId ?? ""];
-  const partyPush = partyPosition?.stance === "support" ? 1 : partyPosition?.stance === "oppose" ? -1 : 0;
+  const partyPush =
+    partyPosition?.stance === "support" ? 1 : partyPosition?.stance === "oppose" ? -1 : 0;
   const loyalty = memberPartyLoyalty(world, state, member);
-  const partyCohesion = member.partyId ? state.partyStates[member.partyId]?.cohesion ?? 0.5 : 0;
+  const partyCohesion = member.partyId ? (state.partyStates[member.partyId]?.cohesion ?? 0.5) : 0;
   const discipline = Math.max(0.22, Math.min(0.9, 0.28 + partyCohesion * 0.52));
   const governorId = currentGovernorId(world, state, bill.provinceId);
-  const governorParty = governorId ? state.politicians[governorId]?.partyId ?? null : null;
+  const governorParty = governorId ? (state.politicians[governorId]?.partyId ?? null) : null;
   const governorSponsor = governorId === bill.sponsorId ? 1 : 0;
   const governorPartySignal = governorParty && member.partyId === governorParty ? 1 : 0;
   const overrideSignal = kind === "veto_override" ? -governorPartySignal * loyalty : 0;
@@ -185,17 +201,21 @@ export function chooseProvincialLegislativeVote(
   const orgSignal = organizationSignal(world, bill);
   const relation = provincialGovernmentRelation(world, state, bill.provinceId);
   const sponsor = state.provincialRuntime.legislators[bill.sponsorId];
-  const sponsorStrength = sponsor ? (sponsor.legislativeSkill + sponsor.standing - 1) : 0;
+  const sponsorStrength = sponsor ? sponsor.legislativeSkill + sponsor.standing - 1 : 0;
   const fiscalPressure = Math.max(0, Math.min(1, state.economyRuntime.national.fiscalPressure));
   const fiscalSignal = Math.max(-1, Math.min(1, -bill.fiscalImpact * (2 + fiscalPressure * 2.2)));
-  const issueDissent = bill.subject === "local_administration" ? 0.16
-    : bill.subject === "housing_delivery" ? 0.1
-      : 0.06;
+  const issueDissent =
+    bill.subject === "local_administration"
+      ? 0.16
+      : bill.subject === "housing_delivery"
+        ? 0.1
+        : 0.06;
   const independence = 1 - loyalty;
   const personalMandate =
     (((provincialPoliticalHash(`${bill.id}:${kind}:${memberId}:mandate`) % 1001) - 500) / 2500) *
     independence;
-  const noise = ((provincialPoliticalHash(`${bill.id}:${kind}:${memberId}:noise`) % 1001) - 500) / 3900;
+  const noise =
+    ((provincialPoliticalHash(`${bill.id}:${kind}:${memberId}:noise`) % 1001) - 500) / 3900;
   const score =
     ideology * 0.42 +
     partyPush * loyalty * discipline * (partyPosition?.strength ?? 0.35) * 0.32 +
@@ -237,10 +257,13 @@ export function evaluateGovernorDisposition(
   const governor = state.politicians[governorId];
   const profile = getAgentProfile(world, state, governorId);
   const policy = provincialPolicy(bill.subject);
-  const ideology = (profile?.ideology[policy.axis] ?? partyIdeology(world, governor?.partyId ?? null, policy.axis)) * bill.policyDirection;
+  const ideology =
+    (profile?.ideology[policy.axis] ??
+      partyIdeology(world, governor?.partyId ?? null, policy.axis)) * bill.policyDirection;
   const governorParty = governor?.partyId ?? null;
   const partyPosition = governorParty ? bill.partyPositions[governorParty] : null;
-  const party = partyPosition?.stance === "support" ? 1 : partyPosition?.stance === "oppose" ? -1 : 0;
+  const party =
+    partyPosition?.stance === "support" ? 1 : partyPosition?.stance === "oppose" ? -1 : 0;
   const governance = state.provincialRuntime.provinces[bill.provinceId];
   const prioritySubject: Partial<Record<string, ProvincialBillSubject[]>> = {
     transport: ["transport_service"],
@@ -249,16 +272,25 @@ export function evaluateGovernorDisposition(
     hospitals: ["hospital_access"],
     local_revenue: ["local_administration"],
   };
-  const agenda = prioritySubject[governance?.administrativePriority ?? ""]?.includes(bill.subject) ? bill.policyDirection : 0;
+  const agenda = prioritySubject[governance?.administrativePriority ?? ""]?.includes(bill.subject)
+    ? bill.policyDirection
+    : 0;
   const need = provincialInterest(state, bill);
   const fiscal = clampSigned(-bill.fiscalImpact * 2.2);
   const organizations = organizationSignal(world, bill);
   const assembly = state.provincialRuntime.assemblies[bill.provinceId];
-  const sponsorParty = state.provincialRuntime.legislators[bill.sponsorId]?.partyId ?? state.politicians[bill.sponsorId]?.partyId ?? null;
-  const legislature = governorParty && sponsorParty === governorParty ? 1 : assembly && governorParty
-    ? ((assembly.partySeats[governorParty] ?? 0) / Math.max(1, assembly.seatCount)) * 2 - 0.5
-    : 0;
-  const noise = ((provincialPoliticalHash(`${bill.id}:${governorId}:disposition-noise`) % 1001) - 500) / 7000;
+  const sponsorParty =
+    state.provincialRuntime.legislators[bill.sponsorId]?.partyId ??
+    state.politicians[bill.sponsorId]?.partyId ??
+    null;
+  const legislature =
+    governorParty && sponsorParty === governorParty
+      ? 1
+      : assembly && governorParty
+        ? ((assembly.partySeats[governorParty] ?? 0) / Math.max(1, assembly.seatCount)) * 2 - 0.5
+        : 0;
+  const noise =
+    ((provincialPoliticalHash(`${bill.id}:${governorId}:disposition-noise`) % 1001) - 500) / 7000;
   const score =
     ideology * 0.36 +
     party * 0.22 +

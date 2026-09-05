@@ -35,12 +35,15 @@ function constituencyFit(
   for (const id of blocIds) {
     const bloc = world.voterBlocs[id];
     if (!bloc) continue;
-    const fit = item.dimensionEffects && Object.keys(item.dimensionEffects).length > 0
-      ? (Object.entries(item.dimensionEffects) as Array<[keyof typeof bloc.ideology, number]>).reduce(
-          (sum, [effectAxis, effect]) => sum + (bloc.ideology[effectAxis] ?? 0) * effect,
-          0,
-        ) / Object.keys(item.dimensionEffects).length
-      : (bloc.ideology[axis] ?? 0) * item.direction;
+    const fit =
+      item.dimensionEffects && Object.keys(item.dimensionEffects).length > 0
+        ? (
+            Object.entries(item.dimensionEffects) as Array<[keyof typeof bloc.ideology, number]>
+          ).reduce(
+            (sum, [effectAxis, effect]) => sum + (bloc.ideology[effectAxis] ?? 0) * effect,
+            0,
+          ) / Object.keys(item.dimensionEffects).length
+        : (bloc.ideology[axis] ?? 0) * item.direction;
     acc += fit * bloc.weight;
     w += bloc.weight;
   }
@@ -71,19 +74,28 @@ export function chooseLegislativeVote(
   const partyPush = party === "support" ? 1 : party === "oppose" ? -1 : 0;
   const factionPush = faction === "support" ? 1 : faction === "oppose" ? -1 : 0;
   const discipline = pol?.partyId ? parliamentaryDiscipline(world, state, pol.partyId).score : 0;
-  const dimensions = bill.policyItems.map((item) => world.issueDimensions[item.issueId] ?? "institutional");
-  const issueDiscipline = dimensions.length === 0 ? 0.72 : dimensions.reduce((sum, dimension) => {
-    if (dimension === "social") return sum + 0.56;
-    if (dimension === "institutional") return sum + 0.66;
-    if (dimension === "economic-social") return sum + 0.62;
-    if (dimension === "foreign") return sum + 0.8;
-    return sum + 0.74;
-  }, 0) / dimensions.length;
+  const dimensions = bill.policyItems.map(
+    (item) => world.issueDimensions[item.issueId] ?? "institutional",
+  );
+  const issueDiscipline =
+    dimensions.length === 0
+      ? 0.72
+      : dimensions.reduce((sum, dimension) => {
+          if (dimension === "social") return sum + 0.56;
+          if (dimension === "institutional") return sum + 0.66;
+          if (dimension === "economic-social") return sum + 0.62;
+          if (dimension === "foreign") return sum + 0.8;
+          return sum + 0.74;
+        }, 0) / dimensions.length;
   const factionConflict = partyPush !== 0 && factionPush === -partyPush;
   const constituencyConflict = partyPush !== 0 && district * partyPush < -0.06;
   const conscienceRoom = Math.max(0.08, 1 - discipline * issueDiscipline);
-  const personalVariance = (rng.float01("legislature") - 0.5) *
-    (0.18 + conscienceRoom * 0.32 + (factionConflict ? 0.12 : 0) + (constituencyConflict ? 0.1 : 0));
+  const personalVariance =
+    (rng.float01("legislature") - 0.5) *
+    (0.18 +
+      conscienceRoom * 0.32 +
+      (factionConflict ? 0.12 : 0) +
+      (constituencyConflict ? 0.1 : 0));
   const score =
     fit * 0.36 +
     partyPush * partyLoyalty * discipline * issueDiscipline * 0.38 +
@@ -144,18 +156,26 @@ export function chooseIntroduce(
           ? "globalism"
           : "authority";
   const v = profile.ideology[axis] ?? 0;
-  const propensity = 0.12 + Math.abs(v) * 0.26 + profile.traits.ambition * 0.2 + profile.skills.legislation * 0.18;
+  const propensity =
+    0.12 + Math.abs(v) * 0.26 + profile.traits.ambition * 0.2 + profile.skills.legislation * 0.18;
   if (rng.float01("legislature") > propensity) return null;
   const alternatives = definition.options.filter((option) => !option.current);
-  const selected = alternatives.map((option) => {
-    const fit = option.dimensionEffects && Object.keys(option.dimensionEffects).length > 0
-      ? (Object.entries(option.dimensionEffects) as Array<[keyof typeof profile.ideology, number]>).reduce(
-          (sum, [effectAxis, effect]) => sum + (profile.ideology[effectAxis] ?? 0) * effect,
-          0,
-        ) / Object.keys(option.dimensionEffects).length
-      : v * option.direction;
-    return { option, score: fit * option.magnitude + rng.float01("legislature") * 0.08 };
-  }).sort((a, b) => b.score - a.score || a.option.id.localeCompare(b.option.id))[0]?.option;
+  const selected = alternatives
+    .map((option) => {
+      const fit =
+        option.dimensionEffects && Object.keys(option.dimensionEffects).length > 0
+          ? (
+              Object.entries(option.dimensionEffects) as Array<
+                [keyof typeof profile.ideology, number]
+              >
+            ).reduce(
+              (sum, [effectAxis, effect]) => sum + (profile.ideology[effectAxis] ?? 0) * effect,
+              0,
+            ) / Object.keys(option.dimensionEffects).length
+          : v * option.direction;
+      return { option, score: fit * option.magnitude + rng.float01("legislature") * 0.08 };
+    })
+    .sort((a, b) => b.score - a.score || a.option.id.localeCompare(b.option.id))[0]?.option;
   return selected ? policyItemForProvision(definition.id, selected.id) : null;
 }
 
@@ -183,11 +203,23 @@ export function evaluatePresidentDisposition(
   const profile = getAgentProfile(world, state, presidentId);
   const policyFit = billPolicyFit(world, state, presidentId, bill);
   const sponsorIds = [bill.sponsorId, ...bill.cosponsorIds];
-  const alignedSponsors = sponsorIds.filter((id) => president?.partyId && state.politicians[id]?.partyId === president.partyId).length;
-  const sponsorCoalition = sponsorIds.length > 0 ? (alignedSponsors / sponsorIds.length) * 2 - 1 : 0;
-  const floorVote = bill.floorVoteId ? state.legislatureRuntime.legislativeVotes[bill.floorVoteId] : null;
+  const alignedSponsors = sponsorIds.filter(
+    (id) => president?.partyId && state.politicians[id]?.partyId === president.partyId,
+  ).length;
+  const sponsorCoalition =
+    sponsorIds.length > 0 ? (alignedSponsors / sponsorIds.length) * 2 - 1 : 0;
+  const floorVote = bill.floorVoteId
+    ? state.legislatureRuntime.legislativeVotes[bill.floorVoteId]
+    : null;
   const assemblyMandate = floorVote
-    ? Math.max(-1, Math.min(1, (floorVote.yes - floorVote.no) / Math.max(1, floorVote.yes + floorVote.no + floorVote.abstain)))
+    ? Math.max(
+        -1,
+        Math.min(
+          1,
+          (floorVote.yes - floorVote.no) /
+            Math.max(1, floorVote.yes + floorVote.no + floorVote.abstain),
+        ),
+      )
     : 0;
   const fiscalTotal = bill.policyItems.reduce((sum, item) => sum + (item.fiscalImpact ?? 0), 0);
   const fiscalPressure = state.economyRuntime.national.fiscalPressure;
@@ -218,5 +250,11 @@ export function choosePresidentDisposition(
   rng: RngService,
 ): "sign" | "return" {
   if (presidentId === state.playerPoliticianId) return "sign";
-  return evaluatePresidentDisposition(world, state, presidentId, bill, (rng.float01("npc-decisions") - 0.5) * 0.14).decision;
+  return evaluatePresidentDisposition(
+    world,
+    state,
+    presidentId,
+    bill,
+    (rng.float01("npc-decisions") - 0.5) * 0.14,
+  ).decision;
 }

@@ -112,7 +112,11 @@ function campaignActionsClosed(state: SimState, campaign: CampaignState): boolea
   if (contestStatus === "resolved" || contestStatus === "cancelled") return true;
   if (!campaign.electionId) return false;
   const nationalStatus = state.elections[campaign.electionId]?.status;
-  if (nationalStatus === "voting" || nationalStatus === "resolved" || nationalStatus === "cancelled") {
+  if (
+    nationalStatus === "voting" ||
+    nationalStatus === "resolved" ||
+    nationalStatus === "cancelled"
+  ) {
     return true;
   }
   const governorStatus = state.provincialRuntime.elections[campaign.electionId]?.status;
@@ -179,10 +183,7 @@ export function declareCampaign(
       ? state.elections[args.electionId]
       : Object.values(state.elections)
           .filter(
-            (e) =>
-              e.type === "presidential" &&
-              e.status !== "resolved" &&
-              e.status !== "cancelled",
+            (e) => e.type === "presidential" && e.status !== "resolved" && e.status !== "cancelled",
           )
           .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
     const electionId = election?.id ?? String(args.electionId ?? "presidential");
@@ -227,7 +228,8 @@ export function declareCampaign(
               candidate.status !== "assumed",
           )
           .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
-    if (!election) return { error: reject("INVALID_ELECTION", String(args.electionId ?? "governor")) };
+    if (!election)
+      return { error: reject("INVALID_ELECTION", String(args.electionId ?? "governor")) };
     const candidacy = election.candidates[args.politicianId];
     if (!candidacy || candidacy.withdrawn) {
       return { error: reject("NOT_A_CANDIDATE", args.politicianId) };
@@ -264,11 +266,16 @@ export function declareCampaign(
     const election = args.electionId
       ? state.provincialRuntime.assemblyElections[args.electionId]
       : Object.values(state.provincialRuntime.assemblyElections)
-          .filter((candidate) =>
-            candidate.candidateIds.includes(args.politicianId) &&
-            candidate.status === "filing_open")
+          .filter(
+            (candidate) =>
+              candidate.candidateIds.includes(args.politicianId) &&
+              candidate.status === "filing_open",
+          )
           .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
-    if (!election) return { error: reject("INVALID_ELECTION", String(args.electionId ?? "provincial_assembly")) };
+    if (!election)
+      return {
+        error: reject("INVALID_ELECTION", String(args.electionId ?? "provincial_assembly")),
+      };
     if (!election.candidateIds.includes(args.politicianId)) {
       return { error: reject("NOT_A_CANDIDATE", args.politicianId) };
     }
@@ -390,7 +397,12 @@ function beginAction(
   const actorErr = requireActor(state, campaign, actorId);
   if (actorErr) return { error: actorErr };
   if (campaignActionsClosed(state, campaign)) {
-    return { error: reject("CAMPAIGN_ACTIONS_CLOSED", "Campaign actions close when voting and counting begin") };
+    return {
+      error: reject(
+        "CAMPAIGN_ACTIONS_CLOSED",
+        "Campaign actions close when voting and counting begin",
+      ),
+    };
   }
   ensureActionPoints(world, state, campaign);
   const ap = spendActionPoint(campaign);
@@ -550,19 +562,25 @@ function campaignGeographyScopeError(
   if (!geography.id) return reject("INVALID_GEOGRAPHY", "mobilization requires a place");
   if (campaign.type === "assembly") {
     if (geography.kind !== "constituency" || geography.id !== campaign.constituencyId) {
-      return reject("INVALID_GEOGRAPHY", "Assembly mobilization must remain in the filed constituency");
+      return reject(
+        "INVALID_GEOGRAPHY",
+        "Assembly mobilization must remain in the filed constituency",
+      );
     }
   }
-  const provinceId = typeof campaign.metadata.provinceId === "string" ? campaign.metadata.provinceId : null;
+  const provinceId =
+    typeof campaign.metadata.provinceId === "string" ? campaign.metadata.provinceId : null;
   if (provinceId && geography.kind === "province" && geography.id !== provinceId) {
     return reject("INVALID_GEOGRAPHY", "provincial campaign cannot mobilize outside its province");
   }
   if (
     provinceId &&
     geography.kind === "constituency" &&
-    !(world.constituencyElectorate[geography.id]?.provincePopulationShares.some(
-      (share) => share.provinceId === provinceId && share.share > 0,
-    ) ?? false)
+    !(
+      world.constituencyElectorate[geography.id]?.provincePopulationShares.some(
+        (share) => share.provinceId === provinceId && share.share > 0,
+      ) ?? false
+    )
   ) {
     return reject("INVALID_GEOGRAPHY", "constituency is outside the campaign province");
   }
@@ -581,21 +599,37 @@ export function campaignGotv(
   if (actorErr) return { error: actorErr };
   const geoErr = campaignGeographyError(world, args.geography);
   if (geoErr || args.geography.kind === "national") {
-    return { error: geoErr ?? reject("INVALID_GEOGRAPHY", "GOTV requires a province or constituency") };
+    return {
+      error: geoErr ?? reject("INVALID_GEOGRAPHY", "GOTV requires a province or constituency"),
+    };
   }
   const scopeErr = campaignGeographyScopeError(world, existing, args.geography);
   if (scopeErr) return { error: scopeErr };
   const targetDate = campaignTargetDate(state, existing);
   const months = campaignMonthsRemaining(state, existing);
-  if (!targetDate || months == null || months < 0 || months > 1 || compareIsoDate(state.currentDate, targetDate) > 0) {
-    return { error: reject("GOTV_WINDOW_CLOSED", "GOTV opens during the final two campaign months") };
+  if (
+    !targetDate ||
+    months == null ||
+    months < 0 ||
+    months > 1 ||
+    compareIsoDate(state.currentDate, targetDate) > 0
+  ) {
+    return {
+      error: reject("GOTV_WINDOW_CLOSED", "GOTV opens during the final two campaign months"),
+    };
   }
   const geographyId = args.geography.id!;
-  const organization = args.geography.kind === "province"
-    ? (existing.organizationByProvince[geographyId] ?? 0) + existing.fieldOrganization * 0.25
-    : (existing.organizationByConstituency[geographyId] ?? 0) + existing.fieldOrganization * 0.2;
+  const organization =
+    args.geography.kind === "province"
+      ? (existing.organizationByProvince[geographyId] ?? 0) + existing.fieldOrganization * 0.25
+      : (existing.organizationByConstituency[geographyId] ?? 0) + existing.fieldOrganization * 0.2;
   if (organization < FIELD.gotvMinimumOrganization) {
-    return { error: reject("INSUFFICIENT_ORGANIZATION", "Build a Ground Game here before mobilizing voters") };
+    return {
+      error: reject(
+        "INSUFFICIENT_ORGANIZATION",
+        "Build a Ground Game here before mobilizing voters",
+      ),
+    };
   }
   const key = `${args.geography.kind}:${geographyId}`;
   const prior = gotvActivations(existing)[key];
@@ -673,15 +707,25 @@ export function campaignVisit(
   );
   const maxPopulation = Math.max(1, ...constituencyPopulations);
   if (args.geography.kind === "national") {
-    const provincePops = world.provinceIds.map((provinceId) => provincePopulation(world, provinceId));
+    const provincePops = world.provinceIds.map((provinceId) =>
+      provincePopulation(world, provinceId),
+    );
     const maxProvincePopulation = Math.max(1, ...provincePops);
     for (const provinceId of world.provinceIds) {
       const reach = Math.sqrt(provincePopulation(world, provinceId) / maxProvincePopulation);
-      addProvinceOrganization(campaign, provinceId, FIELD.visitOrgGain * dim * (0.12 + reach * 0.1));
+      addProvinceOrganization(
+        campaign,
+        provinceId,
+        FIELD.visitOrgGain * dim * (0.12 + reach * 0.1),
+      );
     }
     for (const cid of targets) {
       const reach = Math.sqrt((world.constituencyElectorate[cid]?.population ?? 0) / maxPopulation);
-      addConstituencyOrganization(campaign, cid, FIELD.visitOrgGain * dim * (0.035 + reach * 0.035));
+      addConstituencyOrganization(
+        campaign,
+        cid,
+        FIELD.visitOrgGain * dim * (0.035 + reach * 0.035),
+      );
     }
   } else if (args.geography.kind === "province" && args.geography.id) {
     const provinceId = args.geography.id;
@@ -700,7 +744,11 @@ export function campaignVisit(
     for (const cid of targets) {
       addConstituencyOrganization(campaign, cid, FIELD.visitOrgGain * dim);
       for (const row of world.constituencyElectorate[cid]?.provincePopulationShares ?? []) {
-        addProvinceOrganization(campaign, row.provinceId, FIELD.visitOrgGain * dim * row.share * 0.25);
+        addProvinceOrganization(
+          campaign,
+          row.provinceId,
+          FIELD.visitOrgGain * dim * row.share * 0.25,
+        );
       }
     }
   }
@@ -751,7 +799,10 @@ export function campaignOrganize(
   };
   const geoErr = campaignGeographyError(world, geography);
   if (geoErr || geography.kind === "national") {
-    return { error: geoErr ?? reject("INVALID_GEOGRAPHY", "organizing requires a province or constituency") };
+    return {
+      error:
+        geoErr ?? reject("INVALID_GEOGRAPHY", "organizing requires a province or constituency"),
+    };
   }
   const campaign = beginAction(world, state, args.campaignId, args.actorId);
   if ("error" in campaign) return campaign;
@@ -1290,7 +1341,9 @@ export function withdrawCampaign(
   const actorErr = requireActor(state, campaign, args.actorId);
   if (actorErr) return { error: actorErr };
   if (campaignActionsClosed(state, campaign)) {
-    return { error: reject("CAMPAIGN_ACTIONS_CLOSED", "Withdrawal closes when voting and counting begin") };
+    return {
+      error: reject("CAMPAIGN_ACTIONS_CLOSED", "Withdrawal closes when voting and counting begin"),
+    };
   }
   campaign.status = "withdrawn";
   campaign.endedDate = state.currentDate;

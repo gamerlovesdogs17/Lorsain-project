@@ -15,7 +15,9 @@ function clampUnit(value: number): number {
 }
 
 export function governorOfficeForProvince(world: KernelWorld, provinceId: string) {
-  return officesOfKind(world, "governor").find((office) => office.provinceId === provinceId) ?? null;
+  return (
+    officesOfKind(world, "governor").find((office) => office.provinceId === provinceId) ?? null
+  );
 }
 
 export function currentGovernorId(

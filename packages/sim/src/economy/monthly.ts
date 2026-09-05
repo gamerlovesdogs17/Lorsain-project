@@ -41,7 +41,12 @@ function event(
 function queuePolicySource(
   state: SimState,
   sourceId: string,
-  items: Array<{ issueId: string; direction: number; magnitude: number; fiscalImpact: number | null }>,
+  items: Array<{
+    issueId: string;
+    direction: number;
+    magnitude: number;
+    fiscalImpact: number | null;
+  }>,
   lagKind: EconomyLagKind,
 ): void {
   if (state.economyRuntime.appliedPolicySources[sourceId]) return;
@@ -111,7 +116,10 @@ function applyMomentumAndBudget(state: SimState, world: KernelWorld, rng: RngSer
   );
   cycle.housingMomentum = Math.max(
     -0.34,
-    Math.min(0.34, cycle.housingMomentum * 0.8 + Math.sin(cycle.phase - 0.8) * 0.035 + noise() * 0.5),
+    Math.min(
+      0.34,
+      cycle.housingMomentum * 0.8 + Math.sin(cycle.phase - 0.8) * 0.035 + noise() * 0.5,
+    ),
   );
   const scenario = world.economyScenario;
   const start = scenario?.national ?? {
@@ -144,27 +152,36 @@ function applyMomentumAndBudget(state: SimState, world: KernelWorld, rng: RngSer
   const priceTarget = start.priceIndex + trend.prices * years - wave * 0.5;
   n.priceIndex = moveToward(n.priceIndex, priceTarget, 0.025, cycle.inflationMomentum);
   const wageTarget =
-    start.realWageIndex + trend.realWages * years +
+    start.realWageIndex +
+    trend.realWages * years +
     (n.employmentIndex - start.employmentIndex) * 0.24 -
     (n.priceIndex - start.priceIndex) * 0.12;
   n.realWageIndex = moveToward(n.realWageIndex, wageTarget, 0.035, noise() * 0.18);
-  const housingTarget = start.housingIndex + trend.housing * years + Math.sin(cycle.phase - 0.8) * 1.1;
+  const housingTarget =
+    start.housingIndex + trend.housing * years + Math.sin(cycle.phase - 0.8) * 1.1;
   n.housingIndex = moveToward(n.housingIndex, housingTarget, 0.028, cycle.housingMomentum);
   const confidenceTarget =
-    start.confidenceIndex + (n.outputIndex - start.outputIndex) * 0.6 -
-    (n.priceIndex - start.priceIndex) * 0.22 - (n.fiscalPressure - start.fiscalPressure) * 4;
+    start.confidenceIndex +
+    (n.outputIndex - start.outputIndex) * 0.6 -
+    (n.priceIndex - start.priceIndex) * 0.22 -
+    (n.fiscalPressure - start.fiscalPressure) * 4;
   n.confidenceIndex = moveToward(n.confidenceIndex, confidenceTarget, 0.08, noise() * 0.45);
   const budgets = Object.values(state.executiveRuntime.budgets);
   const latest = budgets.sort((a, b) => (a.fiscalYear < b.fiscalYear ? 1 : -1))[0];
   if (latest?.status === "approved") n.fiscalPressure = clampFiscal(n.fiscalPressure - 0.01);
-  else if (latest?.status === "continuing") n.fiscalPressure = clampFiscal(n.fiscalPressure + 0.008);
+  else if (latest?.status === "continuing")
+    n.fiscalPressure = clampFiscal(n.fiscalPressure + 0.008);
   n.confidenceIndex = clampIndex(n.confidenceIndex - (n.fiscalPressure - 0.35) * 0.4);
 }
 
-function applyShock(state: SimState, world: KernelWorld, rng: RngService, commandId: string): SimEvent[] {
+function applyShock(
+  state: SimState,
+  world: KernelWorld,
+  rng: RngService,
+  commandId: string,
+): SimEvent[] {
   const events: SimEvent[] = [];
-  const early =
-    world.scenarioStartDate <= "2028-01-01" && state.currentDate < "2028-03-01";
+  const early = world.scenarioStartDate <= "2028-01-01" && state.currentDate < "2028-03-01";
   const roll = rng.float01("economy");
   let magnitude = (rng.float01("economy") - 0.5) * 0.28;
   let kind = "routine";
@@ -187,15 +204,7 @@ function applyShock(state: SimState, world: KernelWorld, rng: RngService, comman
       remainingMonths: 2,
       metadata: {},
     });
-    events.push(
-      event(
-        state,
-        "ECONOMIC_SHOCK",
-        { shockId: id, kind, magnitude },
-        commandId,
-        0.7,
-      ),
-    );
+    events.push(event(state, "ECONOMIC_SHOCK", { shockId: id, kind, magnitude }, commandId, 0.7));
   }
   state.economyRuntime.shocks = state.economyRuntime.shocks.filter((s) => {
     s.remainingMonths -= 1;
@@ -222,8 +231,11 @@ function updateRegions(world: KernelWorld, state: SimState): void {
     if (!profile) continue;
     let nationalSignal = n.outputIndex - startNational.outputIndex;
     if (sectorId === "labor") {
-      nationalSignal = ((n.employmentIndex - startNational.employmentIndex) +
-        (n.realWageIndex - startNational.realWageIndex)) / 2;
+      nationalSignal =
+        (n.employmentIndex -
+          startNational.employmentIndex +
+          (n.realWageIndex - startNational.realWageIndex)) /
+        2;
     } else if (sectorId === "housing") {
       nationalSignal = n.housingIndex - startNational.housingIndex;
     } else if (sectorId === "trade") {
@@ -236,7 +248,8 @@ function updateRegions(world: KernelWorld, state: SimState): void {
         (n.confidenceIndex - startNational.confidenceIndex) * 0.55;
     }
     const target =
-      profile.conditionsIndex + nationalSignal * profile.cyclicalSensitivity +
+      profile.conditionsIndex +
+      nationalSignal * profile.cyclicalSensitivity +
       profile.annualStructuralTrend * years;
     current.conditionsIndex = moveToward(current.conditionsIndex, target, 0.12);
   }
@@ -254,11 +267,14 @@ function updateRegions(world: KernelWorld, state: SimState): void {
       state.economyRuntime.provinces[provinceId] = current;
       continue;
     }
-    const sectorSignal = Object.entries(profile.sectorExposure).reduce((sum, [sectorId, weight]) => {
-      const sector = state.economyRuntime.sectors[sectorId];
-      const base = scenario?.sectors[sectorId as EconomySectorId]?.conditionsIndex ?? 100;
-      return sum + ((sector?.conditionsIndex ?? base) - base) * weight;
-    }, 0);
+    const sectorSignal = Object.entries(profile.sectorExposure).reduce(
+      (sum, [sectorId, weight]) => {
+        const sector = state.economyRuntime.sectors[sectorId];
+        const base = scenario?.sectors[sectorId as EconomySectorId]?.conditionsIndex ?? 100;
+        return sum + ((sector?.conditionsIndex ?? base) - base) * weight;
+      },
+      0,
+    );
     const outputSignal = n.outputIndex - startNational.outputIndex;
     const employmentSignal = n.employmentIndex - startNational.employmentIndex;
     const housingSignal = n.housingIndex - startNational.housingIndex;
@@ -279,7 +295,8 @@ function updateRegions(world: KernelWorld, state: SimState): void {
     );
     current.employmentIndex = moveToward(
       current.employmentIndex,
-      profile.starting.employmentIndex + employmentSignal * profile.sensitivity.growth +
+      profile.starting.employmentIndex +
+        employmentSignal * profile.sensitivity.growth +
         sectorSignal * 0.25 +
         tradeSignal * profile.sensitivity.trade * 0.1 +
         profile.annualStructuralTrend.employment * years,
@@ -287,8 +304,10 @@ function updateRegions(world: KernelWorld, state: SimState): void {
     );
     current.housingIndex = moveToward(
       current.housingIndex,
-      profile.starting.housingIndex + housingSignal * profile.sensitivity.housing -
-        priceSignal * 0.12 + profile.annualStructuralTrend.housing * years,
+      profile.starting.housingIndex +
+        housingSignal * profile.sensitivity.housing -
+        priceSignal * 0.12 +
+        profile.annualStructuralTrend.housing * years,
       0.07,
     );
     state.economyRuntime.provinces[provinceId] = current;
@@ -331,8 +350,12 @@ function publicPoliticalEffects(world: KernelWorld, state: SimState): void {
   const president = currentPresidentialAuthorityId(world, state);
   if (president) {
     const standing = ensureCandidateStanding(world, state, president);
-    standing.favorability = clampUnit(standing.favorability + Math.max(-0.018, Math.min(0.018, conf * 0.04)));
-    standing.momentum = clampUnit(standing.momentum + Math.max(-0.012, Math.min(0.012, conf * 0.03)));
+    standing.favorability = clampUnit(
+      standing.favorability + Math.max(-0.018, Math.min(0.018, conf * 0.04)),
+    );
+    standing.momentum = clampUnit(
+      standing.momentum + Math.max(-0.012, Math.min(0.012, conf * 0.03)),
+    );
   }
   const climate = state.electoralEnvironment.issueClimateShift;
   bumpIssueClimate(world, climate, "ISS_HOUSING", housing * 0.04);

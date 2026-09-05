@@ -21,7 +21,9 @@ export function publicElectabilitySignal(
   let pollShare = 0;
   if (contestType === "presidential_nomination" && contestId) {
     pollShare =
-      precomputedPollShare ?? contestPollAverage(state, state.currentDate, contestId)[politicianId] ?? 0;
+      precomputedPollShare ??
+      contestPollAverage(state, state.currentDate, contestId)[politicianId] ??
+      0;
   }
   return (
     standingScore * SELECTOR_ELECTABILITY.standing + pollShare * SELECTOR_ELECTABILITY.pollShare

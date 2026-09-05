@@ -1,9 +1,4 @@
-import {
-  TERENA_WORLD_ID,
-  bilateralKey,
-  type KernelWorld,
-  type SimState,
-} from "@lorsain/sim";
+import { TERENA_WORLD_ID, bilateralKey, type KernelWorld, type SimState } from "@lorsain/sim";
 import { institutionDisplayName } from "../presentation.js";
 import type { WorldMapMode } from "./WorldMap.js";
 

@@ -50,37 +50,37 @@ function selectPostElectionSpeaker(
   const seatTotals = state.elections[electionId]?.assembly?.partySeatTotals ?? {};
   const speakerOffice = world.offices.OFFICE_SPEAKER;
   if (!speakerOffice) return null;
-  return winnerIds
-    .filter((id) => id !== state.playerPoliticianId)
-    .filter((id) =>
-      activeTermsForPolitician(state, id).every((term) => {
-        const other = world.offices[term.officeId];
+  return (
+    winnerIds
+      .filter((id) => id !== state.playerPoliticianId)
+      .filter((id) =>
+        activeTermsForPolitician(state, id).every((term) => {
+          const other = world.offices[term.officeId];
+          return (
+            !other || other.id === speakerOffice.id || !officesAreIncompatible(speakerOffice, other)
+          );
+        }),
+      )
+      .sort((a, b) => {
+        const score = (id: string) => {
+          const politician = state.politicians[id];
+          const standing = candidateStandingOrDefault(world, state, id);
+          const partySeats = seatTotals[politician?.partyId ?? "independent"] ?? 0;
+          const partyLeader =
+            politician?.partyId && state.partyStates[politician.partyId]?.leaderId === id ? 1 : 0;
+          return (
+            (partySeats / Math.max(1, world.legislativeConstitution.assemblySeatCount)) * 1.8 +
+            standing.nameRecognition * 0.35 +
+            standing.favorability * 0.2 +
+            partyLeader * 0.3
+          );
+        };
         return (
-          !other ||
-          other.id === speakerOffice.id ||
-          !officesAreIncompatible(speakerOffice, other)
+          score(b) - score(a) ||
+          stableHash(`${electionId}:speaker:${a}`) - stableHash(`${electionId}:speaker:${b}`)
         );
-      }),
-    )
-    .sort((a, b) => {
-      const score = (id: string) => {
-        const politician = state.politicians[id];
-        const standing = candidateStandingOrDefault(world, state, id);
-        const partySeats = seatTotals[politician?.partyId ?? "independent"] ?? 0;
-        const partyLeader =
-          politician?.partyId && state.partyStates[politician.partyId]?.leaderId === id ? 1 : 0;
-        return (
-          (partySeats / Math.max(1, world.legislativeConstitution.assemblySeatCount)) * 1.8 +
-          standing.nameRecognition * 0.35 +
-          standing.favorability * 0.2 +
-          partyLeader * 0.3
-        );
-      };
-      return (
-        score(b) - score(a) ||
-        stableHash(`${electionId}:speaker:${a}`) - stableHash(`${electionId}:speaker:${b}`)
-      );
-    })[0] ?? null;
+      })[0] ?? null
+  );
 }
 
 export function assemblyElectionIdForDate(date: IsoDate): string {
@@ -243,7 +243,11 @@ export function resolveAssemblyElection(
       mobilizationByCandidate,
     });
     if ("error" in out) return { error: out.error };
-    if (!out.election.turnout || !out.election.countArchive || out.election.countArchive.method !== "stv") {
+    if (
+      !out.election.turnout ||
+      !out.election.countArchive ||
+      out.election.countArchive.method !== "stv"
+    ) {
       return { error: reject("COUNT_FAILED", `${cid} did not produce a complete STV archive`) };
     }
     constituencyElectionIds[cid] = out.election.id;
@@ -345,8 +349,7 @@ export function applyAssemblyAssumption(
   args: { date: IsoDate; scheduledEventId: string; commandId: string },
 ): { events: SimEvent[] } | { error: CommandError } {
   const src = state.scheduler.events.find((e) => e.id === args.scheduledEventId);
-  const electionId =
-    typeof src?.payload.electionId === "string" ? src.payload.electionId : null;
+  const electionId = typeof src?.payload.electionId === "string" ? src.payload.electionId : null;
   if (!electionId) {
     return { error: reject("MISSING_ELECTION_ID", "assumption event lacks electionId") };
   }

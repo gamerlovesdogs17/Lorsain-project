@@ -67,7 +67,9 @@ export function processNpcTerenaDiplomacy(
   state.foreignAffairsRuntime.diplomaticActionsThisMonth += 1;
 
   if (roll < 0.4 && rel.general > 0) {
-    const delta = outreachRelationDelta(world.worldCountries[TERENA_WORLD_ID]?.powerTier ?? "major power");
+    const delta = outreachRelationDelta(
+      world.worldCountries[TERENA_WORLD_ID]?.powerTier ?? "major power",
+    );
     adjustRelation(rel, { ...delta, general: delta.general + 2 });
     rel.lastUpdated = state.currentDate;
     recordNpcAction(state, { targetCountryId: targetId, kind: "outreach", commandId });

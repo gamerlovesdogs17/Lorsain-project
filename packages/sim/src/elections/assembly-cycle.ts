@@ -1,4 +1,10 @@
-import { addMonths, compareIsoDate, formatIsoDate, parseIsoDate, type IsoDate } from "../calendar.js";
+import {
+  addMonths,
+  compareIsoDate,
+  formatIsoDate,
+  parseIsoDate,
+  type IsoDate,
+} from "../calendar.js";
 import { getAgentProfile, ageOnDate } from "../agents/profile.js";
 import { activeTermsForPolitician, occupyingTerms, officesOfKind } from "../offices.js";
 import { recruitFederalAssemblyClass } from "../provinces/assemblies.js";
@@ -96,7 +102,9 @@ export function assemblyCandidateEligibilityError(
   }
   if (
     pol.partyId === world.independentAggregatePartyId ||
-    (pol.partyId != null && !world.partyDefinitions[pol.partyId] && !state.dynamicParties[pol.partyId])
+    (pol.partyId != null &&
+      !world.partyDefinitions[pol.partyId] &&
+      !state.dynamicParties[pol.partyId])
   ) {
     return reject("INVALID_PARTY", String(pol.partyId));
   }
@@ -181,8 +189,14 @@ function candidateQuality(state: SimState, world: KernelWorld, politicianId: str
   );
 }
 
-function localFit(state: SimState, world: KernelWorld, politicianId: string, constituencyId: string): number {
-  const home = state.politicians[politicianId]?.homeProvinceId ?? world.politicianHomeProvince[politicianId];
+function localFit(
+  state: SimState,
+  world: KernelWorld,
+  politicianId: string,
+  constituencyId: string,
+): number {
+  const home =
+    state.politicians[politicianId]?.homeProvinceId ?? world.politicianHomeProvince[politicianId];
   if (!home) return 0;
   return (
     world.constituencyElectorate[constituencyId]?.provincePopulationShares.find(
@@ -251,10 +265,17 @@ function availableAssemblyCandidateIds(
   }
 
   const available = new Set<string>();
-  for (const candidacy of Object.values(ensureAssemblyElectionCycle(state, world, election).candidacies)) {
+  for (const candidacy of Object.values(
+    ensureAssemblyElectionCycle(state, world, election).candidacies,
+  )) {
     if (
       candidacy.status === "filed" &&
-      !assemblyCandidateEligibilityError(state, world, candidacy.politicianId, candidacy.constituencyId)
+      !assemblyCandidateEligibilityError(
+        state,
+        world,
+        candidacy.politicianId,
+        candidacy.constituencyId,
+      )
     ) {
       available.add(candidacy.politicianId);
     }
@@ -314,7 +335,14 @@ export function allocateAssemblyCandidateFields(
     a.politicianId.localeCompare(b.politicianId),
   )) {
     if (existing.status !== "filed") continue;
-    if (assemblyCandidateEligibilityError(state, world, existing.politicianId, existing.constituencyId)) {
+    if (
+      assemblyCandidateEligibilityError(
+        state,
+        world,
+        existing.politicianId,
+        existing.constituencyId,
+      )
+    ) {
       continue;
     }
     candidacies[existing.politicianId] = { ...existing };
@@ -370,8 +398,11 @@ export function allocateAssemblyCandidateFields(
   const stretchFor = (cid: string): number =>
     world.constituencyElectorate[cid]!.seats + ASSEMBLY_FIELD_RESERVE_TARGET;
 
-  const choosePair = (stretch: boolean): { politicianId: string; constituencyId: string } | null => {
-    let best: { politicianId: string; constituencyId: string; score: number; tie: number } | null = null;
+  const choosePair = (
+    stretch: boolean,
+  ): { politicianId: string; constituencyId: string } | null => {
+    let best: { politicianId: string; constituencyId: string; score: number; tie: number } | null =
+      null;
     for (const constituencyId of constituencyIds) {
       const ids = byConstituency.get(constituencyId)!;
       const target = stretch ? stretchFor(constituencyId) : targetFor(constituencyId);
@@ -413,21 +444,20 @@ export function allocateAssemblyCandidateFields(
 
   while (unassigned.size > 0) {
     const politicianId = [...unassigned].sort(
-      (a, b) => stableHash(`${election.id}:fallback:${a}`) - stableHash(`${election.id}:fallback:${b}`),
+      (a, b) =>
+        stableHash(`${election.id}:fallback:${a}`) - stableHash(`${election.id}:fallback:${b}`),
     )[0]!;
-    const constituencyId = constituencyIds
-      .slice()
-      .sort((a, b) => {
-        const da = byConstituency.get(a)!.length / world.constituencyElectorate[a]!.seats;
-        const db = byConstituency.get(b)!.length / world.constituencyElectorate[b]!.seats;
-        return (
-          da - db ||
-          (candidateMetrics.get(politicianId)?.localFitByConstituency.get(b) ?? 0) -
-            (candidateMetrics.get(politicianId)?.localFitByConstituency.get(a) ?? 0) ||
-          stableHash(`${election.id}:${politicianId}:${a}`) -
-            stableHash(`${election.id}:${politicianId}:${b}`)
-        );
-      })[0]!;
+    const constituencyId = constituencyIds.slice().sort((a, b) => {
+      const da = byConstituency.get(a)!.length / world.constituencyElectorate[a]!.seats;
+      const db = byConstituency.get(b)!.length / world.constituencyElectorate[b]!.seats;
+      return (
+        da - db ||
+        (candidateMetrics.get(politicianId)?.localFitByConstituency.get(b) ?? 0) -
+          (candidateMetrics.get(politicianId)?.localFitByConstituency.get(a) ?? 0) ||
+        stableHash(`${election.id}:${politicianId}:${a}`) -
+          stableHash(`${election.id}:${politicianId}:${b}`)
+      );
+    })[0]!;
     unassigned.delete(politicianId);
     candidacies[politicianId] = candidacyFor(
       state,
@@ -523,7 +553,10 @@ export function openAssemblyFilingIfDue(
   commandId: string,
 ): SimEvent[] {
   const cycle = ensureAssemblyElectionCycle(state, world, election);
-  if (cycle.filingStatus !== "planned" || compareIsoDate(state.currentDate, cycle.filingOpenDate) < 0) {
+  if (
+    cycle.filingStatus !== "planned" ||
+    compareIsoDate(state.currentDate, cycle.filingOpenDate) < 0
+  ) {
     return [];
   }
   cycle.filingStatus = "open";
@@ -575,7 +608,10 @@ export function fileAssemblyCandidacy(
     return { error: reject("INVALID_ELECTION", args.electionId) };
   }
   const cycle = ensureAssemblyElectionCycle(state, world, election);
-  if (cycle.filingStatus !== "open" || compareIsoDate(state.currentDate, cycle.filingDeadlineDate) >= 0) {
+  if (
+    cycle.filingStatus !== "open" ||
+    compareIsoDate(state.currentDate, cycle.filingDeadlineDate) >= 0
+  ) {
     return { error: reject("FILING_CLOSED", election.id) };
   }
   const eligibility = assemblyCandidateEligibilityError(
@@ -636,7 +672,10 @@ export function declineAssemblyCandidacy(
     return { error: reject("INVALID_ELECTION", args.electionId) };
   }
   const cycle = ensureAssemblyElectionCycle(state, world, election);
-  if (cycle.filingStatus !== "open" || compareIsoDate(state.currentDate, cycle.filingDeadlineDate) >= 0) {
+  if (
+    cycle.filingStatus !== "open" ||
+    compareIsoDate(state.currentDate, cycle.filingDeadlineDate) >= 0
+  ) {
     return { error: reject("FILING_CLOSED", election.id) };
   }
   if (cycle.candidacies[args.politicianId]?.status === "filed") {
@@ -688,13 +727,16 @@ export function finalizeAssemblyFieldsIfDue(
   commandId: string,
 ): SimEvent[] {
   const cycle = ensureAssemblyElectionCycle(state, world, election);
-  if (cycle.filingStatus !== "open" || compareIsoDate(state.currentDate, cycle.filingDeadlineDate) < 0) {
+  if (
+    cycle.filingStatus !== "open" ||
+    compareIsoDate(state.currentDate, cycle.filingDeadlineDate) < 0
+  ) {
     return [];
   }
   const incomplete = Object.entries(world.constituencyElectorate).some(
     ([constituencyId, electorate]) =>
       (cycle.constituencyFields[constituencyId]?.candidateIds.length ?? 0) <
-        electorate.seats + ASSEMBLY_FIELD_MINIMUM_RESERVE,
+      electorate.seats + ASSEMBLY_FIELD_MINIMUM_RESERVE,
   );
   if (incomplete) {
     // Death or another modeled withdrawal can occur after filing opens. The
@@ -706,12 +748,7 @@ export function finalizeAssemblyFieldsIfDue(
       0,
     );
     const available = availableAssemblyCandidateIds(state, world, election).size;
-    recruitFederalAssemblyClass(
-      world,
-      state,
-      election.id,
-      Math.max(0, fieldTarget - available),
-    );
+    recruitFederalAssemblyClass(world, state, election.id, Math.max(0, fieldTarget - available));
     const err = rebuildAssemblyAllocation(state, world, election);
     if (err) throw new Error(`${err.code}: ${err.message}`);
   }

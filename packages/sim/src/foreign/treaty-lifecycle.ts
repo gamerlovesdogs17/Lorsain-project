@@ -32,7 +32,8 @@ function terminateTreaty(
   commandId: string,
 ): SimEvent {
   treaty.status = "terminated";
-  treaty.ratificationStatus = treaty.ratificationStatus === "ratified" ? "ratified" : "not_required";
+  treaty.ratificationStatus =
+    treaty.ratificationStatus === "ratified" ? "ratified" : "not_required";
   treaty.metadata = { ...treaty.metadata, terminationReason: reason, terminatedDate: date };
   recordTreatyRejectionCooldown(state.foreignAffairsRuntime, treaty, date, 24);
   return pushHistory(state, {
@@ -65,7 +66,11 @@ export function processTreatyLifecycleMonth(
     if (membersAtWar(state, treaty.memberIds)) {
       if (HARD_TO_ABANDON.includes(treaty.kind)) {
         treaty.status = "suspended";
-        treaty.metadata = { ...treaty.metadata, suspendedReason: "war_between_members", suspendedDate: date };
+        treaty.metadata = {
+          ...treaty.metadata,
+          suspendedReason: "war_between_members",
+          suspendedDate: date,
+        };
         events.push(
           pushHistory(state, {
             date,

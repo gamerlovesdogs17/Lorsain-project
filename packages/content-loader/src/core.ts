@@ -564,16 +564,21 @@ export function validateAndLoadContent(
   const wa = byInstitution.get("INT_WA");
   const lto = byInstitution.get("INT_LTO");
   if (!wa || !Array.isArray(wa.member_country_ids) || wa.member_country_ids.length !== 48) {
-    error(`INT_WA must list exactly 48 member_country_ids (got ${wa?.member_country_ids?.length ?? 0})`);
+    error(
+      `INT_WA must list exactly 48 member_country_ids (got ${wa?.member_country_ids?.length ?? 0})`,
+    );
   }
   if (!lto || !Array.isArray(lto.member_country_ids) || lto.member_country_ids.length !== 43) {
-    error(`INT_LTO must list exactly 43 member_country_ids (got ${lto?.member_country_ids?.length ?? 0})`);
+    error(
+      `INT_LTO must list exactly 43 member_country_ids (got ${lto?.member_country_ids?.length ?? 0})`,
+    );
   }
   if (lto && Array.isArray(lto.member_country_ids)) {
     if (!lto.member_country_ids.includes("W40")) error("INT_LTO must include W40 (Vaskara)");
     if (!lto.member_country_ids.includes("W24")) error("INT_LTO must include W24 (Elzesh)");
   }
-  const veto = wa && Array.isArray(wa.security_council_veto_ids) ? wa.security_council_veto_ids : [];
+  const veto =
+    wa && Array.isArray(wa.security_council_veto_ids) ? wa.security_council_veto_ids : [];
   for (const id of ["W24", "W28", "W37", "W40"]) {
     if (!veto.includes(id)) error(`INT_WA security_council_veto_ids missing ${id}`);
   }

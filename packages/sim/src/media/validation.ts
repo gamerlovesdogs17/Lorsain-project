@@ -1,6 +1,11 @@
 import { isIsoDate } from "../calendar.js";
 import { parseCanonicalAllocatedId } from "../ids.js";
-import { emptyMediaRuntime, MEDIA_CATEGORIES, type MediaRuntime, type MediaStory } from "./types.js";
+import {
+  emptyMediaRuntime,
+  MEDIA_CATEGORIES,
+  type MediaRuntime,
+  type MediaStory,
+} from "./types.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
@@ -40,10 +45,13 @@ export function parseMediaRuntime(raw: unknown): MediaRuntime | string {
             : "politics",
         importance: typeof rec.importance === "number" ? rec.importance : 0.4,
         framing:
-          rec.framing === "critical" || rec.framing === "sympathetic" || rec.framing === "sensational"
+          rec.framing === "critical" ||
+          rec.framing === "sympathetic" ||
+          rec.framing === "sensational"
             ? rec.framing
             : "restrained",
-        headlineKey: typeof rec.headlineKey === "string" ? rec.headlineKey : "Political developments",
+        headlineKey:
+          typeof rec.headlineKey === "string" ? rec.headlineKey : "Political developments",
         summaryKey: typeof rec.summaryKey === "string" ? rec.summaryKey : "politics",
         factEventType: typeof rec.factEventType === "string" ? rec.factEventType : "",
         publicEffects: isRecord(rec.publicEffects)

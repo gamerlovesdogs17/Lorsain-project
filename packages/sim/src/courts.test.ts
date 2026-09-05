@@ -9,7 +9,11 @@ import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
+import {
+  terenaElectoralFromBundle,
+  terenaPartyFields,
+  terenaWorldFieldsFromBundle,
+} from "./terena-party-input.js";
 import { occupyingTerms, officesOfKind, endTerm } from "./offices.js";
 import { parseSaveFile } from "./save.js";
 import {
@@ -357,7 +361,14 @@ describe("Phase 8 courts kernel", () => {
     for (const id of generated) {
       expect(state.politicians[id]?.displayName).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
       expect(state.politicians[id]?.description).not.toMatch(/moderate on|public-law record/i);
-      expect(judicialEligibilityError(world, state, id, officesOfKind(world, "constitutional_court_justice")[0]!.id)).toBeNull();
+      expect(
+        judicialEligibilityError(
+          world,
+          state,
+          id,
+          officesOfKind(world, "constitutional_court_justice")[0]!.id,
+        ),
+      ).toBeNull();
     }
   });
 
@@ -856,7 +867,11 @@ describe("Phase 8 courts kernel", () => {
 describe("Phase 8 authorized-assembly thresholds", () => {
   it("lets a legally qualified nominee assemble the required cross-party confirmation vote", () => {
     const world = loadTerenaWorld();
-    const sim = createSimulation({ world, playerPoliticianId: "NPC002", seed: "P8-CONFIRM-VIABLE" });
+    const sim = createSimulation({
+      world,
+      playerPoliticianId: "NPC002",
+      seed: "P8-CONFIRM-VIABLE",
+    });
     const state = jsonClone(sim.getSnapshot());
     const seat = officesOfKind(world, "constitutional_court_justice")[0]!;
     const sitting = occupyingTerms(state, seat.id)[0];
@@ -864,7 +879,10 @@ describe("Phase 8 authorized-assembly thresholds", () => {
     materializeLegalCandidates(world, state);
     const nomineeId = Object.keys(state.politicians)
       .sort()
-      .find((id) => id !== state.playerPoliticianId && !judicialEligibilityError(world, state, id, seat.id));
+      .find(
+        (id) =>
+          id !== state.playerPoliticianId && !judicialEligibilityError(world, state, id, seat.id),
+      );
     expect(nomineeId).toBeTruthy();
     if (!nomineeId) return;
     const rng = createRngService("P8-CONFIRM-VIABLE");

@@ -33,7 +33,13 @@ export type ProvincialActionRecord = {
   date: IsoDate;
   provinceId: string;
   actorId: string;
-  kind: "priority" | "investment" | "federal_position" | "pressure_response" | "ministry_advice" | "civic_priority";
+  kind:
+    | "priority"
+    | "investment"
+    | "federal_position"
+    | "pressure_response"
+    | "ministry_advice"
+    | "civic_priority";
   focus: string;
   direction: number;
 };
@@ -65,8 +71,7 @@ export const GUBERNATORIAL_INCUMBENT_DECISIONS = [
   "seek_other_office",
   "leave_electoral_politics",
 ] as const;
-export type GubernatorialIncumbentDecision =
-  (typeof GUBERNATORIAL_INCUMBENT_DECISIONS)[number];
+export type GubernatorialIncumbentDecision = (typeof GUBERNATORIAL_INCUMBENT_DECISIONS)[number];
 
 export type GovernorVacancyState = {
   provinceId: string;

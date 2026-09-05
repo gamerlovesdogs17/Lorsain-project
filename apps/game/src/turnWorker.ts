@@ -1,9 +1,13 @@
-import { restoreSimulation, type CommandResult, type KernelWorld, type SaveFile } from "@lorsain/sim";
+import {
+  restoreSimulation,
+  type CommandResult,
+  type KernelWorld,
+  type SaveFile,
+} from "@lorsain/sim";
 
 type Request = { save: SaveFile; world: KernelWorld };
 type Response =
-  | { ok: true; save: SaveFile; result: CommandResult }
-  | { ok: false; message: string };
+  { ok: true; save: SaveFile; result: CommandResult } | { ok: false; message: string };
 
 self.onmessage = (event: MessageEvent<Request>) => {
   try {

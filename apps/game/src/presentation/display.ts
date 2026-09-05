@@ -65,8 +65,7 @@ const INTERRUPT_LABELS: Record<string, (date?: string) => string> = {
       ? `The ${year} Assembly election must be resolved before time can advance.`
       : "The Assembly election must be resolved before time can advance.";
   },
-  ASSEMBLY_ASSUMPTION_DUE: () =>
-    "The new Assembly must be seated before time can advance.",
+  ASSEMBLY_ASSUMPTION_DUE: () => "The new Assembly must be seated before time can advance.",
   SPECIAL_PRESIDENTIAL_ELECTION_DEADLINE: () =>
     "A special presidential election must be resolved before time can advance.",
   OFFICE_TERM_END_DUE: () => "An office term must be processed before time can advance.",

@@ -36,8 +36,7 @@ export function parseOrganizationRuntime(raw: unknown): OrganizationRuntime | st
             relationships[pid] = {
               affinity: edge.affinity,
               trust: typeof edge.trust === "number" ? edge.trust : edge.affinity * 0.5,
-              policyAlignment:
-                typeof edge.policyAlignment === "number" ? edge.policyAlignment : 0,
+              policyAlignment: typeof edge.policyAlignment === "number" ? edge.policyAlignment : 0,
               lastUpdatedDate:
                 typeof edge.lastUpdatedDate === "string" && isIsoDate(edge.lastUpdatedDate)
                   ? edge.lastUpdatedDate
@@ -55,7 +54,9 @@ export function parseOrganizationRuntime(raw: unknown): OrganizationRuntime | st
         relationships,
         billPressure: Array.isArray(rec.billPressure)
           ? rec.billPressure
-              .filter((p): p is Record<string, unknown> => isRecord(p) && typeof p.billId === "string")
+              .filter(
+                (p): p is Record<string, unknown> => isRecord(p) && typeof p.billId === "string",
+              )
               .map((p) => ({
                 billId: p.billId as string,
                 stance: p.stance === "oppose" || p.stance === "watch" ? p.stance : "support",
@@ -64,13 +65,16 @@ export function parseOrganizationRuntime(raw: unknown): OrganizationRuntime | st
           : [],
         endorsements: Array.isArray(rec.endorsements)
           ? rec.endorsements
-              .filter((e): e is Record<string, unknown> => isRecord(e) && typeof e.politicianId === "string")
+              .filter(
+                (e): e is Record<string, unknown> =>
+                  isRecord(e) && typeof e.politicianId === "string",
+              )
               .map((e) => ({
                 politicianId: e.politicianId as string,
                 campaignId: typeof e.campaignId === "string" ? e.campaignId : null,
                 date: typeof e.date === "string" && isIsoDate(e.date) ? e.date : "2000-01-01",
                 public: true as const,
-                status: e.status === "withdrawn" ? "withdrawn" as const : "active" as const,
+                status: e.status === "withdrawn" ? ("withdrawn" as const) : ("active" as const),
                 withdrawnDate:
                   typeof e.withdrawnDate === "string" && isIsoDate(e.withdrawnDate)
                     ? e.withdrawnDate

@@ -47,8 +47,9 @@ export function campaignDecisionOptions(
           const bs = be.provincePopulationShares.find((row) => row.provinceId === home)?.share ?? 0;
           return be.population * bs - ae.population * as || a.localeCompare(b);
         })[0]
-    : Object.entries(world.constituencyElectorate)
-        .sort(([, a], [, b]) => b.population - a.population)[0]?.[0];
+    : Object.entries(world.constituencyElectorate).sort(
+        ([, a], [, b]) => b.population - a.population,
+      )[0]?.[0];
   const rivals = activeRaceCampaigns(state, campaign);
   const leader = rivals.slice().sort((a, b) => {
     const sa = standingPublicScore(world, state, b.politicianId);
@@ -57,9 +58,11 @@ export function campaignDecisionOptions(
     return a.politicianId < b.politicianId ? -1 : 1;
   })[0]?.politicianId;
   const issueSalience = getAgentProfile(world, state, id)?.issueSalience ?? {};
-  const issueId = world.issueIds
-    .slice()
-    .sort((a, b) => (issueSalience[b] ?? 0) - (issueSalience[a] ?? 0) || a.localeCompare(b))[0] ?? null;
+  const issueId =
+    world.issueIds
+      .slice()
+      .sort((a, b) => (issueSalience[b] ?? 0) - (issueSalience[a] ?? 0) || a.localeCompare(b))[0] ??
+    null;
   const opts: DecisionOption[] = [
     {
       optionId: "FUNDRAISE",
@@ -145,16 +148,25 @@ export function campaignDecisionOptions(
     },
   ];
   const monthsRemaining = campaignMonthsRemaining(state, campaign);
-  const campaignProvince = typeof campaign.metadata.provinceId === "string" ? campaign.metadata.provinceId : null;
-  const gotvGeography = campaign.type === "assembly" && campaign.constituencyId
-    ? { kind: "constituency" as const, id: campaign.constituencyId }
-    : { kind: "province" as const, id: campaignProvince ?? home };
-  const gotvOrganization = gotvGeography.kind === "constituency" && gotvGeography.id
-    ? campaign.organizationByConstituency[gotvGeography.id] ?? 0
-    : gotvGeography.id
-      ? campaign.organizationByProvince[gotvGeography.id] ?? 0
-      : 0;
-  if (monthsRemaining != null && monthsRemaining >= 0 && monthsRemaining <= 1 && gotvGeography.id && gotvOrganization >= 0.12) {
+  const campaignProvince =
+    typeof campaign.metadata.provinceId === "string" ? campaign.metadata.provinceId : null;
+  const gotvGeography =
+    campaign.type === "assembly" && campaign.constituencyId
+      ? { kind: "constituency" as const, id: campaign.constituencyId }
+      : { kind: "province" as const, id: campaignProvince ?? home };
+  const gotvOrganization =
+    gotvGeography.kind === "constituency" && gotvGeography.id
+      ? (campaign.organizationByConstituency[gotvGeography.id] ?? 0)
+      : gotvGeography.id
+        ? (campaign.organizationByProvince[gotvGeography.id] ?? 0)
+        : 0;
+  if (
+    monthsRemaining != null &&
+    monthsRemaining >= 0 &&
+    monthsRemaining <= 1 &&
+    gotvGeography.id &&
+    gotvOrganization >= 0.12
+  ) {
     opts.push({
       optionId: `GOTV:${gotvGeography.kind}:${gotvGeography.id}`,
       actionType: "CAMPAIGN_GOTV",
@@ -319,20 +331,23 @@ export function chooseCampaignAction(
       },
     };
   });
-  return tuned
-    .map((option) => ({
-      option,
-      score:
-        option.signals.careerBenefit * (0.35 + ambition * 0.35) +
-        option.signals.pragmaticEffectiveness * (0.3 + pragmatism * 0.35) +
-        option.signals.partyAlignment * profile.traits.partyLoyalty * 0.25 +
-        option.signals.factionAlignment * profile.traits.factionLoyalty * 0.18 +
-        option.signals.institutionalAlignment * profile.traits.institutionalism * 0.18 +
-        option.signals.statusBenefit * profile.traits.ego * 0.16 -
-        option.signals.risk * (1 - risk) * 0.32 +
-        (rng.float01("npc-decisions") - 0.5) * option.uncertainty * 0.3,
-    }))
-    .sort((a, b) => b.score - a.score || a.option.optionId.localeCompare(b.option.optionId))[0]?.option ?? null;
+  return (
+    tuned
+      .map((option) => ({
+        option,
+        score:
+          option.signals.careerBenefit * (0.35 + ambition * 0.35) +
+          option.signals.pragmaticEffectiveness * (0.3 + pragmatism * 0.35) +
+          option.signals.partyAlignment * profile.traits.partyLoyalty * 0.25 +
+          option.signals.factionAlignment * profile.traits.factionLoyalty * 0.18 +
+          option.signals.institutionalAlignment * profile.traits.institutionalism * 0.18 +
+          option.signals.statusBenefit * profile.traits.ego * 0.16 -
+          option.signals.risk * (1 - risk) * 0.32 +
+          (rng.float01("npc-decisions") - 0.5) * option.uncertainty * 0.3,
+      }))
+      .sort((a, b) => b.score - a.score || a.option.optionId.localeCompare(b.option.optionId))[0]
+      ?.option ?? null
+  );
 }
 
 export function chooseDeclare(

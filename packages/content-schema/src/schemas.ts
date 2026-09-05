@@ -198,28 +198,36 @@ export const ConstitutionFileSchema = z
     document: z.object({
       title: z.string(),
       preamble: z.string(),
-      articles: z.array(z.object({
-        id: z.string(),
-        number: z.string(),
-        title: z.string(),
-        sections: z.array(z.object({
+      articles: z.array(
+        z.object({
           id: z.string(),
           number: z.string(),
           title: z.string(),
-          clauses: z.array(z.object({
-            id: z.string(),
-            number: z.string(),
-            text: z.string(),
-            amendment_difficulty: z.enum(["ordinary", "substantial", "foundational"]),
-            runtime_rule_id: z.enum([
-              "assembly_term_years",
-              "presidential_term_limit",
-              "court_term_years",
-              "veto_override_fraction",
-            ]).optional(),
-          })),
-        })),
-      })),
+          sections: z.array(
+            z.object({
+              id: z.string(),
+              number: z.string(),
+              title: z.string(),
+              clauses: z.array(
+                z.object({
+                  id: z.string(),
+                  number: z.string(),
+                  text: z.string(),
+                  amendment_difficulty: z.enum(["ordinary", "substantial", "foundational"]),
+                  runtime_rule_id: z
+                    .enum([
+                      "assembly_term_years",
+                      "presidential_term_limit",
+                      "court_term_years",
+                      "veto_override_fraction",
+                    ])
+                    .optional(),
+                }),
+              ),
+            }),
+          ),
+        }),
+      ),
     }),
   })
   .passthrough();

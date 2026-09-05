@@ -24,7 +24,9 @@ export function billPolicyFit(
   for (const item of bill.policyItems) {
     if (item.dimensionEffects && Object.keys(item.dimensionEffects).length > 0) {
       const rows = Object.entries(item.dimensionEffects) as Array<[IdeologyAxis, number]>;
-      const structuralFit = rows.reduce((sum, [axis, effect]) => sum + (profile.ideology[axis] ?? 0) * effect, 0) / rows.length;
+      const structuralFit =
+        rows.reduce((sum, [axis, effect]) => sum + (profile.ideology[axis] ?? 0) * effect, 0) /
+        rows.length;
       acc += structuralFit * item.magnitude;
       n += 1;
       continue;

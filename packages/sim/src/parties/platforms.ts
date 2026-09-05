@@ -99,17 +99,18 @@ function factionPosition(
   partyId: string,
   issue: PartyPlatformIssue,
 ): number {
-  const factions = Object.values(world.factionDefinitions).filter((faction) => faction.partyId === partyId);
+  const factions = Object.values(world.factionDefinitions).filter(
+    (faction) => faction.partyId === partyId,
+  );
   const baseline = world.partyPublicIdeology[partyId] ?? NEUTRAL_IDEOLOGY;
   if (factions.length === 0) return positionFromIdeology(baseline, issue);
   let total = 0;
   let weight = 0;
   for (const faction of factions) {
     const share = Math.max(0, faction.share);
-    total += positionFromIdeology(
-      world.factionPublicIdeology[faction.factionId] ?? baseline,
-      issue,
-    ) * share;
+    total +=
+      positionFromIdeology(world.factionPublicIdeology[faction.factionId] ?? baseline, issue) *
+      share;
     weight += share;
   }
   return weight > 0 ? total / weight : 0;
@@ -121,7 +122,10 @@ function platformTarget(
   partyId: string,
   issue: PartyPlatformIssue,
 ): number {
-  const baseline = positionFromIdeology(world.partyPublicIdeology[partyId] ?? NEUTRAL_IDEOLOGY, issue);
+  const baseline = positionFromIdeology(
+    world.partyPublicIdeology[partyId] ?? NEUTRAL_IDEOLOGY,
+    issue,
+  );
   const members = meanMemberPosition(world, state, partyId, issue);
   const faction = factionPosition(world, state, partyId, issue);
   const leaderId = state.partyStates[partyId]?.leaderId;
@@ -138,7 +142,8 @@ export function recordPartyPlatform(
   const party = state.partyStates[partyId];
   const platform = party?.publicPlatform;
   if (!party || !platform) return;
-  if (platform.history.some((entry) => entry.date === state.currentDate && entry.reason === reason)) return;
+  if (platform.history.some((entry) => entry.date === state.currentDate && entry.reason === reason))
+    return;
   platform.history.push({
     date: state.currentDate,
     reason,
@@ -162,35 +167,51 @@ export function updatePublicPartyPlatforms(
     for (const issue of PARTY_PLATFORM_ISSUES) {
       const current = party.publicPlatform.positions[issue] ?? 0;
       const target = platformTarget(world, state, partyId, issue);
-      const change = Math.max(-MONTHLY_PLATFORM_STEP, Math.min(MONTHLY_PLATFORM_STEP, (target - current) * 0.08));
+      const change = Math.max(
+        -MONTHLY_PLATFORM_STEP,
+        Math.min(MONTHLY_PLATFORM_STEP, (target - current) * 0.08),
+      );
       party.publicPlatform.positions[issue] = clamp(current + change);
     }
     party.publicPlatform.updatedDate = state.currentDate;
     const year = state.currentDate.slice(0, 4);
-    const publish = state.currentDate.slice(5, 7) === "01" &&
-      !party.publicPlatform.history.some((entry) => entry.reason === "annual_conference" && entry.date.startsWith(year));
+    const publish =
+      state.currentDate.slice(5, 7) === "01" &&
+      !party.publicPlatform.history.some(
+        (entry) => entry.reason === "annual_conference" && entry.date.startsWith(year),
+      );
     if (!publish) continue;
     recordPartyPlatform(state, partyId, "annual_conference");
-    events.push(pushHistory(state, {
-      date: state.currentDate,
-      type: "PARTY_PLATFORM_PUBLISHED",
-      importance: 0.45,
-      visibility: "public",
-      actorIds: party.leaderId ? [party.leaderId] : [],
-      entityIds: [partyId],
-      payload: { partyId, reason: "annual_conference" },
-      sourceScheduledEventId: null,
-      sourceCommandId: commandId,
-    }));
+    events.push(
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "PARTY_PLATFORM_PUBLISHED",
+        importance: 0.45,
+        visibility: "public",
+        actorIds: party.leaderId ? [party.leaderId] : [],
+        entityIds: [partyId],
+        payload: { partyId, reason: "annual_conference" },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    );
   }
   return events;
 }
 
-export function partyPlatformIssueForBillItem(issueId: string, provisionId?: string | null): PartyPlatformIssue {
-  const category = provisionId ? legislativeProvision(provisionId)?.category.toLowerCase() ?? "" : "";
-  if (issueId === "ISS_LABOR" || category.includes("labor") || category.includes("worker")) return "labor";
-  if (issueId === "ISS_HOUSING" || category.includes("housing") || category.includes("rent")) return "housing";
-  if (issueId === "ISS_CLIMATE" || category.includes("climate") || category.includes("energy")) return "environment";
+export function partyPlatformIssueForBillItem(
+  issueId: string,
+  provisionId?: string | null,
+): PartyPlatformIssue {
+  const category = provisionId
+    ? (legislativeProvision(provisionId)?.category.toLowerCase() ?? "")
+    : "";
+  if (issueId === "ISS_LABOR" || category.includes("labor") || category.includes("worker"))
+    return "labor";
+  if (issueId === "ISS_HOUSING" || category.includes("housing") || category.includes("rent"))
+    return "housing";
+  if (issueId === "ISS_CLIMATE" || category.includes("climate") || category.includes("energy"))
+    return "environment";
   if (category.includes("tax") || category.includes("revenue")) return "taxes";
   if (["ISS_LIBERTY", "ISS_IMMIGRATION", "ISS_POLICING"].includes(issueId)) return "social_policy";
   if (["ISS_DECENT", "ISS_EXEC", "ISS_REFORM"].includes(issueId)) return "institutional_reform";
@@ -215,10 +236,22 @@ export function partyPlatformLabel(issue: PartyPlatformIssue, value: number): st
     taxes: ["Tax restraint", "Balanced tax mix", "Progressive public revenue"],
     labor: ["Flexible labor rules", "Negotiated workplace balance", "Stronger worker bargaining"],
     housing: ["Private housing supply", "Mixed housing supply", "Public and affordable housing"],
-    social_policy: ["Traditional social limits", "Settled-rights approach", "Expanded personal freedoms"],
+    social_policy: [
+      "Traditional social limits",
+      "Settled-rights approach",
+      "Expanded personal freedoms",
+    ],
     environment: ["Development first", "Managed transition", "Accelerated green transition"],
-    institutional_reform: ["Executive-centered order", "Institutional stewardship", "Structural democratic reform"],
-    foreign_policy: ["National independence", "Pragmatic internationalism", "Multilateral engagement"],
+    institutional_reform: [
+      "Executive-centered order",
+      "Institutional stewardship",
+      "Structural democratic reform",
+    ],
+    foreign_policy: [
+      "National independence",
+      "Pragmatic internationalism",
+      "Multilateral engagement",
+    ],
   };
   return labels[issue][band + 1]!;
 }

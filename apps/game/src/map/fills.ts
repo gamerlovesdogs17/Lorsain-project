@@ -116,23 +116,39 @@ export function mapFillFor(
   if (mode === "election") {
     const provincial = electionId ? snap.provincialRuntime.elections[electionId] : null;
     if (kind === "province" && provincial) {
-      const race = Object.values(snap.provincialRuntime.elections).find((candidate) => candidate.provinceId === feature.id && candidate.date.slice(0, 4) === provincial.date.slice(0, 4));
+      const race = Object.values(snap.provincialRuntime.elections).find(
+        (candidate) =>
+          candidate.provinceId === feature.id &&
+          candidate.date.slice(0, 4) === provincial.date.slice(0, 4),
+      );
       const winner = race?.winnerId;
       return winner ? partyColor(world, race.candidates[winner]?.partyId ?? null) : "#dedbd3";
     }
-    const provincialAssembly = electionId ? snap.provincialRuntime.assemblyElections[electionId] : null;
+    const provincialAssembly = electionId
+      ? snap.provincialRuntime.assemblyElections[electionId]
+      : null;
     if (kind === "province" && provincialAssembly) {
-      const race = Object.values(snap.provincialRuntime.assemblyElections).find((candidate) => candidate.provinceId === feature.id && candidate.date.slice(0, 4) === provincialAssembly.date.slice(0, 4));
+      const race = Object.values(snap.provincialRuntime.assemblyElections).find(
+        (candidate) =>
+          candidate.provinceId === feature.id &&
+          candidate.date.slice(0, 4) === provincialAssembly.date.slice(0, 4),
+      );
       if (race?.status !== "resolved") return "#dedbd3";
-      const ranked = Object.entries(race.partySeats).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      const ranked = Object.entries(race.partySeats).sort(
+        (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+      );
       if (ranked.length > 1 && ranked[0]![1] === ranked[1]![1]) return CONSTITUENCY_TIE_FILL;
       return partyColor(world, ranked[0]?.[0] ?? null);
     }
     if (kind === "constituency") {
       const selected = electionId ? snap.elections[electionId] : undefined;
-      const election = selected ?? Object.values(snap.elections)
-        .filter((candidate) => candidate.type === "assembly" && candidate.geographyKind === "national")
-        .sort((a, b) => b.date.localeCompare(a.date))[0];
+      const election =
+        selected ??
+        Object.values(snap.elections)
+          .filter(
+            (candidate) => candidate.type === "assembly" && candidate.geographyKind === "national",
+          )
+          .sort((a, b) => b.date.localeCompare(a.date))[0];
       const result = election?.assembly?.constituencyResults[feature.id];
       if (result) {
         const seats = new Map<string, number>();
@@ -142,14 +158,15 @@ export function mapFillFor(
         }
         const ranked = [...seats.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
         if (ranked.length > 1 && ranked[0]![1] === ranked[1]![1]) return CONSTITUENCY_TIE_FILL;
-        return partyColor(world, ranked[0]?.[0] === "none" ? null : ranked[0]?.[0] ?? null);
+        return partyColor(world, ranked[0]?.[0] === "none" ? null : (ranked[0]?.[0] ?? null));
       }
       const polls = Object.values(snap.polls)
         .filter((poll) => poll.electionId === election?.id && poll.constituencyId === feature.id)
         .sort((a, b) => b.publicationDate.localeCompare(a.publicationDate));
       const leaders = polls[0]?.firstPreference.slice().sort((a, b) => b.share - a.share);
       if (leaders?.length) {
-        if (leaders.length > 1 && Math.abs(leaders[0]!.share - leaders[1]!.share) < 0.000001) return CONSTITUENCY_TIE_FILL;
+        if (leaders.length > 1 && Math.abs(leaders[0]!.share - leaders[1]!.share) < 0.000001)
+          return CONSTITUENCY_TIE_FILL;
         return partyColor(world, leaders[0]!.partyId);
       }
       return "#dedbd3";

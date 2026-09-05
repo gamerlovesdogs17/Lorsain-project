@@ -48,26 +48,40 @@ export function parliamentaryDiscipline(
   const factions = Object.values(state.factionStates).filter(
     (row) => row.partyId === partyId && row.status === "active",
   );
-  const factionStability = factions.length > 0
-    ? factions.reduce((sum, row) => sum + row.cohesion, 0) / factions.length
-    : 0.5;
+  const factionStability =
+    factions.length > 0
+      ? factions.reduce((sum, row) => sum + row.cohesion, 0) / factions.length
+      : 0.5;
   const openLeadershipContest = Object.values(state.partyContests).some(
-    (contest) => contest.partyId === partyId && contest.type === "party_leadership" &&
-      contest.status !== "resolved" && contest.status !== "cancelled",
+    (contest) =>
+      contest.partyId === partyId &&
+      contest.type === "party_leadership" &&
+      contest.status !== "resolved" &&
+      contest.status !== "cancelled",
   );
   const latestAssembly = Object.values(state.elections)
-    .filter((election) => election.type === "assembly" && election.status === "resolved" && election.assembly)
+    .filter(
+      (election) =>
+        election.type === "assembly" && election.status === "resolved" && election.assembly,
+    )
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))[0];
   const seatDelta = latestAssembly?.assembly
     ? (latestAssembly.assembly.partySeatTotals[partyId] ?? 0) -
       (latestAssembly.assembly.previousPartySeatTotals[partyId] ?? 0)
     : 0;
-  const score = Math.max(0.2, Math.min(0.92,
-    0.12 + (party?.cohesion ?? 0.5) * 0.5 + leaderStrength * 0.17 +
-    factionStability * 0.13 + Math.max(-0.05, Math.min(0.05, seatDelta / 300)) +
-    Math.max(-0.04, Math.min(0.04, leaderStanding * 0.04)) -
-    (openLeadershipContest ? 0.1 : 0),
-  ));
+  const score = Math.max(
+    0.2,
+    Math.min(
+      0.92,
+      0.12 +
+        (party?.cohesion ?? 0.5) * 0.5 +
+        leaderStrength * 0.17 +
+        factionStability * 0.13 +
+        Math.max(-0.05, Math.min(0.05, seatDelta / 300)) +
+        Math.max(-0.04, Math.min(0.04, leaderStanding * 0.04)) -
+        (openLeadershipContest ? 0.1 : 0),
+    ),
+  );
   const publicReasons: string[] = [];
   if (openLeadershipContest) publicReasons.push("Leadership is being contested");
   if (factionStability < 0.48) publicReasons.push("Caucuses are divided");

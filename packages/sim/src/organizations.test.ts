@@ -7,7 +7,11 @@ import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
+import {
+  terenaElectoralFromBundle,
+  terenaPartyFields,
+  terenaWorldFieldsFromBundle,
+} from "./terena-party-input.js";
 import { MAX_ORG_MEETINGS_PER_MONTH, organizationPressureForBill } from "./organizations/index.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
@@ -119,12 +123,12 @@ describe("Phase 9 organizations", () => {
     if (labor && biz && labor.billId === biz.billId) {
       expect(labor.stance).not.toBe(biz.stance);
     }
-    expect(organizationPressureForBill(world, sim.getSnapshot(), "MP02", "BILL000001")).toBeLessThanOrEqual(
-      0.12,
-    );
-    expect(organizationPressureForBill(world, sim.getSnapshot(), "MP02", "BILL000001")).toBeGreaterThanOrEqual(
-      -0.12,
-    );
+    expect(
+      organizationPressureForBill(world, sim.getSnapshot(), "MP02", "BILL000001"),
+    ).toBeLessThanOrEqual(0.12);
+    expect(
+      organizationPressureForBill(world, sim.getSnapshot(), "MP02", "BILL000001"),
+    ).toBeGreaterThanOrEqual(-0.12);
   });
 
   it("keeps meetings secondary and does not leak hidden scores in public actions", () => {
@@ -140,7 +144,9 @@ describe("Phase 9 organizations", () => {
     const third = sim.executeCommand({ type: "MEET_ORGANIZATION", organizationId: "ORG_MAN" });
     expect(third.ok).toBe(false);
     if (!third.ok) expect(third.error.code).toBe("ORG_MEETING_LIMIT");
-    expect(sim.getSnapshot().organizationRuntime.meetingsThisMonth).toBe(MAX_ORG_MEETINGS_PER_MONTH);
+    expect(sim.getSnapshot().organizationRuntime.meetingsThisMonth).toBe(
+      MAX_ORG_MEETINGS_PER_MONTH,
+    );
     expect(
       sim.getSnapshot().organizationRuntime.actors.ORG_TCL?.relationships.MP02?.affinity,
     ).toBeCloseTo(0.015);
@@ -154,9 +160,7 @@ describe("Phase 9 organizations", () => {
     expectOk(sim, {
       type: "INTRODUCE_BILL",
       title: "Income Security Act",
-      policyItems: [
-        { issueId: "ISS_WELFARE", direction: 1, magnitude: 0.7, fiscalImpact: null },
-      ],
+      policyItems: [{ issueId: "ISS_WELFARE", direction: 1, magnitude: 0.7, fiscalImpact: null }],
     });
     const relationship = sim.getSnapshot().organizationRuntime.actors.ORG_TCL?.relationships.MP02;
     expect(relationship?.policyAlignment ?? 0).toBeGreaterThan(0);
@@ -184,8 +188,9 @@ describe("Phase 9 organizations", () => {
     const created = createSimulation({ world, playerPoliticianId: "MP02", seed: "ORG-WITHDRAW" });
     const raw = jsonClone(created.serializeSave()) as ReturnType<Simulation["serializeSave"]>;
     const mutable = raw.simulation;
-    const campaign = Object.values(mutable.campaignRuntime.campaigns)
-      .find((row) => row.politicianId === "MP02");
+    const campaign = Object.values(mutable.campaignRuntime.campaigns).find(
+      (row) => row.politicianId === "MP02",
+    );
     const actor = mutable.organizationRuntime.actors.ORG_TCL!;
     actor.endorsements.push({
       politicianId: "MP02",
@@ -208,7 +213,9 @@ describe("Phase 9 organizations", () => {
     const withdrawn = snapshot.organizationRuntime.actors.ORG_TCL?.endorsements[0];
     expect(withdrawn?.status).toBe("withdrawn");
     expect(withdrawn?.withdrawnDate).not.toBeNull();
-    expect(snapshot.history.some((event) => event.type === "ORGANIZATION_ENDORSEMENT_WITHDRAWN")).toBe(true);
+    expect(
+      snapshot.history.some((event) => event.type === "ORGANIZATION_ENDORSEMENT_WITHDRAWN"),
+    ).toBe(true);
   });
 
   it("save/restore continues organization state", () => {

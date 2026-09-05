@@ -1,10 +1,7 @@
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import { pushHistory } from "../scheduler.js";
-import {
-  currentAssemblyMemberIds,
-  allocateLegislativeVoteId,
-} from "../legislature/state.js";
+import { currentAssemblyMemberIds, allocateLegislativeVoteId } from "../legislature/state.js";
 import { currentPresidentialAuthorityId } from "../executive/state.js";
 import { stageIsRipe } from "../legislature/procedure.js";
 import type { LegislativeVoteChoice } from "../legislature/types.js";
@@ -246,8 +243,12 @@ export function processTreatyRatificationVotes(
       date: state.currentDate,
       committeeId: null,
       votes,
-      partyIdsAtVote: Object.fromEntries(Object.keys(votes).map((id) => [id, state.politicians[id]?.partyId ?? null])),
-      factionIdsAtVote: Object.fromEntries(Object.keys(votes).map((id) => [id, state.politicians[id]?.factionId ?? null])),
+      partyIdsAtVote: Object.fromEntries(
+        Object.keys(votes).map((id) => [id, state.politicians[id]?.partyId ?? null]),
+      ),
+      factionIdsAtVote: Object.fromEntries(
+        Object.keys(votes).map((id) => [id, state.politicians[id]?.factionId ?? null]),
+      ),
       yes,
       no,
       abstain,

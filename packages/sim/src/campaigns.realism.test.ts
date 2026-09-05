@@ -5,7 +5,11 @@ import { loadContentBundleFromRepo } from "@lorsain/content-loader/node";
 import { createSimulation, type Simulation } from "./engine.js";
 import { jsonClone } from "./hash.js";
 import { buildTerenaKernelWorld, type TerenaKernelInput } from "./world.js";
-import { terenaElectoralFromBundle, terenaPartyFields, terenaWorldFieldsFromBundle } from "./terena-party-input.js";
+import {
+  terenaElectoralFromBundle,
+  terenaPartyFields,
+  terenaWorldFieldsFromBundle,
+} from "./terena-party-input.js";
 import type { Command, KernelWorld } from "./types.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");

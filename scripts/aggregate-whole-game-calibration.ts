@@ -26,16 +26,13 @@ const seedStart = Math.max(0, Math.floor(numericFlag("seed-start") ?? 0));
 const seedCountRaw = numericFlag("seed-count");
 const seedCount = seedCountRaw == null ? null : Math.max(1, Math.floor(seedCountRaw));
 const shardDir = resolve(
-  stringFlag("shard-dir") ??
-    join(repoRoot, ".calibration/phase11_3/shards", `${months}m`),
+  stringFlag("shard-dir") ?? join(repoRoot, ".calibration/phase11_3/shards", `${months}m`),
 );
 const outputPath = resolve(
-  stringFlag("output") ??
-    join(repoRoot, "docs/qa/phase11_3/whole_game_calibration.json"),
+  stringFlag("output") ?? join(repoRoot, "docs/qa/phase11_3/whole_game_calibration.json"),
 );
 const markdownPath = resolve(
-  stringFlag("markdown") ??
-    join(repoRoot, "docs/qa/phase11_3/whole_game_calibration.md"),
+  stringFlag("markdown") ?? join(repoRoot, "docs/qa/phase11_3/whole_game_calibration.md"),
 );
 const determinismInput = stringFlag("determinism-input");
 
@@ -54,26 +51,37 @@ function inRequestedRange(index: number): boolean {
 }
 
 const shards = readdirSync(shardDir, { withFileTypes: true })
-  .filter((entry) => entry.isFile() && entry.name.endsWith(`-${String(months).padStart(3, "0")}m.json`))
+  .filter(
+    (entry) => entry.isFile() && entry.name.endsWith(`-${String(months).padStart(3, "0")}m.json`),
+  )
   .map((entry) => {
     const path = join(shardDir, entry.name);
     const parsed = JSON.parse(readFileSync(path, "utf8")) as Shard;
     return { path, parsed };
   })
-  .filter(({ parsed }) => parsed.formatVersion === 1 && parsed.months === months && inRequestedRange(parsed.seedIndex))
+  .filter(
+    ({ parsed }) =>
+      parsed.formatVersion === 1 && parsed.months === months && inRequestedRange(parsed.seedIndex),
+  )
   .sort((a, b) => a.parsed.seedIndex - b.parsed.seedIndex);
 
 const fingerprints = [...new Set(shards.map(({ parsed }) => parsed.sourceFingerprint))];
 if (fingerprints.length > 1) {
-  throw new Error(`Shard directory contains ${fingerprints.length} source revisions; rerun stale seeds before aggregating.`);
+  throw new Error(
+    `Shard directory contains ${fingerprints.length} source revisions; rerun stale seeds before aggregating.`,
+  );
 }
 if (fingerprints[0] && fingerprints[0] !== calibrationSourceFingerprint) {
-  throw new Error("Shard source fingerprint is stale; rerun these seeds against the current source before aggregating.");
+  throw new Error(
+    "Shard source fingerprint is stale; rerun these seeds against the current source before aggregating.",
+  );
 }
 
 const contentVersions = [...new Set(shards.map(({ parsed }) => parsed.contentVersion))];
 if (contentVersions.length > 1) {
-  throw new Error(`Shard directory contains ${contentVersions.length} content versions; rerun stale seeds before aggregating.`);
+  throw new Error(
+    `Shard directory contains ${contentVersions.length} content versions; rerun stale seeds before aggregating.`,
+  );
 }
 
 const seen = new Set<number>();
@@ -88,8 +96,17 @@ function summarizeValues(values: number[]) {
   if (values.length === 0) return { n: 0, min: 0, median: 0, p95: 0, max: 0, mean: 0, sum: 0 };
   const sorted = values.slice().sort((a, b) => a - b);
   const sum = sorted.reduce((total, value) => total + value, 0);
-  const pick = (fraction: number) => sorted[Math.min(sorted.length - 1, Math.floor(fraction * (sorted.length - 1)))] ?? 0;
-  return { n: sorted.length, min: sorted[0]!, median: pick(0.5), p95: pick(0.95), max: sorted.at(-1)!, mean: sum / sorted.length, sum };
+  const pick = (fraction: number) =>
+    sorted[Math.min(sorted.length - 1, Math.floor(fraction * (sorted.length - 1)))] ?? 0;
+  return {
+    n: sorted.length,
+    min: sorted[0]!,
+    median: pick(0.5),
+    p95: pick(0.95),
+    max: sorted.at(-1)!,
+    mean: sum / sorted.length,
+    sum,
+  };
 }
 
 const baseAggregate = aggregateRuns(runs, months);
@@ -97,13 +114,25 @@ const aggregate = {
   ...baseAggregate,
   institutions: {
     ...baseAggregate.institutions,
-    provincialBillsPassed: summarizeValues(runs.map((run) => run.institutions.provincialBillsPassed)),
-    partyContestsResolved: summarizeValues(runs.map((run) => run.institutions.partyContestsResolved)),
-    caucusContestsResolved: summarizeValues(runs.map((run) => run.institutions.caucusContestsResolved)),
-    constitutionalAssemblyPassed: summarizeValues(runs.map((run) => run.institutions.constitutionalAssemblyPassed)),
+    provincialBillsPassed: summarizeValues(
+      runs.map((run) => run.institutions.provincialBillsPassed),
+    ),
+    partyContestsResolved: summarizeValues(
+      runs.map((run) => run.institutions.partyContestsResolved),
+    ),
+    caucusContestsResolved: summarizeValues(
+      runs.map((run) => run.institutions.caucusContestsResolved),
+    ),
+    constitutionalAssemblyPassed: summarizeValues(
+      runs.map((run) => run.institutions.constitutionalAssemblyPassed),
+    ),
     constitutionalFailed: summarizeValues(runs.map((run) => run.institutions.constitutionalFailed)),
-    federalProvincialCases: summarizeValues(runs.map((run) => run.institutions.federalProvincialCases)),
-    organizationEndorsements: summarizeValues(runs.map((run) => run.institutions.organizationEndorsements)),
+    federalProvincialCases: summarizeValues(
+      runs.map((run) => run.institutions.federalProvincialCases),
+    ),
+    organizationEndorsements: summarizeValues(
+      runs.map((run) => run.institutions.organizationEndorsements),
+    ),
   },
   careers: {
     sampleSize: summarizeValues(runs.map((run) => run.careers.sampleSize)),
@@ -133,7 +162,8 @@ const payload = {
   meta,
   aggregate,
   determinism: determinismInput
-    ? (JSON.parse(readFileSync(resolve(determinismInput), "utf8")) as { determinism?: unknown }).determinism ?? null
+    ? ((JSON.parse(readFileSync(resolve(determinismInput), "utf8")) as { determinism?: unknown })
+        .determinism ?? null)
     : null,
   runIndex: shards.map(({ path, parsed }) => ({
     seed: parsed.run.seed,
@@ -147,7 +177,8 @@ const payload = {
   })),
 };
 
-const markdown = `# Phase 11.3 whole-game calibration\n\n` +
+const markdown =
+  `# Phase 11.3 whole-game calibration\n\n` +
   `Generated: ${meta.generatedAt}\n\n` +
   `Source fingerprint: \`${meta.sourceFingerprint ?? "none"}\`\n\n` +
   `## Completion and invariants\n\n` +

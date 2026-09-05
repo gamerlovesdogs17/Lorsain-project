@@ -133,14 +133,20 @@ function runSeed(seed: string, world: ReturnType<typeof loadTerenaWorld>): RunMe
   const snap = sim.getSnapshot();
   const runtime = snap.foreignAffairsRuntime;
 
-  const crisesCreated = Object.values(runtime.crises).filter((c) => c.metadata.preexisting !== true);
+  const crisesCreated = Object.values(runtime.crises).filter(
+    (c) => c.metadata.preexisting !== true,
+  );
   const crisesSettled = crisesCreated.filter((c) => c.stage === "settled").length;
 
-  const conflictStartedEvents = snap.history.filter((e) => e.type === "INTERNATIONAL_CONFLICT_STARTED");
+  const conflictStartedEvents = snap.history.filter(
+    (e) => e.type === "INTERNATIONAL_CONFLICT_STARTED",
+  );
   const conflictEndedEvents = snap.history.filter((e) => e.type === "INTERNATIONAL_CONFLICT_ENDED");
   const conflictsStarted = conflictStartedEvents.length;
   const conflictsEnded = conflictEndedEvents.length;
-  const conflictsActiveAtHorizon = Object.values(runtime.conflicts).filter((c) => !c.endedDate).length;
+  const conflictsActiveAtHorizon = Object.values(runtime.conflicts).filter(
+    (c) => !c.endedDate,
+  ).length;
 
   const terenaWarEvents = conflictStartedEvents.filter(
     (e) =>
@@ -187,14 +193,15 @@ function runSeed(seed: string, world: ReturnType<typeof loadTerenaWorld>): RunMe
     if (/managed|theocracy|empire|one-party|military/i.test(gov)) authoritarian += 1;
     else democratic += 1;
     const title = String(e.payload.title ?? "");
-    if (/king|queen|emperor|duke|prince/i.test(title) || /king|queen|emperor|duke|prince/i.test(name)) {
+    if (
+      /king|queen|emperor|duke|prince/i.test(title) ||
+      /king|queen|emperor|duke|prince/i.test(name)
+    ) {
       monarchTitle += 1;
     }
     const prior = leadershipEvents.find(
       (p) =>
-        p.payload.countryId === countryId &&
-        p.date < e.date &&
-        String(p.payload.name) === name,
+        p.payload.countryId === countryId && p.date < e.date && String(p.payload.name) === name,
     );
     if (prior) sameName += 1;
   }
@@ -263,7 +270,8 @@ function runSeed(seed: string, world: ReturnType<typeof loadTerenaWorld>): RunMe
     treatiesActive: active.length,
     treatiesUniqueActive: activeKeys.size,
     treatiesDuplicateActive,
-    treatiesMaxDuplicate: treatiesMaxDuplicate === 1 && active.length === 0 ? 0 : treatiesMaxDuplicate,
+    treatiesMaxDuplicate:
+      treatiesMaxDuplicate === 1 && active.length === 0 ? 0 : treatiesMaxDuplicate,
     treatiesTerminated: treaties.filter((t) => t.status === "terminated").length,
     treatiesSuspended: treaties.filter((t) => t.status === "suspended").length,
     treatiesProposed,
@@ -318,48 +326,165 @@ function main(): void {
   }
 
   console.log("\nDistribution summary:");
-  printSummary("months completed", runs.map((r) => r.monthsCompleted));
-  printSummary("crises created", runs.map((r) => r.crisesCreated));
-  printSummary("crises settled", runs.map((r) => r.crisesSettled));
-  printSummary("conflicts started", runs.map((r) => r.conflictsStarted));
-  printSummary("conflicts ended", runs.map((r) => r.conflictsEnded));
-  printSummary("conflicts active @ horizon", runs.map((r) => r.conflictsActiveAtHorizon));
-  printSummary("Terena wars", runs.map((r) => r.terenaWars));
-  printSummary("Vaskara–Terena wars", runs.map((r) => r.vaskaraTerenaWars));
-  printSummary("great-power wars", runs.map((r) => r.greatPowerWars));
-  printSummary("sanctions imposed", runs.map((r) => r.sanctionsImposed));
-  printSummary("sanctions lifted", runs.map((r) => r.sanctionsLifted));
-  printSummary("treaties total", runs.map((r) => r.treatiesTotal));
-  printSummary("treaties active", runs.map((r) => r.treatiesActive));
-  printSummary("treaties unique active", runs.map((r) => r.treatiesUniqueActive));
-  printSummary("treaties duplicate active", runs.map((r) => r.treatiesDuplicateActive));
-  printSummary("treaties max duplicate", runs.map((r) => r.treatiesMaxDuplicate));
-  printSummary("treaties terminated", runs.map((r) => r.treatiesTerminated));
-  printSummary("treaties suspended", runs.map((r) => r.treatiesSuspended));
-  printSummary("treaties proposed", runs.map((r) => r.treatiesProposed));
-  printSummary("treaties rejected", runs.map((r) => r.treatiesRejected));
-  printSummary("treaties activated", runs.map((r) => r.treatiesActivated));
-  printSummary("leadership changes", runs.map((r) => r.leadershipChanges));
-  printSummary("leadership same-name", runs.map((r) => r.leadershipSameName));
-  printSummary("leadership max on one date", runs.map((r) => r.leadershipMaxOnOneDate));
-  printSummary("leadership unique dates", runs.map((r) => r.leadershipUniqueDates));
-  printSummary("WA actions", runs.map((r) => r.waActions));
-  printSummary("WA vetoes", runs.map((r) => r.waVetoes));
-  printSummary("LTO disputes filed", runs.map((r) => r.ltoFiled));
-  printSummary("LTO settled", runs.map((r) => r.ltoSettled));
-  printSummary("LTO failed", runs.map((r) => r.ltoFailed));
-  printSummary("DC consultations", runs.map((r) => r.dcConsultations));
-  printSummary("CSC actions", runs.map((r) => r.cscActions));
-  printSummary("NAF mediations", runs.map((r) => r.nafMediations));
-  printSummary("war-power begun", runs.map((r) => r.warTriggers));
-  printSummary("Assembly war auth motions", runs.map((r) => r.assemblyWarAuth));
-  printSummary("AI actions toward Terena", runs.map((r) => r.aiActionsTowardTerena));
-  printSummary("elevated posture signals", runs.map((r) => r.elevatedPostureMonths));
+  printSummary(
+    "months completed",
+    runs.map((r) => r.monthsCompleted),
+  );
+  printSummary(
+    "crises created",
+    runs.map((r) => r.crisesCreated),
+  );
+  printSummary(
+    "crises settled",
+    runs.map((r) => r.crisesSettled),
+  );
+  printSummary(
+    "conflicts started",
+    runs.map((r) => r.conflictsStarted),
+  );
+  printSummary(
+    "conflicts ended",
+    runs.map((r) => r.conflictsEnded),
+  );
+  printSummary(
+    "conflicts active @ horizon",
+    runs.map((r) => r.conflictsActiveAtHorizon),
+  );
+  printSummary(
+    "Terena wars",
+    runs.map((r) => r.terenaWars),
+  );
+  printSummary(
+    "Vaskara–Terena wars",
+    runs.map((r) => r.vaskaraTerenaWars),
+  );
+  printSummary(
+    "great-power wars",
+    runs.map((r) => r.greatPowerWars),
+  );
+  printSummary(
+    "sanctions imposed",
+    runs.map((r) => r.sanctionsImposed),
+  );
+  printSummary(
+    "sanctions lifted",
+    runs.map((r) => r.sanctionsLifted),
+  );
+  printSummary(
+    "treaties total",
+    runs.map((r) => r.treatiesTotal),
+  );
+  printSummary(
+    "treaties active",
+    runs.map((r) => r.treatiesActive),
+  );
+  printSummary(
+    "treaties unique active",
+    runs.map((r) => r.treatiesUniqueActive),
+  );
+  printSummary(
+    "treaties duplicate active",
+    runs.map((r) => r.treatiesDuplicateActive),
+  );
+  printSummary(
+    "treaties max duplicate",
+    runs.map((r) => r.treatiesMaxDuplicate),
+  );
+  printSummary(
+    "treaties terminated",
+    runs.map((r) => r.treatiesTerminated),
+  );
+  printSummary(
+    "treaties suspended",
+    runs.map((r) => r.treatiesSuspended),
+  );
+  printSummary(
+    "treaties proposed",
+    runs.map((r) => r.treatiesProposed),
+  );
+  printSummary(
+    "treaties rejected",
+    runs.map((r) => r.treatiesRejected),
+  );
+  printSummary(
+    "treaties activated",
+    runs.map((r) => r.treatiesActivated),
+  );
+  printSummary(
+    "leadership changes",
+    runs.map((r) => r.leadershipChanges),
+  );
+  printSummary(
+    "leadership same-name",
+    runs.map((r) => r.leadershipSameName),
+  );
+  printSummary(
+    "leadership max on one date",
+    runs.map((r) => r.leadershipMaxOnOneDate),
+  );
+  printSummary(
+    "leadership unique dates",
+    runs.map((r) => r.leadershipUniqueDates),
+  );
+  printSummary(
+    "WA actions",
+    runs.map((r) => r.waActions),
+  );
+  printSummary(
+    "WA vetoes",
+    runs.map((r) => r.waVetoes),
+  );
+  printSummary(
+    "LTO disputes filed",
+    runs.map((r) => r.ltoFiled),
+  );
+  printSummary(
+    "LTO settled",
+    runs.map((r) => r.ltoSettled),
+  );
+  printSummary(
+    "LTO failed",
+    runs.map((r) => r.ltoFailed),
+  );
+  printSummary(
+    "DC consultations",
+    runs.map((r) => r.dcConsultations),
+  );
+  printSummary(
+    "CSC actions",
+    runs.map((r) => r.cscActions),
+  );
+  printSummary(
+    "NAF mediations",
+    runs.map((r) => r.nafMediations),
+  );
+  printSummary(
+    "war-power begun",
+    runs.map((r) => r.warTriggers),
+  );
+  printSummary(
+    "Assembly war auth motions",
+    runs.map((r) => r.assemblyWarAuth),
+  );
+  printSummary(
+    "AI actions toward Terena",
+    runs.map((r) => r.aiActionsTowardTerena),
+  );
+  printSummary(
+    "elevated posture signals",
+    runs.map((r) => r.elevatedPostureMonths),
+  );
 
   console.log(`\nRuns with LTO disputes: ${runs.filter((r) => r.ltoFiled > 0).length}/${SEEDS}`);
-  console.log(`Runs with zero active treaty duplicates: ${runs.filter((r) => r.treatiesDuplicateActive === 0).length}/${SEEDS}`);
-  console.log(`Runs with zero same-name replacements: ${runs.filter((r) => r.leadershipSameName === 0).length}/${SEEDS}`);
-  console.log(`Max leadership on one date across runs: ${Math.max(...runs.map((r) => r.leadershipMaxOnOneDate))}`);
+  console.log(
+    `Runs with zero active treaty duplicates: ${runs.filter((r) => r.treatiesDuplicateActive === 0).length}/${SEEDS}`,
+  );
+  console.log(
+    `Runs with zero same-name replacements: ${runs.filter((r) => r.leadershipSameName === 0).length}/${SEEDS}`,
+  );
+  console.log(
+    `Max leadership on one date across runs: ${Math.max(...runs.map((r) => r.leadershipMaxOnOneDate))}`,
+  );
   const incomplete = runs.filter((r) => r.monthsCompleted < MONTHS).length;
   if (incomplete > 0) {
     console.log(`\nWarning: ${incomplete}/${SEEDS} runs completed fewer than ${MONTHS} months.`);

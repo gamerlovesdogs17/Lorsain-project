@@ -16,7 +16,8 @@ function pairHasActiveCrisis(
 ): boolean {
   const key = bilateralKey(aId, bId);
   return activeCrises(runtime).some(
-    (c) => c.focalPairKey === key || (c.participantIds.includes(aId) && c.participantIds.includes(bId)),
+    (c) =>
+      c.focalPairKey === key || (c.participantIds.includes(aId) && c.participantIds.includes(bId)),
   );
 }
 
@@ -41,8 +42,7 @@ function emergenceProbability(
   const sanctionsOnPair = Object.values(state.foreignAffairsRuntime.sanctions).filter(
     (s) =>
       s.active &&
-      ((s.imposerId === aId && s.targetId === bId) ||
-        (s.imposerId === bId && s.targetId === aId)),
+      ((s.imposerId === aId && s.targetId === bId) || (s.imposerId === bId && s.targetId === aId)),
   );
   p += Math.min(0.12, sanctionsOnPair.length * 0.04);
 

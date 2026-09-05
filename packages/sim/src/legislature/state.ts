@@ -112,16 +112,18 @@ function selectCommitteeChair(
   state: SimState,
   memberIds: string[],
 ): string | null {
-  return memberIds
-    .filter((id) => id !== state.playerPoliticianId)
-    .slice()
-    .sort((a, b) => {
-      const pa = getAgentProfile(world, state, a);
-      const pb = getAgentProfile(world, state, b);
-      const as = (pa?.skills.legislation ?? 0.5) * 0.72 + (pa?.traits.ambition ?? 0.5) * 0.28;
-      const bs = (pb?.skills.legislation ?? 0.5) * 0.72 + (pb?.traits.ambition ?? 0.5) * 0.28;
-      return bs - as || a.localeCompare(b);
-    })[0] ?? null;
+  return (
+    memberIds
+      .filter((id) => id !== state.playerPoliticianId)
+      .slice()
+      .sort((a, b) => {
+        const pa = getAgentProfile(world, state, a);
+        const pb = getAgentProfile(world, state, b);
+        const as = (pa?.skills.legislation ?? 0.5) * 0.72 + (pa?.traits.ambition ?? 0.5) * 0.28;
+        const bs = (pb?.skills.legislation ?? 0.5) * 0.72 + (pb?.traits.ambition ?? 0.5) * 0.28;
+        return bs - as || a.localeCompare(b);
+      })[0] ?? null
+  );
 }
 
 export function seedCommitteesIfNeeded(world: KernelWorld, state: SimState): void {
@@ -130,12 +132,14 @@ export function seedCommitteesIfNeeded(world: KernelWorld, state: SimState): voi
   if (existingCommittees.length > 0) {
     const currentMembers = new Set(mps);
     const assignedMembers = new Set(existingCommittees.flatMap((committee) => committee.memberIds));
-    const staleRoster = existingCommittees.some((committee) =>
-      committee.memberIds.some((id) => !currentMembers.has(id)),
-    ) || mps.some((id) => !assignedMembers.has(id));
-    if (!staleRoster) for (const committee of existingCommittees) {
-      committee.chairId ??= selectCommitteeChair(world, state, committee.memberIds);
-    }
+    const staleRoster =
+      existingCommittees.some((committee) =>
+        committee.memberIds.some((id) => !currentMembers.has(id)),
+      ) || mps.some((id) => !assignedMembers.has(id));
+    if (!staleRoster)
+      for (const committee of existingCommittees) {
+        committee.chairId ??= selectCommitteeChair(world, state, committee.memberIds);
+      }
     if (!staleRoster) return;
     state.legislatureRuntime.committees = {};
   }

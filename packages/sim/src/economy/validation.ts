@@ -53,12 +53,16 @@ export function parseEconomyRuntime(raw: unknown): EconomyRuntime | string {
       if (!Array.isArray(rows)) continue;
       runtime.provinceHistory[id] = rows.flatMap((row) => {
         if (!isRecord(row) || typeof row.date !== "string" || !isIsoDate(row.date)) return [];
-        return [{
-          date: row.date,
-          conditionsIndex: typeof row.conditionsIndex === "number" ? clampIndex(row.conditionsIndex) : 100,
-          employmentIndex: typeof row.employmentIndex === "number" ? clampIndex(row.employmentIndex) : 100,
-          housingIndex: typeof row.housingIndex === "number" ? clampIndex(row.housingIndex) : 100,
-        }];
+        return [
+          {
+            date: row.date,
+            conditionsIndex:
+              typeof row.conditionsIndex === "number" ? clampIndex(row.conditionsIndex) : 100,
+            employmentIndex:
+              typeof row.employmentIndex === "number" ? clampIndex(row.employmentIndex) : 100,
+            housingIndex: typeof row.housingIndex === "number" ? clampIndex(row.housingIndex) : 100,
+          },
+        ];
       });
     }
   }
@@ -67,10 +71,13 @@ export function parseEconomyRuntime(raw: unknown): EconomyRuntime | string {
       if (!Array.isArray(rows)) continue;
       runtime.sectorHistory[id] = rows.flatMap((row) => {
         if (!isRecord(row) || typeof row.date !== "string" || !isIsoDate(row.date)) return [];
-        return [{
-          date: row.date,
-          conditionsIndex: typeof row.conditionsIndex === "number" ? clampIndex(row.conditionsIndex) : 100,
-        }];
+        return [
+          {
+            date: row.date,
+            conditionsIndex:
+              typeof row.conditionsIndex === "number" ? clampIndex(row.conditionsIndex) : 100,
+          },
+        ];
       });
     }
   }
@@ -78,8 +85,10 @@ export function parseEconomyRuntime(raw: unknown): EconomyRuntime | string {
     for (const [id, rec] of Object.entries(raw.provinces)) {
       if (!isRecord(rec)) continue;
       const region: RegionalEconomyIndices = {
-        conditionsIndex: typeof rec.conditionsIndex === "number" ? clampIndex(rec.conditionsIndex) : 100,
-        employmentIndex: typeof rec.employmentIndex === "number" ? clampIndex(rec.employmentIndex) : 100,
+        conditionsIndex:
+          typeof rec.conditionsIndex === "number" ? clampIndex(rec.conditionsIndex) : 100,
+        employmentIndex:
+          typeof rec.employmentIndex === "number" ? clampIndex(rec.employmentIndex) : 100,
         housingIndex: typeof rec.housingIndex === "number" ? clampIndex(rec.housingIndex) : 100,
       };
       runtime.provinces[id] = region;
@@ -89,7 +98,8 @@ export function parseEconomyRuntime(raw: unknown): EconomyRuntime | string {
     for (const [id, rec] of Object.entries(raw.sectors)) {
       if (!isRecord(rec)) continue;
       runtime.sectors[id] = {
-        conditionsIndex: typeof rec.conditionsIndex === "number" ? clampIndex(rec.conditionsIndex) : 100,
+        conditionsIndex:
+          typeof rec.conditionsIndex === "number" ? clampIndex(rec.conditionsIndex) : 100,
       };
     }
   }
@@ -113,7 +123,9 @@ export function parseEconomyRuntime(raw: unknown): EconomyRuntime | string {
                 fiscalImpact: typeof i.fiscalImpact === "number" ? i.fiscalImpact : null,
               }))
           : [],
-        metadata: isRecord(rec.metadata) ? (rec.metadata as EconomyRuntime["laggedEffects"][0]["metadata"]) : {},
+        metadata: isRecord(rec.metadata)
+          ? (rec.metadata as EconomyRuntime["laggedEffects"][0]["metadata"])
+          : {},
       });
     }
   }
@@ -126,7 +138,9 @@ export function parseEconomyRuntime(raw: unknown): EconomyRuntime | string {
         kind: typeof rec.kind === "string" ? rec.kind : "routine",
         magnitude: typeof rec.magnitude === "number" ? rec.magnitude : 0,
         remainingMonths: isInt(rec.remainingMonths) ? rec.remainingMonths : 1,
-        metadata: isRecord(rec.metadata) ? (rec.metadata as EconomyRuntime["shocks"][0]["metadata"]) : {},
+        metadata: isRecord(rec.metadata)
+          ? (rec.metadata as EconomyRuntime["shocks"][0]["metadata"])
+          : {},
       });
     }
   }

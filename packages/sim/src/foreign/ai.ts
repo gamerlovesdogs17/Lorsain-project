@@ -122,7 +122,12 @@ function aiOutreach(
   const delta = outreachRelationDelta(actor.powerTier);
   adjustRelation(rel, delta);
   rel.lastUpdated = state.currentDate;
-  recordAction(state, { actorCountryId: actorId, targetCountryId: targetId, kind: "outreach", commandId });
+  recordAction(state, {
+    actorCountryId: actorId,
+    targetCountryId: targetId,
+    kind: "outreach",
+    commandId,
+  });
   return [
     pushHistory(state, {
       date: state.currentDate,
@@ -148,7 +153,12 @@ function aiWarning(
   if (!rel) return [];
   adjustRelation(rel, { general: -3, securityTension: 0.06, trust: -0.04 });
   rel.lastUpdated = state.currentDate;
-  recordAction(state, { actorCountryId: actorId, targetCountryId: targetId, kind: "warning", commandId });
+  recordAction(state, {
+    actorCountryId: actorId,
+    targetCountryId: targetId,
+    kind: "warning",
+    commandId,
+  });
   return [
     pushHistory(state, {
       date: state.currentDate,
@@ -364,8 +374,14 @@ export function processForeignAiMonth(
       const next = nextPosture(actorRuntime.posture, escalate);
       events.push(...aiPostureChange(state, actorId, next, commandId));
     } else if (roll < 0.42 && rel.securityTension < 0.3 && actorRuntime.posture !== "normal") {
-      events.push(...aiPostureChange(state, actorId, nextPosture(actorRuntime.posture, false), commandId));
-    } else if (roll < 0.43 + warBias * 0.02 && rel.securityTension > 0.65 && isSuperpowerTier(actorCanon.powerTier)) {
+      events.push(
+        ...aiPostureChange(state, actorId, nextPosture(actorRuntime.posture, false), commandId),
+      );
+    } else if (
+      roll < 0.43 + warBias * 0.02 &&
+      rel.securityTension > 0.65 &&
+      isSuperpowerTier(actorCanon.powerTier)
+    ) {
       const deterrence = deterrenceModifier(state.foreignAffairsRuntime, actorId, targetId);
       if (rng.float01("foreign-affairs") < 0.08 - deterrence * 0.05) {
         const crisis = Object.values(state.foreignAffairsRuntime.crises).find(

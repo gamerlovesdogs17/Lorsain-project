@@ -17,10 +17,7 @@ import type { RngService } from "../rng.js";
 import { constituencyGotvBoost } from "../campaigns/gotv.js";
 import { pushHistory } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
-import {
-  createGubernatorialElection,
-  governorOfficeForProvince,
-} from "./state.js";
+import { createGubernatorialElection, governorOfficeForProvince } from "./state.js";
 import { promoteProvincialCandidate } from "./assemblies.js";
 import type {
   GubernatorialCandidate,
@@ -60,25 +57,29 @@ export function gubernatorialEligibilityError(
   if ((politician.homeProvinceId ?? world.politicianHomeProvince[politicianId]) !== provinceId) {
     return reject("PROVINCIAL_RESIDENCY", `${politicianId} is not resident in ${provinceId}`);
   }
-  const presidentElect = Object.values(state.elections).some((election) =>
-    election.type === "presidential" && election.status === "resolved" &&
-    election.winnerIds.includes(politicianId) &&
-    (
-      (typeof election.metadata.assumptionDate === "string" &&
+  const presidentElect = Object.values(state.elections).some(
+    (election) =>
+      election.type === "presidential" &&
+      election.status === "resolved" &&
+      election.winnerIds.includes(politicianId) &&
+      ((typeof election.metadata.assumptionDate === "string" &&
         compareIsoDate(state.currentDate, election.metadata.assumptionDate) < 0) ||
-      state.scheduler.events.some((event) =>
-        event.eventType === "PRESIDENTIAL_ASSUMPTION_DUE" &&
-        event.payload.electionId === election.id && compareIsoDate(state.currentDate, event.dueDate) < 0,
-      )
-    ),
+        state.scheduler.events.some(
+          (event) =>
+            event.eventType === "PRESIDENTIAL_ASSUMPTION_DUE" &&
+            event.payload.electionId === election.id &&
+            compareIsoDate(state.currentDate, event.dueDate) < 0,
+        )),
   );
   if (presidentElect) return reject("INCOMPATIBLE_CANDIDACY", `${politicianId} is President-elect`);
   const nationalCandidacy = Object.values(state.elections).some((election) => {
     if (election.status === "resolved" || election.status === "cancelled") return false;
-    if (election.candidates[politicianId] && !election.candidates[politicianId]!.withdrawn) return true;
+    if (election.candidates[politicianId] && !election.candidates[politicianId]!.withdrawn)
+      return true;
     return election.assembly?.candidacies[politicianId]?.status === "filed";
   });
-  if (nationalCandidacy) return reject("INCOMPATIBLE_CANDIDACY", `${politicianId} is already seeking national office`);
+  if (nationalCandidacy)
+    return reject("INCOMPATIBLE_CANDIDACY", `${politicianId} is already seeking national office`);
   for (const term of activeTermsForPolitician(state, politicianId)) {
     const office = world.offices[term.officeId];
     if (!office) continue;
@@ -127,8 +128,12 @@ function completedGovernorTerms(
 ): number {
   return Object.values(state.officeTerms).filter((term) => {
     const office = world.offices[term.officeId];
-    return term.holderId === politicianId && term.holdingKind === "substantive" &&
-      office?.kind === "governor" && office.provinceId === provinceId;
+    return (
+      term.holderId === politicianId &&
+      term.holdingKind === "substantive" &&
+      office?.kind === "governor" &&
+      office.provinceId === provinceId
+    );
   }).length;
 }
 
@@ -150,13 +155,19 @@ function incumbentVulnerability(
   return Math.max(-1, Math.min(1, (challengerShare - incumbentShare) * 3));
 }
 
-function hasNearTermHigherOfficeOpportunity(state: SimState, election: GubernatorialElection): boolean {
+function hasNearTermHigherOfficeOpportunity(
+  state: SimState,
+  election: GubernatorialElection,
+): boolean {
   const electionYear = Number(election.date.slice(0, 4));
   return Object.values(state.elections).some((row) => {
     if (row.status === "resolved" || row.status === "cancelled") return false;
     const year = Number(row.date.slice(0, 4));
-    return (row.type === "presidential" || row.type === "assembly") &&
-      year >= electionYear && year <= electionYear + 2;
+    return (
+      (row.type === "presidential" || row.type === "assembly") &&
+      year >= electionYear &&
+      year <= electionYear + 2
+    );
   });
 }
 
@@ -175,31 +186,38 @@ function chooseIncumbentDecision(
   const vulnerability = incumbentVulnerability(state, election, incumbentId);
   const incumbentParty = state.politicians[incumbentId]?.partyId ?? null;
   const assembly = state.provincialRuntime.assemblies[election.provinceId];
-  const partyControl = incumbentParty && assembly
-    ? (assembly.partySeats[incumbentParty] ?? 0) / Math.max(1, assembly.seatCount)
-    : 0;
+  const partyControl =
+    incumbentParty && assembly
+      ? (assembly.partySeats[incumbentParty] ?? 0) / Math.max(1, assembly.seatCount)
+      : 0;
   const agePenalty = Math.max(0, age - 62) * 0.018 + Math.max(0, age - 72) * 0.026;
   const termPenalty = Math.max(0, terms - 2) * 0.065;
   const seekProbability = Math.max(
     0.005,
     Math.min(
       0.95,
-      0.62 + ambition * 0.25 - retirement * 0.24 + standing.favorability * 0.18 +
-        partyControl * 0.12 - Math.max(0, vulnerability) * 0.14 - agePenalty - termPenalty,
+      0.62 +
+        ambition * 0.25 -
+        retirement * 0.24 +
+        standing.favorability * 0.18 +
+        partyControl * 0.12 -
+        Math.max(0, vulnerability) * 0.14 -
+        agePenalty -
+        termPenalty,
     ),
   );
   if (stableFraction(`${election.id}:${incumbentId}:career-decision`) < seekProbability) {
     return "seek_reelection";
   }
   if (
-    age < 76 && ambition >= 0.7 && hasNearTermHigherOfficeOpportunity(state, election) &&
+    age < 76 &&
+    ambition >= 0.7 &&
+    hasNearTermHigherOfficeOpportunity(state, election) &&
     stableFraction(`${election.id}:${incumbentId}:higher-office`) < ambition
   ) {
     return "seek_other_office";
   }
-  return age >= 66 || retirement >= 0.55 || terms >= 4
-    ? "retire"
-    : "leave_electoral_politics";
+  return age >= 66 || retirement >= 0.55 || terms >= 4 ? "retire" : "leave_electoral_politics";
 }
 
 function npcCandidateScore(
@@ -216,7 +234,8 @@ function npcCandidateScore(
   if (kinds.includes("governor")) score += 0.55;
   if (kinds.includes("mayor")) score += 0.24;
   if (kinds.includes("minister")) score += 0.18;
-  if (Object.values(state.partyStates).some((party) => party.leaderId === politicianId)) score += 0.2;
+  if (Object.values(state.partyStates).some((party) => party.leaderId === politicianId))
+    score += 0.2;
   score += (stableHash(`${election.id}:${politicianId}`) % 1000) / 100000;
   return score;
 }
@@ -262,7 +281,11 @@ function openField(
         visibility: "public",
         actorIds: [election.incumbentId],
         entityIds: [election.id, election.provinceId],
-        payload: { electionId: election.id, provinceId: election.provinceId, decision: election.incumbentDecision },
+        payload: {
+          electionId: election.id,
+          provinceId: election.provinceId,
+          decision: election.incumbentDecision,
+        },
         sourceScheduledEventId: null,
         sourceCommandId: commandId,
       }),
@@ -272,29 +295,42 @@ function openField(
   const eligibleIds = Object.keys(state.politicians)
     .filter((id) => id !== state.playerPoliticianId)
     .filter((id) => gubernatorialEligibilityError(state, world, id, election.provinceId) == null)
-    .filter((id) => id !== election.incumbentId || election.incumbentDecision === "seek_reelection");
+    .filter(
+      (id) => id !== election.incumbentId || election.incumbentDecision === "seek_reelection",
+    );
   if (eligibleIds.length < 4) {
     const provincialPool = Object.values(state.provincialRuntime.legislators)
-      .filter((row) => row.provinceId === election.provinceId && row.active && row.fullPoliticianId == null)
+      .filter(
+        (row) =>
+          row.provinceId === election.provinceId && row.active && row.fullPoliticianId == null,
+      )
       .sort(
         (a, b) =>
           b.ambition + b.campaignSkill + b.standing - (a.ambition + a.campaignSkill + a.standing) ||
-          stableHash(`${election.id}:${a.id}:recruit`) - stableHash(`${election.id}:${b.id}:recruit`),
+          stableHash(`${election.id}:${a.id}:recruit`) -
+            stableHash(`${election.id}:${b.id}:recruit`),
       );
     for (const row of provincialPool) {
       if (eligibleIds.length >= 6) break;
-      const promoted = promoteProvincialCandidate(world, state, row.id, "gubernatorial_recruitment");
-      if (promoted && gubernatorialEligibilityError(state, world, promoted, election.provinceId) == null) {
+      const promoted = promoteProvincialCandidate(
+        world,
+        state,
+        row.id,
+        "gubernatorial_recruitment",
+      );
+      if (
+        promoted &&
+        gubernatorialEligibilityError(state, world, promoted, election.provinceId) == null
+      ) {
         eligibleIds.push(promoted);
       }
     }
   }
-  const pool = [...new Set(eligibleIds)]
-    .sort(
-      (a, b) =>
-        npcCandidateScore(state, world, b, election) - npcCandidateScore(state, world, a, election) ||
-        stableHash(`${election.id}:${a}`) - stableHash(`${election.id}:${b}`),
-    );
+  const pool = [...new Set(eligibleIds)].sort(
+    (a, b) =>
+      npcCandidateScore(state, world, b, election) - npcCandidateScore(state, world, a, election) ||
+      stableHash(`${election.id}:${a}`) - stableHash(`${election.id}:${b}`),
+  );
   if (
     election.incumbentId &&
     election.incumbentId !== state.playerPoliticianId &&
@@ -361,13 +397,18 @@ export function fileGubernatorialCandidacy(
   if (!election || election.provinceId !== args.provinceId) {
     return { error: reject("INVALID_ELECTION", args.electionId) };
   }
-  if (election.status !== "filing_open" || compareIsoDate(state.currentDate, election.filingDeadlineDate) >= 0) {
+  if (
+    election.status !== "filing_open" ||
+    compareIsoDate(state.currentDate, election.filingDeadlineDate) >= 0
+  ) {
     return { error: reject("FILING_CLOSED", election.id) };
   }
   const error = gubernatorialEligibilityError(state, world, args.politicianId, args.provinceId);
   if (error) return { error };
-  if (election.playerDecision === "declined") return { error: reject("ALREADY_DECLINED", args.politicianId) };
-  if (election.candidates[args.politicianId]) return { error: reject("ALREADY_FILED", args.politicianId) };
+  if (election.playerDecision === "declined")
+    return { error: reject("ALREADY_DECLINED", args.politicianId) };
+  if (election.candidates[args.politicianId])
+    return { error: reject("ALREADY_FILED", args.politicianId) };
   election.candidates[args.politicianId] = filedCandidate(
     state,
     world,
@@ -398,7 +439,8 @@ export function declineGubernatorialCandidacy(
   const election = state.provincialRuntime.elections[args.electionId];
   if (!election) return { error: reject("INVALID_ELECTION", args.electionId) };
   if (election.status !== "filing_open") return { error: reject("FILING_CLOSED", election.id) };
-  if (election.candidates[args.politicianId]) return { error: reject("ALREADY_FILED", args.politicianId) };
+  if (election.candidates[args.politicianId])
+    return { error: reject("ALREADY_FILED", args.politicianId) };
   if (args.politicianId === state.playerPoliticianId) election.playerDecision = "declined";
   const event = pushHistory(state, {
     date: state.currentDate,
@@ -467,19 +509,24 @@ function resolveElection(
     }
   }
   for (const politicianId of candidateIds) {
-    votes[politicianId] =
-      (votes[politicianId] ?? 0) * (0.992 + rng.float01("elections") * 0.016);
+    votes[politicianId] = (votes[politicianId] ?? 0) * (0.992 + rng.float01("elections") * 0.016);
   }
   const total = Object.values(votes).reduce((sum, value) => sum + value, 0);
   election.voteShares = Object.fromEntries(
-    candidateIds.map((politicianId) => [politicianId, total > 0 ? votes[politicianId]! / total : 1 / candidateIds.length]),
+    candidateIds.map((politicianId) => [
+      politicianId,
+      total > 0 ? votes[politicianId]! / total : 1 / candidateIds.length,
+    ]),
   );
-  const ranked = candidateIds.slice().sort((a, b) => election.voteShares[b]! - election.voteShares[a]! || a.localeCompare(b));
+  const ranked = candidateIds
+    .slice()
+    .sort((a, b) => election.voteShares[b]! - election.voteShares[a]! || a.localeCompare(b));
   const topShare = election.voteShares[ranked[0]!]!;
-  const tied = ranked.filter((id) => Math.abs(election.voteShares[id]! - topShare) <= Number.EPSILON);
-  const lot = tied.length > 1
-    ? resolveLegalLot(tied, { nextUint32: () => rng.uint32("elections") })
-    : null;
+  const tied = ranked.filter(
+    (id) => Math.abs(election.voteShares[id]! - topShare) <= Number.EPSILON,
+  );
+  const lot =
+    tied.length > 1 ? resolveLegalLot(tied, { nextUint32: () => rng.uint32("elections") }) : null;
   election.winnerId = lot?.selectedId ?? ranked[0]!;
   election.turnoutRate = electorateWeight > 0 ? turnoutWeight / electorateWeight : 0.58;
   election.certification = certifyShareResult({
@@ -554,34 +601,50 @@ function assumeWinner(
   prepare(preview);
   const previewAssumed = assumeOffice(preview, world, args);
   if ("error" in previewAssumed) {
-    return [pushHistory(state, {
-      date: state.currentDate,
-      type: "GUBERNATORIAL_ASSUMPTION_BLOCKED",
-      importance: 0.9,
-      visibility: "system",
-      actorIds: [election.winnerId],
-      entityIds: [election.id, election.provinceId, office.id],
-      payload: { code: previewAssumed.error.code, message: previewAssumed.error.message },
-      sourceScheduledEventId: null,
-      sourceCommandId: commandId,
-    })];
+    return [
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "GUBERNATORIAL_ASSUMPTION_BLOCKED",
+        importance: 0.9,
+        visibility: "system",
+        actorIds: [election.winnerId],
+        entityIds: [election.id, election.provinceId, office.id],
+        payload: { code: previewAssumed.error.code, message: previewAssumed.error.message },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    ];
   }
   prepare(state);
   const assumed = assumeOffice(state, world, args);
-  if ("error" in assumed) throw new Error(`Governor assumption preview drift: ${assumed.error.code}`);
+  if ("error" in assumed)
+    throw new Error(`Governor assumption preview drift: ${assumed.error.code}`);
   election.status = "assumed";
   delete state.provincialRuntime.governorVacancies[election.provinceId];
   if (election.cycleKind === "special") {
     const nextRegular = Object.values(state.provincialRuntime.elections)
-      .filter((row) => row.provinceId === election.provinceId && row.cycleKind === "regular" && row.status !== "assumed")
+      .filter(
+        (row) =>
+          row.provinceId === election.provinceId &&
+          row.cycleKind === "regular" &&
+          row.status !== "assumed",
+      )
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
     if (nextRegular) nextRegular.incumbentId = election.winnerId;
     else {
-      const next = createGubernatorialElection(election.provinceId, Number(election.date.slice(0, 4)) + 4, election.winnerId);
+      const next = createGubernatorialElection(
+        election.provinceId,
+        Number(election.date.slice(0, 4)) + 4,
+        election.winnerId,
+      );
       state.provincialRuntime.elections[next.id] = next;
     }
   } else {
-    const next = createGubernatorialElection(election.provinceId, Number(election.date.slice(0, 4)) + 4, election.winnerId);
+    const next = createGubernatorialElection(
+      election.provinceId,
+      Number(election.date.slice(0, 4)) + 4,
+      election.winnerId,
+    );
     state.provincialRuntime.elections[next.id] = next;
   }
   const events: SimEvent[] = [
@@ -600,9 +663,12 @@ function assumeWinner(
   if (
     election.incumbentId &&
     election.incumbentId !== election.winnerId &&
-    (election.incumbentDecision === "retire" || election.incumbentDecision === "leave_electoral_politics")
+    (election.incumbentDecision === "retire" ||
+      election.incumbentDecision === "leave_electoral_politics")
   ) {
-    events.push(...applyPoliticianExit(state, world, election.incumbentId, "retirement", commandId));
+    events.push(
+      ...applyPoliticianExit(state, world, election.incumbentId, "retirement", commandId),
+    );
   }
   return events;
 }
@@ -619,23 +685,26 @@ function reconcileGovernorAuthority(
     const holders = occupyingTerms(state, office.id);
     const valid = holders.filter((term) => {
       const politician = state.politicians[term.holderId];
-      const termCurrent = term.endDate == null || compareIsoDate(state.currentDate, term.endDate) < 0;
+      const termCurrent =
+        term.endDate == null || compareIsoDate(state.currentDate, term.endDate) < 0;
       return politician?.alive && !politician.retired && termCurrent;
     });
     if (valid.length > 0) {
       if (state.provincialRuntime.governorVacancies[provinceId]) {
         delete state.provincialRuntime.governorVacancies[provinceId];
-        events.push(pushHistory(state, {
-          date: state.currentDate,
-          type: "GOVERNOR_VACANCY_ENDED",
-          importance: 0.55,
-          visibility: "public",
-          actorIds: valid.map((term) => term.holderId),
-          entityIds: [provinceId, office.id],
-          payload: { provinceId, officeId: office.id },
-          sourceScheduledEventId: null,
-          sourceCommandId: commandId,
-        }));
+        events.push(
+          pushHistory(state, {
+            date: state.currentDate,
+            type: "GOVERNOR_VACANCY_ENDED",
+            importance: 0.55,
+            visibility: "public",
+            actorIds: valid.map((term) => term.holderId),
+            entityIds: [provinceId, office.id],
+            payload: { provinceId, officeId: office.id },
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
+        );
       }
       continue;
     }
@@ -646,19 +715,33 @@ function reconcileGovernorAuthority(
           : "holder_ineligible";
       endTerm(state, term.id, state.currentDate, reason);
     }
-    const futureRegular = Object.values(state.provincialRuntime.elections)
-      .filter((row) => row.provinceId === provinceId && row.status !== "assumed")
-      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0] ?? null;
-    let future = Object.values(state.provincialRuntime.elections)
-      .filter((row) => row.provinceId === provinceId && row.cycleKind === "special" && row.status !== "assumed")
-      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0] ?? null;
-    if (!future && (!futureRegular || compareIsoDate(futureRegular.date, addMonths(state.currentDate, 12)) > 0)) {
+    const futureRegular =
+      Object.values(state.provincialRuntime.elections)
+        .filter((row) => row.provinceId === provinceId && row.status !== "assumed")
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0] ?? null;
+    let future =
+      Object.values(state.provincialRuntime.elections)
+        .filter(
+          (row) =>
+            row.provinceId === provinceId &&
+            row.cycleKind === "special" &&
+            row.status !== "assumed",
+        )
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0] ?? null;
+    if (
+      !future &&
+      (!futureRegular || compareIsoDate(futureRegular.date, addMonths(state.currentDate, 12)) > 0)
+    ) {
       future = createGubernatorialSpecialElection(provinceId, state.currentDate);
       state.provincialRuntime.elections[future.id] = future;
     }
     if (!future) future = futureRegular;
     if (!future) {
-      future = createGubernatorialElection(provinceId, Number(state.currentDate.slice(0, 4)) + 1, null);
+      future = createGubernatorialElection(
+        provinceId,
+        Number(state.currentDate.slice(0, 4)) + 1,
+        null,
+      );
       state.provincialRuntime.elections[future.id] = future;
     }
     if (!state.provincialRuntime.governorVacancies[provinceId]) {
@@ -670,17 +753,19 @@ function reconcileGovernorAuthority(
         actingHolderId: null,
         expectedElectionId: future.id,
       };
-      events.push(pushHistory(state, {
-        date: state.currentDate,
-        type: "GOVERNOR_VACANCY_OPENED",
-        importance: 0.72,
-        visibility: "public",
-        actorIds: [],
-        entityIds: [provinceId, office.id, future.id],
-        payload: { provinceId, officeId: office.id, expectedElectionId: future.id },
-        sourceScheduledEventId: null,
-        sourceCommandId: commandId,
-      }));
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "GOVERNOR_VACANCY_OPENED",
+          importance: 0.72,
+          visibility: "public",
+          actorIds: [],
+          entityIds: [provinceId, office.id, future.id],
+          payload: { provinceId, officeId: office.id, expectedElectionId: future.id },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
     }
   }
   return events;
@@ -697,17 +782,29 @@ export function processGubernatorialCalendar(
     (a, b) => a.date.localeCompare(b.date) || a.provinceId.localeCompare(b.provinceId),
   );
   for (const election of elections) {
-    if (election.status === "planned" && compareIsoDate(state.currentDate, election.filingOpenDate) >= 0) {
+    if (
+      election.status === "planned" &&
+      compareIsoDate(state.currentDate, election.filingOpenDate) >= 0
+    ) {
       events.push(...openField(state, world, election, commandId));
     }
-    if (election.status === "filing_open" && compareIsoDate(state.currentDate, election.filingDeadlineDate) >= 0) {
+    if (
+      election.status === "filing_open" &&
+      compareIsoDate(state.currentDate, election.filingDeadlineDate) >= 0
+    ) {
       if (election.playerDecision == null) election.playerDecision = "declined";
       election.status = "field_finalized";
     }
-    if (election.status === "field_finalized" && compareIsoDate(state.currentDate, election.date) >= 0) {
+    if (
+      election.status === "field_finalized" &&
+      compareIsoDate(state.currentDate, election.date) >= 0
+    ) {
       events.push(...resolveElection(state, world, rng, election, commandId));
     }
-    if (election.status === "resolved" && compareIsoDate(state.currentDate, election.assumptionDate) >= 0) {
+    if (
+      election.status === "resolved" &&
+      compareIsoDate(state.currentDate, election.assumptionDate) >= 0
+    ) {
       events.push(...assumeWinner(state, world, election, commandId));
     }
   }

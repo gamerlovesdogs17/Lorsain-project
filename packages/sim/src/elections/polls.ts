@@ -174,11 +174,13 @@ export function createPoll(
       ? [args.constituencyId]
       : args.geographyKind === "province" && args.provinceId
         ? Object.keys(world.constituencyElectorate)
-            .filter((constituencyId) => world.constituencyElectorate[constituencyId]?.provincePopulationShares.some(
-              (share) => share.provinceId === args.provinceId && share.share > 0,
-            ))
+            .filter((constituencyId) =>
+              world.constituencyElectorate[constituencyId]?.provincePopulationShares.some(
+                (share) => share.provinceId === args.provinceId && share.share > 0,
+              ),
+            )
             .sort()
-      : Object.keys(world.constituencyElectorate).sort();
+        : Object.keys(world.constituencyElectorate).sort();
   if (constituencyIds.length === 0) {
     return { error: reject("INVALID_GEOGRAPHY", "no electorate loaded") };
   }

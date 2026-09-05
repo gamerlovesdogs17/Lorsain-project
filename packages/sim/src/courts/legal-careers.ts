@@ -51,15 +51,18 @@ export function hasExplicitLegalCareer(profile: AgentProfile | null | undefined)
 
 export function explicitLegalCareerLabel(profile: AgentProfile | null | undefined): string | null {
   const roles = profile?.roleTypes ?? [];
-  if (roles.some((role) => role.includes("constitutional_court") || role === "chief_justice")) return "Constitutional Court justice";
+  if (roles.some((role) => role.includes("constitutional_court") || role === "chief_justice"))
+    return "Constitutional Court justice";
   if (roles.some((role) => role.includes("appellate"))) return "Appellate judge";
   if (roles.some((role) => role.includes("judge"))) return "Judge";
   if (roles.some((role) => role.includes("prosecut"))) return "Prosecutor";
   if (roles.some((role) => role.includes("defender"))) return "Public defender";
   if (roles.some((role) => role.includes("academic"))) return "Legal academic";
-  if (roles.some((role) => role.includes("government_legal") || role.includes("justice_ministry"))) return "Senior government legal counsel";
+  if (roles.some((role) => role.includes("government_legal") || role.includes("justice_ministry")))
+    return "Senior government legal counsel";
   if (roles.some((role) => role.includes("constitutional_lawyer"))) return "Constitutional lawyer";
-  if (roles.some((role) => role.includes("lawyer") || role.includes("counsel"))) return "Practicing lawyer";
+  if (roles.some((role) => role.includes("lawyer") || role.includes("counsel")))
+    return "Practicing lawyer";
   return null;
 }
 
@@ -81,31 +84,74 @@ function candidateName(state: SimState, ordinal: number): string {
   return selectGeneratedPublicName(existing, `legal-career:${ordinal}`);
 }
 
-function partyAndFaction(world: KernelWorld, salt: string): { partyId: string | null; factionId: string | null } {
-  const parties = Object.keys(world.partyDefinitions).filter((id) => id !== world.independentAggregatePartyId).sort();
-  if (parties.length === 0 || stableHash(`${salt}:nonpartisan`) % 5 === 0) return { partyId: null, factionId: null };
+function partyAndFaction(
+  world: KernelWorld,
+  salt: string,
+): { partyId: string | null; factionId: string | null } {
+  const parties = Object.keys(world.partyDefinitions)
+    .filter((id) => id !== world.independentAggregatePartyId)
+    .sort();
+  if (parties.length === 0 || stableHash(`${salt}:nonpartisan`) % 5 === 0)
+    return { partyId: null, factionId: null };
   const partyId = parties[stableHash(`${salt}:party`) % parties.length]!;
-  const factions = (world.partyDefinitions[partyId]?.factionIds ?? []).filter((id) => world.factionDefinitions[id]?.partyId === partyId).sort();
-  return { partyId, factionId: factions[stableHash(`${salt}:faction`) % Math.max(1, factions.length)] ?? null };
+  const factions = (world.partyDefinitions[partyId]?.factionIds ?? [])
+    .filter((id) => world.factionDefinitions[id]?.partyId === partyId)
+    .sort();
+  return {
+    partyId,
+    factionId: factions[stableHash(`${salt}:faction`) % Math.max(1, factions.length)] ?? null,
+  };
 }
 
-function careerDescription(name: string, role: typeof GENERATED_LEGAL_ROLES[number], salt: string): string {
+function careerDescription(
+  name: string,
+  role: (typeof GENERATED_LEGAL_ROLES)[number],
+  salt: string,
+): string {
   const family = name.split(" ").at(-1) ?? name;
-  const copy: Record<typeof GENERATED_LEGAL_ROLES[number], [string, string]> = {
-    appellate_judge: [`${family} serves on a provincial appellate bench and has written extensively on administrative procedure.`, `${name} is an appellate judge whose docket has centered on public law and constitutional procedure.`],
-    lower_court_judge: [`${family} is a trial judge with a substantial record in public-law cases.`, `${name} serves on a lower court and is known for careful written rulings in disputes involving public bodies.`],
-    prosecutor: [`${family} is a senior prosecutor whose practice includes corruption and public-integrity cases.`, `${name} built a legal career prosecuting complex financial and public-integrity cases.`],
-    public_defender: [`${family} is a veteran public defender with a civil-liberties and appellate practice.`, `${name} has spent much of a legal career in public defense and appellate advocacy.`],
-    constitutional_lawyer: [`${family} practices constitutional and administrative law before national and provincial courts.`, `${name} represents public bodies and private clients in constitutional litigation.`],
-    legal_academic: [`${family} teaches constitutional law and publishes on institutions and civil rights.`, `${name} is a legal scholar whose work examines constitutional structure and civil rights.`],
-    practicing_lawyer: [`${family} is a senior practicing lawyer with extensive litigation and public-law experience.`, `${name} has a long litigation practice spanning commercial disputes and public law.`],
-    senior_government_legal_counsel: [`${family} is a senior government legal counsel specializing in legislation and constitutional review.`, `${name} advises government on legislation, administrative procedure, and constitutional risk.`],
+  const copy: Record<(typeof GENERATED_LEGAL_ROLES)[number], [string, string]> = {
+    appellate_judge: [
+      `${family} serves on a provincial appellate bench and has written extensively on administrative procedure.`,
+      `${name} is an appellate judge whose docket has centered on public law and constitutional procedure.`,
+    ],
+    lower_court_judge: [
+      `${family} is a trial judge with a substantial record in public-law cases.`,
+      `${name} serves on a lower court and is known for careful written rulings in disputes involving public bodies.`,
+    ],
+    prosecutor: [
+      `${family} is a senior prosecutor whose practice includes corruption and public-integrity cases.`,
+      `${name} built a legal career prosecuting complex financial and public-integrity cases.`,
+    ],
+    public_defender: [
+      `${family} is a veteran public defender with a civil-liberties and appellate practice.`,
+      `${name} has spent much of a legal career in public defense and appellate advocacy.`,
+    ],
+    constitutional_lawyer: [
+      `${family} practices constitutional and administrative law before national and provincial courts.`,
+      `${name} represents public bodies and private clients in constitutional litigation.`,
+    ],
+    legal_academic: [
+      `${family} teaches constitutional law and publishes on institutions and civil rights.`,
+      `${name} is a legal scholar whose work examines constitutional structure and civil rights.`,
+    ],
+    practicing_lawyer: [
+      `${family} is a senior practicing lawyer with extensive litigation and public-law experience.`,
+      `${name} has a long litigation practice spanning commercial disputes and public law.`,
+    ],
+    senior_government_legal_counsel: [
+      `${family} is a senior government legal counsel specializing in legislation and constitutional review.`,
+      `${name} advises government on legislation, administrative procedure, and constitutional risk.`,
+    ],
   };
   return copy[role][stableHash(`${salt}:description`) % 2]!;
 }
 
 /** Maintain a lightweight, named legal profession without weakening qualification rules. */
-export function ensureRenewableLegalPool(world: KernelWorld, state: SimState, target = 18): LegalCareerCandidate[] {
+export function ensureRenewableLegalPool(
+  world: KernelWorld,
+  state: SimState,
+  target = 18,
+): LegalCareerCandidate[] {
   const currentYear = Number(state.currentDate.slice(0, 4));
   const qualifiedFull = Object.values(state.politicians).filter((politician) => {
     if (!politician.alive || politician.retired) return false;
@@ -149,24 +195,38 @@ export function ensureRenewableLegalPool(world: KernelWorld, state: SimState, ta
   return created;
 }
 
-export function materializeLegalCandidates(world: KernelWorld, state: SimState, minimumAvailable = 8): string[] {
+export function materializeLegalCandidates(
+  world: KernelWorld,
+  state: SimState,
+  minimumAvailable = 8,
+): string[] {
   ensureRenewableLegalPool(world, state);
   const currentYear = Number(state.currentDate.slice(0, 4));
   const disqualified = new Set<string>();
   const formerJudges = new Set<string>();
   for (const term of Object.values(state.officeTerms)) {
     const kind = world.offices[term.officeId]?.kind;
-    if ((term.status === "active" || term.status === "suspended") && (kind === "military" || kind === "constitutional_court_justice")) {
+    if (
+      (term.status === "active" || term.status === "suspended") &&
+      (kind === "military" || kind === "constitutional_court_justice")
+    ) {
       disqualified.add(term.holderId);
     }
-    if (term.holdingKind === "substantive" && kind === "constitutional_court_justice") formerJudges.add(term.holderId);
+    if (term.holdingKind === "substantive" && kind === "constitutional_court_justice")
+      formerJudges.add(term.holderId);
   }
   const availableFull = Object.values(state.politicians).filter((politician) => {
     const profile = getAgentProfile(world, state, politician.id);
     const age = profile?.birthDate ? currentYear - Number(profile.birthDate.slice(0, 4)) : 50;
-    return politician.alive && !politician.retired && !disqualified.has(politician.id) &&
+    return (
+      politician.alive &&
+      !politician.retired &&
+      !disqualified.has(politician.id) &&
       (world.courtConstitution.renewable || !formerJudges.has(politician.id)) &&
-      age >= 35 && age < 76 && hasExplicitLegalCareer(profile);
+      age >= 35 &&
+      age < 76 &&
+      hasExplicitLegalCareer(profile)
+    );
   }).length;
   const needed = Math.max(0, minimumAvailable - availableFull);
   const rows = Object.values(state.constitutionalRuntime.legalCareerPool)
@@ -190,7 +250,12 @@ export function materializeLegalCandidates(world: KernelWorld, state: SimState, 
     const profile = syntheticAgentProfile(politicianId, {
       birthDate: row.birthDate,
       roleTypes: [row.careerRole, "legal_professional"],
-      issueSalience: Object.fromEntries(world.issueIds.map((issueId) => [issueId, 0.3 + (stableHash(`${row.id}:${issueId}`) % 51) / 100])),
+      issueSalience: Object.fromEntries(
+        world.issueIds.map((issueId) => [
+          issueId,
+          0.3 + (stableHash(`${row.id}:${issueId}`) % 51) / 100,
+        ]),
+      ),
       ...(ideology ? { ideology } : {}),
     });
     profile.skills.legislation = 0.58 + (stableHash(`${row.id}:legislation`) % 31) / 100;

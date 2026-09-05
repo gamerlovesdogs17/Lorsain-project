@@ -92,9 +92,15 @@ export function diplomaticOutreach(
   if (cap) return { error: cap };
   const targetErr = validateTarget(state, args.targetCountryId);
   if (targetErr) return { error: targetErr };
-  const rel = getBilateralRelation(state.foreignAffairsRuntime, TERENA_WORLD_ID, args.targetCountryId);
+  const rel = getBilateralRelation(
+    state.foreignAffairsRuntime,
+    TERENA_WORLD_ID,
+    args.targetCountryId,
+  );
   if (!rel) return { error: reject("NO_RELATION", args.targetCountryId) };
-  const delta = outreachRelationDelta(world.worldCountries[TERENA_WORLD_ID]?.powerTier ?? "major power");
+  const delta = outreachRelationDelta(
+    world.worldCountries[TERENA_WORLD_ID]?.powerTier ?? "major power",
+  );
   adjustRelation(rel, { ...delta, general: delta.general + 2 });
   rel.lastUpdated = state.currentDate;
   recordPlayerAction(state, {
@@ -134,7 +140,11 @@ export function diplomaticSummit(
   if (cap) return { error: cap };
   const targetErr = validateTarget(state, args.targetCountryId);
   if (targetErr) return { error: targetErr };
-  const rel = getBilateralRelation(state.foreignAffairsRuntime, TERENA_WORLD_ID, args.targetCountryId);
+  const rel = getBilateralRelation(
+    state.foreignAffairsRuntime,
+    TERENA_WORLD_ID,
+    args.targetCountryId,
+  );
   if (!rel) return { error: reject("NO_RELATION", args.targetCountryId) };
   adjustRelation(rel, { general: 8, trust: 0.1, securityTension: -0.05 });
   rel.lastUpdated = state.currentDate;
@@ -215,7 +225,11 @@ export function negotiateTrade(
   if (cap) return { error: cap };
   const targetErr = validateTarget(state, args.targetCountryId);
   if (targetErr) return { error: targetErr };
-  const rel = getBilateralRelation(state.foreignAffairsRuntime, TERENA_WORLD_ID, args.targetCountryId);
+  const rel = getBilateralRelation(
+    state.foreignAffairsRuntime,
+    TERENA_WORLD_ID,
+    args.targetCountryId,
+  );
   if (!rel) return { error: reject("NO_RELATION", args.targetCountryId) };
   adjustRelation(rel, { general: 5, economicTies: 0.1 });
   rel.lastUpdated = state.currentDate;
@@ -439,7 +453,11 @@ export function issueDiplomaticWarning(
   if (cap) return { error: cap };
   const targetErr = validateTarget(state, args.targetCountryId);
   if (targetErr) return { error: targetErr };
-  const rel = getBilateralRelation(state.foreignAffairsRuntime, TERENA_WORLD_ID, args.targetCountryId);
+  const rel = getBilateralRelation(
+    state.foreignAffairsRuntime,
+    TERENA_WORLD_ID,
+    args.targetCountryId,
+  );
   if (!rel) return { error: reject("NO_RELATION", args.targetCountryId) };
   adjustRelation(rel, { general: -4, securityTension: 0.08, trust: -0.05 });
   rel.lastUpdated = state.currentDate;
@@ -474,7 +492,11 @@ export function castTreatyRatificationVote(
     return { error: reject("PLAYER_AUTONOMY", args.actorId) };
   }
   const treaty = state.foreignAffairsRuntime.treaties[args.treatyId];
-  if (!treaty || treaty.status !== "ratification_pending" || treaty.ratificationStatus !== "pending") {
+  if (
+    !treaty ||
+    treaty.status !== "ratification_pending" ||
+    treaty.ratificationStatus !== "pending"
+  ) {
     return { error: reject("NO_PENDING_TREATY", args.treatyId) };
   }
   state.foreignAffairsRuntime.pendingPlayerTreatyVotes[args.treatyId] = {

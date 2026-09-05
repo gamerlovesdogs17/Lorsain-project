@@ -68,7 +68,8 @@ function normalizePolicyItems(
   items: readonly PolicyItem[],
 ): PolicyItem[] | { error: CommandError } {
   if (items.length < 1) return { error: reject("INVALID_BILL", "bill needs a policy item") };
-  if (items.length > 3) return { error: reject("INVALID_BILL", "a bill may contain at most three provisions") };
+  if (items.length > 3)
+    return { error: reject("INVALID_BILL", "a bill may contain at most three provisions") };
   const out: PolicyItem[] = [];
   for (const item of items) {
     if (!world.issueIds.includes(item.issueId) && Object.keys(world.issueDimensions).length > 0) {
@@ -88,7 +89,7 @@ function normalizePolicyItems(
       fiscalImpact: item.fiscalImpact == null ? null : item.fiscalImpact,
     });
   }
-  const provisionIds = out.flatMap((item) => item.provisionId ? [item.provisionId] : []);
+  const provisionIds = out.flatMap((item) => (item.provisionId ? [item.provisionId] : []));
   if (new Set(provisionIds).size !== provisionIds.length) {
     return { error: reject("INVALID_BILL", "a policy category may appear only once in a bill") };
   }
@@ -327,8 +328,12 @@ function affiliationSnapshot(
   votes: Record<string, LegislativeVoteChoice>,
 ): Pick<LegislativeVoteRecord, "partyIdsAtVote" | "factionIdsAtVote"> {
   return {
-    partyIdsAtVote: Object.fromEntries(Object.keys(votes).map((id) => [id, state.politicians[id]?.partyId ?? null])),
-    factionIdsAtVote: Object.fromEntries(Object.keys(votes).map((id) => [id, state.politicians[id]?.factionId ?? null])),
+    partyIdsAtVote: Object.fromEntries(
+      Object.keys(votes).map((id) => [id, state.politicians[id]?.partyId ?? null]),
+    ),
+    factionIdsAtVote: Object.fromEntries(
+      Object.keys(votes).map((id) => [id, state.politicians[id]?.factionId ?? null]),
+    ),
   };
 }
 

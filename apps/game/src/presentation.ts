@@ -91,7 +91,8 @@ export function catalogFromBundle(
 export function politicianDisplayName(catalog: PresentationCatalog, id: string): string {
   const named = catalog.figures.get(id)?.name;
   if (named && named.trim()) return named;
-  if (id.startsWith("GENASM_") || id.startsWith("POL_PLEG_")) return generatedAssemblyCandidateName(id);
+  if (id.startsWith("GENASM_") || id.startsWith("POL_PLEG_"))
+    return generatedAssemblyCandidateName(id);
   // Never leak raw simulation IDs into normal play surfaces.
   return "Unknown politician";
 }
@@ -145,7 +146,7 @@ export function generatedAssemblyCandidateName(id: string): string {
     "Torin",
     "Wren",
     "Hale",
-  ][((hash >>> 8) % 10)]!;
+  ][(hash >>> 8) % 10]!;
   return `${first} ${last}`;
 }
 
@@ -189,7 +190,10 @@ export function committeeDisplayName(id: string | null | undefined): string {
   return COMMITTEE_NAMES[id as keyof typeof COMMITTEE_NAMES] ?? "Committee";
 }
 
-export function countryDisplayName(world: KernelWorld, countryId: string | null | undefined): string {
+export function countryDisplayName(
+  world: KernelWorld,
+  countryId: string | null | undefined,
+): string {
   if (!countryId) return "Unknown country";
   if (countryId === TERENA_WORLD_ID) return world.worldCountries[countryId]?.name ?? "Terena";
   return world.worldCountries[countryId]?.name ?? "Unknown country";
@@ -297,9 +301,7 @@ export function resolveCountryLeaderDisplay(
   if (countryId === TERENA_WORLD_ID) {
     const presidentId = currentPresidentId(world, state);
     if (!presidentId) return null;
-    const name = catalog
-      ? politicianDisplayName(catalog, presidentId)
-      : presidentId;
+    const name = catalog ? politicianDisplayName(catalog, presidentId) : presidentId;
     return { name, title: "President" };
   }
   const runtime = state.foreignAffairsRuntime.countries[countryId];
@@ -395,9 +397,14 @@ export function mediaHeadlineForEvent(
 ): string {
   const sensational = framing === "sensational";
   if (eventType.startsWith("FOREIGN_CRISIS_") || eventType.includes("CRISIS")) {
-    return sensational ? "International crisis dominates headlines" : "International crisis develops";
+    return sensational
+      ? "International crisis dominates headlines"
+      : "International crisis develops";
   }
-  if (eventType.startsWith("INTERNATIONAL_CONFLICT_") || eventType === "INTERNATIONAL_CONFLICT_STARTED") {
+  if (
+    eventType.startsWith("INTERNATIONAL_CONFLICT_") ||
+    eventType === "INTERNATIONAL_CONFLICT_STARTED"
+  ) {
     return sensational ? "War fears spread abroad" : "Armed conflict erupts internationally";
   }
   if (eventType.includes("TREATY")) {
@@ -437,11 +444,7 @@ export function diplomaticActionLabel(kind: string | null | undefined): string {
   return kind.replace(/_/g, " ");
 }
 
-function countryFromEvent(
-  world: KernelWorld,
-  state: SimState,
-  event: SimEvent,
-): string | null {
+function countryFromEvent(world: KernelWorld, state: SimState, event: SimEvent): string | null {
   const payloadTarget =
     typeof event.payload.targetCountryId === "string" ? event.payload.targetCountryId : null;
   if (payloadTarget) return countryDisplayName(world, payloadTarget);
@@ -550,12 +553,12 @@ export function eventDisplay(
       return `${lead ?? "A campaign"} raises funds`;
     case "ENDORSEMENT_MADE":
     case "ENDORSEMENT_RECEIVED": {
-      const endorserId = typeof event.payload.endorserId === "string"
-        ? event.payload.endorserId
-        : event.actorIds[0];
-      const targetId = typeof event.payload.targetId === "string"
-        ? event.payload.targetId
-        : event.actorIds.find((id) => id !== endorserId && state.politicians[id]);
+      const endorserId =
+        typeof event.payload.endorserId === "string" ? event.payload.endorserId : event.actorIds[0];
+      const targetId =
+        typeof event.payload.targetId === "string"
+          ? event.payload.targetId
+          : event.actorIds.find((id) => id !== endorserId && state.politicians[id]);
       const endorser = endorserId
         ? publicPoliticalActorName(catalog, world, state, endorserId)
         : "A political organization";

@@ -70,7 +70,10 @@ function updateProvince(
   province.politicalCapital = Math.min(1, province.politicalCapital + 0.025);
   const momentum = province.investmentMomentum;
   economy.conditionsIndex = clampIndex(
-    economy.conditionsIndex + momentum.transport * 0.08 + momentum.schools * 0.025 + momentum.hospitals * 0.025,
+    economy.conditionsIndex +
+      momentum.transport * 0.08 +
+      momentum.schools * 0.025 +
+      momentum.hospitals * 0.025,
   );
   economy.employmentIndex = clampIndex(
     economy.employmentIndex + momentum.transport * 0.045 + momentum.housing * 0.025,
@@ -82,10 +85,13 @@ function updateProvince(
   const governorId = currentGovernorId(world, state, provinceId);
   if (governorId) {
     const economicSignal =
-      ((economy.conditionsIndex - 100) + (economy.employmentIndex - 100) * 0.7) / 170;
+      (economy.conditionsIndex - 100 + (economy.employmentIndex - 100) * 0.7) / 170;
     province.publicStanding = Math.max(
       -1,
-      Math.min(1, province.publicStanding * 0.995 + Math.max(-0.012, Math.min(0.012, economicSignal))),
+      Math.min(
+        1,
+        province.publicStanding * 0.995 + Math.max(-0.012, Math.min(0.012, economicSignal)),
+      ),
     );
     const standing = ensureCandidateStanding(world, state, governorId);
     standing.favorability = Math.max(

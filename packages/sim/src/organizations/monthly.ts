@@ -18,11 +18,7 @@ function note(
   if (actor.recentActions.length > 6) actor.recentActions.length = 6;
 }
 
-export function orgIssueFit(
-  world: KernelWorld,
-  orgId: string,
-  issueId: string,
-): number {
+export function orgIssueFit(world: KernelWorld, orgId: string, issueId: string): number {
   const canon = world.interestOrganizations[orgId];
   if (!canon) return 0;
   if (!canon.issues.includes(issueId)) return 0;
@@ -33,11 +29,13 @@ export function orgIssueFit(
   }
   if (issueId === "ISS_CLIMATE") {
     if (type.includes("climate") || type.includes("advocacy")) return 0.7;
-    if (type.includes("manufactur") || type.includes("farm") || type.includes("maritime")) return -0.25;
+    if (type.includes("manufactur") || type.includes("farm") || type.includes("maritime"))
+      return -0.25;
   }
   if (issueId === "ISS_HOUSING" && type.includes("municipal")) return 0.45;
   if (issueId === "ISS_TRADE") {
-    if (type.includes("maritime") || type.includes("farm") || type.includes("manufactur")) return 0.4;
+    if (type.includes("maritime") || type.includes("farm") || type.includes("manufactur"))
+      return 0.4;
   }
   return 0.25;
 }
@@ -150,8 +148,8 @@ export function processOrganizationsMonth(
         : null;
       const relationship = actor.relationships[endorsement.politicianId];
       const campaignEnded = campaign != null && !["active", "exploring"].includes(campaign.status);
-      const relationshipCollapsed = (relationship?.policyAlignment ?? 0) <= -0.45 ||
-        (relationship?.trust ?? 0) <= -0.4;
+      const relationshipCollapsed =
+        (relationship?.policyAlignment ?? 0) <= -0.45 || (relationship?.trust ?? 0) <= -0.4;
       if (!campaignEnded && !relationshipCollapsed) continue;
       endorsement.status = "withdrawn";
       endorsement.withdrawnDate = state.currentDate;
@@ -186,17 +184,27 @@ export function processOrganizationsMonth(
     const relevant = activeBills
       .filter((b) => b.policyItems.some((i) => canon.issues.includes(i.issueId)))
       .sort((a, b) => {
-        const priority = (status: string) => status === "sent_to_president" ? 3 : status === "floor_scheduled" ? 2 : 1;
-        const fit = (bill: typeof a) => Math.max(...bill.policyItems
-          .filter((item) => canon.issues.includes(item.issueId))
-          .map((item) => Math.abs(orgIssueFit(world, orgId, item.issueId) * item.direction)), 0);
-        return priority(b.status) - priority(a.status) || fit(b) - fit(a) ||
-          (b.introducedDate ?? "").localeCompare(a.introducedDate ?? "") || a.id.localeCompare(b.id);
+        const priority = (status: string) =>
+          status === "sent_to_president" ? 3 : status === "floor_scheduled" ? 2 : 1;
+        const fit = (bill: typeof a) =>
+          Math.max(
+            ...bill.policyItems
+              .filter((item) => canon.issues.includes(item.issueId))
+              .map((item) => Math.abs(orgIssueFit(world, orgId, item.issueId) * item.direction)),
+            0,
+          );
+        return (
+          priority(b.status) - priority(a.status) ||
+          fit(b) - fit(a) ||
+          (b.introducedDate ?? "").localeCompare(a.introducedDate ?? "") ||
+          a.id.localeCompare(b.id)
+        );
       })
       .slice(0, 4);
     if (relevant.length > 0) {
       const bill = relevant[0]!;
-      const item = bill.policyItems.find((i) => canon.issues.includes(i.issueId)) ?? bill.policyItems[0]!;
+      const item =
+        bill.policyItems.find((i) => canon.issues.includes(i.issueId)) ?? bill.policyItems[0]!;
       const fit = orgIssueFit(world, orgId, item.issueId) * item.direction;
       const stance: OrganizationStance = fit > 0.12 ? "support" : fit < -0.12 ? "oppose" : "watch";
       const strength = Math.min(1, canon.strength * (0.5 + Math.abs(fit) * 0.4));
@@ -232,9 +240,12 @@ export function processOrganizationsMonth(
         const party = state.politicians[c.politicianId]?.partyId;
         return party != null && canon.leanPartyIds.includes(party);
       });
-      if (campaign && !actor.endorsements.some(
-        (e) => e.politicianId === campaign.politicianId && (e.status ?? "active") === "active",
-      )) {
+      if (
+        campaign &&
+        !actor.endorsements.some(
+          (e) => e.politicianId === campaign.politicianId && (e.status ?? "active") === "active",
+        )
+      ) {
         actor.endorsements.push({
           politicianId: campaign.politicianId,
           campaignId: campaign.id,
@@ -246,7 +257,10 @@ export function processOrganizationsMonth(
         const standing = ensureCandidateStanding(world, state, campaign.politicianId);
         standing.favorability = clampUnit(standing.favorability + 0.012 * canon.strength);
         standing.enthusiasm = Math.min(1, standing.enthusiasm + 0.01 * canon.strength);
-        campaign.cashOnHand = Math.min(50_000_000, campaign.cashOnHand + Math.round(8000 * canon.strength));
+        campaign.cashOnHand = Math.min(
+          50_000_000,
+          campaign.cashOnHand + Math.round(8000 * canon.strength),
+        );
         note(actor, state.currentDate, "endorse", `Endorsed a campaign`);
         actor.cooldownUntil = addMonths(state.currentDate, 2);
         events.push(

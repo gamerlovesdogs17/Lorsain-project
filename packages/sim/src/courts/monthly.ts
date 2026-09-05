@@ -145,7 +145,12 @@ function assemblyProceedings(
   const events: SimEvent[] = [];
   const impeach = Object.values(state.constitutionalRuntime.impeachments)
     .filter((p) => p.status === "assembly_pending" && courtStageRipe(state, p.stageReadyDate))
-    .sort((a, b) => a.stageReadyDate.localeCompare(b.stageReadyDate) || a.introducedDate.localeCompare(b.introducedDate) || a.id.localeCompare(b.id))[0];
+    .sort(
+      (a, b) =>
+        a.stageReadyDate.localeCompare(b.stageReadyDate) ||
+        a.introducedDate.localeCompare(b.introducedDate) ||
+        a.id.localeCompare(b.id),
+    )[0];
   if (impeach && mps.length > 0) {
     const pending = mps.includes(state.playerPoliticianId)
       ? takePendingCourtVote(state, "impeachment", impeach.id)
@@ -158,7 +163,12 @@ function assemblyProceedings(
   }
   const recall = Object.values(state.constitutionalRuntime.recalls)
     .filter((p) => p.status === "referral_pending" && courtStageRipe(state, p.stageReadyDate))
-    .sort((a, b) => a.stageReadyDate.localeCompare(b.stageReadyDate) || a.introducedDate.localeCompare(b.introducedDate) || a.id.localeCompare(b.id))[0];
+    .sort(
+      (a, b) =>
+        a.stageReadyDate.localeCompare(b.stageReadyDate) ||
+        a.introducedDate.localeCompare(b.introducedDate) ||
+        a.id.localeCompare(b.id),
+    )[0];
   if (recall && mps.length > 0) {
     const pending = mps.includes(state.playerPoliticianId)
       ? takePendingCourtVote(state, "recall", recall.id)
@@ -198,13 +208,17 @@ function generateCases(
     existingCases.map((courtCase) => `${courtCase.challengedKind}:${courtCase.challengedId}`),
   );
   let activeCases = existingCases.reduce(
-    (count, courtCase) => count + (courtCase.status === "filed" || courtCase.status === "pending" ? 1 : 0),
+    (count, courtCase) =>
+      count + (courtCase.status === "filed" || courtCase.status === "pending" ? 1 : 0),
     0,
   );
-  for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) => a.id.localeCompare(b.id))) {
+  for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  )) {
     if (bill.status !== "signed" && bill.status !== "override_passed") continue;
     if (stableCourtDisputeHash(bill.id) % 100 >= 8) continue;
-    if (reviewedTargets.has(`provincial_law:${bill.id}`) || activeCases >= MAX_ACTIVE_COURT_CASES) continue;
+    if (reviewedTargets.has(`provincial_law:${bill.id}`) || activeCases >= MAX_ACTIVE_COURT_CASES)
+      continue;
     const governorId = currentGovernorId(world, state, bill.provinceId);
     const presidentId = currentPresidentialAuthorityId(world, state);
     if (!governorId || !presidentId || governorId === state.playerPoliticianId) continue;
@@ -234,9 +248,12 @@ function generateCases(
     if (emergency.metadata.courtReviewRequired !== true) continue;
     if (reviewedTargets.has(`emergency:${emergency.id}`)) continue;
     const eligibleEmergencyPetitioners = mps.filter((id) => id !== state.playerPoliticianId);
-    const petitioner = eligibleEmergencyPetitioners.length > 0
-      ? eligibleEmergencyPetitioners[rng.uint32("npc-decisions") % eligibleEmergencyPetitioners.length]!
-      : emergency.declaredBy;
+    const petitioner =
+      eligibleEmergencyPetitioners.length > 0
+        ? eligibleEmergencyPetitioners[
+            rng.uint32("npc-decisions") % eligibleEmergencyPetitioners.length
+          ]!
+        : emergency.declaredBy;
     const filed = fileConstitutionalCase(
       world,
       state,
@@ -265,9 +282,10 @@ function generateCases(
     .sort((a, b) => (a.id < b.id ? 1 : -1));
   const law = laws[0];
   const eligiblePetitioners = mps.filter((id) => id !== state.playerPoliticianId);
-  const petitioner = eligiblePetitioners.length > 0
-    ? eligiblePetitioners[rng.uint32("npc-decisions") % eligiblePetitioners.length]
-    : undefined;
+  const petitioner =
+    eligiblePetitioners.length > 0
+      ? eligiblePetitioners[rng.uint32("npc-decisions") % eligiblePetitioners.length]
+      : undefined;
   if (law && petitioner && npcShouldFileLawReview(world, state, petitioner, rng)) {
     if (!reviewedTargets.has(`law:${law.id}`)) {
       const filed = fileConstitutionalCase(
@@ -338,8 +356,10 @@ export function processCourtsMonth(
   const month = monthStart(state.currentDate);
   if (state.constitutionalRuntime.lastMonthProcessed === month) return [];
   const events: SimEvent[] = [];
-  const profile = (globalThis as typeof globalThis & { __lorsainStageTimings?: Record<string, number[]> }).__lorsainStageTimings;
-  const timed = <T,>(stage: string, work: () => T): T => {
+  const profile = (
+    globalThis as typeof globalThis & { __lorsainStageTimings?: Record<string, number[]> }
+  ).__lorsainStageTimings;
+  const timed = <T>(stage: string, work: () => T): T => {
     if (!profile) return work();
     const started = performance.now();
     const result = work();
@@ -348,9 +368,15 @@ export function processCourtsMonth(
   };
   const mps = timed("courts.current_assembly", () => currentAssemblyMemberIds(world, state));
   const judges = timed("courts.current_bench", () => currentCourtJudgeIds(world, state));
-  events.push(...timed("courts.nominations", () => nominationWork(state, world, rng, commandId, mps)));
-  events.push(...timed("courts.proceedings", () => assemblyProceedings(state, world, rng, commandId, mps)));
-  events.push(...timed("courts.case_generation", () => generateCases(state, world, rng, commandId, mps)));
+  events.push(
+    ...timed("courts.nominations", () => nominationWork(state, world, rng, commandId, mps)),
+  );
+  events.push(
+    ...timed("courts.proceedings", () => assemblyProceedings(state, world, rng, commandId, mps)),
+  );
+  events.push(
+    ...timed("courts.case_generation", () => generateCases(state, world, rng, commandId, mps)),
+  );
   events.push(...timed("courts.docket", () => docketWork(state, world, rng, commandId, judges)));
   state.constitutionalRuntime.lastMonthProcessed = month;
   return events;

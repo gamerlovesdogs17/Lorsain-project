@@ -188,10 +188,13 @@ function committeeWork(
   const events: SimEvent[] = [];
   const bills = Object.values(state.legislatureRuntime.bills)
     .filter((b) => b.status === "committee")
-    .sort((a, b) =>
-      (a.stageReadyDate ?? a.introducedDate ?? "9999-12-31").localeCompare(b.stageReadyDate ?? b.introducedDate ?? "9999-12-31") ||
-      (a.introducedDate ?? "9999-12-31").localeCompare(b.introducedDate ?? "9999-12-31") ||
-      a.id.localeCompare(b.id),
+    .sort(
+      (a, b) =>
+        (a.stageReadyDate ?? a.introducedDate ?? "9999-12-31").localeCompare(
+          b.stageReadyDate ?? b.introducedDate ?? "9999-12-31",
+        ) ||
+        (a.introducedDate ?? "9999-12-31").localeCompare(b.introducedDate ?? "9999-12-31") ||
+        a.id.localeCompare(b.id),
     );
   for (const bill of bills) {
     if (!stageIsRipe(state, bill.stageReadyDate)) {
@@ -242,18 +245,32 @@ function speakerSchedule(state: SimState, world: KernelWorld): void {
   const rest = queue.filter((id) => !privileged.includes(id));
   if (speaker && speaker !== state.playerPoliticianId) {
     const party = state.politicians[speaker]?.partyId;
-    const priorities = new Set(party ? state.legislatureRuntime.caucusLeadership[party]?.priorityBillIds ?? [] : []);
+    const priorities = new Set(
+      party ? (state.legislatureRuntime.caucusLeadership[party]?.priorityBillIds ?? []) : [],
+    );
     rest.sort((a, b) => {
       const ba = state.legislatureRuntime.bills[a];
       const bb = state.legislatureRuntime.bills[b];
       const pa = ba ? state.politicians[ba.sponsorId]?.partyId : null;
       const pb = bb ? state.politicians[bb.sponsorId]?.partyId : null;
-      const stanceA = party ? state.legislatureRuntime.partyRecommendations[`${party}:${a}`]?.stance : null;
-      const stanceB = party ? state.legislatureRuntime.partyRecommendations[`${party}:${b}`]?.stance : null;
-      const scoreA = (priorities.has(a) ? 4 : 0) + (stanceA === "support" ? 2 : stanceA === "oppose" ? -1 : 0) + (pa === party ? 1 : 0);
-      const scoreB = (priorities.has(b) ? 4 : 0) + (stanceB === "support" ? 2 : stanceB === "oppose" ? -1 : 0) + (pb === party ? 1 : 0);
+      const stanceA = party
+        ? state.legislatureRuntime.partyRecommendations[`${party}:${a}`]?.stance
+        : null;
+      const stanceB = party
+        ? state.legislatureRuntime.partyRecommendations[`${party}:${b}`]?.stance
+        : null;
+      const scoreA =
+        (priorities.has(a) ? 4 : 0) +
+        (stanceA === "support" ? 2 : stanceA === "oppose" ? -1 : 0) +
+        (pa === party ? 1 : 0);
+      const scoreB =
+        (priorities.has(b) ? 4 : 0) +
+        (stanceB === "support" ? 2 : stanceB === "oppose" ? -1 : 0) +
+        (pb === party ? 1 : 0);
       if (scoreA !== scoreB) return scoreB - scoreA;
-      const ready = (ba?.stageReadyDate ?? ba?.introducedDate ?? "").localeCompare(bb?.stageReadyDate ?? bb?.introducedDate ?? "");
+      const ready = (ba?.stageReadyDate ?? ba?.introducedDate ?? "").localeCompare(
+        bb?.stageReadyDate ?? bb?.introducedDate ?? "",
+      );
       if (ready !== 0) return ready;
       return a.localeCompare(b);
     });
@@ -314,10 +331,13 @@ function presidentialWork(
   if (!president) return events;
   const bills = Object.values(state.legislatureRuntime.bills)
     .filter((b) => b.status === "sent_to_president")
-    .sort((a, b) =>
-      (a.stageReadyDate ?? a.introducedDate ?? "9999-12-31").localeCompare(b.stageReadyDate ?? b.introducedDate ?? "9999-12-31") ||
-      (a.introducedDate ?? "9999-12-31").localeCompare(b.introducedDate ?? "9999-12-31") ||
-      a.id.localeCompare(b.id),
+    .sort(
+      (a, b) =>
+        (a.stageReadyDate ?? a.introducedDate ?? "9999-12-31").localeCompare(
+          b.stageReadyDate ?? b.introducedDate ?? "9999-12-31",
+        ) ||
+        (a.introducedDate ?? "9999-12-31").localeCompare(b.introducedDate ?? "9999-12-31") ||
+        a.id.localeCompare(b.id),
     );
   for (const bill of bills.slice(0, 2)) {
     if (president === state.playerPoliticianId) continue;

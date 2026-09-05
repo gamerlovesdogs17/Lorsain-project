@@ -49,7 +49,13 @@ function billConsequences(
     const bits = Object.entries(effects)
       .filter(([, v]) => typeof v === "number" && Math.abs(v) >= 0.05)
       .slice(0, 3)
-      .map(([k, v]) => `${k.replace(/Index$/, "").replace(/([A-Z])/g, " $1").trim()} ${formatIndexDelta(v as number)}`);
+      .map(
+        ([k, v]) =>
+          `${k
+            .replace(/Index$/, "")
+            .replace(/([A-Z])/g, " $1")
+            .trim()} ${formatIndexDelta(v as number)}`,
+      );
     if (bits.length) lines.push(bits.join(" · "));
   }
   return lines.slice(0, 4);
@@ -109,7 +115,9 @@ export function ExecutivePage(props: {
           props.snap.politicians[id]?.partyId ?? null,
           props.snap,
         );
-        return `${politicianDisplayName(props.catalog, id)} ${party} ${offices}`.toLowerCase().includes(q);
+        return `${politicianDisplayName(props.catalog, id)} ${party} ${offices}`
+          .toLowerCase()
+          .includes(q);
       })
       .sort((a, b) =>
         politicianDisplayName(props.catalog, a).localeCompare(
@@ -188,7 +196,9 @@ export function ExecutivePage(props: {
                         type="button"
                         className="btn"
                         onClick={() => {
-                          props.report(props.sim.executeCommand({ type: "SIGN_BILL", billId: b.id }));
+                          props.report(
+                            props.sim.executeCommand({ type: "SIGN_BILL", billId: b.id }),
+                          );
                           props.onDone();
                         }}
                       >
@@ -229,15 +239,15 @@ export function ExecutivePage(props: {
                       <button
                         type="button"
                         className="btn ghost"
-                        onClick={() =>
-                          setDetailsOpen((prev) => ({ ...prev, [b.id]: !open }))
-                        }
+                        onClick={() => setDetailsOpen((prev) => ({ ...prev, [b.id]: !open }))}
                       >
                         {open ? "Hide details" : "Details"}
                       </button>
                       {open ? (
                         <div className="bill-action-details-body">
-                          <p className="muted">Sponsor: {politicianDisplayName(props.catalog, b.sponsorId)}</p>
+                          <p className="muted">
+                            Sponsor: {politicianDisplayName(props.catalog, b.sponsorId)}
+                          </p>
                           {b.policyItems.map((p, i) => (
                             <p key={`${p.issueId}-${i}`}>{policyItemDisplay(props.catalog, p)}</p>
                           ))}
@@ -319,7 +329,10 @@ export function ExecutivePage(props: {
 
           {president && vacantMinistries.length > 0 ? (
             <div className="appoint-panel">
-              <SectionDivider title="Appoint a minister" hint="Choose the vacant portfolio and politician" />
+              <SectionDivider
+                title="Appoint a minister"
+                hint="Choose the vacant portfolio and politician"
+              />
               <div className="row">
                 <select
                   value={selectedOfficeId}
@@ -341,7 +354,10 @@ export function ExecutivePage(props: {
                   onChange={(e) => setAppointQuery(e.target.value)}
                 />
               </div>
-              <div className="list" style={{ marginTop: "0.6rem", maxHeight: "16rem", overflow: "auto" }}>
+              <div
+                className="list"
+                style={{ marginTop: "0.6rem", maxHeight: "16rem", overflow: "auto" }}
+              >
                 {eligible.map((id) => {
                   const offices = playerOffices(props.world, props.snap, id);
                   return (
@@ -391,7 +407,11 @@ export function ExecutivePage(props: {
 
           {president ? (
             <div className="row">
-              <button type="button" className="btn secondary" onClick={() => setPanel("regulation")}>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => setPanel("regulation")}
+              >
                 Issue regulation
               </button>
               <button type="button" className="btn secondary" onClick={() => setPanel("budget")}>
@@ -434,7 +454,14 @@ export function ExecutivePage(props: {
                     <option value="-1">Against</option>
                   </select>
                   <label>
-                    Regulatory scope {regMag >= 0.75 ? "sweeping" : regMag >= 0.5 ? "broad" : regMag >= 0.3 ? "targeted" : "limited"}
+                    Regulatory scope{" "}
+                    {regMag >= 0.75
+                      ? "sweeping"
+                      : regMag >= 0.5
+                        ? "broad"
+                        : regMag >= 0.3
+                          ? "targeted"
+                          : "limited"}
                     <input
                       type="range"
                       min={0.1}
@@ -499,7 +526,11 @@ export function ExecutivePage(props: {
                 <DataTable dense headers={["Ministry", "Envelope"]}>
                   {Object.entries(b.allocations).map(([officeId, n]) => (
                     <tr key={officeId}>
-                      <td>{cab.find((m) => m.officeId === officeId)?.title ?? props.world.offices[officeId]?.title ?? "Ministry"}</td>
+                      <td>
+                        {cab.find((m) => m.officeId === officeId)?.title ??
+                          props.world.offices[officeId]?.title ??
+                          "Ministry"}
+                      </td>
                       <td>{n.toLocaleString()}</td>
                     </tr>
                   ))}
@@ -597,7 +628,8 @@ export function ExecutivePage(props: {
                         ok: false,
                         error: {
                           code: "INVALID_BUDGET",
-                          message: "Set at least one ministry allocation before proposing a budget.",
+                          message:
+                            "Set at least one ministry allocation before proposing a budget.",
                         },
                       });
                       return;
@@ -620,7 +652,9 @@ export function ExecutivePage(props: {
           {regulations.map((r) => (
             <EntityRow
               key={r.id}
-              title={cab.find((m) => m.officeId === r.ministryOfficeId)?.title ?? r.ministryOfficeId}
+              title={
+                cab.find((m) => m.officeId === r.ministryOfficeId)?.title ?? r.ministryOfficeId
+              }
               meta={r.policyItems.map((p) => policyItemDisplay(props.catalog, p)).join("; ")}
               status={r.status}
               trailing={

@@ -124,9 +124,7 @@ export function ForeignAffairsPage(props: {
     ? resolveCountryLeaderDisplay(world, snap, selectedId, catalog)
     : undefined;
   const relationKey =
-    selectedId && selectedId !== TERENA_WORLD_ID
-      ? bilateralKey(TERENA_WORLD_ID, selectedId)
-      : null;
+    selectedId && selectedId !== TERENA_WORLD_ID ? bilateralKey(TERENA_WORLD_ID, selectedId) : null;
   const bilateral = relationKey ? runtime.bilateralRelations[relationKey] : undefined;
 
   const targetable =
@@ -142,15 +140,16 @@ export function ForeignAffairsPage(props: {
     : [];
 
   const diplomaticFeed = useMemo(
-    () =>
-      Object.values(runtime.diplomaticActions)
-        .slice(-6)
-        .reverse(),
+    () => Object.values(runtime.diplomaticActions).slice(-6).reverse(),
     [runtime.diplomaticActions],
   );
 
   const leadershipChanges = useMemo(
-    () => snap.history.filter((e) => e.type === "FOREIGN_LEADERSHIP_CHANGE").slice(-5).reverse(),
+    () =>
+      snap.history
+        .filter((e) => e.type === "FOREIGN_LEADERSHIP_CHANGE")
+        .slice(-5)
+        .reverse(),
     [snap.history],
   );
 
@@ -236,7 +235,11 @@ export function ForeignAffairsPage(props: {
           value={president ? `${capacityUsed}/${MAX_DIPLOMATIC_ACTIONS_PER_MONTH}` : "—"}
           hint={president ? `${capacityLeft} remaining this month` : "Presidential prerogative"}
         />
-        <StatCard label="Active crises" value={String(publicCrises.length)} hint="Public international crises" />
+        <StatCard
+          label="Active crises"
+          value={String(publicCrises.length)}
+          hint="Public international crises"
+        />
         <StatCard
           label="Strategic tension"
           value={String(latentTensions.length)}
@@ -244,7 +247,9 @@ export function ForeignAffairsPage(props: {
         />
         <StatCard
           label="Active treaties"
-          value={String(Object.values(runtime.treaties).filter((t) => t.status === "active").length)}
+          value={String(
+            Object.values(runtime.treaties).filter((t) => t.status === "active").length,
+          )}
         />
         <StatCard label="Active sanctions" value={String(activeSanctions.length)} />
         <StatCard
@@ -286,9 +291,7 @@ export function ForeignAffairsPage(props: {
                   <div>
                     <span className="kicker">Leader</span>
                     <div>
-                      {selectedLeader
-                        ? `${selectedLeader.name}, ${selectedLeader.title}`
-                        : "—"}
+                      {selectedLeader ? `${selectedLeader.name}, ${selectedLeader.title}` : "—"}
                     </div>
                   </div>
                   <div>
@@ -333,10 +336,14 @@ export function ForeignAffairsPage(props: {
                     </div>
                     <div className="muted" style={{ marginTop: "0.35rem" }}>
                       World Assembly:{" "}
-                      {selectedRuntime.institutionIds.includes("INT_WA") ? "member" : "not a member"}
+                      {selectedRuntime.institutionIds.includes("INT_WA")
+                        ? "member"
+                        : "not a member"}
                       {" · "}
                       Lorsain Trade Organization:{" "}
-                      {selectedRuntime.institutionIds.includes("INT_LTO") ? "member" : "not a member"}
+                      {selectedRuntime.institutionIds.includes("INT_LTO")
+                        ? "member"
+                        : "not a member"}
                     </div>
                   </div>
                 ) : null}
@@ -353,7 +360,9 @@ export function ForeignAffairsPage(props: {
                             {t.title} · {treatyTypeLabel(t.kind)} · {treatyStatusLabel(t)}
                           </div>
                         ))}
-                      {Object.values(runtime.treaties).every((t) => !t.memberIds.includes(selectedId)) ? (
+                      {Object.values(runtime.treaties).every(
+                        (t) => !t.memberIds.includes(selectedId),
+                      ) ? (
                         <div className="muted">None on record.</div>
                       ) : null}
                     </div>
@@ -363,7 +372,8 @@ export function ForeignAffairsPage(props: {
                         .filter((s) => s.active && s.targetId === selectedId)
                         .map((s) => (
                           <div key={s.id} className="muted">
-                            Imposed by {countryDisplayName(world, s.imposerId)} · {sanctionsScopeLabel(s.severity)} measures
+                            Imposed by {countryDisplayName(world, s.imposerId)} ·{" "}
+                            {sanctionsScopeLabel(s.severity)} measures
                           </div>
                         ))}
                       {Object.values(runtime.sanctions).every(
@@ -412,7 +422,10 @@ export function ForeignAffairsPage(props: {
               {capacityLeft <= 0 ? (
                 <p className="text-warn">Monthly diplomatic capacity exhausted (2/month).</p>
               ) : (
-                <p className="muted">{capacityLeft} presidential action{capacityLeft === 1 ? "" : "s"} remaining this month.</p>
+                <p className="muted">
+                  {capacityLeft} presidential action{capacityLeft === 1 ? "" : "s"} remaining this
+                  month.
+                </p>
               )}
               <div className="foreign-action-grid">
                 <button
@@ -521,18 +534,38 @@ export function ForeignAffairsPage(props: {
             tooltipFor={(id) => {
               const country = world.worldCountries[id];
               const countryRuntime = runtime.countries[id];
-              const activeCountryCrises = publicCrises.filter((crisis) => crisis.participantIds.includes(id));
-              const countrySanctions = activeSanctions.filter((sanction) => sanction.targetId === id);
-              const detail = mode === "relation"
-                ? id === TERENA_WORLD_ID ? "Home country" : terenaBilateralRelationLabel(world, snap, id)
-                : mode === "alliance"
-                  ? countryRuntime?.institutionIds.map((institution) => institutionDisplayName(world, institution)).join(" · ") || country?.alignment || "Independent"
-                  : mode === "crisis"
-                    ? activeCountryCrises.length ? `${activeCountryCrises.length} active public crisis${activeCountryCrises.length === 1 ? "" : "es"}` : "No active public crisis"
-                    : mode === "sanctions"
-                      ? countrySanctions.length ? `${countrySanctions.length} active sanction${countrySanctions.length === 1 ? "" : "s"}` : "No active sanctions"
-                      : militaryPostureLabel(countryRuntime?.posture ?? "normal");
-              return <><strong>{countryDisplayName(world, id)}</strong><span>{detail}</span></>;
+              const activeCountryCrises = publicCrises.filter((crisis) =>
+                crisis.participantIds.includes(id),
+              );
+              const countrySanctions = activeSanctions.filter(
+                (sanction) => sanction.targetId === id,
+              );
+              const detail =
+                mode === "relation"
+                  ? id === TERENA_WORLD_ID
+                    ? "Home country"
+                    : terenaBilateralRelationLabel(world, snap, id)
+                  : mode === "alliance"
+                    ? countryRuntime?.institutionIds
+                        .map((institution) => institutionDisplayName(world, institution))
+                        .join(" · ") ||
+                      country?.alignment ||
+                      "Independent"
+                    : mode === "crisis"
+                      ? activeCountryCrises.length
+                        ? `${activeCountryCrises.length} active public crisis${activeCountryCrises.length === 1 ? "" : "es"}`
+                        : "No active public crisis"
+                      : mode === "sanctions"
+                        ? countrySanctions.length
+                          ? `${countrySanctions.length} active sanction${countrySanctions.length === 1 ? "" : "s"}`
+                          : "No active sanctions"
+                        : militaryPostureLabel(countryRuntime?.posture ?? "normal");
+              return (
+                <>
+                  <strong>{countryDisplayName(world, id)}</strong>
+                  <span>{detail}</span>
+                </>
+              );
             }}
           />
           <div className="map-legend">
@@ -559,9 +592,7 @@ export function ForeignAffairsPage(props: {
               <StatusBadge tone={c.stage === "conflict" ? "warn" : "idle"}>
                 {crisisStageLabel(c.stage)}
               </StatusBadge>
-              <div>
-                {c.participantIds.map((id) => countryDisplayName(world, id)).join(" · ")}
-              </div>
+              <div>{c.participantIds.map((id) => countryDisplayName(world, id)).join(" · ")}</div>
               <div className="muted">
                 Since {c.startedDate} · {publicSeverityLabel(c.intensity, c.stage)}
               </div>
@@ -576,9 +607,7 @@ export function ForeignAffairsPage(props: {
           {latentTensions.map((c) => (
             <div key={c.id} className="foreign-crisis-row foreign-tension-row">
               <StatusBadge tone="idle">Strategic tension</StatusBadge>
-              <div>
-                {c.participantIds.map((id) => countryDisplayName(world, id)).join(" · ")}
-              </div>
+              <div>{c.participantIds.map((id) => countryDisplayName(world, id)).join(" · ")}</div>
               <div className="muted">
                 Since {c.startedDate} · {publicSeverityLabel(c.intensity, c.stage)}
               </div>
@@ -587,7 +616,9 @@ export function ForeignAffairsPage(props: {
         </SectionCard>
 
         <SectionCard title="Recent diplomatic changes">
-          {diplomaticFeed.length === 0 ? <EmptyState>No recent diplomatic actions.</EmptyState> : null}
+          {diplomaticFeed.length === 0 ? (
+            <EmptyState>No recent diplomatic actions.</EmptyState>
+          ) : null}
           {diplomaticFeed.map((a) => (
             <div key={a.id} className="muted">
               {a.date} · {diplomaticActionLabel(a.kind)}
@@ -602,7 +633,9 @@ export function ForeignAffairsPage(props: {
         </SectionCard>
 
         <SectionCard title="Sanctions in force">
-          {activeSanctions.length === 0 ? <EmptyState>No sanctions currently in force.</EmptyState> : null}
+          {activeSanctions.length === 0 ? (
+            <EmptyState>No sanctions currently in force.</EmptyState>
+          ) : null}
           {activeSanctions.slice(0, 8).map((s) => (
             <div key={s.id} className="muted">
               {countryDisplayName(world, s.imposerId)} → {countryDisplayName(world, s.targetId)} ·
@@ -636,24 +669,24 @@ export function ForeignAffairsPage(props: {
                 {drawer === "incoming_diplomacy"
                   ? "Respond to incoming diplomacy"
                   : drawer === "outreach"
-                  ? "Diplomatic outreach"
-                  : drawer === "summit"
-                    ? "Summit"
-                    : drawer === "treaty"
-                      ? "Negotiate treaty"
-                      : drawer === "trade"
-                        ? "Trade settlement"
-                        : drawer === "sanctions"
-                          ? "Impose sanctions"
-                          : drawer === "lift_sanctions"
-                            ? "Lift sanctions"
-                            : drawer === "alliance"
-                              ? "Alliance consultation"
-                              : drawer === "posture"
-                                ? "Military posture"
-                                : drawer === "mediation"
-                                  ? "Crisis mediation"
-                                  : "Diplomatic warning"}
+                    ? "Diplomatic outreach"
+                    : drawer === "summit"
+                      ? "Summit"
+                      : drawer === "treaty"
+                        ? "Negotiate treaty"
+                        : drawer === "trade"
+                          ? "Trade settlement"
+                          : drawer === "sanctions"
+                            ? "Impose sanctions"
+                            : drawer === "lift_sanctions"
+                              ? "Lift sanctions"
+                              : drawer === "alliance"
+                                ? "Alliance consultation"
+                                : drawer === "posture"
+                                  ? "Military posture"
+                                  : drawer === "mediation"
+                                    ? "Crisis mediation"
+                                    : "Diplomatic warning"}
               </h3>
               <button type="button" className="btn quiet" onClick={() => setDrawer(null)}>
                 Close
@@ -779,96 +812,97 @@ export function ForeignAffairsPage(props: {
                 </select>
               ) : null}
               {drawer !== "incoming_diplomacy" ? (
-              <button
-                type="button"
-                className="btn"
-                disabled={
-                  capacityLeft <= 0 ||
-                  (drawerNeedsTarget(drawer) && !targetable) ||
-                  (drawer === "mediation" && !crisisId)
-                }
-                onClick={() => {
-                  if (drawer === "outreach" && selectedId) {
-                    props.askConfirm({
-                      title: "Diplomatic outreach",
-                      body: `Extend outreach to ${countryDisplayName(world, selectedId)}? Uses 1 of ${MAX_DIPLOMATIC_ACTIONS_PER_MONTH} monthly actions.`,
-                      confirmLabel: "Send outreach",
-                      action: () =>
-                        run({ type: "DIPLOMATIC_OUTREACH", targetCountryId: selectedId }),
-                    });
-                    return;
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={
+                    capacityLeft <= 0 ||
+                    (drawerNeedsTarget(drawer) && !targetable) ||
+                    (drawer === "mediation" && !crisisId)
                   }
-                  if (drawer === "summit" && selectedId) {
-                    props.askConfirm({
-                      title: "Summit",
-                      body: `Hold a summit with ${countryDisplayName(world, selectedId)}?`,
-                      confirmLabel: "Hold summit",
-                      action: () => run({ type: "DIPLOMATIC_SUMMIT", targetCountryId: selectedId }),
-                    });
-                    return;
-                  }
-                  if (drawer === "treaty" && selectedId) {
-                    props.askConfirm({
-                      title: "Propose treaty",
-                      body: `Propose a ${treatyTypeLabel(treatyKind)} with ${countryDisplayName(world, selectedId)}? The counterparty must accept before the agreement can take effect${treatyKind !== "trade" ? ", and the Assembly must ratify it" : ""}.`,
-                      confirmLabel: "Propose",
-                      action: () =>
-                        run({
-                          type: "PROPOSE_TREATY",
-                          targetCountryId: selectedId,
-                          kind: treatyKind,
-                          ...(treatyTitle.trim() ? { title: treatyTitle.trim() } : {}),
-                        }),
-                    });
-                    return;
-                  }
-                  if (drawer === "trade" && selectedId) {
-                    run({ type: "NEGOTIATE_TRADE", targetCountryId: selectedId });
-                    return;
-                  }
-                  if (drawer === "sanctions" && selectedId) {
-                    props.askConfirm({
-                      title: "Impose sanctions",
-                      body: `Impose sanctions on ${countryDisplayName(world, selectedId)}?`,
-                      confirmLabel: "Impose",
-                      action: () =>
-                        run({
-                          type: "IMPOSE_SANCTIONS",
-                          targetCountryId: selectedId,
-                          severity: sanctionSeverity,
-                        }),
-                    });
-                    return;
-                  }
-                  if (drawer === "lift_sanctions" && selectedId) {
-                    run({ type: "LIFT_SANCTIONS", targetCountryId: selectedId });
-                    return;
-                  }
-                  if (drawer === "alliance") {
-                    run({ type: "ALLIANCE_CONSULTATION", institutionId });
-                    return;
-                  }
-                  if (drawer === "posture") {
-                    run({ type: "ADJUST_MILITARY_POSTURE", posture });
-                    return;
-                  }
-                  if (drawer === "mediation" && crisisId) {
-                    run({ type: "MEDIATE_CRISIS", crisisId });
-                    return;
-                  }
-                  if (drawer === "warning" && selectedId) {
-                    props.askConfirm({
-                      title: "Diplomatic warning",
-                      body: `Issue a formal warning to ${countryDisplayName(world, selectedId)}?`,
-                      confirmLabel: "Issue warning",
-                      action: () =>
-                        run({ type: "ISSUE_DIPLOMATIC_WARNING", targetCountryId: selectedId }),
-                    });
-                  }
-                }}
-              >
-                Confirm action
-              </button>
+                  onClick={() => {
+                    if (drawer === "outreach" && selectedId) {
+                      props.askConfirm({
+                        title: "Diplomatic outreach",
+                        body: `Extend outreach to ${countryDisplayName(world, selectedId)}? Uses 1 of ${MAX_DIPLOMATIC_ACTIONS_PER_MONTH} monthly actions.`,
+                        confirmLabel: "Send outreach",
+                        action: () =>
+                          run({ type: "DIPLOMATIC_OUTREACH", targetCountryId: selectedId }),
+                      });
+                      return;
+                    }
+                    if (drawer === "summit" && selectedId) {
+                      props.askConfirm({
+                        title: "Summit",
+                        body: `Hold a summit with ${countryDisplayName(world, selectedId)}?`,
+                        confirmLabel: "Hold summit",
+                        action: () =>
+                          run({ type: "DIPLOMATIC_SUMMIT", targetCountryId: selectedId }),
+                      });
+                      return;
+                    }
+                    if (drawer === "treaty" && selectedId) {
+                      props.askConfirm({
+                        title: "Propose treaty",
+                        body: `Propose a ${treatyTypeLabel(treatyKind)} with ${countryDisplayName(world, selectedId)}? The counterparty must accept before the agreement can take effect${treatyKind !== "trade" ? ", and the Assembly must ratify it" : ""}.`,
+                        confirmLabel: "Propose",
+                        action: () =>
+                          run({
+                            type: "PROPOSE_TREATY",
+                            targetCountryId: selectedId,
+                            kind: treatyKind,
+                            ...(treatyTitle.trim() ? { title: treatyTitle.trim() } : {}),
+                          }),
+                      });
+                      return;
+                    }
+                    if (drawer === "trade" && selectedId) {
+                      run({ type: "NEGOTIATE_TRADE", targetCountryId: selectedId });
+                      return;
+                    }
+                    if (drawer === "sanctions" && selectedId) {
+                      props.askConfirm({
+                        title: "Impose sanctions",
+                        body: `Impose sanctions on ${countryDisplayName(world, selectedId)}?`,
+                        confirmLabel: "Impose",
+                        action: () =>
+                          run({
+                            type: "IMPOSE_SANCTIONS",
+                            targetCountryId: selectedId,
+                            severity: sanctionSeverity,
+                          }),
+                      });
+                      return;
+                    }
+                    if (drawer === "lift_sanctions" && selectedId) {
+                      run({ type: "LIFT_SANCTIONS", targetCountryId: selectedId });
+                      return;
+                    }
+                    if (drawer === "alliance") {
+                      run({ type: "ALLIANCE_CONSULTATION", institutionId });
+                      return;
+                    }
+                    if (drawer === "posture") {
+                      run({ type: "ADJUST_MILITARY_POSTURE", posture });
+                      return;
+                    }
+                    if (drawer === "mediation" && crisisId) {
+                      run({ type: "MEDIATE_CRISIS", crisisId });
+                      return;
+                    }
+                    if (drawer === "warning" && selectedId) {
+                      props.askConfirm({
+                        title: "Diplomatic warning",
+                        body: `Issue a formal warning to ${countryDisplayName(world, selectedId)}?`,
+                        confirmLabel: "Issue warning",
+                        action: () =>
+                          run({ type: "ISSUE_DIPLOMATIC_WARNING", targetCountryId: selectedId }),
+                      });
+                    }
+                  }}
+                >
+                  Confirm action
+                </button>
               ) : null}
             </div>
           </div>

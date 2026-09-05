@@ -75,7 +75,11 @@ describe("Phase 11.1 closeout Assembly candidacy", () => {
 
   it("recruits against the actual eligible filing pool after long-run attrition", () => {
     const world = loadTerenaWorld();
-    const simulation = createSimulation({ world, playerPoliticianId: "NPC146", seed: "P11-LATE-POOL" });
+    const simulation = createSimulation({
+      world,
+      playerPoliticianId: "NPC146",
+      seed: "P11-LATE-POOL",
+    });
     const state = simulation.serializeSave().simulation;
     const election = state.elections[CANONICAL_ASSEMBLY_ELECTION_ID]!;
     state.currentDate = "2029-11-01";
@@ -95,7 +99,9 @@ describe("Phase 11.1 closeout Assembly candidacy", () => {
     const beforePromotions = Object.keys(state.provincialRuntime.promotions).length;
     const events = openAssemblyFilingIfDue(state, world, election, "CMD-LATE-POOL");
     expect(events).toHaveLength(1);
-    expect(Object.keys(state.provincialRuntime.promotions).length).toBeGreaterThan(beforePromotions);
+    expect(Object.keys(state.provincialRuntime.promotions).length).toBeGreaterThan(
+      beforePromotions,
+    );
     for (const field of Object.values(election.assembly!.constituencyFields)) {
       expect(field.candidateIds.length).toBeGreaterThanOrEqual(field.magnitude + 1);
     }
@@ -199,16 +205,11 @@ describe("Phase 11.1 closeout Assembly candidacy", () => {
     expect("error" in field).toBe(false);
     if ("error" in field) return;
 
-    const base = resolveAssemblyConstituency(
-      world,
-      state,
-      createRngService("P11-MOBILIZATION"),
-      {
-        constituencyId: "C007",
-        ...field,
-        mobilizationByCandidate: Object.fromEntries(field.candidateIds.map((id) => [id, 1])),
-      },
-    );
+    const base = resolveAssemblyConstituency(world, state, createRngService("P11-MOBILIZATION"), {
+      constituencyId: "C007",
+      ...field,
+      mobilizationByCandidate: Object.fromEntries(field.candidateIds.map((id) => [id, 1])),
+    });
     const organized = resolveAssemblyConstituency(
       world,
       state,
@@ -236,9 +237,7 @@ describe("Phase 11.1 closeout Assembly candidacy", () => {
         mobilizationByCandidate: Object.fromEntries(
           field.candidateIds.map((id) => [
             id,
-            id === "NPC146"
-              ? 1 + FIELD.turnoutScale + FIELD.gotvTurnoutScale * gotvBoost
-              : 1,
+            id === "NPC146" ? 1 + FIELD.turnoutScale + FIELD.gotvTurnoutScale * gotvBoost : 1,
           ]),
         ),
       },

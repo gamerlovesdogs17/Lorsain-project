@@ -3,11 +3,7 @@ import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { pushHistory } from "../scheduler.js";
 import type { SimEvent as HistoryEvent } from "../types.js";
 
-function noteForeignReaction(
-  state: SimState,
-  orgId: string,
-  summary: string,
-): void {
+function noteForeignReaction(state: SimState, orgId: string, summary: string): void {
   const actor = state.organizationRuntime.actors[orgId];
   if (!actor) return;
   actor.recentActions.unshift({
@@ -54,8 +50,15 @@ export function processOrganizationForeignReactions(
       if (!canon || !actor) continue;
       const type = canon.type.toLowerCase();
 
-      if (ev.type.includes("SANCTION") && (type.includes("business") || type.includes("maritime"))) {
-        noteForeignReaction(state, orgId, "Business and trade groups warn on sanctions fallout abroad");
+      if (
+        ev.type.includes("SANCTION") &&
+        (type.includes("business") || type.includes("maritime"))
+      ) {
+        noteForeignReaction(
+          state,
+          orgId,
+          "Business and trade groups warn on sanctions fallout abroad",
+        );
         reactedOnce = true;
         events.push(
           pushHistory(state, {
@@ -72,8 +75,15 @@ export function processOrganizationForeignReactions(
         );
         break;
       }
-      if (ev.type.includes("CONFLICT") && (type.includes("advocacy") || type.includes("security"))) {
-        noteForeignReaction(state, orgId, "Advocacy groups call for de-escalation and humanitarian restraint");
+      if (
+        ev.type.includes("CONFLICT") &&
+        (type.includes("advocacy") || type.includes("security"))
+      ) {
+        noteForeignReaction(
+          state,
+          orgId,
+          "Advocacy groups call for de-escalation and humanitarian restraint",
+        );
         reactedOnce = true;
         events.push(
           pushHistory(state, {

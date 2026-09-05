@@ -3,14 +3,26 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import { createReadStream, existsSync } from "node:fs";
 
-const productionBase = process.env.VITE_BASE_PATH ??
-  (process.env.GITHUB_ACTIONS ? "/Lorsain-project/" : "/");
+const productionBase =
+  process.env.VITE_BASE_PATH ?? (process.env.GITHUB_ACTIONS ? "/Lorsain-project/" : "/");
 
 const qaFixtures = new Map([
-  ["judicial", resolve(__dirname, "../../docs/qa/phase11_3/judicial-appointment-browser-save.json")],
-  ["institutions", resolve(__dirname, "../../docs/qa/phase11_3/leadership-election-browser-save.json")],
-  ["former-officeholder", resolve(__dirname, "../../docs/qa/phase11_3/former-officeholder-browser-save.json")],
-  ["election-results", resolve(__dirname, "../../docs/qa/phase11_3/election-results-browser-save.json")],
+  [
+    "judicial",
+    resolve(__dirname, "../../docs/qa/phase11_3/judicial-appointment-browser-save.json"),
+  ],
+  [
+    "institutions",
+    resolve(__dirname, "../../docs/qa/phase11_3/leadership-election-browser-save.json"),
+  ],
+  [
+    "former-officeholder",
+    resolve(__dirname, "../../docs/qa/phase11_3/former-officeholder-browser-save.json"),
+  ],
+  [
+    "election-results",
+    resolve(__dirname, "../../docs/qa/phase11_3/election-results-browser-save.json"),
+  ],
 ]);
 
 export default defineConfig({

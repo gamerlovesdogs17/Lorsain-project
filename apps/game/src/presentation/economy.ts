@@ -1,7 +1,6 @@
 import type { SimState } from "@lorsain/sim";
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, value));
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export function signedPercent(value: number): string {
   const rounded = Math.abs(value) < 0.05 ? 0 : value;
@@ -47,14 +46,16 @@ function fiscalPressureLabel(value: number): string {
 }
 
 function percentChange(current: number, comparison: number): number {
-  return comparison === 0 ? 0 : ((current / comparison) - 1) * 100;
+  return comparison === 0 ? 0 : (current / comparison - 1) * 100;
 }
 
 export function nationalPublicEconomy(state: SimState) {
   const runtime = state.economyRuntime;
   const current = runtime.national;
-  const previous = runtime.history.length >= 2 ? runtime.history[runtime.history.length - 2]! : null;
-  const yearAgo = runtime.history.length >= 13 ? runtime.history[runtime.history.length - 13]! : null;
+  const previous =
+    runtime.history.length >= 2 ? runtime.history[runtime.history.length - 2]! : null;
+  const yearAgo =
+    runtime.history.length >= 13 ? runtime.history[runtime.history.length - 13]! : null;
 
   return {
     growth: yearAgo
@@ -98,7 +99,13 @@ export function regionalPublicEconomy(state: SimState, provinceId: string) {
   return {
     conditions: publicConditionsLabel(data.conditionsIndex),
     laborMarket:
-      unemployment <= 4.5 ? "Tight" : unemployment <= 6.5 ? "Steady" : unemployment <= 9 ? "Soft" : "Weak",
+      unemployment <= 4.5
+        ? "Tight"
+        : unemployment <= 6.5
+          ? "Steady"
+          : unemployment <= 9
+            ? "Soft"
+            : "Weak",
     unemployment,
     housing: housingPressureLabel(data.housingIndex),
     monthChange,

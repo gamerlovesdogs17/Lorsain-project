@@ -42,10 +42,7 @@ import type {
 import type { ExecutiveRuntime, MotionKind } from "./executive/types.js";
 import type { ConstitutionalRuntime, CourtCaseType, JudicialVoteChoice } from "./courts/types.js";
 import type { CanonicalEconomyScenario, EconomyRuntime } from "./economy/types.js";
-import type {
-  CanonicalInterestOrganization,
-  OrganizationRuntime,
-} from "./organizations/types.js";
+import type { CanonicalInterestOrganization, OrganizationRuntime } from "./organizations/types.js";
 import type { CanonicalMediaOutlet, MediaRuntime } from "./media/types.js";
 import type {
   CanonicalWorldCountry,
@@ -63,7 +60,11 @@ import type {
   ProvincialRuntime,
 } from "./provinces/types.js";
 
-export type { CanonicalWorldCountry, CanonicalWorldInstitution, CanonicalWorldLeader } from "./foreign/types.js";
+export type {
+  CanonicalWorldCountry,
+  CanonicalWorldInstitution,
+  CanonicalWorldLeader,
+} from "./foreign/types.js";
 
 export const SAVE_SCHEMA_VERSION = 18 as const;
 

@@ -52,11 +52,7 @@ function missingSeatParties(
   return missing;
 }
 
-function firstPreferenceCompare(
-  result: AssemblyConstituencyResult,
-  a: string,
-  b: string,
-): number {
+function firstPreferenceCompare(result: AssemblyConstituencyResult, a: string, b: string): number {
   const av = parseRational(result.firstPreferences[a] ?? "0/1");
   const bv = parseRational(result.firstPreferences[b] ?? "0/1");
   return compare(bv, av) || a.localeCompare(b);
@@ -81,7 +77,9 @@ export function reconcileAssemblyVacancies(
       .map((term) => term.holderId),
   );
 
-  for (const office of officesOfKind(world, "assembly_member").sort((a, b) => a.id.localeCompare(b.id))) {
+  for (const office of officesOfKind(world, "assembly_member").sort((a, b) =>
+    a.id.localeCompare(b.id),
+  )) {
     const holders = occupyingTerms(state, office.id);
     if (holders.length >= office.capacity) continue;
     const source = assemblySourceForOffice(state, office);
@@ -90,8 +88,7 @@ export function reconcileAssemblyVacancies(
     const previouslyServed = new Set(
       Object.values(state.officeTerms)
         .filter(
-          (term) =>
-            term.officeId === office.id && term.sourceElectionId === source.election.id,
+          (term) => term.officeId === office.id && term.sourceElectionId === source.election.id,
         )
         .map((term) => term.holderId),
     );
@@ -112,9 +109,10 @@ export function reconcileAssemblyVacancies(
 
     while (occupyingTerms(state, office.id).length < office.capacity && eligible.length > 0) {
       const preferredParty = missingParties.shift() ?? null;
-      const partyIndex = preferredParty == null
-        ? -1
-        : eligible.findIndex((id) => archivalParty(source.result, id) === preferredParty);
+      const partyIndex =
+        preferredParty == null
+          ? -1
+          : eligible.findIndex((id) => archivalParty(source.result, id) === preferredParty);
       const replacementId = eligible.splice(partyIndex >= 0 ? partyIndex : 0, 1)[0]!;
       const assumed = assumeOffice(state, world, {
         officeId: office.id,
