@@ -2034,20 +2034,20 @@ export function AssemblyPage(props: {
                               const warnings = constitutionalDependencyWarnings(
                                 ruleId,
                                 amendmentValue,
-                                {
-                                  assembly_term_years:
-                                    props.snap.provincialRuntime.constitutionalRules
-                                      .assembly_term_years?.value,
-                                  presidential_term_limit:
-                                    props.snap.provincialRuntime.constitutionalRules
-                                      .presidential_term_limit?.value,
-                                  court_term_years:
-                                    props.snap.provincialRuntime.constitutionalRules
-                                      .court_term_years?.value,
-                                  veto_override_fraction:
-                                    props.snap.provincialRuntime.constitutionalRules
-                                      .veto_override_fraction?.value,
-                                },
+                                Object.fromEntries(
+                                  (
+                                    [
+                                      "assembly_term_years",
+                                      "presidential_term_limit",
+                                      "court_term_years",
+                                      "veto_override_fraction",
+                                    ] as const
+                                  ).flatMap((id) => {
+                                    const value =
+                                      props.snap.provincialRuntime.constitutionalRules[id]?.value;
+                                    return typeof value === "number" ? [[id, value] as const] : [];
+                                  }),
+                                ),
                               );
                               const relatedAmendments = Object.values(
                                 props.snap.provincialRuntime.constitutionalAmendments,
