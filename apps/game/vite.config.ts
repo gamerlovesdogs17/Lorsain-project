@@ -23,6 +23,10 @@ const qaFixtures = new Map([
     "election-results",
     resolve(__dirname, "../../docs/qa/phase11_3/election-results-browser-save.json"),
   ],
+  [
+    "assembly-worker",
+    resolve(__dirname, "../../docs/qa/phase11_3/assembly-worker-production-save.json"),
+  ],
 ]);
 
 export default defineConfig({
