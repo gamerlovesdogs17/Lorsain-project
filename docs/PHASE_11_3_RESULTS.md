@@ -10,15 +10,15 @@ The detailed requirement mapping is in `PHASE_11_3_REQUIREMENT_EVIDENCE.md`; dep
 
 ### 1. Starting HEAD
 
-This documentation/screenshot refresh continues from `6a2f5d2` (Phase 11.3 public Pages validation). Closeout lineage: `08a1086` → `6d81af6` → `6a2f5d2` → `01ec453` (Prettier) → `136698c` (CI split) → `38769d2` (screenshots/evidence) → `f817f01` (integration Vitest harden; CI/Pages green) → `cbb01c9` (acceptance docs).
+This documentation/screenshot refresh continues from `6a2f5d2` (Phase 11.3 public Pages validation). Closeout lineage: `08a1086` → `6d81af6` → `6a2f5d2` → `01ec453` (Prettier) → `136698c` (CI split) → `38769d2` (screenshots/evidence) → `f817f01` (integration Vitest harden; CI/Pages green) → acceptance-docs tip on `main`.
 
 ### 2. Final Phase 11.3 HEAD
 
-Final tip: `cbb01c981b5fa581261639209087ce0bd09a2cf1`. Functional acceptance (Quality + Integration + Pages) was verified on `f817f01325f3955afc6cde5321e9b97d5b2646c4`; `cbb01c9` only records that acceptance in RESULTS/KNOWN_ISSUES.
+Functional acceptance (Quality + Integration + Pages) was verified on `f817f01325f3955afc6cde5321e9b97d5b2646c4`. Later tip commits on `main` only record that acceptance in RESULTS/KNOWN_ISSUES; use `git rev-parse HEAD` / GitHub `main` tip for the exact docs tip hash.
 
 ### 3. Working-tree state
 
-Closeout is complete and pushed. Screenshots live under `docs/qa/phase11_3/final/` (2026-09-04 evening). Playwright is a workspace `devDependency` for `scripts/phase11_3-capture-screenshots.mjs`. Working tree clean after the acceptance-docs commit.
+Closeout is complete and pushed. Screenshots live under `docs/qa/phase11_3/final/` (2026-09-04 evening). Playwright is a workspace `devDependency` for `scripts/phase11_3-capture-screenshots.mjs`. Working tree clean after the acceptance-docs tip.
 
 ### 4. Map architecture changes
 
@@ -179,6 +179,6 @@ No known code or deterministic-simulation blocker remains. Phase 11.3 is **ACCEP
 
 **ACCEPTED**
 
-Final tip `cbb01c9` (acceptance docs). Functional CI Quality + Integration green on `f817f01` ([run 33941810423](https://github.com/gamerlovesdogs17/Lorsain-project/actions/runs/33941810423)); Pages deploy green ([run 33941810405](https://github.com/gamerlovesdogs17/Lorsain-project/actions/runs/33941810405)). Live public URL remains the validated Phase 11.3 game. 1×600 evidence retained; screenshots regenerated into `docs/qa/phase11_3/final/`. Phase 11.4 has not begun.
+Functional CI Quality + Integration green on `f817f01` ([run 33941810423](https://github.com/gamerlovesdogs17/Lorsain-project/actions/runs/33941810423)); Pages deploy green on the same lineage ([run 33941810405](https://github.com/gamerlovesdogs17/Lorsain-project/actions/runs/33941810405)). Acceptance recorded in RESULTS/KNOWN_ISSUES on the subsequent docs tip. Live public URL remains the validated Phase 11.3 game. 1×600 evidence retained; screenshots regenerated into `docs/qa/phase11_3/final/`. Phase 11.4 has not begun.
 
 STOP. Phase 11.4 has not begun.
