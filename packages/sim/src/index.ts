@@ -161,6 +161,13 @@ export {
   constitutionAlternativeFor,
   constitutionalDependencyWarnings,
   diffConstitutionalText,
+  CONSTITUTION_CHANGE_SUBJECTS,
+  constitutionSubjectsForArticle,
+  constitutionSubjectById,
+  constitutionAlternative,
+  subjectsCoveringAllArticles,
+  proposeConstitutionalPackage,
+  currentConstitutionalClauseText,
 } from "./provinces/index.js";
 export type {
   ProvincialRuntime,
@@ -170,6 +177,9 @@ export type {
   ConstitutionalRuleId,
   ConstitutionalAmendmentIntent,
   ConstitutionAlternative,
+  ConstitutionChangeSubject,
+  ConstitutionChangeAlternative,
+  ConstitutionalOrderState,
   DiffSegment,
 } from "./provinces/index.js";
 export {

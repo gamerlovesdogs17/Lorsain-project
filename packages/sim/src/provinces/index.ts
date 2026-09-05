@@ -6,4 +6,6 @@ export * from "./monthly.js";
 export * from "./assemblies.js";
 export * from "./constitutional.js";
 export * from "./constitutionAlternatives.js";
+export * from "./constitutionChanges.js";
+export * from "./constitutionalOrder.js";
 export * from "./themes.js";

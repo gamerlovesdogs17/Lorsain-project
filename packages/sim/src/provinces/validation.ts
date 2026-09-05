@@ -189,6 +189,17 @@ export function parseProvincialRuntime(raw: unknown): ProvincialRuntime | string
   if (isRecord(raw.constitutionalAmendments))
     runtime.constitutionalAmendments =
       raw.constitutionalAmendments as ProvincialRuntime["constitutionalAmendments"];
+  if (isRecord(raw.constitutionalOrder)) {
+    runtime.constitutionalOrder = {
+      ...runtime.constitutionalOrder,
+      ...(raw.constitutionalOrder as ProvincialRuntime["constitutionalOrder"]),
+      clauseTexts: isRecord(
+        (raw.constitutionalOrder as { clauseTexts?: unknown }).clauseTexts,
+      )
+        ? ((raw.constitutionalOrder as { clauseTexts: Record<string, string> }).clauseTexts ?? {})
+        : {},
+    };
+  }
   runtime.lastMonthProcessed =
     typeof raw.lastMonthProcessed === "string" && isIsoDate(raw.lastMonthProcessed)
       ? raw.lastMonthProcessed

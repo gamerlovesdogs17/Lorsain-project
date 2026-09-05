@@ -12,6 +12,12 @@ import type {
 import { CONSTITUTIONAL_RULE_IDS } from "./types.js";
 import { provincialLegislatorForPolitician } from "./assemblies.js";
 import { constitutionAlternativeFor } from "./constitutionAlternatives.js";
+import {
+  constitutionAlternative,
+  constitutionSubjectById,
+} from "./constitutionChanges.js";
+import { amendmentThresholds, emptyConstitutionalOrder } from "./constitutionalOrder.js";
+import type { ConstitutionalPackageChange } from "./types.js";
 
 /**
  * Legal values for each constitutional rule. Expanding each rule to 4 alternatives
@@ -159,20 +165,35 @@ export function currentConstitutionalClauseText(
   state: SimState,
   clauseId: string,
 ): string | null {
+  const orderText = state.provincialRuntime.constitutionalOrder?.clauseTexts?.[clauseId];
+  if (typeof orderText === "string" && orderText.trim()) return orderText;
   const canonical = documentClause(world, clauseId)?.clause.text ?? null;
   return (
     Object.values(state.provincialRuntime.constitutionalAmendments)
       .filter(
         (amendment) =>
           amendment.status === "ratified" &&
-          amendment.documentClauseId === clauseId &&
-          typeof amendment.proposedText === "string",
+          ((amendment.documentClauseId === clauseId &&
+            typeof amendment.proposedText === "string") ||
+            amendment.packageChanges?.some(
+              (change) =>
+                change.clauseId === clauseId && typeof change.proposedText === "string",
+            )),
       )
       .sort(
         (a, b) =>
           (b.enactedDate ?? b.proposedDate).localeCompare(a.enactedDate ?? a.proposedDate) ||
           b.id.localeCompare(a.id),
-      )[0]?.proposedText ?? canonical
+      )
+      .flatMap((amendment) => {
+        if (amendment.documentClauseId === clauseId && amendment.proposedText)
+          return [amendment.proposedText];
+        return (
+          amendment.packageChanges
+            ?.filter((change) => change.clauseId === clauseId)
+            .map((change) => change.proposedText) ?? []
+        );
+      })[0] ?? canonical
   );
 }
 
@@ -480,66 +501,100 @@ export function proposeConstitutionalAmendment(
 }
 
 export function proposeConstitutionalTextAmendment(
+  _world: KernelWorld,
+  _state: SimState,
+  _actorId: string,
+  _clauseId: string,
+  _proposedText: string,
+  _intent: ConstitutionalAmendmentIntent,
+  _commandId: string | null,
+): { amendment: ConstitutionalAmendment; events: SimEvent[] } | { error: CommandError } {
+  return {
+    error: reject(
+      "STRUCTURED_CONSTITUTIONAL_AMENDMENT_REQUIRED",
+      "Constitutional text must be amended through structured alternatives with gameplay effects.",
+    ),
+  };
+}
+
+export function proposeConstitutionalPackage(
   world: KernelWorld,
   state: SimState,
   actorId: string,
-  clauseId: string,
-  proposedText: string,
-  intent: ConstitutionalAmendmentIntent,
+  changes: ReadonlyArray<{ subjectId: string; alternativeId: string }>,
   commandId: string | null,
 ): { amendment: ConstitutionalAmendment; events: SimEvent[] } | { error: CommandError } {
   if (!isFederalMp(world, state, actorId)) return { error: reject("NOT_ASSEMBLY_MEMBER", actorId) };
-  const entry = documentClause(world, clauseId);
-  if (!entry) return { error: reject("UNKNOWN_CONSTITUTIONAL_CLAUSE", clauseId) };
-  if (entry.clause.runtime_rule_id) {
-    return {
-      error: reject("MODELED_RULE_REQUIRES_STRUCTURED_AMENDMENT", entry.clause.runtime_rule_id),
-    };
+  if (changes.length < 1 || changes.length > 8) {
+    return { error: reject("INVALID_AMENDMENT_PACKAGE", "package must contain 1–8 changes") };
   }
-  const intentPolitics = INTENT_POLITICS[intent];
-  if (!intentPolitics) return { error: reject("INVALID_CONSTITUTIONAL_INTENT", intent) };
-  const currentText = currentConstitutionalClauseText(world, state, clauseId);
-  const cleanText = proposedText.replace(/\s+/g, " ").trim();
-  if (cleanText.length < 40 || cleanText.length > 1200) {
-    return {
-      error: reject(
-        "INVALID_CONSTITUTIONAL_TEXT",
-        "Replacement text must contain 40 to 1,200 characters.",
-      ),
-    };
+  const packageChanges: ConstitutionalPackageChange[] = [];
+  const seenSubjects = new Set<string>();
+  for (const change of changes) {
+    if (seenSubjects.has(change.subjectId)) {
+      return { error: reject("DUPLICATE_AMENDMENT_SUBJECT", change.subjectId) };
+    }
+    seenSubjects.add(change.subjectId);
+    const subject = constitutionSubjectById(change.subjectId);
+    if (!subject) return { error: reject("UNKNOWN_AMENDMENT_SUBJECT", change.subjectId) };
+    const alt = constitutionAlternative(change.subjectId, change.alternativeId);
+    if (!alt) return { error: reject("UNKNOWN_AMENDMENT_ALTERNATIVE", change.alternativeId) };
+    const currentText =
+      currentConstitutionalClauseText(world, state, subject.targetClauseId) ??
+      documentClause(world, subject.targetClauseId)?.clause.text ??
+      "";
+    // Current constitution is baseline — proposing identical text is not an amendment.
+    // Restoring founding text after a prior amendment is a valid change.
+    if (alt.proposedClauseText === currentText) {
+      return { error: reject("NO_POLICY_CHANGE", change.subjectId) };
+    }
+    packageChanges.push({
+      subjectId: subject.id,
+      alternativeId: alt.id,
+      clauseId: subject.targetClauseId,
+      currentText,
+      proposedText: alt.proposedClauseText,
+    });
   }
-  if (cleanText === currentText) return { error: reject("NO_POLICY_CHANGE", clauseId) };
-  const open = Object.values(state.provincialRuntime.constitutionalAmendments).some(
-    (amendment) =>
-      amendment.documentClauseId === clauseId &&
-      ["proposed", "ratifying"].includes(amendment.status),
+  const open = Object.values(state.provincialRuntime.constitutionalAmendments).some((amendment) =>
+    ["proposed", "ratifying"].includes(amendment.status),
   );
-  if (open) return { error: reject("AMENDMENT_ALREADY_PENDING", clauseId) };
-  const clauseDifficulty =
-    entry.clause.amendment_difficulty === "foundational"
-      ? 0.92
-      : entry.clause.amendment_difficulty === "substantial"
-        ? 0.67
-        : 0.42;
-  const difficulty = clamp(Math.max(clauseDifficulty, intentPolitics.difficulty));
+  if (open) return { error: reject("AMENDMENT_ALREADY_PENDING", "package") };
   const id = `CAMEND_${String(Object.keys(state.provincialRuntime.constitutionalAmendments).length + 1).padStart(4, "0")}`;
+  const titles = packageChanges.map((change) => {
+    const subject = constitutionSubjectById(change.subjectId)!;
+    const alt = constitutionAlternative(change.subjectId, change.alternativeId)!;
+    return `${subject.subject}: ${alt.label}`;
+  });
+  const primary = packageChanges[0]!;
+  const primaryAlt = constitutionAlternative(primary.subjectId, primary.alternativeId)!;
+  const primaryRule = primaryAlt.rulePatch
+    ? (Object.keys(primaryAlt.rulePatch)[0] as ConstitutionalRuleId | undefined)
+    : undefined;
   const amendment: ConstitutionalAmendment = {
     id,
-    title: `${intentPolitics.label}: Article ${entry.article.number}, Section ${entry.section.number}`,
-    summary: `${intentPolitics.label}. Replaces clause ${entry.clause.number} of ${entry.section.title}.`,
+    title:
+      packageChanges.length === 1
+        ? titles[0]!
+        : `Constitutional package (${packageChanges.length} changes)`,
+    summary: titles.join("; "),
     sponsorId: actorId,
     proposedDate: state.currentDate,
-    ruleId: null,
-    proposedValue: null,
-    documentClauseId: clauseId,
-    currentText,
-    proposedText: cleanText,
-    intent,
-    runtimeEffect: "text_only",
-    politicalDifficulty: difficulty,
+    ruleId: primaryRule ?? null,
+    proposedValue:
+      primaryRule && primaryAlt.rulePatch?.[primaryRule] != null
+        ? primaryAlt.rulePatch[primaryRule]!
+        : null,
+    documentClauseId: primary.clauseId,
+    currentText: primary.currentText,
+    proposedText: primary.proposedText,
+    packageChanges,
+    intent: "alter_office_terms",
+    runtimeEffect: "modeled_rule",
+    politicalDifficulty: 0.72,
     proposalTrigger:
       actorId === state.playerPoliticianId ? "player_sponsorship" : "reform_movement",
-    politicalImpetus: clamp(0.72 - difficulty * 0.38),
+    politicalImpetus: 0.55,
     status: "proposed",
     assemblyVoteId: null,
     assemblyVotes: {},
@@ -560,20 +615,76 @@ export function proposeConstitutionalTextAmendment(
         importance: 0.9,
         visibility: "public",
         actorIds: [actorId],
-        entityIds: [id, clauseId],
+        entityIds: [id, ...packageChanges.map((change) => change.clauseId)],
         payload: {
           amendmentId: id,
-          clauseId,
-          trigger: amendment.proposalTrigger,
-          scope: entry.clause.amendment_difficulty,
-          intent,
-          runtimeEffect: amendment.runtimeEffect,
+          packageSize: packageChanges.length,
+          subjects: packageChanges.map((change) => change.subjectId),
         },
         sourceScheduledEventId: null,
         sourceCommandId: commandId,
       }),
     ],
   };
+}
+
+function ensureConstitutionalOrder(state: SimState) {
+  if (!state.provincialRuntime.constitutionalOrder) {
+    state.provincialRuntime.constitutionalOrder = emptyConstitutionalOrder();
+  }
+  return state.provincialRuntime.constitutionalOrder;
+}
+
+export function applyRatifiedAmendmentEffects(
+  state: SimState,
+  amendment: ConstitutionalAmendment,
+): void {
+  const order = ensureConstitutionalOrder(state);
+  if (amendment.ruleId && amendment.proposedValue != null) {
+    const rule = state.provincialRuntime.constitutionalRules[amendment.ruleId];
+    if (rule) {
+      rule.value = amendment.proposedValue;
+      rule.amendedDate = state.currentDate;
+      rule.sourceAmendmentId = amendment.id;
+    }
+  }
+  if (amendment.documentClauseId && amendment.proposedText) {
+    order.clauseTexts[amendment.documentClauseId] = amendment.proposedText;
+  }
+  for (const change of amendment.packageChanges ?? []) {
+    order.clauseTexts[change.clauseId] = change.proposedText;
+    const alt = constitutionAlternative(change.subjectId, change.alternativeId);
+    if (!alt) continue;
+    if (alt.orderPatch) Object.assign(order, alt.orderPatch);
+    if (alt.rulePatch) {
+      for (const [ruleId, value] of Object.entries(alt.rulePatch) as Array<
+        [ConstitutionalRuleId, number]
+      >) {
+        const rule = state.provincialRuntime.constitutionalRules[ruleId];
+        if (rule && typeof value === "number") {
+          rule.value = value;
+          rule.amendedDate = state.currentDate;
+          rule.sourceAmendmentId = amendment.id;
+        }
+      }
+    }
+  }
+  if (order.partySystem === "single_legal_party" && !order.soleLegalPartyId) {
+    order.soleLegalPartyId = state.politicians[amendment.sponsorId]?.partyId ?? null;
+  }
+  if (order.partySystem !== "single_legal_party") {
+    order.soleLegalPartyId = null;
+  }
+  order.lastAmendedDate = state.currentDate;
+}
+
+export function assemblyVotesRequired(state: SimState): number {
+  const { assemblyFraction } = amendmentThresholds(ensureConstitutionalOrder(state));
+  return Math.ceil(420 * assemblyFraction);
+}
+
+export function provincesRequiredForRatification(state: SimState): number {
+  return amendmentThresholds(ensureConstitutionalOrder(state)).provincesRequired;
 }
 
 export function castConstitutionalAssemblyVote(
@@ -648,11 +759,18 @@ function federalVote(
   }
   amendment.assemblyYes = yes;
   amendment.assemblyVoteId = `CAVOTE_${amendment.id}`;
-  if (yes >= 280) {
-    amendment.status = "ratifying";
-    // Lorsain v1 uses no universal ratification deadline. All 21 Provincial
-    // Assemblies receive a recorded vote; the proposal fails if fewer than 13 ratify.
-    amendment.ratificationDeadline = null;
+  const required = assemblyVotesRequired(state);
+  if (yes >= required) {
+    const provincesNeeded = provincesRequiredForRatification(state);
+    if (provincesNeeded <= 0) {
+      amendment.status = "ratified";
+      amendment.enactedDate = state.currentDate;
+      applyRatifiedAmendmentEffects(state, amendment);
+      amendment.ratificationDeadline = null;
+    } else {
+      amendment.status = "ratifying";
+      amendment.ratificationDeadline = null;
+    }
   } else {
     amendment.status = "assembly_failed";
   }
@@ -813,14 +931,18 @@ export function processConstitutionalAmendmentsMonth(
         pushHistory(state, {
           date: state.currentDate,
           type:
-            amendment.assemblyYes >= 280
+            amendment.assemblyYes >= assemblyVotesRequired(state)
               ? "CONSTITUTIONAL_AMENDMENT_SENT_TO_PROVINCES"
               : "CONSTITUTIONAL_AMENDMENT_FAILED",
           importance: 0.88,
           visibility: "public",
           actorIds: [amendment.sponsorId],
           entityIds: [amendment.id],
-          payload: { amendmentId: amendment.id, assemblyYes: amendment.assemblyYes, required: 280 },
+          payload: {
+            amendmentId: amendment.id,
+            assemblyYes: amendment.assemblyYes,
+            required: assemblyVotesRequired(state),
+          },
           sourceScheduledEventId: null,
           sourceCommandId: commandId,
         }),
@@ -862,17 +984,10 @@ export function processConstitutionalAmendmentsMonth(
         }),
       );
     }
-    if (amendment.ratifiedProvinceIds.length >= 13) {
+    if (amendment.ratifiedProvinceIds.length >= provincesRequiredForRatification(state)) {
       amendment.status = "ratified";
       amendment.enactedDate = state.currentDate;
-      const rule = amendment.ruleId
-        ? state.provincialRuntime.constitutionalRules[amendment.ruleId]
-        : null;
-      if (rule && amendment.proposedValue != null) {
-        rule.value = amendment.proposedValue;
-        rule.amendedDate = state.currentDate;
-        rule.sourceAmendmentId = amendment.id;
-      }
+      applyRatifiedAmendmentEffects(state, amendment);
       events.push(
         pushHistory(state, {
           date: state.currentDate,
@@ -893,6 +1008,8 @@ export function processConstitutionalAmendmentsMonth(
             ...(amendment.ruleId
               ? { ruleId: amendment.ruleId, value: amendment.proposedValue ?? 0 }
               : { clauseId: amendment.documentClauseId ?? "unrecorded" }),
+            packageSize: amendment.packageChanges?.length ?? 0,
+            partySystem: state.provincialRuntime.constitutionalOrder.partySystem,
             ratifyingProvinces: amendment.ratifiedProvinceIds.length,
           },
           sourceScheduledEventId: null,
@@ -917,7 +1034,7 @@ export function processConstitutionalAmendmentsMonth(
             amendmentId: amendment.id,
             stage: "provincial_ratification",
             ratifyingProvinces: amendment.ratifiedProvinceIds.length,
-            required: 13,
+            required: provincesRequiredForRatification(state),
           },
           sourceScheduledEventId: null,
           sourceCommandId: commandId,

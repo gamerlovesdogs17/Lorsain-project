@@ -1745,3 +1745,69 @@ export function migrateSaveV17ToV18(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 17, toSchema: 18, migrate: migrateSaveV17ToV18 });
+
+/**
+ * Schema 19 adds live ConstitutionalOrderState and multi-change package
+ * metadata on amendments. Prior text-only amendments remain historically
+ * readable; new proposals must use structured package changes.
+ */
+export function migrateSaveV18ToV19(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 19 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 19 };
+  const provincial = isRecord(sim.provincialRuntime) ? { ...sim.provincialRuntime } : {};
+  if (!isRecord(provincial.constitutionalOrder)) {
+    provincial.constitutionalOrder = {
+      partySystem: "competitive_multiparty",
+      soleLegalPartyId: null,
+      presidentialElection: "national_rcv",
+      assemblyElection: "stv",
+      judicialReview: "standard_review",
+      provincialCompetence: "concurrent_powers",
+      emergencyPowers: "standard_emergency",
+      treatyApproval: "assembly_ratification",
+      amendmentProcess: "assembly_two_thirds_plus_13_provinces",
+      civilLiberties: "standard_charter",
+      executiveAuthority: "constrained_dual_mandate",
+      republicForm: "democratic_republic",
+      citizenshipGuard: "equal_citizenship",
+      cabinetFormation: "presidential_choice",
+      pressFreedom: "free_press",
+      localGovernment: "provincial_primary",
+      defenseControl: "civil_supremacy",
+      clauseTexts: {},
+      lastAmendedDate: null,
+    };
+  }
+  const amendments: Record<string, unknown> = {};
+  if (isRecord(provincial.constitutionalAmendments)) {
+    for (const [id, value] of Object.entries(provincial.constitutionalAmendments)) {
+      if (!isRecord(value)) {
+        amendments[id] = value;
+        continue;
+      }
+      const packageChanges = Array.isArray(value.packageChanges) ? value.packageChanges : [];
+      amendments[id] = {
+        ...value,
+        packageChanges,
+        runtimeEffect:
+          value.runtimeEffect === "modeled_rule" || packageChanges.length > 0
+            ? "modeled_rule"
+            : value.runtimeEffect === "text_only"
+              ? "text_only"
+              : typeof value.ruleId === "string"
+                ? "modeled_rule"
+                : "text_only",
+      };
+    }
+  }
+  sim.provincialRuntime = {
+    ...provincial,
+    constitutionalAmendments: amendments,
+  };
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 18, toSchema: 19, migrate: migrateSaveV18ToV19 });

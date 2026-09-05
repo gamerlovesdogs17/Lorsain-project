@@ -170,6 +170,7 @@ import {
   castConstitutionalAssemblyVote,
   castConstitutionalRatificationVote,
   proposeConstitutionalAmendment,
+  proposeConstitutionalPackage,
   proposeConstitutionalTextAmendment,
 } from "./provinces/constitutional.js";
 import { processOrganizationsMonth } from "./organizations/monthly.js";
@@ -2579,6 +2580,27 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         state.playerPoliticianId,
         command.ruleId,
         command.proposedValue,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "PROPOSE_CONSTITUTIONAL_PACKAGE") {
+      const preview = proposeConstitutionalPackage(
+        world,
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.changes,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = proposeConstitutionalPackage(
+        world,
+        state,
+        state.playerPoliticianId,
+        command.changes,
         commandId,
       );
       if ("error" in out) return fail(out.error.code, out.error.message);

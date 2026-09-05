@@ -1,5 +1,9 @@
 import type { IsoDate } from "../calendar.js";
 import type { ElectionCertification } from "../elections/types.js";
+import {
+  emptyConstitutionalOrder,
+  type ConstitutionalOrderState,
+} from "./constitutionalOrder.js";
 
 export const PROVINCIAL_PRIORITIES = [
   "transport",
@@ -299,9 +303,14 @@ export type ConstitutionalAmendment = {
   documentClauseId?: string | null;
   currentText?: string | null;
   proposedText?: string | null;
+  /** Multi-change package entries (document-first amendment system). */
+  packageChanges?: ConstitutionalPackageChange[];
   /** Public legal-policy purpose selected before text is drafted. */
   intent: ConstitutionalAmendmentIntent;
-  /** Whether ratification changes a modeled rule or only the authoritative document text. */
+  /**
+   * @deprecated Prefer packageChanges with order/rule patches. Kept for save compatibility.
+   * New amendments always use modeled effects.
+   */
   runtimeEffect: "modeled_rule" | "text_only";
   /** Public political resistance, not a hidden formal voting threshold. */
   politicalDifficulty?: number;
@@ -325,6 +334,14 @@ export type ConstitutionalAmendment = {
   enactedDate: IsoDate | null;
 };
 
+export type ConstitutionalPackageChange = {
+  subjectId: string;
+  alternativeId: string;
+  clauseId: string;
+  currentText: string;
+  proposedText: string;
+};
+
 export type ProvincialRuntime = {
   provinces: Record<string, ProvinceGovernanceState>;
   elections: Record<string, GubernatorialElection>;
@@ -339,6 +356,7 @@ export type ProvincialRuntime = {
   promotions: Record<string, ProvincialPromotion>;
   constitutionalRules: Record<string, RuntimeConstitutionalRule>;
   constitutionalAmendments: Record<string, ConstitutionalAmendment>;
+  constitutionalOrder: ConstitutionalOrderState;
   lastMonthProcessed: IsoDate | null;
 };
 
@@ -357,6 +375,7 @@ export function emptyProvincialRuntime(): ProvincialRuntime {
     promotions: {},
     constitutionalRules: {},
     constitutionalAmendments: {},
+    constitutionalOrder: emptyConstitutionalOrder(),
     lastMonthProcessed: null,
   };
 }

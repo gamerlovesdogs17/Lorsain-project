@@ -15,6 +15,22 @@ import { candidateStandingOrDefault } from "../elections/standing.js";
 import type { ElectionState } from "../elections/types.js";
 import { seedPublicPartyPlatform } from "./platforms.js";
 
+export function partyAllowedUnderConstitution(
+  state: SimState,
+  partyId: string | null | undefined,
+): boolean {
+  if (!partyId) return true;
+  const order = state.provincialRuntime.constitutionalOrder;
+  if (!order) return true;
+  if (order.partySystem === "competitive_multiparty") return true;
+  if (order.partySystem === "nonpartisan_candidates") return partyId === INDEPENDENT_AGGREGATE_ID;
+  if (order.partySystem === "single_legal_party") {
+    return order.soleLegalPartyId == null || partyId === order.soleLegalPartyId;
+  }
+  // restricted_registration: all existing registered parties remain legal unless sole party set
+  return true;
+}
+
 type PresidentialInterestContext = {
   officeKindsByPolitician: Map<string, Set<string>>;
   partyLeaders: Set<string>;
@@ -276,7 +292,8 @@ function futureEntriesForParty(
         politician.id !== state.playerPoliticianId &&
         politician.partyId === partyId &&
         politician.alive &&
-        !politician.retired,
+        !politician.retired &&
+        partyAllowedUnderConstitution(state, politician.partyId),
     )
     .map((politician) => ({
       politicianId: politician.id,

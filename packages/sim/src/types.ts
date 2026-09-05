@@ -66,7 +66,7 @@ export type {
   CanonicalWorldLeader,
 } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 18 as const;
+export const SAVE_SCHEMA_VERSION = 19 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -555,6 +555,10 @@ export type Command =
       type: "PROPOSE_CONSTITUTIONAL_AMENDMENT";
       ruleId: ConstitutionalRuleId;
       proposedValue: number;
+    }
+  | {
+      type: "PROPOSE_CONSTITUTIONAL_PACKAGE";
+      changes: Array<{ subjectId: string; alternativeId: string }>;
     }
   | {
       type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT";
