@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-05T17:52:07.679Z",
+  "generatedAt": "2026-09-05T22:03:03.387Z",
   "legislation": {
     "policySubjects": 50,
     "foundingBaselines": 50,
     "obsoleteCurrentTrue": 0,
     "keepCurrentLabels": 0,
     "keepSample": [],
-    "categorical": 49,
-    "numericalOrThreshold": 1,
+    "categorical": 30,
+    "numericalOrThreshold": 20,
     "binary": 0,
-    "withParameters": 1,
+    "withParameters": 20,
     "proposalOptionDistribution": {
-      "2": 34,
-      "3": 9,
-      "4": 5,
-      "5+": 2
+      "2": 0,
+      "3": 24,
+      "4": 23,
+      "5+": 3
     },
     "maxProposalOptions": 6,
-    "minProposalOptions": 2
+    "minProposalOptions": 3
   },
   "constitution": {
     "articles": 12,
