@@ -141,6 +141,12 @@ export type InternationalCrisis = {
   startedDate: IsoDate;
   lastStageChange: IsoDate;
   intensity: number;
+  /**
+   * Phase 11.4: optional short narrative theme label assigned at crisis
+   * emergence (e.g. "border incident", "sanctions dispute"). May be absent
+   * on crises loaded from older saves — treat as undefined in UI/events.
+   */
+  narrativeTitle?: string;
   metadata: JsonObject;
 };
 

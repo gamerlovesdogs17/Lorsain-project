@@ -245,6 +245,8 @@ export function parseForeignAffairsRuntime(raw: unknown): ForeignAffairsRuntime 
             ? rec.lastStageChange
             : "2000-01-01",
         intensity: clamp01(Number(rec.intensity ?? 0.3)),
+        // Phase 11.4: optional narrative theme label — absent on older saves.
+        ...(typeof rec.narrativeTitle === "string" ? { narrativeTitle: rec.narrativeTitle } : {}),
         metadata: isRecord(rec.metadata)
           ? (rec.metadata as ForeignAffairsRuntime["crises"][string]["metadata"])
           : {},

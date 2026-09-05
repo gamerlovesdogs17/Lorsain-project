@@ -61,6 +61,11 @@ export function parseMediaRuntime(raw: unknown): MediaRuntime | string {
       runtime.stories[id] = story;
     }
   }
+  if (Array.isArray(raw.recentHeadlineFingerprints)) {
+    runtime.recentHeadlineFingerprints = raw.recentHeadlineFingerprints
+      .filter((x): x is string => typeof x === "string")
+      .slice(0, 24);
+  }
   if (Array.isArray(raw.lingering)) {
     for (const rec of raw.lingering) {
       if (!isRecord(rec)) continue;

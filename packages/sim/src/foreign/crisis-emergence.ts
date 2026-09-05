@@ -1,9 +1,55 @@
 import type { KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import type { IsoDate } from "../calendar.js";
-import { TERENA_WORLD_ID, type InternationalCrisis } from "./types.js";
+import {
+  TERENA_WORLD_ID,
+  type BilateralRelation,
+  type ForeignCountryRuntime,
+  type InternationalCrisis,
+} from "./types.js";
 import { bilateralKey, allocateCrisisId, getBilateralRelation } from "./state.js";
 import { activeCrises } from "./crises.js";
+
+// ---------------------------------------------------------------------------
+// Phase 11.4 — Crisis narrative theme assignment
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive a short narrative theme label for a newly emergent crisis from the
+ * bilateral context. The label is purely descriptive — it does not affect any
+ * game-mechanical values. Priority order mirrors realistic escalation factors.
+ *
+ * Exported so tests can verify stability without a full sim harness.
+ */
+export function assignCrisisTheme(
+  aRuntime: ForeignCountryRuntime,
+  bRuntime: ForeignCountryRuntime,
+  rel: BilateralRelation,
+  aNeighborsB: boolean,
+  hasSanctions: boolean,
+): string {
+  // 1. Active sanctions are a near-certain driver of the dispute identity.
+  if (hasSanctions) return "sanctions dispute";
+  // 2. High naval/air posture signals military sabre-rattling.
+  if (aRuntime.posture === "mobilized" || bRuntime.posture === "mobilized") {
+    return "naval posturing";
+  }
+  // 3. Shared border → most common flashpoint.
+  if (aNeighborsB) return "border incident";
+  // 4. Dense trade links → economic friction.
+  if (rel.economicTies > 0.4) return "trade corridor closure";
+  // 5. Alliance-seeking goals → consultation breakdown.
+  if (
+    aRuntime.strategicGoals.includes("secure_alliance") ||
+    bRuntime.strategicGoals.includes("secure_alliance")
+  ) {
+    return "alliance consultation rupture";
+  }
+  // 6. Deeply negative general relations → diplomatic fracture.
+  if (rel.general < -20) return "diplomatic expulsion cycle";
+  // 7. Fallback.
+  return "border incident";
+}
 
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
@@ -117,6 +163,28 @@ export function checkCrisisEmergence(
 
     const id = allocateCrisisId(state);
     const rel = getBilateralRelation(state.foreignAffairsRuntime, aId, bId);
+    const aRuntime = state.foreignAffairsRuntime.countries[aId];
+    const bRuntime = state.foreignAffairsRuntime.countries[bId];
+    const aCanon = world.worldCountries[aId];
+
+    // Phase 11.4: assign a narrative theme if we have enough context.
+    let narrativeTitle: string | undefined;
+    if (aRuntime && bRuntime && rel && aCanon) {
+      const hasSanctions = Object.values(state.foreignAffairsRuntime.sanctions).some(
+        (s) =>
+          s.active &&
+          ((s.imposerId === aId && s.targetId === bId) ||
+            (s.imposerId === bId && s.targetId === aId)),
+      );
+      narrativeTitle = assignCrisisTheme(
+        aRuntime,
+        bRuntime,
+        rel,
+        aCanon.neighborIds.includes(bId),
+        hasSanctions,
+      );
+    }
+
     const crisis: InternationalCrisis = {
       id,
       stage: "latent",
@@ -125,6 +193,7 @@ export function checkCrisisEmergence(
       startedDate: date,
       lastStageChange: date,
       intensity: clamp01(0.2 + (rel?.securityTension ?? 0.15) * 0.5),
+      ...(narrativeTitle != null ? { narrativeTitle } : {}),
       metadata: {
         cause: "emergence",
         securityTension: rel?.securityTension ?? 0.15,

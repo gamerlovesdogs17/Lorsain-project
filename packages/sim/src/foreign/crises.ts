@@ -209,6 +209,8 @@ export function processCrisisLifecycle(
               toStage: crisis.stage,
               intensity: crisis.intensity,
               focalPairKey: crisis.focalPairKey,
+              // Phase 11.4: propagate narrative theme when present.
+              ...(crisis.narrativeTitle != null ? { narrativeTitle: crisis.narrativeTitle } : {}),
             },
             sourceScheduledEventId: null,
             sourceCommandId: commandId,

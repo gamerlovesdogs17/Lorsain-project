@@ -4,8 +4,11 @@ import { parseIsoDate } from "../calendar.js";
 import { createPoll } from "../elections/polls.js";
 import { activeElectionCandidateIds } from "../elections/field.js";
 import { processAssemblyFilingCalendar } from "../elections/assembly-cycle.js";
-import { decayMomentum, monthStart } from "./effects.js";
+import { decayMomentum, monthStart, applyStandingDelta } from "./effects.js";
 import { activeCampaigns, ensureActionPoints } from "./state.js";
+import { pushHistory } from "../scheduler.js";
+import { candidateStandingOrDefault } from "../elections/standing.js";
+import { pickCampaignSituation, pickSituationTitle } from "./situations.js";
 import {
   campaignAdvertise,
   campaignAttack,
@@ -148,6 +151,8 @@ export function processCampaignMonth(
         );
         if (applied && !("error" in applied)) events.push(...applied.events);
         else break;
+        // Phase 11.4: occasional situation flavor event (≈8% chance, NPC only).
+        events.push(...maybeEmitSituationEvent(world, state, live, rng, commandId));
       }
     }
   });
@@ -297,6 +302,64 @@ function isCampaignGeography(value: unknown): value is CampaignGeography {
   if (value == null || typeof value !== "object") return false;
   const raw = value as { kind?: unknown; id?: unknown };
   return (raw.kind === "province" || raw.kind === "constituency") && typeof raw.id === "string";
+}
+
+/**
+ * Attempt to emit a campaign situation flavor event for an NPC campaign.
+ * Uses existing CAMPAIGN_MESSAGE / CAMPAIGN_ATTACK history types; no new
+ * engine state. Returns an array of 0 or 1 events.
+ */
+function maybeEmitSituationEvent(
+  world: KernelWorld,
+  state: SimState,
+  campaign: CampaignState,
+  rng: RngService,
+  commandId: string,
+): SimEvent[] {
+  // Compute a rough monthsToElection from the linked election date, if any.
+  let monthsToElection: number | null = null;
+  const linkedElection = campaign.electionId ? state.elections[campaign.electionId] : null;
+  if (linkedElection?.date) {
+    const now = parseIsoDate(state.currentDate);
+    const then = parseIsoDate(linkedElection.date);
+    monthsToElection = Math.max(0, (then.year - now.year) * 12 + (then.month - now.month));
+  }
+
+  const standing = candidateStandingOrDefault(world, state, campaign.politicianId);
+  const ctx = {
+    cashOnHand: campaign.cashOnHand,
+    monthsToElection,
+    momentum: standing.momentum ?? 0,
+    fieldOrganization: campaign.fieldOrganization,
+  };
+
+  const situation = pickCampaignSituation(campaign, ctx, rng);
+  if (!situation) return [];
+
+  const title = pickSituationTitle(situation, rng);
+
+  // Apply the optional standing nudge (small, within clamp ranges).
+  if (situation.standingDelta) {
+    applyStandingDelta(world, state, campaign.politicianId, situation.standingDelta);
+  }
+
+  return [
+    pushHistory(state, {
+      date: state.currentDate,
+      type: situation.eventType,
+      importance: situation.importance,
+      visibility: "public",
+      actorIds: [campaign.politicianId],
+      entityIds: [campaign.id],
+      payload: {
+        situationId: situation.id,
+        title,
+        campaignId: campaign.id,
+      },
+      sourceScheduledEventId: null,
+      sourceCommandId: commandId,
+    }),
+  ];
 }
 
 function maybeDebates(

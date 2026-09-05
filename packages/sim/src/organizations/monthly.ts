@@ -18,6 +18,26 @@ function note(
   if (actor.recentActions.length > 6) actor.recentActions.length = 6;
 }
 
+/**
+ * Phase 11.4: convert a raw issue ID to a short human-readable label used in
+ * action descriptions. Falls back to a generic "policy" label for unknown IDs.
+ */
+function issueActionLabel(issueId: string): string {
+  const LABELS: Record<string, string> = {
+    ISS_ECONOMY: "fiscal and economic",
+    ISS_HEALTHCARE: "healthcare",
+    ISS_CLIMATE: "climate and energy",
+    ISS_FOREIGN: "foreign policy",
+    ISS_LABOR: "labor and wages",
+    ISS_HOUSING: "housing",
+    ISS_TRADE: "trade",
+    ISS_SECURITY: "public safety",
+    ISS_EDUCATION: "education",
+    ISS_WELFARE: "social welfare",
+  };
+  return LABELS[issueId] ?? issueId.replace(/^ISS_/, "").toLowerCase().replace(/_/g, " ");
+}
+
 export function orgIssueFit(world: KernelWorld, orgId: string, issueId: string): number {
   const canon = world.interestOrganizations[orgId];
   if (!canon) return 0;
@@ -210,14 +230,16 @@ export function processOrganizationsMonth(
       const strength = Math.min(1, canon.strength * (0.5 + Math.abs(fit) * 0.4));
       actor.billPressure = actor.billPressure.filter((p) => p.billId !== bill.id);
       actor.billPressure.push({ billId: bill.id, stance, strength });
-      note(
-        actor,
-        state.currentDate,
-        "lobby",
+
+      // Phase 11.4: issue-aware lobby note rather than generic trust language.
+      const issueSuffix = issueActionLabel(item.issueId);
+      const lobbyNote =
         stance === "watch"
-          ? `Monitoring ${bill.title}`
-          : `${stance === "support" ? "Supporting" : "Opposing"} ${bill.title}`,
-      );
+          ? `Monitoring ${issueSuffix} provisions in ${bill.title}`
+          : stance === "support"
+            ? `Mobilizing members to advance ${issueSuffix} measures in ${bill.title}`
+            : `Organizing opposition to ${issueSuffix} changes in ${bill.title}`;
+      note(actor, state.currentDate, "lobby", lobbyNote);
       actor.lastActionMonth = month;
       actor.cooldownUntil = addMonths(state.currentDate, 1);
       events.push(
@@ -228,7 +250,15 @@ export function processOrganizationsMonth(
           visibility: "public",
           actorIds: [],
           entityIds: [orgId, bill.id],
-          payload: { organizationId: orgId, billId: bill.id, stance, kind: "lobby" },
+          payload: {
+            organizationId: orgId,
+            billId: bill.id,
+            stance,
+            kind: "lobby",
+            // Phase 11.4: expose the driving issue for UI/media consumption.
+            issueId: item.issueId,
+            issueLabel: issueSuffix,
+          },
           sourceScheduledEventId: null,
           sourceCommandId: commandId,
         }),
@@ -261,7 +291,20 @@ export function processOrganizationsMonth(
           50_000_000,
           campaign.cashOnHand + Math.round(8000 * canon.strength),
         );
-        note(actor, state.currentDate, "endorse", `Endorsed a campaign`);
+        // Phase 11.4: endorsement note varies by org type for flavor.
+        const orgType = canon.type.toLowerCase();
+        const endorseMsg = orgType.includes("union")
+          ? "Threw labor weight behind a candidate"
+          : orgType.includes("business") || orgType.includes("manufactur")
+            ? "Extended business community backing to a candidate"
+            : orgType.includes("climate") || orgType.includes("advocacy")
+              ? "Committed advocacy network resources to a campaign"
+              : orgType.includes("farm") || orgType.includes("rural")
+                ? "Delivered rural constituency support to a candidate"
+                : orgType.includes("municipal")
+                  ? "Pledged civic organization backing"
+                  : "Endorsed a campaign";
+        note(actor, state.currentDate, "endorse", endorseMsg);
         actor.cooldownUntil = addMonths(state.currentDate, 2);
         events.push(
           pushHistory(state, {

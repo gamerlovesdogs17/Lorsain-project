@@ -23,6 +23,13 @@ const SUBJECT_POLICY: Record<ProvincialBillSubject, ProvincialPolicy> = {
   school_capacity: { issueId: "ISS_WELFARE", axis: "economic" },
   hospital_access: { issueId: "ISS_WELFARE", axis: "economic" },
   local_administration: { issueId: "ISS_REFORM", axis: "authority" },
+  policing_public_safety: { issueId: "ISS_POLICING", axis: "authority" },
+  environmental_regulation: { issueId: "ISS_CLIMATE", axis: "economic" },
+  labor_standards: { issueId: "ISS_LABOR", axis: "economic" },
+  agricultural_support: { issueId: "ISS_TRADE", axis: "economic" },
+  utilities_infrastructure: { issueId: "ISS_TRADE", axis: "economic" },
+  economic_development: { issueId: "ISS_TRADE", axis: "economic" },
+  social_services: { issueId: "ISS_WELFARE", axis: "economic" },
 };
 
 function clampSigned(value: number): number {
@@ -99,10 +106,25 @@ function provincialInterest(state: SimState, bill: ProvincialBill): number {
   const governance = state.provincialRuntime.provinces[bill.provinceId];
   if (!economy) return 0;
   let need = 0;
-  if (bill.subject === "housing_delivery") need = (100 - economy.housingIndex) / 12;
-  else if (bill.subject === "transport_service") need = (100 - economy.conditionsIndex) / 16;
-  else if (bill.subject === "school_capacity" || bill.subject === "hospital_access") {
+  if (bill.subject === "housing_delivery") {
+    need = (100 - economy.housingIndex) / 12;
+  } else if (bill.subject === "transport_service") {
+    need = (100 - economy.conditionsIndex) / 16;
+  } else if (
+    bill.subject === "school_capacity" ||
+    bill.subject === "hospital_access" ||
+    bill.subject === "social_services"
+  ) {
     need = (100 - economy.conditionsIndex) / 14;
+  } else if (bill.subject === "labor_standards") {
+    need = (100 - economy.employmentIndex) / 14;
+  } else if (
+    bill.subject === "environmental_regulation" ||
+    bill.subject === "utilities_infrastructure"
+  ) {
+    need = (100 - economy.conditionsIndex) / 18;
+  } else if (bill.subject === "agricultural_support" || bill.subject === "economic_development") {
+    need = (100 - economy.conditionsIndex) / 16;
   } else {
     need = (0.45 - (governance?.politicalCapital ?? 0.45)) * 0.7;
   }
@@ -271,6 +293,7 @@ export function evaluateGovernorDisposition(
     schools: ["school_capacity"],
     hospitals: ["hospital_access"],
     local_revenue: ["local_administration"],
+    policing: ["policing_public_safety"],
   };
   const agenda = prioritySubject[governance?.administrativePriority ?? ""]?.includes(bill.subject)
     ? bill.policyDirection

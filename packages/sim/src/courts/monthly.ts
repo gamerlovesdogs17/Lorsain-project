@@ -231,7 +231,7 @@ function generateCases(
         challengedKind: "provincial_law",
         challengedId: bill.id,
         respondentId: presidentId,
-        constitutionalQuestion: `Whether ${bill.title} remains within provincial authority`,
+        constitutionalQuestion: provincialDisputeQuestion(bill.id, bill.title, bill.subject),
         constitutionalRule: "federal_provincial_competence",
         meritsLean: ((stableCourtDisputeHash(`${bill.id}:merits`) % 101) - 50) / 100,
       },
@@ -345,6 +345,75 @@ function stableCourtDisputeHash(text: string): number {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
+}
+
+function provincialDisputeQuestion(billId: string, billTitle: string, subject: string): string {
+  const v = stableCourtDisputeHash(`${billId}:question`) % 3;
+  const qs: Record<string, [string, string, string]> = {
+    policing_public_safety: [
+      `Whether ${billTitle} encroaches on federal jurisdiction over criminal law`,
+      `Whether ${billTitle} exceeds provincial authority over policing and public order`,
+      `Whether ${billTitle} conflicts with the federal criminal code framework`,
+    ],
+    environmental_regulation: [
+      `Whether ${billTitle} conflicts with national environmental standards`,
+      `Whether ${billTitle} impermissibly regulates matters of national environmental concern`,
+      `Whether ${billTitle} intrudes on federal jurisdiction over inter-provincial environmental matters`,
+    ],
+    labor_standards: [
+      `Whether ${billTitle} overlaps with federal labor relations jurisdiction`,
+      `Whether ${billTitle} exceeds the province's authority over labor standards`,
+      `Whether ${billTitle} conflicts with federally protected collective bargaining rights`,
+    ],
+    agricultural_support: [
+      `Whether ${billTitle} constitutes an impermissible subsidy under the trade framework`,
+      `Whether ${billTitle} encroaches on federal authority over inter-provincial trade`,
+      `Whether ${billTitle} conflicts with federal agricultural marketing regulations`,
+    ],
+    utilities_infrastructure: [
+      `Whether ${billTitle} intrudes on federally regulated utility sectors`,
+      `Whether ${billTitle} exceeds provincial authority over inter-provincial infrastructure`,
+      `Whether ${billTitle} imposes discriminatory terms on federally regulated services`,
+    ],
+    economic_development: [
+      `Whether ${billTitle} creates trade barriers inconsistent with federal economic union provisions`,
+      `Whether ${billTitle} exceeds provincial economic development authority`,
+      `Whether ${billTitle} discriminates against out-of-province businesses contrary to the constitution`,
+    ],
+    social_services: [
+      `Whether ${billTitle} encroaches on federal jurisdiction over social insurance programs`,
+      `Whether ${billTitle} imposes conditions inconsistent with national social standards`,
+      `Whether ${billTitle} exceeds provincial authority over social welfare administration`,
+    ],
+    transport_service: [
+      `Whether ${billTitle} conflicts with federal jurisdiction over inter-provincial transport`,
+      `Whether ${billTitle} exceeds provincial transport regulatory authority`,
+      `Whether ${billTitle} imposes terms inconsistent with federal transport safety standards`,
+    ],
+    housing_delivery: [
+      `Whether ${billTitle} encroaches on federal housing and property rights jurisdiction`,
+      `Whether ${billTitle} imposes obligations inconsistent with federal land use authority`,
+      `Whether ${billTitle} conflicts with constitutionally protected property rights`,
+    ],
+    school_capacity: [
+      `Whether ${billTitle} exceeds provincial education authority in relation to federal standards`,
+      `Whether ${billTitle} encroaches on constitutionally protected education rights`,
+      `Whether ${billTitle} conflicts with national education framework provisions`,
+    ],
+    hospital_access: [
+      `Whether ${billTitle} conflicts with federal health authority and national standards`,
+      `Whether ${billTitle} imposes conditions inconsistent with the federal health framework`,
+      `Whether ${billTitle} exceeds provincial jurisdiction over health service delivery`,
+    ],
+    local_administration: [
+      `Whether ${billTitle} exceeds provincial authority over municipal governance`,
+      `Whether ${billTitle} conflicts with constitutional protections for local administration`,
+      `Whether ${billTitle} imposes obligations inconsistent with municipal autonomy principles`,
+    ],
+  };
+  const variants = qs[subject];
+  if (variants) return variants[v]!;
+  return `Whether ${billTitle} remains within provincial authority`;
 }
 
 export function processCourtsMonth(

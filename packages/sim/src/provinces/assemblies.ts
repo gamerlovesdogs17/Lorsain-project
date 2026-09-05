@@ -26,6 +26,7 @@ import {
   provincialGovernmentRelation,
   provincialPolicy,
 } from "./politics.js";
+import { preferredBillSubjects } from "./themes.js";
 
 const BACKGROUNDS = [
   "municipal administrator",
@@ -856,6 +857,90 @@ const BILL_COPY: Record<ProvincialBillSubject, { titles: string[]; summaries: st
       "Sets clearer procurement and public reporting duties.",
     ],
   },
+  policing_public_safety: {
+    titles: [
+      "Provincial Policing Standards Act",
+      "Community Safety Improvement Act",
+      "Public Order Resources Act",
+    ],
+    summaries: [
+      "Sets provincial standards for policing conduct and community safety resources.",
+      "Expands provincial support for local law enforcement and crime prevention programs.",
+      "Directs funding to public safety infrastructure across provincial police services.",
+    ],
+  },
+  environmental_regulation: {
+    titles: [
+      "Provincial Environmental Standards Act",
+      "Clean Air and Water Act",
+      "Industrial Emissions Control Act",
+    ],
+    summaries: [
+      "Establishes minimum provincial standards for air and water quality.",
+      "Requires provincial review of industrial emissions and environmental compliance.",
+      "Coordinates provincial environmental enforcement with national climate targets.",
+    ],
+  },
+  labor_standards: {
+    titles: [
+      "Fair Wage Standards Act",
+      "Provincial Workplace Safety Act",
+      "Worker Rights Enforcement Act",
+    ],
+    summaries: [
+      "Sets minimum wage and working condition standards across provincial employers.",
+      "Strengthens provincial oversight of workplace health and safety.",
+      "Expands enforcement capacity for labor rights complaints and violations.",
+    ],
+  },
+  agricultural_support: {
+    titles: [
+      "Provincial Farm Support Act",
+      "Rural Agriculture Investment Act",
+      "Crop and Livestock Assistance Act",
+    ],
+    summaries: [
+      "Provides provincial subsidies and technical support for agricultural producers.",
+      "Directs provincial investment toward rural farming communities and supply chains.",
+      "Establishes a relief program for crop losses and livestock emergencies.",
+    ],
+  },
+  utilities_infrastructure: {
+    titles: [
+      "Provincial Utilities Modernization Act",
+      "Energy Grid Resilience Act",
+      "Public Infrastructure Investment Act",
+    ],
+    summaries: [
+      "Funds upgrades to provincial water, power, and communications infrastructure.",
+      "Requires reliability standards for provincially regulated utility services.",
+      "Coordinates provincial capital spending on shared utility infrastructure.",
+    ],
+  },
+  economic_development: {
+    titles: [
+      "Provincial Investment Zones Act",
+      "Regional Business Development Act",
+      "Industrial Growth Initiative Act",
+    ],
+    summaries: [
+      "Creates provincial economic zones with targeted incentives for new investment.",
+      "Expands provincial support programs for small and medium enterprises.",
+      "Coordinates provincial industrial policy to attract and retain employers.",
+    ],
+  },
+  social_services: {
+    titles: [
+      "Community Services Expansion Act",
+      "Provincial Social Support Act",
+      "Vulnerable Populations Assistance Act",
+    ],
+    summaries: [
+      "Expands provincial funding for community social services and support programs.",
+      "Raises service standards for provincially delivered social assistance.",
+      "Targets additional resources toward vulnerable populations and at-risk communities.",
+    ],
+  },
 };
 
 function agendaSubject(
@@ -880,9 +965,18 @@ function agendaSubject(
     schools: "school_capacity",
     hospitals: "hospital_access",
     local_revenue: "local_administration",
+    policing: "policing_public_safety",
   };
   const priority = priorityMap[province?.administrativePriority ?? ""];
   if (priority) return { subject: priority, source: "governor_priority" };
+  const themed = preferredBillSubjects(provinceId);
+  if (themed.length > 0) {
+    return {
+      subject:
+        themed[stableProvincialHash(`${provinceId}:${state.currentDate}:theme`) % themed.length]!,
+      source: "legislative_agenda",
+    };
+  }
   const subjects = Object.keys(BILL_COPY) as ProvincialBillSubject[];
   return {
     subject:
@@ -924,6 +1018,48 @@ function restrainedBillCopy(subject: ProvincialBillSubject): { title: string; su
         title: "Municipal Autonomy Act",
         summary:
           "Repeals selected provincial reporting duties and expands municipal administrative discretion.",
+      };
+    case "policing_public_safety":
+      return {
+        title: "Local Policing Flexibility Act",
+        summary:
+          "Reduces provincial mandates on local police services and expands municipal discretion over public safety resource allocation.",
+      };
+    case "environmental_regulation":
+      return {
+        title: "Environmental Burden Reduction Act",
+        summary:
+          "Narrows provincial environmental compliance requirements and defers enforcement to existing national standards.",
+      };
+    case "labor_standards":
+      return {
+        title: "Employer Flexibility Act",
+        summary:
+          "Reduces provincial labor regulations and grants employers greater discretion over workplace policies.",
+      };
+    case "agricultural_support":
+      return {
+        title: "Farm Market Deregulation Act",
+        summary:
+          "Reduces provincial agricultural subsidies and expands market-based pricing for farming inputs and outputs.",
+      };
+    case "utilities_infrastructure":
+      return {
+        title: "Utilities Privatization Act",
+        summary:
+          "Opens provincially regulated utilities to private operators and reduces direct provincial infrastructure spending.",
+      };
+    case "economic_development":
+      return {
+        title: "Business Deregulation Act",
+        summary:
+          "Removes selected provincial business regulations and reduces compliance costs for employers in key sectors.",
+      };
+    case "social_services":
+      return {
+        title: "Social Services Efficiency Act",
+        summary:
+          "Consolidates provincial social programs and introduces stricter eligibility criteria to reduce expenditure.",
       };
   }
 }
@@ -1663,11 +1799,21 @@ function provincialBillPolicyItem(
       return { issueId: "ISS_HOUSING", direction };
     case "school_capacity":
     case "hospital_access":
+    case "social_services":
       return { issueId: "ISS_WELFARE", direction };
     case "local_administration":
       return { issueId: "ISS_REFORM", direction };
     case "transport_service":
+    case "agricultural_support":
+    case "utilities_infrastructure":
+    case "economic_development":
       return { issueId: "ISS_TRADE", direction };
+    case "policing_public_safety":
+      return { issueId: "ISS_POLICING", direction };
+    case "environmental_regulation":
+      return { issueId: "ISS_CLIMATE", direction };
+    case "labor_standards":
+      return { issueId: "ISS_LABOR", direction };
   }
 }
 

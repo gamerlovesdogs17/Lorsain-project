@@ -108,6 +108,13 @@ export const PROVINCIAL_BILL_SUBJECTS = [
   "school_capacity",
   "hospital_access",
   "local_administration",
+  "policing_public_safety",
+  "environmental_regulation",
+  "labor_standards",
+  "agricultural_support",
+  "utilities_infrastructure",
+  "economic_development",
+  "social_services",
 ] as const;
 export type ProvincialBillSubject = (typeof PROVINCIAL_BILL_SUBJECTS)[number];
 

@@ -51,8 +51,19 @@ export type MediaRuntime = {
   stories: Record<string, MediaStory>;
   lingering: MediaLingeringEffect[];
   lastMonthProcessed: IsoDate | null;
+  /** Rolling window of normalized headline fingerprints (max 24) to reduce repetition. */
+  recentHeadlineFingerprints?: string[];
 };
 
 export function emptyMediaRuntime(): MediaRuntime {
   return { stories: {}, lingering: [], lastMonthProcessed: null };
+}
+
+/** Normalize a headline string to a fingerprint for deduplication. */
+export function headlineFingerprint(headline: string): string {
+  return headline
+    .toLowerCase()
+    .replace(/\b(act|the|a|an)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

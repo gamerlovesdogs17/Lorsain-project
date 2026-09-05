@@ -10,6 +10,7 @@ export * from "./debates.js";
 export * from "./decisions.js";
 export * from "./monthly.js";
 export * from "./gotv.js";
+export * from "./situations.js";
 export {
   parseCampaignRuntime,
   campaignCounterError,
