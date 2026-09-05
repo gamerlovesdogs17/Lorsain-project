@@ -11,13 +11,32 @@ import type {
 } from "./types.js";
 import { CONSTITUTIONAL_RULE_IDS } from "./types.js";
 import { provincialLegislatorForPolitician } from "./assemblies.js";
+import { constitutionAlternativeFor } from "./constitutionAlternatives.js";
 
-const LEGAL_VALUES: Record<ConstitutionalRuleId, readonly number[]> = {
-  assembly_term_years: [3, 4, 5],
-  presidential_term_limit: [1, 2, 3],
-  court_term_years: [9, 12, 15],
-  veto_override_fraction: [0.6, 2 / 3, 0.75],
+/**
+ * Legal values for each constitutional rule. Expanding each rule to 4 alternatives
+ * (Phase 11.4). These are the only values accepted by `proposeConstitutionalAmendment`.
+ *
+ * Special encoding:
+ *   presidential_term_limit === 0  →  no term limit (unlimited re-elections permitted).
+ *   All eligibility logic must treat 0 as unlimited — see packages/sim/src/parties/eligibility.ts.
+ */
+export const CONSTITUTIONAL_LEGAL_VALUES: Record<ConstitutionalRuleId, readonly number[]> = {
+  /** 3 | 4 | 5 | 6 year terms for the National Assembly */
+  assembly_term_years: [3, 4, 5, 6],
+  /**
+   * 1 | 2 | 3 elected terms, or 0 (no limit).
+   * Value 0 means presidential term limit is abolished; eligibility must skip the term-count check.
+   */
+  presidential_term_limit: [1, 2, 3, 0],
+  /** 6 | 9 | 12 | 15 year non-renewable terms for Constitutional Court justices */
+  court_term_years: [6, 9, 12, 15],
+  /** 0.55 | 0.6 | 2/3 | 0.75 supermajority required to override a presidential veto */
+  veto_override_fraction: [0.55, 0.6, 2 / 3, 0.75],
 };
+
+/** @internal Module-level alias so existing private code reads clearly. */
+const LEGAL_VALUES = CONSTITUTIONAL_LEGAL_VALUES;
 
 const INTENT_POLITICS: Record<
   ConstitutionalAmendmentIntent,
@@ -176,7 +195,11 @@ function amendmentDirection(
 ): number {
   const current = state.provincialRuntime.constitutionalRules[ruleId]?.value ?? proposedValue;
   const values = LEGAL_VALUES[ruleId];
-  const span = Math.max(...values) - Math.min(...values);
+  // presidential_term_limit uses 0 to encode "no term limit" (unlimited re-elections).
+  // Exclude 0 from the ordinal span so that proposing 1/2/3 terms preserves its
+  // directional magnitude relative to the pre-Phase-11.4 behaviour.
+  const spanValues = ruleId === "presidential_term_limit" ? values.filter((v) => v !== 0) : values;
+  const span = Math.max(...spanValues) - Math.min(...spanValues);
   return span === 0 ? 0 : clamp((proposedValue - current) / span, -1, 1);
 }
 
@@ -401,6 +424,9 @@ export function proposeConstitutionalAmendment(
   );
   if (open) return { error: reject("AMENDMENT_ALREADY_PENDING", ruleId) };
   const id = `CAMEND_${String(Object.keys(state.provincialRuntime.constitutionalAmendments).length + 1).padStart(4, "0")}`;
+  // Look up the structured alternative so the amendment carries the canonical clause text
+  // alongside the numeric rule change (text and rule stay unified — Phase 11.4).
+  const alternative = constitutionAlternativeFor(ruleId, proposedValue);
   const amendment: ConstitutionalAmendment = {
     id,
     title: titleFor(state, ruleId),
@@ -409,6 +435,7 @@ export function proposeConstitutionalAmendment(
     proposedDate: state.currentDate,
     ruleId,
     proposedValue,
+    ...(alternative ? { proposedText: alternative.proposedClauseText } : {}),
     intent: ruleIntent(state, ruleId, proposedValue),
     runtimeEffect: "modeled_rule",
     proposalTrigger:

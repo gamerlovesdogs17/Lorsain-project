@@ -143,7 +143,10 @@ export function evaluatePresidentialEligibility(
   const constitutionalTermLimit =
     state.provincialRuntime.constitutionalRules.presidential_term_limit?.value ??
     rules.termLimitElected;
-  if (elected >= constitutionalTermLimit) {
+  // presidential_term_limit === 0 encodes "no term limit" (unlimited re-elections).
+  // When 0, skip the term-count check entirely — the candidate is always eligible
+  // on this dimension regardless of how many terms they have served.
+  if (constitutionalTermLimit !== 0 && elected >= constitutionalTermLimit) {
     return {
       eligible: false,
       code: "PRESIDENTIALLY_INELIGIBLE",

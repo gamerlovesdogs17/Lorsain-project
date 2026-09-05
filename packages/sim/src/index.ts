@@ -156,6 +156,10 @@ export {
   PROVINCIAL_BILL_SUBJECTS,
   CONSTITUTIONAL_RULE_IDS,
   CONSTITUTIONAL_AMENDMENT_INTENTS,
+  CONSTITUTIONAL_LEGAL_VALUES,
+  constitutionAlternativesFor,
+  constitutionAlternativeFor,
+  diffConstitutionalText,
 } from "./provinces/index.js";
 export type {
   ProvincialRuntime,
@@ -164,7 +168,9 @@ export type {
   ProvincialBillSubject,
   ConstitutionalRuleId,
   ConstitutionalAmendmentIntent,
-} from "./provinces/types.js";
+  ConstitutionAlternative,
+  DiffSegment,
+} from "./provinces/index.js";
 export {
   processLegislatureMonth,
   emptyLegislatureRuntime,
