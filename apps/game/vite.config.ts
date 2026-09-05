@@ -27,6 +27,15 @@ const qaFixtures = new Map([
     "assembly-worker",
     resolve(__dirname, "../../docs/qa/phase11_3/assembly-worker-production-save.json"),
   ],
+  // Phase 11.4 fixtures
+  [
+    "active-campaign",
+    resolve(__dirname, "../../docs/qa/phase11_4/fixtures/active-campaign-browser-save.json"),
+  ],
+  [
+    "election-night-partial",
+    resolve(__dirname, "../../docs/qa/phase11_4/fixtures/election-night-partial-browser-save.json"),
+  ],
 ]);
 
 export default defineConfig({

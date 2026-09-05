@@ -30,7 +30,8 @@
     "calibrate:whole-game:smoke": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/whole-game-calibration.ts --smoke",
     "calibrate:whole-game:aggregate": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/aggregate-whole-game-calibration.ts",
     "calibrate:game": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/whole-game-calibration.ts",
-    "measure:save": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/save-size-breakdown.ts"
+    "measure:save": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/save-size-breakdown.ts",
+    "build:phase11_4-fixtures": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/create-phase11-4-qa-saves.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
