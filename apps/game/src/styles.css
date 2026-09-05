@@ -6417,3 +6417,140 @@ button.entity-row:hover,
     grid-template-columns: 1fr;
   }
 }
+
+.constitution-diff-replace {
+  display: inline;
+}
+.quick-amendments {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.quick-amendments-toolbar {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, 14rem);
+}
+.quick-amendments-article {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+}
+.quick-amendments-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.quick-amendments-chips button {
+  padding: 0.28rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+.quick-amendments-chips button.active {
+  border-color: var(--navy);
+  background: rgba(22, 48, 74, 0.06);
+  font-weight: 700;
+}
+.quick-amendment-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 18rem;
+  overflow: auto;
+}
+.quick-amendment-item {
+  display: grid;
+  gap: 0.12rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  background: #fffdf8;
+  text-align: left;
+  cursor: pointer;
+}
+.quick-amendment-item strong {
+  color: var(--navy);
+  font-size: 0.78rem;
+}
+.quick-amendment-item span {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+.quick-amendment-item.active,
+.quick-amendment-item:hover {
+  border-left-color: var(--accent);
+  border-color: var(--navy);
+}
+.lawbook-browse-toolbar {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+}
+.lawbook-area-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+.lawbook-area-chips button {
+  padding: 0.28rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+.lawbook-area-chips button.active {
+  border-color: var(--navy);
+  background: rgba(22, 48, 74, 0.06);
+  font-weight: 700;
+}
+.lawbook-act-list {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+.lawbook-act-pick {
+  display: grid;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  background: #fffdf8;
+  text-align: left;
+  cursor: pointer;
+}
+.lawbook-act-pick.active {
+  border-color: var(--navy);
+  background: #fff;
+}
+.lawbook-act-detail {
+  align-items: flex-start;
+}
+.lawbook-act-side {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: end;
+}
+.lawbook-row-actions {
+  margin-top: 0.45rem;
+}
+.party-legal-hint {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+.bill-why-summary {
+  margin: 0 0 0.55rem;
+  font-size: 0.76rem;
+}
+@media (max-width: 760px) {
+  .quick-amendments-toolbar {
+    grid-template-columns: 1fr;
+  }
+}

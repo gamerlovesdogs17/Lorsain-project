@@ -11,6 +11,7 @@ import {
   evaluatePresidentialEligibility,
   isDeclaredContestCandidate,
   PARTY_PLATFORM_ISSUES,
+  partyLegalStatus,
   partyPlatformLabel,
   provincialLegislatorForPolitician,
   publicConstituencyPressures,
@@ -54,6 +55,7 @@ import {
   latentStrategicTensions,
   partyColor,
   partyDisplayName,
+  partyLegalStatusLabel,
   politicianDisplayName,
   pollShareLine,
   publicSeverityLabel,
@@ -2236,7 +2238,7 @@ function Party(props: PageProps) {
             >
               <strong>{partyDisplayName(props.world, id, props.snap)}</strong>
               <span>
-                {seats} seats ·{" "}
+                {partyLegalStatusLabel(partyLegalStatus(props.snap, id))} · {seats} seats ·{" "}
                 {leader ? politicianDisplayName(props.catalog, leader) : "leadership vacant"}
               </span>
             </button>
@@ -2249,6 +2251,9 @@ function Party(props: PageProps) {
             {caucus} of {totalSeats} Assembly seats
           </StatusBadge>
           <StatusBadge>{position}</StatusBadge>
+          <StatusBadge>
+            {partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}
+          </StatusBadge>
         </div>
       ) : null}
       {runtime?.leaderId ? (

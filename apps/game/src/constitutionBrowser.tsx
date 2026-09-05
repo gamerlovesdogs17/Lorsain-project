@@ -7,6 +7,7 @@ import {
   currentConstitutionalClauseText,
   diffConstitutionalText,
   type CommandResult,
+  type DiffSegment,
   type KernelWorld,
   type SimState,
   type Simulation,
@@ -22,6 +23,128 @@ const METRIC_EFFECT_LABELS: Record<string, string> = {
   judicialIndependence: "Judicial independence",
   governmentLegitimacy: "Government legitimacy",
 };
+
+const CONSTITUTION_TOPIC_CHIPS = [
+  "Rights",
+  "Elections",
+  "Executive",
+  "Legislature",
+  "Judiciary",
+  "Parties",
+  "Provinces",
+  "Finance",
+  "Emergency",
+  "Foreign Affairs",
+  "Amendment Process",
+] as const;
+
+type ConstitutionTopic = (typeof CONSTITUTION_TOPIC_CHIPS)[number];
+
+/** Maps each amendment subject id to a browsable institutional topic chip. */
+function constitutionSubjectTopic(subjectId: string): ConstitutionTopic {
+  const byId: Record<string, ConstitutionTopic> = {
+    art1_republic_form: "Rights",
+    art1_executive_authority: "Executive",
+    art2_civil_liberties: "Rights",
+    art2_citizenship_guard: "Rights",
+    art3_presidential_term_limit: "Elections",
+    art3_presidential_election_mode: "Elections",
+    art4_assembly_term: "Legislature",
+    art4_assembly_election_mode: "Elections",
+    art5_veto_override: "Legislature",
+    art6_cabinet_formation: "Executive",
+    art7_party_system: "Parties",
+    art7_press_freedom: "Rights",
+    art8_court_term: "Judiciary",
+    art8_judicial_review: "Judiciary",
+    art9_provincial_competence: "Provinces",
+    art9_local_government: "Provinces",
+    art10_emergency_powers: "Emergency",
+    art10_defense_control: "Emergency",
+    art11_treaty_approval: "Foreign Affairs",
+    art12_amendment_process: "Amendment Process",
+    art12_unamendable_core: "Amendment Process",
+  };
+  return byId[subjectId] ?? "Rights";
+}
+
+type DisplayDiffBlock =
+  | { kind: "same"; text: string }
+  | { kind: "change"; del: string; add: string }
+  | { kind: "del"; text: string }
+  | { kind: "add"; text: string };
+
+/** Groups word-level diff segments into phrase-level replace blocks for readable redlines. */
+function groupDiffForDisplay(segments: DiffSegment[]): DisplayDiffBlock[] {
+  const blocks: DisplayDiffBlock[] = [];
+  let index = 0;
+  while (index < segments.length) {
+    const segment = segments[index]!;
+    if (segment.kind === "same") {
+      blocks.push({ kind: "same", text: segment.text });
+      index += 1;
+      continue;
+    }
+    let del = "";
+    let add = "";
+    while (index < segments.length && segments[index]!.kind !== "same") {
+      const part = segments[index]!;
+      if (part.kind === "del") del += part.text;
+      else add += part.text;
+      index += 1;
+    }
+    if (del && add) blocks.push({ kind: "change", del, add });
+    else if (del) blocks.push({ kind: "del", text: del });
+    else if (add) blocks.push({ kind: "add", text: add });
+  }
+  return blocks;
+}
+
+function ConstitutionalDiffView(props: {
+  currentText: string;
+  proposedText: string;
+  inline?: boolean;
+  ariaLabel?: string;
+}) {
+  const segments = diffConstitutionalText(props.currentText, props.proposedText);
+  const blocks = groupDiffForDisplay(segments);
+  return (
+    <span
+      className={`constitution-text-diff${props.inline ? " inline" : ""}`}
+      aria-label={props.ariaLabel}
+    >
+      {blocks.map((block, blockIndex) => {
+        if (block.kind === "same") {
+          return (
+            <span key={`same-${blockIndex}`} className="constitution-diff-same">
+              {block.text}
+            </span>
+          );
+        }
+        if (block.kind === "change") {
+          return (
+            <span key={`change-${blockIndex}`} className="constitution-diff-replace">
+              <span className="constitution-diff-del">{block.del}</span>
+              <span className="constitution-diff-add">{block.add}</span>
+            </span>
+          );
+        }
+        if (block.kind === "del") {
+          return (
+            <span key={`del-${blockIndex}`} className="constitution-diff-del">
+              {block.text}
+            </span>
+          );
+        }
+        return (
+          <span key={`add-${blockIndex}`} className="constitution-diff-add">
+            {block.text}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 
 type ConstitutionClause = NonNullable<
   KernelWorld["constitutionalDocument"]
@@ -81,6 +204,9 @@ export function ConstitutionBrowser(props: {
   >([]);
   const [draftSubjectId, setDraftSubjectId] = useState("");
   const [draftAlternativeId, setDraftAlternativeId] = useState("");
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogArticleId, setCatalogArticleId] = useState("");
+  const [catalogTopics, setCatalogTopics] = useState<ConstitutionTopic[]>([]);
 
   const selectedArticle =
     constitutionDocument?.articles.find((article) => article.id === selectedArticleId) ??
@@ -124,6 +250,51 @@ export function ConstitutionBrowser(props: {
     activeSubject && activeAlternative
       ? { subjectId: activeSubject.id, alternativeId: activeAlternative.id }
       : null;
+
+  const articleNumberById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const article of constitutionDocument?.articles ?? []) {
+      map.set(article.id, String(article.number));
+    }
+    return map;
+  }, [constitutionDocument?.articles]);
+
+  const filteredCatalogSubjects = useMemo(() => {
+    const query = catalogSearch.trim().toLowerCase();
+    return CONSTITUTION_CHANGE_SUBJECTS.filter((subject) => {
+      if (catalogArticleId && subject.articleId !== catalogArticleId) return false;
+      if (catalogTopics.length && !catalogTopics.includes(constitutionSubjectTopic(subject.id))) {
+        return false;
+      }
+      if (!query) return true;
+      const articleNumber = articleNumberById.get(subject.articleId);
+      const haystack =
+        `${subject.subject} ${subject.id} Article ${articleNumber ?? ""} ${constitutionSubjectTopic(subject.id)}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [articleNumberById, catalogArticleId, catalogSearch, catalogTopics]);
+
+  const openSubjectInBuilder = (subjectId: string) => {
+    const subject = constitutionSubjectById(subjectId);
+    if (!subject) return;
+    setSelectedArticleId(subject.articleId);
+    setSelectedClauseId(subject.targetClauseId);
+    setDraftSubjectId(subject.id);
+    const clause = constitutionDocument?.articles
+      .flatMap((article) => article.sections)
+      .flatMap((section) => section.clauses)
+      .find((row) => row.id === subject.targetClauseId);
+    const live = clause ? clauseText(props.world, props.snap, clause) : "";
+    const firstAlt = subject.alternatives.find((alt) => alt.proposedClauseText !== live);
+    setDraftAlternativeId(firstAlt?.id ?? "");
+    document.querySelector(".constitution-annotation")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const toggleCatalogTopic = (topic: ConstitutionTopic) => {
+    setCatalogTopics((topics) =>
+      topics.includes(topic) ? topics.filter((row) => row !== topic) : [...topics, topic],
+    );
+  };
 
   if (!constitutionDocument) {
     return <p className="muted">The structured constitutional document is unavailable.</p>;
@@ -196,17 +367,14 @@ export function ConstitutionBrowser(props: {
                       amendmentPackage,
                       selectedClause?.id === clause.id ? draftPreview : null,
                     );
-                    const segments =
-                      preview && preview !== baseline
-                        ? diffConstitutionalText(baseline, preview)
-                        : null;
+                    const hasPreview = preview != null && preview !== baseline;
                     const isSelected = selectedClause?.id === clause.id;
                     const amendable = subjectsForClause(clause.id).length > 0;
                     return (
                       <button
                         type="button"
                         className={`constitution-clause${isSelected ? " selected" : ""}${
-                          segments ? " constitution-clause-previewing" : ""
+                          hasPreview ? " constitution-clause-previewing" : ""
                         }`}
                         key={clause.id}
                         onClick={() => {
@@ -225,20 +393,13 @@ export function ConstitutionBrowser(props: {
                       >
                         <span className="clause-number">({clause.number})</span>
                         <span className="constitution-clause-body">
-                          {segments ? (
-                            <span
-                              className="constitution-text-diff inline"
-                              aria-label="Proposed constitutional language"
-                            >
-                              {segments.map((segment, index) => (
-                                <span
-                                  key={`${segment.kind}-${index}`}
-                                  className={`constitution-diff-${segment.kind}`}
-                                >
-                                  {segment.text}
-                                </span>
-                              ))}
-                            </span>
+                          {hasPreview && preview ? (
+                            <ConstitutionalDiffView
+                              currentText={baseline}
+                              proposedText={preview}
+                              inline
+                              ariaLabel="Proposed constitutional language"
+                            />
                           ) : (
                             baseline
                           )}
@@ -323,22 +484,11 @@ export function ConstitutionBrowser(props: {
                   {activeAlternative ? (
                     <>
                       <div className="kicker">Document preview</div>
-                      <div
-                        className="constitution-text-diff"
-                        aria-label="Red-green constitutional diff"
-                      >
-                        {diffConstitutionalText(
-                          currentText,
-                          activeAlternative.proposedClauseText,
-                        ).map((segment, index) => (
-                          <span
-                            key={`${segment.kind}-${index}`}
-                            className={`constitution-diff-${segment.kind}`}
-                          >
-                            {segment.text}
-                          </span>
-                        ))}
-                      </div>
+                      <ConstitutionalDiffView
+                        currentText={currentText}
+                        proposedText={activeAlternative.proposedClauseText}
+                        ariaLabel="Red-green constitutional diff"
+                      />
                       <div className="kicker">Mechanical consequences</div>
                       <ul className="constitution-mechanical-list">
                         {activeAlternative.mechanicalEffects.map((effect) => (
@@ -485,6 +635,77 @@ export function ConstitutionBrowser(props: {
           ) : null}
         </aside>
       </div>
+
+      <SectionDivider
+        title="Quick amendments"
+        hint={`${CONSTITUTION_CHANGE_SUBJECTS.length} amendable subjects · opens the document builder`}
+      />
+      <section className="quick-amendments" aria-label="Quick amendment catalog">
+        <div className="quick-amendments-toolbar">
+          <input
+            className="search"
+            value={catalogSearch}
+            onChange={(event) => setCatalogSearch(event.target.value)}
+            placeholder="Search subjects, articles, or topics"
+          />
+          <label className="quick-amendments-article">
+            Article
+            <select
+              value={catalogArticleId}
+              onChange={(event) => setCatalogArticleId(event.target.value)}
+            >
+              <option value="">All articles</option>
+              {constitutionDocument.articles.map((article) => (
+                <option key={article.id} value={article.id}>
+                  Article {article.number} — {article.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="quick-amendments-chips" role="group" aria-label="Topic filters">
+          {CONSTITUTION_TOPIC_CHIPS.map((topic) => (
+            <button
+              type="button"
+              key={topic}
+              className={catalogTopics.includes(topic) ? "active" : ""}
+              onClick={() => toggleCatalogTopic(topic)}
+            >
+              {topic}
+            </button>
+          ))}
+          {catalogTopics.length ? (
+            <button type="button" className="btn ghost" onClick={() => setCatalogTopics([])}>
+              Clear topics
+            </button>
+          ) : null}
+        </div>
+        <ul className="quick-amendment-list">
+          {filteredCatalogSubjects.length === 0 ? (
+            <li className="muted">No amendment subject matches these filters.</li>
+          ) : (
+            filteredCatalogSubjects.map((subject) => {
+              const articleNumber = articleNumberById.get(subject.articleId);
+              const topic = constitutionSubjectTopic(subject.id);
+              const isActive = draftSubjectId === subject.id;
+              return (
+                <li key={subject.id}>
+                  <button
+                    type="button"
+                    className={`quick-amendment-item${isActive ? " active" : ""}`}
+                    onClick={() => openSubjectInBuilder(subject.id)}
+                  >
+                    <strong>{subject.subject}</strong>
+                    <span>
+                      Article {articleNumber ?? "?"} · {topic}
+                    </span>
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      </section>
     </>
   );
 }

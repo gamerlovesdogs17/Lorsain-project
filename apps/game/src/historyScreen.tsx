@@ -3,6 +3,7 @@ import type { ContentBundle } from "@lorsain/content-loader";
 import {
   caseTitle,
   PARTY_PLATFORM_ISSUES,
+  partyLegalStatus,
   partyPlatformLabel,
   type KernelWorld,
   type SimState,
@@ -12,6 +13,7 @@ import {
   eventDisplay,
   partyColor,
   partyDisplayName,
+  partyLegalStatusLabel,
   policyItemDisplay,
   politicianDisplayName,
   type PresentationCatalog,
@@ -923,7 +925,8 @@ export function HistoryPage(props: {
         <p className="wiki-lead">
           {partyDisplayName(props.world, id, props.snap)} is a national political party whose public
           identity is recorded through its leaders, Assembly delegation, elections and evolving
-          platform.
+          platform. Constitutional legal status:{" "}
+          {partyLegalStatusLabel(partyLegalStatus(props.snap, id))}.
         </p>
         <h2 id="platform">Current public platform</h2>
         <dl className="wiki-platform">

@@ -1,18 +1,22 @@
 import { useState } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import {
+  billPolicyFit,
   collectPlayerActionableDecisions,
   CONSTITUTIONAL_RULE_IDS,
   currentAssemblyMemberIds,
   currentProvisionOption,
   defaultProvisionOptionId,
   estimatedProvisionEffects,
+  getAgentProfile,
   partyStance,
   factionStance,
   LEGISLATIVE_PROVISIONS,
   legislativeProvision,
+  partyLegalStatus,
   policyItemForProvision,
   whipEstimate,
+  type BillState,
   type CommandResult,
   type KernelWorld,
   type NationalEconomyIndices,
@@ -28,6 +32,7 @@ import {
   issueDisplayName,
   partyColor,
   partyDisplayName,
+  partyLegalStatusLabel,
   policyItemDisplay,
   politicianDisplayName,
   stanceLabel,
@@ -51,6 +56,10 @@ import { TerenaMap } from "./map/TerenaMap.js";
 
 type ChamberTab = "business" | "draft" | "committees" | "votes" | "lawbook";
 type BillDetailTab = "overview" | "provisions" | "politics" | "process";
+type LawbookBrowseMode = "provisions" | "acts";
+type MpBillLean = "likely_yes" | "likely_no" | "uncertain";
+
+const POLICY_AREAS = [...new Set(LEGISLATIVE_PROVISIONS.map((row) => row.category))].sort();
 
 const EFFECT_LABELS: Record<keyof NationalEconomyIndices, string> = {
   outputIndex: "Output",
@@ -218,6 +227,43 @@ function provisionChoices(
   };
 }
 
+function estimateMpBillLean(
+  world: KernelWorld,
+  snap: SimState,
+  bill: BillState,
+  politicianId: string,
+): { lean: MpBillLean; factors: string[]; fit: number } {
+  const pol = snap.politicians[politicianId];
+  const fit = billPolicyFit(world, snap, politicianId, bill);
+  const party = partyStance(snap, pol?.partyId ?? null, bill.id);
+  const faction = factionStance(snap, pol?.factionId ?? null, bill.id);
+  const profile = getAgentProfile(world, snap, politicianId);
+  const loyalty = profile?.traits.partyLoyalty ?? 0.5;
+  let score = fit;
+  if (party === "support") score += 0.25 * loyalty;
+  if (party === "oppose") score -= 0.25 * loyalty;
+  if (faction === "support") score += 0.12;
+  if (faction === "oppose") score -= 0.12;
+  const lean: MpBillLean =
+    score > 0.18 ? "likely_yes" : score < -0.18 ? "likely_no" : "uncertain";
+  const factors: string[] = [];
+  if (Math.abs(fit) >= 0.06) {
+    factors.push(fit > 0 ? "Policy alignment" : "Policy opposition");
+  }
+  if (party === "support") factors.push("Party support");
+  else if (party === "oppose") factors.push("Party oppose");
+  if (faction === "support") factors.push("Caucus support");
+  else if (faction === "oppose") factors.push("Caucus oppose");
+  if (!factors.length) factors.push("No strong public signals");
+  return { lean, factors, fit };
+}
+
+function mpLeanLabel(lean: MpBillLean): string {
+  if (lean === "likely_yes") return "Likely yes";
+  if (lean === "likely_no") return "Likely no";
+  return "Uncertain";
+}
+
 export function AssemblyPage(props: {
   world: KernelWorld;
   snap: SimState;
@@ -248,6 +294,9 @@ export function AssemblyPage(props: {
   const [selectedCommitteeId, setSelectedCommitteeId] = useState<string | null>(null);
   const [rollCallFilter, setRollCallFilter] = useState<"all" | "yes" | "no" | "abstain">("all");
   const [lawQuery, setLawQuery] = useState("");
+  const [lawbookMode, setLawbookMode] = useState<LawbookBrowseMode>("provisions");
+  const [lawbookArea, setLawbookArea] = useState("");
+  const [lawbookActId, setLawbookActId] = useState("");
 
   const mps = currentAssemblyMemberIds(props.world, props.snap);
   const seatCount = props.world.legislativeConstitution.assemblySeatCount;
@@ -316,6 +365,47 @@ export function AssemblyPage(props: {
     props.setSelectedBill(id);
     setBillTab("overview");
     setChamberTab("business");
+  };
+
+  const preloadLawDraft = (
+    law: (typeof enactedLaws)[number],
+    action: "amend" | "replace" | "repeal",
+  ) => {
+    const rows = law.policyItems.flatMap((item) => {
+      if (!item.provisionId) return [];
+      const definition = legislativeProvision(item.provisionId);
+      if (!definition) return [];
+      if (action === "repeal") {
+        const founding = definition.options.find((option) => option.founding);
+        return [
+          {
+            provisionId: item.provisionId,
+            optionId: founding?.id ?? defaultProvisionOptionId(item.provisionId),
+          },
+        ];
+      }
+      return [
+        {
+          provisionId: item.provisionId,
+          optionId: item.optionId ?? defaultProvisionOptionId(item.provisionId),
+        },
+      ];
+    });
+    if (!rows.length) return;
+    setDraftProvisions(rows);
+    setTitle(
+      action === "amend"
+        ? `Amendment to ${law.title}`
+        : action === "replace"
+          ? `Replacement of ${law.title}`
+          : `Repeal of ${law.title}`,
+    );
+    setSummary(
+      action === "repeal"
+        ? `Returns operative provisions in ${law.title} to founding statutory baselines.`
+        : `Builds on provisions enacted in ${law.title} (${law.enactedDate}).`,
+    );
+    setChamberTab("draft");
   };
 
   const chamberTabs: Array<{ id: ChamberTab; label: string }> = [
@@ -398,6 +488,12 @@ export function AssemblyPage(props: {
                   style={{ background: partyColor(props.world, party === "none" ? null : party) }}
                 />
                 {partyDisplayName(props.world, party === "none" ? null : party, props.snap)} · {n}
+                {party !== "none" ? (
+                  <small className="party-legal-hint">
+                    {" "}
+                    · {partyLegalStatusLabel(partyLegalStatus(props.snap, party))}
+                  </small>
+                ) : null}
               </span>
             ))}
           </div>
@@ -1057,6 +1153,74 @@ export function AssemblyPage(props: {
                           <p className="muted">
                             Likely no {whip.likelyNo} · estimate only, not a recorded whip.
                           </p>
+                        ) : null}
+                        {bill ? (
+                          <>
+                            <SectionDivider
+                              title="Delegation lean"
+                              hint="Public estimate from policy fit and party signals"
+                            />
+                            {(() => {
+                              const focusParty =
+                                props.snap.politicians[props.snap.playerPoliticianId]?.partyId ??
+                                partyRanks[0]?.[0] ??
+                                null;
+                              const caucusIds = focusParty
+                                ? mps.filter(
+                                    (memberId) =>
+                                      props.snap.politicians[memberId]?.partyId === focusParty,
+                                  )
+                                : mps.slice(0, 18);
+                              const sample = caucusIds
+                                .slice()
+                                .sort((a, b) => a.localeCompare(b))
+                                .slice(0, 18)
+                                .map((memberId) => ({
+                                  memberId,
+                                  ...estimateMpBillLean(props.world, props.snap, bill, memberId),
+                                }));
+                              const playerFit = billPolicyFit(
+                                props.world,
+                                props.snap,
+                                props.snap.playerPoliticianId,
+                                bill,
+                              );
+                              const playerWhy =
+                                Math.abs(playerFit) >= 0.06
+                                  ? playerFit > 0
+                                    ? "Your recorded positions align with this bill's provisions."
+                                    : "Your recorded positions diverge from this bill's provisions."
+                                  : "Your ideological fit with this bill is mixed across provisions.";
+                              return (
+                                <>
+                                  <p className="muted bill-why-summary">{playerWhy}</p>
+                                  <DataTable dense headers={["Member", "Lean", "Why"]}>
+                                    {sample.map((row) => (
+                                      <tr key={row.memberId}>
+                                        <td>
+                                          {politicianDisplayName(props.catalog, row.memberId)}
+                                        </td>
+                                        <td>
+                                          <StatusBadge
+                                            tone={
+                                              row.lean === "likely_yes"
+                                                ? "ok"
+                                                : row.lean === "likely_no"
+                                                  ? "warn"
+                                                  : "idle"
+                                            }
+                                          >
+                                            {mpLeanLabel(row.lean)}
+                                          </StatusBadge>
+                                        </td>
+                                        <td className="muted">{row.factors.slice(0, 2).join(" · ")}</td>
+                                      </tr>
+                                    ))}
+                                  </DataTable>
+                                </>
+                              );
+                            })()}
+                          </>
                         ) : null}
                         <SectionDivider
                           title="Party positions"
@@ -1811,100 +1975,247 @@ export function AssemblyPage(props: {
 
                 <SectionDivider
                   title="Current statutory position"
-                  hint="Concrete policy categories in force"
+                  hint="Browse by policy area or review enacted Acts"
                 />
-                <input
-                  className="search lawbook-search"
-                  value={lawQuery}
-                  onChange={(event) => setLawQuery(event.target.value)}
-                  placeholder="Search law or policy category"
-                />
-                <div className="current-law-grid">
-                  {LEGISLATIVE_PROVISIONS.filter((definition) => {
-                    const option = currentProvisionOption(props.snap, definition.id);
-                    const query = lawQuery.trim().toLowerCase();
-                    return (
-                      !query ||
-                      `${definition.category} ${option?.label ?? ""} ${option?.change ?? ""}`
-                        .toLowerCase()
-                        .includes(query)
-                    );
-                  })
-                    .slice(0, 50)
-                    .map((definition) => {
-                      const option = currentProvisionOption(props.snap, definition.id);
-                      const sourceLaws = Object.values(props.snap.legislatureRuntime.enactedLaws)
-                        .filter((law) =>
-                          law.policyItems.some((item) => item.provisionId === definition.id),
-                        )
-                        .sort(
-                          (a, b) =>
-                            b.enactedDate.localeCompare(a.enactedDate) || b.id.localeCompare(a.id),
+                <div className="lawbook-browse-toolbar">
+                  <div className="map-scale-switch" role="tablist" aria-label="Lawbook browse mode">
+                    <button
+                      type="button"
+                      className={lawbookMode === "provisions" ? "active" : ""}
+                      onClick={() => setLawbookMode("provisions")}
+                    >
+                      Policy areas
+                    </button>
+                    <button
+                      type="button"
+                      className={lawbookMode === "acts" ? "active" : ""}
+                      onClick={() => setLawbookMode("acts")}
+                    >
+                      Acts
+                    </button>
+                  </div>
+                  <input
+                    className="search lawbook-search"
+                    value={lawQuery}
+                    onChange={(event) => setLawQuery(event.target.value)}
+                    placeholder={
+                      lawbookMode === "provisions"
+                        ? "Search policy category or operative rule"
+                        : "Search enacted Act title or provisions"
+                    }
+                  />
+                </div>
+                {lawbookMode === "provisions" ? (
+                  <>
+                    <div className="lawbook-area-chips" role="group" aria-label="Policy area filters">
+                      <button
+                        type="button"
+                        className={!lawbookArea ? "active" : ""}
+                        onClick={() => setLawbookArea("")}
+                      >
+                        All areas
+                      </button>
+                      {POLICY_AREAS.map((area) => (
+                        <button
+                          type="button"
+                          key={area}
+                          className={lawbookArea === area ? "active" : ""}
+                          onClick={() => setLawbookArea(area)}
+                        >
+                          {area}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="current-law-grid">
+                      {LEGISLATIVE_PROVISIONS.filter((definition) => {
+                        const option = currentProvisionOption(props.snap, definition.id);
+                        const query = lawQuery.trim().toLowerCase();
+                        if (lawbookArea && definition.category !== lawbookArea) return false;
+                        return (
+                          !query ||
+                          `${definition.category} ${option?.label ?? ""} ${option?.change ?? ""}`
+                            .toLowerCase()
+                            .includes(query)
                         );
-                      const source = sourceLaws.find((law) => law.operative) ?? null;
-                      return (
-                        <article key={definition.id} className="current-law-row">
-                          <div className="kicker">{definition.category}</div>
-                          <strong>{option?.label ?? "No operative rule recorded"}</strong>
-                          {option?.change ? <p className="muted">{option.change}</p> : null}
-                          {source ? (
-                            <div className="current-law-source">
-                              <span>
-                                In force from {source.title} · {source.enactedDate}
-                                {sourceLaws.length > 1
-                                  ? ` · ${sourceLaws.length - 1} earlier amendment${sourceLaws.length === 2 ? "" : "s"}`
-                                  : ""}
-                              </span>
+                      })
+                        .slice(0, 50)
+                        .map((definition) => {
+                          const option = currentProvisionOption(props.snap, definition.id);
+                          const sourceLaws = Object.values(
+                            props.snap.legislatureRuntime.enactedLaws,
+                          )
+                            .filter((law) =>
+                              law.policyItems.some((item) => item.provisionId === definition.id),
+                            )
+                            .sort(
+                              (a, b) =>
+                                b.enactedDate.localeCompare(a.enactedDate) || b.id.localeCompare(a.id),
+                            );
+                          const source = sourceLaws.find((law) => law.operative) ?? null;
+                          return (
+                            <article key={definition.id} className="current-law-row">
+                              <div className="kicker">{definition.category}</div>
+                              <strong>{option?.label ?? "No operative rule recorded"}</strong>
+                              {option?.change ? <p className="muted">{option.change}</p> : null}
+                              {source ? (
+                                <div className="current-law-source">
+                                  <span>
+                                    In force from {source.title} · {source.enactedDate}
+                                    {sourceLaws.length > 1
+                                      ? ` · ${sourceLaws.length - 1} earlier amendment${sourceLaws.length === 2 ? "" : "s"}`
+                                      : ""}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="link-button"
+                                    onClick={() => {
+                                      setChamberTab("business");
+                                      selectBill(source.billId);
+                                      setBillTab("process");
+                                    }}
+                                  >
+                                    Open act history
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="muted">Founding statutory position</span>
+                              )}
+                              {mp && source ? (
+                                <div className="lawbook-row-actions row">
+                                  <button
+                                    type="button"
+                                    className="btn ghost"
+                                    onClick={() => preloadLawDraft(source, "amend")}
+                                  >
+                                    Amend
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn ghost"
+                                    onClick={() => preloadLawDraft(source, "replace")}
+                                  >
+                                    Replace
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn ghost"
+                                    onClick={() => preloadLawDraft(source, "repeal")}
+                                  >
+                                    Repeal
+                                  </button>
+                                </div>
+                              ) : null}
+                            </article>
+                          );
+                        })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="lawbook-act-list">
+                      {enactedLaws
+                        .filter((law) => !lawbookActId || law.id === lawbookActId)
+                        .slice(0, 40)
+                        .map((law) => (
+                          <button
+                            type="button"
+                            key={law.id}
+                            className={`lawbook-act-pick${lawbookActId === law.id ? " active" : ""}`}
+                            onClick={() =>
+                              setLawbookActId((current) => (current === law.id ? "" : law.id))
+                            }
+                          >
+                            <strong>{law.title}</strong>
+                            <span>
+                              {law.enactedDate} · {law.policyItems.length} provision
+                              {law.policyItems.length === 1 ? "" : "s"}
+                            </span>
+                          </button>
+                        ))}
+                    </div>
+                    {(lawbookActId
+                      ? enactedLaws.filter((law) => law.id === lawbookActId)
+                      : enactedLaws.slice(0, 30)
+                    ).map((law) => (
+                      <article key={`act:${law.id}`} className="statute-row lawbook-act-detail">
+                        <div>
+                          <strong>{law.title}</strong>
+                          <div className="muted">
+                            Enacted {law.enactedDate} · Sponsor{" "}
+                            {politicianDisplayName(props.catalog, law.sponsorId)}
+                          </div>
+                          <div className="muted">
+                            {law.policyItems
+                              .map((item) => policyItemDisplay(props.catalog, item))
+                              .join("; ")}
+                          </div>
+                        </div>
+                        <div className="lawbook-act-side">
+                          <StatusBadge tone={law.operative ? "ok" : "warn"}>
+                            {law.operative ? "Operative" : "Invalidated"}
+                          </StatusBadge>
+                          {mp && law.operative ? (
+                            <div className="lawbook-row-actions row">
                               <button
                                 type="button"
-                                className="link-button"
-                                onClick={() => {
-                                  setChamberTab("business");
-                                  selectBill(source.billId);
-                                  setBillTab("process");
-                                }}
+                                className="btn ghost"
+                                onClick={() => preloadLawDraft(law, "amend")}
                               >
-                                Open act history
+                                Amend
+                              </button>
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                onClick={() => preloadLawDraft(law, "replace")}
+                              >
+                                Replace
+                              </button>
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                onClick={() => preloadLawDraft(law, "repeal")}
+                              >
+                                Repeal
                               </button>
                             </div>
-                          ) : (
-                            <span className="muted">Founding statutory position</span>
-                          )}
-                        </article>
-                      );
-                    })}
-                </div>
+                          ) : null}
+                        </div>
+                      </article>
+                    ))}
+                  </>
+                )}
 
                 <SectionDivider
-                  title="Statute book"
+                  title="Statute book archive"
                   hint={`${Object.keys(props.snap.legislatureRuntime.enactedLaws).length} enacted laws`}
                 />
                 {enactedLaws.length === 0 ? (
                   <p className="muted">No enacted law matches this search.</p>
                 ) : null}
-                {enactedLaws.slice(0, 30).map((law) => (
-                  <article key={law.id} className="statute-row">
-                    <div>
-                      <strong>{law.title}</strong>
-                      <div className="muted">
-                        Enacted {law.enactedDate} · Sponsor{" "}
-                        {politicianDisplayName(props.catalog, law.sponsorId)}
-                      </div>
-                      <div className="muted">
-                        {law.policyItems
-                          .map((item) => policyItemDisplay(props.catalog, item))
-                          .join("; ")}
-                      </div>
-                    </div>
-                    <StatusBadge tone={law.operative ? "ok" : "warn"}>
-                      {law.operative ? "Operative" : "Invalidated"}
-                    </StatusBadge>
-                  </article>
-                ))}
-                {enactedLaws.length > 30 ? (
+                {lawbookMode === "provisions"
+                  ? enactedLaws.slice(0, 15).map((law) => (
+                      <article key={law.id} className="statute-row">
+                        <div>
+                          <strong>{law.title}</strong>
+                          <div className="muted">
+                            Enacted {law.enactedDate} · Sponsor{" "}
+                            {politicianDisplayName(props.catalog, law.sponsorId)}
+                          </div>
+                          <div className="muted">
+                            {law.policyItems
+                              .map((item) => policyItemDisplay(props.catalog, item))
+                              .join("; ")}
+                          </div>
+                        </div>
+                        <StatusBadge tone={law.operative ? "ok" : "warn"}>
+                          {law.operative ? "Operative" : "Invalidated"}
+                        </StatusBadge>
+                      </article>
+                    ))
+                  : null}
+                {lawbookMode === "provisions" && enactedLaws.length > 15 ? (
                   <p className="muted">
-                    Showing the 30 most recent matching laws. Refine the search to narrow the
-                    statute book.
+                    Switch to Acts browse for amend / replace / repeal shortcuts on full measures.
                   </p>
                 ) : null}
               </>

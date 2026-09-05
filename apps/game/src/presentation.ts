@@ -1,5 +1,5 @@
 import type { ContentBundle } from "@lorsain/content-loader";
-import type { KernelWorld, SimEvent, SimState, TreatyRecord } from "@lorsain/sim";
+import type { KernelWorld, PartyLegalStatus, SimEvent, SimState, TreatyRecord } from "@lorsain/sim";
 import {
   COMMITTEE_NAMES,
   TERENA_WORLD_ID,
@@ -166,6 +166,19 @@ export function partyDisplayName(
 export function partyColor(world: KernelWorld, partyId: string | null | undefined): string {
   if (!partyId) return "#6b7280";
   return world.partyDefinitions[partyId]?.color ?? "#6b7280";
+}
+
+const PARTY_LEGAL_STATUS_LABELS: Record<PartyLegalStatus, string> = {
+  registered: "Registered party",
+  restricted: "Restricted registration",
+  sole_recognized: "Sole recognized party",
+  prohibited: "Prohibited organization",
+  nonpartisan_only: "Nonpartisan candidacies only",
+  defunct: "Defunct party",
+};
+
+export function partyLegalStatusLabel(status: PartyLegalStatus): string {
+  return PARTY_LEGAL_STATUS_LABELS[status] ?? status.replace(/_/g, " ");
 }
 
 export function factionDisplayName(
