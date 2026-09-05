@@ -39,6 +39,7 @@ export function CourtsPage(props: {
   catalog: PresentationCatalog;
   onDone: () => void;
   report: (r: CommandResult) => boolean;
+  globalFocus?: { kind: string; id: string } | null;
 }) {
   const { world, snap, sim, catalog } = props;
   const playerId = snap.playerPoliticianId;
@@ -356,7 +357,7 @@ export function CourtsPage(props: {
         <h3>Docket</h3>
         {pendingCases.length === 0 ? <p className="muted">No active cases.</p> : null}
         {pendingCases.map((c) => (
-          <div key={c.id}>
+          <div key={c.id} className={props.globalFocus?.kind === "Court case" && props.globalFocus.id === c.id ? "selected-record" : undefined}>
             <strong>{caseTitle(c)}</strong>
             <div className="muted">
               {c.caseType.replace(/_/g, " ")} · filed {c.filedDate}
@@ -397,7 +398,7 @@ export function CourtsPage(props: {
         {decided.map((d) => {
           const c = snap.constitutionalRuntime.courtCases[d.caseId];
           return (
-            <div key={d.id} style={{ marginBottom: "0.75rem" }}>
+            <div key={d.id} className={props.globalFocus?.kind === "Court case" && props.globalFocus.id === d.caseId ? "selected-record" : undefined} style={{ marginBottom: "0.75rem" }}>
               <strong>{c ? caseTitle(c) : d.constitutionalQuestion}</strong>
               <div>
                 Decision: {d.disposition} · Vote: {d.uphold}–{d.invalidate}

@@ -27,6 +27,8 @@ import type {
   GubernatorialElection,
   GubernatorialIncumbentDecision,
 } from "./types.js";
+import { resolveLegalLot } from "@lorsain/election-math";
+import { certifyShareResult } from "../elections/certification.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -267,7 +269,7 @@ function openField(
     );
   }
 
-  let eligibleIds = Object.keys(state.politicians)
+  const eligibleIds = Object.keys(state.politicians)
     .filter((id) => id !== state.playerPoliticianId)
     .filter((id) => gubernatorialEligibilityError(state, world, id, election.provinceId) == null)
     .filter((id) => id !== election.incumbentId || election.incumbentDecision === "seek_reelection");
@@ -472,14 +474,20 @@ function resolveElection(
   election.voteShares = Object.fromEntries(
     candidateIds.map((politicianId) => [politicianId, total > 0 ? votes[politicianId]! / total : 1 / candidateIds.length]),
   );
-  election.winnerId = candidateIds
-    .slice()
-    .sort(
-      (a, b) =>
-        election.voteShares[b]! - election.voteShares[a]! ||
-        stableHash(`${election.id}:${a}`) - stableHash(`${election.id}:${b}`),
-    )[0]!;
+  const ranked = candidateIds.slice().sort((a, b) => election.voteShares[b]! - election.voteShares[a]! || a.localeCompare(b));
+  const topShare = election.voteShares[ranked[0]!]!;
+  const tied = ranked.filter((id) => Math.abs(election.voteShares[id]! - topShare) <= Number.EPSILON);
+  const lot = tied.length > 1
+    ? resolveLegalLot(tied, { nextUint32: () => rng.uint32("elections") })
+    : null;
+  election.winnerId = lot?.selectedId ?? ranked[0]!;
   election.turnoutRate = electorateWeight > 0 ? turnoutWeight / electorateWeight : 0.58;
+  election.certification = certifyShareResult({
+    date: state.currentDate,
+    authority: "provincial_electoral_commission",
+    shares: Object.values(election.voteShares),
+    legalLotUsed: lot != null,
+  });
   election.status = "resolved";
   for (const candidateId of candidateIds) {
     const campaign = campaignForElection(state, candidateId, election.id);
@@ -499,6 +507,8 @@ function resolveElection(
       provinceId: election.provinceId,
       winnerId: election.winnerId,
       turnoutRate: election.turnoutRate,
+      certification: election.certification,
+      ...(lot ? { legalLot: lot } : {}),
     },
     sourceScheduledEventId: null,
     sourceCommandId: commandId,

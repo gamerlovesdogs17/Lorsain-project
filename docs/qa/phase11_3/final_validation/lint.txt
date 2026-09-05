@@ -1,0 +1,4 @@
+
+> lorsain@0.3.0-predev lint C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project
+> eslint . --max-warnings 0
+

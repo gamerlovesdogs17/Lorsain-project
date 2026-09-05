@@ -1,0 +1,24 @@
+
+> lorsain@0.3.0-predev game:build C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project
+> pnpm --filter @lorsain/game build
+
+
+> @lorsain/game@0.3.0-predev build C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project\apps\game
+> tsc -p tsconfig.json --noEmit && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 304 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                              0.44 kB │ gzip:     0.28 kB
+dist/assets/electionWorker-BztTLDDt.js     801.77 kB
+dist/assets/turnWorker-D5f90lHw.js         801.78 kB
+dist/assets/index-BgfF2NPE.css              92.27 kB │ gzip:    17.71 kB
+dist/assets/index-Bw688WFQ.js           11,324.12 kB │ gzip: 2,578.84 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.59s

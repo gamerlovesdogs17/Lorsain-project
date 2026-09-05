@@ -19,6 +19,7 @@ V6 does not expose hidden support, AI utility, private traits, exact relationshi
 - Ctrl/Cmd+K opens global search for pages, politicians, parties, caucuses, provinces, elections, bills, and Court cases.
 - Desktop uses a grouped left rail. At narrow widths the rail becomes an explicit menu; it must never cover the work area after navigation.
 - Informational national pages remain available to every role, while contextual labels identify the player's actual office.
+- Home and Office may show the full required-decision queue. Other pages show a compact pending-count control; the player opens the queue deliberately.
 
 ## Shared composition patterns
 
@@ -38,7 +39,7 @@ The primary action or required vote precedes reference material. Supporting hist
 
 Tables are preferred for roll calls, candidate fields, bill histories, memberships, and archive records. Mobile tables may scroll horizontally inside their own container, but the page itself must not create horizontal overflow.
 
-## Party and caucus directory
+## Party, Assembly Delegation, and caucus workspaces
 
 The Party page is national, not synonymous with “my party.” Its first layer lists every major party with leader and Assembly seats. Selecting a party opens:
 
@@ -48,16 +49,18 @@ The Party page is national, not synonymous with “my party.” Its first layer 
 - parliamentary floor leader and whip;
 - presidential nominations and recent public party events.
 
-Player-facing copy uses **caucus** for organized intraparty groups. Storage may retain `faction`.
+Player-facing copy uses **caucus** for an ideological intraparty organization and **Assembly Delegation** for a party's parliamentary group. Storage may retain `faction` and `caucusLeadership`, but the interface must keep Party Leader, Assembly Floor Leader, Assembly Whip, and ideological Caucus Chair distinct.
+
+Every ideological caucus has a stable workspace rather than redirecting to its parent party. It shows parent party, Chair, membership/share, public priorities, prominent members, recent votes, influence, endorsements, leadership term/next contest, electorate, eligibility, candidates, ballots, and history.
 
 ## Assembly chamber
 
-The 420-seat hemicycle is a public composition and member-selection surface, not a decorative chart. Every occupied seat is keyboard-selectable and has an accessible politician/party label. It appears before bill detail because current chamber control frames all legislative work.
+The 420-seat hemicycle is a public composition and member-selection surface, not a decorative chart. Every occupied seat is keyboard-selectable and has an accessible politician/party label. On desktop, Speaker/Floor Leaders/Whips and current business appear before the smaller chamber visualization; the first screen is for people and work, not decorative geometry.
 
 Assembly business uses three linked layers:
 
-1. chamber composition and current agenda;
-2. bills and required player decisions;
+1. leadership, current agenda, and required player decisions;
+2. compact chamber composition and bill list;
 3. selected-bill detail, provisions, politics, procedure, and roll calls.
 
 ## Roll calls and caucus positions
@@ -129,7 +132,8 @@ Campaign field infrastructure is called **Ground Game** in player-facing text. I
 - Province actions build provincial infrastructure and weighted constituency spillover.
 - Constituency actions remain local.
 - Maintenance preserves part of established infrastructure while allowing slow decay.
-- Maps toggle province and constituency scale and never reveal latent support.
+- Campaign maps distinguish **Forecast**, **Polling**, **Ground Game**, and **Previous Election**, with Activity, Spending, and Endorsements when public data exists. They never reveal latent support.
+- Polling labels direct/sparse/no-local-data and publication freshness. Forecast uses only public observations, shows uncertainty, and projects multi-member seat composition rather than a fake two-party winner.
 
 ## Economy statistics
 
@@ -137,21 +141,44 @@ The public briefing and detailed views lead with derived real-output growth, une
 
 The January scenario may say “reference index 100,” but must not imply that current values equal 100 or that January 2028 defines neutrality. With no prior month, cards say that no comparison is available.
 
-## Map inspector
+## Shared political map workspace
 
-Domestic modes are Political, Election, Campaign, and Economy. A mode exists only when it visualizes the named public data.
+`PoliticalMapWorkspace` owns the map canvas, mode/layer controls, legend, temporary tooltip, selected entity, compact inspector, and optional full-detail drawer. Terena, Economy, Assembly elections, Governor elections, Provincial Assembly elections, and historical election presentations reuse it where geography exists. A mode exists only when it visualizes the named public data.
 
 - Hover is temporary and uses a lightweight tooltip.
 - Pointer leave removes hover only.
-- Click/tap pins a compact detail inspector.
+- Click/tap pins a compact contextual card over the map; it must not create a permanent full-height rail or shrink the canvas.
+- Only an explicit **View full result** action opens the larger drawer.
 - Keyboard Enter/Space pins the focused geography.
 - Zoom, pan, and Reset remain lightweight.
 - Political mode shows sitting multi-member composition/plurality.
-- Election mode uses the selected election's public result or published poll; a national race without geographic data remains neutral and says so.
-- Campaign mode shows Ground Game.
+- Election mode uses the selected current or historical result; a national presidential race without geographic returns remains neutral and says so.
+- Campaign layers distinguish observed polling, public forecast, known Ground Game, public activity, spending, endorsements, and the previous certified election.
 - Economy mode shows structural provincial conditions.
 
 Selection outlines remain restrained; province boundaries are stronger than internal constituency borders.
+
+Every legend names the truth type and what color means: observed poll leader, public forecast category, Ground Game strength, actual reported result, certified composition, swing, turnout, or previous election. Hue is always paired with labels, patterns/status, outlines, and text inspection.
+
+## Election Night and certification
+
+First viewing is **Election Night**. It never reveals the certified winner, final seats, majority status, or later RCV rounds before the truthful presentation event becomes visible. Pause, 0.5×, 1×, 2×, 4×, Step, and Instant affect presentation only; count computation is not deliberately slowed.
+
+Assembly constituencies and provincial races populate a neutral map as deterministic result events arrive. Reveal time may depend on ballot complexity, turnout, magnitude, closeness, and bounded seeded variation but may never change the result. Presidential elections use national RCV bars, eliminations, transfers, exhausted ballots, and threshold; no province returns are fabricated. Once historical, the same event stream is offered as **Replay Election Night**.
+
+Certification panels state the commission, certified date, final margin, automatic recount, and any countback/first-preference/legal-lot tie procedure. Certified information remains hidden until Election Night playback completes or the player chooses Instant.
+
+## News and History
+
+News groups outlet treatments around a common public event. The article reader distinguishes verified source-record facts from outlet framing and does not dump opaque event payloads. History is an interconnected political wiki for years, people, parties, laws, courts, elections, administrations, campaigns, foreign affairs, and economic periods. Historical elections, public forecasts, and count events remain immutable.
+
+## New Game and confirmations
+
+Featured starts are full-depth roles with office, party, gameplay focus, and complexity. Limited Mayor and Minister roles remain searchable but are labeled Limited with an honest description. Material actions—war powers, bill signature/return, Governor legislation, disposition, administrative priority, and investment emphasis—use concise confirmation copy naming the effect, cost, or irreversible consequence.
+
+## Production deployment
+
+The Pages build uses the repository base `/Lorsain-project/`; entry assets, dynamic imports, and module Workers must resolve beneath that base. Production acceptance includes start, Worker-driven End Turn, explicit save/reload, and map interaction through the built subpath, not only the development server.
 
 ## Political Calendar
 

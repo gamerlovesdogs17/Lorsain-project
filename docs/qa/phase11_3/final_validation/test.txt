@@ -1,0 +1,364 @@
+
+> lorsain@0.3.0-predev test C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project
+> vitest run
+
+
+ RUN  v3.2.7 C:/Users/zydlo/OneDrive/Desktop/lorsain_project_package/Lorsain project
+
+stdout | packages/sim/src/elections.test.ts > Phase 4 10,000 synthetic acceptance > exercises the real support/turnout/ballot/election-math pipeline
+{"pipeline10000":{"presidential":4000,"assembly":4000,"supportPoll":2000,"irvWins":{"P3":2247,"P4":753,"P1":1000},"stvSeats":{"P1":4000,"P3":4000},"meanFormalVsLatentAbsErr":0.01053507208372497,"turnoutMin":0.5600133333333334,"turnoutMax":0.6779733333333333,"exhaustionCases":4000,"transferCases":4000,"reorderSame":4000,"replaySame":8000,"hiddenUnchanged":4000,"closeUniqueWinners":["P3","P4"]}}
+
+stdout | packages/sim/src/elections.test.ts > Phase 4 geography backcast > keeps Labour strong in industrial blocs and RL present in regional shares
+{"backcastFormal":{"PARTY_NU":0.1743927201555516,"PARTY_GRN":0.1523775315162433,"PARTY_RL":0.15840720263064495,"PARTY_PM":0.14347696078161873,"PARTY_LAB":0.207859131234755,"PARTY_CR":0.16348645368118642}}
+
+stdout | packages/sim/src/elections.test.ts > Phase 4 explicit 2028–2029 test path > resolves six nominees, counts IRV, and assumes office on 2029-01-20
+{"presidentialReplayHash":"7fb91be9dfa0cc9f7a9a2564da83f212","afterElectionStateHash":"4e6a73d38ae83631247a2453e0f861b1","domainResolutions":1,"winnerId":"NPC003"}
+
+stdout | packages/sim/src/elections.test.ts > Phase 4 performance > benchmarks support, polls, synthetic elections, STV batch, and national RCV setup
+{"support48Ms":189,"polls1000Ms":14697,"synthetic10000Ms":170,"stvBatchMs":24,"nationalSupportMs":171}
+
+ ✓ packages/sim/src/elections.test.ts (14 tests) 254699ms
+   ✓ Phase 4 kernel electorate ingest > loads 48 constituencies, unique blocs, 12 pollsters, and issue dimensions  1707ms
+   ✓ Phase 4 polling > is deterministic, house-effect centered after renormalize, and lower variance at larger N  6107ms
+   ✓ Phase 4 10,000 synthetic acceptance > exercises the real support/turnout/ballot/election-math pipeline  211615ms
+   ✓ Phase 4 geography backcast > keeps Labour strong in industrial blocs and RL present in regional shares  1978ms
+   ✓ Phase 4 save schema v4 > round-trips a new game and migrates v3 saves  1987ms
+   ✓ Phase 4 TERENA_2028 domain block > reaches 2028-10-14 and still requires an explicit presidential count  4298ms
+   ✓ Phase 4 explicit 2028–2029 test path > resolves six nominees, counts IRV, and assumes office on 2029-01-20  10012ms
+   ✓ Phase 4 performance > benchmarks support, polls, synthetic elections, STV batch, and national RCV setup  16909ms
+ ❯ packages/sim/src/determinism.test.ts (9 tests | 1 failed) 173ms
+   × 20-year kernel determinism > save at 10 years, continue vs restore, identical 20-year hashes 125ms
+     → expected '066c8072f413e5afd869df6e2a16bab3' to be '85715c24a5fb57f698ab780ab82173d8' // Object.is equality
+   ✓ 20-year kernel determinism > different seed with stochastic event produces a different valid hash 32ms
+   ✓ save / load > new game save/load matches state hash 2ms
+   ✓ save / load > save after RNG draws restores the next draw 2ms
+   ✓ save / load > save while paused at mid-month interrupt resumes correctly 3ms
+   ✓ save / load > rejects malformed, future schema, and incompatible content versions 1ms
+   ✓ save / load > continues event IDs deterministically after load 1ms
+   ✓ save / load > canonical hash ignores object key insertion order 0ms
+   ✓ save / load > leaves kernel world unchanged after 120 turns 6ms
+ ✓ packages/sim/src/foreign.test.ts (32 tests) 139900ms
+   ✓ Phase 10 foreign affairs > seeds 48 countries and canonical Terena bilateral relations  1757ms
+   ✓ Phase 10 foreign affairs > starts Vaskara (W40) at heightened posture with a latent Terena crisis  1567ms
+   ✓ Phase 10 foreign affairs > reproduces identical foreign history over 27 months for the same seed  22884ms
+   ✓ Phase 10 foreign affairs > continues identically after save/reload mid-run  15759ms
+   ✓ Phase 10 foreign affairs > migrates schema 9 to 10 deterministically without fabricated foreign history  8221ms
+   ✓ Phase 10 foreign affairs > reproduces leadership change events for the same seed  22840ms
+   ✓ Phase 10 foreign affairs > does not auto-cast treaty ratification votes for the player MP  2168ms
+   ✓ Phase 10 foreign affairs > does not auto-sanction or auto-treaty when the player is President  10729ms
+   ✓ Phase 10 foreign affairs > keeps strategic goals out of public history and player decision surfaces  10118ms
+   ✓ Phase 10.1 foreign affairs functional completion > allows President Mara Velic to impose sanctions on W40  1583ms
+   ✓ Phase 10.1 foreign affairs functional completion > allows President Mara Velic to adjust Terena military posture  1587ms
+   ✓ Phase 10.1 foreign affairs functional completion > emits structured events for consequential crisis stage changes  1548ms
+   ✓ Phase 10.1 foreign affairs functional completion > can allocate a new crisis from high-tension conditions  1616ms
+   ✓ Phase 10.1 foreign affairs functional completion > rejects hostile mutual-defense treaties without counterparty consent  1552ms
+   ✓ Phase 10.1 foreign affairs functional completion > records foreign AI diplomatic actions toward Terena over 27 months  10744ms
+   ✓ Phase 10.1 foreign affairs functional completion > can begin conflict from severe crisis and arm Terena war trigger for player President  1517ms
+   ✓ Phase 10.1 foreign affairs functional completion > resolves runtime leader display after foreign leadership change  1605ms
+   ✓ Phase 10.1 foreign affairs functional completion > excludes latent crises from public active crisis counts  1537ms
+   ✓ Phase 10.1 foreign affairs functional completion > allows AI sanctions to be lifted when relations improve  1575ms
+   ✓ Phase 10.1 foreign affairs functional completion > arms war trigger for MP player without granting presidential player control  1569ms
+   ✓ Phase 10.1 foreign affairs functional completion > blocks duplicate treaty proposals for the same pair and kind  1552ms
+   ✓ Phase 10.1 foreign affairs functional completion > defers treaty ratification tally until the vote-ready month  1649ms
+   ✓ Phase 10.1 foreign affairs functional completion > applies bilateral treaty effects once even with duplicate active records  1592ms
+   ✓ Phase 10.1 foreign affairs functional completion > reacts to same-month foreign sanctions through the post-foreign organization bridge  1598ms
+   ✓ Phase 10.1 foreign affairs functional completion > allows NPC President to invoke war powers when player is an MP  1502ms
+   ✓ Phase 10.1 foreign affairs functional completion > completes treaty ratification end-to-end without DecisionContractError  1743ms
+   ✓ Phase 10.1 foreign affairs functional completion > seeds canonical WA and LTO membership with correct Security Council vetoes  1551ms
+   ✓ Phase 10.1 foreign affairs functional completion > can file and advance an LTO dispute between LTO members  1540ms
+   ✓ Phase 10.1 foreign affairs functional completion > applies bounded WA consequences and honors great-power vetoes  1584ms
+   ✓ Phase 10.1 foreign affairs functional completion > does not emit same-name fake leadership replacements  1567ms
+   ✓ Phase 10.1 foreign affairs functional completion > spreads leadership reviews from canonical since_year rather than a synchronized wave  1538ms
+ ✓ packages/sim/src/phase11_3.institutions.test.ts (22 tests) 37609ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > ends both sides of an incompatible office pair when a Speaker becomes Governor  1662ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > renews the NPC political class deterministically without choosing the player's exit  1915ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > seeds twenty-one population-scaled chambers and a named renewable political class  1088ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > archives meaningful provincial leadership changes without routine reselection records  1207ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > promotes pre-existing provincial legislators before a federal filing allocation  1885ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > preserves Provincial Assembly authority through a promoted full-politician identity  1263ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > migrates schema 12 saves and deterministically seeds the new institutions on restore  3092ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > migrates schema 13 structural fields without fabricating political history  1390ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > migrates schema 14 gubernatorial structure without inventing history  1184ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > migrates schema 15 party platforms without fabricating a published history  1023ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > migrates schema 16 constitutional amendment records without fabricating text history  1055ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > migrates schema 17 poll geography and constitutional intent without changing history  1034ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > moves public party platforms gradually and keeps publication history bounded  1192ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > derives public constituency pressures from regional conditions and applies only a bounded vote incentive  998ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > requires 280 federal votes and 13 Provincial Assemblies before changing a real rule  1121ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > forms amendment-specific coalitions instead of reusing one constitutional vote pattern  971ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > rejects constitutional proposal authority outside the National Assembly  1039ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > lets a serving player legislator explicitly contest provincial leadership and archives the ballot  1359ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > distinguishes friendly, divided, and hostile provincial governments from actual seat control  1035ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > opens federal caucus contests only for real triggers and requires an explicit player campaign  1286ms
+   ✓ Phase 11.3 Provincial Assemblies and recruitment > enforces new institutional authority in the command layer for every featured role  10799ms
+stdout | packages/sim/src/phase11.integration.test.ts > Phase 11.1 full-game integration > records ordinary and assembly election resolve timings
+{"phase11Perf":{"ordinaryMedianMs":215,"ordinaryMaxMs":438}}
+{"phase11Perf":{"assemblyResolveMs":11399,"juneAssumptionMs":760}}
+
+stdout | packages/sim/src/phase11.integration.test.ts > Phase 11.1 full-game integration > lets the player enter the naturally opened 2033 nomination and preserves every campaign stage
+{"phase11Player2033":{"nominated":false,"won":false}}
+
+ ❯ packages/sim/src/phase11.integration.test.ts (9 tests | 1 failed) 280614ms
+   ✓ Phase 11.1 full-game integration > reaches 2029 presidential transition with matching continuous/reload hashes  15518ms
+   ✓ Phase 11.1 full-game integration > resolves the 2030 Assembly election and reseats 420 members  26920ms
+   ✓ Phase 11.1 full-game integration > supports Adrian's explicit reelection campaign with deterministic checkpoint reloads  39940ms
+   ✓ Phase 11.1 full-game integration > lets an eligible non-incumbent file, campaign, and reach the June transition  28638ms
+   ✓ Phase 11.1 full-game integration > keeps Mara Velic playable after leaving the presidency  6451ms
+   ✓ Phase 11.1 full-game integration > matches deterministic multi-year hashes with checkpoint reloads (MP)  54929ms
+   ✓ Phase 11.1 full-game integration > records ordinary and assembly election resolve timings  26645ms
+   × Phase 11.1 full-game integration > naturally completes the 2033 presidential cycle and January 2034 transition 11819ms
+     → expected '2030-01-30' to be '2033-10-08' // Object.is equality
+   ✓ Phase 11.1 full-game integration > lets the player enter the naturally opened 2033 nomination and preserves every campaign stage  69754ms
+ ✓ packages/sim/src/phase11_2.governor.test.ts (5 tests) 28229ms
+   ✓ Phase 11.2 provincial government > gives a governor bounded provincial authority and rejects other roles  3448ms
+   ✓ Phase 11.2 provincial government > keeps a player governor out until explicit filing and preserves the race across reload  6774ms
+   ✓ Phase 11.2 provincial government > resolves all province races once and creates the next four-year cycle  10083ms
+   ✓ Phase 11.2 provincial government > makes bounded NPC end-of-term decisions instead of filing elderly incumbents forever  6139ms
+   ✓ Phase 11.2 provincial government > makes the same NPC Governor sign an aligned provincial bill and veto a hostile reversal  1783ms
+ ✓ packages/sim/src/phase11.closeout.test.ts (6 tests) 23753ms
+   ✓ Phase 11.1 closeout Assembly candidacy > allocates nationally without processing-order bias or duplicate candidates  3081ms
+   ✓ Phase 11.1 closeout Assembly candidacy > recruits against the actual eligible filing pool after long-run attrition  2961ms
+   ✓ Phase 11.1 closeout Assembly candidacy > keeps an incumbent player off the ballot unless they affirmatively file  2481ms
+   ✓ Phase 11.1 closeout Assembly candidacy > persists a player decline and allows a non-incumbent to file legitimately  4630ms
+   ✓ Phase 11.1 closeout Assembly candidacy > feeds bounded constituency organization into the Assembly ballot model  3037ms
+   ✓ Phase 11.1 closeout Assembly candidacy > retains complete typed STV archives for every constituency  7561ms
+ ✓ packages/sim/src/terena.integration.test.ts (15 tests) 28646ms
+   ✓ TERENA_2028 office instantiation > creates canonical office-term counts without mutating content  1931ms
+   ✓ TERENA_2028 office instantiation > enforces assembly capacity, single president, and incompatibilities  1698ms
+   ✓ presidential vacancy > ends a President-elect's symmetrically incompatible office before assumption  1614ms
+   ✓ presidential vacancy > uses lawful succession and schedules a real special election when the President-elect cannot assume  1695ms
+   ✓ presidential vacancy > Speaker becomes Acting President and a special election is required early in the term  1643ms
+   ✓ presidential vacancy > skips an unavailable Speaker in favor of the Justice Minister  1556ms
+   ✓ presidential vacancy > skips Speaker and Justice in favor of Finance  1594ms
+   ✓ presidential vacancy > does not require a special election within 180 days of the regular election  3227ms
+   ✓ presidential vacancy > uses a certified president-elect as acting successor before January 20  1629ms
+   ✓ TERENA first domain interrupt > advances until the 2028-10-14 presidential election blocking interrupt  4526ms
+   ✓ TERENA first domain interrupt > cannot silently carry expired elected terms past an unresolved election  4115ms
+   ✓ TERENA_2028 January save integrity > rejects mutating the October presidential election to processed  1586ms
+   ✓ TERENA_2028 Phase 2 agent substrate > loads 530 canonical profiles without O(N^2) social state  1726ms
+ ✓ packages/sim/src/foreign.determinism.test.ts (2 tests) 15986ms
+   ✓ Phase 10 foreign affairs RNG isolation > does not perturb the elections stream when advancing turns  13567ms
+   ✓ Phase 10 foreign affairs RNG isolation > leaves the foreign-affairs stream unchanged after unrelated commands  2417ms
+ ✓ packages/sim/src/parties.test.ts (51 tests) 10762ms
+   ✓ TERENA_2028 starting party institutions > seeds 6 parties, 15 factions, no PARTY_IND state, and valid memberships  1758ms
+   ✓ TERENA_2028 starting party institutions > derives party and faction membership and caucus counts from PoliticianRuntime  1643ms
+   ✓ Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save > withdraws incompatible candidacies on party, independent, death, retirement, and faction switch  422ms
+   ✓ Phase 3 hardening: leadership, chairs, lifecycle, eligibility, save > rejects Mara Velic and under-35 candidates, and allows MP/governor/minister while blocking court  1793ms
+   ✓ Phase 3 history and lifecycle integrity > keeps resolved contests valid after later death, retirement, party, and faction changes  594ms
+ ✓ scripts/phase11_3.provincial-government.test.ts (2 tests) 9812ms
+   ✓ Phase 11.3 controlled provincial government > distinguishes friendly, divided, and hostile passage and disposition behavior  6564ms
+   ✓ Phase 11.3 controlled provincial government > allows a hostile supermajority to override while a friendly chamber sustains the veto  3246ms
+stdout | packages/sim/src/campaigns.vertical.test.ts > Phase 5 2028 vertical slice > NPCs campaign autonomously through nomination, general election, and inauguration
+{"startCampaigns":0,"afterDeclare":17,"winnerId":"NPC003","debates":19,"polls":5,"nextPres":"2033-10-08"}
+
+stdout | packages/sim/src/campaigns.vertical.test.ts > Phase 5 campaign performance > processes an active presidential campaign month without pathological scaling
+{"firstMonthMs":433,"secondMonthMs":172,"activeCampaigns":17}
+
+ ✓ packages/sim/src/campaigns.vertical.test.ts (3 tests) 11995ms
+   ✓ Phase 5 2028 vertical slice > NPCs campaign autonomously through nomination, general election, and inauguration  6797ms
+   ✓ Phase 5 2028 vertical slice > player withdrawal/loss does not end the simulation  3053ms
+   ✓ Phase 5 campaign performance > processes an active presidential campaign month without pathological scaling  2143ms
+stdout | packages/sim/src/legislature.vertical.test.ts > Phase 6 legislative performance > keeps 420-MP floor/committee/whip work off pathological all-pairs scaling
+{"legislatureMonthMs":398,"whipMs":1,"floorVoteMs":0}
+
+ ✓ packages/sim/src/legislature.vertical.test.ts (4 tests) 11436ms
+   ✓ Phase 6 Terena 2028 legislature + campaigns > seeds 420 MPs and five committees without copying an Assembly roster  1753ms
+   ✓ Phase 6 Terena 2028 legislature + campaigns > introduces bills during 2028 while campaigns still run, and save/load stays deterministic  6037ms
+   ✓ Phase 6 legislative performance > keeps 420-MP floor/committee/whip work off pathological all-pairs scaling  1981ms
+   ✓ Phase 6 Terena constitutional majority > still requires 211 yes to repass when 419 MPs currently sit  1663ms
+ ✓ packages/sim/src/playable-path.test.ts (2 tests) 10057ms
+   ✓ Phase 7 playable 2028–2029 path > lets an ordinary MP play to the January 2029 transition without DEV commands  6400ms
+   ✓ Phase 7 playable 2028–2029 path > gives a presidential contender campaign commands and a sitting President executive commands  3655ms
+ ✓ packages/sim/src/campaigns.realism.test.ts (1 test) 8848ms
+   ✓ Phase 5 campaign realism harness > resources and standing help, but seeds can produce different nominees  8847ms
+ ✓ packages/sim/src/phase11_2.systems.test.ts (7 tests) 16153ms
+   ✓ Phase 11.2 economic geography > starts from canonical uneven values and preserves meaningful regional differences for four years  3381ms
+   ✓ Phase 11.2 economic geography > makes trade-exposed provinces react more strongly to a trade disruption  1647ms
+   ✓ Phase 11.2 campaign geography > distributes national work beyond the first four IDs and retains decaying local infrastructure  1067ms
+   ✓ Phase 11.2 concrete legislation > accepts one to three named provisions, generates public copy, and rejects a fourth  1037ms
+   ✓ Phase 11.2 role authority > gives Ministers and Mayors one explicit bounded role action per month  2160ms
+   ✓ Phase 11.2 role authority > rejects provincial executive commands for every non-governor starting role  6850ms
+stdout | packages/sim/src/parties.perf.test.ts > Phase 3 performance > runs 1,000 leadership contests with non-degenerate faction and endorsement politics
+{"leadershipContestsMs":4944,"baseline":{"PA":457,"PB":238,"PC":305,"other":0},"endorsedB":{"PA":58,"PB":890,"PC":52,"other":0},"distinctBaseline":3,"relationshipCaucusChanges":1,"deterministic":{"sameA":"PC","sameB":"PC"}}
+
+ ✓ packages/sim/src/parties.perf.test.ts (2 tests) 6599ms
+   ✓ Phase 3 performance > derives 530-politician party queries without an O(N^2) init  1193ms
+   ✓ Phase 3 performance > runs 1,000 leadership contests with non-degenerate faction and endorsement politics  5405ms
+ ✓ packages/sim/src/courts.test.ts (27 tests) 8320ms
+   ✓ Phase 8 courts kernel > materializes named legal professionals instead of weakening the qualification bar  1779ms
+   ✓ Phase 8 authorized-assembly thresholds > lets a legally qualified nominee assemble the required cross-party confirmation vote  1762ms
+   ✓ Phase 8 authorized-assembly thresholds > keeps 252/280 thresholds with 419 sitting MPs  1762ms
+   ✓ Phase 8 nonrenewable terms and impeachment basis > blocks the first canonical justice from returning after the 2029-06-01 vacancy  2182ms
+   ✓ Phase 8 judicial realism and performance > shows ideology without party robots and allows 5-4 plus precedent influence  428ms
+ ✓ scripts/dist-exports.smoke.test.ts (3 tests) 3779ms
+   ✓ built package exports smoke > imports @lorsain/sim from package exports (dist)  3608ms
+ ❯ packages/sim/src/executive.test.ts (14 tests | 1 failed) 3556ms
+   × Phase 7 executive kernel > uses schemaVersion 7 and empty executive runtime at new game 38ms
+     → expected 18 to be 17 // Object.is equality
+   ✓ Phase 7 executive kernel > lets a player President appoint and dismiss a minister 24ms
+   ✓ Phase 7 executive kernel > rejects duplicate portfolios without dismissing either incumbent 7ms
+   ✓ Phase 7 executive kernel > fills multiple NPC cabinet vacancies with distinct people 35ms
+   ✓ Phase 7 executive kernel > does not auto-appoint or auto-regulate when the player is President 19ms
+   ✓ Phase 7 executive kernel > issues a regulation and allows Assembly annulment during the review window 25ms
+   ✓ Phase 7 executive kernel > continues the previous budget when a new one is not approved 8ms
+   ✓ Phase 7 executive kernel > lets an Acting President use presidential executive powers 12ms
+   ✓ Phase 7 executive kernel > gives the player a month before a motion is tallied 16ms
+   ✓ Phase 7 executive kernel > requires a trigger to declare an emergency or begin war powers 17ms
+   ✓ Phase 7 executive kernel > chooses a politically grounded war-referral sponsor when the Speakership is vacant 6ms
+   ✓ Phase 7 executive kernel > migrates v6 saves into empty executive runtime 7ms
+   ✓ Phase 7 Terena executive > derives the 12-minister cabinet from office terms and uses 231 yes for censure  1692ms
+   ✓ Phase 7 Terena executive > still requires 231 yes to censure when 419 MPs currently sit  1647ms
+ ✓ packages/sim/src/agents.perf.test.ts (1 test) 1985ms
+   ✓ Phase 2 performance substrate > evaluates 10,000 decisions over a 530-agent sparse graph  1984ms
+ ✓ packages/sim/src/organizations.test.ts (7 tests) 1886ms
+   ✓ Phase 9 organizations > consumes the ten canonical Terena organizations  1774ms
+ ❯ packages/sim/src/legislature.test.ts (15 tests | 1 failed) 533ms
+   ✓ Phase 6 legislature kernel > derives distinct public parliamentary-discipline categories from evolving party institutions 26ms
+   × Phase 6 legislature kernel > uses schemaVersion 6, derived Assembly membership, and functional committees 13ms
+     → expected 18 to be 17 // Object.is equality
+   ✓ Phase 6 legislature kernel > reads Assembly absolute majority from world constitution, not current attendance 1ms
+   ✓ Phase 6 legislature kernel > does not auto-sponsor or auto-vote the player; uncast player votes are abstain 31ms
+   ✓ Phase 6 legislature kernel > records an explicit player committee vote when CAST_LEGISLATIVE_VOTE targets committee 12ms
+   ✓ Phase 6 legislature kernel > leaves player-president bills pending until SIGN_BILL or RETURN_BILL 33ms
+   ✓ Phase 6 legislature kernel > makes the same NPC President sign an aligned bill and return a strongly hostile bill 5ms
+   ✓ Phase 6 legislature kernel > runs 48 months with introductions, committee deaths, floor outcomes, signing, and mixed coalitions 295ms
+   ✓ Phase 6 legislature kernel > migrates v5 saves into empty legislature runtime 6ms
+   ✓ Phase 6 legislature kernel > rejects NPC-targeted legislative commands as player-autonomy violations 4ms
+   ✓ Phase 6 legislature kernel > makes an NPC bill visible before any player committee or floor tally 11ms
+   ✓ Phase 6 legislature kernel > lets the player cast committee then floor votes on separate stages 17ms
+   ✓ Phase 6 legislature kernel > does not consume a committee pending choice as a floor vote 58ms
+   ✓ Phase 6 legislature kernel > adopts or rejects a player amendment before the parent bill leaves the stage 11ms
+   ✓ Phase 6 legislature kernel > will not tally a bill while a proposed amendment is still unripe 7ms
+ ✓ packages/sim/src/campaigns.test.ts (17 tests) 486ms
+ ✓ packages/sim/src/economy.test.ts (7 tests) 425ms
+ ✓ packages/sim/src/elections.hardening.test.ts (20 tests) 628ms
+ ✓ packages/sim/src/media.test.ts (4 tests) 253ms
+ ✓ packages/content-loader/src/validate.test.ts (2 tests) 136ms
+ ✓ packages/sim/src/hardening.test.ts (79 tests) 124ms
+ ✓ packages/sim/src/agents.test.ts (41 tests) 123ms
+stdout | packages/election-math/src/performance.test.ts > election-math performance (representative) > IRV: several candidates × thousands of weighted ranking groups
+[perf] IRV 6c×5000 groups: 22.8ms
+
+stdout | packages/election-math/src/performance.test.ts > election-math performance (representative) > STV: 8-seat field with thousands of groups
+[perf] STV 16c/8 seats ×4000 groups: 70.8ms
+
+ ✓ packages/election-math/src/performance.test.ts (2 tests) 98ms
+ ✓ packages/sim/src/dependency.test.ts (1 test) 68ms
+ ✓ packages/sim/src/player-decisions.test.ts (2 tests) 53ms
+ ✓ packages/sim/src/scheduler.test.ts (4 tests) 32ms
+ ✓ apps/game/src/content/browserReader.test.ts (2 tests) 27ms
+ ✓ apps/game/src/map/publicLayers.test.ts (2 tests) 17ms
+ ✓ apps/game/src/presentation/display.test.ts (8 tests) 16ms
+ ✓ packages/election-math/src/invariants.test.ts (4 tests) 14ms
+ ✓ apps/game/src/map/fills.test.ts (5 tests) 11ms
+ ✓ packages/election-math/src/irv.test.ts (8 tests) 14ms
+ ✓ packages/map/src/geometry.test.ts (1 test) 13ms
+ ✓ packages/election-math/src/stv.test.ts (11 tests) 10ms
+ ✓ packages/election-math/src/hardening.test.ts (12 tests) 7ms
+ ✓ packages/election-math/src/golden.test.ts (3 tests) 7ms
+ ✓ packages/election-math/src/dependency.test.ts (1 test) 8ms
+ ✓ packages/sim/src/rng.test.ts (9 tests) 6ms
+ ✓ packages/election-math/src/rational.test.ts (8 tests) 4ms
+ ✓ packages/sim/src/elections/certification.test.ts (3 tests) 5ms
+ ✓ packages/election-math/src/tiebreak.test.ts (6 tests) 4ms
+ ✓ packages/election-math/src/lot.test.ts (4 tests) 3ms
+ ✓ packages/sim/src/calendar.test.ts (6 tests) 3ms
+ ✓ apps/game/src/map/workspace.test.ts (1 test) 3ms
+ ✓ apps/game/src/ui/overlayStacking.test.ts (1 test) 2ms
+ ✓ apps/game/src/electionNight.test.ts (2 tests) 3ms
+ ✓ packages/sim/src/worker-protocol.test.ts (1 test) 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/sim/src/determinism.test.ts > 20-year kernel determinism > save at 10 years, continue vs restore, identical 20-year hashes
+AssertionError: expected '066c8072f413e5afd869df6e2a16bab3' to be '85715c24a5fb57f698ab780ab82173d8' // Object.is equality
+
+Expected: "85715c24a5fb57f698ab780ab82173d8"
+Received: "066c8072f413e5afd869df6e2a16bab3"
+
+ ❯ packages/sim/src/determinism.test.ts:41:27
+     39|     advance(c, 240);
+     40|     expect(c.hashState()).toBe(a.hashState());
+     41|     expect(a.hashState()).toBe("85715c24a5fb57f698ab780ab82173d8");
+       |                           ^
+     42|   });
+     43| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  packages/sim/src/executive.test.ts > Phase 7 executive kernel > uses schemaVersion 7 and empty executive runtime at new game
+AssertionError: expected 18 to be 17 // Object.is equality
+
+- Expected
++ Received
+
+- 17
++ 18
+
+ ❯ packages/sim/src/executive.test.ts:88:33
+     86|     const sim = createSimulation({ world, playerPoliticianId: "P1", se…
+     87|     expect(sim.getSnapshot().schemaVersion).toBe(SAVE_SCHEMA_VERSION);
+     88|     expect(SAVE_SCHEMA_VERSION).toBe(17);
+       |                                 ^
+     89|     expect(sim.getSnapshot().executiveRuntime.regulations).toEqual({});
+     90|     expect(sim.getSnapshot().executiveRuntime.motions).toEqual({});
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  packages/sim/src/legislature.test.ts > Phase 6 legislature kernel > uses schemaVersion 6, derived Assembly membership, and functional committees
+AssertionError: expected 18 to be 17 // Object.is equality
+
+- Expected
++ Received
+
+- 17
++ 18
+
+ ❯ packages/sim/src/legislature.test.ts:76:33
+     74|     const snap = sim.getSnapshot();
+     75|     expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
+     76|     expect(SAVE_SCHEMA_VERSION).toBe(17);
+       |                                 ^
+     77|     expect(currentAssemblyMemberIds(world, snap)).toHaveLength(36);
+     78|     expect(Object.keys(snap.legislatureRuntime.committees).sort()).toE…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  packages/sim/src/phase11.integration.test.ts > Phase 11.1 full-game integration > naturally completes the 2033 presidential cycle and January 2034 transition
+AssertionError: expected '2030-01-30' to be '2033-10-08' // Object.is equality
+
+Expected: "2033-10-08"
+Received: "2030-01-30"
+
+ ❯ packages/sim/src/phase11.integration.test.ts:331:50
+    329|     const hit = await advanceResponsive(continuous, 64, "PRESIDENTIAL_…
+    330|     expect(hit).toBe("PRESIDENTIAL_ELECTION_DUE");
+    331|     expect(continuous.getSnapshot().currentDate).toBe("2033-10-08");
+       |                                                  ^
+    332|     const election = continuous.getSnapshot().elections.ELEC_PRES_2033…
+    333|     expect(election.fieldFinalized).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-worker]: Timeout calling "onTaskUpdate"
+ ❯ Object.onTimeoutError ../Lorsain%20project/node_modules/.pnpm/vitest@3.2.7_@types+node@22.20.1_tsx@4.23.12/node_modules/vitest/dist/chunks/rpc.-pEldfrD.js:53:10
+ ❯ Timeout._onTimeout ../Lorsain%20project/node_modules/.pnpm/vitest@3.2.7_@types+node@22.20.1_tsx@4.23.12/node_modules/vitest/dist/chunks/index.B521nVV-.js:59:62
+ ❯ listOnTimeout node:internal/timers:605:17
+ ❯ processTimers node:internal/timers:541:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  4 failed | 51 passed (55)
+      Tests  4 failed | 526 passed (530)
+     Errors  1 error
+   Start at  18:11:55
+   Duration  951.68s (transform 3.98s, setup 0ms, collect 15.69s, tests 917.93s, environment 7ms, prepare 6.85s)
+
+ ELIFECYCLE  Test failed. See above for more details.

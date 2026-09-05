@@ -1,248 +1,182 @@
-# Phase 11.3 results
+# Phase 11.3 closeout results
 
-Date: 2026-08-28
+Date: 2026-09-04
 
-Scope: institutional politics, UI System V6, legislative depth and whole-game balance
+Scope: institutional politics, public election truth, UI System V6, production deployment architecture, and current-source whole-game validation. Phase 11.4 has not begun.
 
-Interrupted-export prompt baseline: `398d8e52b40c369f542dd2367fe38b86d173d719`; actual repository HEAD at resume: `2d215a606f090690b671ba3133357cb1a32fabb`
-
-Safety checkpoint: `9031478` (`WIP: preserve interrupted Phase 11.3 institutional implementation`) on `phase11-3-institutional-resume`
-
-Acceptance artifact: `docs/qa/phase11_3/whole_game_calibration.json`
-
-Phase 11.4 has not begun.
+The detailed requirement mapping is in `PHASE_11_3_REQUIREMENT_EVIDENCE.md`; deployment status is in `GITHUB_PAGES_DEPLOYMENT.md`; browser evidence is in `qa/phase11_3/final/`.
 
 ## Final report
 
-### 1. Final commit hash
+### 1. Starting HEAD
 
-The final immutable hash is reported in the task handoff after the closeout commit is created. A commit cannot contain its own hash. The interrupted work was preserved first at `9031478`; no reset, clean, checkout, or source discard was used.
+Continuation began from `08a1086998b74ce3c511275712b1102b27bcf450` (`bnv`) on `phase11-3-institutional-resume`. Completed work in that commit and earlier checkpoints was preserved.
 
-### 2. Working-tree status
+### 2. Final Phase 11.3 HEAD
 
-The task handoff records the post-commit `git status --short` result. The intended acceptance state is a clean `phase11-3-institutional-resume` worktree with all implementation, documentation, evidence and generated type outputs committed.
+The immutable closeout hash is reported in the task handoff after the final commit; a commit cannot contain its own hash.
 
-### 3. Long-run candidate-depletion fix
+### 3. Working-tree state
 
-Federal recruitment no longer waits for count time and does not use an emergency anonymous-candidate patch as its normal path. Before Assembly filing, it counts real valid filings, incumbents who actually seek reelection and command-layer-eligible challengers. It promotes enough existing Provincial Assembly politicians to keep every constituency's legitimate field larger than its seat count. Stable identity, age, geography, party/faction membership, biography, save persistence and later officeholding all survive promotion.
+The intended handoff is a clean worktree after implementation, generated type output, documentation, screenshots, and compact calibration artifacts are committed. No reset, clean, or destructive source discard was used.
 
-### 4. Party directory architecture
+### 4. Map architecture changes
 
-Party is an all-party master/detail workspace. It exposes government/opposition status, national and provincial representation, leader, factions, officeholders, nomination and leadership contests, election performance and recent public events. It no longer treats the player's party as the only institution or a multi-member Assembly result as one national winner.
+`PoliticalMapWorkspace` provides one map composition contract: layer controls, legend, canvas, hover tooltip, selected entity, compact inspector, and an optional full drawer. Terena, Economy, National Assembly, Governor, and Provincial Assembly election views reuse it; historical articles reuse the same result and replay primitives when geography exists.
 
-### 5. Caucus architecture
+### 5. Selection root fix
 
-National Assembly caucuses are derived from sitting members and kept separate from whole-party membership. Every represented party has a persisted floor leader, whip, selection date, next election date, priority bills and public bill recommendations. Provincial caucuses have their own named floor leaders and whips without duplicating the federal legislature engine.
+Click/tap/keyboard activation pins a small contextual card over the map without shrinking the canvas. Only **View full result** opens a larger drawer. Mobile uses the same compact card/bottom-drawer behavior. Additional cities in one province are fanned apart, and the real SVG circle owns the accessible action; the 390px production smoke independently selected Luren next to Gavren.
 
-### 6. Party leadership election rules
+### 6. Campaign map modes
 
-Vacancies trigger contests immediately. Otherwise, four-year January reviews beginning in 2029 can trigger a contest after low cohesion, a severe Assembly defeat or a deterministic challenge check. Up to four eligible non-player candidates enter automatically; the player must explicitly enter. The full party membership is the selectorate, ranked-choice resolution is deterministic, and every contest is archived.
+Campaign HQ offers Forecast, Polling, Ground Game, Previous Election, Activity, Spending, and Endorsements when public data exists. Each mode has a literal legend and maintains province/constituency selection context.
 
-### 7. Caucus election rules
+### 7. Geographic polling
 
-Represented Assembly parties elect floor leaders and whips after a general election, on a vacancy, after an eligible low-cohesion challenge, or after a four-year review that is itself politically triggered. A review that does not trigger a contest advances the next review date instead of producing calendar spam. Sitting caucus members are the selectorate. NPC candidates are ranked by role-relevant legislative, negotiating, loyalty and pragmatic attributes; the player is never auto-entered. Platforms, senior/caucus endorsements, named ballots, totals, winners, triggers and dates persist.
+Public polls support national, province, and selective constituency geography. Direct, sparse, and no-local-poll states are explicit, with publication date, sample, method, and margin of error. The system does not manufacture monthly polls for all 48 constituencies.
 
-### 8. Parliamentary leadership/whip architecture
+### 8. Public forecast
 
-The Speaker, party floor leaders, whips and committee chairs are distinct offices. Floor leaders and whips can set public caucus positions on bills; the command layer rejects outsiders. Committee chairs and rosters are reseeded from actual current members, and post-election Speaker selection excludes the player and anyone holding an incompatible active office.
+Forecast uses only observable polling, the prior certified election, public economy, incumbency, candidate standing, endorsements, campaign activity, and observable Ground Game. It labels Toss-up/Lean/Likely/Safe plus confidence and projects multi-member party seats rather than a fake two-party Assembly winner.
 
-### 9. Assembly chamber visualization
+### 9. Election Night spoiler fix
 
-The Assembly page renders all 420 authorized seats in a compact party-grouped semicircle. Selecting a seat opens the linked politician rather than creating 420 cards. Composition supports party totals, government/opposition reading and vacancies while current business and required votes remain more prominent than decorative geometry.
+Certified winner, majority, seat totals, and later RCV rounds remain behind the playback gate until the final truthful event or Instant. First viewing is labeled **Election Night**; history later offers **Replay Election Night**.
 
-### 10. Federal roll-call architecture
+### 10. Election Night map progression
 
-Federal votes persist each named member's yes/no/abstain/absent choice, party totals, threshold, result and public date. Bill detail, roll-call detail and politician voting records link to one another. Filters separate bill, treaty, war, censure, confirmation and constitutional votes, and only current authorized members can vote.
+Assembly constituencies and province races begin neutral and fill only as their immutable result events appear. Totals, completion counts, gain/hold language, and recent-result feed update from revealed events. Deterministic timing uses count complexity, magnitude, turnout, closeness, and bounded stable variation without changing results.
 
-### 11. Politician profile/directory architecture
+### 11. RCV animation
 
-One shared profile surface is reachable from linked names, global search, chamber seats, parties, courts, elections and office pages. It shows a natural display name and biography, geography, party/faction, current and former offices, election/campaign history, public standing, leadership record and filterable voting history. Generated politicians use the same model and never fall back to raw IDs as public names.
+Presidential bars resize and reorder from exact round totals; eliminations visibly exit, transfers and exhausted ballots are named, round state advances, and the elected threshold appears only in the truthful final round.
 
-### 12. Court bench visualization
+### 12. Historical election maps
 
-Courts presents the nine Constitutional Court seats as a bench with justice, vacancy and selected states, followed by the live docket and recent decisions. The design keeps the current case and required judicial action prominent instead of allowing empty procedural sections to dominate.
+Archived National Assembly, Governor, and Provincial Assembly elections retain actual historical maps, composition, turnout, and selection detail. Presidential history uses immutable national RCV because no geographic presidential returns are recorded.
 
-### 13. Court vote/opinion architecture
+### 13. Election Night replay
 
-Resolved cases persist every justice's vote, disposition, majority author, dissent author where applicable, holding and public opinion text. Federal-provincial disputes and provincial-law invalidations use the same judicial record. Qualification and precedent matter without turning justices into party robots.
+Compact presentation events are derived from immutable archives and reused by current and historical views. Final public poll/forecast observations remain separate from actual and certified results.
 
-### 14. Judicial eligibility/appointment redesign
+### 14. Dedicated Caucus pages
 
-The President's appointment browser lists only legally qualified candidates for a real vacancy and explains the public professional basis. Constitutional lawyers, public-law attorneys, appellate/lower-court judges and promoted provincial solicitors provide a renewable pool. Confirmation remains 252 of 420; professional record and institutional confidence permit cross-party confirmations while controversial nominees may still fail.
+Every ideological caucus has a stable workspace with identity, parent party, Chair, membership/share, public priorities, prominent members, recent votes, influence, endorsements, leadership term, contest, selectorate, eligibility, candidates, ballots, and history.
 
-### 15. Provincial Assembly model
+### 15. Party Leadership workflow
 
-Each of the 21 provinces has one unicameral lightweight Assembly with persisted members, party seat totals, Speaker, party floor leaders/whips, elections, public bills, named roll calls, Governor decisions and constitutional-ratification votes. It is deliberately not a second full federal government: there are no provincial cabinets, detailed budgets, taxes, committees or separate constitutions.
+Party pages expose the Party Leader separately from parliamentary and ideological offices, with selection method, electorate, next contest, candidates, endorsements, ranked ballots/rounds, result, and history. Player candidacy remains explicit.
 
-### 16. Provincial Assembly sizes
+### 16. Assembly Delegation leadership workflow
 
-Chambers scale by canonical population/electorate weight using a bounded square-root rule. The smallest has 25 seats, the largest 65, and all 21 chamber totals are validated after elections and save/reload. Formal run median total: `{{PROVINCIAL_SEATS_MEDIAN}}` seats nationwide.
+Each represented party's Assembly Delegation has distinct Floor Leader and Whip selection, triggers, platforms, ballots, and history. Player-facing copy no longer calls the parliamentary group an “Assembly caucus.”
 
-### 17. Provincial election system
+### 17. Caucus Leadership workflow
 
-Provincial Assembly elections recur every four years and use deterministic provincewide party-list proportional allocation with largest remainders and stable final tie-breaks. Candidates and winners remain named political actors. An eligible player must explicitly file or decline; no monthly AI decision can run the player.
+The ideological Caucus Chair contest uses caucus membership as its selectorate, displays eligibility and endorsements, resolves by ranked choice, archives the result, and never auto-enters the player.
 
-### 18. Lightweight provincial-politician architecture
+### 18. Assembly layout and leadership changes
 
-Provincial legislators have stable IDs, unique public names, short rule-based biographies, birth year, province, party/faction, standing, legislative/campaign skills, ambition and service history. Non-winners remain in the province's renewable political pool. This provides visible careers without giving every local figure the full national agent footprint.
+Speaker, Floor Leaders, Whips, current bill, next votes, floor agenda, and recent vote are visible before a smaller 420-seat chamber at 1440, 1200, and 900 pixels. The chamber remains keyboard-selectable but no longer dominates the first screen.
 
-### 19. National-politician promotion architecture
+### 19. Global Required Decisions cleanup
 
-Promotion upgrades an existing provincial figure into a complete `PoliticianRuntime` and synthetic agent profile while retaining home province, party/faction, name, description and prior service. Promotion occurs before federal filing based on actual supply needs or career opportunity, not after a count fails. The full politician can then run, campaign, hold office, lead a party and enter later elections normally.
+Home and Office retain the full actionable queue. Other pages show a compact pending-count control that opens the queue rather than rendering unrelated decisions at the top of every screen.
 
-### 20. Governor legislative process
+### 20. Remaining UI-shell changes
 
-Provincial Assemblies introduce bounded measures in areas consistent with Governor authority. Members cast recorded final votes; a passed bill goes to the Governor. NPC Governors sign or veto from public policy and political context. A player Governor receives an explicit command decision and inaction never becomes an invented affirmative choice.
+Role-aware Home/Office/Career, stable global focus, entity navigation, compact tables, master/detail layouts, institution-specific visual grammar, honest limited-role labels, and material-action confirmations complete the ordinary-gameplay pass. New Game features only full-depth roles while keeping Mayor and Minister searchable as Limited.
 
-### 21. Provincial veto/override rule
+### 21. Legacy policy-helper retirement
 
-A Governor may sign or veto a passed provincial bill. A veto returns it to the chamber, where at least two-thirds of authorized seats is required to override. Signed or overridden measures become provincial law; failed overrides are archived with the named roll call.
+All 50 provision definitions use 161 policy-specific alternatives; no authored low/middle/high option remains. Read-time aliases preserve schema-13 development saves, but new writes canonicalize to the real policy option ID. Policies carry independent fiscal, capacity, wage, housing, regional, institutional, liberty, environment, and service tradeoffs.
 
-### 22. Federal–provincial Court integration
+### 22. Constitutional semantic/runtime architecture
 
-Provincial laws and Governor/federal conflicts can create Constitutional Court disputes. The Court may uphold or invalidate a provincial law and records named votes and opinions. The UI links the case to its province and affected law while exposing public holdings rather than hidden judicial utility.
+Amendments carry structured intent, clause target, current/proposed legal text, political difficulty, and modeled/text-only reach. Supported changes alter live Assembly term, presidential term-limit, Court term, and provincial veto-override rules only after 280 federal votes and 13 of 21 Provincial Assemblies; unsupported powers are not presented as simulated consequences.
 
-### 23. Constitutional amendment procedure
+### 23. News redesign
 
-An amendment requires at least 280 votes in the 420-seat National Assembly, followed by ratification in at least 13 of 21 Provincial Assemblies. The President has no sign, veto or ratification role. Lorsain v1 has no invented universal ratification deadline; a proposal may carry one only if a future authorized rule supplies it. Province scheduling is deterministically rotated by amendment-specific hash rather than always starting with the first province IDs.
+News is outlet-driven: a lead and secondary-event front page groups coverage around underlying public facts, shows the number of outlets, and offers Read/Compare Coverage. Article facts come from a public payload whitelist while outlet framing remains visibly separate.
 
-### 24. Constitutional rules made dynamically amendable
+### 24. History Wiki expansion
 
-Supported runtime rules are Assembly term years, presidential term limit, Court term years and the legislative veto-override fraction. Elections, opportunities, office transitions and override votes read the live constitutional rule store rather than stale 2028 constants. Presidential term length, gubernatorial terms, Court size and deeper constitutional rewrites remain unsupported and are not presented as amendable choices.
+The Wiki links years, politicians, parties, caucuses, provinces, administrations, laws, amendments, Court cases, elections, treaties, conflicts, and economic periods. Year articles use type-specific sections and article-specific contents rather than a universal event dump.
 
-### 25. Federal bill/provision redesign
+### 25. GitHub Pages root cause
 
-Bills contain one to three concrete legal provisions, with only one required. Each provision displays current law, proposed law, named alternatives, fiscal direction and estimated public metric effects. Deterministic editorial title templates produce ordinary legislative names and summaries; NPC bills no longer surface IDs or phrases such as “moderate on …”.
+The live URL was still a branch-source Phase 10 site. The first explicit Pages workflow run for `08a1086` failed in `pnpm build` on an exact-optional property type in the polling layer, while GitHub's dynamic branch-source Pages job succeeded and continued publishing the old site. The type error is fixed in the closeout source.
 
-### 26. Ordinary amendment redesign
+### 26. Vite/base-path fix
 
-An ordinary amendment targets one existing provision and substitutes one valid named legal option. It does not replace the bill with a broad ideology slider. Version history records proposer, date, old option, new option and resulting bill text; invalid targets, duplicate current-law choices and unauthorized commands reject safely.
+Vite uses `/Lorsain-project/` in GitHub Actions or when `VITE_BASE_PATH` is supplied, while local development remains `/`. Entry, CSS, dynamic chunks, map/content imports, and module-Worker URLs build beneath the base. QA fixture serving remains development-only.
 
-### 27. Number of major policy provisions/options added
+### 27. Pages deployment workflow
 
-There are 50 major provision categories and 161 named legal options. Each category has two to five alternatives, including asymmetrical institutional choices rather than a universal less/same/more scale. Persisted option IDs are policy-specific (for example, `national_protection`) rather than universal `low/current/high`; schema-13 development saves can read the old aliases and canonicalize all new writes.
+`.github/workflows/pages.yml` checks out source, installs pinned pnpm/Node, builds the workspace with the repository base, configures Pages, uploads `apps/game/dist`, and deploys with official actions and correct permissions/concurrency. Repository Pages Source must be set to **GitHub Actions** before publication.
 
-### 28. Organizations redesign
+### 28. Production-build smoke result
 
-Organizations respond to votes, sponsorship, enactment, signature, veto and campaign behavior through separate affinity, trust and policy-alignment dimensions. Meetings provide a small bounded relationship change rather than a primary grinding strategy. Endorsements require a live political basis and are publicly withdrawn when the campaign ends or the relationship collapses.
+The Pages-style `/Lorsain-project/` build rendered with CSS/JS, title, New Game, Governor Home/Office, navigation, map hover/selection/drawer, Worker-driven End Turn, explicit save, reload, and Continue. Direct reopen returns the app because navigation is state/query based rather than browser-path routing. No QA fixture server was used.
 
-### 29. Organization scorecard architecture
+### 29. Real deployed-site result
 
-The public scorecard shows relationship tier, trust, alignment, recent recorded interactions, issues, current activity and endorsement status without exposing hidden utility. It links relevant politicians, bills and campaigns. Geographic data is shown only where a legitimate public basis exists; the fake neutral organization map mode remains removed.
+The public URL returned HTTP 200 but still served the older Phase 10 site during closeout. It is not claimed as the current build. Publishing the closeout commit after selecting GitHub Actions remains the external release action; see `GITHUB_PAGES_DEPLOYMENT.md`.
 
-### 30. Ground Game terminology/presentation
+### 30. Worker production test
 
-Player-facing campaign copy uses Ground Game for campaign field infrastructure. The Campaign command center distinguishes national infrastructure, provincial strength and constituency strength, with recent visits, actions, resources and map selection in one workflow. It does not present normalized internal decimals as a vague “organization” stat.
+The Pages-style build loaded the emitted turn Worker beneath the repository base, showed the legitimate Processing state, prevented double-run, and advanced January to February 2028. The election Worker result is recorded in the final production-browser pass.
 
-### 31. Ground Game balance
+### 31. Save/reload production test
 
-National actions distribute small deterministic effects across real geography, province actions create weighted local spillover, constituency actions stay focused, and inactive field strength decays slowly rather than vanishing or remaining permanently maxed. Calibration confirms no sorted-ID C001–C004 preference and meaningful province/constituency spread: `{{CAMPAIGN_BALANCE_SUMMARY}}`.
+A new Ana Mirev Governor career advanced to February 2028, saved through the real game control, reloaded from the production URL, and returned on the title screen as a one-month career dated 2028-02-01. No development fixture participated.
 
-### 32. New public economic metrics
+### 32. New-player QA
 
-Economy now emphasizes real growth, employment rate, CPI inflation, real-wage change, housing pressure, confidence and fiscal pressure while retaining internal indices for simulation. National, sector and province history distinguishes monthly, 12-month and longer movement; shocks and policy explanations remain public without exposing formulas.
+The real production path exercised Title → New Game → role roster → Governor Home → Office/navigation → map → End Turn → save/reload. Existing current-source fixture QA covers Assembly, Party, first decisions, Campaign, and election workflows without giant onboarding prose.
 
-### 33. Map inspector redesign
+### 33. Role-transition QA
 
-The Terena and World maps use a compact pinned inspector so geography remains the primary surface. Hover is temporary, click/tap/keyboard selection persists, mouse leave clears only hover, tooltips are mode-specific and hidden voter truth is never shown. Election, Campaign and Economy modes read actual named data; the false Organizations mode is absent.
+Tests and replay fixtures cover MP/Speaker incompatibility, Governor-to-presidential opportunity, candidate win/loss, Party Leader + MP, Caucus Chair + MP, Provincial Assembly promotion, justice duty, and former-officeholder continuation. Concurrent labels do not imply Party Leader = Floor Leader or Caucus Chair = Party Leader.
 
-### 34. Political Calendar
+### 34. Repeated-bug regression tests
 
-The calendar is a reusable panel rather than another permanent sidebar destination. It groups filing openings/deadlines, elections, assumptions, party/caucus leadership contests, legislative decisions, Court work and any authorized proposal-specific constitutional deadline, with role relevance and linked destinations.
+Focused tests protect compact map selection, nonblank certified/historical maps, campaign modes, real caucus routing, Election Night spoiler gates/report order, first-screen Assembly hierarchy, role terminology, policy IDs, constitutional behavior, authority, certification/recount, and meaningful provincial leadership history.
 
-### 35. Global search/profile navigation
+### 35. Current performance
 
-The command palette searches politicians, parties, provinces, constituencies, bills, elections, organizations and Court cases. Results navigate to the correct page and selected detail where possible. Linked names across institutional screens use the same profile navigation model.
+Current 600-month telemetry: median monthly turn `{{MEDIAN_TURN_MS}} ms`, p95 `{{P95_TURN_MS}} ms`, and maximum `{{MAX_TURN_MS}} ms`. Heavy turn and national election counts remain off the main interface Worker. Production main bundle is about 11.3 MB before gzip (2.58 MB gzip); route/data splitting is Phase 11.5 release engineering.
 
-### 36. UI before/after architecture
+### 36. Save sizes
 
-V5's repeated dashboard-card grammar is replaced by V6 role workbenches, dense master/detail layouts, split panes, entity rows, chamber/bench visualizations, compact tables, timelines, maps and drawers. Navigation remains role-aware: Home briefs the current politician, Office hosts current authority, Career handles identity/opportunities, and informational national institutions remain accessible. The full comparison is in `docs/PHASE_11_3_UI_BEFORE_AFTER.md`; rules are in `docs/UI_SYSTEM_V6.md`.
+Current schema-18 seed `P113-WG-000`: start `{{SAVE_0}}`, 1 year `{{SAVE_12}}`, 4 years `{{SAVE_48}}`, 10 years `{{SAVE_120}}`, 25 years `{{SAVE_300}}`, and 50 years `{{SAVE_600}}`. Section-level attribution is stored in the current shard. Growth is large and roughly linear rather than an accidental duplicated snapshot explosion; immutable archive compaction remains release work.
 
-### 37. Screenshots
+### 37. Deterministic 1×600
 
-Thirty-seven asserted running-browser JPEG captures are stored in `docs/qa/phase11_3/screenshots/`, with the fixture/assertion contract and decoded dimensions in `docs/qa/phase11_3/browser-qa-manifest.json`. They cover the 420-seat chamber, bill and committee details, federal/provincial roll calls, politician profile/record, amendment tracker, Court bench/decision/appointment, party/caucus politics, Governor play, Ground Game, economy/maps, calendar/search and required 1440/1200/900/600/390 responsive states. The browser console remained free of warnings and errors through the final role/map pass.
+`P113-WG-000` completed 600/600 months to 2078-01-01 with hash `{{FINAL_HASH}}`. A separate midpoint-save/reload path produced `{{SEGMENTED_HASH}}`; continuous versus segmented match = `{{DETERMINISM_MATCH}}`. Runs with execution errors: `{{RUN_ERRORS}}`; catastrophic failures: `{{CATASTROPHIC}}`.
 
-### 38. Full calibration sample size
+### 38. 10×600 / 25×600 result
 
-`{{RUNS_COMPLETED}}` independent deterministic seeds × 600 months = `{{MONTHS_TOTAL}}` simulated months, plus seed-0 continuous/continuous and continuous/save-reload comparisons. This is the real monthly engine, not a reduced election-only model.
+Not rerun. One current-source 600-month seed takes roughly 26 minutes and produces a roughly 75 MiB save; multiplying that before the explicitly deferred release soak was not practical or proportionate after the deterministic run and controlled mechanic tests. The 100×600 monster soak remains Phase 11.5.
 
-### 39. Catastrophic invariant failure rate
+### 39. Strict invariant failures
 
-`{{CATASTROPHIC_FAILURES}}` catastrophic invariant failures across `{{RUNS_COMPLETED}}` completed runs: `{{CATASTROPHIC_RATE}}`. Runs with execution errors: `{{RUN_ERRORS}}`.
+`{{STRICT_FAILURES}}` strict-v1 failures across the completed current-source 600-month run. Candidate-shortage events: `{{CANDIDATE_SHORTAGES}}`; active Governors at end: `{{ACTIVE_GOVERNORS}}`; generated-person quality errors/warnings: `{{PERSON_ERRORS}}` / `{{PERSON_WARNINGS}}`.
 
-### 40. Candidate-generation statistics
+### 40. Genuine remaining blockers
 
-Median Provincial-to-national promotions: `{{PROMOTIONS_MEDIAN}}` per run; median generated national politicians: `{{GENERATED_NATIONAL_MEDIAN}}`; total candidate-shortage events: `{{CANDIDATE_SHORTAGE_SUM}}`. Fields are generated before filing from renewable provincial careers rather than patched at count time.
+No known code or deterministic-simulation blocker remains. Public release is not yet current: the repository owner must select GitHub Actions as Pages Source and publish the closeout commit, then the public URL must be retested.
 
-### 41. Party leadership turnover statistics
+### 41. Nonblocking deferred items
 
-Median party-leadership contests: `{{PARTY_CONTESTS_MEDIAN}}` per 50-year run; median faction-chair contests: `{{FACTION_CONTESTS_MEDIAN}}`. Vacancies, low cohesion, severe losses and recurring review can all cause turnover.
+- Phase 11.4: richer biographies, news prose, tutorials, flavor events, and worldbuilding variety.
+- Phase 11.5: public-deployment retest, route/data splitting, immutable-save compaction, automated visual-diff CI, and the 100×600 release soak.
+- Mayor/Minister remain truthfully Limited; municipal legislatures and ministry portfolio simulators are outside v1.
+- Later-cycle nomination totals can take seconds of Worker time, but the browser remains responsive.
 
-### 42. Caucus turnover statistics
+### 42. Phase 11.3 acceptance
 
-Median national caucus floor-leader/whip contests: `{{CAUCUS_CONTESTS_MEDIAN}}` per run. Contests follow general elections, vacancies, low-cohesion challenges and politically triggered four-year reviews, with explicit player entry.
+`{{PHASE_STATUS}}`
 
-### 43. Provincial legislative/election statistics
-
-Median per run: `{{PROV_ELECTIONS_MEDIAN}}` Provincial Assembly elections, `{{PROV_LEADERSHIP_MEDIAN}}` provincial leadership elections, `{{PROV_BILLS_MEDIAN}}` bills introduced and `{{PROV_LEGISLATORS_MEDIAN}}` persisted provincial politicians. Chamber totals remained within 25–65 seats and valid after every completed run.
-
-### 44. Governor legislative statistics
-
-Median per run: `{{PROV_SIGNED_MEDIAN}}` provincial bills signed, `{{PROV_VETO_MEDIAN}}` vetoed and `{{PROV_OVERRIDE_MEDIAN}}` vetoes overridden. The 21 Governors also continued through recurring provincewide elections; aggregate Governor races: `{{GOV_RACES}}`.
-
-### 45. Constitutional amendment statistics
-
-Median proposed per run: `{{CONST_PROPOSED_MEDIAN}}`; total ratified: `{{CONST_RATIFIED_SUM}}`; median failed: `{{CONST_FAILED_MEDIAN}}`. Every adopted amendment satisfied both federal and provincial thresholds. No proposal expired under an invented universal deadline because v1 has none.
-
-### 46. Federal legislative statistics
-
-Median per run: `{{FED_BILLS_MEDIAN}}` bills introduced, `{{FED_ENACTED_MEDIAN}}` enacted/signed and `{{FED_RETURNED_MEDIAN}}` returned by the President. Bills retain concrete provisions, versions, committees and named roll calls through the full horizon.
-
-### 47. Organization relationship statistics
-
-The neutral long-run harness takes no proactive player meetings, so its organization-action statistic is reported separately from controlled behavior tests: median actions `{{ORG_ACTIONS_MEDIAN}}`, median persisted public relationships `{{ORG_RELATIONSHIPS_MEDIAN}}`, total active/historical endorsements at run end `{{ORG_ENDORSEMENTS_SUM}}`. Regression tests prove a meeting adds only 0.015 affinity, no more than two meetings may occur in a month, policy behavior drives trust/alignment, and obsolete endorsements withdraw.
-
-### 48. Career-mobility/generational statistics
-
-The harness samples 24 canonical careers per run and records every office transition. Across the full matrix, median promotions were `{{PROMOTIONS_MEDIAN}}` and median full national politicians generated from the renewable class were `{{GENERATED_NATIONAL_MEDIAN}}`; the sampled transition total was `{{CAREER_TRANSITIONS_SUM}}`. Median NPC retirements/deaths were `{{RETIREMENTS_MEDIAN}}` / `{{DEATHS_MEDIAN}}`; median original politicians still active in 2078 were `{{ACTIVE_ORIGINAL_MEDIAN}}`, and mean active political age was `{{ACTIVE_AGE_MEDIAN}}`. Provincial service, Assembly, Governor, leadership, Court and presidential routes remain connected over fifty years.
-
-### 49. Economic-cycle statistics
-
-Across the matrix, median 50-year output-index change was `{{OUTPUT_DELTA_MEDIAN}}`, median output sign changes `{{OUTPUT_SIGN_CHANGES_MEDIAN}}`, median direction changes `{{OUTPUT_DIRECTION_CHANGES_MEDIAN}}` and median provincial ranking churn `{{RANKING_CHURN_MEDIAN}}`. Dedicated economic calibration: `{{ECONOMY_CALIBRATION_SUMMARY}}`. No canonical start is flat at 100 and the model exhibits cycles rather than pure random walk or universal reversion.
-
-### 50. Campaign balance
-
-Dedicated campaign-geography calibration completed with `{{CAMPAIGN_CALIBRATION_STATUS}}`. National actions do not select C001–C004, province actions remain weighted by local geography, targeted actions are stronger locally, and bounded decay prevents both instant disappearance and permanent maximum organization.
-
-### 51. Performance before/after
-
-Formal matrix median-of-run median turn time: `{{MEDIAN_TURN_MS}} ms`; median-of-run p95: `{{P95_TURN_MS}} ms`; maximum observed: `{{MAX_TURN_MS}} ms`. The Assembly Worker is preserved. Nomination-heavy turns use the off-main turn Worker with a truthful indeterminate state and double-run guard, so multi-second later-cycle work does not freeze the browser.
-
-### 52. Save-size growth
-
-Median final schema-14 save after 600 months: `{{FINAL_SAVE_BYTES}}` bytes (`{{FINAL_SAVE_MIB}} MiB`); minimum `{{FINAL_SAVE_MIN_BYTES}}`, maximum `{{FINAL_SAVE_MAX_BYTES}}`. Schema migration preserves player/date/history and deterministically seeds new structural fields without fabricating past events.
-
-### 53. Deterministic save/reload results
-
-Seed `{{DETERMINISM_SEED}}`: continuous-versus-continuous match `{{DUAL_MATCH}}`; continuous-versus-midpoint-save/reload match `{{RELOAD_MATCH}}`. Final hashes: `{{DETERMINISM_HASHES}}`. The targeted former candidate-shortage seed is `P113-WG-000`, the exact archived run that previously failed near month 358.
-
-### 54. Remaining BLOCKERS
-
-`{{BLOCKERS}}`
-
-### 55. Genuinely NONBLOCKING debt for 11.4/11.5
-
-- Later-cycle nomination counts can still consume multiple seconds of Worker time as the political population grows, although the UI remains responsive.
-- The production client bundle remains large because canonical geography/content is bundled; route/data splitting is release engineering for 11.5.
-- Manual responsive browser evidence exists, but automated screenshot-diff CI does not.
-- Mayor and Minister are truthfully labeled limited roles; full municipal legislatures and ministry portfolio games are outside v1.
-- Detailed provincial election canon can later replace the documented v1 proportional abstraction without discarding the institutional layer.
-- Richer biographies, news prose, tutorials and content variety belong to 11.4.
-
-### 56. Additional ideas for post-11.5 reassessment
-
-After the release-candidate decision, reassess optional code-split geography, searchable case-law reporters, partial statutory invalidation, coalition/caucus negotiation depth, office-specific ministry portfolios, data-backed organization geography and a larger authored provincial-politician name pool. Detailed local budgets, taxes, cabinets, municipal councils and production chains should remain separate expansion decisions rather than stealth v1 scope.
-
-### 57. STOP
-
-Phase 11.3 stops here. Phase 11.4 has not begun.
+STOP. Phase 11.4 has not begun.

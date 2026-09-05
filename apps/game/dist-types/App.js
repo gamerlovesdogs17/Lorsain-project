@@ -8,13 +8,26 @@ import { playerCampaign, playerOffices, politicianName, publicStandingLabel } fr
 import { GamePages } from "./pages.js";
 import { DecisionPanel } from "./decisions.js";
 import { useCommandFeedback } from "./feedback.js";
-import { catalogFromBundle, eventDisplay, partyColor, partyDisplayName, politicianDisplayName } from "./presentation.js";
-import { GameShell } from "./ui/shell.js";
+import { catalogFromBundle, eventDisplay, partyColor, partyDisplayName, politicianDisplayName, } from "./presentation.js";
+import { GameShell, } from "./ui/shell.js";
 import { StatusBadge } from "./ui/kit.js";
 import { PoliticianAvatar, PoliticianCard } from "./ui/politician.js";
 const QA_SCREENS = new Set([
-    "home", "career", "office", "assembly", "party", "campaign", "elections", "executive",
-    "courts", "economy", "organizations", "news", "foreign", "terena", "archive",
+    "home",
+    "career",
+    "office",
+    "assembly",
+    "party",
+    "campaign",
+    "elections",
+    "executive",
+    "courts",
+    "economy",
+    "organizations",
+    "news",
+    "foreign",
+    "terena",
+    "archive",
 ]);
 function monthsBetween(startDate, endDate) {
     return Math.max(0, (Number(endDate.slice(0, 4)) - Number(startDate.slice(0, 4))) * 12 +
@@ -52,13 +65,23 @@ function qaScreen(value) {
 function routeFromHash() {
     if (typeof window === "undefined")
         return { screen: "home", focus: null };
-    const parts = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+    const parts = window.location.hash
+        .replace(/^#\/?/, "")
+        .split("/")
+        .filter(Boolean)
+        .map(decodeURIComponent);
     const screen = QA_SCREENS.has(parts[0]) ? parts[0] : "home";
     if (parts.length < 3)
         return { screen, focus: null };
     const kinds = {
-        politician: "Politician", party: "Party", caucus: "Caucus", province: "Province",
-        constituency: "Constituency", election: "Election", bill: "Bill", organization: "Organization",
+        politician: "Politician",
+        party: "Party",
+        caucus: "Caucus",
+        province: "Province",
+        constituency: "Constituency",
+        election: "Election",
+        bill: "Bill",
+        organization: "Organization",
         "court-case": "Court case",
     };
     const kind = kinds[parts[1].toLowerCase()];
@@ -99,7 +122,9 @@ export default function App() {
             return [];
         try {
             const raw = JSON.parse(window.localStorage.getItem("lorsain-watchlist") ?? "[]");
-            return Array.isArray(raw) ? raw.filter((value) => typeof value === "string") : [];
+            return Array.isArray(raw)
+                ? raw.filter((value) => typeof value === "string")
+                : [];
         }
         catch {
             return [];
@@ -128,18 +153,29 @@ export default function App() {
                     .then(async (response) => {
                     if (!response.ok)
                         throw new Error(`Browser QA fixture ${fixture} was not found.`);
-                    return await response.json();
+                    return (await response.json());
                 })
                     .then((save) => {
                     const player = save.simulation.politicians[save.simulation.playerPoliticianId];
                     const figureName = bundle?.content.starting_figures.figures?.find((figure) => figure.id === save.simulation.playerPoliticianId)?.name;
-                    setSaves([{ id: `qa-title:${fixture}`, name: `Career of ${figureName ?? player?.displayName ?? save.simulation.playerPoliticianId}`, savedAt: `${save.simulation.currentDate}T18:00:00.000Z`, playerName: figureName ?? player?.displayName ?? save.simulation.playerPoliticianId, date: save.simulation.currentDate, save }]);
+                    setSaves([
+                        {
+                            id: `qa-title:${fixture}`,
+                            name: `Career of ${figureName ?? player?.displayName ?? save.simulation.playerPoliticianId}`,
+                            savedAt: `${save.simulation.currentDate}T18:00:00.000Z`,
+                            playerName: figureName ?? player?.displayName ?? save.simulation.playerPoliticianId,
+                            date: save.simulation.currentDate,
+                            save,
+                        },
+                    ]);
                 })
                     .catch(() => setSaves([]));
                 return;
             }
         }
-        void listSaves().then(setSaves).catch(() => setSaves([]));
+        void listSaves()
+            .then(setSaves)
+            .catch(() => setSaves([]));
     }, [bundle, world]);
     useEffect(() => {
         if (!import.meta.env.DEV || !world || qaBooted.current)
@@ -153,7 +189,7 @@ export default function App() {
             .then(async (response) => {
             if (!response.ok)
                 throw new Error(`Browser QA fixture ${fixture} was not found.`);
-            return await response.json();
+            return (await response.json());
         })
             .then((save) => {
             const playerId = params.get("qaPlayer");
@@ -210,30 +246,67 @@ export default function App() {
         if (!world || !snap || !catalog)
             return [];
         const pages = [
-            ["home", "Home", "Current political briefing"], ["career", "Political opportunities", "Career and politician directory"],
-            ["party", "Parties and caucuses", "Leadership and internal politics"], ["campaign", "Campaign", "Race command center and Ground Game"],
-            ["elections", "Elections and calendar", "Presidential, Assembly and provincial races"], ["assembly", "National Assembly", "Bills, committees and roll calls"],
-            ["executive", "Executive", "President, cabinet and administration"], ["courts", "Constitutional Court", "Bench, docket and decisions"],
-            ["economy", "Economy", "Public national and regional indicators"], ["organizations", "Organizations", "Influence, priorities and scorecards"],
-            ["foreign", "Foreign Affairs", "World relations and crises"], ["terena", "Maps", "Political, election and economic geography"],
-            ["news", "News", "Political news desk"], ["archive", "History of Terena", "Political encyclopedia and election archive"],
+            ["home", "Home", "Current political briefing"],
+            ["career", "Political opportunities", "Career and politician directory"],
+            ["party", "Parties and caucuses", "Leadership and internal politics"],
+            ["campaign", "Campaign", "Race command center and Ground Game"],
+            ["elections", "Elections and calendar", "Presidential, Assembly and provincial races"],
+            ["assembly", "National Assembly", "Bills, committees and roll calls"],
+            ["executive", "Executive", "President, cabinet and administration"],
+            ["courts", "Constitutional Court", "Bench, docket and decisions"],
+            ["economy", "Economy", "Public national and regional indicators"],
+            ["organizations", "Organizations", "Influence, priorities and scorecards"],
+            ["foreign", "Foreign Affairs", "World relations and crises"],
+            ["terena", "Maps", "Political, election and economic geography"],
+            ["news", "News", "Political news desk"],
+            ["archive", "History of Terena", "Political encyclopedia and election archive"],
         ];
-        const entries = pages.map(([screen, label, detail]) => ({ id: screen, kind: "Page", label, detail, screen }));
+        const entries = pages.map(([screen, label, detail]) => ({
+            id: screen,
+            kind: "Page",
+            label,
+            detail,
+            screen,
+        }));
         for (const politician of Object.values(snap.politicians)) {
             if (!politician.alive)
                 continue;
-            entries.push({ id: politician.id, kind: "Politician", label: politicianDisplayName(catalog, politician.id), detail: partyDisplayName(world, politician.partyId, snap), screen: "career" });
+            entries.push({
+                id: politician.id,
+                kind: "Politician",
+                label: politicianDisplayName(catalog, politician.id),
+                detail: partyDisplayName(world, politician.partyId, snap),
+                screen: "career",
+            });
         }
         for (const partyId of Object.keys(world.partyDefinitions)) {
             if (partyId === world.independentAggregatePartyId)
                 continue;
-            entries.push({ id: partyId, kind: "Party", label: partyDisplayName(world, partyId, snap), detail: "Leadership, caucus and electoral record", screen: "party" });
+            entries.push({
+                id: partyId,
+                kind: "Party",
+                label: partyDisplayName(world, partyId, snap),
+                detail: "Leadership, caucus and electoral record",
+                screen: "party",
+            });
         }
         for (const faction of Object.values(world.factionDefinitions)) {
-            entries.push({ id: faction.factionId, kind: "Caucus", label: faction.name, detail: partyDisplayName(world, faction.partyId, snap), screen: "party" });
+            entries.push({
+                id: faction.factionId,
+                kind: "Caucus",
+                label: faction.name,
+                detail: partyDisplayName(world, faction.partyId, snap),
+                screen: "party",
+            });
         }
         for (const provinceId of world.provinceIds) {
-            entries.push({ id: provinceId, kind: "Province", label: catalog.places.get(provinceId)?.name ?? "Province", detail: "Governor, Assembly and regional statistics", screen: "terena" });
+            entries.push({
+                id: provinceId,
+                kind: "Province",
+                label: catalog.places.get(provinceId)?.name ?? "Province",
+                detail: "Governor, Assembly and regional statistics",
+                screen: "terena",
+            });
         }
         for (const constituencyId of Object.keys(world.constituencyElectorate).sort()) {
             const place = catalog.places.get(constituencyId);
@@ -246,31 +319,71 @@ export default function App() {
             });
         }
         for (const organization of Object.values(world.interestOrganizations)) {
-            entries.push({ id: organization.id, kind: "Organization", label: organization.name, detail: organization.type, screen: "organizations" });
+            entries.push({
+                id: organization.id,
+                kind: "Organization",
+                label: organization.name,
+                detail: organization.type,
+                screen: "organizations",
+            });
         }
         for (const election of Object.values(snap.elections)) {
-            entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${election.type === "assembly" ? "National Assembly" : "presidential"} election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
+            entries.push({
+                id: election.id,
+                kind: "Election",
+                label: `${election.date.slice(0, 4)} ${election.type === "assembly" ? "National Assembly" : "presidential"} election`,
+                detail: election.status.replace(/_/g, " "),
+                screen: "elections",
+            });
         }
         for (const election of Object.values(snap.provincialRuntime.elections)) {
             const province = catalog.places.get(election.provinceId)?.name ?? "Province";
-            entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${province} gubernatorial election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
+            entries.push({
+                id: election.id,
+                kind: "Election",
+                label: `${election.date.slice(0, 4)} ${province} gubernatorial election`,
+                detail: election.status.replace(/_/g, " "),
+                screen: "elections",
+            });
         }
         for (const election of Object.values(snap.provincialRuntime.assemblyElections)) {
             const province = catalog.places.get(election.provinceId)?.name ?? "Province";
-            entries.push({ id: election.id, kind: "Election", label: `${election.date.slice(0, 4)} ${province} Assembly election`, detail: election.status.replace(/_/g, " "), screen: "elections" });
+            entries.push({
+                id: election.id,
+                kind: "Election",
+                label: `${election.date.slice(0, 4)} ${province} Assembly election`,
+                detail: election.status.replace(/_/g, " "),
+                screen: "elections",
+            });
         }
         for (const bill of Object.values(snap.legislatureRuntime.bills)) {
-            entries.push({ id: bill.id, kind: "Bill", label: bill.title, detail: bill.status.replace(/_/g, " "), screen: "assembly" });
+            entries.push({
+                id: bill.id,
+                kind: "Bill",
+                label: bill.title,
+                detail: bill.status.replace(/_/g, " "),
+                screen: "assembly",
+            });
         }
         for (const courtCase of Object.values(snap.constitutionalRuntime.courtCases)) {
-            entries.push({ id: courtCase.id, kind: "Court case", label: courtCase.constitutionalQuestion, detail: courtCase.status.replace(/_/g, " "), screen: "courts" });
+            entries.push({
+                id: courtCase.id,
+                kind: "Court case",
+                label: courtCase.constitutionalQuestion,
+                detail: courtCase.status.replace(/_/g, " "),
+                screen: "courts",
+            });
         }
         return entries;
     }, [world, snap, catalog]);
     useEffect(() => {
-        if (mode !== "play" || import.meta.env.DEV && new URLSearchParams(window.location.search).has("qaFixture"))
+        if (mode !== "play" ||
+            (import.meta.env.DEV && new URLSearchParams(window.location.search).has("qaFixture")))
             return;
-        const focusForScreen = globalFocus && searchEntries.some((entry) => entry.screen === screen && entry.kind === globalFocus.kind && entry.id === globalFocus.id) ? globalFocus : null;
+        const focusForScreen = globalFocus &&
+            searchEntries.some((entry) => entry.screen === screen && entry.kind === globalFocus.kind && entry.id === globalFocus.id)
+            ? globalFocus
+            : null;
         const next = routeHash(screen, focusForScreen);
         if (window.location.hash !== next)
             window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${next}`);
@@ -294,6 +407,8 @@ export default function App() {
             seed: "TERENA-2028",
         });
         setTurnEvents([]);
+        setGlobalFocus(null);
+        setSelectedBill(null);
         setScreen("home");
         setMode("play");
         refresh(created);
@@ -487,14 +602,26 @@ export default function App() {
     if (mode === "title") {
         const latest = saves[0] ?? null;
         const latestSummary = latest ? savedGamePoliticalSummary(world, latest) : null;
-        return (_jsxs("div", { className: "political-title-screen", children: [_jsxs("section", { className: "title-masthead", "aria-labelledby": "lorsain-title", children: [_jsx("div", { className: "title-seal", "aria-hidden": "true", children: "L" }), _jsxs("div", { className: "title-wordmark", children: [_jsx("span", { children: "THE POLITICAL LIFE OF TERENA" }), _jsx("h1", { id: "lorsain-title", children: "LORSAIN" }), _jsx("p", { children: "Govern, legislate, campaign and build a public life in the Dual-Mandate Republic." })] }), _jsxs("div", { className: "title-founding-line", children: [_jsx("span", { children: "Republic founded 1971" }), _jsx("span", { children: "January 2028 scenario" })] })] }), _jsxs("section", { className: "title-political-desk", children: [latest && latestSummary ? (_jsxs("article", { className: "continue-dossier", children: [_jsx("div", { className: "kicker", children: "Continue political career" }), _jsxs("div", { className: "continue-dossier-head", children: [_jsxs("div", { children: [_jsx("h2", { children: latest.playerName }), _jsx("p", { children: latestSummary.office })] }), _jsx("time", { children: latest.date })] }), _jsxs("div", { className: "continue-party-line", children: [_jsx("span", { className: "continue-party-mark", style: { background: partyColor(world, latest.save.simulation.politicians[latest.save.simulation.playerPoliticianId]?.partyId ?? null) } }), _jsx("strong", { children: latestSummary.party })] }), _jsxs("dl", { className: "continue-dossier-facts", children: [_jsxs("div", { children: [_jsx("dt", { children: "Political context" }), _jsx("dd", { children: latestSummary.context })] }), _jsxs("div", { children: [_jsx("dt", { children: "Career length" }), _jsx("dd", { children: latestSummary.played })] }), _jsxs("div", { children: [_jsx("dt", { children: "Last saved" }), _jsx("dd", { children: new Date(latest.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) })] })] }), _jsx("button", { className: "btn title-continue", onClick: () => loadFile(latest.save), children: "Continue" })] })) : (_jsxs("article", { className: "continue-dossier empty", children: [_jsx("div", { className: "kicker", children: "No current career" }), _jsx("h2", { children: "Enter Terenan politics" }), _jsx("p", { children: "Choose a politician and begin on 1 January 2028." }), _jsx("button", { className: "btn title-continue", onClick: () => setMode("select"), children: "Start a new game" })] })), _jsxs("nav", { className: "title-actions", "aria-label": "Main menu", children: [_jsxs("button", { type: "button", onClick: () => setMode("select"), children: [_jsx("span", { children: "New Game" }), _jsx("small", { children: "Choose a political life" })] }), _jsxs("button", { type: "button", onClick: () => setMode("load"), disabled: saves.length === 0, children: [_jsx("span", { children: "Load Game" }), _jsxs("small", { children: [saves.length, " saved career", saves.length === 1 ? "" : "s"] })] }), _jsxs("button", { type: "button", disabled: true, children: [_jsx("span", { children: "Settings" }), _jsx("small", { children: "Display and accessibility" })] })] })] })] }));
+        return (_jsxs("div", { className: "political-title-screen", children: [_jsxs("section", { className: "title-masthead", "aria-labelledby": "lorsain-title", children: [_jsx("div", { className: "title-seal", "aria-hidden": "true", children: "L" }), _jsxs("div", { className: "title-wordmark", children: [_jsx("span", { children: "THE POLITICAL LIFE OF TERENA" }), _jsx("h1", { id: "lorsain-title", children: "LORSAIN" }), _jsx("p", { children: "Govern, legislate, campaign and build a public life in the Dual-Mandate Republic." })] }), _jsxs("div", { className: "title-founding-line", children: [_jsx("span", { children: "Republic founded 1971" }), _jsx("span", { children: "January 2028 scenario" })] })] }), _jsxs("section", { className: "title-political-desk", children: [latest && latestSummary ? (_jsxs("article", { className: "continue-dossier", children: [_jsx("div", { className: "kicker", children: "Continue political career" }), _jsxs("div", { className: "continue-dossier-head", children: [_jsxs("div", { children: [_jsx("h2", { children: latest.playerName }), _jsx("p", { children: latestSummary.office })] }), _jsx("time", { children: latest.date })] }), _jsxs("div", { className: "continue-party-line", children: [_jsx("span", { className: "continue-party-mark", style: {
+                                                background: partyColor(world, latest.save.simulation.politicians[latest.save.simulation.playerPoliticianId]
+                                                    ?.partyId ?? null),
+                                            } }), _jsx("strong", { children: latestSummary.party })] }), _jsxs("dl", { className: "continue-dossier-facts", children: [_jsxs("div", { children: [_jsx("dt", { children: "Political context" }), _jsx("dd", { children: latestSummary.context })] }), _jsxs("div", { children: [_jsx("dt", { children: "Career length" }), _jsx("dd", { children: latestSummary.played })] }), _jsxs("div", { children: [_jsx("dt", { children: "Last saved" }), _jsx("dd", { children: new Date(latest.savedAt).toLocaleString([], {
+                                                        dateStyle: "medium",
+                                                        timeStyle: "short",
+                                                    }) })] })] }), _jsx("button", { className: "btn title-continue", onClick: () => loadFile(latest.save), children: "Continue" })] })) : (_jsxs("article", { className: "continue-dossier empty", children: [_jsx("div", { className: "kicker", children: "No current career" }), _jsx("h2", { children: "Enter Terenan politics" }), _jsx("p", { children: "Choose a politician and begin on 1 January 2028." }), _jsx("button", { className: "btn title-continue", onClick: () => setMode("select"), children: "Start a new game" })] })), _jsxs("nav", { className: "title-actions", "aria-label": "Main menu", children: [_jsxs("button", { type: "button", onClick: () => setMode("select"), children: [_jsx("span", { children: "New Game" }), _jsx("small", { children: "Choose a political life" })] }), _jsxs("button", { type: "button", onClick: () => setMode("load"), disabled: saves.length === 0, children: [_jsx("span", { children: "Load Game" }), _jsxs("small", { children: [saves.length, " saved career", saves.length === 1 ? "" : "s"] })] }), _jsxs("button", { type: "button", disabled: true, children: [_jsx("span", { children: "Settings" }), _jsx("small", { children: "Display and accessibility" })] })] })] })] }));
     }
     if (mode === "load") {
-        return (_jsxs("div", { className: "load-career-screen", children: [_jsxs("header", { className: "load-career-head", children: [_jsxs("div", { children: [_jsx("div", { className: "kicker", children: "LORSAIN RECORDS" }), _jsx("h1", { children: "Saved political careers" }), _jsx("p", { children: "Resume a career with its office, allegiance and political context intact." })] }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" }), _jsxs("label", { className: "btn secondary", children: ["Import save", _jsx("input", { type: "file", accept: "application/json", hidden: true, onChange: async (e) => { const file = e.target.files?.[0]; if (file)
-                                                loadFile(await readImportedSave(file)); } })] })] })] }), _jsx("div", { className: "saved-career-grid", children: saves.map((s) => {
+        return (_jsxs("div", { className: "load-career-screen", children: [_jsxs("header", { className: "load-career-head", children: [_jsxs("div", { children: [_jsx("div", { className: "kicker", children: "LORSAIN RECORDS" }), _jsx("h1", { children: "Saved political careers" }), _jsx("p", { children: "Resume a career with its office, allegiance and political context intact." })] }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" }), _jsxs("label", { className: "btn secondary", children: ["Import save", _jsx("input", { type: "file", accept: "application/json", hidden: true, onChange: async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file)
+                                                    loadFile(await readImportedSave(file));
+                                            } })] })] })] }), _jsx("div", { className: "saved-career-grid", children: saves.map((s) => {
                         const summary = savedGamePoliticalSummary(world, s);
                         const savedPlayer = s.save.simulation.politicians[s.save.simulation.playerPoliticianId];
-                        return _jsxs("article", { className: "saved-career", children: [_jsxs("div", { className: "saved-career-date", children: [_jsx("span", { children: s.date }), _jsx("small", { children: summary.played })] }), _jsx("h2", { children: s.playerName }), _jsx("p", { className: "saved-career-office", children: summary.office }), _jsxs("div", { className: "continue-party-line", children: [_jsx("span", { className: "continue-party-mark", style: { background: partyColor(world, savedPlayer?.partyId ?? null) } }), _jsx("strong", { children: summary.party })] }), _jsx("p", { className: "saved-career-context", children: summary.context }), _jsxs("footer", { children: [_jsxs("small", { children: ["Saved ", new Date(s.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })] }), _jsx("button", { className: "btn", onClick: () => void getSave(s.id).then((row) => row && loadFile(row.save)), children: "Resume" })] })] }, s.id);
+                        return (_jsxs("article", { className: "saved-career", children: [_jsxs("div", { className: "saved-career-date", children: [_jsx("span", { children: s.date }), _jsx("small", { children: summary.played })] }), _jsx("h2", { children: s.playerName }), _jsx("p", { className: "saved-career-office", children: summary.office }), _jsxs("div", { className: "continue-party-line", children: [_jsx("span", { className: "continue-party-mark", style: { background: partyColor(world, savedPlayer?.partyId ?? null) } }), _jsx("strong", { children: summary.party })] }), _jsx("p", { className: "saved-career-context", children: summary.context }), _jsxs("footer", { children: [_jsxs("small", { children: ["Saved", " ", new Date(s.savedAt).toLocaleString([], {
+                                                    dateStyle: "medium",
+                                                    timeStyle: "short",
+                                                })] }), _jsx("button", { className: "btn", onClick: () => void getSave(s.id).then((row) => row && loadFile(row.save)), children: "Resume" })] })] }, s.id));
                     }) })] }));
     }
     if (mode === "select") {
@@ -628,7 +755,9 @@ export default function App() {
             const level = complexity(f);
             return (_jsxs("article", { className: "featured-start", style: { borderLeftColor: accent }, children: [_jsxs("div", { className: "featured-start-top", children: [_jsx(PoliticianAvatar, { name: f.name, ...(f.party_id != null ? { partyId: f.party_id } : {}), world: world, size: "sm" }), _jsxs("div", { className: "featured-start-id", children: [_jsx("h3", { className: "featured-start-name serif-head", children: f.name }), _jsx("div", { className: "featured-start-role", children: roleLabel(f) }), _jsxs("div", { className: "muted featured-start-party", children: [f.party ?? "Independent", f.home ? ` · ${f.home}` : ""] })] }), _jsx(StatusBadge, { tone: level === "High" ? "warn" : level === "Medium" ? "idle" : "ok", children: level })] }), _jsxs("div", { className: "featured-start-focus", children: [_jsx("span", { className: "kicker", children: "Gameplay focus" }), _jsx("div", { children: gameplayFocus(f) })] }), _jsxs("div", { className: "featured-start-foot", children: [_jsxs("span", { className: "muted", children: ["Complexity \u00B7 ", level] }), _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" })] })] }, f.id));
         };
-        const rosterCard = (f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), descriptor: `${roleDescription(f)}${f.notes ?? f.display_summary ? ` ${f.notes ?? f.display_summary}` : ""}`, compact: officeKind(f) === "minister" || (f.office ?? "").toLowerCase().includes("mayor"), action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id));
+        const rosterCard = (f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), descriptor: officeKind(f) === "minister" || (f.office ?? "").toLowerCase().includes("mayor")
+                ? roleDescription(f)
+                : (f.notes ?? f.display_summary ?? roleDescription(f)), action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id));
         return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: "Choose your career" }), _jsx("p", { className: "muted", children: "Featured starts are full-depth political roles. Search the roster for Limited offices and other public figures. Hidden traits are never shown." })] }), _jsxs("div", { className: "row new-game-filters", children: [_jsx("input", { className: "search", placeholder: "Search by name, office, party, or home", value: query, onChange: (e) => {
                                 setQuery(e.target.value);
                                 setBrowsePage(0);
@@ -649,17 +778,27 @@ export default function App() {
     const offices = playerOffices(world, snap, snap.playerPoliticianId);
     const provincialMember = provincialLegislatorForPolitician(snap, snap.playerPoliticianId);
     const roleKind = Object.values(snap.officeTerms)
-        .filter((term) => term.holderId === snap.playerPoliticianId && (term.status === "active" || term.status === "suspended"))
+        .filter((term) => term.holderId === snap.playerPoliticianId &&
+        (term.status === "active" || term.status === "suspended"))
         .map((term) => world.offices[term.officeId]?.kind)
-        .find(Boolean) ?? (provincialMember?.serviceStartDate && provincialMember.serviceEndDate == null ? "provincial_legislator" : "private_citizen");
+        .find(Boolean) ??
+        (provincialMember?.serviceStartDate && provincialMember.serviceEndDate == null
+            ? "provincial_legislator"
+            : "private_citizen");
     const interrupt = snap.pendingInterrupt;
     const playerDecisions = collectPlayerActionableDecisions(world, snap);
     const decisionScreen = (kind) => {
         if (kind === "assembly_filing")
             return "career";
-        if (kind === "judicial_vote" || kind === "confirmation_vote" || kind === "impeachment_vote" || kind === "recall_vote")
+        if (kind === "judicial_vote" ||
+            kind === "confirmation_vote" ||
+            kind === "impeachment_vote" ||
+            kind === "recall_vote")
             return "courts";
-        if (kind === "foreign_presidential_action" || kind === "incoming_treaty" || kind === "incoming_summit" || kind === "war_powers")
+        if (kind === "foreign_presidential_action" ||
+            kind === "incoming_treaty" ||
+            kind === "incoming_summit" ||
+            kind === "war_powers")
             return "foreign";
         if (kind === "sign_bill")
             return "executive";
@@ -670,7 +809,9 @@ export default function App() {
     const attentionItems = playerDecisions.map((decision) => ({
         id: decision.key,
         label: decision.label,
-        detail: decision.kind === "interrupt" ? "The turn cannot continue until this is resolved." : "Your affirmative choice is required.",
+        detail: decision.kind === "interrupt"
+            ? "The turn cannot continue until this is resolved."
+            : "Your affirmative choice is required.",
         screen: decisionScreen(decision.kind),
         tone: decision.kind === "interrupt" ? "urgent" : "soon",
     }));
@@ -680,7 +821,13 @@ export default function App() {
         const playerHome = player.homeProvinceId ?? world.politicianHomeProvince[player.id];
         if (election.provinceId !== playerHome && election.incumbentId !== player.id)
             continue;
-        attentionItems.push({ id: `governor-filing:${election.id}`, label: `Governor filing is open in ${catalog.places.get(election.provinceId)?.name ?? "your province"}.`, detail: `Deadline ${election.filingDeadlineDate}`, screen: "career", tone: "soon" });
+        attentionItems.push({
+            id: `governor-filing:${election.id}`,
+            label: `Governor filing is open in ${catalog.places.get(election.provinceId)?.name ?? "your province"}.`,
+            detail: `Deadline ${election.filingDeadlineDate}`,
+            screen: "career",
+            tone: "soon",
+        });
     }
     for (const election of Object.values(snap.provincialRuntime.assemblyElections)) {
         if (election.status !== "filing_open" || election.playerDecision != null)
@@ -688,36 +835,57 @@ export default function App() {
         const playerHome = player.homeProvinceId ?? world.politicianHomeProvince[player.id];
         if (election.provinceId !== playerHome)
             continue;
-        attentionItems.push({ id: `provincial-filing:${election.id}`, label: `Provincial Assembly filing is open in ${catalog.places.get(election.provinceId)?.name ?? "your province"}.`, detail: `Election ${election.date}`, screen: "career", tone: "soon" });
+        attentionItems.push({
+            id: `provincial-filing:${election.id}`,
+            label: `Provincial Assembly filing is open in ${catalog.places.get(election.provinceId)?.name ?? "your province"}.`,
+            detail: `Election ${election.date}`,
+            screen: "career",
+            tone: "soon",
+        });
     }
     const watchedIds = new Set(watchlist.map((entry) => entry.slice(entry.indexOf(":") + 1)));
     const publicTurnEvents = turnEvents.filter((event) => event.visibility === "public" && event.type !== "TURN_COMPLETED");
     const meaningfulTurnEvents = publicTurnEvents.filter((event) => event.importance >= 0.45);
-    const briefingSource = (meaningfulTurnEvents.length ? meaningfulTurnEvents : publicTurnEvents).slice(-10).reverse();
+    const briefingSource = (meaningfulTurnEvents.length ? meaningfulTurnEvents : publicTurnEvents)
+        .slice(-10)
+        .reverse();
     const briefingItems = briefingSource.map((event) => ({
         id: event.id,
         date: event.date,
         label: eventDisplay(catalog, world, snap, event),
-        watched: [...event.actorIds, ...event.entityIds].some((id) => watchedIds.has(id)) || [...watchedIds].some((id) => JSON.stringify(event.payload).includes(id)),
+        watched: [...event.actorIds, ...event.entityIds].some((id) => watchedIds.has(id)) ||
+            [...watchedIds].some((id) => JSON.stringify(event.payload).includes(id)),
     }));
     const activeCampaign = playerCampaign(snap);
     const campaignDate = activeCampaign?.electionId
-        ? snap.elections[activeCampaign.electionId]?.date ?? snap.provincialRuntime.elections[activeCampaign.electionId]?.date ?? snap.provincialRuntime.assemblyElections[activeCampaign.electionId]?.date
-        : activeCampaign?.contestId && typeof snap.partyContests[activeCampaign.contestId]?.metadata.electionDate === "string"
+        ? (snap.elections[activeCampaign.electionId]?.date ??
+            snap.provincialRuntime.elections[activeCampaign.electionId]?.date ??
+            snap.provincialRuntime.assemblyElections[activeCampaign.electionId]?.date)
+        : activeCampaign?.contestId &&
+            typeof snap.partyContests[activeCampaign.contestId]?.metadata.electionDate === "string"
             ? snap.partyContests[activeCampaign.contestId].metadata.electionDate
             : null;
-    const monthsRemaining = campaignDate ? Math.max(0, (Number(campaignDate.slice(0, 4)) - Number(snap.currentDate.slice(0, 4))) * 12 + Number(campaignDate.slice(5, 7)) - Number(snap.currentDate.slice(5, 7))) : null;
+    const monthsRemaining = campaignDate
+        ? Math.max(0, (Number(campaignDate.slice(0, 4)) - Number(snap.currentDate.slice(0, 4))) * 12 +
+            Number(campaignDate.slice(5, 7)) -
+            Number(snap.currentDate.slice(5, 7)))
+        : null;
     const provinceId = governedProvinceId(world, snap, player.id);
-    const roleActions = activeCampaign?.actionPointsRemaining ?? (provinceId ? snap.provincialRuntime.provinces[provinceId]?.actionPointsRemaining : null);
+    const roleActions = activeCampaign?.actionPointsRemaining ??
+        (provinceId ? snap.provincialRuntime.provinces[provinceId]?.actionPointsRemaining : null);
     const statusSegments = [
         `Standing: ${publicStandingLabel(world, snap, player.id)}`,
         ...(roleActions != null ? [`${roleActions} action${roleActions === 1 ? "" : "s"}`] : []),
-        ...(activeCampaign && monthsRemaining != null ? [`${monthsRemaining} month${monthsRemaining === 1 ? "" : "s"} to election`] : []),
+        ...(activeCampaign && monthsRemaining != null
+            ? [`${monthsRemaining} month${monthsRemaining === 1 ? "" : "s"} to election`]
+            : []),
     ];
-    const lastSavedLabel = lastSavedAt ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Autosave runs before every turn and national count.";
+    const lastSavedLabel = lastSavedAt
+        ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+        : "Autosave runs before every turn and national count.";
     return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: attentionItems.length, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: () => void endTurn(), onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), searchEntries: searchEntries, onSearchSelect: selectSearchEntry, attentionItems: attentionItems, briefingItems: briefingItems, watchlist: watchlist, onToggleWatch: (entry) => {
             const key = `${entry.kind}:${entry.id}`;
             setWatchlist((items) => items.includes(key) ? items.filter((item) => item !== key) : [...items, key]);
-        }, statusSegments: statusSegments, lastSavedLabel: lastSavedLabel, children: [screen === "home" || screen === "office" ? (_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection() })) : playerDecisions.length ? (_jsxs("button", { type: "button", className: "required-decisions-indicator", onClick: () => setScreen("home"), children: [_jsx("span", { children: "Required decisions" }), _jsx("strong", { children: playerDecisions.length }), _jsx("small", { children: "Open the political inbox on Home" })] })) : null, _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm, globalFocus: globalFocus, setGlobalFocus: setGlobalFocus }), import.meta.env.DEV ? (_jsx("output", { id: "lorsain-browser-qa-state", hidden: true, "data-ready": "true", "data-screen": screen, "data-player": snap.playerPoliticianId, "data-date": snap.currentDate, children: "Browser QA ready" })) : null, feedback.overlay()] }));
+        }, statusSegments: statusSegments, lastSavedLabel: lastSavedLabel, children: [screen === "home" || screen === "office" ? (_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm })) : playerDecisions.length ? (_jsxs("button", { type: "button", className: "required-decisions-indicator", onClick: () => setScreen("home"), children: [_jsx("span", { children: "Required decisions" }), _jsx("strong", { children: playerDecisions.length }), _jsx("small", { children: "Open the political inbox on Home" })] })) : null, _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm, globalFocus: globalFocus, setGlobalFocus: setGlobalFocus }), import.meta.env.DEV ? (_jsx("output", { id: "lorsain-browser-qa-state", hidden: true, "data-ready": "true", "data-screen": screen, "data-player": snap.playerPoliticianId, "data-date": snap.currentDate, children: "Browser QA ready" })) : null, feedback.overlay()] }));
 }
 //# sourceMappingURL=App.js.map

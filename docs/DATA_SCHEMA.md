@@ -12,7 +12,7 @@ Examples: `TER`, `W41`, `P09`, `FDV`, `C001`, `PARTY_LAB`, `NPC001`, `OFFICE_PRE
 
 **Static content** defines geography, constitutional rules, office definitions, issue definitions, party rules, initial politicians and historical facts before the scenario start. **Save state** records mutable values from the scenario onward. Do not modify static content objects during play.
 
-`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 11.2 uses `schemaVersion: 12` and `contentVersion: 0.3.1-predev`. Phase 11 saves migrate to v12 by adding provincial runtime, campaign province organization, economy history/cycle fields, and clearing only illegitimately pre-populated planned future presidential fields; no past election, office, action or economic event is fabricated.
+`contentVersion` (canonical JSON package), npm `package.json` version, and save `schemaVersion` are **separate**. Phase 11.3 closeout uses `schemaVersion: 18` and `contentVersion: 0.3.1-predev`. The v12→v18 chain adds institutional structure, gubernatorial vacancy/decision state, public party platforms, clause-targeted constitutional text, poll geography, and structured constitutional intent without fabricating past elections, offices, actions, votes, polls, or platform history.
 
 ## 3. Core static schemas
 
@@ -344,11 +344,11 @@ News and history pages consume events; they do not invent a separate reality.
 
 ## 14. Save root
 
-Current save envelope (`schemaVersion: 12`):
+Current save envelope (`schemaVersion: 18`):
 
 ```ts
 interface SaveFile {
-  schemaVersion: 12;
+  schemaVersion: 18;
   contentVersion: string;
   scenarioId: string;
   simulation: SimState;
@@ -390,6 +390,18 @@ Loaded saves are untrusted `unknown` and are fully structurally validated. Conte
 
 **v11 → v12:** Phase 11 saves had no provincial gameplay/election runtime, province-level campaign organization, or provincial/sector economic history and medium-term cycle state. Migration adds these structures deterministically. Restore derives province office state from current office terms and schedules the first v1 gubernatorial cycle. Existing national/province/sector economic values remain authoritative; missing histories begin at the migrated save date and do not backfill invented past points. Planned future presidential nomination contests whose metadata marks runtime politics lose prematurely stored entries, while open/resolved and historical contests remain immutable.
 
+**v12 → v13:** Adds Provincial Assemblies, lightweight legislators, promotions, provincial bills/votes/elections, constitutional rules/amendments, and federal caucus leadership state. Restore seeds current institutions deterministically from the save date and current parties; it does not create backdated elections or votes.
+
+**v13 → v14:** Adds provincial campaign rankings, legislator service/election/sponsorship references, bill cosponsors/party positions/agenda source, caucus-contest platforms/endorsements, and constitutional proposal impetus. Existing records receive structural defaults only.
+
+**v14 → v15:** Adds gubernatorial regular/special-cycle identity, incumbent decision, and explicit Governor vacancy state without inferring a past decision or vacancy event.
+
+**v15 → v16:** Adds bounded public party platforms. Older saves receive a neutral current platform at the save date and an empty publication history; monthly politics moves it thereafter.
+
+**v16 → v17:** Adds clause-targeted constitutional document fields and political difficulty. Existing numeric amendments keep their result and acquire null text targets.
+
+**v17 → v18:** Adds first-class province IDs to public polls plus structured constitutional intent and modeled/text-only runtime reach. Existing poll results and amendment text are preserved.
+
 Canonical allocated IDs are `PREFIX` + a positive integer (leading zeros allowed, width not fixed): `EVT`, `SEV`, `TERM`, `CMD`, `MEM`, `GOAL`, `END`, `CONTEST`, `DPARTY`, `POLL`, `ELEC`, `DRES`, `CAMP`, `DEBATE`, `BILL`, `AMD`, `LVOTE`, `LAW`, `REG`, `MOT`, `EMG`, `WAR`, `BUD`, `CASE`, `CNOM`, `CDEC`, `IMPEACH`, `RECALL`, `CGND`. Canonical scheduled elections may use stable IDs (`ELEC_PRES_2028`, `ELEC_ASM_2030`). `banana`, `EVT0`, and `EVTabc` are rejected.
 
 ### 14.1 Agent state (Phase 2)
@@ -421,7 +433,7 @@ PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolve
 - **Support:** bloc utility combines party habit, issue-salience-weighted public ideological fit (salience grouped by ideology axis then normalized so issue-ID cardinality does not overweight an axis), regional/home connection, incumbency/office/leadership, public standing, and sparse national/constituency/issue environment. Softmax with temperature `SUPPORT_SOFTMAX_TEMPERATURE` yields nonnegative shares summing to 1. Exact latent support is simulation truth, not NPC omniscience; `DecisionActorContext` does not receive it. Selectorates may use a small public standing/poll signal only.
 - **Turnout:** aggregated, no voter entities. `registered_2028 = round(population_now × registered_2026 / population_2026)`. Rate mixes canonical `turnout_propensity`, 2026 turnout, election importance, mean enthusiasm, and bounded `campaigns`-stream noise, then clamps. Invalid/blank uses the 2026 rate plus bounded noise. `ballotsCast = invalidOrBlank + validVoteValue` exactly. Valid ballot-group weights are integers from largest remainder and sum to `validVoteValue`.
 - **Polls:** `POLL…` historical records. House effects are centered party vote-share-point offsets, split among same-party candidates, then renormalized. Sample size is explicit or drawn in the pollster range. Quality lowers model-error variance; it never reveals exact latent support. Published polls are not rewritten when candidates later die, switch party, or withdraw. IDs are counters, not RNG.
-- **ElectionState:** separate from `PartyContest`. Statuses: `planned` → `field_open` → `field_finalized` → `voting` → `resolved` / `cancelled`. Canonical 2028 presidential election `ELEC_PRES_2028` starts unfinalized with no nominees. Current-cycle helpers choose the earliest unresolved/upcoming election rather than a canonical ID. Nomination winners sync into their metadata-linked general-election field without mutating contest archives. Presidential counts call `countIrv`; Assembly constituency counts call `countStv`. Resolved archives replay from stored ballots and lot draws. Current eligibility is checked only for unresolved fields.
+- **ElectionState:** separate from `PartyContest`. Statuses: `planned` → `field_open` → `field_finalized` → `voting` → `resolved` / `cancelled`. Canonical 2028 presidential election `ELEC_PRES_2028` starts unfinalized with no nominees. Current-cycle helpers choose the earliest unresolved/upcoming election rather than a canonical ID. Nomination winners sync into their metadata-linked general-election field without mutating contest archives. Presidential counts call `countIrv`; Assembly constituency counts call `countStv`. Resolved archives replay from stored ballots and lot draws. New resolved results also carry public `ElectionCertification` (commission, certified date, final margin, automatic recount state, and countback/first-preference/legal-lot tie procedures). Current eligibility is checked only for unresolved fields.
 - **DomainResolutionRecord:** `DRES…` evidence for a processed `requiresResolution` event (election or presidential assumption). `RESOLVE_PRESIDENTIAL_ELECTION` is transactional: failure leaves hash, counters, and RNG unchanged when validation can run before draws.
 - **Presidential transition:** a regular election winner is immediately `certifiedPresidentElectId` and that victory counts as an elected term. Assumption is 20 January following. Incompatible prior offices (MP/governor/minister) end with structured reasons; vacancies are not auto-filled. The next regular presidential date is calculated from canonical calendar rules, never hardcoded as 2033. If the president-elect cannot assume, the engine raises a typed constitutional block rather than inventing a successor.
 
@@ -476,12 +488,12 @@ PRESENTATION interrupts persist as `unresolved` or `acknowledged` only (`resolve
 - **Canonical start:** `terena_economy_2028.json` contains scenario date, six national indices plus fiscal pressure, six sector profiles, and 21 province profiles. Province profiles contain starting conditions/employment/housing, six normalized sector exposures, growth/inflation/housing/trade sensitivities, bounded annual structural trends, and a short public character description.
 - **Economy runtime:** `national`, `sectors`, `provinces`, national `history`, `sectorHistory`, `provinceHistory`, lagged policy effects, shocks, applied policy sources, cycle phase/momentum/month count, and last processed month. History is bounded to 120 monthly points.
 - **Provincial runtime:** `provinces`, `pressures`, `actions`, `elections`, and last processed month. Province state stores administrative priority, investment emphasis/momentum, political capital, public standing, federal relationship, two monthly action points, and an optional active pressure.
-- **Gubernatorial election:** stable ID `ELEC_GOV_<province>_<year>`; status `planned | filing_open | field_finalized | resolved | assumed`; province, election/filing/assumption dates, incumbent, candidate records, optional winner, vote shares/total, and public result metadata. Each politician can occur once in a race; the player enters only through an explicit command.
+- **Gubernatorial election:** stable ID `ELEC_GOV_<province>_<year>`; status `planned | filing_open | field_finalized | resolved | assumed`; province, election/filing/assumption dates, incumbent, candidate records, optional winner, vote shares/total, public result metadata, and optional certification for migrated history. Each politician can occur once in a race; the player enters only through an explicit command.
 - **Authority:** Governor commands validate a current substantive governorship for the target province. Minister and Mayor bounded commands validate their corresponding current office. UI visibility is never authority.
 
-### 14.10 Phase 11.3 institutional state (schemas 13–14)
+### 14.10 Phase 11.3 institutional state (schemas 13–18)
 
-- **Migration:** save schema **13** adds institutional state through deterministic v12→v13 seeding. Schema **14** adds explicit provincial campaign rankings, legislator service/election/sponsorship lists, bill cosponsors/party positions/agenda source, caucus-contest politics and amendment proposal impetus through v13→v14 structural defaults. Existing player identity, date, offices, elections, laws and history remain intact. New chambers and legislators are seeded from the save's current canonical province/party state; neither migration invents backdated elections, bills, votes or careers.
+- **Migration:** schema **13** adds institutional state; **14** adds campaign/career/cosponsorship/party-position structure; **15** adds gubernatorial cycle/vacancy state; **16** adds public party platforms; **17** adds clause-targeted constitutional text; and **18** adds poll geography plus structured constitutional intent/runtime reach. Existing player identity, date, offices, elections, laws and history remain intact. No migration invents backdated elections, bills, votes, polls, platform publications, or careers.
 - **Politician runtime:** full politicians may carry `displayName`, `description` and `homeProvinceId`. Canonical figures retain canonical presentation data; promoted/generated figures use save-owned natural names and concise public descriptions. Generated profiles may include `provincial_legislator` in `roleTypes`.
 - **Provincial political class:** `provincialRuntime.assemblies`, `legislators`, `assemblyElections`, `bills`, `votes` and `promotions`. A lightweight legislator stores identity, province, party/faction, birth year, service dates/status, standing, legislative/campaign skill and ambition. It is not a duplicate full `PoliticianRuntime`. Promotion records the source legislator, resulting national politician and trigger election.
 - **Political lifecycle:** no additional random lifecycle blob is persisted. Annual national retirement/death draws are stable functions of politician ID, year, age and the persisted profile's `retirementInclination`; the resulting `alive` / `retired` flag, ended `OfficeTerm`s and public history events are persisted normally. Provincial filing retirement sets the lightweight legislator's existing `active` flag. The player ID is excluded from automatic career exit.

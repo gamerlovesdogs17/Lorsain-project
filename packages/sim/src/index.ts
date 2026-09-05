@@ -143,7 +143,7 @@ export {
   gotvActivations,
 } from "./campaigns/index.js";
 export type { CampaignState, CampaignRuntime, DebateState } from "./campaigns/types.js";
-export type { PollRecord } from "./elections/types.js";
+export type { ElectionCertification, PollRecord } from "./elections/types.js";
 export {
   currentGovernorId,
   governedProvinceId,

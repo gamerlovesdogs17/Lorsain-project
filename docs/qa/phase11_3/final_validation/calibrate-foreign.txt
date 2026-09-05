@@ -1,0 +1,73 @@
+
+> lorsain@0.3.0-predev calibrate:foreign C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project
+> pnpm --filter @lorsain/content-loader exec tsx ../../scripts/foreign-calibration.ts
+
+Foreign affairs calibration: 20 seeds × 15 years (180 months)
+Terena world id: W41
+Driver: foreign-calibration harness (domestic interrupts bypassed)
+
+Per-seed totals:
+  FOREIGN-CAL-01 treaties=52/28 uniq=28 dup=0 maxDup=1 leaders=94 sameName=0 maxLeadDay=3 LTO=3/1/1 WA=25/veto=0 wars=4/1/active=3 warAuth=0
+  FOREIGN-CAL-02 treaties=44/31 uniq=31 dup=0 maxDup=1 leaders=92 sameName=0 maxLeadDay=3 LTO=3/1/0 WA=16/veto=2 wars=7/4/active=3 warAuth=0
+  FOREIGN-CAL-03 treaties=50/37 uniq=37 dup=0 maxDup=1 leaders=89 sameName=0 maxLeadDay=3 LTO=3/2/0 WA=18/veto=1 wars=2/1/active=1 warAuth=0
+  FOREIGN-CAL-04 treaties=45/26 uniq=26 dup=0 maxDup=1 leaders=92 sameName=0 maxLeadDay=3 LTO=3/0/2 WA=14/veto=3 wars=2/0/active=2 warAuth=0
+  FOREIGN-CAL-05 treaties=44/24 uniq=24 dup=0 maxDup=1 leaders=99 sameName=0 maxLeadDay=3 LTO=3/1/0 WA=19/veto=2 wars=4/2/active=2 warAuth=1
+  FOREIGN-CAL-06 treaties=51/36 uniq=36 dup=0 maxDup=1 leaders=98 sameName=0 maxLeadDay=3 LTO=1/1/0 WA=23/veto=1 wars=4/3/active=1 warAuth=1
+  FOREIGN-CAL-07 treaties=48/34 uniq=34 dup=0 maxDup=1 leaders=101 sameName=0 maxLeadDay=4 LTO=3/2/0 WA=17/veto=7 wars=9/5/active=4 warAuth=1
+  FOREIGN-CAL-08 treaties=44/31 uniq=31 dup=0 maxDup=1 leaders=90 sameName=0 maxLeadDay=3 LTO=3/1/0 WA=22/veto=0 wars=1/1/active=0 warAuth=1
+  FOREIGN-CAL-09 treaties=54/32 uniq=32 dup=0 maxDup=1 leaders=96 sameName=0 maxLeadDay=3 LTO=3/0/1 WA=32/veto=8 wars=3/2/active=1 warAuth=0
+  FOREIGN-CAL-10 treaties=54/34 uniq=34 dup=0 maxDup=1 leaders=90 sameName=0 maxLeadDay=3 LTO=3/1/0 WA=15/veto=2 wars=1/0/active=1 warAuth=0
+  FOREIGN-CAL-11 treaties=48/30 uniq=30 dup=0 maxDup=1 leaders=94 sameName=0 maxLeadDay=4 LTO=3/1/1 WA=15/veto=1 wars=5/2/active=3 warAuth=0
+  FOREIGN-CAL-12 treaties=48/25 uniq=25 dup=0 maxDup=1 leaders=94 sameName=0 maxLeadDay=3 LTO=3/2/0 WA=33/veto=9 wars=4/3/active=1 warAuth=0
+  FOREIGN-CAL-13 treaties=46/27 uniq=27 dup=0 maxDup=1 leaders=90 sameName=0 maxLeadDay=3 LTO=3/2/1 WA=28/veto=7 wars=4/3/active=1 warAuth=1
+  FOREIGN-CAL-14 treaties=49/23 uniq=23 dup=0 maxDup=1 leaders=97 sameName=0 maxLeadDay=3 LTO=3/2/0 WA=23/veto=3 wars=7/3/active=4 warAuth=2
+  FOREIGN-CAL-15 treaties=37/24 uniq=24 dup=0 maxDup=1 leaders=90 sameName=0 maxLeadDay=3 LTO=3/1/0 WA=13/veto=6 wars=3/2/active=1 warAuth=0
+  FOREIGN-CAL-16 treaties=47/28 uniq=28 dup=0 maxDup=1 leaders=107 sameName=0 maxLeadDay=3 LTO=3/3/0 WA=24/veto=4 wars=3/0/active=3 warAuth=1
+  FOREIGN-CAL-17 treaties=47/27 uniq=27 dup=0 maxDup=1 leaders=95 sameName=0 maxLeadDay=3 LTO=3/2/0 WA=20/veto=5 wars=10/5/active=5 warAuth=1
+  FOREIGN-CAL-18 treaties=39/24 uniq=24 dup=0 maxDup=1 leaders=90 sameName=0 maxLeadDay=4 LTO=3/1/0 WA=20/veto=0 wars=6/4/active=2 warAuth=1
+  FOREIGN-CAL-19 treaties=60/28 uniq=28 dup=0 maxDup=1 leaders=99 sameName=0 maxLeadDay=3 LTO=3/1/0 WA=22/veto=8 wars=6/2/active=4 warAuth=1
+  FOREIGN-CAL-20 treaties=46/31 uniq=31 dup=0 maxDup=1 leaders=96 sameName=0 maxLeadDay=3 LTO=3/3/0 WA=17/veto=4 wars=4/1/active=3 warAuth=1
+
+Distribution summary:
+  months completed                     min=180.0 p25=180.0 med=180.0 p75=180.0 max=180.0 mean=180.00
+  crises created                       min=210.0 p25=227.0 med=237.0 p75=253.0 max=264.0 mean=239.85
+  crises settled                       min=181.0 p25=187.0 med=200.0 p75=217.0 max=225.0 mean=204.40
+  conflicts started                    min=1.0 p25=3.0 med=4.0 p75=6.0 max=10.0 mean=4.45
+  conflicts ended                      min=0.0 p25=1.0 med=2.0 p75=3.0 max=5.0 mean=2.20
+  conflicts active @ horizon           min=0.0 p25=1.0 med=2.0 p75=3.0 max=5.0 mean=2.25
+  Terena wars                          min=0.0 p25=0.0 med=1.0 p75=1.0 max=2.0 mean=0.60
+  Vaskara–Terena wars                  min=0.0 p25=0.0 med=0.0 p75=0.0 max=1.0 mean=0.05
+  great-power wars                     min=0.0 p25=1.0 med=1.0 p75=2.0 max=5.0 mean=1.65
+  sanctions imposed                    min=3.0 p25=4.0 med=6.0 p75=8.0 max=11.0 mean=6.35
+  sanctions lifted                     min=0.0 p25=0.0 med=1.0 p75=1.0 max=4.0 mean=1.35
+  treaties total                       min=37.0 p25=44.0 med=47.0 p75=50.0 max=60.0 mean=47.65
+  treaties active                      min=23.0 p25=25.0 med=28.0 p75=31.0 max=37.0 mean=29.00
+  treaties unique active               min=23.0 p25=25.0 med=28.0 p75=31.0 max=37.0 mean=29.00
+  treaties duplicate active            min=0.0 p25=0.0 med=0.0 p75=0.0 max=0.0 mean=0.00
+  treaties max duplicate               min=1.0 p25=1.0 med=1.0 p75=1.0 max=1.0 mean=1.00
+  treaties terminated                  min=0.0 p25=0.0 med=0.0 p75=1.0 max=1.0 mean=0.50
+  treaties suspended                   min=0.0 p25=0.0 med=0.0 p75=0.0 max=1.0 mean=0.20
+  treaties proposed                    min=36.0 p25=43.0 med=46.0 p75=49.0 max=59.0 mean=46.65
+  treaties rejected                    min=12.0 p25=13.0 med=19.0 p75=20.0 max=30.0 mean=17.95
+  treaties activated                   min=23.0 p25=25.0 med=28.0 p75=31.0 max=36.0 mean=28.70
+  leadership changes                   min=89.0 p25=90.0 med=94.0 p75=97.0 max=107.0 mean=94.65
+  leadership same-name                 min=0.0 p25=0.0 med=0.0 p75=0.0 max=0.0 mean=0.00
+  leadership max on one date           min=3.0 p25=3.0 med=3.0 p75=3.0 max=4.0 mean=3.15
+  leadership unique dates              min=74.0 p25=76.0 med=77.0 p75=80.0 max=85.0 mean=78.05
+  WA actions                           min=13.0 p25=16.0 med=20.0 p75=23.0 max=33.0 mean=20.80
+  WA vetoes                            min=0.0 p25=1.0 med=3.0 p75=6.0 max=9.0 mean=3.65
+  LTO disputes filed                   min=1.0 p25=3.0 med=3.0 p75=3.0 max=3.0 mean=2.90
+  LTO settled                          min=0.0 p25=1.0 med=1.0 p75=2.0 max=3.0 mean=1.40
+  LTO failed                           min=0.0 p25=0.0 med=0.0 p75=0.0 max=2.0 mean=0.30
+  DC consultations                     min=0.0 p25=0.0 med=0.0 p75=9.0 max=17.0 mean=4.25
+  CSC actions                          min=6.0 p25=12.0 med=15.0 p75=17.0 max=24.0 mean=14.95
+  NAF mediations                       min=4.0 p25=5.0 med=6.0 p75=9.0 max=12.0 mean=7.30
+  war-power begun                      min=0.0 p25=0.0 med=1.0 p75=1.0 max=2.0 mean=0.60
+  Assembly war auth motions            min=0.0 p25=0.0 med=1.0 p75=1.0 max=2.0 mean=0.60
+  AI actions toward Terena             min=198.0 p25=205.0 med=213.0 p75=224.0 max=243.0 mean=215.20
+  elevated posture signals             min=27.0 p25=34.0 med=41.0 p75=45.0 max=59.0 mean=40.15
+
+Runs with LTO disputes: 20/20
+Runs with zero active treaty duplicates: 20/20
+Runs with zero same-name replacements: 20/20
+Max leadership on one date across runs: 4

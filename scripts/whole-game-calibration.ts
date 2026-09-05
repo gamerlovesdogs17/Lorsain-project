@@ -30,7 +30,11 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { createSimulation, restoreSimulation, type Simulation } from "../packages/sim/src/engine.js";
+import {
+  createSimulation,
+  restoreSimulation,
+  type Simulation,
+} from "../packages/sim/src/engine.js";
 import {
   advanceIntegrated,
   assertCatastrophicInvariants,
@@ -50,7 +54,7 @@ const SMOKE_SEEDS = 3;
 const SMOKE_MONTHS = 24;
 const PLAYER_ID = "NPC146";
 const CAREER_SAMPLE_SIZE = 24;
-const SAVE_SIZE_MONTHS = [0, 120, 300, 600] as const;
+const SAVE_SIZE_MONTHS = [0, 12, 48, 120, 300, 600] as const;
 
 const smoke =
   process.env.WHOLE_GAME_SMOKE === "1" ||
@@ -99,8 +103,7 @@ const outPath = outFlag
   ? resolve(outFlag)
   : resolve(repoRoot, "docs/qa/phase11_3/whole_game_calibration.json");
 const shardDir = resolve(
-  stringFlag("shard-dir") ??
-    join(repoRoot, ".calibration/phase11_3/shards", `${months}m`),
+  stringFlag("shard-dir") ?? join(repoRoot, ".calibration/phase11_3/shards", `${months}m`),
 );
 
 function sourceFingerprint(): string {
@@ -114,7 +117,9 @@ function sourceFingerprint(): string {
   const visit = (relativeDir: string): void => {
     const absoluteDir = resolve(repoRoot, relativeDir);
     if (!existsSync(absoluteDir)) return;
-    for (const entry of readdirSync(absoluteDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    for (const entry of readdirSync(absoluteDir, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
       const relative = join(relativeDir, entry.name);
       if (entry.isDirectory()) visit(relative);
       else if (/\.(?:ts|json|ya?ml|geojson)$/i.test(entry.name)) {
@@ -243,7 +248,10 @@ export type RunTelemetry = {
     provincialBillsIntroduced: number;
     provincialBillsPassed: number;
     provincialBillsFailed: number;
-    provincialPassageByGovernment: Record<"friendly" | "divided" | "hostile", { votes: number; passed: number }>;
+    provincialPassageByGovernment: Record<
+      "friendly" | "divided" | "hostile",
+      { votes: number; passed: number }
+    >;
     provincialBillsSigned: number;
     provincialVetoes: number;
     provincialOverrides: number;
@@ -318,7 +326,12 @@ export type RunTelemetry = {
     p95TurnMs: number;
     maxTurnMs: number;
   };
-  saveGrowth: Array<{ month: number; date: string; bytes: number }>;
+  saveGrowth: Array<{
+    month: number;
+    date: string;
+    bytes: number;
+    sections: Record<string, number>;
+  }>;
 };
 
 type RunShard = {
@@ -472,8 +485,7 @@ function partySeatShiftHalf(election: ElectionState): number {
     (sum, partyId) =>
       sum +
       Math.abs(
-        (assembly.partySeatTotals[partyId] ?? 0) -
-          (assembly.previousPartySeatTotals[partyId] ?? 0),
+        (assembly.partySeatTotals[partyId] ?? 0) - (assembly.previousPartySeatTotals[partyId] ?? 0),
       ),
     0,
   );
@@ -485,8 +497,9 @@ function countUncontested(election: ElectionState): {
   constituencies: number;
 } {
   const fields = Object.values(election.assembly?.constituencyFields ?? {});
-  const uncontested = fields.filter((field) => field.candidateIds.length === field.magnitude)
-    .length;
+  const uncontested = fields.filter(
+    (field) => field.candidateIds.length === field.magnitude,
+  ).length;
   return { uncontested, constituencies: fields.length };
 }
 
@@ -592,7 +605,10 @@ function legislativeTelemetry(state: SimState) {
       row.push(choice);
       byParty.set(partyId, row);
     }
-    if (vote.passed && [...byParty.values()].filter((choices) => choices.includes("yes")).length > 1) {
+    if (
+      vote.passed &&
+      [...byParty.values()].filter((choices) => choices.includes("yes")).length > 1
+    ) {
       crossPartyFloorPasses += 1;
     }
     for (const [partyId, choices] of byParty) {
@@ -601,7 +617,8 @@ function legislativeTelemetry(state: SimState) {
         const yes = cast.filter((choice) => choice === "yes").length;
         cohesionSamples.push(Math.max(yes, cast.length - yes) / cast.length);
       }
-      const recommendation = state.legislatureRuntime.partyRecommendations[`${partyId}:${vote.billId}`];
+      const recommendation =
+        state.legislatureRuntime.partyRecommendations[`${partyId}:${vote.billId}`];
       if (recommendation?.stance === "support" || recommendation?.stance === "oppose") {
         const aligned = choices.filter((choice) =>
           recommendation.stance === "support" ? choice === "yes" : choice === "no",
@@ -682,7 +699,10 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
       row.push(choice);
       byParty.set(partyId, row);
     }
-    if (vote.passed && [...byParty.values()].filter((choices) => choices.includes("yes")).length > 1) {
+    if (
+      vote.passed &&
+      [...byParty.values()].filter((choices) => choices.includes("yes")).length > 1
+    ) {
       provincialCrossPartyPasses += 1;
     }
     for (const choices of byParty.values()) {
@@ -695,14 +715,18 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
   const currentGovernorParty = (provinceId: string): string | null => {
     const holder = Object.values(state.officeTerms).find((term) => {
       const office = world.offices[term.officeId];
-      return office?.kind === "governor" && office.provinceId === provinceId &&
-        (term.status === "active" || term.status === "suspended");
+      return (
+        office?.kind === "governor" &&
+        office.provinceId === provinceId &&
+        (term.status === "active" || term.status === "suspended")
+      );
     })?.holderId;
-    return holder ? state.politicians[holder]?.partyId ?? null : null;
+    return holder ? (state.politicians[holder]?.partyId ?? null) : null;
   };
   const pluralityParty = (provinceId: string): string | null =>
-    Object.entries(state.provincialRuntime.assemblies[provinceId]?.partySeats ?? {})
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+    Object.entries(state.provincialRuntime.assemblies[provinceId]?.partySeats ?? {}).sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+    )[0]?.[0] ?? null;
   const dividedBills = Object.values(state.provincialRuntime.bills).filter((bill) => {
     const governorParty = currentGovernorParty(bill.provinceId);
     const chamberParty = pluralityParty(bill.provinceId);
@@ -734,8 +758,11 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
     ...Object.entries(state.politicians)
       .filter(([, politician]) => politician.alive && !politician.retired)
       .flatMap(([id]) => {
-        const birthDate = state.generatedAgentProfiles[id]?.birthDate ?? world.agentProfiles[id]?.birthDate;
-        return birthDate ? [Number(state.currentDate.slice(0, 4)) - Number(birthDate.slice(0, 4))] : [];
+        const birthDate =
+          state.generatedAgentProfiles[id]?.birthDate ?? world.agentProfiles[id]?.birthDate;
+        return birthDate
+          ? [Number(state.currentDate.slice(0, 4)) - Number(birthDate.slice(0, 4))]
+          : [];
       }),
   ].filter((age) => age >= 18 && age <= 110);
   const constitutionalByRule: Record<string, number> = {};
@@ -749,65 +776,122 @@ function institutionTelemetry(world: KernelWorld, state: SimState): RunTelemetry
     provincialSeats: seatCounts.reduce((sum, seats) => sum + seats, 0),
     provincialSeatMin: seatCounts.length ? Math.min(...seatCounts) : 0,
     provincialSeatMax: seatCounts.length ? Math.max(...seatCounts) : 0,
-    provincialElections: Object.values(state.provincialRuntime.assemblyElections).filter((election) => election.status === "resolved").length,
-    provincialLeadershipElections: assemblies.reduce((sum, assembly) => sum + (assembly.leadershipHistory?.length ?? 0), 0),
-    provincialBillsIntroduced: eventCount("PROVINCIAL_BILL_INTRODUCED") + eventCount("GOVERNOR_PROVINCIAL_BILL_PROPOSED"),
+    provincialElections: Object.values(state.provincialRuntime.assemblyElections).filter(
+      (election) => election.status === "resolved",
+    ).length,
+    provincialLeadershipElections: assemblies.reduce(
+      (sum, assembly) => sum + (assembly.leadershipHistory?.length ?? 0),
+      0,
+    ),
+    provincialBillsIntroduced:
+      eventCount("PROVINCIAL_BILL_INTRODUCED") + eventCount("GOVERNOR_PROVINCIAL_BILL_PROPOSED"),
     provincialBillsPassed: billVotes.filter((vote) => vote.passed).length,
     provincialBillsFailed: billVotes.filter((vote) => !vote.passed).length,
     provincialPassageByGovernment: passageByGovernment,
     provincialBillsSigned: eventCount("PROVINCIAL_BILL_SIGNED"),
     provincialVetoes: eventCount("PROVINCIAL_BILL_VETOED"),
     provincialOverrides: eventCount("PROVINCIAL_VETO_OVERRIDDEN"),
-    provincialVotes: Object.values(state.provincialRuntime.votes).filter((vote) => !vote.id.startsWith("pending:")).length,
+    provincialVotes: Object.values(state.provincialRuntime.votes).filter(
+      (vote) => !vote.id.startsWith("pending:"),
+    ).length,
     provincialCrossPartyPasses,
     provincialMeanPartyCohesion: cohesionSamples.length
       ? cohesionSamples.reduce((sum, value) => sum + value, 0) / cohesionSamples.length
       : 0,
     provincialDividedGovernmentBills: dividedBills.length,
-    provincialDividedGovernmentSigned: dividedBills.filter((bill) => ["signed", "override_passed"].includes(bill.status)).length,
-    provincialDividedGovernmentVetoed: dividedBills.filter((bill) => ["vetoed", "override_failed"].includes(bill.status)).length,
+    provincialDividedGovernmentSigned: dividedBills.filter((bill) =>
+      ["signed", "override_passed"].includes(bill.status),
+    ).length,
+    provincialDividedGovernmentVetoed: dividedBills.filter((bill) =>
+      ["vetoed", "override_failed"].includes(bill.status),
+    ).length,
     provincialLeadershipTurnover: leadershipTurnover,
     provincialLegislators: Object.keys(state.provincialRuntime.legislators).length,
-    provincialLegislatorsGenerated: Object.values(state.provincialRuntime.legislators).filter((politician) => politician.source === "recruited").length,
+    provincialLegislatorsGenerated: Object.values(state.provincialRuntime.legislators).filter(
+      (politician) => politician.source === "recruited",
+    ).length,
     provincialPromotions: Object.keys(state.provincialRuntime.promotions).length,
-    generatedNationalPoliticians: Object.keys(state.politicians).filter((id) => !worldPoliticians.has(id)).length,
+    generatedNationalPoliticians: Object.keys(state.politicians).filter(
+      (id) => !worldPoliticians.has(id),
+    ).length,
     generatedPersonQualityErrors: generatedQuality.errors.length,
     generatedPersonQualityWarnings: generatedQuality.warnings.length,
     generatedLargestFirstNameShare: generatedQuality.largestFirstNameShare,
     generatedLargestFamilyNameShare: generatedQuality.largestFamilyNameShare,
-    federalAssemblyCandidates: resolvedFederalFields.reduce((sum, field) => sum + field.candidateIds.length, 0),
+    federalAssemblyCandidates: resolvedFederalFields.reduce(
+      (sum, field) => sum + field.candidateIds.length,
+      0,
+    ),
     minimumFederalCandidateSurplus: candidateSurpluses.length ? Math.min(...candidateSurpluses) : 0,
     activeOriginalPoliticians: world.politicians.filter((politician) => {
       const runtime = state.politicians[politician.id];
       return runtime?.alive && !runtime.retired;
     }).length,
-    activeGovernors: Object.values(state.officeTerms).filter((term) => world.offices[term.officeId]?.kind === "governor" && (term.status === "active" || term.status === "suspended")).length,
-    activePartyLeaders: new Set(Object.values(state.partyStates).map((party) => party.leaderId).filter(Boolean)).size,
-    activeCaucusLeaders: new Set(Object.values(state.legislatureRuntime.caucusLeadership).flatMap((leadership) => [leadership.floorLeaderId, leadership.whipId]).filter(Boolean)).size,
-    meanActivePoliticalAge: activeAges.length ? activeAges.reduce((sum, age) => sum + age, 0) / activeAges.length : 0,
+    activeGovernors: Object.values(state.officeTerms).filter(
+      (term) =>
+        world.offices[term.officeId]?.kind === "governor" &&
+        (term.status === "active" || term.status === "suspended"),
+    ).length,
+    activePartyLeaders: new Set(
+      Object.values(state.partyStates)
+        .map((party) => party.leaderId)
+        .filter(Boolean),
+    ).size,
+    activeCaucusLeaders: new Set(
+      Object.values(state.legislatureRuntime.caucusLeadership)
+        .flatMap((leadership) => [leadership.floorLeaderId, leadership.whipId])
+        .filter(Boolean),
+    ).size,
+    meanActivePoliticalAge: activeAges.length
+      ? activeAges.reduce((sum, age) => sum + age, 0) / activeAges.length
+      : 0,
     politiciansRetired: eventCount("POLITICIAN_RETIRED"),
     politiciansDied: eventCount("POLITICIAN_DIED"),
-    partyLeadershipContests: partyContests.filter((contest) => contest.type === "party_leadership").length,
-    factionChairContests: partyContests.filter((contest) => contest.type === "faction_chair").length,
+    partyLeadershipContests: partyContests.filter((contest) => contest.type === "party_leadership")
+      .length,
+    factionChairContests: partyContests.filter((contest) => contest.type === "faction_chair")
+      .length,
     partyContestsResolved: partyContests.filter((contest) => contest.status === "resolved").length,
     caucusContests: caucusContests.length,
-    caucusContestsResolved: caucusContests.filter((contest) => contest.status === "resolved").length,
+    caucusContestsResolved: caucusContests.filter((contest) => contest.status === "resolved")
+      .length,
     constitutionalProposed: amendments.length,
-    constitutionalAssemblyPassed: amendments.filter((amendment) => ["ratifying", "ratified"].includes(amendment.status)).length,
-    constitutionalRatified: amendments.filter((amendment) => amendment.status === "ratified").length,
-    constitutionalFailed: amendments.filter((amendment) => ["assembly_failed", "failed"].includes(amendment.status)).length,
+    constitutionalAssemblyPassed: amendments.filter((amendment) =>
+      ["ratifying", "ratified"].includes(amendment.status),
+    ).length,
+    constitutionalRatified: amendments.filter((amendment) => amendment.status === "ratified")
+      .length,
+    constitutionalFailed: amendments.filter((amendment) =>
+      ["assembly_failed", "failed"].includes(amendment.status),
+    ).length,
     constitutionalByRule,
     constitutionalByTrigger,
     courtDecisions: Object.keys(state.constitutionalRuntime.courtDecisions).length,
-    federalProvincialCases: Object.values(state.constitutionalRuntime.courtCases).filter((courtCase) => courtCase.caseType === "FEDERAL_PROVINCIAL_DISPUTE").length,
-    organizationActions: organizations.reduce((sum, organization) => sum + organization.recentActions.length, 0),
-    organizationEndorsements: organizations.reduce((sum, organization) => sum + organization.endorsements.length, 0),
-    organizationRelationships: organizations.reduce((sum, organization) => sum + Object.keys(organization.relationships).length, 0),
+    federalProvincialCases: Object.values(state.constitutionalRuntime.courtCases).filter(
+      (courtCase) => courtCase.caseType === "FEDERAL_PROVINCIAL_DISPUTE",
+    ).length,
+    organizationActions: organizations.reduce(
+      (sum, organization) => sum + organization.recentActions.length,
+      0,
+    ),
+    organizationEndorsements: organizations.reduce(
+      (sum, organization) => sum + organization.endorsements.length,
+      0,
+    ),
+    organizationRelationships: organizations.reduce(
+      (sum, organization) => sum + Object.keys(organization.relationships).length,
+      0,
+    ),
     organizationMeetings: eventCount("ORGANIZATION_MEETING"),
     organizationPolicyTalks: eventCount("ORGANIZATION_POLICY_TALK"),
     organizationEndorsementWithdrawals: eventCount("ORGANIZATION_ENDORSEMENT_WITHDRAWN"),
-    organizationBillPositions: organizations.reduce((sum, organization) => sum + organization.billPressure.length, 0),
-    candidateShortageEvents: state.history.filter((event) => /CANDIDATE_SHORTAGE|INSUFFICIENT_CANDIDATES/.test(event.type)).length,
+    organizationBillPositions: organizations.reduce(
+      (sum, organization) => sum + organization.billPressure.length,
+      0,
+    ),
+    candidateShortageEvents: state.history.filter((event) =>
+      /CANDIDATE_SHORTAGE|INSUFFICIENT_CANDIDATES/.test(event.type),
+    ).length,
   };
 }
 
@@ -870,8 +954,54 @@ function pickCareerSample(state: SimState): string[] {
     .slice(0, CAREER_SAMPLE_SIZE);
 }
 
-function saveBytes(sim: Simulation): number {
-  return Buffer.byteLength(JSON.stringify(sim.serializeSave()), "utf8");
+function jsonBytes(value: unknown): number {
+  return Buffer.byteLength(JSON.stringify(value), "utf8");
+}
+
+function saveFootprint(sim: Simulation): { bytes: number; sections: Record<string, number> } {
+  const save = sim.serializeSave();
+  const state = save.simulation;
+  return {
+    bytes: jsonBytes(save),
+    sections: {
+      historyEvents: jsonBytes(state.history),
+      nationalElections: jsonBytes(state.elections),
+      provincialElections: jsonBytes({
+        governors: state.provincialRuntime.elections,
+        assemblies: state.provincialRuntime.assemblyElections,
+      }),
+      provincialLegislators: jsonBytes(state.provincialRuntime.legislators),
+      provincialLeadershipHistory: jsonBytes(
+        Object.fromEntries(
+          Object.entries(state.provincialRuntime.assemblies).map(([id, assembly]) => [
+            id,
+            assembly.leadershipHistory,
+          ]),
+        ),
+      ),
+      federalRollCalls: jsonBytes(state.legislatureRuntime.legislativeVotes),
+      provincialRollCalls: jsonBytes(state.provincialRuntime.votes),
+      federalLegislation: jsonBytes({
+        bills: state.legislatureRuntime.bills,
+        laws: state.legislatureRuntime.enactedLaws,
+        amendments: state.legislatureRuntime.amendments,
+      }),
+      provincialLegislation: jsonBytes(state.provincialRuntime.bills),
+      leadershipContests: jsonBytes({
+        party: state.partyContests,
+        delegation: state.legislatureRuntime.caucusContests,
+      }),
+      media: jsonBytes(state.mediaRuntime),
+      campaigns: jsonBytes(state.campaignRuntime),
+      foreignAffairs: jsonBytes(state.foreignAffairsRuntime),
+      relationshipsAndMemories: jsonBytes({
+        relationships: state.relationships,
+        memories: state.memories,
+        beliefs: state.beliefs,
+        goals: state.goals,
+      }),
+    },
+  };
 }
 
 function shouldCaptureSave(month: number): boolean {
@@ -922,7 +1052,7 @@ function runOneSeed(args: {
   const turnMs: number[] = [];
   const saveGrowth: RunTelemetry["saveGrowth"] = [];
 
-  saveGrowth.push({ month: 0, date: startState.currentDate, bytes: saveBytes(sim) });
+  saveGrowth.push({ month: 0, date: startState.currentDate, ...saveFootprint(sim) });
 
   let monthsCompleted = 0;
   let error: string | null = null;
@@ -951,20 +1081,23 @@ function runOneSeed(args: {
       if (outputDelta > 0.04) expansionMonths += 1;
       if (outputDelta < -0.04) contractionMonths += 1;
       if (outputDelta > 0.04 && previousOutputDelta < -0.04) recoveryMonths += 1;
-      if (telemetry.national.priceIndex - previousNational.priceIndex > 0.18) inflationPressureMonths += 1;
-      if (telemetry.national.realWageIndex - previousNational.realWageIndex < -0.12) wageSqueezeMonths += 1;
-      if (telemetry.national.housingIndex - previousNational.housingIndex > 0.12) housingImprovementMonths += 1;
-      if (telemetry.national.housingIndex - previousNational.housingIndex < -0.12) housingWeakeningMonths += 1;
-      largestSpread = Math.max(largestSpread, numericSpread(Object.values(telemetry.provinceConditions)));
+      if (telemetry.national.priceIndex - previousNational.priceIndex > 0.18)
+        inflationPressureMonths += 1;
+      if (telemetry.national.realWageIndex - previousNational.realWageIndex < -0.12)
+        wageSqueezeMonths += 1;
+      if (telemetry.national.housingIndex - previousNational.housingIndex > 0.12)
+        housingImprovementMonths += 1;
+      if (telemetry.national.housingIndex - previousNational.housingIndex < -0.12)
+        housingWeakeningMonths += 1;
+      largestSpread = Math.max(
+        largestSpread,
+        numericSpread(Object.values(telemetry.provinceConditions)),
+      );
       previousOutputDelta = outputDelta;
       previousNational = { ...telemetry.national };
 
       if (shouldCaptureSave(month)) {
-        saveGrowth.push({
-          month,
-          date: telemetry.currentDate,
-          bytes: saveBytes(sim),
-        });
+        saveGrowth.push({ month, date: telemetry.currentDate, ...saveFootprint(sim) });
       }
     }
   } catch (err) {
@@ -1045,7 +1178,9 @@ function runOneSeed(args: {
       top5End: endRanking.slice(0, 5),
       startSpread,
       endSpread: endState
-        ? numericSpread(Object.values(endState.economyRuntime.provinces).map((row) => row.conditionsIndex))
+        ? numericSpread(
+            Object.values(endState.economyRuntime.provinces).map((row) => row.conditionsIndex),
+          )
         : startSpread,
       largestSpread,
     },
@@ -1131,7 +1266,12 @@ function runOneSeed(args: {
         },
     careers: endState
       ? careerTelemetry(world, endState, careerSample)
-      : { sampleSize: careerSample.length, politicianIds: careerSample, termsObserved: 0, transitions: [] },
+      : {
+          sampleSize: careerSample.length,
+          politicianIds: careerSample,
+          termsObserved: 0,
+          transitions: [],
+        },
     foreign: endState
       ? foreignTelemetry(endState)
       : {
@@ -1157,7 +1297,10 @@ function runOneSeed(args: {
   };
 }
 
-function runDeterminismChecks(world: KernelWorld): {
+function runDeterminismChecks(
+  world: KernelWorld,
+  continuousRun: RunTelemetry | undefined,
+): {
   seed: string;
   dualRunMatch: boolean;
   hashA: string | null;
@@ -1170,42 +1313,44 @@ function runDeterminismChecks(world: KernelWorld): {
   const seed = seedLabel(0);
   let error: string | null = null;
   try {
-    const a = createSimulation({ world, playerPoliticianId: PLAYER_ID, seed });
-    const b = createSimulation({ world, playerPoliticianId: PLAYER_ID, seed });
-    advanceIntegrated(a, months);
-    advanceIntegrated(b, months);
-    const hashA = a.hashState();
-    const hashB = b.hashState();
-    const dualRunMatch = hashA === hashB;
-
-    const continuous = createSimulation({ world, playerPoliticianId: PLAYER_ID, seed });
+    if (
+      !continuousRun ||
+      continuousRun.seed !== seed ||
+      continuousRun.monthsCompleted !== months ||
+      continuousRun.error ||
+      !continuousRun.finalHash
+    ) {
+      throw new Error("completed continuous seed-0 run is unavailable for determinism comparison");
+    }
+    const hashA = continuousRun.finalHash;
+    const segmented = createSimulation({ world, playerPoliticianId: PLAYER_ID, seed });
     const midMonths = Math.max(1, Math.floor(months / 2));
-    advanceIntegrated(continuous, midMonths);
-    const midSave = continuous.serializeSave();
+    advanceIntegrated(segmented, midMonths);
+    const midSave = segmented.serializeSave();
     const restored = restoreSimulation(midSave, world);
-    if (restored.hashState() !== continuous.hashState()) {
+    if (restored.hashState() !== segmented.hashState()) {
       return {
         seed,
-        dualRunMatch,
+        dualRunMatch: false,
         hashA,
-        hashB,
+        hashB: restored.hashState(),
         reloadMatch: false,
-        reloadHashContinuous: continuous.hashState(),
+        reloadHashContinuous: segmented.hashState(),
         reloadHashRestored: restored.hashState(),
         error: "reload hash mismatch at midpoint",
       };
     }
     const remaining = months - midMonths;
-    advanceIntegrated(continuous, remaining);
     advanceIntegrated(restored, remaining);
-    const reloadHashContinuous = continuous.hashState();
+    const reloadHashContinuous = hashA;
     const reloadHashRestored = restored.hashState();
+    const dualRunMatch = hashA === reloadHashRestored;
     return {
       seed,
       dualRunMatch,
       hashA,
-      hashB,
-      reloadMatch: reloadHashContinuous === reloadHashRestored,
+      hashB: reloadHashRestored,
+      reloadMatch: dualRunMatch,
       reloadHashContinuous,
       reloadHashRestored,
       error: null,
@@ -1284,7 +1429,8 @@ export function aggregateRuns(runs: RunTelemetry[], requestedMonths = months) {
     .filter((v): v is number => v != null);
 
   return {
-    runsCompleted: runs.filter((r) => r.error == null && r.monthsCompleted === requestedMonths).length,
+    runsCompleted: runs.filter((r) => r.error == null && r.monthsCompleted === requestedMonths)
+      .length,
     runsWithErrors: runs.filter((r) => r.error != null).length,
     catastrophic: {
       totalFailures: catastrophicTotal,
@@ -1296,7 +1442,8 @@ export function aggregateRuns(runs: RunTelemetry[], requestedMonths = months) {
     strictV1: {
       totalFailures: strictTotal,
       failedRuns: runs.filter((run) => run.strictV1FailureCount > 0).length,
-      failureRate: runs.filter((run) => run.strictV1FailureCount > 0).length / Math.max(1, runs.length),
+      failureRate:
+        runs.filter((run) => run.strictV1FailureCount > 0).length / Math.max(1, runs.length),
       byCode: strictByCode,
       passed: strictTotal === 0,
     },
@@ -1353,37 +1500,77 @@ export function aggregateRuns(runs: RunTelemetry[], requestedMonths = months) {
     institutions: {
       provincialSeats: summarize(runs.map((r) => r.institutions.provincialSeats)),
       provincialElections: summarize(runs.map((r) => r.institutions.provincialElections)),
-      provincialLeadershipElections: summarize(runs.map((r) => r.institutions.provincialLeadershipElections)),
-      provincialBillsIntroduced: summarize(runs.map((r) => r.institutions.provincialBillsIntroduced)),
+      provincialLeadershipElections: summarize(
+        runs.map((r) => r.institutions.provincialLeadershipElections),
+      ),
+      provincialBillsIntroduced: summarize(
+        runs.map((r) => r.institutions.provincialBillsIntroduced),
+      ),
       provincialBillsPassed: summarize(runs.map((r) => r.institutions.provincialBillsPassed)),
       provincialBillsFailed: summarize(runs.map((r) => r.institutions.provincialBillsFailed)),
       provincialPassageByGovernment: Object.fromEntries(
         (["friendly", "divided", "hostile"] as const).map((relation) => {
-          const votes = runs.reduce((sum, run) => sum + run.institutions.provincialPassageByGovernment[relation].votes, 0);
-          const passed = runs.reduce((sum, run) => sum + run.institutions.provincialPassageByGovernment[relation].passed, 0);
+          const votes = runs.reduce(
+            (sum, run) => sum + run.institutions.provincialPassageByGovernment[relation].votes,
+            0,
+          );
+          const passed = runs.reduce(
+            (sum, run) => sum + run.institutions.provincialPassageByGovernment[relation].passed,
+            0,
+          );
           return [relation, { votes, passed, passageRate: votes > 0 ? passed / votes : null }];
         }),
       ),
       provincialBillsSigned: summarize(runs.map((r) => r.institutions.provincialBillsSigned)),
       provincialVetoes: summarize(runs.map((r) => r.institutions.provincialVetoes)),
       provincialOverrides: summarize(runs.map((r) => r.institutions.provincialOverrides)),
-      provincialCrossPartyPasses: summarize(runs.map((r) => r.institutions.provincialCrossPartyPasses)),
-      provincialMeanPartyCohesion: summarize(runs.map((r) => r.institutions.provincialMeanPartyCohesion)),
-      provincialDividedGovernmentBills: summarize(runs.map((r) => r.institutions.provincialDividedGovernmentBills)),
-      provincialDividedGovernmentSigned: summarize(runs.map((r) => r.institutions.provincialDividedGovernmentSigned)),
-      provincialDividedGovernmentVetoed: summarize(runs.map((r) => r.institutions.provincialDividedGovernmentVetoed)),
-      provincialLeadershipTurnover: summarize(runs.map((r) => r.institutions.provincialLeadershipTurnover)),
+      provincialCrossPartyPasses: summarize(
+        runs.map((r) => r.institutions.provincialCrossPartyPasses),
+      ),
+      provincialMeanPartyCohesion: summarize(
+        runs.map((r) => r.institutions.provincialMeanPartyCohesion),
+      ),
+      provincialDividedGovernmentBills: summarize(
+        runs.map((r) => r.institutions.provincialDividedGovernmentBills),
+      ),
+      provincialDividedGovernmentSigned: summarize(
+        runs.map((r) => r.institutions.provincialDividedGovernmentSigned),
+      ),
+      provincialDividedGovernmentVetoed: summarize(
+        runs.map((r) => r.institutions.provincialDividedGovernmentVetoed),
+      ),
+      provincialLeadershipTurnover: summarize(
+        runs.map((r) => r.institutions.provincialLeadershipTurnover),
+      ),
       provincialLegislators: summarize(runs.map((r) => r.institutions.provincialLegislators)),
-      provincialLegislatorsGenerated: summarize(runs.map((r) => r.institutions.provincialLegislatorsGenerated)),
+      provincialLegislatorsGenerated: summarize(
+        runs.map((r) => r.institutions.provincialLegislatorsGenerated),
+      ),
       provincialPromotions: summarize(runs.map((r) => r.institutions.provincialPromotions)),
-      generatedNationalPoliticians: summarize(runs.map((r) => r.institutions.generatedNationalPoliticians)),
-      generatedPersonQualityErrors: summarize(runs.map((r) => r.institutions.generatedPersonQualityErrors)),
-      generatedPersonQualityWarnings: summarize(runs.map((r) => r.institutions.generatedPersonQualityWarnings)),
-      generatedLargestFirstNameShare: summarize(runs.map((r) => r.institutions.generatedLargestFirstNameShare)),
-      generatedLargestFamilyNameShare: summarize(runs.map((r) => r.institutions.generatedLargestFamilyNameShare)),
-      federalAssemblyCandidates: summarize(runs.map((r) => r.institutions.federalAssemblyCandidates)),
-      minimumFederalCandidateSurplus: summarize(runs.map((r) => r.institutions.minimumFederalCandidateSurplus)),
-      activeOriginalPoliticians: summarize(runs.map((r) => r.institutions.activeOriginalPoliticians)),
+      generatedNationalPoliticians: summarize(
+        runs.map((r) => r.institutions.generatedNationalPoliticians),
+      ),
+      generatedPersonQualityErrors: summarize(
+        runs.map((r) => r.institutions.generatedPersonQualityErrors),
+      ),
+      generatedPersonQualityWarnings: summarize(
+        runs.map((r) => r.institutions.generatedPersonQualityWarnings),
+      ),
+      generatedLargestFirstNameShare: summarize(
+        runs.map((r) => r.institutions.generatedLargestFirstNameShare),
+      ),
+      generatedLargestFamilyNameShare: summarize(
+        runs.map((r) => r.institutions.generatedLargestFamilyNameShare),
+      ),
+      federalAssemblyCandidates: summarize(
+        runs.map((r) => r.institutions.federalAssemblyCandidates),
+      ),
+      minimumFederalCandidateSurplus: summarize(
+        runs.map((r) => r.institutions.minimumFederalCandidateSurplus),
+      ),
+      activeOriginalPoliticians: summarize(
+        runs.map((r) => r.institutions.activeOriginalPoliticians),
+      ),
       activeGovernors: summarize(runs.map((r) => r.institutions.activeGovernors)),
       activePartyLeaders: summarize(runs.map((r) => r.institutions.activePartyLeaders)),
       activeCaucusLeaders: summarize(runs.map((r) => r.institutions.activeCaucusLeaders)),
@@ -1399,11 +1586,17 @@ export function aggregateRuns(runs: RunTelemetry[], requestedMonths = months) {
       constitutionalByTrigger: sumRecords(runs.map((r) => r.institutions.constitutionalByTrigger)),
       courtDecisions: summarize(runs.map((r) => r.institutions.courtDecisions)),
       organizationActions: summarize(runs.map((r) => r.institutions.organizationActions)),
-      organizationRelationships: summarize(runs.map((r) => r.institutions.organizationRelationships)),
+      organizationRelationships: summarize(
+        runs.map((r) => r.institutions.organizationRelationships),
+      ),
       organizationMeetings: summarize(runs.map((r) => r.institutions.organizationMeetings)),
       organizationPolicyTalks: summarize(runs.map((r) => r.institutions.organizationPolicyTalks)),
-      organizationEndorsementWithdrawals: summarize(runs.map((r) => r.institutions.organizationEndorsementWithdrawals)),
-      organizationBillPositions: summarize(runs.map((r) => r.institutions.organizationBillPositions)),
+      organizationEndorsementWithdrawals: summarize(
+        runs.map((r) => r.institutions.organizationEndorsementWithdrawals),
+      ),
+      organizationBillPositions: summarize(
+        runs.map((r) => r.institutions.organizationBillPositions),
+      ),
       candidateShortageEvents: summarize(runs.map((r) => r.institutions.candidateShortageEvents)),
     },
     foreign: {
@@ -1546,7 +1739,8 @@ async function main(): Promise<void> {
     }
   }
 
-  if (!skipDeterminism) console.log("  running determinism checks (seed 0 dual + reload)…");
+  if (!skipDeterminism)
+    console.log("  running determinism check (continuous seed 0 vs midpoint save/reload)…");
   const determinism = skipDeterminism
     ? {
         seed: seedLabel(0),
@@ -1558,7 +1752,10 @@ async function main(): Promise<void> {
         reloadHashRestored: null,
         error: "skipped by --skip-determinism",
       }
-    : runDeterminismChecks(world);
+    : runDeterminismChecks(
+        world,
+        runs.find((run) => run.seedIndex === 0),
+      );
   const aggregate = aggregateRuns(runs);
 
   const meta = {
@@ -1614,28 +1811,41 @@ async function runParallelCalibration(): Promise<void> {
       "--calibration-child",
       ...(resume ? ["--resume"] : []),
     ];
-    jobs.push(new Promise<string>((resolveJob, rejectJob) => {
-      const child = spawn(process.execPath, childArgs, { stdio: "inherit", windowsHide: true });
-      child.on("error", rejectJob);
-      child.on("exit", (code) => {
-        if (code === 0) resolveJob(chunkPath);
-        else rejectJob(new Error(`Calibration worker ${worker} exited with code ${code ?? "unknown"}`));
-      });
-    }));
+    jobs.push(
+      new Promise<string>((resolveJob, rejectJob) => {
+        const child = spawn(process.execPath, childArgs, { stdio: "inherit", windowsHide: true });
+        child.on("error", rejectJob);
+        child.on("exit", (code) => {
+          if (code === 0) resolveJob(chunkPath);
+          else
+            rejectJob(
+              new Error(`Calibration worker ${worker} exited with code ${code ?? "unknown"}`),
+            );
+        });
+      }),
+    );
   }
 
   try {
     const chunkPaths = await Promise.all(jobs);
-    const runs = chunkPaths.flatMap((chunkPath) => {
-      const payload = JSON.parse(readFileSync(chunkPath, "utf8")) as { runs?: RunTelemetry[] };
-      return payload.runs ?? [];
-    }).sort((a, b) => a.seedIndex - b.seedIndex);
+    const runs = chunkPaths
+      .flatMap((chunkPath) => {
+        const payload = JSON.parse(readFileSync(chunkPath, "utf8")) as { runs?: RunTelemetry[] };
+        return payload.runs ?? [];
+      })
+      .sort((a, b) => a.seedIndex - b.seedIndex);
     if (runs.length !== seeds) {
-      throw new Error(`Parallel calibration returned ${runs.length} runs for ${seeds} requested seeds`);
+      throw new Error(
+        `Parallel calibration returned ${runs.length} runs for ${seeds} requested seeds`,
+      );
     }
     const world = loadTerenaWorld();
-    const probe = createSimulation({ world, playerPoliticianId: PLAYER_ID, seed: seedLabel(seedStart) });
-    console.log("  running determinism checks (seed 0 dual + reload)…");
+    const probe = createSimulation({
+      world,
+      playerPoliticianId: PLAYER_ID,
+      seed: seedLabel(seedStart),
+    });
+    console.log("  running determinism check (continuous seed 0 vs midpoint save/reload)…");
     const determinism = skipDeterminism
       ? {
           seed: seedLabel(seedStart),
@@ -1647,7 +1857,10 @@ async function runParallelCalibration(): Promise<void> {
           reloadHashRestored: null,
           error: "skipped by --skip-determinism",
         }
-      : runDeterminismChecks(world);
+      : runDeterminismChecks(
+          world,
+          runs.find((run) => run.seedIndex === 0),
+        );
     const aggregate = aggregateRuns(runs, months);
     const meta = {
       phase: "11.3",

@@ -37,6 +37,12 @@ export function DecisionPanel(props: {
   countingElection: boolean;
   onResolveAssembly: () => void;
   onResolvePresidential: () => void;
+  askConfirm: (opts: {
+    title: string;
+    body: string;
+    confirmLabel?: string;
+    action: () => void;
+  }) => void;
 }) {
   const { snap, sim, world } = props;
   const interrupt = snap.pendingInterrupt;
@@ -72,11 +78,7 @@ export function DecisionPanel(props: {
         <div>
           <div>{interruptDisplay(interrupt)}</div>
           {interrupt.code === "PRESIDENTIAL_ELECTION_DUE" ? (
-            <button
-              type="button"
-              className="btn"
-              onClick={props.onResolvePresidential}
-            >
+            <button type="button" className="btn" onClick={props.onResolvePresidential}>
               Resolve presidential election
             </button>
           ) : interrupt.code === "ASSEMBLY_ELECTION_DUE" ? (
@@ -107,7 +109,18 @@ export function DecisionPanel(props: {
       {president && warTrigger ? (
         <div className="row" style={{ marginTop: "0.5rem" }}>
           <span>International crisis requires war powers authorization</span>
-          <button type="button" className="btn" onClick={() => run({ type: "BEGIN_WAR_POWERS" })}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() =>
+              props.askConfirm({
+                title: "Request war powers?",
+                body: "This opens a formal authorization process in the Assembly. It does not itself begin hostilities, but it commits the administration to a public escalation.",
+                confirmLabel: "Begin authorization",
+                action: () => run({ type: "BEGIN_WAR_POWERS" }),
+              })
+            }
+          >
             Begin war powers
           </button>
         </div>
@@ -132,9 +145,7 @@ export function DecisionPanel(props: {
             <button
               type="button"
               className="btn secondary"
-              onClick={() =>
-                run({ type: "DECLINE_ASSEMBLY_CANDIDACY", electionId: d.electionId! })
-              }
+              onClick={() => run({ type: "DECLINE_ASSEMBLY_CANDIDACY", electionId: d.electionId! })}
             >
               Do not run
             </button>
@@ -142,17 +153,18 @@ export function DecisionPanel(props: {
         </div>
       ))}
       {incomingDiplomacy.map((d) => {
-        const action = snap.foreignAffairsRuntime.pendingPresidentialActions.find(
-          (a) =>
-            d.targetCountryId != null
-              ? a.targetCountryId === d.targetCountryId && d.key.includes(a.kind)
-              : d.key.includes(a.kind),
+        const action = snap.foreignAffairsRuntime.pendingPresidentialActions.find((a) =>
+          d.targetCountryId != null
+            ? a.targetCountryId === d.targetCountryId && d.key.includes(a.kind)
+            : d.key.includes(a.kind),
         );
-        const label = action
-          ? foreignPresidentialActionLabel(world, snap, action)
-          : d.label;
+        const label = action ? foreignPresidentialActionLabel(world, snap, action) : d.label;
         return (
-          <div key={d.key} className="row incoming-diplomacy-decision" style={{ marginTop: "0.5rem" }}>
+          <div
+            key={d.key}
+            className="row incoming-diplomacy-decision"
+            style={{ marginTop: "0.5rem" }}
+          >
             <span>{label}</span>
             <button
               type="button"
@@ -185,27 +197,43 @@ export function DecisionPanel(props: {
           </div>
         );
       })}
-      {signs.length ? <div className="decision-action-grid">
-        {signs.map((d) => (
-          <div key={d.key} className="row decision-action-row">
-            <span>{d.label}</span>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => run({ type: "SIGN_BILL", billId: d.billId! })}
-            >
-              Sign
-            </button>
-            <button
-              type="button"
-              className="btn danger"
-              onClick={() => run({ type: "RETURN_BILL", billId: d.billId! })}
-            >
-              Return
-            </button>
-          </div>
-        ))}
-      </div> : null}
+      {signs.length ? (
+        <div className="decision-action-grid">
+          {signs.map((d) => (
+            <div key={d.key} className="row decision-action-row">
+              <span>{d.label}</span>
+              <button
+                type="button"
+                className="btn"
+                onClick={() =>
+                  props.askConfirm({
+                    title: "Sign this bill?",
+                    body: "The measure will become operative law and its published policy effects will begin on the modeled schedule.",
+                    confirmLabel: "Sign into law",
+                    action: () => run({ type: "SIGN_BILL", billId: d.billId! }),
+                  })
+                }
+              >
+                Sign
+              </button>
+              <button
+                type="button"
+                className="btn danger"
+                onClick={() =>
+                  props.askConfirm({
+                    title: "Return this bill?",
+                    body: "The measure will go back to the Assembly with your objections and may still become law after a successful repassage vote.",
+                    confirmLabel: "Return to Assembly",
+                    action: () => run({ type: "RETURN_BILL", billId: d.billId! }),
+                  })
+                }
+              >
+                Return
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <div className="decision-list">
         {votes.map((d) => {
           if (d.kind === "motion_vote") {

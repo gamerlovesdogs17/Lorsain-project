@@ -18,6 +18,7 @@ import type { ElectionCandidate, ElectionState } from "./types.js";
 import { FIELD } from "../campaigns/policy.js";
 import { constituencyGotvBoost } from "../campaigns/gotv.js";
 import { presidentialNominationCycleMetadata } from "../parties/state.js";
+import { certifyCount } from "./certification.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -158,6 +159,11 @@ export function resolvePresidentialElection(
     return { error: reject("COUNT_FAILED", "IRV produced no winner") };
   }
   const winnerId = result.elected;
+  const certification = certifyCount({
+    date: state.currentDate,
+    authority: "national_electoral_commission",
+    archives: [result],
+  });
   const resultEvent = pushHistory(state, {
     date: state.currentDate,
     type: "PRESIDENTIAL_ELECTION_RESULT",
@@ -170,6 +176,7 @@ export function resolvePresidentialElection(
       winnerId,
       turnout,
       replay: serializeCountResult(result),
+      certification,
     },
     sourceScheduledEventId: args.scheduledEventId,
     sourceCommandId: args.commandId,
@@ -180,6 +187,7 @@ export function resolvePresidentialElection(
   election.countArchive = result;
   election.winnerIds = [winnerId];
   election.resultEventId = resultEvent.id;
+  election.certification = certification;
   state.presidential.certifiedPresidentElectId = winnerId;
   if (election.metadata.specialElection !== true) {
     state.presidential.electedTermCountByPolitician[winnerId] =

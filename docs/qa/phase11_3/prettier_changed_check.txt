@@ -1,0 +1,15 @@
+Checking formatting...
+[warn] scripts/whole-game-calibration.ts
+[warn] packages/sim/src/provinces/assemblies.ts
+[warn] packages/sim/src/phase11_3.institutions.test.ts
+[warn] packages/sim/src/elections/certification.ts
+[warn] packages/sim/src/elections/certification.test.ts
+[warn] apps/game/src/map/TerenaMap.tsx
+[warn] apps/game/src/map/publicLayers.ts
+[warn] apps/game/src/pages.tsx
+[warn] apps/game/src/electionsScreen.tsx
+[warn] apps/game/src/newsScreen.tsx
+[warn] apps/game/src/officeScreen.tsx
+[warn] apps/game/src/decisions.tsx
+[warn] apps/game/src/App.tsx
+[warn] Code style issues found in 13 files. Run Prettier with --write to fix.

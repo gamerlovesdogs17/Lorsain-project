@@ -1,0 +1,14 @@
+
+> lorsain@0.3.0-predev validate:phase0b:recount C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project
+> pnpm --filter @lorsain/content-loader exec tsx ../../scripts/phase0b/recount_validate.ts
+
+Recounted 48/48 constituencies successfully (lots replayed: 0).
+National party seats: {
+  PARTY_LAB: 128,
+  PARTY_NU: 110,
+  PARTY_CR: 69,
+  PARTY_GRN: 41,
+  PARTY_RL: 35,
+  PARTY_PM: 29,
+  PARTY_IND: 8
+}

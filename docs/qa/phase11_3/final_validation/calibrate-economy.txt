@@ -1,0 +1,670 @@
+
+> lorsain@0.3.0-predev calibrate:economy C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project
+> pnpm --filter @lorsain/content-loader exec tsx ../../scripts/economy-calibration.ts
+
+{
+  "economyCalibration": {
+    "seeds": 12,
+    "months": 48,
+    "canonicalStartingNational": {
+      "outputIndex": 98.7,
+      "employmentIndex": 99.3,
+      "priceIndex": 103.8,
+      "realWageIndex": 97.6,
+      "housingIndex": 96.4,
+      "confidenceIndex": 94.8,
+      "fiscalPressure": 0.41
+    },
+    "canonicalStartingProvinceRange": {
+      "min": 91.9,
+      "max": 105.2,
+      "spread": 13.299999999999997
+    },
+    "canonicalStartingSectorRange": {
+      "min": 92.8,
+      "max": 102.7,
+      "spread": 9.900000000000006
+    },
+    "oneYearOutputChangeRange": {
+      "min": 0.23673496941037797,
+      "max": 2.6025544874794804,
+      "spread": 2.3658195180691024
+    },
+    "fourYearOutputChangeRange": {
+      "min": 0.16546338756276668,
+      "max": 2.8808242588625177,
+      "spread": 2.715360871299751
+    },
+    "largestRegionalSpread": 17.088059442608724,
+    "shocks": 4,
+    "boundHits": 0,
+    "averageMonthlyOutputMove": 0.1481932307306599,
+    "averageDirectionChanges": 10.583333333333334
+  },
+  "runs": [
+    {
+      "seed": "P112-ECON-01",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 100.3899275194863,
+        "employmentIndex": 99.80593369392375,
+        "priceIndex": 103.15449142683454,
+        "realWageIndex": 97.68053333010877,
+        "housingIndex": 96.9475435148811,
+        "confidenceIndex": 94.96204606393029,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 1.6899275194863037,
+      "yearFour": {
+        "outputIndex": 100.46007533331756,
+        "employmentIndex": 100.75118162753921,
+        "priceIndex": 104.18139059757347,
+        "realWageIndex": 98.5863840491005,
+        "housingIndex": 99.54614008162774,
+        "confidenceIndex": 96.17706057450336,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 1.760075333317559,
+      "finalProvinceRange": {
+        "min": 93.92879142352805,
+        "max": 110.80775502069432,
+        "spread": 16.878963597166262
+      },
+      "maxProvinceSpread": 16.878963597166262,
+      "shocks": 0,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.16533615418030104,
+      "outputDirectionChanges": 10
+    },
+    {
+      "seed": "P112-ECON-02",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 98.93673496941038,
+        "employmentIndex": 99.1893842475561,
+        "priceIndex": 103.56513108814589,
+        "realWageIndex": 97.65268001512597,
+        "housingIndex": 96.69543893272119,
+        "confidenceIndex": 94.30944651783837,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 0.23673496941037797,
+      "yearFour": {
+        "outputIndex": 99.00471518890424,
+        "employmentIndex": 99.89164134395844,
+        "priceIndex": 104.82480057760834,
+        "realWageIndex": 98.45005961272605,
+        "housingIndex": 99.39000258090591,
+        "confidenceIndex": 95.45199118789213,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 0.30471518890423965,
+      "finalProvinceRange": {
+        "min": 92.32171916386352,
+        "max": 109.38356912666346,
+        "spread": 17.06184996279994
+      },
+      "maxProvinceSpread": 17.06184996279994,
+      "shocks": 1,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.17808634123961328,
+      "outputDirectionChanges": 11
+    },
+    {
+      "seed": "P112-ECON-03",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 100.16290796037495,
+        "employmentIndex": 99.7386232193512,
+        "priceIndex": 103.66879643753364,
+        "realWageIndex": 97.69341127430307,
+        "housingIndex": 96.28692483532791,
+        "confidenceIndex": 94.84555455388237,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 1.4629079603749489,
+      "yearFour": {
+        "outputIndex": 99.76987818872622,
+        "employmentIndex": 100.38260822777221,
+        "priceIndex": 104.94640186226101,
+        "realWageIndex": 98.43585847680906,
+        "housingIndex": 99.74499592870103,
+        "confidenceIndex": 95.81196163685566,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 1.0698781887262214,
+      "finalProvinceRange": {
+        "min": 93.10330621705606,
+        "max": 110.04030946856639,
+        "spread": 16.937003251510333
+      },
+      "maxProvinceSpread": 16.937003251510333,
+      "shocks": 0,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.14417809481788466,
+      "outputDirectionChanges": 10
+    },
+    {
+      "seed": "P112-ECON-04",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 100.52815656526475,
+        "employmentIndex": 99.93598171054799,
+        "priceIndex": 103.44440596953173,
+        "realWageIndex": 97.70719219811444,
+        "housingIndex": 96.63931336418345,
+        "confidenceIndex": 95.07612802494633,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 1.8281565652647487,
+      "yearFour": {
+        "outputIndex": 100.9393887311553,
+        "employmentIndex": 100.89227067766636,
+        "priceIndex": 104.64297454782411,
+        "realWageIndex": 98.47657772451518,
+        "housingIndex": 99.86687781073925,
+        "confidenceIndex": 96.57095767674032,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 2.2393887311553016,
+      "finalProvinceRange": {
+        "min": 93.61571318187688,
+        "max": 110.51325945890433,
+        "spread": 16.897546277027445
+      },
+      "maxProvinceSpread": 16.897546277027445,
+      "shocks": 1,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.14646828224654454,
+      "outputDirectionChanges": 15
+    },
+    {
+      "seed": "P112-ECON-05",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 100.60329636513754,
+        "employmentIndex": 99.96496569078701,
+        "priceIndex": 103.15447858267439,
+        "realWageIndex": 97.70163233545384,
+        "housingIndex": 96.30680916450963,
+        "confidenceIndex": 95.31143237034222,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 1.9032963651375354,
+      "yearFour": {
+        "outputIndex": 100.18905876467531,
+        "employmentIndex": 100.56674216960839,
+        "priceIndex": 104.59467148959527,
+        "realWageIndex": 98.53597778932924,
+        "housingIndex": 100.00522827901013,
+        "confidenceIndex": 95.99017973630065,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 1.4890587646753062,
+      "finalProvinceRange": {
+        "min": 93.27902603126572,
+        "max": 110.2850229317402,
+        "spread": 17.005996900474486
+      },
+      "maxProvinceSpread": 17.005996900474486,
+      "shocks": 0,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.13617416815347827,
+      "outputDirectionChanges": 11
+    },
+    {
+      "seed": "P112-ECON-06",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 99.83983888052641,
+        "employmentIndex": 99.71617298838038,
+        "priceIndex": 103.52069816393207,
+        "realWageIndex": 97.63272799667658,
+        "housingIndex": 96.29466340958953,
+        "confidenceIndex": 95.00432340282502,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 1.139838880526412,
+      "yearFour": {
+        "outputIndex": 99.38364831810073,
+        "employmentIndex": 100.32035182452293,
+        "priceIndex": 105.02454233436606,
+        "realWageIndex": 98.52697410716034,
+        "housingIndex": 99.72296991875547,
+        "confidenceIndex": 95.73447599712168,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 0.6836483181007225,
+      "finalProvinceRange": {
+        "min": 93.00568539945047,
+        "max": 109.94353224006306,
+        "spread": 16.937846840612593
+      },
+      "maxProvinceSpread": 16.937846840612593,
+      "shocks": 0,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.1620432757169367,
+      "outputDirectionChanges": 8
+    },
+    {
+      "seed": "P112-ECON-07",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 99.92936439579663,
+        "employmentIndex": 99.70454885756949,
+        "priceIndex": 103.48519957875645,
+        "realWageIndex": 97.70204302324841,
+        "housingIndex": 96.42809674471046,
+        "confidenceIndex": 94.94524198167082,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 1.2293643957966225,
+      "yearFour": {
+        "outputIndex": 99.42085934164166,
+        "employmentIndex": 100.14152735077845,
+        "priceIndex": 105.02783753826674,
+        "realWageIndex": 98.36702843378997,
+        "housingIndex": 99.42624790332371,
+        "confidenceIndex": 95.67521273356068,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 0.7208593416416562,
+      "finalProvinceRange": {
+        "min": 92.7371724427076,
+        "max": 109.73692360750763,
+        "spread": 16.99975116480003
+      },
+      "maxProvinceSpread": 16.99975116480003,
+      "shocks": 0,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.13835686780414047,
+      "outputDirectionChanges": 11
+    },
+    {
+      "seed": "P112-ECON-08",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 101.30255448747948,
+        "employmentIndex": 100.26348843485206,
+        "priceIndex": 103.11788169635496,
+        "realWageIndex": 97.72961644341106,
+        "housingIndex": 96.40362053416845,
+        "confidenceIndex": 95.59616965420621,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 2.6025544874794804,
+      "yearFour": {
+        "outputIndex": 101.01546951210534,
+        "employmentIndex": 101.06373541996726,
+        "priceIndex": 105.09094122011643,
+        "realWageIndex": 98.60296715997104,
+        "housingIndex": 99.82131346245676,
+        "confidenceIndex": 96.39340199461243,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 2.315469512105338,
+      "finalProvinceRange": {
+        "min": 94.12636841268184,
+        "max": 110.8759844627902,
+        "spread": 16.749616050108358
+      },
+      "maxProvinceSpread": 16.749616050108358,
+      "shocks": 0,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.14508873776238249,
+      "outputDirectionChanges": 9
+    },
+    {
+      "seed": "P112-ECON-09",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 100.61183751768904,
+        "employmentIndex": 99.92853841917098,
+        "priceIndex": 103.23915844441719,
+        "realWageIndex": 97.68212425051794,
+        "housingIndex": 95.98757710341552,
+        "confidenceIndex": 95.17133195847175,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 1.9118375176890368,
+      "yearFour": {
+        "outputIndex": 100.76779192675859,
+        "employmentIndex": 100.9972889013325,
+        "priceIndex": 104.5607091510894,
+        "realWageIndex": 98.6210841885122,
+        "housingIndex": 99.38278308076228,
+        "confidenceIndex": 96.51595648117492,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 2.067791926758588,
+      "finalProvinceRange": {
+        "min": 94.42338702590438,
+        "max": 111.17807668202174,
+        "spread": 16.754689656117364
+      },
+      "maxProvinceSpread": 16.754689656117364,
+      "shocks": 0,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.1624049999765654,
+      "outputDirectionChanges": 11
+    },
+    {
+      "seed": "P112-ECON-10",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 99.57397299851011,
+        "employmentIndex": 99.51746987238103,
+        "priceIndex": 103.56008478749355,
+        "realWageIndex": 97.68317442776109,
+        "housingIndex": 96.54317744657388,
+        "confidenceIndex": 94.54772205293133,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 0.8739729985101121,
+      "yearFour": {
+        "outputIndex": 98.86546338756277,
+        "employmentIndex": 99.82994173011515,
+        "priceIndex": 105.08918181487257,
+        "realWageIndex": 98.4850040312634,
+        "housingIndex": 98.78067646468448,
+        "confidenceIndex": 95.23863517064538,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 0.16546338756276668,
+      "finalProvinceRange": {
+        "min": 92.15895607254706,
+        "max": 109.24701551515578,
+        "spread": 17.088059442608724
+      },
+      "maxProvinceSpread": 17.088059442608724,
+      "shocks": 2,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.14778773663282863,
+      "outputDirectionChanges": 9
+    },
+    {
+      "seed": "P112-ECON-11",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 100.2668917909085,
+        "employmentIndex": 99.82517683085405,
+        "priceIndex": 103.38327194649992,
+        "realWageIndex": 97.65386032637225,
+        "housingIndex": 96.21237517065498,
+        "confidenceIndex": 94.85259427444005,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 1.5668917909084996,
+      "yearFour": {
+        "outputIndex": 101.58082425886252,
+        "employmentIndex": 101.17145897691839,
+        "priceIndex": 104.85553119934126,
+        "realWageIndex": 98.47975997251066,
+        "housingIndex": 99.52494617140202,
+        "confidenceIndex": 96.26422776070405,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 2.8808242588625177,
+      "finalProvinceRange": {
+        "min": 93.98473519406647,
+        "max": 110.70304776847473,
+        "spread": 16.71831257440826
+      },
+      "maxProvinceSpread": 16.71831257440826,
+      "shocks": 0,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.11150551488000075,
+      "outputDirectionChanges": 13
+    },
+    {
+      "seed": "P112-ECON-12",
+      "start": {
+        "outputIndex": 98.7,
+        "employmentIndex": 99.3,
+        "priceIndex": 103.8,
+        "realWageIndex": 97.6,
+        "housingIndex": 96.4,
+        "confidenceIndex": 94.8,
+        "fiscalPressure": 0.41
+      },
+      "startProvinceRange": {
+        "min": 91.9,
+        "max": 105.2,
+        "spread": 13.299999999999997
+      },
+      "startSectorRange": {
+        "min": 92.8,
+        "max": 102.7,
+        "spread": 9.900000000000006
+      },
+      "yearOne": {
+        "outputIndex": 100.61080557234501,
+        "employmentIndex": 99.92960405093243,
+        "priceIndex": 103.03240282040278,
+        "realWageIndex": 97.6817532546923,
+        "housingIndex": 96.37640669995704,
+        "confidenceIndex": 94.96164689685614,
+        "fiscalPressure": 0.41
+      },
+      "yearOneOutputChange": 1.9108055723450121,
+      "yearFour": {
+        "outputIndex": 101.17993849628178,
+        "employmentIndex": 101.08596687217039,
+        "priceIndex": 104.17763581920218,
+        "realWageIndex": 98.61725255722472,
+        "housingIndex": 100.52726601639706,
+        "confidenceIndex": 96.52084047558407,
+        "fiscalPressure": 0.41
+      },
+      "yearFourOutputChange": 2.4799384962817754,
+      "finalProvinceRange": {
+        "min": 94.25418362981515,
+        "max": 111.11368283492926,
+        "spread": 16.85949920511412
+      },
+      "maxProvinceSpread": 16.85949920511412,
+      "shocks": 0,
+      "boundHits": 0,
+      "averageMonthlyOutputMove": 0.14088859535724266,
+      "outputDirectionChanges": 9
+    }
+  ]
+}

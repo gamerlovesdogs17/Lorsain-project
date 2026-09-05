@@ -569,10 +569,17 @@ button {
 .map-city circle {
   fill: #1f3a5f;
   stroke: #fff;
-  stroke-width: 0.35;
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
   opacity: 0.85;
   pointer-events: all;
   cursor: pointer;
+}
+
+.map-city circle:focus-visible {
+  outline: none;
+  stroke: var(--focus-ring, #f3bd4c);
+  stroke-width: 3;
 }
 
 .bench-grid {
@@ -3163,6 +3170,11 @@ button.entity-row:hover,
 .news-article-copy { max-width: 48rem; margin: 0 auto; padding: 0 clamp(1rem, 5vw, 4rem) 4rem; font: 1.03rem/1.72 var(--serif); }
 .news-article-copy > p { max-width: 42rem; }
 .news-article-lede { font-size: 1.28rem; font-weight: 600; }
+.news-article-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 1.2rem 0; border-block: 1px solid var(--line); font-family: var(--sans); }
+.news-article-facts div { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.45rem; padding: 0.55rem 0.7rem; border-bottom: 1px dotted var(--line); }
+.news-article-facts dt { color: var(--muted); font-size: 0.68rem; font-weight: 800; text-transform: uppercase; }
+.news-article-facts dd { margin: 0; font-size: 0.76rem; }
+.selected-record { margin-inline: -0.55rem; padding: 0.55rem; border-left: 4px solid var(--accent); background: rgba(22, 48, 74, 0.055); }
 .news-article-copy h2 { margin-top: 2.2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--navy); font-size: 1.65rem; }
 .news-article-figures { display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; margin: 1.3rem 0; padding: 0.8rem 1rem; border-left: 3px solid var(--accent); background: rgba(22, 55, 84, 0.04); font-family: var(--sans); font-size: 0.78rem; }
 .news-article-figures strong { width: 100%; color: var(--navy); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -3176,6 +3188,7 @@ button.entity-row:hover,
 .news-article-record { margin-top: 2rem; padding-top: 0.8rem; border-top: 2px solid var(--ink); color: var(--muted); font: 0.72rem/1.4 var(--sans); }
 
 @media (max-width: 600px) {
+  .news-article-facts { grid-template-columns: 1fr; }
   .news-article-masthead { margin-bottom: 1.2rem; }
   .news-article-header h1 { font-size: 2.35rem; }
   .news-article-deck { font-size: 1rem; }

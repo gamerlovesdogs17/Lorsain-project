@@ -1,0 +1,4 @@
+Content version: 0.3.1-predev
+Validated 48 countries, 21 admin units, 48 constituencies, 530 figures, 420 MPs
+Assembly constituencies crossing province boundaries by design: 34/48
+PASS: canonical content integrity checks succeeded

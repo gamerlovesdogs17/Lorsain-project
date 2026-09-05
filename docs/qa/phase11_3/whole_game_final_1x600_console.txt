@@ -1,0 +1,20 @@
+Whole-game calibration starting: seeds=1 months=600 seedStart=0 smoke=false player=NPC146
+  seed P113-WG-000 (1/1)… 600/600m hash=646457c4 cat=0 1618.3s
+  running determinism check (continuous seed 0 vs midpoint save/reload)…
+
+=== Phase 11.3 whole-game calibration ===
+mode=acceptance-scale seeds=1 months=600 (acceptance 100×600)
+completed=1/1 errors=0 catastrophic=0 (nearZero=true)
+strict-v1 failures=0 failedRuns=0 rate=0.0000 passed=true
+presidential races=11 incumbentRetention=0.18181818181818182
+assembly races=12 seatShift med=11.0 uncontested med=0.0
+governors races=276 incumbentRetention=0.43223443223443225
+economy outputΔ med=21.01 signChanges med=129.0 rankingChurn med=0.272
+legislative introduced med=814 enacted/signed med=485 returned med=29
+institutions provincialSeats=918 provincialElections med=273 leadership med=1828 bills med=1141 promotions med=817 shortages=0
+leadership party med=69 faction med=201 caucus med=165 amendments adopted=0
+foreign crisesCreated med=1067.0 conflictsStarted med=34.0 treatiesActive med=59.0
+perf medianTurnMs med=1326.27 p95TurnMs med=11259.43 saveFinalBytes med=77908005
+determinism seed=P113-WG-000 dualRunMatch=true reloadMatch=true
+wrote C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project\docs\qa\phase11_3\whole_game_final_1x600.json
+

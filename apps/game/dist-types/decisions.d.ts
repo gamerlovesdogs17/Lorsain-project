@@ -9,5 +9,11 @@ export declare function DecisionPanel(props: {
     countingElection: boolean;
     onResolveAssembly: () => void;
     onResolvePresidential: () => void;
+    askConfirm: (opts: {
+        title: string;
+        body: string;
+        confirmLabel?: string;
+        action: () => void;
+    }) => void;
 }): import("react").JSX.Element | null;
 //# sourceMappingURL=decisions.d.ts.map

@@ -5,15 +5,14 @@ import {
   type SimState,
 } from "@lorsain/sim";
 import { useMemo, useState } from "react";
+import { EmptyState, LeadStory, PageHeader, SectionDivider, TabBar, WorkLayout } from "./ui/kit.js";
 import {
-  EmptyState,
-  LeadStory,
-  PageHeader,
-  SectionDivider,
-  TabBar,
-  WorkLayout,
-} from "./ui/kit.js";
-import { eventDisplay, mediaHeadlineForEvent, politicianDisplayName, type PresentationCatalog } from "./presentation.js";
+  eventDisplay,
+  mediaHeadlineForEvent,
+  partyDisplayName,
+  politicianDisplayName,
+  type PresentationCatalog,
+} from "./presentation.js";
 
 const TABS = [
   "all",
@@ -81,8 +80,10 @@ export function NewsPage(props: {
   const [selectedStoryKey, setSelectedStoryKey] = useState<string | null>(null);
 
   const groups = useMemo(() => {
-    const all = storiesChronological(props.snap).filter((s) =>
-      (tab === "all" || s.category === tab) && (selectedOutletId === "all" || s.outletId === selectedOutletId),
+    const all = storiesChronological(props.snap).filter(
+      (s) =>
+        (tab === "all" || s.category === tab) &&
+        (selectedOutletId === "all" || s.outletId === selectedOutletId),
     );
     const map = new Map<string, StoryGroup>();
     for (const s of all) {
@@ -105,8 +106,11 @@ export function NewsPage(props: {
     });
   }, [props.snap, selectedOutletId, tab]);
 
-  const outlets = Object.values(props.world.mediaOutlets).sort((a, b) => a.name.localeCompare(b.name));
-  const selectedOutlet = selectedOutletId === "all" ? null : props.world.mediaOutlets[selectedOutletId] ?? null;
+  const outlets = Object.values(props.world.mediaOutlets).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  const selectedOutlet =
+    selectedOutletId === "all" ? null : (props.world.mediaOutlets[selectedOutletId] ?? null);
 
   const lead = groups[0] ?? null;
   const secondary = groups.slice(1, 3);
@@ -124,17 +128,49 @@ export function NewsPage(props: {
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   })();
-  const selectedGroup = selectedStoryKey ? groups.find((group) => group.key === selectedStoryKey) ?? null : null;
+  const selectedGroup = selectedStoryKey
+    ? (groups.find((group) => group.key === selectedStoryKey) ?? null)
+    : null;
 
   function articleDeck(group: StoryGroup): string {
     const category = group.category;
-    if (category === "elections") return "The race moved into a new public phase as campaigns, parties and voters assessed the latest development.";
-    if (category === "economy") return "The development adds to the public record on economic conditions and the choices facing Terenan institutions.";
-    if (category === "courts") return "The constitutional and legal consequences now form part of the public institutional record.";
-    if (category === "foreign") return "Officials and the press are assessing the diplomatic consequences for Terena and its partners.";
-    if (category === "organizations") return "Political organizations are responding publicly as the issue moves through Terenan politics.";
-    if (category === "government") return "The development now moves through the institutions responsible for public action and oversight.";
+    if (category === "elections")
+      return "The race moved into a new public phase as campaigns, parties and voters assessed the latest development.";
+    if (category === "economy")
+      return "The development adds to the public record on economic conditions and the choices facing Terenan institutions.";
+    if (category === "courts")
+      return "The constitutional and legal consequences now form part of the public institutional record.";
+    if (category === "foreign")
+      return "Officials and the press are assessing the diplomatic consequences for Terena and its partners.";
+    if (category === "organizations")
+      return "Political organizations are responding publicly as the issue moves through Terenan politics.";
+    if (category === "government")
+      return "The development now moves through the institutions responsible for public action and oversight.";
     return "The development is reshaping the current political argument and the choices facing elected officials.";
+  }
+
+  function publicEventDetails(event: SimState["history"][number] | null): string[] {
+    if (!event) return [];
+    const details: string[] = [];
+    const winnerId = typeof event.payload.winnerId === "string" ? event.payload.winnerId : null;
+    const partyId = typeof event.payload.partyId === "string" ? event.payload.partyId : null;
+    const provinceId =
+      typeof event.payload.provinceId === "string" ? event.payload.provinceId : null;
+    if (winnerId) details.push(`Winner: ${politicianDisplayName(props.catalog, winnerId)}`);
+    if (partyId) details.push(`Party: ${partyDisplayName(props.world, partyId, props.snap)}`);
+    if (provinceId)
+      details.push(`Province: ${props.catalog.places.get(provinceId)?.name ?? "Province"}`);
+    if (typeof event.payload.yes === "number" && typeof event.payload.no === "number")
+      details.push(
+        `Recorded vote: ${event.payload.yes} aye, ${event.payload.no} nay${typeof event.payload.abstain === "number" ? `, ${event.payload.abstain} abstaining` : ""}`,
+      );
+    if (typeof event.payload.seats === "number")
+      details.push(`Seats filled: ${event.payload.seats}`);
+    if (typeof event.payload.constituencies === "number")
+      details.push(`Constituencies counted: ${event.payload.constituencies}`);
+    if (typeof event.payload.turnoutRate === "number")
+      details.push(`Turnout: ${(event.payload.turnoutRate * 100).toFixed(1)}%`);
+    return details;
   }
 
   function renderOutlets(group: StoryGroup) {
@@ -154,34 +190,109 @@ export function NewsPage(props: {
   if (selectedGroup) {
     const primary = selectedGroup.stories[0]!;
     const sourceId = primary.sourceEventIds[0];
-    const sourceEvent = sourceId ? props.snap.history.find((event) => event.id === sourceId) : null;
-    const relatedPoliticians = primary.subjectIds.filter((id) => Boolean(props.snap.politicians[id]));
+    const sourceEvent = sourceId
+      ? (props.snap.history.find((event) => event.id === sourceId) ?? null)
+      : null;
+    const relatedPoliticians = primary.subjectIds.filter((id) =>
+      Boolean(props.snap.politicians[id]),
+    );
+    const publicDetails = publicEventDetails(sourceEvent);
     return (
       <WorkLayout
-        header={<PageHeader kicker={selectedOutlet?.name ?? "News desk"} title="Article" subtitle={selectedOutlet ? `An article from the ${selectedOutlet.name} archive; its framing remains distinct from the public fact.` : "One public event, with each outlet's framing kept distinct from the underlying facts."} />}
+        header={
+          <PageHeader
+            kicker={selectedOutlet?.name ?? "News desk"}
+            title="Article"
+            subtitle={
+              selectedOutlet
+                ? `An article from the ${selectedOutlet.name} archive; its framing remains distinct from the public fact.`
+                : "One public event, with each outlet's framing kept distinct from the underlying facts."
+            }
+          />
+        }
         main={
           <article className="news-article-reader">
-            <button type="button" className="news-article-back" onClick={() => setSelectedStoryKey(null)}>← Back to front page</button>
+            <button
+              type="button"
+              className="news-article-back"
+              onClick={() => setSelectedStoryKey(null)}
+            >
+              ← Back to front page
+            </button>
             <header className="news-article-header">
-              <div className="news-article-masthead">{selectedOutlet?.name.toUpperCase() ?? "THE TERENA POLITICAL DESK"}</div>
-              <div className="kicker">{selectedGroup.category} · {selectedGroup.date}</div>
+              <div className="news-article-masthead">
+                {selectedOutlet?.name.toUpperCase() ?? "THE TERENA POLITICAL DESK"}
+              </div>
+              <div className="kicker">
+                {selectedGroup.category} · {selectedGroup.date}
+              </div>
               <h1>{storyHeadline(props.catalog, props.world, props.snap, primary)}</h1>
               <p className="news-article-deck">{articleDeck(selectedGroup)}</p>
-              <div className="news-article-byline">Public record · {selectedGroup.stories.length} outlet treatment{selectedGroup.stories.length === 1 ? "" : "s"}</div>
+              <div className="news-article-byline">
+                Public record · {selectedGroup.stories.length} outlet treatment
+                {selectedGroup.stories.length === 1 ? "" : "s"}
+              </div>
             </header>
             <div className="news-article-copy">
-              <p className="news-article-lede">{sourceEvent ? eventDisplay(props.catalog, props.world, props.snap, sourceEvent) : outletHeadline(primary)}.</p>
-              <p>The event was recorded on {selectedGroup.date}. Coverage below preserves the same public fact while showing which consequence each outlet placed in its headline and tone.</p>
-              {relatedPoliticians.length > 0 ? <aside className="news-article-figures"><strong>Figures in this story</strong>{relatedPoliticians.map((id) => <span key={id}>{politicianDisplayName(props.catalog, id)}</span>)}</aside> : null}
+              <p className="news-article-lede">
+                {sourceEvent
+                  ? eventDisplay(props.catalog, props.world, props.snap, sourceEvent)
+                  : outletHeadline(primary)}
+                .
+              </p>
+              <p>
+                The underlying event entered the public record on {selectedGroup.date}. The facts
+                below are saved with the event; the headlines that follow are separate editorial
+                treatments.
+              </p>
+              {publicDetails.length > 0 ? (
+                <dl className="news-article-facts">
+                  {publicDetails.map((detail) => {
+                    const [label, ...rest] = detail.split(": ");
+                    return (
+                      <div key={detail}>
+                        <dt>{label}</dt>
+                        <dd>{rest.join(": ")}</dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              ) : null}
+              {relatedPoliticians.length > 0 ? (
+                <aside className="news-article-figures">
+                  <strong>Figures in this story</strong>
+                  {relatedPoliticians.map((id) => (
+                    <span key={id}>{politicianDisplayName(props.catalog, id)}</span>
+                  ))}
+                </aside>
+              ) : null}
               <h2>How the press covered it</h2>
               <div className="news-article-outlets">
-                {selectedGroup.stories.map((story) => <section key={story.id}>
-                  <div><strong>{props.world.mediaOutlets[story.outletId]?.name ?? "Terenan press"}</strong><span>{story.framing} framing</span></div>
-                  <h3>{outletHeadline(story)}</h3>
-                  <p>{story.framing === "critical" ? "Coverage emphasizes scrutiny, political risk and the case made by opponents." : story.framing === "sympathetic" ? "Coverage emphasizes the case made by supporters and the intended public purpose." : story.framing === "sensational" ? "Coverage leads with conflict and immediate political consequence." : "Coverage leads with the institutional facts and the next formal step."}</p>
-                </section>)}
+                {selectedGroup.stories.map((story) => (
+                  <section key={story.id}>
+                    <div>
+                      <strong>
+                        {props.world.mediaOutlets[story.outletId]?.name ?? "Terenan press"}
+                      </strong>
+                      <span>{story.framing} framing</span>
+                    </div>
+                    <h3>{outletHeadline(story)}</h3>
+                    <p>
+                      {story.framing === "critical"
+                        ? "Coverage emphasizes scrutiny, political risk and the case made by opponents."
+                        : story.framing === "sympathetic"
+                          ? "Coverage emphasizes the case made by supporters and the intended public purpose."
+                          : story.framing === "sensational"
+                            ? "Coverage leads with conflict and immediate political consequence."
+                            : "Coverage leads with the institutional facts and the next formal step."}
+                    </p>
+                  </section>
+                ))}
               </div>
-              <footer className="news-article-record">This article is generated from saved public events. Outlet framing does not alter the recorded result.</footer>
+              <footer className="news-article-record">
+                This article is generated from saved public events. Outlet framing does not alter
+                the recorded result.
+              </footer>
             </div>
           </article>
         }
@@ -195,14 +306,41 @@ export function NewsPage(props: {
         <PageHeader
           kicker="Press"
           title={selectedOutlet?.name ?? "News"}
-          subtitle={selectedOutlet ? `${selectedOutlet.name} front page and archive. Headlines reflect its public framing; recorded events remain unchanged.` : "Coverage selected from public events. Outlets may frame, not invent."}
+          subtitle={
+            selectedOutlet
+              ? `${selectedOutlet.name} front page and archive. Headlines reflect its public framing; recorded events remain unchanged.`
+              : "Coverage selected from public events. Outlets may frame, not invent."
+          }
         />
       }
       main={
         <>
           <nav className="news-outlet-switcher" aria-label="News outlet front pages">
-            <button type="button" className={selectedOutletId === "all" ? "active" : ""} onClick={() => { setSelectedOutletId("all"); setPage(0); setSelectedStoryKey(null); }}>All Press</button>
-            {outlets.map((outlet) => <button type="button" className={selectedOutletId === outlet.id ? "active" : ""} key={outlet.id} onClick={() => { setSelectedOutletId(outlet.id); setPage(0); setSelectedStoryKey(null); }}>{outlet.name}</button>)}
+            <button
+              type="button"
+              className={selectedOutletId === "all" ? "active" : ""}
+              onClick={() => {
+                setSelectedOutletId("all");
+                setPage(0);
+                setSelectedStoryKey(null);
+              }}
+            >
+              All Press
+            </button>
+            {outlets.map((outlet) => (
+              <button
+                type="button"
+                className={selectedOutletId === outlet.id ? "active" : ""}
+                key={outlet.id}
+                onClick={() => {
+                  setSelectedOutletId(outlet.id);
+                  setPage(0);
+                  setSelectedStoryKey(null);
+                }}
+              >
+                {outlet.name}
+              </button>
+            ))}
           </nav>
           <TabBar
             tabs={TABS.map((id) => ({ id, label: id }))}
@@ -217,13 +355,17 @@ export function NewsPage(props: {
 
           {lead ? (
             <section className="news-lead">
-              <button type="button" className="news-open-story news-open-lead" onClick={() => setSelectedStoryKey(lead.key)}>
+              <button
+                type="button"
+                className="news-open-story news-open-lead"
+                onClick={() => setSelectedStoryKey(lead.key)}
+              >
                 <LeadStory
                   kicker={`${lead.category} · ${lead.date}`}
                   headline={storyHeadline(props.catalog, props.world, props.snap, lead.stories[0]!)}
                   date={`${lead.stories.length} outlet${lead.stories.length === 1 ? "" : "s"}`}
                 />
-                <span>Read full coverage →</span>
+                <span>Read / compare coverage →</span>
               </button>
               {renderOutlets(lead)}
             </section>
@@ -238,7 +380,16 @@ export function NewsPage(props: {
                     <div className="kicker">
                       {group.category} · {group.date}
                     </div>
-                    <button type="button" className="news-open-story" onClick={() => setSelectedStoryKey(group.key)}><h3 className="serif-head">{storyHeadline(props.catalog, props.world, props.snap, group.stories[0]!)}</h3><span>Read →</span></button>
+                    <button
+                      type="button"
+                      className="news-open-story"
+                      onClick={() => setSelectedStoryKey(group.key)}
+                    >
+                      <h3 className="serif-head">
+                        {storyHeadline(props.catalog, props.world, props.snap, group.stories[0]!)}
+                      </h3>
+                      <span>Read →</span>
+                    </button>
                     {renderOutlets(group)}
                   </article>
                 ))}
@@ -262,7 +413,16 @@ export function NewsPage(props: {
                   {topicGroups.map((group) => (
                     <article key={group.key} className="news-topic-item">
                       <div className="kicker">{group.date}</div>
-                      <button type="button" className="news-open-story" onClick={() => setSelectedStoryKey(group.key)}><h4 className="serif-head">{storyHeadline(props.catalog, props.world, props.snap, group.stories[0]!)}</h4><span>Read →</span></button>
+                      <button
+                        type="button"
+                        className="news-open-story"
+                        onClick={() => setSelectedStoryKey(group.key)}
+                      >
+                        <h4 className="serif-head">
+                          {storyHeadline(props.catalog, props.world, props.snap, group.stories[0]!)}
+                        </h4>
+                        <span>Read →</span>
+                      </button>
                       {renderOutlets(group)}
                     </article>
                   ))}

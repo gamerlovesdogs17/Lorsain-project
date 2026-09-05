@@ -18,3 +18,5 @@ __pycache__/
 *.tsbuildinfo
 .cursor/
 .calibration/
+
+.phase11-tools/

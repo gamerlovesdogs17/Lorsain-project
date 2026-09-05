@@ -9,6 +9,7 @@ import { electionReplayError, replayElectionCount } from "./replay.js";
 import { payloadElectionId, resolutionForScheduledEvent } from "./resolution.js";
 import { isElectoralAggregatePartyId } from "./support.js";
 import { integerBallotWeightSum } from "./ballots.js";
+import { parseElectionCertification } from "./certification.js";
 import {
   isAssemblyCandidacyStatus,
   isAssemblyFilingStatus,
@@ -389,6 +390,8 @@ function parseElection(id: string, raw: unknown): ElectionState | string {
     return `elections.${id} resultEventId`;
   }
   if (!isJsonObject(raw.metadata)) return `elections.${id} metadata`;
+  const certification = parseElectionCertification(raw.certification);
+  if (typeof certification === "string") return `elections.${id}.${certification}`;
   const assembly = parseAssemblyCycle(raw.assembly);
   if (typeof assembly === "string") return `elections.${id} ${assembly}`;
   if (raw.type === "presidential" && assembly != null) {
@@ -428,6 +431,7 @@ function parseElection(id: string, raw: unknown): ElectionState | string {
         countArchive: null,
         winnerIds,
         resultEventId: raw.resultEventId as string,
+        ...(certification ? { certification } : {}),
         assembly,
         metadata: raw.metadata as JsonObject,
       };
@@ -455,6 +459,7 @@ function parseElection(id: string, raw: unknown): ElectionState | string {
       countArchive: raw.countArchive as ElectionState["countArchive"],
       winnerIds,
       resultEventId: raw.resultEventId,
+      ...(certification ? { certification } : {}),
       assembly,
       metadata: raw.metadata,
     };
@@ -486,6 +491,7 @@ function parseElection(id: string, raw: unknown): ElectionState | string {
     countArchive: null,
     winnerIds: [],
     resultEventId: null,
+    ...(certification ? { certification } : {}),
     assembly,
     metadata: raw.metadata,
   };

@@ -16,6 +16,16 @@ export const ELECTION_STATUSES = [
 ] as const;
 export type ElectionStatus = (typeof ELECTION_STATUSES)[number];
 
+export type ElectionCertification = {
+  status: "pending" | "certified" | "certified_after_recount";
+  authority: "national_electoral_commission" | "provincial_electoral_commission";
+  certifiedDate: IsoDate | null;
+  recount: "not_required" | "automatic_exact_recount_completed";
+  recountReason: string | null;
+  margin: number | null;
+  tieBreakMethods: Array<"previous_count_totals" | "first_preferences" | "legal_lot">;
+};
+
 export const ELECTION_GEOGRAPHIES = ["national", "province", "constituency"] as const;
 export type ElectionGeographyKind = (typeof ELECTION_GEOGRAPHIES)[number];
 
@@ -198,6 +208,7 @@ export type ElectionState = {
   countArchive: IrvResult | StvResult | null;
   winnerIds: string[];
   resultEventId: string | null;
+  certification?: ElectionCertification;
   /** Present for recurring national Assembly cycles; null for presidential elections. */
   assembly: AssemblyElectionCycle | null;
   metadata: JsonObject;

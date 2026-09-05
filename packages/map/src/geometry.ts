@@ -234,8 +234,10 @@ export function prepareCities(
     const n = counts.get(provinceId) ?? 0;
     counts.set(provinceId, n + 1);
     const [cx, cy] = province?.centroid ?? [0, 0];
-    const angle = n * 1.7;
-    const radius = n === 0 ? 0 : 0.08 + n * 0.05;
+    // Keep the first city at the public province centroid and fan additional
+    // cities far enough apart to remain independently selectable at fit view.
+    const angle = (n - 1) * 2.399963229728653;
+    const radius = n === 0 ? 0 : 0.32 + Math.floor((n - 1) / 6) * 0.16;
     out.push({
       id: city.id,
       name: city.name,

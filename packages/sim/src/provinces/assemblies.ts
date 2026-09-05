@@ -5,6 +5,8 @@ import type { RngService } from "../rng.js";
 import { provinceGotvBoost } from "../campaigns/gotv.js";
 import { pushHistory } from "../scheduler.js";
 import { recordOrganizationPolicyBehavior } from "../organizations/monthly.js";
+import { certifyShareResult } from "../elections/certification.js";
+import { resolveLegalLot } from "@lorsain/election-math";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import type {
   ProvincialAssemblyElection,
@@ -61,7 +63,8 @@ export function stableProvincialHash(text: string): number {
 function provincePopulation(world: KernelWorld, provinceId: string): number {
   let population = 0;
   for (const electorate of Object.values(world.constituencyElectorate)) {
-    const share = electorate.provincePopulationShares.find((row) => row.provinceId === provinceId)?.share ?? 0;
+    const share =
+      electorate.provincePopulationShares.find((row) => row.provinceId === provinceId)?.share ?? 0;
     population += electorate.population * share;
   }
   return population;
@@ -88,7 +91,10 @@ function numericBaseline(value: string | undefined): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
-function provincePartyWeights(world: KernelWorld, provinceId: string): Array<{ partyId: string; weight: number }> {
+function provincePartyWeights(
+  world: KernelWorld,
+  provinceId: string,
+): Array<{ partyId: string; weight: number }> {
   const parties = membershipPartyIds(world);
   const rows = parties.map((partyId) => ({
     partyId,
@@ -103,7 +109,8 @@ function allocateSeats(
   seatCount: number,
   weights: Array<{ partyId: string; weight: number }>,
   salt: string,
-): Record<string, number> {
+  rng?: RngService,
+): { seats: Record<string, number>; legalLotUsed: boolean } {
   const total = weights.reduce((sum, row) => sum + Math.max(0, row.weight), 0) || 1;
   const exact = weights.map((row) => ({
     partyId: row.partyId,
@@ -122,13 +129,27 @@ function allocateSeats(
       tie: stableProvincialHash(`${salt}:${row.partyId}`),
     }))
     .sort((a, b) => b.fraction - a.fraction || a.tie - b.tie || a.partyId.localeCompare(b.partyId));
-  for (let index = 0; allocated < seatCount; index += 1) {
-    const row = remainder[index % Math.max(1, remainder.length)];
-    if (!row) break;
-    seats[row.partyId] = (seats[row.partyId] ?? 0) + 1;
+  let legalLotUsed = false;
+  while (allocated < seatCount && remainder.length > 0) {
+    const bestFraction = Math.max(...remainder.map((row) => row.fraction));
+    const tied = remainder.filter((row) => Math.abs(row.fraction - bestFraction) <= Number.EPSILON);
+    const chosenPartyId =
+      tied.length > 1 && rng
+        ? resolveLegalLot(
+            tied.map((row) => row.partyId),
+            { nextUint32: () => rng.uint32("elections") },
+          ).selectedId
+        : tied.slice().sort((a, b) => a.tie - b.tie || a.partyId.localeCompare(b.partyId))[0]!
+            .partyId;
+    legalLotUsed ||= tied.length > 1 && rng != null;
+    seats[chosenPartyId] = (seats[chosenPartyId] ?? 0) + 1;
     allocated += 1;
+    remainder.splice(
+      remainder.findIndex((row) => row.partyId === chosenPartyId),
+      1,
+    );
   }
-  return seats;
+  return { seats, legalLotUsed };
 }
 
 function factionForParty(world: KernelWorld, partyId: string | null, salt: string): string | null {
@@ -175,13 +196,14 @@ function newLegislator(
   const background = BACKGROUNDS[stableProvincialHash(`${id}:background`) % BACKGROUNDS.length]!;
   const priority = PRIORITIES[stableProvincialHash(`${id}:priority`) % PRIORITIES.length]!;
   const biographyStyle = stableProvincialHash(`${id}:biography-style`) % 4;
-  const description = biographyStyle === 0
-    ? `${name} worked as a ${background} before entering provincial politics. ${familyName} focuses on ${priority}.`
-    : biographyStyle === 1
-      ? `Before election, ${name} was a ${background}. The center of ${familyName}'s provincial record is ${priority}.`
-      : biographyStyle === 2
-        ? `${name}, formerly a ${background}, built a public profile around ${priority}.`
-        : `${name} came to the Provincial Assembly from work as a ${background}, with ${priority} as a consistent priority.`;
+  const description =
+    biographyStyle === 0
+      ? `${name} worked as a ${background} before entering provincial politics. ${familyName} focuses on ${priority}.`
+      : biographyStyle === 1
+        ? `Before election, ${name} was a ${background}. The center of ${familyName}'s provincial record is ${priority}.`
+        : biographyStyle === 2
+          ? `${name}, formerly a ${background}, built a public profile around ${priority}.`
+          : `${name} came to the Provincial Assembly from work as a ${background}, with ${priority} as a consistent priority.`;
   return {
     id,
     displayName: name,
@@ -189,7 +211,8 @@ function newLegislator(
     provinceId,
     partyId,
     factionId: factionForParty(world, partyId, id),
-    birthYear: Number(state.currentDate.slice(0, 4)) - (28 + (stableProvincialHash(`${id}:age`) % 36)),
+    birthYear:
+      Number(state.currentDate.slice(0, 4)) - (28 + (stableProvincialHash(`${id}:age`) % 36)),
     active: true,
     source,
     careerStartDate: state.currentDate,
@@ -252,31 +275,32 @@ function applyProvincialFilingRetirements(
     if (row.id === state.playerPoliticianId || row.fullPoliticianId === state.playerPoliticianId) {
       continue;
     }
-    const fullPolitician = row.fullPoliticianId
-      ? state.politicians[row.fullPoliticianId]
-      : null;
+    const fullPolitician = row.fullPoliticianId ? state.politicians[row.fullPoliticianId] : null;
     if (fullPolitician && (!fullPolitician.alive || fullPolitician.retired)) {
       row.active = false;
       continue;
     }
     const probability = provincialRetirementProbability(row, electionYear);
     if (probability <= 0) continue;
-    const draw = (stableProvincialHash(`${row.id}:${electionYear}:retirement`) >>> 0) / 0x1_0000_0000;
+    const draw =
+      (stableProvincialHash(`${row.id}:${electionYear}:retirement`) >>> 0) / 0x1_0000_0000;
     if (draw < probability) row.active = false;
   }
 }
 
-function leadershipScore(
-  member: ProvincialLegislator,
-  role: ProvincialLeadershipRole,
-): number {
+function leadershipScore(member: ProvincialLegislator, role: ProvincialLeadershipRole): number {
   if (role === "speaker") {
     return member.legislativeSkill * 0.58 + member.standing * 0.27 + member.ambition * 0.15;
   }
   if (role === "floor_leader") {
     return member.legislativeSkill * 0.46 + member.standing * 0.28 + member.ambition * 0.26;
   }
-  return member.legislativeSkill * 0.34 + member.campaignSkill * 0.34 + member.standing * 0.18 + member.ambition * 0.14;
+  return (
+    member.legislativeSkill * 0.34 +
+    member.campaignSkill * 0.34 +
+    member.standing * 0.18 +
+    member.ambition * 0.14
+  );
 }
 
 function leadershipBallot(
@@ -296,28 +320,43 @@ function leadershipBallot(
     .sort((a, b) => leadershipScore(b, role) - leadershipScore(a, role) || a.id.localeCompare(b.id))
     .slice(0, 3)
     .map((row) => row.id);
-  const candidateIds = [...new Set([
-    ...(explicitCandidateId && members.some((row) => row.id === explicitCandidateId)
-      ? [explicitCandidateId]
-      : []),
-    ...npcCandidates,
-  ])].sort();
+  const candidateIds = [
+    ...new Set([
+      ...(explicitCandidateId && members.some((row) => row.id === explicitCandidateId)
+        ? [explicitCandidateId]
+        : []),
+      ...npcCandidates,
+    ]),
+  ].sort();
   if (candidateIds.length === 0) return { candidateIds: [], ballots: {}, winnerId: null };
   const ballots = Object.fromEntries(candidateIds.map((id) => [id, 0]));
   for (const voter of members) {
     const preferred = candidateIds
       .map((candidateId) => {
         const candidate = state.provincialRuntime.legislators[candidateId]!;
-        const factionAffinity = voter.factionId && voter.factionId === candidate.factionId ? 0.1 : 0;
-        const localVariance = (stableProvincialHash(`${salt}:${voter.id}:${candidateId}`) % 1000) / 10000;
-        return { candidateId, score: leadershipScore(candidate, role) + factionAffinity + localVariance };
+        const factionAffinity =
+          voter.factionId && voter.factionId === candidate.factionId ? 0.1 : 0;
+        const localVariance =
+          (stableProvincialHash(`${salt}:${voter.id}:${candidateId}`) % 1000) / 10000;
+        return {
+          candidateId,
+          score: leadershipScore(candidate, role) + factionAffinity + localVariance,
+        };
       })
-      .sort((a, b) => b.score - a.score || a.candidateId.localeCompare(b.candidateId))[0]?.candidateId;
+      .sort(
+        (a, b) => b.score - a.score || a.candidateId.localeCompare(b.candidateId),
+      )[0]?.candidateId;
     if (preferred) ballots[preferred] = (ballots[preferred] ?? 0) + 1;
   }
-  const winnerId = candidateIds
-    .slice()
-    .sort((a, b) => (ballots[b] ?? 0) - (ballots[a] ?? 0) || stableProvincialHash(`${salt}:tie:${a}`) - stableProvincialHash(`${salt}:tie:${b}`) || a.localeCompare(b))[0] ?? null;
+  const winnerId =
+    candidateIds
+      .slice()
+      .sort(
+        (a, b) =>
+          (ballots[b] ?? 0) - (ballots[a] ?? 0) ||
+          stableProvincialHash(`${salt}:tie:${a}`) - stableProvincialHash(`${salt}:tie:${b}`) ||
+          a.localeCompare(b),
+      )[0] ?? null;
   return { candidateIds, ballots, winnerId };
 }
 
@@ -350,34 +389,72 @@ function assignProvincialLeadership(
 ): void {
   assembly.partyLeadership ??= {};
   assembly.leadershipHistory ??= [];
+  const previousSpeakerId = assembly.presidingOfficerId;
+  const previousPartyLeadership = assembly.partyLeadership;
   const speaker = leadershipBallot(state, assembly, "speaker", null, `${salt}:speaker`);
   assembly.presidingOfficerId = speaker.winnerId;
-  if (recordElection) {
+  if (recordElection && speaker.winnerId != null && speaker.winnerId !== previousSpeakerId) {
     assembly.leadershipHistory.push(
       leadershipRecord(assembly, "speaker", null, speaker, "general_election", state.currentDate),
     );
   }
-  const partyIds = [...new Set(
-    assembly.memberIds
-      .map((id) => state.provincialRuntime.legislators[id]?.partyId)
-      .filter((id): id is string => Boolean(id)),
-  )].sort();
+  const partyIds = [
+    ...new Set(
+      assembly.memberIds
+        .map((id) => state.provincialRuntime.legislators[id]?.partyId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ].sort();
   const leadership: ProvincialAssemblyState["partyLeadership"] = {};
   for (const partyId of partyIds) {
-    const floor = leadershipBallot(state, assembly, "floor_leader", partyId, `${salt}:${partyId}:floor`);
+    const floor = leadershipBallot(
+      state,
+      assembly,
+      "floor_leader",
+      partyId,
+      `${salt}:${partyId}:floor`,
+    );
     const whip = leadershipBallot(state, assembly, "whip", partyId, `${salt}:${partyId}:whip`);
     leadership[partyId] = {
       partyId,
       floorLeaderId: floor.winnerId,
-      whipId: whip.winnerId === floor.winnerId
-        ? whip.candidateIds.find((id) => id !== floor.winnerId) ?? null
-        : whip.winnerId,
+      whipId:
+        whip.winnerId === floor.winnerId
+          ? (whip.candidateIds.find((id) => id !== floor.winnerId) ?? null)
+          : whip.winnerId,
       selectedDate: state.currentDate,
     };
-    if (recordElection) {
+    if (
+      recordElection &&
+      floor.winnerId != null &&
+      floor.winnerId !== previousPartyLeadership[partyId]?.floorLeaderId
+    ) {
       assembly.leadershipHistory.push(
-        leadershipRecord(assembly, "floor_leader", partyId, floor, "general_election", state.currentDate),
-        leadershipRecord(assembly, "whip", partyId, { ...whip, winnerId: leadership[partyId]!.whipId }, "general_election", state.currentDate),
+        leadershipRecord(
+          assembly,
+          "floor_leader",
+          partyId,
+          floor,
+          "general_election",
+          state.currentDate,
+        ),
+      );
+    }
+    const selectedWhipId = leadership[partyId]!.whipId;
+    if (
+      recordElection &&
+      selectedWhipId != null &&
+      selectedWhipId !== previousPartyLeadership[partyId]?.whipId
+    ) {
+      assembly.leadershipHistory.push(
+        leadershipRecord(
+          assembly,
+          "whip",
+          partyId,
+          { ...whip, winnerId: selectedWhipId },
+          "general_election",
+          state.currentDate,
+        ),
       );
     }
   }
@@ -401,13 +478,33 @@ export function seedProvincialAssemblies(world: KernelWorld, state: SimState): v
     if (!state.provincialRuntime.assemblies[provinceId]) {
       const pool = Object.values(state.provincialRuntime.legislators)
         .filter((row) => row.provinceId === provinceId && row.active)
-        .sort((a, b) => b.standing + b.legislativeSkill * 0.35 - (a.standing + a.legislativeSkill * 0.35) || a.id.localeCompare(b.id));
-      const partySeats = allocateSeats(seatCount, provincePartyWeights(world, provinceId), `${provinceId}:2028`);
+        .sort(
+          (a, b) =>
+            b.standing + b.legislativeSkill * 0.35 - (a.standing + a.legislativeSkill * 0.35) ||
+            a.id.localeCompare(b.id),
+        );
+      const partySeats = allocateSeats(
+        seatCount,
+        provincePartyWeights(world, provinceId),
+        `${provinceId}:2028`,
+      ).seats;
       const selected: string[] = [];
-      for (const [partyId, count] of Object.entries(partySeats).sort(([a], [b]) => a.localeCompare(b))) {
-        selected.push(...pool.filter((row) => row.partyId === partyId && !selected.includes(row.id)).slice(0, count).map((row) => row.id));
+      for (const [partyId, count] of Object.entries(partySeats).sort(([a], [b]) =>
+        a.localeCompare(b),
+      )) {
+        selected.push(
+          ...pool
+            .filter((row) => row.partyId === partyId && !selected.includes(row.id))
+            .slice(0, count)
+            .map((row) => row.id),
+        );
       }
-      selected.push(...pool.filter((row) => !selected.includes(row.id)).slice(0, seatCount - selected.length).map((row) => row.id));
+      selected.push(
+        ...pool
+          .filter((row) => !selected.includes(row.id))
+          .slice(0, seatCount - selected.length)
+          .map((row) => row.id),
+      );
       for (const id of selected) {
         const row = state.provincialRuntime.legislators[id]!;
         row.serviceStartDate = state.currentDate;
@@ -419,11 +516,12 @@ export function seedProvincialAssemblies(world: KernelWorld, state: SimState): v
         seatCount,
         memberIds: selected,
         partySeats,
-        presidingOfficerId: selected.slice().sort((a, b) => {
-          const pa = state.provincialRuntime.legislators[a]!;
-          const pb = state.provincialRuntime.legislators[b]!;
-          return pb.legislativeSkill - pa.legislativeSkill || a.localeCompare(b);
-        })[0] ?? null,
+        presidingOfficerId:
+          selected.slice().sort((a, b) => {
+            const pa = state.provincialRuntime.legislators[a]!;
+            const pb = state.provincialRuntime.legislators[b]!;
+            return pb.legislativeSkill - pa.legislativeSkill || a.localeCompare(b);
+          })[0] ?? null,
         partyLeadership: {},
         leadershipHistory: [],
         termStartDate: state.currentDate,
@@ -437,7 +535,12 @@ export function seedProvincialAssemblies(world: KernelWorld, state: SimState): v
     const assembly = state.provincialRuntime.assemblies[provinceId]!;
     assembly.leadershipHistory ??= [];
     if (!assembly.partyLeadership || Object.keys(assembly.partyLeadership).length === 0) {
-      assignProvincialLeadership(state, assembly, `${provinceId}:${assembly.termStartDate}:initial`, false);
+      assignProvincialLeadership(
+        state,
+        assembly,
+        `${provinceId}:${assembly.termStartDate}:initial`,
+        false,
+      );
     }
   }
   seedRuntimeConstitution(state);
@@ -445,10 +548,38 @@ export function seedProvincialAssemblies(world: KernelWorld, state: SimState): v
 
 function seedRuntimeConstitution(state: SimState): void {
   const rules = state.provincialRuntime.constitutionalRules;
-  rules.assembly_term_years ??= { id: "assembly_term_years", label: "Assembly term", value: 4, unit: "years", amendedDate: null, sourceAmendmentId: null };
-  rules.presidential_term_limit ??= { id: "presidential_term_limit", label: "Presidential elected-term limit", value: 2, unit: "terms", amendedDate: null, sourceAmendmentId: null };
-  rules.court_term_years ??= { id: "court_term_years", label: "Constitutional Court term", value: 12, unit: "years", amendedDate: null, sourceAmendmentId: null };
-  rules.veto_override_fraction ??= { id: "veto_override_fraction", label: "Provincial veto override", value: 2 / 3, unit: "fraction", amendedDate: null, sourceAmendmentId: null };
+  rules.assembly_term_years ??= {
+    id: "assembly_term_years",
+    label: "Assembly term",
+    value: 4,
+    unit: "years",
+    amendedDate: null,
+    sourceAmendmentId: null,
+  };
+  rules.presidential_term_limit ??= {
+    id: "presidential_term_limit",
+    label: "Presidential elected-term limit",
+    value: 2,
+    unit: "terms",
+    amendedDate: null,
+    sourceAmendmentId: null,
+  };
+  rules.court_term_years ??= {
+    id: "court_term_years",
+    label: "Constitutional Court term",
+    value: 12,
+    unit: "years",
+    amendedDate: null,
+    sourceAmendmentId: null,
+  };
+  rules.veto_override_fraction ??= {
+    id: "veto_override_fraction",
+    label: "Provincial veto override",
+    value: 2 / 3,
+    unit: "fraction",
+    amendedDate: null,
+    sourceAmendmentId: null,
+  };
 }
 
 function ensureProvincialReserve(world: KernelWorld, state: SimState, provinceId: string): number {
@@ -480,9 +611,15 @@ function openProvincialAssemblyElection(
   const assembly = state.provincialRuntime.assemblies[election.provinceId];
   if (assembly) {
     let ordinal = nextLegislatorOrdinal(state, election.provinceId);
-    for (const [partyId, seats] of Object.entries(assembly.partySeats).sort(([a], [b]) => a.localeCompare(b))) {
+    for (const [partyId, seats] of Object.entries(assembly.partySeats).sort(([a], [b]) =>
+      a.localeCompare(b),
+    )) {
       let available = Object.values(state.provincialRuntime.legislators).filter(
-        (row) => row.provinceId === election.provinceId && row.active && row.fullPoliticianId == null && row.partyId === partyId,
+        (row) =>
+          row.provinceId === election.provinceId &&
+          row.active &&
+          row.fullPoliticianId == null &&
+          row.partyId === partyId,
       ).length;
       const target = seats + Math.max(2, Math.ceil(seats * 0.25));
       while (available < target) {
@@ -494,7 +631,9 @@ function openProvincialAssemblyElection(
     }
   }
   election.candidateIds = Object.values(state.provincialRuntime.legislators)
-    .filter((row) => row.provinceId === election.provinceId && row.active && row.fullPoliticianId == null)
+    .filter(
+      (row) => row.provinceId === election.provinceId && row.active && row.fullPoliticianId == null,
+    )
     .map((row) => row.id)
     .sort();
 }
@@ -513,18 +652,32 @@ function resolveProvincialAssemblyElection(
     weight: Math.max(0.01, row.weight * (0.94 + rng.float01("elections") * 0.12)),
   }));
   const total = weights.reduce((sum, row) => sum + row.weight, 0) || 1;
-  election.partyVoteShares = Object.fromEntries(weights.map((row) => [row.partyId, row.weight / total]));
-  election.partySeats = allocateSeats(assembly.seatCount, weights, election.id);
+  election.partyVoteShares = Object.fromEntries(
+    weights.map((row) => [row.partyId, row.weight / total]),
+  );
+  const allocation = allocateSeats(assembly.seatCount, weights, election.id, rng);
+  election.partySeats = allocation.seats;
   const oldMembers = new Set(assembly.memberIds);
-  const campaignFor = (id: string) => Object.values(state.campaignRuntime.campaigns)
-    .find((campaign) => campaign.electionId === election.id && campaign.politicianId === id);
-  const leadershipIds = new Set([
-    assembly.presidingOfficerId,
-    ...Object.values(assembly.partyLeadership).flatMap((row) => [row.floorLeaderId, row.whipId]),
-  ].filter((id): id is string => Boolean(id)));
-  const endorsementCount = (id: string): number => Object.values(state.organizationRuntime.actors)
-    .reduce((count, actor) => count + actor.endorsements.filter((endorsement) =>
-      endorsement.politicianId === id && (endorsement.status ?? "active") === "active").length, 0);
+  const campaignFor = (id: string) =>
+    Object.values(state.campaignRuntime.campaigns).find(
+      (campaign) => campaign.electionId === election.id && campaign.politicianId === id,
+    );
+  const leadershipIds = new Set(
+    [
+      assembly.presidingOfficerId,
+      ...Object.values(assembly.partyLeadership).flatMap((row) => [row.floorLeaderId, row.whipId]),
+    ].filter((id): id is string => Boolean(id)),
+  );
+  const endorsementCount = (id: string): number =>
+    Object.values(state.organizationRuntime.actors).reduce(
+      (count, actor) =>
+        count +
+        actor.endorsements.filter(
+          (endorsement) =>
+            endorsement.politicianId === id && (endorsement.status ?? "active") === "active",
+        ).length,
+      0,
+    );
   const personalScore = (row: ProvincialLegislator): number => {
     const campaign = campaignFor(row.id);
     const incumbent = oldMembers.has(row.id) ? 0.13 : 0;
@@ -537,8 +690,16 @@ function resolveProvincialAssemblyElection(
       : 0;
     const endorsements = Math.min(0.08, endorsementCount(row.fullPoliticianId ?? row.id) * 0.025);
     const variance = (stableProvincialHash(`${election.id}:${row.id}:personal`) % 1001) / 10000;
-    return row.standing * 0.39 + row.campaignSkill * 0.2 + row.legislativeSkill * 0.1 +
-      incumbent + leadership + campaignWork + endorsements + variance;
+    return (
+      row.standing * 0.39 +
+      row.campaignSkill * 0.2 +
+      row.legislativeSkill * 0.1 +
+      incumbent +
+      leadership +
+      campaignWork +
+      endorsements +
+      variance
+    );
   };
   const pool = election.candidateIds
     .map((id) => state.provincialRuntime.legislators[id])
@@ -546,17 +707,27 @@ function resolveProvincialAssemblyElection(
     .sort((a, b) => personalScore(b) - personalScore(a) || a.id.localeCompare(b.id));
   const elected: string[] = [];
   election.personalRankingsByParty = {};
-  for (const [partyId, count] of Object.entries(election.partySeats).sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [partyId, count] of Object.entries(election.partySeats).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
     const ranking = pool.filter((row) => row.partyId === partyId).map((row) => row.id);
     election.personalRankingsByParty[partyId] = ranking;
     elected.push(...ranking.slice(0, count));
   }
-  elected.push(...pool.filter((row) => !elected.includes(row.id)).slice(0, assembly.seatCount - elected.length).map((row) => row.id));
+  elected.push(
+    ...pool
+      .filter((row) => !elected.includes(row.id))
+      .slice(0, assembly.seatCount - elected.length)
+      .map((row) => row.id),
+  );
   for (const id of assembly.memberIds) {
     const row = state.provincialRuntime.legislators[id];
     if (row && !elected.includes(id)) {
       row.serviceEndDate = state.currentDate;
-      const openTerm = row.serviceTerms.slice().reverse().find((term) => term.endDate == null);
+      const openTerm = row.serviceTerms
+        .slice()
+        .reverse()
+        .find((term) => term.endDate == null);
       if (openTerm) openTerm.endDate = state.currentDate;
     }
   }
@@ -565,7 +736,11 @@ function resolveProvincialAssemblyElection(
     if (row) {
       if (!oldMembers.has(id) || row.serviceTerms.length === 0) {
         row.serviceStartDate ??= state.currentDate;
-        row.serviceTerms.push({ startDate: state.currentDate, endDate: null, electionId: election.id });
+        row.serviceTerms.push({
+          startDate: state.currentDate,
+          endDate: null,
+          electionId: election.id,
+        });
       }
       row.serviceEndDate = null;
       row.electionIds = [...new Set([...row.electionIds, election.id])];
@@ -580,6 +755,12 @@ function resolveProvincialAssemblyElection(
   assignProvincialLeadership(state, assembly, `${election.id}:leadership`, true);
   election.electedIds = [...elected];
   election.turnoutRate = 0.48 + rng.float01("elections") * 0.19;
+  election.certification = certifyShareResult({
+    date: state.currentDate,
+    authority: "provincial_electoral_commission",
+    shares: Object.values(election.partyVoteShares),
+    legalLotUsed: allocation.legalLotUsed,
+  });
   election.status = "resolved";
   for (const campaign of Object.values(state.campaignRuntime.campaigns)) {
     if (campaign.type !== "provincial_assembly" || campaign.electionId !== election.id) continue;
@@ -596,7 +777,13 @@ function resolveProvincialAssemblyElection(
       visibility: "public",
       actorIds: [],
       entityIds: [election.id, election.provinceId],
-      payload: { electionId: election.id, provinceId: election.provinceId, seatCount: assembly.seatCount, partySeats: election.partySeats },
+      payload: {
+        electionId: election.id,
+        provinceId: election.provinceId,
+        seatCount: assembly.seatCount,
+        partySeats: election.partySeats,
+        certification: election.certification,
+      },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,
     }),
@@ -605,24 +792,47 @@ function resolveProvincialAssemblyElection(
 
 const BILL_COPY: Record<ProvincialBillSubject, { titles: string[]; summaries: string[] }> = {
   transport_service: {
-    titles: ["Regional Bus Reliability Act", "Provincial Roads Maintenance Act", "Rural Connections Act"],
-    summaries: ["Sets service and maintenance priorities for the provincial transport network.", "Directs provincial capacity toward overdue road and transit work."],
+    titles: [
+      "Regional Bus Reliability Act",
+      "Provincial Roads Maintenance Act",
+      "Rural Connections Act",
+    ],
+    summaries: [
+      "Sets service and maintenance priorities for the provincial transport network.",
+      "Directs provincial capacity toward overdue road and transit work.",
+    ],
   },
   housing_delivery: {
     titles: ["Homes Delivery Act", "Vacant Sites Renewal Act", "Municipal Housing Partnership Act"],
-    summaries: ["Coordinates provincial land and administrative support for new homes.", "Speeds reuse of serviced sites while preserving municipal approval."],
+    summaries: [
+      "Coordinates provincial land and administrative support for new homes.",
+      "Speeds reuse of serviced sites while preserving municipal approval.",
+    ],
   },
   school_capacity: {
     titles: ["Classroom Capacity Act", "Provincial Schools Renewal Act", "Teacher Placement Act"],
-    summaries: ["Targets additional school capacity in districts under sustained pressure.", "Prioritizes repairs and staffing support across provincial schools."],
+    summaries: [
+      "Targets additional school capacity in districts under sustained pressure.",
+      "Prioritizes repairs and staffing support across provincial schools.",
+    ],
   },
   hospital_access: {
     titles: ["Community Clinics Act", "Provincial Care Access Act", "Hospital Capacity Act"],
-    summaries: ["Expands access points for routine and urgent care.", "Directs provincial administration toward hospital and clinic capacity."],
+    summaries: [
+      "Expands access points for routine and urgent care.",
+      "Directs provincial administration toward hospital and clinic capacity.",
+    ],
   },
   local_administration: {
-    titles: ["Municipal Accounts Act", "Local Services Coordination Act", "Provincial Procurement Act"],
-    summaries: ["Strengthens reporting and coordination for provincial service delivery.", "Sets clearer procurement and public reporting duties."],
+    titles: [
+      "Municipal Accounts Act",
+      "Local Services Coordination Act",
+      "Provincial Procurement Act",
+    ],
+    summaries: [
+      "Strengthens reporting and coordination for provincial service delivery.",
+      "Sets clearer procurement and public reporting duties.",
+    ],
   },
 };
 
@@ -635,7 +845,8 @@ function agendaSubject(
     ? state.provincialRuntime.pressures[province.activePressureId]
     : null;
   if (pressure?.status === "open") {
-    if (pressure.kind === "housing_strain") return { subject: "housing_delivery", source: "economic_pressure" };
+    if (pressure.kind === "housing_strain")
+      return { subject: "housing_delivery", source: "economic_pressure" };
     if (pressure.kind === "employment_loss" || pressure.kind === "transport_disruption") {
       return { subject: "transport_service", source: "economic_pressure" };
     }
@@ -652,7 +863,10 @@ function agendaSubject(
   if (priority) return { subject: priority, source: "governor_priority" };
   const subjects = Object.keys(BILL_COPY) as ProvincialBillSubject[];
   return {
-    subject: subjects[stableProvincialHash(`${provinceId}:${state.currentDate}:agenda`) % subjects.length]!,
+    subject:
+      subjects[
+        stableProvincialHash(`${provinceId}:${state.currentDate}:agenda`) % subjects.length
+      ]!,
     source: "legislative_agenda",
   };
 }
@@ -660,15 +874,35 @@ function agendaSubject(
 function restrainedBillCopy(subject: ProvincialBillSubject): { title: string; summary: string } {
   switch (subject) {
     case "transport_service":
-      return { title: "Local Transport Flexibility Act", summary: "Narrows provincial service mandates and gives local operators greater scheduling discretion." };
+      return {
+        title: "Local Transport Flexibility Act",
+        summary:
+          "Narrows provincial service mandates and gives local operators greater scheduling discretion.",
+      };
     case "housing_delivery":
-      return { title: "Local Planning Discretion Act", summary: "Reduces provincial housing directives and returns more approval authority to municipalities." };
+      return {
+        title: "Local Planning Discretion Act",
+        summary:
+          "Reduces provincial housing directives and returns more approval authority to municipalities.",
+      };
     case "school_capacity":
-      return { title: "School Administration Flexibility Act", summary: "Limits new provincial capacity commitments and gives districts wider control over existing resources." };
+      return {
+        title: "School Administration Flexibility Act",
+        summary:
+          "Limits new provincial capacity commitments and gives districts wider control over existing resources.",
+      };
     case "hospital_access":
-      return { title: "Health Service Cost Control Act", summary: "Restrains new provincial care commitments while preserving essential access requirements." };
+      return {
+        title: "Health Service Cost Control Act",
+        summary:
+          "Restrains new provincial care commitments while preserving essential access requirements.",
+      };
     case "local_administration":
-      return { title: "Municipal Autonomy Act", summary: "Repeals selected provincial reporting duties and expands municipal administrative discretion." };
+      return {
+        title: "Municipal Autonomy Act",
+        summary:
+          "Repeals selected provincial reporting duties and expands municipal administrative discretion.",
+      };
   }
 }
 
@@ -684,16 +918,30 @@ function createAgendaProvincialBill(
   const yearBills = Object.values(state.provincialRuntime.bills).filter(
     (bill) => bill.provinceId === provinceId && bill.introducedDate.slice(0, 4) === year,
   );
-  if (yearBills.length >= 2 || yearBills.some((bill) => ["introduced", "passed"].includes(bill.status))) return null;
+  if (
+    yearBills.length >= 2 ||
+    yearBills.some((bill) => ["introduced", "passed"].includes(bill.status))
+  )
+    return null;
   const governance = state.provincialRuntime.provinces[provinceId];
   const economy = state.economyRuntime.provinces[provinceId];
   const openPressure = governance?.activePressureId
     ? state.provincialRuntime.pressures[governance.activePressureId]?.status === "open"
     : false;
-  const weakConditions = economy ? Math.max(0, 98 - Math.min(economy.conditionsIndex, economy.employmentIndex, economy.housingIndex)) / 20 : 0;
-  const electionMandate = Number(state.currentDate.slice(0, 4)) === Number(assembly.termStartDate.slice(0, 4));
-  let impetus = 0.045 + (openPressure ? 0.13 : 0) + weakConditions * 0.08 +
-    (governance?.administrativePriority ? 0.025 : 0) + (electionMandate ? 0.04 : 0);
+  const weakConditions = economy
+    ? Math.max(
+        0,
+        98 - Math.min(economy.conditionsIndex, economy.employmentIndex, economy.housingIndex),
+      ) / 20
+    : 0;
+  const electionMandate =
+    Number(state.currentDate.slice(0, 4)) === Number(assembly.termStartDate.slice(0, 4));
+  let impetus =
+    0.045 +
+    (openPressure ? 0.13 : 0) +
+    weakConditions * 0.08 +
+    (governance?.administrativePriority ? 0.025 : 0) +
+    (electionMandate ? 0.04 : 0);
   if (yearBills.length === 1) impetus *= 0.32;
   if (["07", "08", "12"].includes(state.currentDate.slice(5, 7))) impetus *= 0.2;
   if (rng.float01("legislature") >= impetus) return null;
@@ -701,28 +949,45 @@ function createAgendaProvincialBill(
   const agenda = agendaSubject(state, provinceId);
   if (electionMandate && agenda.source === "legislative_agenda") agenda.source = "election_mandate";
   const subject = agenda.subject;
-  const pluralityParty = Object.entries(assembly.partySeats)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
-  const leadershipSponsor = pluralityParty ? assembly.partyLeadership[pluralityParty]?.floorLeaderId ?? null : null;
-  const sponsorId = leadershipSponsor ?? assembly.memberIds
-    .slice()
-    .sort((a, b) => {
+  const pluralityParty =
+    Object.entries(assembly.partySeats).sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+    )[0]?.[0] ?? null;
+  const leadershipSponsor = pluralityParty
+    ? (assembly.partyLeadership[pluralityParty]?.floorLeaderId ?? null)
+    : null;
+  const sponsorId =
+    leadershipSponsor ??
+    assembly.memberIds.slice().sort((a, b) => {
       const ar = state.provincialRuntime.legislators[a];
       const br = state.provincialRuntime.legislators[b];
-      return (br?.legislativeSkill ?? 0) + (br?.standing ?? 0) * 0.5 -
-        ((ar?.legislativeSkill ?? 0) + (ar?.standing ?? 0) * 0.5) || a.localeCompare(b);
+      return (
+        (br?.legislativeSkill ?? 0) +
+          (br?.standing ?? 0) * 0.5 -
+          ((ar?.legislativeSkill ?? 0) + (ar?.standing ?? 0) * 0.5) || a.localeCompare(b)
+      );
     })[0]!;
   const sponsorParty = state.provincialRuntime.legislators[sponsorId]?.partyId ?? null;
   const policy = provincialPolicy(subject);
-  const partyLean = sponsorParty ? world.partyPublicIdeology[sponsorParty]?.[policy.axis] ?? 0 : 0;
+  const partyLean = sponsorParty
+    ? (world.partyPublicIdeology[sponsorParty]?.[policy.axis] ?? 0)
+    : 0;
   const policyDirection: -1 | 1 = partyLean < -0.08 ? -1 : 1;
   const copy = BILL_COPY[subject];
-  const selectedCopy = policyDirection > 0
-    ? {
-        title: copy.titles[stableProvincialHash(`${provinceId}:${state.currentDate}:title`) % copy.titles.length]!,
-        summary: copy.summaries[stableProvincialHash(`${provinceId}:${state.currentDate}:summary`) % copy.summaries.length]!,
-      }
-    : restrainedBillCopy(subject);
+  const selectedCopy =
+    policyDirection > 0
+      ? {
+          title:
+            copy.titles[
+              stableProvincialHash(`${provinceId}:${state.currentDate}:title`) % copy.titles.length
+            ]!,
+          summary:
+            copy.summaries[
+              stableProvincialHash(`${provinceId}:${state.currentDate}:summary`) %
+                copy.summaries.length
+            ]!,
+        }
+      : restrainedBillCopy(subject);
   const sequence = Object.keys(state.provincialRuntime.bills).length + 1;
   const id = `PBILL_${String(sequence).padStart(6, "0")}`;
   const compatibleCosponsors = assembly.memberIds
@@ -730,14 +995,22 @@ function createAgendaProvincialBill(
     .map((id) => state.provincialRuntime.legislators[id])
     .filter((row): row is ProvincialLegislator => Boolean(row))
     .filter((row) => {
-      const lean = row.partyId ? world.partyPublicIdeology[row.partyId]?.[policy.axis] ?? 0 : 0;
+      const lean = row.partyId ? (world.partyPublicIdeology[row.partyId]?.[policy.axis] ?? 0) : 0;
       return lean * policyDirection > -0.05;
     })
-    .sort((a, b) => b.standing + b.legislativeSkill * 0.4 - (a.standing + a.legislativeSkill * 0.4) || a.id.localeCompare(b.id));
+    .sort(
+      (a, b) =>
+        b.standing + b.legislativeSkill * 0.4 - (a.standing + a.legislativeSkill * 0.4) ||
+        a.id.localeCompare(b.id),
+    );
   const cosponsorIds: string[] = [];
   for (const row of compatibleCosponsors) {
     if (cosponsorIds.length >= 3) break;
-    if (row.partyId === sponsorParty && cosponsorIds.some((id) => state.provincialRuntime.legislators[id]?.partyId === sponsorParty)) continue;
+    if (
+      row.partyId === sponsorParty &&
+      cosponsorIds.some((id) => state.provincialRuntime.legislators[id]?.partyId === sponsorParty)
+    )
+      continue;
     cosponsorIds.push(row.id);
   }
   const bill: ProvincialBill = {
@@ -765,7 +1038,8 @@ function createAgendaProvincialBill(
   if (sponsor) sponsor.sponsoredBillIds = [...new Set([...sponsor.sponsoredBillIds, id])];
   for (const cosponsorId of cosponsorIds) {
     const cosponsor = state.provincialRuntime.legislators[cosponsorId];
-    if (cosponsor) cosponsor.cosponsoredBillIds = [...new Set([...cosponsor.cosponsoredBillIds, id])];
+    if (cosponsor)
+      cosponsor.cosponsoredBillIds = [...new Set([...cosponsor.cosponsoredBillIds, id])];
   }
   return bill;
 }
@@ -790,7 +1064,8 @@ function recordProvincialVote(
     else if (choice === "no") no += 1;
     else abstain += 1;
     delete state.provincialRuntime.votes[pendingId];
-    const fullPoliticianId = state.provincialRuntime.legislators[memberId]?.fullPoliticianId ??
+    const fullPoliticianId =
+      state.provincialRuntime.legislators[memberId]?.fullPoliticianId ??
       (state.politicians[memberId] ? memberId : null);
     if (fullPoliticianId) {
       recordOrganizationPolicyBehavior(world, state, {
@@ -803,44 +1078,149 @@ function recordProvincialVote(
   }
   const overrideFraction =
     state.provincialRuntime.constitutionalRules.veto_override_fraction?.value ?? 2 / 3;
-  const required = kind === "veto_override" ? Math.ceil(assembly.seatCount * overrideFraction) : Math.floor((yes + no) / 2) + 1;
+  const required =
+    kind === "veto_override"
+      ? Math.ceil(assembly.seatCount * overrideFraction)
+      : Math.floor((yes + no) / 2) + 1;
   const id = `PVOTE_${String(Object.keys(state.provincialRuntime.votes).length + 1).padStart(6, "0")}`;
-  const vote: ProvincialVote = { id, provinceId: bill.provinceId, subjectKind: kind, subjectId: bill.id, date: state.currentDate, votes, partyIdsAtVote: Object.fromEntries(assembly.memberIds.map((memberId) => [memberId, state.provincialRuntime.legislators[memberId]?.partyId ?? null])), factionIdsAtVote: Object.fromEntries(assembly.memberIds.map((memberId) => [memberId, state.provincialRuntime.legislators[memberId]?.factionId ?? null])), yes, no, abstain, passed: yes >= required };
+  const vote: ProvincialVote = {
+    id,
+    provinceId: bill.provinceId,
+    subjectKind: kind,
+    subjectId: bill.id,
+    date: state.currentDate,
+    votes,
+    partyIdsAtVote: Object.fromEntries(
+      assembly.memberIds.map((memberId) => [
+        memberId,
+        state.provincialRuntime.legislators[memberId]?.partyId ?? null,
+      ]),
+    ),
+    factionIdsAtVote: Object.fromEntries(
+      assembly.memberIds.map((memberId) => [
+        memberId,
+        state.provincialRuntime.legislators[memberId]?.factionId ?? null,
+      ]),
+    ),
+    yes,
+    no,
+    abstain,
+    passed: yes >= required,
+  };
   state.provincialRuntime.votes[id] = vote;
   return vote;
 }
 
-function progressProvincialBills(world: KernelWorld, state: SimState, commandId: string): SimEvent[] {
+function progressProvincialBills(
+  world: KernelWorld,
+  state: SimState,
+  commandId: string,
+): SimEvent[] {
   const events: SimEvent[] = [];
-  for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) => a.id.localeCompare(b.id))) {
-    if (bill.status === "introduced" && compareIsoDate(state.currentDate, addMonths(bill.introducedDate, 1)) >= 0) {
+  for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  )) {
+    if (
+      bill.status === "introduced" &&
+      compareIsoDate(state.currentDate, addMonths(bill.introducedDate, 1)) >= 0
+    ) {
       const vote = recordProvincialVote(world, state, bill, "bill");
       const governmentRelation = provincialGovernmentRelation(world, state, bill.provinceId);
       bill.voteId = vote.id;
       bill.status = vote.passed ? "passed" : "failed";
-      events.push(pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_BILL_VOTE", importance: 0.42, visibility: "public", actorIds: [bill.sponsorId], entityIds: [bill.id, vote.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId, yes: vote.yes, no: vote.no, abstain: vote.abstain, passed: vote.passed, governmentRelation }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "PROVINCIAL_BILL_VOTE",
+          importance: 0.42,
+          visibility: "public",
+          actorIds: [bill.sponsorId],
+          entityIds: [bill.id, vote.id, bill.provinceId],
+          payload: {
+            billId: bill.id,
+            provinceId: bill.provinceId,
+            yes: vote.yes,
+            no: vote.no,
+            abstain: vote.abstain,
+            passed: vote.passed,
+            governmentRelation,
+          },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
       continue;
     }
     if (bill.status !== "passed") continue;
-    const governorId = Object.values(state.officeTerms).find((term) => {
-      const office = world.offices[term.officeId];
-      return term.status === "active" && office?.kind === "governor" && office.provinceId === bill.provinceId;
-    })?.holderId ?? null;
+    const governorId =
+      Object.values(state.officeTerms).find((term) => {
+        const office = world.offices[term.officeId];
+        return (
+          term.status === "active" &&
+          office?.kind === "governor" &&
+          office.provinceId === bill.provinceId
+        );
+      })?.holderId ?? null;
     if (!governorId || governorId === state.playerPoliticianId) continue;
     const evaluation = evaluateGovernorDisposition(world, state, governorId, bill);
     const sign = evaluation.decision === "sign";
     bill.status = sign ? "signed" : "vetoed";
     bill.governorDispositionDate = state.currentDate;
-    recordOrganizationPolicyBehavior(world, state, { politicianId: governorId, policyItems: [provincialBillPolicyItem(bill.subject, bill.policyDirection)], behavior: sign ? "sign" : "veto" });
-    events.push(pushHistory(state, { date: state.currentDate, type: sign ? "PROVINCIAL_BILL_SIGNED" : "PROVINCIAL_BILL_VETOED", importance: 0.48, visibility: "public", actorIds: [governorId, bill.sponsorId], entityIds: [bill.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId, dispositionScore: Math.round(evaluation.score * 100) / 100 }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+    recordOrganizationPolicyBehavior(world, state, {
+      politicianId: governorId,
+      policyItems: [provincialBillPolicyItem(bill.subject, bill.policyDirection)],
+      behavior: sign ? "sign" : "veto",
+    });
+    events.push(
+      pushHistory(state, {
+        date: state.currentDate,
+        type: sign ? "PROVINCIAL_BILL_SIGNED" : "PROVINCIAL_BILL_VETOED",
+        importance: 0.48,
+        visibility: "public",
+        actorIds: [governorId, bill.sponsorId],
+        entityIds: [bill.id, bill.provinceId],
+        payload: {
+          billId: bill.id,
+          provinceId: bill.provinceId,
+          dispositionScore: Math.round(evaluation.score * 100) / 100,
+        },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    );
   }
-  for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) => a.id.localeCompare(b.id))) {
+  for (const bill of Object.values(state.provincialRuntime.bills).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  )) {
     if (bill.status !== "vetoed" || !bill.governorDispositionDate) continue;
     if (compareIsoDate(state.currentDate, addMonths(bill.governorDispositionDate, 1)) < 0) continue;
     const vote = recordProvincialVote(world, state, bill, "veto_override");
     bill.status = vote.passed ? "override_passed" : "override_failed";
-    const overrideFraction = state.provincialRuntime.constitutionalRules.veto_override_fraction?.value ?? 2 / 3;
-    events.push(pushHistory(state, { date: state.currentDate, type: vote.passed ? "PROVINCIAL_VETO_OVERRIDDEN" : "PROVINCIAL_VETO_SUSTAINED", importance: 0.52, visibility: "public", actorIds: [bill.sponsorId], entityIds: [bill.id, vote.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId, yes: vote.yes, no: vote.no, abstain: vote.abstain, required: Math.ceil((state.provincialRuntime.assemblies[bill.provinceId]?.seatCount ?? 0) * overrideFraction) }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+    const overrideFraction =
+      state.provincialRuntime.constitutionalRules.veto_override_fraction?.value ?? 2 / 3;
+    events.push(
+      pushHistory(state, {
+        date: state.currentDate,
+        type: vote.passed ? "PROVINCIAL_VETO_OVERRIDDEN" : "PROVINCIAL_VETO_SUSTAINED",
+        importance: 0.52,
+        visibility: "public",
+        actorIds: [bill.sponsorId],
+        entityIds: [bill.id, vote.id, bill.provinceId],
+        payload: {
+          billId: bill.id,
+          provinceId: bill.provinceId,
+          yes: vote.yes,
+          no: vote.no,
+          abstain: vote.abstain,
+          required: Math.ceil(
+            (state.provincialRuntime.assemblies[bill.provinceId]?.seatCount ?? 0) *
+              overrideFraction,
+          ),
+        },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    );
   }
   return events;
 }
@@ -856,16 +1236,57 @@ export function processProvincialAssembliesMonth(
   const month = state.currentDate.slice(5, 7);
   if (month === "01") {
     let created = 0;
-    for (const provinceId of world.provinceIds) created += ensureProvincialReserve(world, state, provinceId);
-    if (created > 0) events.push(pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_POLITICAL_RECRUITMENT", importance: 0.18, visibility: "system", actorIds: [], entityIds: [], payload: { recruits: created }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+    for (const provinceId of world.provinceIds)
+      created += ensureProvincialReserve(world, state, provinceId);
+    if (created > 0)
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "PROVINCIAL_POLITICAL_RECRUITMENT",
+          importance: 0.18,
+          visibility: "system",
+          actorIds: [],
+          entityIds: [],
+          payload: { recruits: created },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
   }
-  for (const election of Object.values(state.provincialRuntime.assemblyElections).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))) {
-    if (election.status === "planned" && compareIsoDate(state.currentDate, addMonths(election.date, -5)) >= 0) openProvincialAssemblyElection(world, state, election);
-    if (election.status === "filing_open" && compareIsoDate(state.currentDate, election.date) >= 0) events.push(...resolveProvincialAssemblyElection(world, state, rng, election, commandId));
+  for (const election of Object.values(state.provincialRuntime.assemblyElections).sort(
+    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
+  )) {
+    if (
+      election.status === "planned" &&
+      compareIsoDate(state.currentDate, addMonths(election.date, -5)) >= 0
+    )
+      openProvincialAssemblyElection(world, state, election);
+    if (election.status === "filing_open" && compareIsoDate(state.currentDate, election.date) >= 0)
+      events.push(...resolveProvincialAssemblyElection(world, state, rng, election, commandId));
   }
   for (const provinceId of world.provinceIds) {
     const bill = createAgendaProvincialBill(world, state, rng, provinceId);
-    if (bill) events.push(pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_BILL_INTRODUCED", importance: 0.32, visibility: "public", actorIds: [bill.sponsorId, ...bill.cosponsorIds], entityIds: [bill.id, provinceId], payload: { billId: bill.id, provinceId, title: bill.title, subject: bill.subject, agendaSource: bill.agendaSource, cosponsorIds: bill.cosponsorIds }, sourceScheduledEventId: null, sourceCommandId: commandId }));
+    if (bill)
+      events.push(
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "PROVINCIAL_BILL_INTRODUCED",
+          importance: 0.32,
+          visibility: "public",
+          actorIds: [bill.sponsorId, ...bill.cosponsorIds],
+          entityIds: [bill.id, provinceId],
+          payload: {
+            billId: bill.id,
+            provinceId,
+            title: bill.title,
+            subject: bill.subject,
+            agendaSource: bill.agendaSource,
+            cosponsorIds: bill.cosponsorIds,
+          },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      );
   }
   events.push(...progressProvincialBills(world, state, commandId));
   return events;
@@ -878,14 +1299,25 @@ export function fileProvincialAssemblyCandidacy(
   electionId: string,
   commandId: string | null,
 ): { events: SimEvent[] } | { error: CommandError } {
-  if (politicianId !== state.playerPoliticianId) return { error: reject("PLAYER_AUTONOMY", "The player may only file their own provincial candidacy") };
+  if (politicianId !== state.playerPoliticianId)
+    return {
+      error: reject("PLAYER_AUTONOMY", "The player may only file their own provincial candidacy"),
+    };
   const election = state.provincialRuntime.assemblyElections[electionId];
-  if (!election || election.status !== "filing_open") return { error: reject("FILING_CLOSED", electionId) };
+  if (!election || election.status !== "filing_open")
+    return { error: reject("FILING_CLOSED", electionId) };
   const pol = state.politicians[politicianId];
   if (!pol?.alive || pol.retired) return { error: reject("INELIGIBLE", politicianId) };
   const home = pol.homeProvinceId ?? world.politicianHomeProvince[politicianId];
-  if (home !== election.provinceId) return { error: reject("PROVINCIAL_RESIDENCY", `${politicianId} is not resident in ${election.provinceId}`) };
-  if (election.playerDecision != null) return { error: reject("DECISION_ALREADY_MADE", electionId) };
+  if (home !== election.provinceId)
+    return {
+      error: reject(
+        "PROVINCIAL_RESIDENCY",
+        `${politicianId} is not resident in ${election.provinceId}`,
+      ),
+    };
+  if (election.playerDecision != null)
+    return { error: reject("DECISION_ALREADY_MADE", electionId) };
   state.provincialRuntime.legislators[politicianId] = {
     id: politicianId,
     displayName: pol.displayName ?? politicianId,
@@ -911,7 +1343,21 @@ export function fileProvincialAssemblyCandidacy(
   };
   election.candidateIds = [...new Set([...election.candidateIds, politicianId])].sort();
   election.playerDecision = "filed";
-  return { events: [pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_ASSEMBLY_CANDIDACY_FILED", importance: 0.46, visibility: "public", actorIds: [politicianId], entityIds: [election.id, election.provinceId], payload: { electionId: election.id, provinceId: election.provinceId }, sourceScheduledEventId: null, sourceCommandId: commandId })] };
+  return {
+    events: [
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "PROVINCIAL_ASSEMBLY_CANDIDACY_FILED",
+        importance: 0.46,
+        visibility: "public",
+        actorIds: [politicianId],
+        entityIds: [election.id, election.provinceId],
+        payload: { electionId: election.id, provinceId: election.provinceId },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    ],
+  };
 }
 
 export function declineProvincialAssemblyCandidacy(
@@ -920,12 +1366,29 @@ export function declineProvincialAssemblyCandidacy(
   electionId: string,
   commandId: string | null,
 ): { events: SimEvent[] } | { error: CommandError } {
-  if (politicianId !== state.playerPoliticianId) return { error: reject("PLAYER_AUTONOMY", "The player may only decline their own candidacy") };
+  if (politicianId !== state.playerPoliticianId)
+    return { error: reject("PLAYER_AUTONOMY", "The player may only decline their own candidacy") };
   const election = state.provincialRuntime.assemblyElections[electionId];
-  if (!election || election.status !== "filing_open") return { error: reject("FILING_CLOSED", electionId) };
-  if (election.playerDecision != null) return { error: reject("DECISION_ALREADY_MADE", electionId) };
+  if (!election || election.status !== "filing_open")
+    return { error: reject("FILING_CLOSED", electionId) };
+  if (election.playerDecision != null)
+    return { error: reject("DECISION_ALREADY_MADE", electionId) };
   election.playerDecision = "declined";
-  return { events: [pushHistory(state, { date: state.currentDate, type: "PROVINCIAL_ASSEMBLY_CANDIDACY_DECLINED", importance: 0.18, visibility: "system", actorIds: [politicianId], entityIds: [election.id], payload: { electionId }, sourceScheduledEventId: null, sourceCommandId: commandId })] };
+  return {
+    events: [
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "PROVINCIAL_ASSEMBLY_CANDIDACY_DECLINED",
+        importance: 0.18,
+        visibility: "system",
+        actorIds: [politicianId],
+        entityIds: [election.id],
+        payload: { electionId },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    ],
+  };
 }
 
 export function seekProvincialLeadership(
@@ -936,20 +1399,38 @@ export function seekProvincialLeadership(
   commandId: string | null,
 ): { events: SimEvent[] } | { error: CommandError } {
   if (actorId !== state.playerPoliticianId) {
-    return { error: reject("PLAYER_AUTONOMY", "The player may only enter their own leadership contest") };
+    return {
+      error: reject("PLAYER_AUTONOMY", "The player may only enter their own leadership contest"),
+    };
   }
   const assembly = state.provincialRuntime.assemblies[provinceId];
   const member = provincialLegislatorForPolitician(state, actorId);
   const memberId = member?.id ?? null;
-  if (!assembly || !member || !memberId || !member.active || !assembly.memberIds.includes(memberId)) {
+  if (
+    !assembly ||
+    !member ||
+    !memberId ||
+    !member.active ||
+    !assembly.memberIds.includes(memberId)
+  ) {
     return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
   }
   assembly.partyLeadership ??= {};
   assembly.leadershipHistory ??= [];
-  if (assembly.leadershipHistory.some(
-    (record) => record.date === state.currentDate && record.role === role && record.candidateIds.includes(memberId),
-  )) {
-    return { error: reject("LEADERSHIP_ATTEMPT_USED", "Only one contest for this role may be entered each month") };
+  if (
+    assembly.leadershipHistory.some(
+      (record) =>
+        record.date === state.currentDate &&
+        record.role === role &&
+        record.candidateIds.includes(memberId),
+    )
+  ) {
+    return {
+      error: reject(
+        "LEADERSHIP_ATTEMPT_USED",
+        "Only one contest for this role may be entered each month",
+      ),
+    };
   }
   const partyId = role === "speaker" ? null : member.partyId;
   if (role !== "speaker" && !partyId) {
@@ -1027,7 +1508,12 @@ export function governorProvincialBillDisposition(
   if (!bill || bill.status !== "passed") return { error: reject("BILL_NOT_PENDING", billId) };
   const governor = Object.values(state.officeTerms).some((term) => {
     const office = world.offices[term.officeId];
-    return term.status === "active" && term.holderId === actorId && office?.kind === "governor" && office.provinceId === bill.provinceId;
+    return (
+      term.status === "active" &&
+      term.holderId === actorId &&
+      office?.kind === "governor" &&
+      office.provinceId === bill.provinceId
+    );
   });
   if (!governor) return { error: reject("NOT_PROVINCIAL_GOVERNOR", actorId) };
   bill.status = disposition === "sign" ? "signed" : "vetoed";
@@ -1037,7 +1523,21 @@ export function governorProvincialBillDisposition(
     policyItems: [provincialBillPolicyItem(bill.subject)],
     behavior: disposition,
   });
-  return { events: [pushHistory(state, { date: state.currentDate, type: disposition === "sign" ? "PROVINCIAL_BILL_SIGNED" : "PROVINCIAL_BILL_VETOED", importance: 0.5, visibility: "public", actorIds: [actorId, bill.sponsorId], entityIds: [bill.id, bill.provinceId], payload: { billId: bill.id, provinceId: bill.provinceId }, sourceScheduledEventId: null, sourceCommandId: commandId })] };
+  return {
+    events: [
+      pushHistory(state, {
+        date: state.currentDate,
+        type: disposition === "sign" ? "PROVINCIAL_BILL_SIGNED" : "PROVINCIAL_BILL_VETOED",
+        importance: 0.5,
+        visibility: "public",
+        actorIds: [actorId, bill.sponsorId],
+        entityIds: [bill.id, bill.provinceId],
+        payload: { billId: bill.id, provinceId: bill.provinceId },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    ],
+  };
 }
 
 export function governorProposeProvincialBill(
@@ -1050,29 +1550,44 @@ export function governorProposeProvincialBill(
 ): { bill: ProvincialBill; events: SimEvent[] } | { error: CommandError } {
   const governor = Object.values(state.officeTerms).some((term) => {
     const office = world.offices[term.officeId];
-    return term.status === "active" && term.holderId === actorId && office?.kind === "governor" && office.provinceId === provinceId;
+    return (
+      term.status === "active" &&
+      term.holderId === actorId &&
+      office?.kind === "governor" &&
+      office.provinceId === provinceId
+    );
   });
   if (!governor) return { error: reject("NOT_PROVINCIAL_GOVERNOR", actorId) };
   const assembly = state.provincialRuntime.assemblies[provinceId];
   if (!assembly) return { error: reject("UNKNOWN_PROVINCIAL_ASSEMBLY", provinceId) };
   const openGovernorBill = Object.values(state.provincialRuntime.bills).some(
-    (bill) => bill.provinceId === provinceId && bill.sponsorId === actorId && ["introduced", "passed"].includes(bill.status),
+    (bill) =>
+      bill.provinceId === provinceId &&
+      bill.sponsorId === actorId &&
+      ["introduced", "passed"].includes(bill.status),
   );
-  if (openGovernorBill) return { error: reject("PROVINCIAL_AGENDA_BUSY", "The Governor already has legislation before the Assembly") };
+  if (openGovernorBill)
+    return {
+      error: reject(
+        "PROVINCIAL_AGENDA_BUSY",
+        "The Governor already has legislation before the Assembly",
+      ),
+    };
   const copy = BILL_COPY[subject];
   if (!copy) return { error: reject("INVALID_PROVINCIAL_SUBJECT", subject) };
   const sequence = Object.keys(state.provincialRuntime.bills).length + 1;
   const id = `PBILL_GOV_${String(sequence).padStart(6, "0")}`;
   const governorParty = state.politicians[actorId]?.partyId ?? null;
   const policy = provincialPolicy(subject);
-  const lean = governorParty ? world.partyPublicIdeology[governorParty]?.[policy.axis] ?? 0 : 0;
+  const lean = governorParty ? (world.partyPublicIdeology[governorParty]?.[policy.axis] ?? 0) : 0;
   const policyDirection: -1 | 1 = lean < -0.08 ? -1 : 1;
-  const selectedCopy = policyDirection > 0
-    ? {
-        title: copy.titles[stableProvincialHash(`${id}:title`) % copy.titles.length]!,
-        summary: copy.summaries[stableProvincialHash(`${id}:summary`) % copy.summaries.length]!,
-      }
-    : restrainedBillCopy(subject);
+  const selectedCopy =
+    policyDirection > 0
+      ? {
+          title: copy.titles[stableProvincialHash(`${id}:title`) % copy.titles.length]!,
+          summary: copy.summaries[stableProvincialHash(`${id}:summary`) % copy.summaries.length]!,
+        }
+      : restrainedBillCopy(subject);
   const bill: ProvincialBill = {
     id,
     provinceId,
@@ -1099,7 +1614,22 @@ export function governorProposeProvincialBill(
     policyItems: [provincialBillPolicyItem(subject, policyDirection)],
     behavior: "sponsor",
   });
-  return { bill, events: [pushHistory(state, { date: state.currentDate, type: "GOVERNOR_PROVINCIAL_BILL_PROPOSED", importance: 0.48, visibility: "public", actorIds: [actorId], entityIds: [id, provinceId], payload: { billId: id, provinceId, title: bill.title, subject }, sourceScheduledEventId: null, sourceCommandId: commandId })] };
+  return {
+    bill,
+    events: [
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "GOVERNOR_PROVINCIAL_BILL_PROPOSED",
+        importance: 0.48,
+        visibility: "public",
+        actorIds: [actorId],
+        entityIds: [id, provinceId],
+        payload: { billId: id, provinceId, title: bill.title, subject },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    ],
+  };
 }
 
 function provincialBillPolicyItem(
@@ -1125,15 +1655,31 @@ export function castProvincialBillVote(
   billId: string,
   choice: "yes" | "no" | "abstain",
 ): { error?: CommandError } {
-  if (actorId !== state.playerPoliticianId) return { error: reject("PLAYER_AUTONOMY", "Only the player records this vote") };
+  if (actorId !== state.playerPoliticianId)
+    return { error: reject("PLAYER_AUTONOMY", "Only the player records this vote") };
   const bill = state.provincialRuntime.bills[billId];
-  if (!bill || bill.status !== "introduced") return { error: reject("PROVINCIAL_BILL_NOT_OPEN", billId) };
+  if (!bill || bill.status !== "introduced")
+    return { error: reject("PROVINCIAL_BILL_NOT_OPEN", billId) };
   const assembly = state.provincialRuntime.assemblies[bill.provinceId];
   const member = provincialLegislatorForPolitician(state, actorId);
   const memberId = member?.id ?? null;
-  if (!assembly || !member || !memberId || !assembly.memberIds.includes(memberId)) return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
+  if (!assembly || !member || !memberId || !assembly.memberIds.includes(memberId))
+    return { error: reject("NOT_PROVINCIAL_LEGISLATOR", actorId) };
   const id = `pending:bill:${billId}:${memberId}`;
-  state.provincialRuntime.votes[id] = { id, provinceId: bill.provinceId, subjectKind: "bill", subjectId: billId, date: state.currentDate, votes: { [memberId]: choice }, partyIdsAtVote: { [memberId]: member.partyId }, factionIdsAtVote: { [memberId]: member.factionId }, yes: choice === "yes" ? 1 : 0, no: choice === "no" ? 1 : 0, abstain: choice === "abstain" ? 1 : 0, passed: false };
+  state.provincialRuntime.votes[id] = {
+    id,
+    provinceId: bill.provinceId,
+    subjectKind: "bill",
+    subjectId: billId,
+    date: state.currentDate,
+    votes: { [memberId]: choice },
+    partyIdsAtVote: { [memberId]: member.partyId },
+    factionIdsAtVote: { [memberId]: member.factionId },
+    yes: choice === "yes" ? 1 : 0,
+    no: choice === "no" ? 1 : 0,
+    abstain: choice === "abstain" ? 1 : 0,
+    passed: false,
+  };
   return {};
 }
 
@@ -1143,13 +1689,20 @@ export function provincialLegislatorForPolitician(
 ): ProvincialLegislator | null {
   const direct = state.provincialRuntime.legislators[politicianId];
   if (direct) return direct;
-  return Object.values(state.provincialRuntime.legislators).find(
-    (row) => row.fullPoliticianId === politicianId,
-  ) ?? null;
+  return (
+    Object.values(state.provincialRuntime.legislators).find(
+      (row) => row.fullPoliticianId === politicianId,
+    ) ?? null
+  );
 }
 
 function promotionScore(row: ProvincialLegislator): number {
-  return row.ambition * 0.35 + row.campaignSkill * 0.28 + row.standing * 0.24 + row.legislativeSkill * 0.13;
+  return (
+    row.ambition * 0.35 +
+    row.campaignSkill * 0.28 +
+    row.standing * 0.24 +
+    row.legislativeSkill * 0.13
+  );
 }
 
 export function promoteProvincialCandidate(
@@ -1198,7 +1751,14 @@ export function promoteProvincialCandidate(
   state.generatedAgentProfiles[politicianId] = profile;
   row.fullPoliticianId = politicianId;
   const id = `PROMO_${String(Object.keys(state.provincialRuntime.promotions).length + 1).padStart(6, "0")}`;
-  state.provincialRuntime.promotions[id] = { id, date: state.currentDate, provinceId: row.provinceId, legislatorId, politicianId, reason };
+  state.provincialRuntime.promotions[id] = {
+    id,
+    date: state.currentDate,
+    provinceId: row.provinceId,
+    legislatorId,
+    politicianId,
+    reason,
+  };
   return politicianId;
 }
 
@@ -1214,17 +1774,24 @@ export function recruitFederalAssemblyClass(
   requestedPromotions?: number,
 ): string[] {
   seedProvincialAssemblies(world, state);
-  const seatTotal = Object.values(world.constituencyElectorate).reduce((sum, row) => sum + row.seats, 0);
-  const eligibleFull = Object.values(state.politicians).filter((row) => row.alive && !row.retired).length;
-  const target = Math.ceil(seatTotal * 1.35);
-  const needed = Math.max(
+  const seatTotal = Object.values(world.constituencyElectorate).reduce(
+    (sum, row) => sum + row.seats,
     0,
-    requestedPromotions ?? target - eligibleFull,
   );
+  const eligibleFull = Object.values(state.politicians).filter(
+    (row) => row.alive && !row.retired,
+  ).length;
+  const target = Math.ceil(seatTotal * 1.35);
+  const needed = Math.max(0, requestedPromotions ?? target - eligibleFull);
   if (needed === 0) return [];
   const pool = Object.values(state.provincialRuntime.legislators)
     .filter((row) => row.active && row.fullPoliticianId == null)
-    .sort((a, b) => promotionScore(b) - promotionScore(a) || stableProvincialHash(`${electionId}:${a.id}`) - stableProvincialHash(`${electionId}:${b.id}`));
+    .sort(
+      (a, b) =>
+        promotionScore(b) - promotionScore(a) ||
+        stableProvincialHash(`${electionId}:${a.id}`) -
+          stableProvincialHash(`${electionId}:${b.id}`),
+    );
   const promoted: string[] = [];
   for (const row of pool.slice(0, needed)) {
     const id = promoteProvincialCandidate(world, state, row.id);

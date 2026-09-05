@@ -34,6 +34,12 @@ describe("derived Terena map geometry", () => {
     const valen = prepared.cities.find((c) => c.id === "CITY18");
     expect(valen?.name).toBe("Valen");
     expect(valen?.provinceId).toBe("FDV");
+
+    const luren = prepared.cities.find((city) => city.id === "CITY15")!;
+    const gavren = prepared.cities.find((city) => city.id === "CITY16")!;
+    expect(Math.hypot(luren.x - gavren.x, luren.y - gavren.y)).toBeGreaterThan(
+      prepared.transform.width * 0.009,
+    );
     expect(hitFeature(prepared.provinces, "FDV")?.name).toMatch(/Valen/i);
     expect(hitFeature(prepared.constituencies, prepared.constituencies[0]!.id)?.name.length).toBeGreaterThan(
       1,

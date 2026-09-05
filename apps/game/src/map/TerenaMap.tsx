@@ -67,17 +67,30 @@ export function TerenaMap(props: {
     }
     props.onSelect?.(selection);
   };
-  const reset = () => setView({
-    x: prepared.transform.minX,
-    y: prepared.transform.minY,
-    width: prepared.transform.width,
-    height: prepared.transform.height,
-  });
-  const zoom = (factor: number) => setView((current) => {
-    const width = Math.max(prepared.transform.width * 0.35, Math.min(prepared.transform.width, current.width * factor));
-    const height = Math.max(prepared.transform.height * 0.35, Math.min(prepared.transform.height, current.height * factor));
-    return { x: current.x + (current.width - width) / 2, y: current.y + (current.height - height) / 2, width, height };
-  });
+  const reset = () =>
+    setView({
+      x: prepared.transform.minX,
+      y: prepared.transform.minY,
+      width: prepared.transform.width,
+      height: prepared.transform.height,
+    });
+  const zoom = (factor: number) =>
+    setView((current) => {
+      const width = Math.max(
+        prepared.transform.width * 0.35,
+        Math.min(prepared.transform.width, current.width * factor),
+      );
+      const height = Math.max(
+        prepared.transform.height * 0.35,
+        Math.min(prepared.transform.height, current.height * factor),
+      );
+      return {
+        x: current.x + (current.width - width) / 2,
+        y: current.y + (current.height - height) / 2,
+        width,
+        height,
+      };
+    });
   const showHover = (selection: MapSelection, event: PointerEvent<SVGElement>) => {
     const bounds = panelRef.current?.getBoundingClientRect();
     if (bounds) setTip({ x: event.clientX - bounds.left + 12, y: event.clientY - bounds.top + 12 });
@@ -94,9 +107,15 @@ export function TerenaMap(props: {
   return (
     <div className="map-panel" ref={panelRef}>
       <div className="map-controls" aria-label="Map view controls">
-        <button type="button" aria-label="Zoom in" onClick={() => zoom(0.72)}>+</button>
-        <button type="button" aria-label="Zoom out" onClick={() => zoom(1.38)}>−</button>
-        <button type="button" onClick={reset}>Reset</button>
+        <button type="button" aria-label="Zoom in" onClick={() => zoom(0.72)}>
+          +
+        </button>
+        <button type="button" aria-label="Zoom out" onClick={() => zoom(1.38)}>
+          −
+        </button>
+        <button type="button" onClick={reset}>
+          Reset
+        </button>
       </div>
       <svg
         ref={svgRef}
@@ -126,13 +145,20 @@ export function TerenaMap(props: {
             suppressClickRef.current = true;
             event.currentTarget.setPointerCapture(event.pointerId);
           }
-          setView((current) => ({ ...current, x: drag.viewX - (event.clientX - drag.x) * (current.width / bounds.width), y: drag.viewY - (event.clientY - drag.y) * (current.height / bounds.height) }));
+          setView((current) => ({
+            ...current,
+            x: drag.viewX - (event.clientX - drag.x) * (current.width / bounds.width),
+            y: drag.viewY - (event.clientY - drag.y) * (current.height / bounds.height),
+          }));
         }}
         onPointerUp={(event) => {
           if (dragRef.current?.pointerId === event.pointerId) {
             const moved = dragRef.current.moved;
             dragRef.current = null;
-            if (moved) window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+            if (moved)
+              window.setTimeout(() => {
+                suppressClickRef.current = false;
+              }, 0);
           }
         }}
         onWheel={(event) => {
@@ -158,9 +184,15 @@ export function TerenaMap(props: {
             tabIndex={0}
             role="button"
             aria-label={p.name}
-            onKeyDown={(event) => selectOnKey({ id: p.id, kind: "province", name: p.name }, event.key)}
-            onPointerEnter={(event) => showHover({ id: p.id, kind: "province", name: p.name }, event)}
-            onPointerMove={(event) => showHover({ id: p.id, kind: "province", name: p.name }, event)}
+            onKeyDown={(event) =>
+              selectOnKey({ id: p.id, kind: "province", name: p.name }, event.key)
+            }
+            onPointerEnter={(event) =>
+              showHover({ id: p.id, kind: "province", name: p.name }, event)
+            }
+            onPointerMove={(event) =>
+              showHover({ id: p.id, kind: "province", name: p.name }, event)
+            }
             onPointerLeave={clearHover}
           />
         ))}
@@ -176,27 +208,40 @@ export function TerenaMap(props: {
                 tabIndex={0}
                 role="button"
                 aria-label={c.name}
-                onKeyDown={(event) => selectOnKey({ id: c.id, kind: "constituency", name: c.name }, event.key)}
-                onPointerEnter={(event) => showHover({ id: c.id, kind: "constituency", name: c.name }, event)}
-                onPointerMove={(event) => showHover({ id: c.id, kind: "constituency", name: c.name }, event)}
+                onKeyDown={(event) =>
+                  selectOnKey({ id: c.id, kind: "constituency", name: c.name }, event.key)
+                }
+                onPointerEnter={(event) =>
+                  showHover({ id: c.id, kind: "constituency", name: c.name }, event)
+                }
+                onPointerMove={(event) =>
+                  showHover({ id: c.id, kind: "constituency", name: c.name }, event)
+                }
                 onPointerLeave={clearHover}
               />
             ))
           : null}
         {prepared.cities.map((city) => (
-          <g
-            key={city.id}
-            className="map-city"
-            onClick={() => select({ id: city.id, kind: "city", name: city.name })}
-            tabIndex={0}
-            role="button"
-            aria-label={city.name}
-            onKeyDown={(event) => selectOnKey({ id: city.id, kind: "city", name: city.name }, event.key)}
-            onPointerEnter={(event) => showHover({ id: city.id, kind: "city", name: city.name }, event)}
-            onPointerMove={(event) => showHover({ id: city.id, kind: "city", name: city.name }, event)}
-            onPointerLeave={clearHover}
-          >
-            <circle cx={city.x} cy={city.y} r={prepared.transform.width * 0.0045} />
+          <g key={city.id} className="map-city">
+            <circle
+              cx={city.x}
+              cy={city.y}
+              r={prepared.transform.width * 0.0045}
+              onClick={() => select({ id: city.id, kind: "city", name: city.name })}
+              tabIndex={0}
+              role="button"
+              aria-label={city.name}
+              onKeyDown={(event) =>
+                selectOnKey({ id: city.id, kind: "city", name: city.name }, event.key)
+              }
+              onPointerEnter={(event) =>
+                showHover({ id: city.id, kind: "city", name: city.name }, event)
+              }
+              onPointerMove={(event) =>
+                showHover({ id: city.id, kind: "city", name: city.name }, event)
+              }
+              onPointerLeave={clearHover}
+            />
           </g>
         ))}
       </svg>

@@ -1,4 +1,5 @@
 import { isIsoDate } from "../calendar.js";
+import { parseElectionCertification } from "../elections/certification.js";
 import {
   emptyProvincialRuntime,
   isProvincialInvestment,
@@ -89,6 +90,8 @@ function parseElection(id: string, raw: unknown): GubernatorialElection | string
       voteShares[politicianId] = value;
     }
   }
+  const certification = parseElectionCertification(raw.certification);
+  if (typeof certification === "string") return `provincialRuntime.elections.${id}.${certification}`;
   return {
     id,
     provinceId: raw.provinceId,
@@ -110,6 +113,7 @@ function parseElection(id: string, raw: unknown): GubernatorialElection | string
     voteShares,
     turnoutRate: finite(raw.turnoutRate) ? raw.turnoutRate : null,
     resultEventId: typeof raw.resultEventId === "string" ? raw.resultEventId : null,
+    ...(certification ? { certification } : {}),
   };
 }
 

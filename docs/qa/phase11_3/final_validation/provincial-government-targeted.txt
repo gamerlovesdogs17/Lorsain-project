@@ -1,0 +1,12 @@
+
+ RUN  v3.2.7 C:/Users/zydlo/OneDrive/Desktop/lorsain_project_package/Lorsain project
+
+ ✓ scripts/phase11_3.provincial-government.test.ts (2 tests) 9736ms
+   ✓ Phase 11.3 controlled provincial government > distinguishes friendly, divided, and hostile passage and disposition behavior  6463ms
+   ✓ Phase 11.3 controlled provincial government > allows a hostile supermajority to override while a friendly chamber sustains the veto  3272ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  18:03:13
+   Duration  13.23s (transform 1.22s, setup 0ms, collect 3.06s, tests 9.74s, environment 0ms, prepare 152ms)
+

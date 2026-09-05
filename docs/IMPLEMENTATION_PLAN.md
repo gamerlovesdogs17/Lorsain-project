@@ -308,7 +308,7 @@ Integrated Terena multi-year harness with scripted interrupt resolution, catastr
 - Complete the concrete federal law system with 50 provision categories / 161 policy-specific options, one-to-three-provision bills, editorial deterministic titles, current-law comparison, effects and targeted ordinary amendments.
 - Rebuild organization relationships around policy alignment, trust, action history, active endorsement lifecycle and public scorecards. Present campaign capacity as Ground Game and tune national/province/constituency effects as a single bounded system.
 - Ship UI System V6 role-aware workspaces, party/caucus directory, chamber, roll calls, Court bench, Provincial Assembly detail, Calendar, global search, map inspector, public economic measures and responsive evidence at 1440/1200/900/600/390.
-- Advance save schema to v14 with deterministic v12→v13 and v13→v14 migrations and no fabricated historical events. Validate with targeted institutional tests, the normal repository suite, browser role playtests, and staged resumable gates culminating in 100 saves × 600 months of deterministic whole-game telemetry.
+- Advance save schema to v18 with deterministic v12→v18 migrations and no fabricated historical events. Validate with targeted institutional tests, the normal repository suite, browser role playtests, a production-subpath smoke, and a current-source deterministic 1×600 closeout. The monster 100×600 release soak belongs to Phase 11.5.
 
 Artifacts: `PHASE_11_3_INSTITUTIONAL_AUDIT.md`, `UI_SYSTEM_V6.md`, `PHASE_11_3_UI_BEFORE_AFTER.md`, `PHASE_11_3_RESULTS.md`, and `qa/phase11_3/`. **STOP after Phase 11.3. Do not begin Phase 11.4.**
 

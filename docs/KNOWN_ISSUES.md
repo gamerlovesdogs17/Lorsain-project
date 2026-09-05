@@ -182,7 +182,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title ‚
 
 ## Phase 11.3 notes
 
-**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is implemented.** Formal results and telemetry are recorded in `docs/PHASE_11_3_RESULTS.md` and `docs/qa/phase11_3/whole_game_calibration.json`. Phase 11.4 has not begun.
+**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is implemented.** Formal results and current-source telemetry are recorded in `docs/PHASE_11_3_RESULTS.md`, `docs/PHASE_11_3_REQUIREMENT_EVIDENCE.md`, and `docs/qa/phase11_3/whole_game_final_1x600.json`. Phase 11.4 has not begun.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
@@ -199,10 +199,15 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title ‚
 | P113-CONSTITUTION | **FIXED** | Amendment procedure requires 280 Assembly votes and 13 of 21 Provincial Assemblies, with no presidential role. The closeout removed the invented universal 18-month deadline; a future proposal-specific deadline requires an authorized rule. Supported rules are live runtime values. |
 | P113-LAW-COPY | **FIXED** | Bills use 50 concrete provision categories / 161 policy-specific options, targeted amendments and deterministic editorial titles instead of IDs or ‚Äúmoderate on ‚Ä¶‚Äù descriptions. |
 | P113-LAW-OPTION-IDS | **FIXED** | Persisted bill choices use policy-specific option IDs rather than generic `low/current/high`. Legacy schema-13 development saves resolve those three values only as read-time aliases and canonicalize every new write. |
+| P113-ELECTION-CERTIFICATION | **FIXED** | New Presidential, National Assembly, gubernatorial, and Provincial Assembly results identify their certifying commission, certified date, final margin, automatic recount state, and any countback/first-preference/legal-lot procedure. Election Night keeps certified facts hidden until the truthful presentation completes. |
+| P113-MAP-CITY-HIT | **FIXED** | Cities sharing a province are deterministically separated at fit view, and the actual SVG marker owns the accessible action. The Pages-style 390px smoke independently selected adjacent Luren and Gavren and kept full detail behind an explicit drawer action. |
+| P113-PROVINCIAL-LEADERSHIP-VOLUME | **FIXED** | Provincial Assemblies still select every required leader after an election, but routine reselection of the same holder no longer appends a redundant ballot history object. A 120-month controlled probe recorded 324 meaningful records instead of the old theoretical 819 role-by-cycle records. |
 | P113-ORGANIZATIONS | **FIXED** | Relationship scorecards derive from affinity, trust, policy alignment and behavior; endorsements can be withdrawn when their campaign or relationship basis ends. |
 | P113-MINISTER-MAYOR | NONBLOCKING | Minister and Mayor remain deliberately labeled limited roles. Full ministry portfolio politics and municipal legislatures are outside v1. |
 | P113-NOMINATION-TOTAL | NONBLOCKING | Later-cycle formal nomination counts can still take multiple seconds of worker time as the political population grows. They run off the main thread with a truthful indeterminate state; further algorithmic work is release optimization, not a browser freeze. |
 | P113-BUNDLE-SIZE | NONBLOCKING | Canonical domestic/world geometry and content keep the production bundle large. Route/data splitting remains a Phase 11.5 release-engineering opportunity. |
+| P113-SAVE-SIZE | NONBLOCKING | Long-save growth is measured at 0/1/4/10/25/50 years with section-level attribution. The roughly linear 50-year save remains large; compaction of immutable election/roll-call/history archives is Phase 11.5 release engineering and must preserve replay/history truth. |
+| P113-PAGES-PUBLISH | RELEASE ACTION | The checked-in workflow and faithful `/Lorsain-project/` production smoke are valid, but the public URL was still serving the older Phase 10 branch-source site during closeout. Repository Pages Source must be set to **GitHub Actions**, then the closeout commit must be published and the public URL retested. |
 | P113-SCREENSHOT-CI | NONBLOCKING | Phase 11.3 includes manual browser evidence at all required widths; automated visual-diff CI is not yet wired. |
 | P113-DEEP-LOCAL | POST-11.5 IDEA | Provincial cabinets, detailed provincial budgets/taxes, municipal legislatures and separate provincial constitutions would overexpand v1 and are deliberately absent. |
 

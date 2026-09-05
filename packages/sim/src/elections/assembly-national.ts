@@ -26,6 +26,7 @@ import { constituencyGotvBoost } from "../campaigns/gotv.js";
 import { ensureAssemblyElectionCycle } from "./assembly-cycle.js";
 import { candidateStandingOrDefault } from "./standing.js";
 import { seedCommitteesIfNeeded } from "../legislature/state.js";
+import { certifyCount } from "./certification.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -292,6 +293,11 @@ export function resolveAssemblyElection(
     constituencyElectionIds,
     certifiedForAssumption: true,
   };
+  election.certification = certifyCount({
+    date: state.currentDate,
+    authority: "national_electoral_commission",
+    archives: Object.values(cycle.constituencyResults).map((entry) => entry.countArchive!),
+  });
 
   const resultEvent = pushHistory(state, {
     date: state.currentDate,
@@ -304,6 +310,7 @@ export function resolveAssemblyElection(
       electionId: election.id,
       seats: totalSeats,
       constituencies: constituencyIds.length,
+      certification: election.certification,
     },
     sourceScheduledEventId: args.scheduledEventId,
     sourceCommandId: args.commandId,

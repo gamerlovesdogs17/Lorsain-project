@@ -1,4 +1,5 @@
 import type { IsoDate } from "../calendar.js";
+import type { ElectionCertification } from "../elections/types.js";
 
 export const PROVINCIAL_PRIORITIES = [
   "transport",
@@ -93,6 +94,7 @@ export type GubernatorialElection = {
   voteShares: Record<string, number>;
   turnoutRate: number | null;
   resultEventId: string | null;
+  certification?: ElectionCertification;
 };
 
 export const PROVINCIAL_BILL_SUBJECTS = [
@@ -176,6 +178,7 @@ export type ProvincialAssemblyElection = {
   electedIds: string[];
   personalRankingsByParty: Record<string, string[]>;
   turnoutRate: number | null;
+  certification?: ElectionCertification;
 };
 
 export type ProvincialPartyBillPosition = {

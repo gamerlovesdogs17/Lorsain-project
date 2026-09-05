@@ -1,0 +1,10 @@
+
+> lorsain@0.3.0-predev validate:content C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project
+> pnpm --filter @lorsain/content-loader validate
+
+
+> @lorsain/content-loader@0.3.0-predev validate C:\Users\zydlo\OneDrive\Desktop\lorsain_project_package\Lorsain project\packages\content-loader
+> tsx src/cli-validate.ts
+
+Content version: 0.3.1-predev; countries=48; admin=21; constituencies=48; figures=530; cross-province=34/48
+PASS: canonical content integrity checks succeeded
