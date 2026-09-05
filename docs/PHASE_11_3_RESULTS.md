@@ -177,8 +177,8 @@ No known code or deterministic-simulation blocker remains. Public release is not
 
 ### 42. Phase 11.3 acceptance
 
-`CONDITIONALLY READY — pending public Pages deployment validation`
+`ACCEPTED`
 
-Closeout full suite (current tree): **55** files / **538** tests passed; Vitest exited non-zero only on a harness `onTaskUpdate` worker RPC timeout (no failing assertions). Targeted Pages-equivalent `VITE_BASE_PATH=/Lorsain-project/` game build succeeded with `/Lorsain-project/assets/...` entry URLs.
+Closeout full suite (current tree): **55** files / **538** tests passed; Vitest exited non-zero only on a harness `onTaskUpdate` worker RPC timeout (no failing assertions). Targeted Pages-equivalent `VITE_BASE_PATH=/Lorsain-project/` game build succeeded with `/Lorsain-project/assets/...` entry URLs. Explicit **Deploy game to GitHub Pages** for `6d81af6` succeeded; live public URL validated as the Phase 11.3 game (title/shell, New Game, map, Assembly, Caucus, End Turn Worker, save/resume). CI Format step remains red on pre-existing repo-wide Prettier debt (tests skipped in that workflow).
 
 STOP. Phase 11.4 has not begun.

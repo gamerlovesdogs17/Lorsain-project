@@ -182,7 +182,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 
 ## Phase 11.3 notes
 
-**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is implemented.** Current-source 1Ã—600 stability is **VALIDATED** (`docs/qa/phase11_3/whole_game_final_1x600.json`). Formal results and requirement mapping are in `docs/PHASE_11_3_RESULTS.md` and `docs/PHASE_11_3_REQUIREMENT_EVIDENCE.md`. Phase status remains **conditionally ready** until the public Pages URL is published and retested. Phase 11.4 has not begun.
+**Phase 11.3 institutional politics, UI System V6 and whole-game balance closeout is implemented.** Current-source 1Ã—600 stability is **VALIDATED** (`docs/qa/phase11_3/whole_game_final_1x600.json`). Formal results and requirement mapping are in `docs/PHASE_11_3_RESULTS.md` and `docs/PHASE_11_3_REQUIREMENT_EVIDENCE.md`. Phase 11.3 is **ACCEPTED** after live public Pages validation on closeout commit `6d81af6`. Phase 11.4 has not begun.
 
 | ID | Severity | Issue |
 | --- | --- | --- |
@@ -210,7 +210,7 @@ No Phase 7 **BLOCKING** items remain for the first manual playtest path (title â
 | P113-BUNDLE-SIZE | NONBLOCKING | Canonical domestic/world geometry and content keep the production bundle large. Route/data splitting remains a Phase 11.5 release-engineering opportunity. |
 | P113-SAVE-SIZE | NONBLOCKING | Current-source `P113-WG-000` save growth (shard): ~1.84 / 2.86 / 7.34 / 14.88 / 34.56 / 74.30 MiB at 0/1/4/10/25/50 years. Growth is roughly linear; compaction of immutable election/roll-call/history archives is Phase 11.5 release engineering and must preserve replay/history truth. |
 | P113-WHOLE-GAME-1X600 | **VALIDATED** | Continuous 600-month run completed with determinism match (dual-run + midpoint reload), 0 candidate-shortage events, 21 active Governors, 0 person-quality errors/warnings, and 0 strict/catastrophic failures. See `docs/PHASE_11_3_RESULTS.md`. |
-| P113-PAGES-PUBLISH | RELEASE ACTION | The checked-in workflow and faithful `/Lorsain-project/` production smoke are valid, but the public URL was still serving the older Phase 10 branch-source site during closeout. Do **not** treat Pages as PASS until Repository Pages Source is **GitHub Actions**, the closeout commit is published, and the live URL is retested. |
+| P113-PAGES-PUBLISH | **VALIDATED** | Explicit Pages workflow for `6d81af6` succeeded; live `https://gamerlovesdogs17.github.io/Lorsain-project/` serves the Phase 11.3 game (assets, New Game, map, Assembly, Caucus, End Turn Worker, save/resume). Prefer keeping Pages Source as **GitHub Actions**; legacy dynamic `pages build and deployment` may still appear alongside. |
 | P113-SCREENSHOT-CI | NONBLOCKING | Phase 11.3 includes manual browser evidence at all required widths; automated visual-diff CI is not yet wired. |
 | P113-DEEP-LOCAL | POST-11.5 IDEA | Provincial cabinets, detailed provincial budgets/taxes, municipal legislatures and separate provincial constitutions would overexpand v1 and are deliberately absent. |
 
