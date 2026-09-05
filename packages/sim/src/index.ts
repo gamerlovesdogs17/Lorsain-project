@@ -159,6 +159,7 @@ export {
   CONSTITUTIONAL_LEGAL_VALUES,
   constitutionAlternativesFor,
   constitutionAlternativeFor,
+  constitutionalDependencyWarnings,
   diffConstitutionalText,
 } from "./provinces/index.js";
 export type {

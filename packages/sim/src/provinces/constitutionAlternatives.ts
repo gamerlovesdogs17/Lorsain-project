@@ -243,6 +243,42 @@ export function constitutionAlternativeFor(
 }
 
 /**
+ * Lightweight coherence warnings when a proposed rule value sits awkwardly
+ * beside other live constitutional rules. Does not block enactment.
+ */
+export function constitutionalDependencyWarnings(
+  ruleId: ConstitutionalRuleId,
+  proposedValue: number,
+  currentRules: Partial<Record<ConstitutionalRuleId, number>>,
+): string[] {
+  const warnings: string[] = [];
+  const assemblyYears = currentRules.assembly_term_years ?? 4;
+  const courtYears = currentRules.court_term_years ?? 12;
+
+  if (ruleId === "court_term_years" && proposedValue < assemblyYears * 2) {
+    warnings.push(
+      "Judicial terms shorter than two Assembly cycles would place Court turnover on a faster rhythm than the elected legislature.",
+    );
+  }
+  if (ruleId === "assembly_term_years" && courtYears < proposedValue * 2) {
+    warnings.push(
+      "Lengthening Assembly terms while Court terms remain comparatively short would keep judicial renewal frequent relative to legislative tenure.",
+    );
+  }
+  if (ruleId === "veto_override_fraction" && proposedValue <= 0.55 + 1e-9) {
+    warnings.push(
+      "A bare eleven-twentieths override threshold would make presidential vetoes comparatively easy to reverse and may weaken the executive check on ordinary legislation.",
+    );
+  }
+  if (ruleId === "presidential_term_limit" && proposedValue === 0) {
+    warnings.push(
+      "Abolishing presidential term limits would remove the existing lifetime ceiling on consecutive elected service; eligibility checks treat this as unlimited re-election.",
+    );
+  }
+  return warnings;
+}
+
+/**
  * Word-level diff between two constitutional clause texts.
  *
  * Returns an array of `DiffSegment` objects where each segment has a `kind`

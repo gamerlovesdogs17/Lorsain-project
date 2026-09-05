@@ -117,6 +117,31 @@ async function main() {
     desk,
   );
   await shot(page, "assembly-1440.png");
+  await page.evaluate(() => {
+    const tab = [...document.querySelectorAll("button,[role='tab']")].find((el) =>
+      /Law\s*&\s*Constitution|Law and Constitution/i.test(
+        (el.textContent || "").replace(/\s+/g, " "),
+      ),
+    );
+    tab?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await page.waitForTimeout(900);
+  await shot(page, "constitution-1440.png");
+  await page.evaluate(() => {
+    const modeled = [...document.querySelectorAll("button.constitution-clause")].find((el) =>
+      /Modeled rule/i.test(el.textContent || ""),
+    );
+    modeled?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    const alt = [...document.querySelectorAll("button.constitution-alt-option")].find(
+      (el) => !el.disabled && !el.classList.contains("current"),
+    );
+    alt?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await page.waitForTimeout(700);
+  await shot(page, "constitution-diff-1440.png");
 
   await gotoFixture(
     page,

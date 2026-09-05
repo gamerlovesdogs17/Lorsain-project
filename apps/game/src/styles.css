@@ -6330,6 +6330,88 @@ button.entity-row:hover,
   background: rgba(31, 107, 74, 0.1);
   font-weight: 600;
 }
+.constitution-browser {
+  grid-template-columns: minmax(11rem, 14rem) minmax(24rem, 1fr) minmax(19rem, 24rem);
+}
+.constitution-clause.constitution-clause-previewing {
+  border-color: rgba(31, 107, 74, 0.45);
+  background: rgba(31, 107, 74, 0.04);
+}
+.constitution-clause-body {
+  display: block;
+}
+.constitution-text-diff.inline {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.constitution-amendment-inspector {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+}
+.constitution-alt-list {
+  display: grid;
+  gap: 0.4rem;
+}
+.constitution-alt-option {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  background: #fffdf8;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.constitution-alt-option strong {
+  color: var(--navy);
+  font-size: 0.78rem;
+}
+.constitution-alt-option span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+.constitution-alt-option:hover:not(:disabled),
+.constitution-alt-option:focus-visible:not(:disabled) {
+  border-color: var(--navy);
+}
+.constitution-alt-option.selected {
+  border-left-color: var(--accent);
+  border-color: var(--navy);
+  background: #fff;
+}
+.constitution-alt-option.current,
+.constitution-alt-option:disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+.constitution-mechanical {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+.constitution-dependency-warning {
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border-left: 3px solid #a15c12;
+  background: rgba(161, 92, 18, 0.08);
+  color: #5c3a12;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+.constitution-proposal-redirect {
+  padding: 0.85rem 1rem;
+}
+.constitution-proposal-redirect p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
 @media (max-width: 1100px) {
   .assembly-chamber-stage {
     grid-template-columns: 1fr;

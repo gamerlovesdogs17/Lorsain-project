@@ -6,6 +6,8 @@ import {
   CONSTITUTIONAL_LEGAL_VALUES,
   CONSTITUTIONAL_RULE_IDS,
   constitutionAlternativeFor,
+  constitutionAlternativesFor,
+  constitutionalDependencyWarnings,
   currentAssemblyMemberIds,
   currentProvisionOption,
   defaultProvisionOptionId,
@@ -908,105 +910,20 @@ export function AssemblyPage(props: {
                       ) : null}
                     </div>
                   ))}
-                {mp ? (
-                  <div className="constitutional-proposal">
-                    <label className="field-label">
-                      Rule
-                      <select
-                        value={amendmentRule}
-                        onChange={(event) => {
-                          const rule = event.target.value as typeof amendmentRule;
-                          setAmendmentRule(rule);
-                          const current =
-                            props.snap.provincialRuntime.constitutionalRules[rule]?.value;
-                          setAmendmentValue(
-                            CONSTITUTIONAL_LEGAL_VALUES[rule].find((value) => value !== current) ??
-                              CONSTITUTIONAL_LEGAL_VALUES[rule][0]!,
-                          );
-                        }}
-                      >
-                        {CONSTITUTIONAL_RULE_IDS.map((rule) => (
-                          <option key={rule} value={rule}>
-                            {props.snap.provincialRuntime.constitutionalRules[rule]?.label ??
-                              rule.replace(/_/g, " ")}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field-label">
-                      Proposed value
-                      <select
-                        value={amendmentValue}
-                        onChange={(event) => setAmendmentValue(Number(event.target.value))}
-                      >
-                        {CONSTITUTIONAL_LEGAL_VALUES[amendmentRule].map((value) => {
-                          const alt = constitutionAlternativeFor(amendmentRule, value);
-                          return (
-                            <option
-                              key={value}
-                              value={value}
-                              disabled={
-                                value ===
-                                props.snap.provincialRuntime.constitutionalRules[amendmentRule]
-                                  ?.value
-                              }
-                            >
-                              {alt?.label ??
-                                (value < 1
-                                  ? value === 0
-                                    ? "No term limit"
-                                    : `${Math.round(value * 100)}%`
-                                  : String(value))}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </label>
-                    {(() => {
-                      const alt = constitutionAlternativeFor(amendmentRule, amendmentValue);
-                      const currentRuleText =
-                        constitutionAlternativeFor(
-                          amendmentRule,
-                          props.snap.provincialRuntime.constitutionalRules[amendmentRule]?.value ??
-                            ORIGINAL_CONSTITUTIONAL_VALUES[amendmentRule],
-                        )?.proposedClauseText ?? "";
-                      const proposed = alt?.proposedClauseText ?? currentRuleText;
-                      const segments = diffConstitutionalText(currentRuleText, proposed);
-                      return (
-                        <div className="constitution-amendment-preview">
-                          {alt ? (
-                            <p className="muted">
-                              <strong>{alt.label}</strong> — {alt.mechanicalSummary}
-                            </p>
-                          ) : null}
-                          <div className="constitution-text-diff" aria-label="Proposed text change">
-                            {segments.map((segment, index) => (
-                              <span
-                                key={`${segment.kind}-${index}`}
-                                className={`constitution-diff-${segment.kind}`}
-                              >
-                                {segment.text}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                <div className="constitutional-proposal constitution-proposal-redirect">
+                  <p>
+                    Constitutional text is amended from{" "}
                     <button
                       type="button"
-                      className="btn secondary"
-                      onClick={() =>
-                        run({
-                          type: "PROPOSE_CONSTITUTIONAL_AMENDMENT",
-                          ruleId: amendmentRule,
-                          proposedValue: amendmentValue,
-                        })
-                      }
+                      className="link-button"
+                      onClick={() => setChamberTab("lawbook")}
                     >
-                      Propose amendment
+                      Law &amp; Constitution
                     </button>
-                  </div>
-                ) : null}
+                    . Open a provision, compare alternatives in the document, then introduce the
+                    measure. Assembly votes on pending amendments remain here.
+                  </p>
+                </div>
 
                 <SectionDivider title="Bills" hint="All introduced measures" />
                 <DataTable headers={["Title", "Status", "Sponsor"]} dense>
@@ -1986,22 +1903,87 @@ export function AssemblyPage(props: {
                                     (amendment.documentClauseId === clause.id ||
                                       amendment.ruleId === clause.runtime_rule_id),
                                 );
+                                const isSelected = selectedConstitutionClause?.id === clause.id;
+                                const previewRuleId = clause.runtime_rule_id;
+                                const showLiveDiff =
+                                  isSelected &&
+                                  previewRuleId != null &&
+                                  previewRuleId === amendmentRule;
+                                const currentValue =
+                                  previewRuleId != null
+                                    ? (props.snap.provincialRuntime.constitutionalRules[
+                                        previewRuleId
+                                      ]?.value ?? ORIGINAL_CONSTITUTIONAL_VALUES[previewRuleId])
+                                    : null;
+                                const previewAlt =
+                                  showLiveDiff && currentValue != null
+                                    ? constitutionAlternativeFor(previewRuleId!, amendmentValue)
+                                    : null;
+                                const currentAlt =
+                                  showLiveDiff && currentValue != null
+                                    ? constitutionAlternativeFor(previewRuleId!, currentValue)
+                                    : null;
+                                const previewSegments =
+                                  previewAlt && currentAlt
+                                    ? diffConstitutionalText(
+                                        currentAlt.proposedClauseText,
+                                        previewAlt.proposedClauseText,
+                                      )
+                                    : null;
                                 return (
                                   <button
                                     type="button"
-                                    className={`constitution-clause${selectedConstitutionClause?.id === clause.id ? " selected" : ""}`}
+                                    className={`constitution-clause${isSelected ? " selected" : ""}${
+                                      previewSegments &&
+                                      Math.abs((currentValue ?? 0) - amendmentValue) > 1e-9
+                                        ? " constitution-clause-previewing"
+                                        : ""
+                                    }`}
                                     key={clause.id}
                                     onClick={() => {
                                       setSelectedConstitutionClauseId(clause.id);
                                       setConstitutionalDraftText("");
+                                      if (clause.runtime_rule_id) {
+                                        const rule = clause.runtime_rule_id;
+                                        setAmendmentRule(rule);
+                                        const live =
+                                          props.snap.provincialRuntime.constitutionalRules[rule]
+                                            ?.value;
+                                        setAmendmentValue(
+                                          CONSTITUTIONAL_LEGAL_VALUES[rule].find(
+                                            (value) =>
+                                              live == null || Math.abs(value - live) > 1e-9,
+                                          ) ?? CONSTITUTIONAL_LEGAL_VALUES[rule][0]!,
+                                        );
+                                      }
                                     }}
                                   >
                                     <span className="clause-number">({clause.number})</span>
-                                    <span>{currentText}</span>
+                                    <span className="constitution-clause-body">
+                                      {previewSegments &&
+                                      Math.abs((currentValue ?? 0) - amendmentValue) > 1e-9 ? (
+                                        <span
+                                          className="constitution-text-diff inline"
+                                          aria-label="Proposed constitutional language"
+                                        >
+                                          {previewSegments.map((segment, index) => (
+                                            <span
+                                              key={`${segment.kind}-${index}`}
+                                              className={`constitution-diff-${segment.kind}`}
+                                            >
+                                              {segment.text}
+                                            </span>
+                                          ))}
+                                        </span>
+                                      ) : (
+                                        currentText
+                                      )}
+                                    </span>
                                     <small>
                                       {amendments.length
                                         ? `${amendments.length} adopted amendment${amendments.length === 1 ? "" : "s"}`
                                         : "Founding text"}
+                                      {clause.runtime_rule_id ? " · Modeled rule" : ""}
                                     </small>
                                   </button>
                                 );
@@ -2011,12 +1993,16 @@ export function AssemblyPage(props: {
                         </>
                       ) : null}
                     </article>
-                    <aside className="constitution-annotation">
+                    <aside className="constitution-annotation" aria-label="Amendment inspector">
                       {selectedConstitutionClause ? (
                         <>
-                          <div className="kicker">Selected provision</div>
-                          <h3>{selectedConstitutionArticle?.title}</h3>
-                          <p>{currentClauseText(props.snap, selectedConstitutionClause)}</p>
+                          <div className="kicker">Amendment inspector</div>
+                          <h3>
+                            Article {selectedConstitutionArticle?.number}
+                            {selectedConstitutionClause
+                              ? ` · (§${selectedConstitutionClause.number})`
+                              : ""}
+                          </h3>
                           <div className="constitutional-scope">
                             <span>Political resistance</span>
                             <strong>
@@ -2028,113 +2014,312 @@ export function AssemblyPage(props: {
                             </strong>
                           </div>
                           {selectedConstitutionClause.runtime_rule_id ? (
-                            <div className="constitution-runtime-note">
-                              This clause governs the live{" "}
-                              <strong>
+                            (() => {
+                              const ruleId = selectedConstitutionClause.runtime_rule_id;
+                              const liveValue =
+                                props.snap.provincialRuntime.constitutionalRules[ruleId]?.value ??
+                                ORIGINAL_CONSTITUTIONAL_VALUES[ruleId];
+                              const alternatives = constitutionAlternativesFor(ruleId);
+                              const selectedAlt = constitutionAlternativeFor(
+                                ruleId,
+                                amendmentValue,
+                              );
+                              const currentAlt = constitutionAlternativeFor(ruleId, liveValue);
+                              const segments = diffConstitutionalText(
+                                currentAlt?.proposedClauseText ??
+                                  currentClauseText(props.snap, selectedConstitutionClause),
+                                selectedAlt?.proposedClauseText ??
+                                  currentClauseText(props.snap, selectedConstitutionClause),
+                              );
+                              const warnings = constitutionalDependencyWarnings(
+                                ruleId,
+                                amendmentValue,
                                 {
-                                  props.snap.provincialRuntime.constitutionalRules[
-                                    selectedConstitutionClause.runtime_rule_id
-                                  ]?.label
-                                }
-                              </strong>{" "}
-                              rule. Amend it through the structured rule proposal under Current
-                              business; arbitrary replacement text is disabled.
-                            </div>
-                          ) : (
-                            <div className="constitution-runtime-note">
-                              This clause is part of the legal text. Ratification changes the
-                              authoritative text but has no additional modeled runtime consequence.
-                            </div>
-                          )}
-                          {Object.values(props.snap.provincialRuntime.constitutionalAmendments)
-                            .filter(
-                              (amendment) =>
-                                amendment.documentClauseId === selectedConstitutionClause.id ||
-                                amendment.ruleId === selectedConstitutionClause.runtime_rule_id,
-                            )
-                            .map((amendment) => (
-                              <div className="constitution-annotation-amendment" key={amendment.id}>
-                                <strong>{amendment.title}</strong>
-                                <span>
-                                  {amendment.status.replace(/_/g, " ")} ·{" "}
-                                  {amendment.enactedDate ?? amendment.proposedDate}
-                                </span>
-                              </div>
-                            ))}
-                          {mp && !selectedConstitutionClause.runtime_rule_id ? (
-                            <div className="constitution-draft-panel">
-                              <label>
-                                Legal-policy intent
-                                <select
-                                  value={constitutionalIntent}
-                                  onChange={(event) =>
-                                    setConstitutionalIntent(
-                                      event.target.value as ConstitutionalAmendmentIntent,
-                                    )
-                                  }
-                                >
-                                  {CONSTITUTIONAL_AMENDMENT_INTENTS.map((intent) => (
-                                    <option value={intent} key={intent}>
-                                      {CONSTITUTIONAL_INTENT_LABELS[intent]}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label>
-                                Proposed replacement text
-                                <textarea
-                                  value={constitutionalDraftText}
-                                  onChange={(event) =>
-                                    setConstitutionalDraftText(event.target.value)
-                                  }
-                                  placeholder={currentClauseText(
-                                    props.snap,
-                                    selectedConstitutionClause,
+                                  assembly_term_years:
+                                    props.snap.provincialRuntime.constitutionalRules
+                                      .assembly_term_years?.value,
+                                  presidential_term_limit:
+                                    props.snap.provincialRuntime.constitutionalRules
+                                      .presidential_term_limit?.value,
+                                  court_term_years:
+                                    props.snap.provincialRuntime.constitutionalRules
+                                      .court_term_years?.value,
+                                  veto_override_fraction:
+                                    props.snap.provincialRuntime.constitutionalRules
+                                      .veto_override_fraction?.value,
+                                },
+                              );
+                              const relatedAmendments = Object.values(
+                                props.snap.provincialRuntime.constitutionalAmendments,
+                              ).filter(
+                                (amendment) =>
+                                  amendment.documentClauseId === selectedConstitutionClause.id ||
+                                  amendment.ruleId === ruleId,
+                              );
+                              const pending = relatedAmendments.filter(
+                                (amendment) =>
+                                  amendment.status === "proposed" ||
+                                  amendment.status === "ratifying",
+                              );
+                              return (
+                                <div className="constitution-amendment-inspector">
+                                  <div className="constitution-runtime-note">
+                                    This provision is canonical constitutional text and a live
+                                    gameplay rule (
+                                    <strong>
+                                      {
+                                        props.snap.provincialRuntime.constitutionalRules[ruleId]
+                                          ?.label
+                                      }
+                                    </strong>
+                                    ). Selecting an alternative previews the replacement language in
+                                    the document before introduction.
+                                  </div>
+                                  <div className="kicker">Versions</div>
+                                  <div
+                                    className="constitution-alt-list"
+                                    role="listbox"
+                                    aria-label="Amendment alternatives"
+                                  >
+                                    {alternatives.map((alt) => {
+                                      const isCurrent = Math.abs(alt.value - liveValue) < 1e-9;
+                                      const isSelected =
+                                        Math.abs(alt.value - amendmentValue) < 1e-9;
+                                      return (
+                                        <button
+                                          type="button"
+                                          role="option"
+                                          aria-selected={isSelected}
+                                          key={`${alt.ruleId}:${alt.value}`}
+                                          className={`constitution-alt-option${
+                                            isSelected ? " selected" : ""
+                                          }${isCurrent ? " current" : ""}`}
+                                          disabled={isCurrent}
+                                          onClick={() => {
+                                            setAmendmentRule(ruleId);
+                                            setAmendmentValue(alt.value);
+                                          }}
+                                        >
+                                          <strong>{alt.label}</strong>
+                                          <span>
+                                            {isCurrent ? "Current law" : alt.mechanicalSummary}
+                                          </span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  {selectedAlt && Math.abs(amendmentValue - liveValue) > 1e-9 ? (
+                                    <>
+                                      <div className="kicker">Text change</div>
+                                      <div
+                                        className="constitution-text-diff"
+                                        aria-label="Red-green constitutional diff"
+                                      >
+                                        {segments.map((segment, index) => (
+                                          <span
+                                            key={`${segment.kind}-${index}`}
+                                            className={`constitution-diff-${segment.kind}`}
+                                          >
+                                            {segment.text}
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <p className="constitution-mechanical">
+                                        <strong>Gameplay effect.</strong>{" "}
+                                        {selectedAlt.mechanicalSummary}
+                                      </p>
+                                      {warnings.map((warning) => (
+                                        <p
+                                          className="constitution-dependency-warning"
+                                          key={warning}
+                                        >
+                                          {warning}
+                                        </p>
+                                      ))}
+                                      {mp ? (
+                                        <button
+                                          type="button"
+                                          className="btn"
+                                          onClick={() =>
+                                            run({
+                                              type: "PROPOSE_CONSTITUTIONAL_AMENDMENT",
+                                              ruleId,
+                                              proposedValue: amendmentValue,
+                                            })
+                                          }
+                                        >
+                                          Introduce amendment
+                                        </button>
+                                      ) : (
+                                        <p className="muted">
+                                          Only a sitting National Assembly member may introduce an
+                                          amendment.
+                                        </p>
+                                      )}
+                                      <small>
+                                        Threshold remains 280 Assembly votes and 13 Provincial
+                                        Assemblies. Ratification updates both the document text and
+                                        the modeled rule.
+                                      </small>
+                                    </>
+                                  ) : (
+                                    <p className="muted">
+                                      Select a different version to preview deletions and insertions
+                                      in the constitutional text.
+                                    </p>
                                   )}
-                                  rows={7}
-                                />
-                              </label>
-                              {constitutionalDraftText.trim() ? (
-                                <div className="constitutional-redline">
-                                  <div>
-                                    <span>Current</span>
-                                    <del>
-                                      {currentClauseText(props.snap, selectedConstitutionClause)}
-                                    </del>
-                                  </div>
-                                  <div>
-                                    <span>Proposed</span>
-                                    <ins>{constitutionalDraftText.trim()}</ins>
-                                  </div>
+                                  {pending.length ? (
+                                    <>
+                                      <div className="kicker">Pending on this provision</div>
+                                      {pending.map((amendment) => (
+                                        <div
+                                          className="constitution-annotation-amendment"
+                                          key={amendment.id}
+                                        >
+                                          <strong>{amendment.title}</strong>
+                                          <span>
+                                            {amendment.status.replace(/_/g, " ")} · Assembly{" "}
+                                            {amendment.assemblyYes}/280 ·{" "}
+                                            {amendment.ratifiedProvinceIds.length}/13 provinces
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </>
+                                  ) : null}
+                                  <div className="kicker">History</div>
+                                  {relatedAmendments.length === 0 ? (
+                                    <p className="muted">No recorded amendments to this clause.</p>
+                                  ) : (
+                                    relatedAmendments
+                                      .slice()
+                                      .sort(
+                                        (a, b) =>
+                                          (a.enactedDate ?? a.proposedDate).localeCompare(
+                                            b.enactedDate ?? b.proposedDate,
+                                          ) || a.id.localeCompare(b.id),
+                                      )
+                                      .map((amendment) => (
+                                        <div
+                                          className="constitution-annotation-amendment"
+                                          key={`${amendment.id}:hist`}
+                                        >
+                                          <strong>{amendment.title}</strong>
+                                          <span>
+                                            {amendment.status.replace(/_/g, " ")} ·{" "}
+                                            {amendment.enactedDate ?? amendment.proposedDate}
+                                          </span>
+                                        </div>
+                                      ))
+                                  )}
                                 </div>
-                              ) : null}
-                              <button
-                                type="button"
-                                className="btn"
-                                disabled={constitutionalDraftText.trim().length < 40}
-                                onClick={() => {
-                                  run({
-                                    type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT",
-                                    clauseId: selectedConstitutionClause.id,
-                                    proposedText: constitutionalDraftText,
-                                    intent: constitutionalIntent,
-                                  });
-                                  setConstitutionalDraftText("");
-                                }}
-                              >
-                                Introduce amendment
-                              </button>
-                              <small>
-                                Formal threshold remains 280 Assembly votes and 13 Provincial
-                                Assemblies. Intent and clause scope change political resistance, not
-                                the constitutional threshold.
-                              </small>
-                            </div>
-                          ) : !mp ? (
-                            <p className="muted">
-                              Only a sitting National Assembly member may introduce an amendment.
-                            </p>
-                          ) : null}
+                              );
+                            })()
+                          ) : (
+                            <>
+                              <p>{currentClauseText(props.snap, selectedConstitutionClause)}</p>
+                              <div className="constitution-runtime-note">
+                                This clause is part of the legal text. Ratification changes the
+                                authoritative document; it has no additional modeled runtime
+                                consequence beyond political and historical record.
+                              </div>
+                              {Object.values(props.snap.provincialRuntime.constitutionalAmendments)
+                                .filter(
+                                  (amendment) =>
+                                    amendment.documentClauseId === selectedConstitutionClause.id,
+                                )
+                                .map((amendment) => (
+                                  <div
+                                    className="constitution-annotation-amendment"
+                                    key={amendment.id}
+                                  >
+                                    <strong>{amendment.title}</strong>
+                                    <span>
+                                      {amendment.status.replace(/_/g, " ")} ·{" "}
+                                      {amendment.enactedDate ?? amendment.proposedDate}
+                                    </span>
+                                  </div>
+                                ))}
+                              {mp ? (
+                                <div className="constitution-draft-panel">
+                                  <label>
+                                    Legal-policy intent
+                                    <select
+                                      value={constitutionalIntent}
+                                      onChange={(event) =>
+                                        setConstitutionalIntent(
+                                          event.target.value as ConstitutionalAmendmentIntent,
+                                        )
+                                      }
+                                    >
+                                      {CONSTITUTIONAL_AMENDMENT_INTENTS.map((intent) => (
+                                        <option value={intent} key={intent}>
+                                          {CONSTITUTIONAL_INTENT_LABELS[intent]}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                  <label>
+                                    Proposed replacement text
+                                    <textarea
+                                      value={constitutionalDraftText}
+                                      onChange={(event) =>
+                                        setConstitutionalDraftText(event.target.value)
+                                      }
+                                      placeholder={currentClauseText(
+                                        props.snap,
+                                        selectedConstitutionClause,
+                                      )}
+                                      rows={7}
+                                    />
+                                  </label>
+                                  {constitutionalDraftText.trim() ? (
+                                    <div
+                                      className="constitution-text-diff"
+                                      aria-label="Proposed text change"
+                                    >
+                                      {diffConstitutionalText(
+                                        currentClauseText(props.snap, selectedConstitutionClause),
+                                        constitutionalDraftText.trim(),
+                                      ).map((segment, index) => (
+                                        <span
+                                          key={`${segment.kind}-${index}`}
+                                          className={`constitution-diff-${segment.kind}`}
+                                        >
+                                          {segment.text}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    className="btn"
+                                    disabled={constitutionalDraftText.trim().length < 40}
+                                    onClick={() => {
+                                      run({
+                                        type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT",
+                                        clauseId: selectedConstitutionClause.id,
+                                        proposedText: constitutionalDraftText,
+                                        intent: constitutionalIntent,
+                                      });
+                                      setConstitutionalDraftText("");
+                                    }}
+                                  >
+                                    Introduce amendment
+                                  </button>
+                                  <small>
+                                    Formal threshold remains 280 Assembly votes and 13 Provincial
+                                    Assemblies. Intent and clause scope change political resistance,
+                                    not the constitutional threshold.
+                                  </small>
+                                </div>
+                              ) : (
+                                <p className="muted">
+                                  Only a sitting National Assembly member may introduce an
+                                  amendment.
+                                </p>
+                              )}
+                            </>
+                          )}
                         </>
                       ) : null}
                     </aside>

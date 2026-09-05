@@ -14,6 +14,7 @@ import { loadTerenaWorld } from "./integration/harness.js";
 import {
   constitutionAlternativesFor,
   constitutionAlternativeFor,
+  constitutionalDependencyWarnings,
   diffConstitutionalText,
 } from "./provinces/constitutionAlternatives.js";
 import type { DiffSegment } from "./provinces/constitutionAlternatives.js";
@@ -105,6 +106,23 @@ describe("Phase 11.4 — Constitution alternatives data", () => {
 
     // Non-existent value returns undefined
     expect(constitutionAlternativeFor("assembly_term_years", 99)).toBeUndefined();
+  });
+
+  it("constitutionalDependencyWarnings flags known coherence issues", () => {
+    const shortCourt = constitutionalDependencyWarnings("court_term_years", 6, {
+      assembly_term_years: 4,
+      court_term_years: 12,
+      presidential_term_limit: 2,
+      veto_override_fraction: 2 / 3,
+    });
+    expect(shortCourt.length).toBeGreaterThan(0);
+    const unlimited = constitutionalDependencyWarnings("presidential_term_limit", 0, {
+      assembly_term_years: 4,
+      court_term_years: 12,
+      presidential_term_limit: 2,
+      veto_override_fraction: 2 / 3,
+    });
+    expect(unlimited.some((w) => /term limit/i.test(w))).toBe(true);
   });
 });
 
