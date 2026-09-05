@@ -15,7 +15,7 @@ import type {
   PolicyItem,
 } from "./types.js";
 import { pendingVoteKey } from "./types.js";
-import { concretePolicyItem, naturalBillCopy } from "./provisions.js";
+import { concretePolicyItem, isNoOpProvisionChoice, naturalBillCopy } from "./provisions.js";
 import { absoluteMajorityNeeded, committeeForDimension, LEGISLATURE } from "./policy.js";
 import {
   allocateAmendmentId,
@@ -68,8 +68,8 @@ function normalizePolicyItems(
   items: readonly PolicyItem[],
 ): PolicyItem[] | { error: CommandError } {
   if (items.length < 1) return { error: reject("INVALID_BILL", "bill needs a policy item") };
-  if (items.length > 3)
-    return { error: reject("INVALID_BILL", "a bill may contain at most three provisions") };
+  if (items.length > 8)
+    return { error: reject("INVALID_BILL", "a bill may contain at most eight provisions") };
   const out: PolicyItem[] = [];
   for (const item of items) {
     if (!world.issueIds.includes(item.issueId) && Object.keys(world.issueDimensions).length > 0) {
@@ -87,6 +87,11 @@ function normalizePolicyItems(
       direction,
       magnitude,
       fiscalImpact: item.fiscalImpact == null ? null : item.fiscalImpact,
+      ...(concrete.dimensionEffects
+        ? { dimensionEffects: { ...concrete.dimensionEffects } }
+        : item.dimensionEffects
+          ? { dimensionEffects: { ...item.dimensionEffects } }
+          : {}),
     });
   }
   const provisionIds = out.flatMap((item) => (item.provisionId ? [item.provisionId] : []));
@@ -116,6 +121,20 @@ export function introduceBill(
   if (!mps.has(args.sponsorId)) return { error: reject("NOT_AN_MP", args.sponsorId) };
   const items = normalizePolicyItems(world, args.policyItems);
   if ("error" in items) return items;
+  for (const item of items) {
+    if (
+      item.provisionId &&
+      item.optionId &&
+      isNoOpProvisionChoice(state, item.provisionId, item.optionId)
+    ) {
+      return {
+        error: reject(
+          "NO_POLICY_CHANGE",
+          `${item.provisionId} already matches current law; remove no-op proposals`,
+        ),
+      };
+    }
+  }
   const active = Object.values(state.legislatureRuntime.bills).filter((b) =>
     [
       "introduced",

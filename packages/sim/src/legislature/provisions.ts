@@ -9,12 +9,20 @@ export type LegislativeProvisionOption = {
   label: string;
   change: string;
   billTitle: string;
+  /**
+   * Legacy scalar used only as a fallback AI distance hint when dimensionEffects
+   * are absent. Prefer multi-axis dimensionEffects for new options.
+   */
   direction: number;
   magnitude: number;
   fiscalImpact: number | null;
-  current: boolean;
+  /** Founding / baseline legal state — never a bill proposal by itself. */
+  founding: boolean;
   affectedGroups: readonly string[];
   dimensionEffects?: Partial<Record<IdeologyAxis, number>>;
+  /** Discrete parameter for numeric/threshold-style controls. */
+  parameterValue?: number;
+  controlHint?: "categorical" | "numeric" | "binary" | "threshold";
 };
 
 export type LegislativeProvisionDefinition = {
@@ -52,9 +60,9 @@ function variableProvision(
   currentLawLabel: string,
   options: readonly LegislativeProvisionOption[],
 ): LegislativeProvisionDefinition {
-  if (options.length < 2 || options.filter((option) => option.current).length !== 1) {
+  if (options.length < 2 || options.filter((option) => option.founding).length !== 1) {
     throw new Error(
-      `${id} must define at least two alternatives and exactly one current-law option`,
+      `${id} must define at least two alternatives and exactly one founding baseline option`,
     );
   }
   return { id, issueId, category, currentLawLabel, options };
@@ -69,9 +77,11 @@ function option(
     direction: number;
     magnitude?: number;
     fiscalImpact?: number | null;
-    current?: boolean;
+    founding?: boolean;
     affectedGroups?: readonly string[];
     dimensionEffects?: Partial<Record<IdeologyAxis, number>>;
+    parameterValue?: number;
+    controlHint?: "categorical" | "numeric" | "binary" | "threshold";
   },
 ): LegislativeProvisionOption {
   return {
@@ -82,9 +92,11 @@ function option(
     direction: Math.max(-1, Math.min(1, args.direction)),
     magnitude: args.magnitude ?? 0.65,
     fiscalImpact: args.fiscalImpact ?? null,
-    current: args.current === true,
+    founding: args.founding === true,
     affectedGroups: args.affectedGroups ?? [],
     ...(args.dimensionEffects ? { dimensionEffects: args.dimensionEffects } : {}),
+    ...(args.parameterValue != null ? { parameterValue: args.parameterValue } : {}),
+    ...(args.controlHint ? { controlHint: args.controlHint } : {}),
   };
 }
 
@@ -97,40 +109,95 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
     "Workplace bargaining with voluntary sector agreements",
     [
       option(
-        "workplace_agreements_only",
-        "Workplace agreements only",
-        "Ends statutory sector-wide bargaining and leaves agreements to individual workplaces.",
-        "Workplace Bargaining Bill",
+        "no_statutory_framework",
+        "No statutory bargaining framework",
+        "Removes statutory recognition procedures and leaves bargaining to private contract.",
+        "Bargaining Deregulation Bill",
         {
           direction: -1,
+          magnitude: 0.72,
+          fiscalImpact: -0.02,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+          dimensionEffects: { economic: -0.55, authority: 0.2 },
+        },
+      ),
+      option(
+        "workplace_agreements_only",
+        "Workplace recognition framework",
+        "Limits statutory recognition to individual workplaces.",
+        "Workplace Bargaining Bill",
+        {
+          direction: -0.55,
           magnitude: 0.52,
           fiscalImpact: -0.04,
           affectedGroups: groupsForIssue("ISS_LABOR"),
+          dimensionEffects: { economic: -0.35 },
         },
       ),
       option(
         "keep_current_coverage",
-        "Keep current coverage",
+        "Workplace bargaining with voluntary sector agreements",
         "Leaves existing workplace and voluntary sector agreements in force.",
         "Collective Bargaining Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_LABOR"),
+          dimensionEffects: { economic: 0.05 },
         },
       ),
       option(
-        "sector_bargaining_standard",
-        "Sector bargaining standard",
-        "Creates binding sector bargaining councils for covered industries.",
-        "Sector Bargaining Standards Bill",
+        "enterprise_wide",
+        "Enterprise-wide bargaining",
+        "Requires recognition across an employer's full enterprise where thresholds are met.",
+        "Enterprise Bargaining Bill",
+        {
+          direction: 0.35,
+          magnitude: 0.48,
+          fiscalImpact: 0.04,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+          dimensionEffects: { economic: 0.3 },
+        },
+      ),
+      option(
+        "voluntary_sector_councils",
+        "Voluntary sector bargaining councils",
+        "Enables sector councils that bind only consenting employers and unions.",
+        "Sector Councils Bill",
+        {
+          direction: 0.55,
+          magnitude: 0.5,
+          fiscalImpact: 0.06,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+          dimensionEffects: { economic: 0.4 },
+        },
+      ),
+      option(
+        "binding_sector_councils",
+        "Binding sector bargaining councils",
+        "Creates sector councils whose agreements cover workplaces in the sector by law.",
+        "Binding Sector Bargaining Bill",
+        {
+          direction: 0.85,
+          magnitude: 0.7,
+          fiscalImpact: 0.1,
+          affectedGroups: groupsForIssue("ISS_LABOR"),
+          dimensionEffects: { economic: 0.65, authority: 0.25 },
+        },
+      ),
+      option(
+        "national_wage_council",
+        "National wage and bargaining council",
+        "Establishes a national council setting minimum sectoral wage floors and bargaining rules.",
+        "National Wage Council Bill",
         {
           direction: 1,
-          magnitude: 0.58,
-          fiscalImpact: 0.08,
+          magnitude: 0.78,
+          fiscalImpact: 0.14,
           affectedGroups: groupsForIssue("ISS_LABOR"),
+          dimensionEffects: { economic: 0.8, authority: 0.35 },
         },
       ),
     ],
@@ -143,32 +210,68 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
     [
       option(
         "narrow_eligibility",
-        "Narrow eligibility",
+        "Low-income households only",
         "Limits the child benefit to low-income households.",
         "Child Benefit Targeting Bill",
         {
-          direction: -1,
+          direction: -0.7,
           magnitude: 0.57,
           fiscalImpact: -0.12,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
+          dimensionEffects: { economic: -0.45, social: -0.2 },
+          parameterValue: 80,
+          controlHint: "threshold",
         },
       ),
       option(
         "keep_income_test",
-        "Keep income test",
+        "Income-tested benefit for low- and middle-income households",
         "Retains the present income-tested child benefit.",
         "Family Support Continuity Bill",
         {
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
+          dimensionEffects: { economic: 0.05 },
+          parameterValue: 140,
+          controlHint: "threshold",
+        },
+      ),
+      option(
+        "expanded_middle",
+        "Eligibility to 180% of median income",
+        "Extends the child benefit to households up to 180% of median income.",
+        "Expanded Family Support Bill",
+        {
+          direction: 0.45,
+          magnitude: 0.5,
+          fiscalImpact: 0.12,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+          dimensionEffects: { economic: 0.35, social: 0.25 },
+          parameterValue: 180,
+          controlHint: "threshold",
+        },
+      ),
+      option(
+        "near_universal",
+        "Eligibility to 250% of median income",
+        "Extends the child benefit nearly universally while retaining a high-income taper.",
+        "Broad Child Benefit Bill",
+        {
+          direction: 0.75,
+          magnitude: 0.58,
+          fiscalImpact: 0.18,
+          affectedGroups: groupsForIssue("ISS_WELFARE"),
+          dimensionEffects: { economic: 0.55, social: 0.4 },
+          parameterValue: 250,
+          controlHint: "threshold",
         },
       ),
       option(
         "universal_benefit",
-        "Universal benefit",
+        "Universal child benefit",
         "Pays the child benefit to every household with eligible children.",
         "Universal Child Benefit Bill",
         {
@@ -176,6 +279,9 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           magnitude: 0.62,
           fiscalImpact: 0.22,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
+          dimensionEffects: { economic: 0.7, social: 0.55 },
+          parameterValue: 999,
+          controlHint: "threshold",
         },
       ),
     ],
@@ -187,40 +293,95 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
     "Mixed public infrastructure and private train operations",
     [
       option(
-        "private_concessions",
-        "Private concessions",
-        "Moves passenger operations to long-term private concessions.",
-        "Passenger Rail Concessions Bill",
+        "private_infrastructure",
+        "Private ownership and infrastructure",
+        "Transfers track and stations to private owners under a regulatory licence.",
+        "Rail Privatisation Bill",
         {
           direction: -1,
+          magnitude: 0.78,
+          fiscalImpact: -0.2,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+          dimensionEffects: { economic: -0.7 },
+        },
+      ),
+      option(
+        "private_concessions",
+        "Private concessions on public infrastructure",
+        "Keeps public track while awarding long-term private passenger concessions.",
+        "Passenger Rail Concessions Bill",
+        {
+          direction: -0.55,
           magnitude: 0.62,
           fiscalImpact: -0.12,
           affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+          dimensionEffects: { economic: -0.4 },
+        },
+      ),
+      option(
+        "open_access_private",
+        "Open-access private operators",
+        "Allows competing private operators on public infrastructure under open-access rules.",
+        "Open Access Rail Bill",
+        {
+          direction: -0.25,
+          magnitude: 0.45,
+          fiscalImpact: -0.06,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+          dimensionEffects: { economic: -0.2 },
         },
       ),
       option(
         "keep_mixed_system",
-        "Keep mixed system",
+        "Mixed public infrastructure and private train operations",
         "Retains public infrastructure and private train operations.",
         "Rail Operations Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+          dimensionEffects: { economic: 0 },
+        },
+      ),
+      option(
+        "public_with_competition",
+        "Public operator with private competition",
+        "Creates a public passenger operator while allowing private competitors on the same network.",
+        "Competitive Public Rail Bill",
+        {
+          direction: 0.45,
+          magnitude: 0.55,
+          fiscalImpact: 0.1,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+          dimensionEffects: { economic: 0.35 },
         },
       ),
       option(
         "public_operator",
-        "Public operator",
+        "Exclusive public passenger operator",
         "Creates one public operator for interprovincial passenger rail.",
         "National Passenger Rail Bill",
         {
-          direction: 1,
-          magnitude: 0.66,
+          direction: 0.75,
+          magnitude: 0.68,
           fiscalImpact: 0.18,
           affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+          dimensionEffects: { economic: 0.55 },
+        },
+      ),
+      option(
+        "integrated_public_authority",
+        "Integrated public rail authority",
+        "Unifies track, stations and passenger services under a single public rail authority.",
+        "Integrated Rail Authority Bill",
+        {
+          direction: 1,
+          magnitude: 0.8,
+          fiscalImpact: 0.24,
+          affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
+          dimensionEffects: { economic: 0.75, authority: 0.2 },
         },
       ),
     ],
@@ -241,19 +402,47 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           magnitude: 0.67,
           fiscalImpact: -0.08,
           affectedGroups: groupsForIssue("ISS_TRADE"),
+          dimensionEffects: { economic: -0.7, globalism: 0.45 },
+        },
+      ),
+      option(
+        "injury_only_safeguards",
+        "Injury-only temporary safeguards",
+        "Allows temporary duties only after a published injury finding and with a two-year sunset.",
+        "Injury Safeguards Bill",
+        {
+          direction: -0.35,
+          magnitude: 0.45,
+          fiscalImpact: -0.02,
+          affectedGroups: groupsForIssue("ISS_TRADE"),
+          dimensionEffects: { economic: -0.25, globalism: 0.15 },
         },
       ),
       option(
         "keep_injury_test",
-        "Keep injury test",
+        "Cabinet may impose temporary safeguards after an injury finding",
         "Retains temporary safeguards after an independent injury finding.",
         "Trade Safeguards Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_TRADE"),
+          dimensionEffects: { economic: 0.05 },
+        },
+      ),
+      option(
+        "strategic_list_safeguards",
+        "Strategic industry list safeguards",
+        "Authorizes safeguards for a published strategic-industry list without waiting for severe injury.",
+        "Strategic List Safeguards Bill",
+        {
+          direction: 0.55,
+          magnitude: 0.58,
+          fiscalImpact: 0.08,
+          affectedGroups: groupsForIssue("ISS_TRADE"),
+          dimensionEffects: { economic: 0.35, authority: 0.25, globalism: -0.3 },
         },
       ),
       option(
@@ -266,9 +455,10 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           magnitude: 0.7,
           fiscalImpact: 0.12,
           affectedGroups: groupsForIssue("ISS_TRADE"),
+          dimensionEffects: { economic: 0.55, authority: 0.35, globalism: -0.45 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_HOUSING_APPROVALS",
@@ -286,19 +476,34 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           magnitude: 0.52,
           fiscalImpact: -0.05,
           affectedGroups: groupsForIssue("ISS_HOUSING"),
+          dimensionEffects: { economic: -0.2, authority: -0.45 },
+        },
+      ),
+      option(
+        "provincial_targets",
+        "Provincial housing targets without deadlines",
+        "Sets provincial housing-output targets but leaves approval timing to local law.",
+        "Housing Targets Bill",
+        {
+          direction: -0.35,
+          magnitude: 0.4,
+          fiscalImpact: 0.04,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+          dimensionEffects: { economic: 0.15, authority: -0.15 },
         },
       ),
       option(
         "keep_current_rules",
-        "Keep current rules",
+        "Provinces set approval rules within national safety law",
         "Retains provincial approvals under national safety law.",
         "Planning Administration Continuity Bill",
         {
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_HOUSING"),
+          dimensionEffects: { economic: 0.05 },
         },
       ),
       option(
@@ -307,13 +512,27 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
         "Requires large cities to decide qualifying housing applications within fixed deadlines.",
         "Housing Approvals and Supply Bill",
         {
-          direction: 1,
+          direction: 0.55,
           magnitude: 0.74,
           fiscalImpact: 0.16,
           affectedGroups: groupsForIssue("ISS_HOUSING"),
+          dimensionEffects: { economic: 0.45, authority: 0.35 },
         },
       ),
-    ],
+      option(
+        "national_zoning_override",
+        "National zoning override for transit corridors",
+        "Lets the national housing office approve transit-corridor projects that stall under provincial rules.",
+        "Transit Corridor Housing Bill",
+        {
+          direction: 1,
+          magnitude: 0.82,
+          fiscalImpact: 0.22,
+          affectedGroups: groupsForIssue("ISS_HOUSING"),
+          dimensionEffects: { economic: 0.55, authority: 0.6 },
+        },
+      ),
+    ]
   ),
   variableProvision(
     "PROV_CLEAN_POWER",
@@ -328,37 +547,66 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
         "Energy Reliability Deferral Bill",
         {
           direction: -1,
-          magnitude: 0.57,
-          fiscalImpact: -0.08,
+          magnitude: 0.6,
+          fiscalImpact: -0.06,
           affectedGroups: groupsForIssue("ISS_CLIMATE"),
+          dimensionEffects: { economic: -0.25, social: -0.35 },
+        },
+      ),
+      option(
+        "technology_neutral_standard",
+        "Technology-neutral low-carbon standard",
+        "Counts nuclear, hydro, and carbon capture toward the national clean-power schedule.",
+        "Technology-Neutral Power Bill",
+        {
+          direction: -0.25,
+          magnitude: 0.48,
+          fiscalImpact: 0.05,
+          affectedGroups: groupsForIssue("ISS_CLIMATE"),
+          dimensionEffects: { economic: 0.1, social: 0.2 },
         },
       ),
       option(
         "keep_current_schedule",
-        "Keep current schedule",
-        "Retains the current clean-power timetable.",
+        "Utilities follow a gradual national clean-power schedule",
+        "Retains the existing clean-power schedule.",
         "Clean Power Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_CLIMATE"),
+          dimensionEffects: { social: 0.15 },
         },
       ),
       option(
-        "grid_and_deadline_package",
-        "Grid and deadline package",
-        "Advances the next two clean-power deadlines and funds transmission connections for new clean capacity.",
-        "Clean Electricity Acceleration Bill",
+        "accelerate_clean_power",
+        "Accelerate clean-power schedule",
+        "Advances the national clean-power targets by eight years with higher noncompliance penalties.",
+        "Accelerated Clean Power Bill",
         {
-          direction: 1,
-          magnitude: 0.58,
+          direction: 0.7,
+          magnitude: 0.75,
           fiscalImpact: 0.2,
           affectedGroups: groupsForIssue("ISS_CLIMATE"),
+          dimensionEffects: { economic: 0.25, social: 0.55, authority: 0.3 },
         },
       ),
-    ],
+      option(
+        "zero_carbon_grid_mandate",
+        "Zero-carbon grid mandate",
+        "Requires a zero-carbon electricity supply for the interconnected grid by a fixed statutory year.",
+        "Zero-Carbon Grid Bill",
+        {
+          direction: 1,
+          magnitude: 0.9,
+          fiscalImpact: 0.35,
+          affectedGroups: groupsForIssue("ISS_CLIMATE"),
+          dimensionEffects: { economic: 0.35, social: 0.75, authority: 0.45 },
+        },
+      ),
+    ]
   ),
   variableProvision(
     "PROV_REPRODUCTIVE_LAW",
@@ -380,14 +628,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_statutory_limit",
-        "Keep statutory limit",
+        "National law permits abortion within a statutory time limit",
         "Retains the existing national time limit and medical exceptions.",
         "Reproductive Health Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: null,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_LIBERTY"),
         },
       ),
@@ -403,7 +651,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_LIBERTY"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_RESIDENCY_PATH",
@@ -425,14 +673,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_five_year_route",
-        "Keep five-year route",
+        "Five-year lawful-residence route with language and civic requirements",
         "Retains the present five-year route and civic requirements.",
         "Residency Law Continuity Bill",
         {
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_IMMIGRATION"),
         },
       ),
@@ -448,7 +696,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_IMMIGRATION"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_POLICE_COMPLAINTS",
@@ -470,14 +718,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_provincial_review",
-        "Keep provincial review",
+        "Provincial bodies investigate complaints under national minimum standards",
         "Retains provincial review bodies and national minimum standards.",
         "Police Review Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_POLICING"),
         },
       ),
@@ -493,7 +741,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_POLICING"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_REVENUE_DISCRETION",
@@ -515,14 +763,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_limited_surcharge",
-        "Keep limited surcharge",
+        "Provinces may levy a limited property surcharge",
         "Retains the present provincial property-surcharge authority.",
         "Provincial Revenue Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_DECENT"),
         },
       ),
@@ -538,7 +786,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_DECENT"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_EMERGENCY_RENEWAL",
@@ -560,14 +808,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_current_renewal",
-        "Keep current renewal",
+        "Assembly approval is required after the initial emergency period",
         "Retains the existing Assembly renewal deadline.",
         "Emergency Administration Continuity Bill",
         {
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: null,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_EXEC"),
         },
       ),
@@ -583,7 +831,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_EXEC"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_DONOR_DISCLOSURE",
@@ -605,14 +853,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_current_disclosure",
-        "Keep current disclosure",
+        "Large donations are published during the campaign",
         "Retains campaign-period publication of large donations.",
         "Election Disclosure Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_REFORM"),
         },
       ),
@@ -628,7 +876,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_REFORM"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_CONCORD_PROCUREMENT",
@@ -650,14 +898,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_project_review",
-        "Keep project review",
+        "Lorsain may join projects after separate Cabinet approval",
         "Retains project-by-project participation after Cabinet review.",
         "Defense Cooperation Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_CONCORD"),
         },
       ),
@@ -673,7 +921,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_CONCORD"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_VASKARA_SANCTIONS",
@@ -695,14 +943,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_finding_process",
-        "Keep finding process",
+        "Targeted sanctions require a published executive finding",
         "Retains targeted sanctions after a published executive finding.",
         "Sanctions Procedure Continuity Bill",
         {
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: null,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_VASKARA"),
         },
       ),
@@ -718,7 +966,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_VASKARA"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_READINESS_FUND",
@@ -740,14 +988,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_current_funding",
-        "Keep current funding",
+        "Readiness funding follows the enacted annual budget",
         "Retains the current equipment-readiness appropriation.",
         "Readiness Funding Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_DEFENSE"),
         },
       ),
@@ -763,7 +1011,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_DEFENSE"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_PRIMARY_CARE",
@@ -785,14 +1033,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_current_coverage",
-        "Keep current coverage",
+        "National insurance covers essential primary care with limited copayments",
         "Retains existing primary-care benefits and copayments.",
         "Primary Care Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
@@ -808,7 +1056,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_TUITION_SUPPORT",
@@ -830,14 +1078,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_capped_tuition",
-        "Keep capped tuition",
+        "Students pay capped tuition with income-tested grants",
         "Retains the current tuition cap and grant rules.",
         "Higher Education Continuity Bill",
         {
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
@@ -853,7 +1101,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_INCOME_TAX",
@@ -875,14 +1123,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_current_schedule",
-        "Keep current schedule",
+        "A progressive national schedule applies to personal income",
         "Retains the current progressive income-tax schedule.",
         "Income Tax Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
@@ -898,7 +1146,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_UNEMPLOYMENT_INSURANCE",
@@ -920,14 +1168,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_current_duration",
-        "Keep current duration",
+        "Benefits are earnings-related for a fixed insured period",
         "Retains the present insured benefit period.",
         "Employment Insurance Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
@@ -943,7 +1191,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_UNION_RECOGNITION",
@@ -972,7 +1220,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: null,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_LABOR"),
         },
       ),
@@ -988,7 +1236,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_LABOR"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_STRIKE_NOTICE",
@@ -1010,14 +1258,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_seven_days",
-        "Keep seven days",
+        "Unions must give seven days' notice before protected action",
         "Retains the seven-day notice requirement.",
         "Strike Notice Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_LABOR"),
         },
       ),
@@ -1033,7 +1281,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_LABOR"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_PUBLIC_HOUSING",
@@ -1055,14 +1303,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_current_fund",
-        "Keep current fund",
+        "The national fund co-finances provincial social housing",
         "Retains current public-housing capital grants.",
         "Public Housing Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_HOUSING"),
         },
       ),
@@ -1078,7 +1326,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_HOUSING"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_TRANSIT_ZONING",
@@ -1100,14 +1348,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_voluntary_grants",
-        "Keep voluntary grants",
+        "Cities may seek grants for housing near major transit",
         "Retains voluntary grants for transit-oriented housing plans.",
         "Transit Housing Continuity Bill",
         {
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_HOUSING"),
         },
       ),
@@ -1123,7 +1371,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_HOUSING"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_INFRASTRUCTURE_BANK",
@@ -1145,14 +1393,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_current_finance",
-        "Keep current finance",
+        "Large projects use ordinary appropriations and private lending",
         "Retains ordinary appropriations and project lending.",
         "Infrastructure Finance Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
         },
       ),
@@ -1168,7 +1416,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_FARM_STABILIZATION",
@@ -1190,14 +1438,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_emergency_support",
-        "Keep emergency support",
+        "Emergency farm support requires a declared market disruption",
         "Retains support after a declared market disruption.",
         "Farm Support Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_TRADE"),
         },
       ),
@@ -1213,7 +1461,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_TRADE"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_CARBON_PRICE",
@@ -1235,14 +1483,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_current_levy",
-        "Keep current levy",
+        "Large emitters pay a nationally administered carbon levy",
         "Retains the current levy and rebate schedule.",
         "Carbon Pricing Continuity Bill",
         {
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_CLIMATE"),
         },
       ),
@@ -1258,7 +1506,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_CLIMATE"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_SURVEILLANCE_WARRANT",
@@ -1280,14 +1528,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_prior_warrant",
-        "Keep prior warrant",
+        "Police need a judicial warrant to obtain private communications",
         "Retains the prior judicial-warrant requirement.",
         "Communications Privacy Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: null,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_LIBERTY"),
         },
       ),
@@ -1303,7 +1551,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_LIBERTY"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_SENTENCING",
@@ -1325,14 +1573,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_judicial_ranges",
-        "Keep judicial ranges",
+        "Judges apply statutory ranges with stated reasons for departure",
         "Retains current sentencing ranges and reasoned departures.",
         "Sentencing Continuity Bill",
         {
           direction: 0,
           magnitude: 0.06,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_POLICING"),
         },
       ),
@@ -1348,7 +1596,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_POLICING"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_ELECTION_ADMIN",
@@ -1370,14 +1618,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_shared_administration",
-        "Keep shared administration",
+        "A national commission sets standards while provinces staff polling",
         "Retains national standards with provincial staffing.",
         "Election Administration Continuity Bill",
         {
           direction: 0,
           magnitude: 0.08,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_REFORM"),
         },
       ),
@@ -1393,7 +1641,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_REFORM"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_SCHOOL_MEALS",
@@ -1415,14 +1663,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "keep_income_test",
-        "Keep income test",
+        "Subsidized meals are available through an income test",
         "Retains current school-meal eligibility.",
         "School Meals Continuity Bill",
         {
           direction: 0,
           magnitude: 0.1,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
@@ -1438,7 +1686,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_HEALTH_INSURANCE_MODEL",
@@ -1479,7 +1727,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0.15,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Patients", "Providers", "Taxpayers"],
           dimensionEffects: { economic: 0.2, authority: 0.1 },
         },
@@ -1496,7 +1744,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.9, authority: 0.5 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_MEDICINE_PRICING",
@@ -1536,7 +1784,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Patients", "Drug makers", "Insurers"],
         },
       ),
@@ -1552,7 +1800,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.85, authority: 0.35 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_HOSPITAL_GOVERNANCE",
@@ -1581,7 +1829,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Patients", "Hospital boards", "Provinces"],
         },
       ),
@@ -1597,7 +1845,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.35, authority: -0.25 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_CHILDCARE_MODEL",
@@ -1625,7 +1873,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Parents", "Childcare providers", "Taxpayers"],
         },
       ),
@@ -1652,7 +1900,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.85, authority: 0.4 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_VOCATIONAL_TRAINING",
@@ -1680,7 +1928,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Apprentices", "Employers", "Trade unions"],
         },
       ),
@@ -1695,7 +1943,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: ["Young adults", "Colleges", "Employers"],
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_MINIMUM_WAGE",
@@ -1724,7 +1972,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Low-wage workers", "Employers", "Wage commission"],
         },
       ),
@@ -1750,7 +1998,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: ["Low-wage workers", "Employers", "Households"],
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_PLATFORM_WORK",
@@ -1778,7 +2026,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Platform workers", "Digital platforms", "Courts"],
         },
       ),
@@ -1793,7 +2041,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: ["Platform workers", "Digital platforms", "Labor inspectors"],
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_PAID_LEAVE",
@@ -1821,7 +2069,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Parents", "Employers", "Workers"],
         },
       ),
@@ -1847,7 +2095,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: ["Parents", "Children", "Employers"],
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_RENT_POLICY",
@@ -1875,7 +2123,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Renters", "Landlords", "Cities"],
         },
       ),
@@ -1890,7 +2138,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: ["Renters", "Landlords", "Housing agencies"],
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_LAND_VALUE_TAX",
@@ -1907,7 +2155,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Property owners", "Municipalities", "Developers"],
         },
       ),
@@ -1935,7 +2183,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.45, authority: -0.15 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_INHERITANCE_TAX",
@@ -1974,7 +2222,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Heirs", "Large estates", "Taxpayers"],
         },
       ),
@@ -1989,7 +2237,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: ["Large estates", "Heirs", "Public services"],
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_CORPORATE_TAX",
@@ -2022,14 +2270,14 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
       ),
       option(
         "current_tax_base",
-        "Current tax base",
+        "A national rate applies after investment and loss deductions",
         "Retains the national rate and current deduction rules.",
         "Corporate Tax Continuity Bill",
         {
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Companies", "Investors", "Taxpayers"],
         },
       ),
@@ -2045,7 +2293,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.65, globalism: -0.15 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_ELECTRICITY_MARKET",
@@ -2085,7 +2333,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Households", "Utilities", "Generators"],
         },
       ),
@@ -2113,7 +2361,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.9, authority: 0.45, green: 0.3 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_NUCLEAR_POLICY",
@@ -2142,7 +2390,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Electricity users", "Regulators", "Host communities"],
         },
       ),
@@ -2158,7 +2406,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { green: 0.35, authority: 0.45, economic: 0.2 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_WATER_ENFORCEMENT",
@@ -2187,7 +2435,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Provinces", "Industry", "Water users"],
         },
       ),
@@ -2203,7 +2451,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { green: 0.8, authority: 0.5 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_BROADBAND",
@@ -2231,7 +2479,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Rural households", "Network firms", "Local governments"],
         },
       ),
@@ -2247,7 +2495,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.75, authority: 0.35 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_ASYLUM_PROCESS",
@@ -2276,7 +2524,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Asylum seekers", "Caseworkers", "Courts"],
         },
       ),
@@ -2304,7 +2552,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { social: 0.45, economic: -0.1, globalism: 0.35 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_ELECTORAL_FORMULA",
@@ -2345,7 +2593,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Voters", "Candidates", "Election officials"],
         },
       ),
@@ -2361,7 +2609,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { authority: -0.4, social: 0.2 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_FIREARMS_LICENSING",
@@ -2390,7 +2638,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Firearms owners", "Police", "Communities"],
         },
       ),
@@ -2406,7 +2654,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { social: 0.45, authority: 0.65 },
         },
       ),
-    ],
+    ]
   ),
   variableProvision(
     "PROV_FARMLAND_POLICY",
@@ -2435,7 +2683,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           direction: 0,
           magnitude: 0.2,
           fiscalImpact: 0,
-          current: true,
+          founding: true,
           affectedGroups: ["Farmers", "Provinces", "Investors"],
         },
       ),
@@ -2451,7 +2699,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.35, nationalism: 0.4, green: 0.3 },
         },
       ),
-    ],
+    ]
   ),
 ] as const;
 
@@ -2470,7 +2718,7 @@ export function legislativeProvisionOption(
   // Schema-13 development saves may contain the former universal option IDs.
   // Read them as aliases, but every newly persisted choice uses its legal name.
   if (optionId === "current")
-    return definition.options.find((candidate) => candidate.current) ?? null;
+    return definition.options.find((candidate) => candidate.founding) ?? null;
   if (optionId === "low")
     return (
       definition.options
@@ -2489,7 +2737,7 @@ export function legislativeProvisionOption(
 export function defaultProvisionOptionId(provisionId: string): string {
   const definition = legislativeProvision(provisionId);
   return (
-    definition?.options.find((candidate) => !candidate.current)?.id ??
+    definition?.options.find((candidate) => !candidate.founding)?.id ??
     definition?.options[0]?.id ??
     ""
   );
@@ -2525,7 +2773,7 @@ export function optionForPolicyItem(item: PolicyItem): LegislativeProvisionOptio
       .sort(
         (a, b) =>
           Math.abs(a.direction - item.direction) - Math.abs(b.direction - item.direction) ||
-          Number(a.current) - Number(b.current) ||
+          Number(a.founding) - Number(b.founding) ||
           a.id.localeCompare(b.id),
       )[0] ?? null
   );
@@ -2542,7 +2790,7 @@ export function currentProvisionOption(
     const item = law.policyItems.find((candidate) => candidate.provisionId === provisionId);
     if (item) return optionForPolicyItem(item);
   }
-  return legislativeProvision(provisionId)?.options.find((option) => option.current) ?? null;
+  return legislativeProvision(provisionId)?.options.find((option) => option.founding) ?? null;
 }
 
 export function estimatedProvisionEffects(item: PolicyItem): Partial<NationalEconomyIndices> {
@@ -2602,8 +2850,32 @@ export function concretePolicyItem(item: PolicyItem): PolicyItem {
     .sort(
       (a, b) =>
         Math.abs(a.direction - item.direction) - Math.abs(b.direction - item.direction) ||
-        Number(a.current) - Number(b.current) ||
+        Number(a.founding) - Number(b.founding) ||
         a.id.localeCompare(b.id),
     )[0]!;
   return policyItemForProvision(definition.id, option.id) ?? { ...item };
+}
+
+
+export function foundingOptionId(provisionId: string): string | null {
+  const definition = legislativeProvision(provisionId);
+  return definition?.options.find((option) => option.founding)?.id ?? null;
+}
+
+/** Options that may appear as legislative proposals (excludes founding baseline). */
+export function proposalOptionsFor(
+  provisionId: string,
+): readonly LegislativeProvisionOption[] {
+  const definition = legislativeProvision(provisionId);
+  if (!definition) return [];
+  return definition.options.filter((option) => !option.founding);
+}
+
+export function isNoOpProvisionChoice(
+  state: SimState,
+  provisionId: string,
+  optionId: string,
+): boolean {
+  const current = currentProvisionOption(state, provisionId);
+  return current?.id === optionId;
 }

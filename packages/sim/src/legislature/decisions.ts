@@ -5,7 +5,7 @@ import type { BillState, LegislativeVoteChoice, PolicyItem } from "./types.js";
 import { billPolicyFit, factionStance, partyStance } from "./recommendations.js";
 import { mpConstituencyId } from "./state.js";
 import { organizationPressureForBill } from "../organizations/monthly.js";
-import { LEGISLATIVE_PROVISIONS, policyItemForProvision } from "./provisions.js";
+import { LEGISLATIVE_PROVISIONS, currentProvisionOption, policyItemForProvision } from "./provisions.js";
 import { parliamentaryDiscipline } from "./discipline.js";
 import { constituencyPressureForBill } from "./constituency.js";
 
@@ -19,36 +19,38 @@ function constituencyFit(
   if (!cid) return 0;
   const blocIds = world.voterBlocIdsByConstituency[cid] ?? [];
   if (blocIds.length === 0) return 0;
-  const item = bill.policyItems[0];
-  if (!item) return 0;
-  const dim = world.issueDimensions[item.issueId] ?? "institutional";
-  const axis =
-    dim === "economic" || dim === "economic-social"
-      ? "economic"
-      : dim === "social"
-        ? "social"
-        : dim === "foreign"
-          ? "globalism"
-          : "authority";
-  let acc = 0;
-  let w = 0;
-  for (const id of blocIds) {
-    const bloc = world.voterBlocs[id];
-    if (!bloc) continue;
-    const fit =
-      item.dimensionEffects && Object.keys(item.dimensionEffects).length > 0
-        ? (
-            Object.entries(item.dimensionEffects) as Array<[keyof typeof bloc.ideology, number]>
-          ).reduce(
-            (sum, [effectAxis, effect]) => sum + (bloc.ideology[effectAxis] ?? 0) * effect,
-            0,
-          ) / Object.keys(item.dimensionEffects).length
-        : (bloc.ideology[axis] ?? 0) * item.direction;
-    acc += fit * bloc.weight;
-    w += bloc.weight;
+  if (bill.policyItems.length === 0) return 0;
+  let itemAcc = 0;
+  for (const item of bill.policyItems) {
+    const dim = world.issueDimensions[item.issueId] ?? "institutional";
+    const axis =
+      dim === "economic" || dim === "economic-social"
+        ? "economic"
+        : dim === "social"
+          ? "social"
+          : dim === "foreign"
+            ? "globalism"
+            : "authority";
+    let acc = 0;
+    let w = 0;
+    for (const id of blocIds) {
+      const bloc = world.voterBlocs[id];
+      if (!bloc) continue;
+      const fit =
+        item.dimensionEffects && Object.keys(item.dimensionEffects).length > 0
+          ? (
+              Object.entries(item.dimensionEffects) as Array<[keyof typeof bloc.ideology, number]>
+            ).reduce(
+              (sum, [effectAxis, effect]) => sum + (bloc.ideology[effectAxis] ?? 0) * effect,
+              0,
+            ) / Object.keys(item.dimensionEffects).length
+          : (bloc.ideology[axis] ?? 0) * item.direction;
+      acc += fit * bloc.weight;
+      w += bloc.weight;
+    }
+    if (w > 0) itemAcc += Math.max(-1, Math.min(1, (acc / w) * item.magnitude));
   }
-  if (w <= 0) return 0;
-  return Math.max(-1, Math.min(1, (acc / w) * item.magnitude));
+  return Math.max(-1, Math.min(1, itemAcc / bill.policyItems.length));
 }
 
 export function chooseLegislativeVote(
@@ -159,7 +161,11 @@ export function chooseIntroduce(
   const propensity =
     0.12 + Math.abs(v) * 0.26 + profile.traits.ambition * 0.2 + profile.skills.legislation * 0.18;
   if (rng.float01("legislature") > propensity) return null;
-  const alternatives = definition.options.filter((option) => !option.current);
+  const alternatives = definition.options.filter((option) => {
+    if (option.founding) return false;
+    const current = currentProvisionOption(state, definition.id);
+    return !current || current.id !== option.id;
+  });
   const selected = alternatives
     .map((option) => {
       const fit =
