@@ -6215,3 +6215,123 @@ button.entity-row:hover,
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
 }
+
+/* Phase 11.4 completion � Assembly chamber stage + constitution diff */
+.assembly-chamber-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(14rem, 0.7fr);
+  gap: 0.9rem;
+  align-items: start;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-soft);
+}
+.assembly-chamber-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.assembly-chamber-caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.assembly-hemicycle-tight {
+  width: 100%;
+  max-height: 22rem;
+  background: linear-gradient(180deg, #f4f7fa 0%, #e8eef3 100%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.assembly-leadership-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.assembly-leadership-rail .assembly-speaker-desk,
+.assembly-leadership-rail .assembly-delegation-leaders {
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #eef4f8;
+}
+.assembly-leader-pick {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.35rem 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.assembly-leader-pick:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.assembly-delegation-leaders {
+  display: grid;
+  gap: 0.45rem;
+}
+.assembly-delegation-leaders > button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.45rem;
+  width: 100%;
+  padding: 0.45rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.55);
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.assembly-delegation-leaders > button:hover {
+  border-color: var(--line-strong);
+}
+.assembly-delegation-leaders > button .party-swatch {
+  grid-row: span 2;
+  width: 0.45rem;
+  border-radius: 1px;
+}
+.constitution-amendment-preview {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.55rem 0;
+}
+.constitution-text-diff {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: #fff;
+  font-family: var(--serif);
+  line-height: 1.55;
+}
+.constitution-diff-same {
+  color: var(--ink);
+}
+.constitution-diff-del {
+  color: #8b2e2e;
+  text-decoration: line-through;
+  background: rgba(139, 46, 46, 0.08);
+}
+.constitution-diff-add {
+  color: #1f6b4a;
+  background: rgba(31, 107, 74, 0.1);
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  .assembly-chamber-stage {
+    grid-template-columns: 1fr;
+  }
+}

@@ -3,10 +3,13 @@ import type { ContentBundle } from "@lorsain/content-loader";
 import {
   collectPlayerActionableDecisions,
   CONSTITUTIONAL_AMENDMENT_INTENTS,
+  CONSTITUTIONAL_LEGAL_VALUES,
   CONSTITUTIONAL_RULE_IDS,
+  constitutionAlternativeFor,
   currentAssemblyMemberIds,
   currentProvisionOption,
   defaultProvisionOptionId,
+  diffConstitutionalText,
   estimatedProvisionEffects,
   partyStance,
   factionStance,
@@ -63,13 +66,6 @@ const EFFECT_LABELS: Record<keyof NationalEconomyIndices, string> = {
   fiscalPressure: "Pressure",
 };
 
-const AMENDMENT_VALUES = {
-  assembly_term_years: [3, 4, 5],
-  presidential_term_limit: [1, 2, 3],
-  court_term_years: [9, 12, 15],
-  veto_override_fraction: [0.6, 2 / 3, 0.75],
-} as const;
-
 const ORIGINAL_CONSTITUTIONAL_VALUES: Record<(typeof CONSTITUTIONAL_RULE_IDS)[number], number> = {
   assembly_term_years: 4,
   presidential_term_limit: 2,
@@ -95,6 +91,7 @@ type ConstitutionClause = NonNullable<
 >["articles"][number]["sections"][number]["clauses"][number];
 
 function fractionWords(value: number): string {
+  if (Math.abs(value - 0.55) < 0.0001) return "eleven twentieths";
   if (Math.abs(value - 0.6) < 0.0001) return "three fifths";
   if (Math.abs(value - 2 / 3) < 0.0001) return "two thirds";
   if (Math.abs(value - 0.75) < 0.0001) return "three quarters";
@@ -144,45 +141,67 @@ function AssemblyHemicycle(props: {
   catalog: PresentationCatalog;
   memberIds: string[];
   selectedId: string | null;
+  leadershipIds?: Set<string>;
+  voteByMember?: Record<string, "yes" | "no" | "abstain" | "absent"> | null;
   onSelect: (id: string) => void;
+  onHover?: (id: string | null) => void;
 }) {
   const grouped = props.memberIds.slice().sort((a, b) => {
     const ap = props.snap.politicians[a]?.partyId ?? "";
     const bp = props.snap.politicians[b]?.partyId ?? "";
     return ap.localeCompare(bp) || a.localeCompare(b);
   });
+  // Tighter packing: smaller ring step and denser seats for a chamber-like semicircle.
   const ringCounts = [24, 28, 32, 36, 40, 44, 48, 52, 56, 60] as const;
   let offset = 0;
   return (
     <svg
-      className="assembly-hemicycle"
-      viewBox="0 0 320 182"
+      className="assembly-hemicycle assembly-hemicycle-tight"
+      viewBox="0 0 340 188"
       role="img"
       aria-label="420-seat National Assembly chamber"
     >
       {ringCounts.flatMap((count, ring) => {
-        const radius = 56 + ring * 11.2;
+        const radius = 48 + ring * 7.6;
         const start = offset;
         offset += count;
         return Array.from({ length: count }, (_, index) => {
           const memberId = grouped[start + index];
           if (!memberId) return null;
           const angle = Math.PI - (index / Math.max(1, count - 1)) * Math.PI;
-          const x = 160 + Math.cos(angle) * radius;
-          const y = 166 - Math.sin(angle) * radius;
+          const x = 170 + Math.cos(angle) * radius;
+          const y = 174 - Math.sin(angle) * radius;
           const partyId = props.snap.politicians[memberId]?.partyId ?? null;
+          const isLeader = props.leadershipIds?.has(memberId) ?? false;
+          const vote = props.voteByMember?.[memberId];
+          const fill =
+            vote === "yes"
+              ? "#1f6b4a"
+              : vote === "no"
+                ? "#8b2e2e"
+                : vote === "abstain"
+                  ? "#9a6b16"
+                  : vote === "absent"
+                    ? "#9aa8b8"
+                    : partyColor(props.world, partyId);
           return (
             <circle
               key={memberId}
               cx={x}
               cy={y}
-              r={memberId === props.selectedId ? 3.1 : 2.2}
-              fill={partyColor(props.world, partyId)}
+              r={memberId === props.selectedId ? 3.4 : isLeader ? 2.7 : 2.05}
+              fill={fill}
+              stroke={isLeader ? "var(--navy, #0f2f45)" : "transparent"}
+              strokeWidth={isLeader ? 1.1 : 0}
               className={memberId === props.selectedId ? "assembly-seat selected" : "assembly-seat"}
               tabIndex={0}
               role="button"
-              aria-label={`${politicianDisplayName(props.catalog, memberId)}, ${partyDisplayName(props.world, partyId, props.snap)}`}
+              aria-label={`${politicianDisplayName(props.catalog, memberId)}, ${partyDisplayName(props.world, partyId, props.snap)}${isLeader ? ", leadership" : ""}${vote ? `, vote ${vote}` : ""}`}
               onClick={() => props.onSelect(memberId)}
+              onMouseEnter={() => props.onHover?.(memberId)}
+              onMouseLeave={() => props.onHover?.(null)}
+              onFocus={() => props.onHover?.(memberId)}
+              onBlur={() => props.onHover?.(null)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") props.onSelect(memberId);
               }}
@@ -419,44 +438,28 @@ export function AssemblyPage(props: {
           { label: "Votes due", value: votesDue.length },
         ]}
       />
-      <section className="assembly-leadership-desk" aria-label="Assembly leadership">
-        <div className="assembly-speaker-desk">
-          <span className="kicker">Presiding officer</span>
-          <strong>
-            {speakerHolderId
-              ? politicianDisplayName(props.catalog, speakerHolderId)
-              : "Speaker vacant"}
-          </strong>
-          <small>Speaker of the National Assembly</small>
-        </div>
-        <div className="assembly-delegation-leaders">
-          {delegationLeaders.map((row) => (
-            <button type="button" key={row.partyId} onClick={() => setSelectedMember(row.leaderId)}>
-              <span
-                className="party-swatch"
-                style={{ background: partyColor(props.world, row.partyId) }}
-              />
-              <strong>{partyDisplayName(props.world, row.partyId, props.snap)}</strong>
-              <small>
-                Floor leader · {politicianDisplayName(props.catalog, row.leaderId)}
-                {row.whipId ? ` · Whip ${politicianDisplayName(props.catalog, row.whipId)}` : ""}
-              </small>
-            </button>
-          ))}
-        </div>
-      </section>
-      <details className="assembly-chamber-disclosure">
-        <summary>
-          <strong>Chamber composition</strong>
-          <span>420-seat seating plan and member inspector</span>
-        </summary>
-        <div className="composition-strip">
+      <section className="assembly-chamber-stage" aria-label="Chamber and leadership">
+        <div className="assembly-chamber-main">
+          <div className="assembly-chamber-caption">
+            <strong>National Assembly chamber</strong>
+            <span className="muted">
+              Leadership and composition shown together · outlined seats are leadership
+            </span>
+          </div>
           <AssemblyHemicycle
             world={props.world}
             snap={props.snap}
             catalog={props.catalog}
             memberIds={mps}
             selectedId={selectedMember}
+            leadershipIds={
+              new Set(
+                [
+                  speakerHolderId,
+                  ...delegationLeaders.flatMap((row) => [row.leaderId, row.whipId].filter(Boolean)),
+                ].filter((id): id is string => Boolean(id)),
+              )
+            }
             onSelect={setSelectedMember}
           />
           <div className="composition-bar" aria-label="Party composition">
@@ -488,7 +491,45 @@ export function AssemblyPage(props: {
             ))}
           </div>
         </div>
-      </details>
+        <aside className="assembly-leadership-rail" aria-label="Assembly leadership">
+          <div className="assembly-speaker-desk">
+            <span className="kicker">Presiding officer</span>
+            <button
+              type="button"
+              className="assembly-leader-pick"
+              disabled={!speakerHolderId}
+              onClick={() => speakerHolderId && setSelectedMember(speakerHolderId)}
+            >
+              <strong>
+                {speakerHolderId
+                  ? politicianDisplayName(props.catalog, speakerHolderId)
+                  : "Speaker vacant"}
+              </strong>
+              <small>Speaker of the National Assembly</small>
+            </button>
+          </div>
+          <div className="assembly-delegation-leaders">
+            <span className="kicker">Delegation leadership</span>
+            {delegationLeaders.map((row) => (
+              <button
+                type="button"
+                key={row.partyId}
+                onClick={() => setSelectedMember(row.leaderId)}
+              >
+                <span
+                  className="party-swatch"
+                  style={{ background: partyColor(props.world, row.partyId) }}
+                />
+                <strong>{partyDisplayName(props.world, row.partyId, props.snap)}</strong>
+                <small>
+                  Floor leader · {politicianDisplayName(props.catalog, row.leaderId)}
+                  {row.whipId ? ` · Whip ${politicianDisplayName(props.catalog, row.whipId)}` : ""}
+                </small>
+              </button>
+            ))}
+          </div>
+        </aside>
+      </section>
       {selectedMember ? (
         <div className="assembly-member-inspector">
           <PoliticianProfile
@@ -879,8 +920,8 @@ export function AssemblyPage(props: {
                           const current =
                             props.snap.provincialRuntime.constitutionalRules[rule]?.value;
                           setAmendmentValue(
-                            AMENDMENT_VALUES[rule].find((value) => value !== current) ??
-                              AMENDMENT_VALUES[rule][0],
+                            CONSTITUTIONAL_LEGAL_VALUES[rule].find((value) => value !== current) ??
+                              CONSTITUTIONAL_LEGAL_VALUES[rule][0]!,
                           );
                         }}
                       >
@@ -898,20 +939,59 @@ export function AssemblyPage(props: {
                         value={amendmentValue}
                         onChange={(event) => setAmendmentValue(Number(event.target.value))}
                       >
-                        {AMENDMENT_VALUES[amendmentRule].map((value) => (
-                          <option
-                            key={value}
-                            value={value}
-                            disabled={
-                              value ===
-                              props.snap.provincialRuntime.constitutionalRules[amendmentRule]?.value
-                            }
-                          >
-                            {value < 1 ? `${Math.round(value * 100)}%` : value}
-                          </option>
-                        ))}
+                        {CONSTITUTIONAL_LEGAL_VALUES[amendmentRule].map((value) => {
+                          const alt = constitutionAlternativeFor(amendmentRule, value);
+                          return (
+                            <option
+                              key={value}
+                              value={value}
+                              disabled={
+                                value ===
+                                props.snap.provincialRuntime.constitutionalRules[amendmentRule]
+                                  ?.value
+                              }
+                            >
+                              {alt?.label ??
+                                (value < 1
+                                  ? value === 0
+                                    ? "No term limit"
+                                    : `${Math.round(value * 100)}%`
+                                  : String(value))}
+                            </option>
+                          );
+                        })}
                       </select>
                     </label>
+                    {(() => {
+                      const alt = constitutionAlternativeFor(amendmentRule, amendmentValue);
+                      const currentRuleText =
+                        constitutionAlternativeFor(
+                          amendmentRule,
+                          props.snap.provincialRuntime.constitutionalRules[amendmentRule]?.value ??
+                            ORIGINAL_CONSTITUTIONAL_VALUES[amendmentRule],
+                        )?.proposedClauseText ?? "";
+                      const proposed = alt?.proposedClauseText ?? currentRuleText;
+                      const segments = diffConstitutionalText(currentRuleText, proposed);
+                      return (
+                        <div className="constitution-amendment-preview">
+                          {alt ? (
+                            <p className="muted">
+                              <strong>{alt.label}</strong> — {alt.mechanicalSummary}
+                            </p>
+                          ) : null}
+                          <div className="constitution-text-diff" aria-label="Proposed text change">
+                            {segments.map((segment, index) => (
+                              <span
+                                key={`${segment.kind}-${index}`}
+                                className={`constitution-diff-${segment.kind}`}
+                              >
+                                {segment.text}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <button
                       type="button"
                       className="btn secondary"
