@@ -1,16 +1,35 @@
 :root {
   color-scheme: light;
-  --bg: #f3f0ea;
-  --paper: #fffcf7;
-  --ink: #1c2430;
-  --muted: #5c6570;
-  --line: #d7d2c8;
-  --navy: #1f3a5f;
-  --accent: #2c5282;
+  /* Phase 11.4 — Terena political desk identity (cool slate, not beige intranet) */
+  --bg: #e6eaef;
+  --bg-deep: #d5dde6;
+  --paper: #f7f9fc;
+  --paper-raised: #ffffff;
+  --ink: #121820;
+  --muted: #5a6573;
+  --line: #c5ced8;
+  --line-strong: #9aa8b8;
+  --navy: #0f2f45;
+  --navy-soft: #1a445c;
+  --accent: #1f6f8b;
+  --accent-soft: #d7eef4;
+  --signal: #b23b2f;
+  --signal-soft: #f6e4e1;
+  --ok: #1f6b4a;
+  --ok-soft: #dff0e7;
+  --warn: #9a6b16;
+  --warn-soft: #f5ecd6;
   --danger: #8b2e2e;
-  --sans: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --serif: Georgia, "Times New Roman", serif;
+  --sans: "DM Sans", "Segoe UI", sans-serif;
+  --serif: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --display: var(--serif);
+  --radius-sm: 3px;
+  --radius: 6px;
+  --shadow-soft: 0 1px 2px rgba(18, 24, 32, 0.04), 0 8px 24px rgba(18, 24, 32, 0.06);
+  --shadow-nav: 4px 0 24px rgba(8, 18, 28, 0.18);
   font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.45;
   /* Overlay stacking: content < chrome menus < drawers < confirm/modals < urgent */
   --z-sticky: 5;
   --z-nav-toggle: 10;
@@ -76,13 +95,21 @@ button {
   background: var(--navy);
   color: #fff;
   border: 0;
-  padding: 0.55rem 1rem;
-  border-radius: 2px;
+  padding: 0.58rem 1.05rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition:
+    background 0.14s ease,
+    transform 0.12s ease;
+}
+.btn:hover:not(:disabled) {
+  background: var(--navy-soft);
 }
 .btn.secondary {
-  background: #fff;
+  background: var(--paper-raised);
   color: var(--navy);
-  border: 1px solid var(--navy);
+  border: 1px solid var(--line-strong);
 }
 .btn:disabled {
   opacity: 0.45;
@@ -94,13 +121,18 @@ button {
 
 .shell {
   display: grid;
-  grid-template-columns: 13.5rem 1fr;
+  grid-template-columns: 15.5rem 1fr;
   min-height: 100%;
+  background:
+    radial-gradient(1200px 500px at 100% -10%, rgba(31, 111, 139, 0.08), transparent 55%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
 }
 .nav {
-  background: #243044;
-  color: #e8e4dc;
-  padding: 1.1rem 0.8rem;
+  background: linear-gradient(180deg, #0c2436 0%, #0f2f45 42%, #12384f 100%);
+  color: #e8eef3;
+  padding: 1rem 0.7rem 1.4rem;
+  box-shadow: var(--shadow-nav);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 .nav h2 {
   font-size: 0.95rem;
@@ -115,12 +147,15 @@ button {
   background: transparent;
   color: inherit;
   border: 0;
-  padding: 0.45rem 0.6rem;
-  border-radius: 2px;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 .nav button.active,
 .nav button:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
 }
 .main {
   display: grid;
@@ -132,12 +167,13 @@ button {
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
-  padding: 0.7rem 1.2rem;
-  background: var(--paper);
+  padding: 0.75rem 1.35rem;
+  background: rgba(247, 249, 252, 0.92);
   border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
 }
 .page {
-  padding: 1.2rem 1.4rem 2rem;
+  padding: 1.25rem 1.5rem 2.4rem;
   overflow: auto;
 }
 .grid {
@@ -146,15 +182,18 @@ button {
   gap: 1rem;
 }
 .card {
-  background: var(--paper);
+  background: var(--paper-raised);
   border: 1px solid var(--line);
   padding: 1rem 1.1rem;
-  box-shadow: 0 1px 2px rgba(28, 36, 48, 0.04);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
 }
 .card h3 {
   margin: 0 0 0.6rem;
   font-size: 1rem;
   color: var(--navy);
+  font-family: var(--display);
+  font-weight: 600;
 }
 .muted {
   color: var(--muted);
@@ -5831,4 +5870,348 @@ button.entity-row:hover,
   .election-night-event-log {
     grid-template-columns: 1fr;
   }
+}
+
+/* ==========================================================================
+   Phase 11.4 � Presentation system (shell, desk, press, campaign, wiki)
+   ========================================================================== */
+
+.shell.v7 {
+  grid-template-columns: 15.75rem 1fr;
+}
+.shell.v7 .page {
+  max-width: 98rem;
+}
+.nav.v7 .nav-brand {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.65rem;
+  align-items: center;
+  margin: 0 0.2rem 1.15rem;
+  padding: 0.35rem 0.35rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.nav.v7 .nav-brand strong {
+  display: block;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+}
+.nav.v7 .nav-brand-sub {
+  display: block;
+  margin-top: 0.1rem;
+  color: rgba(232, 238, 243, 0.62);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+.nav.v7 .nav-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid rgba(214, 236, 242, 0.45);
+  border-radius: 999px;
+  color: #d6ecf2;
+  font-family: var(--display);
+  font-weight: 700;
+}
+.nav.v7 .nav-group-title {
+  color: rgba(232, 238, 243, 0.55);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.nav.v7 button.active {
+  background: linear-gradient(90deg, rgba(31, 111, 139, 0.55), rgba(255, 255, 255, 0.08));
+  box-shadow: inset 3px 0 0 #7ec8d8;
+}
+.nav.v7 button.contextual:not(.active) {
+  box-shadow: inset 3px 0 0 rgba(126, 200, 216, 0.45);
+}
+.topbar.v7 {
+  min-height: 4.1rem;
+}
+.topbar.v7 .topbar-primary {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  min-width: 0;
+}
+.topbar.v7 .topbar-date-block {
+  display: grid;
+  gap: 0.1rem;
+}
+.topbar.v7 .topbar-kicker {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.topbar.v7 .game-date {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 650;
+  color: var(--navy);
+  letter-spacing: 0.01em;
+}
+.topbar.v7 .topbar-role-block {
+  min-width: 0;
+}
+.serif-head,
+.page-title,
+.lead-story h2,
+.wiki-article h1 {
+  font-family: var(--display);
+}
+.page-header .page-title {
+  font-size: clamp(1.55rem, 2.4vw, 2.1rem);
+  letter-spacing: -0.01em;
+}
+.kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* Political desk � Home */
+.home-desk .home-desk-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(16rem, 0.85fr);
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(15, 47, 69, 0.94), rgba(31, 111, 139, 0.88)),
+    radial-gradient(600px 180px at 90% 0%, rgba(255, 255, 255, 0.16), transparent 60%);
+  color: #f4f8fb;
+  box-shadow: var(--shadow-soft);
+}
+.home-desk .home-desk-hero .muted,
+.home-desk .home-desk-lede {
+  color: rgba(244, 248, 251, 0.78);
+}
+.home-desk .home-desk-title {
+  margin: 0.2rem 0 0.35rem;
+  font-family: var(--display);
+  font-size: clamp(1.7rem, 2.8vw, 2.35rem);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.home-desk .home-desk-hero .kicker {
+  color: #9ed7e4;
+}
+.home-desk .home-desk-hero .brief-strip,
+.home-desk .home-desk-hero .metric-strip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+}
+.home-desk .lead-block {
+  padding: 1rem 1.1rem;
+  border-left: 4px solid var(--accent);
+  background: var(--paper-raised);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  box-shadow: var(--shadow-soft);
+}
+.home-desk .lead-block h2 {
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  line-height: 1.25;
+}
+
+/* News as a front page */
+.news-paper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.news-paper .news-lead {
+  padding: 1.15rem 1.25rem 1.3rem;
+  border: 1px solid var(--line-strong);
+  border-top: 4px solid var(--navy);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-soft);
+}
+.news-paper .news-lead h2 {
+  font-size: clamp(1.7rem, 3vw, 2.45rem);
+  line-height: 1.15;
+}
+.news-paper .news-secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+.news-paper .news-secondary-item {
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: var(--radius);
+}
+.news-paper .news-outlet-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius);
+}
+.news-paper .news-outlet-switcher button {
+  border: 0;
+  background: transparent;
+  padding: 0.45rem 0.7rem;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-weight: 650;
+}
+.news-paper .news-outlet-switcher button.active {
+  background: var(--navy);
+  color: #fff;
+}
+.news-paper .news-topic-label {
+  margin: 0.85rem 0 0.35rem;
+  color: var(--navy);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Campaign HQ */
+.campaign-hq-v7 .campaign-command-v5 {
+  gap: 1rem;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(247, 249, 252, 0.72);
+}
+.campaign-hq-v7 .campaign-center {
+  min-height: 28rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+}
+.campaign-hq-v7 .campaign-map-layers {
+  background: #eef4f7;
+  border-color: var(--line-strong);
+}
+.campaign-hq-v7 .campaign-left,
+.campaign-hq-v7 .campaign-right {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.85rem;
+}
+.campaign-hq-v7 .campaign-stage-ribbon {
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(90deg, #0f2f45, #1f6f8b);
+  color: #fff;
+}
+
+/* History wiki encyclopedia framing */
+.history-wiki-v7 {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+.history-wiki-v7 .wiki-index {
+  background: #f0f4f8;
+  border-right: 1px solid var(--line);
+}
+.history-wiki-v7 .wiki-index-brand strong {
+  font-family: var(--display);
+  letter-spacing: 0.14em;
+}
+.history-wiki-v7 .wiki-article {
+  padding: 1.25rem 1.4rem 2rem;
+}
+.history-wiki-v7 .wiki-lead {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  border-left: 3px solid var(--accent);
+  padding-left: 0.85rem;
+}
+
+/* Election Night event presence */
+.election-night-live {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #0f2f45 0%, #12384f 28%, #eef2f6 28%);
+  overflow: hidden;
+}
+.election-night-live .election-night-live-status,
+.election-night-live .election-night-controls {
+  color: #eef5f8;
+}
+.election-night-called,
+.race-called-flash {
+  animation: race-call-flash 0.9s ease;
+}
+@keyframes race-call-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(178, 59, 47, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 12px rgba(178, 59, 47, 0);
+  }
+}
+
+/* Maps: stronger contrast */
+.terena-map,
+.map-detail-map {
+  background: #f4f7fa;
+  border-color: var(--line-strong);
+}
+.map-province-selected,
+.selected-map-entity {
+  filter: brightness(1.05) saturate(1.08);
+}
+
+@media (max-width: 1100px) {
+  .home-desk .home-desk-hero,
+  .news-paper .news-secondary {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 900px) {
+  .shell.v7 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.assembly-chamber-v7 .assembly-leadership-desk {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.7fr) minmax(0, 1.3fr);
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  padding: 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-soft);
+}
+.assembly-chamber-v7 .assembly-speaker-desk {
+  padding: 0.75rem;
+  border-left: 4px solid var(--navy);
+  background: #eef4f8;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.assembly-chamber-v7 .assembly-chamber-disclosure {
+  margin-top: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.55);
+}
+.elections-hub-v7 .election-pres-block,
+.elections-hub-v7 .election-result-card {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
 }

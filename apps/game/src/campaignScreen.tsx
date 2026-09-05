@@ -511,7 +511,7 @@ export function CampaignPage(props: {
   };
 
   return (
-    <div className="campaign-page page-tone-campaign">
+    <div className="campaign-page page-tone-campaign campaign-hq-v7">
       <PageHeader
         kicker="Command center"
         title={campaignTypeLabel(c.type).replace(/^./, (letter) => letter.toUpperCase())}

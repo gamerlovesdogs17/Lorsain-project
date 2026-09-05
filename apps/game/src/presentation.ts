@@ -544,8 +544,14 @@ export function eventDisplay(
     case "AD_CAMPAIGN":
       return `${lead ?? "A campaign"} runs ${String(event.payload.messageType ?? "campaign")} advertising`;
     case "CAMPAIGN_MESSAGE":
+      if (typeof event.payload.title === "string" && event.payload.title.length > 0) {
+        return `${lead ?? "A campaign"}: ${event.payload.title}`;
+      }
       return `${lead ?? "A candidate"} emphasizes ${issueDisplayName(catalog, String(event.payload.issueId ?? "their message"))}`;
     case "CAMPAIGN_ATTACK":
+      if (typeof event.payload.title === "string" && event.payload.title.length > 0) {
+        return `${lead ?? "A campaign"}: ${event.payload.title}`;
+      }
       return event.payload.backfire
         ? `${lead ?? "A candidate"}'s attack on ${second ?? "a rival"} backfires`
         : `${lead ?? "A candidate"} attacks ${second ?? "a rival"}`;
@@ -698,13 +704,21 @@ export function eventDisplay(
       return `Foreign affairs briefing: ${String(event.payload.activeCrises ?? 0)} active crises internationally`;
     default:
       if (event.type.startsWith("FOREIGN_CRISIS_ESCALATED")) {
-        return `International tensions escalate involving ${countryFromEvent(world, state, event) ?? "foreign powers"}`;
+        const theme =
+          typeof event.payload.narrativeTitle === "string" ? event.payload.narrativeTitle : null;
+        return theme
+          ? `${theme[0]!.toUpperCase()}${theme.slice(1)} escalates involving ${countryFromEvent(world, state, event) ?? "foreign powers"}`
+          : `International tensions escalate involving ${countryFromEvent(world, state, event) ?? "foreign powers"}`;
       }
       if (event.type.startsWith("FOREIGN_CRISIS_DEESCALATED")) {
         return `International tensions ease involving ${countryFromEvent(world, state, event) ?? "foreign powers"}`;
       }
       if (event.type.startsWith("FOREIGN_CRISIS_")) {
-        return `International crisis develops involving ${countryFromEvent(world, state, event) ?? "foreign powers"}`;
+        const theme =
+          typeof event.payload.narrativeTitle === "string" ? event.payload.narrativeTitle : null;
+        return theme
+          ? `${theme[0]!.toUpperCase()}${theme.slice(1)} involving ${countryFromEvent(world, state, event) ?? "foreign powers"}`
+          : `International crisis develops involving ${countryFromEvent(world, state, event) ?? "foreign powers"}`;
       }
       if (event.type.startsWith("INTERNATIONAL_CONFLICT_")) {
         return `International conflict involving ${countryFromEvent(world, state, event) ?? "foreign belligerents"}`;

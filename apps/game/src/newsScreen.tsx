@@ -387,160 +387,172 @@ export function NewsPage(props: {
   }
 
   return (
-    <WorkLayout
-      header={
-        <PageHeader
-          kicker="Press"
-          title={selectedOutlet?.name ?? "News"}
-          subtitle={
-            selectedOutlet
-              ? `${selectedOutlet.name} front page and archive. Headlines reflect its public framing; recorded events remain unchanged.`
-              : "Coverage selected from public events. Outlets may frame, not invent."
-          }
-        />
-      }
-      main={
-        <>
-          <nav className="news-outlet-switcher" aria-label="News outlet front pages">
-            <button
-              type="button"
-              className={selectedOutletId === "all" ? "active" : ""}
-              onClick={() => {
-                setSelectedOutletId("all");
-                setPage(0);
-                setSelectedStoryKey(null);
-              }}
-            >
-              All Press
-            </button>
-            {outlets.map((outlet) => (
+    <div className="news-paper">
+      <WorkLayout
+        header={
+          <PageHeader
+            kicker="Terenan press"
+            title={selectedOutlet?.name ?? "The Front Page"}
+            subtitle={
+              selectedOutlet
+                ? `${selectedOutlet.name} front page and archive. Headlines reflect its public framing; recorded events remain unchanged.`
+                : "A state-aware press desk. Outlets may frame coverage; they do not invent results."
+            }
+          />
+        }
+        main={
+          <>
+            <nav className="news-outlet-switcher" aria-label="News outlet front pages">
               <button
                 type="button"
-                className={selectedOutletId === outlet.id ? "active" : ""}
-                key={outlet.id}
+                className={selectedOutletId === "all" ? "active" : ""}
                 onClick={() => {
-                  setSelectedOutletId(outlet.id);
+                  setSelectedOutletId("all");
                   setPage(0);
                   setSelectedStoryKey(null);
                 }}
               >
-                {outlet.name}
+                All Press
               </button>
-            ))}
-          </nav>
-          <TabBar
-            tabs={TABS.map((id) => ({ id, label: id }))}
-            value={tab}
-            onChange={(id) => {
-              setTab(id);
-              setPage(0);
-            }}
-          />
+              {outlets.map((outlet) => (
+                <button
+                  type="button"
+                  className={selectedOutletId === outlet.id ? "active" : ""}
+                  key={outlet.id}
+                  onClick={() => {
+                    setSelectedOutletId(outlet.id);
+                    setPage(0);
+                    setSelectedStoryKey(null);
+                  }}
+                >
+                  {outlet.name}
+                </button>
+              ))}
+            </nav>
+            <TabBar
+              tabs={TABS.map((id) => ({ id, label: id }))}
+              value={tab}
+              onChange={(id) => {
+                setTab(id);
+                setPage(0);
+              }}
+            />
 
-          {groups.length === 0 ? <EmptyState>No stories this month yet.</EmptyState> : null}
+            {groups.length === 0 ? <EmptyState>No stories this month yet.</EmptyState> : null}
 
-          {lead ? (
-            <section className="news-lead">
-              <button
-                type="button"
-                className="news-open-story news-open-lead"
-                onClick={() => setSelectedStoryKey(lead.key)}
-              >
-                <LeadStory
-                  kicker={`${lead.category} · ${lead.date}`}
-                  headline={storyHeadline(props.catalog, props.world, props.snap, lead.stories[0]!)}
-                  date={`${lead.stories.length} outlet${lead.stories.length === 1 ? "" : "s"}`}
-                />
-                <span>Read / compare coverage →</span>
-              </button>
-              {renderOutlets(lead)}
-            </section>
-          ) : null}
+            {lead ? (
+              <section className="news-lead">
+                <button
+                  type="button"
+                  className="news-open-story news-open-lead"
+                  onClick={() => setSelectedStoryKey(lead.key)}
+                >
+                  <LeadStory
+                    kicker={`${lead.category} · ${lead.date}`}
+                    headline={storyHeadline(
+                      props.catalog,
+                      props.world,
+                      props.snap,
+                      lead.stories[0]!,
+                    )}
+                    date={`${lead.stories.length} outlet${lead.stories.length === 1 ? "" : "s"}`}
+                  />
+                  <span>Read / compare coverage →</span>
+                </button>
+                {renderOutlets(lead)}
+              </section>
+            ) : null}
 
-          {secondary.length > 0 ? (
-            <>
-              <SectionDivider title="Also in the press" />
-              <div className="news-secondary">
-                {secondary.map((group) => (
-                  <article key={group.key} className="news-secondary-item">
-                    <div className="kicker">
-                      {group.category} · {group.date}
-                    </div>
-                    <button
-                      type="button"
-                      className="news-open-story"
-                      onClick={() => setSelectedStoryKey(group.key)}
-                    >
-                      <h3 className="serif-head">
-                        {storyHeadline(props.catalog, props.world, props.snap, group.stories[0]!)}
-                      </h3>
-                      <span>Read →</span>
-                    </button>
-                    {renderOutlets(group)}
-                  </article>
-                ))}
-              </div>
-            </>
-          ) : null}
-
-          {byTopic.length > 0 ? (
-            <>
-              <SectionDivider
-                title="By topic"
-                {...(rest.length > PAGE_SIZE
-                  ? {
-                      hint: `Showing ${pageIndex * PAGE_SIZE + 1}–${Math.min((pageIndex + 1) * PAGE_SIZE, rest.length)} of ${rest.length}`,
-                    }
-                  : {})}
-              />
-              {byTopic.map(([category, topicGroups]) => (
-                <section key={category} className="news-topic-group">
-                  <h4 className="news-topic-label">{category}</h4>
-                  {topicGroups.map((group) => (
-                    <article key={group.key} className="news-topic-item">
-                      <div className="kicker">{group.date}</div>
+            {secondary.length > 0 ? (
+              <>
+                <SectionDivider title="Also in the press" />
+                <div className="news-secondary">
+                  {secondary.map((group) => (
+                    <article key={group.key} className="news-secondary-item">
+                      <div className="kicker">
+                        {group.category} · {group.date}
+                      </div>
                       <button
                         type="button"
                         className="news-open-story"
                         onClick={() => setSelectedStoryKey(group.key)}
                       >
-                        <h4 className="serif-head">
+                        <h3 className="serif-head">
                           {storyHeadline(props.catalog, props.world, props.snap, group.stories[0]!)}
-                        </h4>
+                        </h3>
                         <span>Read →</span>
                       </button>
                       {renderOutlets(group)}
                     </article>
                   ))}
-                </section>
-              ))}
-              {pageCount > 1 ? (
-                <div className="pager">
-                  <button
-                    type="button"
-                    className="btn secondary"
-                    disabled={pageIndex <= 0}
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  >
-                    Previous
-                  </button>
-                  <span className="muted">
-                    Page {pageIndex + 1} of {pageCount}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn secondary"
-                    disabled={pageIndex >= pageCount - 1}
-                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                  >
-                    Next
-                  </button>
                 </div>
-              ) : null}
-            </>
-          ) : null}
-        </>
-      }
-    />
+              </>
+            ) : null}
+
+            {byTopic.length > 0 ? (
+              <>
+                <SectionDivider
+                  title="By topic"
+                  {...(rest.length > PAGE_SIZE
+                    ? {
+                        hint: `Showing ${pageIndex * PAGE_SIZE + 1}–${Math.min((pageIndex + 1) * PAGE_SIZE, rest.length)} of ${rest.length}`,
+                      }
+                    : {})}
+                />
+                {byTopic.map(([category, topicGroups]) => (
+                  <section key={category} className="news-topic-group">
+                    <h4 className="news-topic-label">{category}</h4>
+                    {topicGroups.map((group) => (
+                      <article key={group.key} className="news-topic-item">
+                        <div className="kicker">{group.date}</div>
+                        <button
+                          type="button"
+                          className="news-open-story"
+                          onClick={() => setSelectedStoryKey(group.key)}
+                        >
+                          <h4 className="serif-head">
+                            {storyHeadline(
+                              props.catalog,
+                              props.world,
+                              props.snap,
+                              group.stories[0]!,
+                            )}
+                          </h4>
+                          <span>Read →</span>
+                        </button>
+                        {renderOutlets(group)}
+                      </article>
+                    ))}
+                  </section>
+                ))}
+                {pageCount > 1 ? (
+                  <div className="pager">
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      disabled={pageIndex <= 0}
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    >
+                      Previous
+                    </button>
+                    <span className="muted">
+                      Page {pageIndex + 1} of {pageCount}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      disabled={pageIndex >= pageCount - 1}
+                      onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    >
+                      Next
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+          </>
+        }
+      />
+    </div>
   );
 }

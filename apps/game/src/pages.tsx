@@ -336,10 +336,21 @@ function Home(props: PageProps) {
               ];
 
   return (
-    <div className="home-v5">
+    <div className="home-v5 home-desk">
       <WorkLayout
         header={
           <>
+            <div className="home-desk-hero">
+              <div className="home-desk-hero-copy">
+                <div className="kicker">Political desk</div>
+                <h2 className="home-desk-title">{briefTitle}</h2>
+                <p className="muted home-desk-lede">
+                  {props.offices[0] ?? "Private citizen"} · {standingLabel} standing ·{" "}
+                  {props.snap.currentDate}
+                </p>
+              </div>
+              <BriefStrip items={briefItems} />
+            </div>
             <PoliticianProfile
               catalog={props.catalog}
               world={props.world}
@@ -354,8 +365,6 @@ function Home(props: PageProps) {
                 ? { biography: figure?.notes ?? figure?.display_summary }
                 : {})}
             />
-            <SectionDivider title={briefTitle} hint="What matters this month" />
-            <BriefStrip items={briefItems} />
           </>
         }
         main={

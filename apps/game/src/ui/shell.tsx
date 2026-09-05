@@ -134,7 +134,7 @@ export function GameShell(props: {
     (id === "career" && props.roleKind === "private_citizen");
 
   return (
-    <div className={`shell v5${props.busy ? " busy" : ""}`}>
+    <div className={`shell v5 v7${props.busy ? " busy" : ""}`}>
       <button
         type="button"
         className="nav-toggle"
@@ -151,9 +151,15 @@ export function GameShell(props: {
           onClick={() => setNavOpen(false)}
         />
       ) : null}
-      <nav className={`nav v3 v5${navOpen ? " open" : ""}`} aria-label="Game navigation">
+      <nav className={`nav v3 v5 v7${navOpen ? " open" : ""}`} aria-label="Game navigation">
         <div className="nav-brand">
-          <strong>Lorsain</strong>
+          <div className="nav-brand-mark" aria-hidden>
+            L
+          </div>
+          <div>
+            <strong>Lorsain</strong>
+            <span className="nav-brand-sub">Political Life of Terena</span>
+          </div>
           <button type="button" className="nav-close" onClick={() => setNavOpen(false)}>
             ×
           </button>
@@ -195,14 +201,19 @@ export function GameShell(props: {
         ))}
       </nav>
       <div className="main">
-        <header className="topbar v3">
+        <header className="topbar v3 v7">
           <div className="topbar-primary">
-            <strong className="game-date">{props.date}</strong>
-            <div className="muted topbar-role">{props.playerLine}</div>
-            <div className="political-status-segments">
-              {props.statusSegments.map((segment) => (
-                <span key={segment}>{segment}</span>
-              ))}
+            <div className="topbar-date-block">
+              <span className="topbar-kicker">Terena calendar</span>
+              <strong className="game-date">{props.date}</strong>
+            </div>
+            <div className="topbar-role-block">
+              <div className="muted topbar-role">{props.playerLine}</div>
+              <div className="political-status-segments">
+                {props.statusSegments.map((segment) => (
+                  <span key={segment}>{segment}</span>
+                ))}
+              </div>
             </div>
           </div>
           <div className="topbar-actions">

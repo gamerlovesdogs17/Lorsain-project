@@ -651,7 +651,7 @@ export function AssemblyPage(props: {
     ) : undefined;
 
   return (
-    <div>
+    <div className="assembly-page assembly-chamber-v7">
       <PageHeader
         kicker="Legislature"
         title="National Assembly"

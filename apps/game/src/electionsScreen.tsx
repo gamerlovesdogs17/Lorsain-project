@@ -2020,11 +2020,11 @@ export function ElectionsPage(props: Props) {
   }
 
   return (
-    <div className="page-tone-election">
+    <div className="page-tone-election elections-hub-v7">
       <PageHeader
-        kicker="Returns"
+        kicker="Returns desk"
         title="Elections"
-        subtitle="Upcoming cycles, active ballots, and certified public results."
+        subtitle="Upcoming cycles, live counting, and certified public results — presented as political events, not a database table."
       />
       <TabBar
         tabs={[

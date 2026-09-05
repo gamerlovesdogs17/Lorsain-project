@@ -1455,7 +1455,7 @@ export function HistoryPage(props: {
         />
       }
       main={
-        <div className="history-wiki">
+        <div className="history-wiki history-wiki-v7">
           <aside className="wiki-index">
             <div className="wiki-index-brand">
               <strong>TERENA</strong>
