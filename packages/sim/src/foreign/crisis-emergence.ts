@@ -30,25 +30,36 @@ export function assignCrisisTheme(
 ): string {
   // 1. Active sanctions are a near-certain driver of the dispute identity.
   if (hasSanctions) return "sanctions dispute";
-  // 2. High naval/air posture signals military sabre-rattling.
+  // 2. Mobilized posture near a maritime rival → military posturing.
+  if (
+    (aRuntime.posture === "mobilized" || bRuntime.posture === "mobilized") &&
+    (aRuntime.strategicGoals.includes("maritime_access") ||
+      bRuntime.strategicGoals.includes("maritime_access") ||
+      aRuntime.capabilities.naval >= 0.55 ||
+      bRuntime.capabilities.naval >= 0.55)
+  ) {
+    return "military posturing";
+  }
   if (aRuntime.posture === "mobilized" || bRuntime.posture === "mobilized") {
-    return "naval posturing";
+    return "security standoff";
   }
   // 3. Shared border → most common flashpoint.
-  if (aNeighborsB) return "border incident";
-  // 4. Dense trade links → economic friction.
-  if (rel.economicTies > 0.4) return "trade corridor closure";
-  // 5. Alliance-seeking goals → consultation breakdown.
+  if (aNeighborsB) return "border tension";
+  // 4. Dense trade links → economic friction (no implied closure).
+  if (rel.economicTies > 0.4) return "trade dispute";
+  // 5. Alliance-seeking goals → consultation strain.
   if (
     aRuntime.strategicGoals.includes("secure_alliance") ||
     bRuntime.strategicGoals.includes("secure_alliance")
   ) {
-    return "alliance consultation rupture";
+    return "alliance consultation strain";
   }
   // 6. Deeply negative general relations → diplomatic fracture.
-  if (rel.general < -20) return "diplomatic expulsion cycle";
-  // 7. Fallback.
-  return "border incident";
+  if (rel.general < -20) return "diplomatic confrontation";
+  // 7. Elevated security tension without a shared border.
+  if (rel.securityTension >= 0.35) return "security standoff";
+  // 8. Fallback — generic, not a fabricated border incident.
+  return "diplomatic confrontation";
 }
 
 function clamp01(n: number): number {

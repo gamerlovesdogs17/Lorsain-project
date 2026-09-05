@@ -75,7 +75,7 @@ function categoryOf(type: string): MediaCategory {
   return "politics";
 }
 
-function headlineFor(
+export function headlineFor(
   type: string,
   framing: MediaStory["framing"],
   payload?: Record<string, unknown>,
@@ -93,7 +93,7 @@ function headlineFor(
       if (critical) return `Warning signs mount around ${theme}`;
       return `International ${theme} draws attention`;
     }
-    return sensational ? "Border crisis erupts abroad" : "International crisis escalates";
+    return sensational ? "Diplomatic crisis escalates abroad" : "International crisis escalates";
   }
   if (type === "FOREIGN_CRISIS_DEESCALATED" || type === "FOREIGN_CRISIS_SETTLED") {
     return sensational ? "Diplomats pull back from the brink" : "International tensions ease";
@@ -199,10 +199,24 @@ function headlineFor(
     return variant === 1 ? "Election results confirmed" : "Campaign and election developments";
   }
   if (type.includes("CAMPAIGN") || type === "CAMPAIGN_LAUNCHED" || type === "DEBATE_HELD") {
+    const concrete =
+      typeof payload?.title === "string"
+        ? payload.title
+        : typeof payload?.notableMoment === "string"
+          ? payload.notableMoment
+          : null;
+    if (concrete && concrete.length > 0) {
+      if (sensational) return concrete;
+      if (critical) return concrete;
+      return concrete;
+    }
+    if (type === "DEBATE_HELD") {
+      return sensational
+        ? "Candidates clash in televised debate"
+        : "Candidates hold a public debate";
+    }
     if (sensational) return "Campaign battle heats up";
-    return type === "DEBATE_HELD"
-      ? "Candidates clash in televised debate"
-      : "Election campaign gets under way";
+    return "Election campaign activity continues";
   }
 
   // ── Economy ───────────────────────────────────────────────────────────────

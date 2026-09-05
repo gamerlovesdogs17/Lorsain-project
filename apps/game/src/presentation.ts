@@ -555,6 +555,14 @@ export function eventDisplay(
       return event.payload.backfire
         ? `${lead ?? "A candidate"}'s attack on ${second ?? "a rival"} backfires`
         : `${lead ?? "A candidate"} attacks ${second ?? "a rival"}`;
+    case "DEBATE_HELD": {
+      const moment =
+        typeof event.payload.notableMoment === "string" ? event.payload.notableMoment : null;
+      const emphasis = typeof event.payload.emphasis === "string" ? event.payload.emphasis : null;
+      if (moment) return `Debate held: ${moment}`;
+      if (emphasis) return `Debate held with emphasis on ${emphasis}`;
+      return `${lead ?? "Candidates"} hold a public debate`;
+    }
     case "FUNDRAISING_PUSH":
       return `${lead ?? "A campaign"} raises funds`;
     case "ENDORSEMENT_MADE":
