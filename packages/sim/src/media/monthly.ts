@@ -114,7 +114,25 @@ export function headlineFor(
     return sensational ? "Sanctions lifted in surprise move" : "Sanctions lifted";
   }
   if (type === "TREATY_PROPOSED" || type === "TREATY_RATIFIED") {
-    return sensational ? "Diplomatic breakthrough in the wings" : "Treaty diplomacy advances";
+    const treatyName =
+      typeof payload?.title === "string"
+        ? payload.title
+        : typeof payload?.treatyName === "string"
+          ? payload.treatyName
+          : null;
+    if (treatyName) {
+      if (type === "TREATY_RATIFIED") {
+        return sensational ? `${treatyName} ratified amid fanfare` : `${treatyName} ratified`;
+      }
+      return sensational ? `${treatyName} proposed in diplomatic push` : `${treatyName} proposed`;
+    }
+    return sensational
+      ? variant === 1
+        ? "Treaty talks advance abroad"
+        : "Diplomatic breakthrough in the wings"
+      : variant === 1
+        ? "Treaty proposal circulates"
+        : "Treaty diplomacy advances";
   }
   if (
     type === "MILITARY_EXERCISES" ||
@@ -215,8 +233,20 @@ export function headlineFor(
         ? "Candidates clash in televised debate"
         : "Candidates hold a public debate";
     }
-    if (sensational) return "Campaign battle heats up";
-    return "Election campaign activity continues";
+    const campaignLines = sensational
+      ? [
+          "Campaign battle heats up",
+          "Race intensifies on the trail",
+          "Campaign pressure mounts nationwide",
+          "Candidates scramble for advantage",
+        ]
+      : [
+          "Election campaign activity continues",
+          "Campaign organizations keep working the field",
+          "Candidates maintain their public schedules",
+          "Campaign period remains active",
+        ];
+    return campaignLines[Math.abs(variant) % campaignLines.length]!;
   }
 
   // ── Economy ───────────────────────────────────────────────────────────────
@@ -321,14 +351,42 @@ export function headlineFor(
       : "Constitutional judge confirmed";
   }
 
-  // ── Catch-all ─────────────────────────────────────────────────────────────
-  return sensational
-    ? variant === 1
-      ? "Political shock wave hits the capital"
-      : "Political storm in Valen"
-    : variant === 1
-      ? "Government activity reported"
-      : "Political developments";
+  // ── Catch-all — stay factual; use payload cues and humanized event type ────
+  const payloadTitle = typeof payload?.title === "string" ? payload.title.trim() : "";
+  const narrativeTitle =
+    typeof payload?.narrativeTitle === "string" ? payload.narrativeTitle.trim() : "";
+  const notableMoment =
+    typeof payload?.notableMoment === "string" ? payload.notableMoment.trim() : "";
+  if (payloadTitle) {
+    if (sensational)
+      return variant === 1
+        ? `${payloadTitle} ignites reaction`
+        : `${payloadTitle} rattles politics`;
+    if (critical) return `Scrutiny follows ${payloadTitle}`;
+    if (sympathetic) return `${payloadTitle} draws supportive coverage`;
+    return variant === 1 ? `${payloadTitle} advances` : payloadTitle;
+  }
+  if (notableMoment) return notableMoment;
+  if (narrativeTitle) {
+    return sensational
+      ? `${narrativeTitle[0]!.toUpperCase()}${narrativeTitle.slice(1)} draws scrutiny`
+      : `Developments around ${narrativeTitle}`;
+  }
+  const human = type.toLowerCase().split("_").filter(Boolean).join(" ");
+  const restrained = [
+    `${human} reported`,
+    `Officials address ${human}`,
+    `Developments around ${human}`,
+    `${human} enters the public record`,
+  ];
+  const hot = [
+    `${human} jolts the capital`,
+    `${human} dominates the news cycle`,
+    `Shockwaves after ${human}`,
+    `${human} sparks a political scramble`,
+  ];
+  const pool = sensational ? hot : critical ? hot : sympathetic ? restrained : restrained;
+  return pool[Math.abs(variant) % pool.length]!;
 }
 
 export function processMediaMonth(
@@ -399,11 +457,13 @@ export function processMediaMonth(
       const evPayload = pick.ev.payload as Record<string, unknown> | undefined;
       const fingerprints = state.mediaRuntime.recentHeadlineFingerprints ?? [];
       let primaryHeadline = headlineFor(pick.ev.type, framing, evPayload, 0);
+      for (let variant = 1; variant <= 5; variant += 1) {
+        if (!fingerprints.includes(headlineFingerprint(primaryHeadline))) break;
+        primaryHeadline = headlineFor(pick.ev.type, framing, evPayload, variant);
+      }
       if (fingerprints.includes(headlineFingerprint(primaryHeadline))) {
-        const alt = headlineFor(pick.ev.type, framing, evPayload, 1);
-        if (!fingerprints.includes(headlineFingerprint(alt))) {
-          primaryHeadline = alt;
-        }
+        const human = pick.ev.type.toLowerCase().split("_").filter(Boolean).join(" ");
+        primaryHeadline = `${human} on ${state.currentDate}`;
       }
       const fp = headlineFingerprint(primaryHeadline);
       const updatedFingerprints = [...fingerprints.filter((f) => f !== fp), fp].slice(-24);
