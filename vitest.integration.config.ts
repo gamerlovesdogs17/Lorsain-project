@@ -29,6 +29,7 @@ export default mergeConfig(
         "packages/sim/src/playable-path.test.ts",
         "packages/sim/src/campaigns.vertical.test.ts",
         "packages/sim/src/legislature.vertical.test.ts",
+        "packages/sim/src/phase12.autonomous-audit.test.ts",
         "scripts/dist-exports.smoke.test.ts",
       ],
       testTimeout: 900_000,
