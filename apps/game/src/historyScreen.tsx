@@ -18,6 +18,7 @@ import {
   politicianDisplayName,
   type PresentationCatalog,
 } from "./presentation.js";
+import { EntityLink } from "./ui/entityLink.js";
 import {
   housingPressureLabel,
   nationalPublicEconomy,
@@ -86,6 +87,7 @@ export function HistoryPage(props: {
   snap: SimState;
   bundle: ContentBundle;
   catalog: PresentationCatalog;
+  onEntityNavigate?: (kind: import("./ui/entityLink.js").EntityLinkKind, id: string) => void;
 }) {
   const [section, setSection] = useState<HistorySection>("years");
   const [query, setQuery] = useState("");
@@ -1015,15 +1017,35 @@ export function HistoryPage(props: {
         <ul className="wiki-plain-list">
           {members.slice(0, 60).map((person) => (
             <li key={person.id}>
-              <button
-                type="button"
-                onClick={() =>
-                  openArticle(articles.find((row) => row.id === `person:${person.id}`)!)
-                }
-              >
-                {politicianDisplayName(props.catalog, person.id)}
-              </button>
-              <span>{partyDisplayName(props.world, person.partyId, props.snap)}</span>
+              {props.onEntityNavigate ? (
+                <EntityLink
+                  kind="Politician"
+                  id={person.id}
+                  label={politicianDisplayName(props.catalog, person.id)}
+                  onNavigate={props.onEntityNavigate}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openArticle(articles.find((row) => row.id === `person:${person.id}`)!)
+                  }
+                >
+                  {politicianDisplayName(props.catalog, person.id)}
+                </button>
+              )}
+              <span>
+                {props.onEntityNavigate && person.partyId ? (
+                  <EntityLink
+                    kind="Party"
+                    id={person.partyId}
+                    label={partyDisplayName(props.world, person.partyId, props.snap)}
+                    onNavigate={props.onEntityNavigate}
+                  />
+                ) : (
+                  partyDisplayName(props.world, person.partyId, props.snap)
+                )}
+              </span>
             </li>
           ))}
         </ul>

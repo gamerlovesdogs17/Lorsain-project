@@ -113,6 +113,19 @@ export function mapFillFor(
     if (plurality === "tie") return CONSTITUENCY_TIE_FILL;
     return partyColor(world, plurality);
   }
+  if (mode === "political" && kind === "province") {
+    // Province political layer: Governor's Party (public office occupancy).
+    const governorTerm = Object.values(snap.officeTerms).find((term) => {
+      if (term.status !== "active" && term.status !== "suspended") return false;
+      const office = world.offices[term.officeId];
+      return office?.kind === "governor" && office.provinceId === feature.id;
+    });
+    if (governorTerm) {
+      const partyId = snap.politicians[governorTerm.holderId]?.partyId ?? null;
+      return partyColor(world, partyId);
+    }
+    return "#dedbd3";
+  }
   if (mode === "election") {
     const provincial = electionId ? snap.provincialRuntime.elections[electionId] : null;
     if (kind === "province" && provincial) {

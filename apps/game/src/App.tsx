@@ -273,6 +273,9 @@ export default function App() {
           setGlobalFocus({ kind: focusKind, id: focusId });
           if (focusKind === "Bill") setSelectedBill(focusId);
         }
+        if (params.get("qaOpenInspector") === "1") {
+          window.sessionStorage.setItem("lorsain-qa-open-inspector", "1");
+        }
         refresh(restored);
       })
       .catch((reason: unknown) =>

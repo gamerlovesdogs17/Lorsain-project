@@ -29,6 +29,8 @@ import {
 } from "@lorsain/sim";
 import { isMp, isSpeaker } from "./format.js";
 import { ConstitutionBrowser } from "./constitutionBrowser.js";
+import { EntityLink } from "./ui/entityLink.js";
+import { WhyPanel } from "./ui/whyPanel.js";
 import {
   billStatusLabel,
   committeeDisplayName,
@@ -290,6 +292,7 @@ export function AssemblyPage(props: {
   setSelectedBill: (id: string | null) => void;
   onDone: () => void;
   report: (r: CommandResult) => boolean;
+  onEntityNavigate?: (kind: import("./ui/entityLink.js").EntityLinkKind, id: string) => void;
 }) {
   const [chamberTab, setChamberTab] = useState<ChamberTab>("business");
   const [billTab, setBillTab] = useState<BillDetailTab>("overview");
@@ -1216,12 +1219,69 @@ export function AssemblyPage(props: {
                                   : "Your ideological fit with this bill is mixed across provisions.";
                               return (
                                 <>
-                                  <p className="muted bill-why-summary">{playerWhy}</p>
+                                  <WhyPanel
+                                    title="Why this bill for you?"
+                                    summary={playerWhy}
+                                    factors={[
+                                      {
+                                        label:
+                                          playerFit >= 0
+                                            ? "Policy alignment with recorded positions"
+                                            : "Policy divergence from recorded positions",
+                                        direction:
+                                          Math.abs(playerFit) < 0.06
+                                            ? "neutral"
+                                            : playerFit > 0
+                                              ? "support"
+                                              : "oppose",
+                                        weight: playerFit,
+                                      },
+                                      ...(partyStance(
+                                        props.snap,
+                                        props.snap.politicians[props.snap.playerPoliticianId]
+                                          ?.partyId ?? null,
+                                        bill.id,
+                                      ) === "support"
+                                        ? [
+                                            {
+                                              label: "Party leadership supports bill",
+                                              direction: "support" as const,
+                                              weight: 0.25,
+                                            },
+                                          ]
+                                        : partyStance(
+                                              props.snap,
+                                              props.snap.politicians[props.snap.playerPoliticianId]
+                                                ?.partyId ?? null,
+                                              bill.id,
+                                            ) === "oppose"
+                                          ? [
+                                              {
+                                                label: "Party leadership opposes bill",
+                                                direction: "oppose" as const,
+                                                weight: -0.25,
+                                              },
+                                            ]
+                                          : []),
+                                    ]}
+                                  />
                                   <DataTable dense headers={["Member", "Lean", "Why"]}>
                                     {sample.map((row) => (
                                       <tr key={row.memberId}>
                                         <td>
-                                          {politicianDisplayName(props.catalog, row.memberId)}
+                                          {props.onEntityNavigate ? (
+                                            <EntityLink
+                                              kind="Politician"
+                                              id={row.memberId}
+                                              label={politicianDisplayName(
+                                                props.catalog,
+                                                row.memberId,
+                                              )}
+                                              onNavigate={props.onEntityNavigate}
+                                            />
+                                          ) : (
+                                            politicianDisplayName(props.catalog, row.memberId)
+                                          )}
                                         </td>
                                         <td>
                                           <StatusBadge
@@ -1236,8 +1296,18 @@ export function AssemblyPage(props: {
                                             {mpLeanLabel(row.lean)}
                                           </StatusBadge>
                                         </td>
-                                        <td className="muted">
-                                          {row.factors.slice(0, 2).join(" · ")}
+                                        <td>
+                                          <WhyPanel
+                                            title="Why?"
+                                            factors={row.factors.map((label) => ({
+                                              label,
+                                              direction: /oppose|resist|against/i.test(label)
+                                                ? ("oppose" as const)
+                                                : /support|align|prefer/i.test(label)
+                                                  ? ("support" as const)
+                                                  : ("neutral" as const),
+                                            }))}
+                                          />
                                         </td>
                                       </tr>
                                     ))}

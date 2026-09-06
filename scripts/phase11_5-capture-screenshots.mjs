@@ -1,5 +1,5 @@
 /**
- * Phase 11.5 screenshot capture (extends Phase 11.4 fixtures).
+ * Phase 11.5 / 11.x cleanup screenshot capture.
  * Requires Vite on http://localhost:5174/Lorsain-project/
  */
 /* eslint-disable no-undef */
@@ -69,26 +69,33 @@ async function main() {
       qaPlayer: "NPC003",
       qaFocusKind: "Politician",
       qaFocusId: "NPC003",
+      qaOpenInspector: "1",
     },
     desk,
   );
   await shot(page, "politician-profile-1440.png");
-
-  await page.evaluate(() => {
-    const btn = [...document.querySelectorAll("button")].find((el) =>
-      /Inspector|Inspect/i.test(el.textContent || ""),
-    );
-    btn?.click();
-  });
-  await page.waitForTimeout(500);
+  await page
+    .waitForSelector(".inspector-drawer, .entity-inspector, [class*='inspector']", {
+      timeout: 10_000,
+    })
+    .catch(() => null);
+  await page.waitForTimeout(400);
   await shot(page, "inspector-1440.png");
 
   await gotoFixture(
     page,
-    { qaFixture: "institutions", qaScreen: "party", qaPlayer: "NPC003" },
+    {
+      qaFixture: "institutions",
+      qaScreen: "party",
+      qaPlayer: "NPC003",
+      qaFocusKind: "Party",
+      qaFocusId: "PARTY_LABOUR",
+      qaOpenInspector: "1",
+    },
     desk,
   );
   await shot(page, "party-dossier-1440.png");
+  await shot(page, "inspector-party-1440.png");
 
   await gotoFixture(
     page,
@@ -102,7 +109,15 @@ async function main() {
     { qaFixture: "institutions", qaScreen: "situation", qaPlayer: "NPC003" },
     desk,
   );
-  await shot(page, "situation-room-1440.png");
+  await shot(page, "situation-room-political-1440.png");
+  await page.evaluate(() => {
+    const path = document.querySelector(
+      "svg path[data-kind='province'], svg .province-path, svg path",
+    );
+    path?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await page.waitForTimeout(500);
+  await shot(page, "situation-room-province-selected-1440.png");
 
   await gotoFixture(
     page,
@@ -110,6 +125,12 @@ async function main() {
     desk,
   );
   await shot(page, "assembly-1440.png");
+  const whyBtn = await page.locator("button.why-panel-toggle").first();
+  if (await whyBtn.count()) {
+    await whyBtn.click();
+    await page.waitForTimeout(300);
+    await shot(page, "why-bill-vote-1440.png");
+  }
 
   await gotoFixture(
     page,
@@ -146,7 +167,7 @@ async function main() {
   await shot(page, "profile-390.png");
 
   await browser.close();
-  console.log("Phase 11.5 screenshots complete →", OUT);
+  console.log("Phase 11.x screenshots complete →", OUT);
 }
 
 main().catch((err) => {

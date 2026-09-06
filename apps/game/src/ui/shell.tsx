@@ -125,6 +125,17 @@ export function GameShell(props: {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+  useEffect(() => {
+    if (!props.inspectorFocus) return;
+    try {
+      if (window.sessionStorage.getItem("lorsain-qa-open-inspector") === "1") {
+        window.sessionStorage.removeItem("lorsain-qa-open-inspector");
+        setInspectorOpen(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [props.inspectorFocus]);
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const searchResults = props.searchEntries
     .filter(
