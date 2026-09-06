@@ -60,6 +60,8 @@ export {
   migrateSaveV12ToV13,
   migrateSaveV13ToV14,
   migrateSaveV17ToV18,
+  migrateSaveV18ToV19,
+  migrateSaveV19ToV20,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -167,6 +169,7 @@ export {
   constitutionSubjectById,
   constitutionAlternative,
   subjectsCoveringAllArticles,
+  assessConstitutionOrderDependencies,
   proposeConstitutionalPackage,
   currentConstitutionalClauseText,
 } from "./provinces/index.js";
@@ -308,6 +311,24 @@ export type {
   TreatyRecord,
   InternationalCrisis,
 } from "./foreign/types.js";
+export {
+  processPoliticalAgencyMonth,
+  ensurePoliticsRuntime,
+  emptyPoliticsRuntime,
+  explainEndorsement,
+  explainLeadershipSupport,
+  recentPoliticalMemories,
+  activeCoalition,
+  AS_MAX_CAREER_ACTIONS_PER_MONTH,
+  AS_MAX_RECRUITMENTS_PER_MONTH,
+} from "./politics/index.js";
+export type {
+  Phase12Runtime,
+  CareerAmbitionRecord,
+  CoalitionAgreement,
+  OpenSeatContest,
+  OrgScorecardEntry,
+} from "./politics/types.js";
 export type {
   Command,
   CommandResult,

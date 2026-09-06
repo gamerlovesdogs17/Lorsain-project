@@ -165,7 +165,7 @@ export type PartyPlatformIssue = (typeof PARTY_PLATFORM_ISSUES)[number];
 
 export type PartyPlatformHistoryEntry = {
   date: IsoDate;
-  reason: "scenario_opening" | "annual_conference" | "leadership_change";
+  reason: "scenario_opening" | "annual_conference" | "leadership_change" | "electoral_defeat";
   leaderId: string | null;
   positions: Record<PartyPlatformIssue, number>;
 };

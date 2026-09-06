@@ -590,7 +590,14 @@ describe("player autonomy", () => {
       }
     }
     const types = sim.getSnapshot().history.map((e) => e.type);
-    expect(types.some((t) => /DECISION|NPC_ACTION|AGENT_ACT/.test(t))).toBe(false);
+    // Phase 12 emits POLITICIAN_CAREER_DECISION for NPCs; do not treat that as legacy agent autonomy spam.
+    expect(types.some((t) => /^(DECISION|NPC_ACTION|AGENT_ACT)$/.test(t))).toBe(false);
+    expect(
+      sim
+        .getSnapshot()
+        .history.filter((e) => e.type === "POLITICIAN_CAREER_DECISION")
+        .every((e) => !e.actorIds.includes("P1")),
+    ).toBe(true);
     expect(goalsOwnedBy(sim.getSnapshot(), "P1").length).toBeGreaterThan(0);
   });
 });

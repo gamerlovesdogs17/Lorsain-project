@@ -77,7 +77,9 @@ function parsePublicPlatform(
       return "publicPlatform.history.date";
     if (compareIsoDate(entry.date, currentDate) > 0) return "publicPlatform.history date in future";
     if (
-      !["scenario_opening", "annual_conference", "leadership_change"].includes(String(entry.reason))
+      !["scenario_opening", "annual_conference", "leadership_change", "electoral_defeat"].includes(
+        String(entry.reason),
+      )
     ) {
       return "publicPlatform.history.reason";
     }

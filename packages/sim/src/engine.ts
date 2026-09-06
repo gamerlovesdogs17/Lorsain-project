@@ -184,6 +184,9 @@ import { seedOrganizationRuntime } from "./organizations/types.js";
 import { processMediaMonth } from "./media/monthly.js";
 import { emptyMediaRuntime } from "./media/types.js";
 import { emptyForeignAffairsRuntime } from "./foreign/types.js";
+import { emptyPoliticsRuntime } from "./politics/types.js";
+import { processPoliticalAgencyMonth } from "./politics/agency.js";
+import { ensurePoliticsRuntime } from "./politics/state.js";
 import { processForeignAffairsMonth } from "./foreign/monthly.js";
 import { processOrganizationForeignReactions } from "./foreign/organization-foreign-bridge.js";
 import { advanceForeignCalibrationMonths as advanceForeignCalibrationMonthsHarness } from "./foreign/calibration-harness.js";
@@ -352,6 +355,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     organizationRuntime: seedOrganizationRuntime(world.interestOrganizations),
     mediaRuntime: emptyMediaRuntime(),
     foreignAffairsRuntime: emptyForeignAffairsRuntime(),
+    politicsRuntime: emptyPoliticsRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -538,6 +542,11 @@ function runTowardTarget(
   events.push(...timed("economy", () => processEconomyMonth(state, world, rng, commandId)));
   events.push(...timed("provincial", () => processProvincialMonth(state, world, rng, commandId)));
   events.push(...timed("party", () => processPartyInstitutionsMonth(world, state, rng, commandId)));
+  // Phase 12 agency: after party institutions (contests/platforms), before organizations
+  // so org scorecards can consume this month's political decisions.
+  events.push(
+    ...timed("political_agency", () => processPoliticalAgencyMonth(world, state, rng, commandId)),
+  );
   events.push(
     ...timed("organizations", () => processOrganizationsMonth(state, world, rng, commandId)),
   );
@@ -670,6 +679,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   }
   state.provincialRuntime = seedProvincialRuntime(frozen, state, state.provincialRuntime);
   if (needsForeignAffairsSeed(state)) seedForeignAffairsRuntime(frozen, state);
+  ensurePoliticsRuntime(state);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);

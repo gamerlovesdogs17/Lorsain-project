@@ -16,6 +16,7 @@ import { parseOrganizationRuntime, organizationCounterError } from "./organizati
 import { parseMediaRuntime, mediaCounterError } from "./media/validation.js";
 import { parseForeignAffairsRuntime, foreignCounterError } from "./foreign/validation.js";
 import { parseProvincialRuntime } from "./provinces/validation.js";
+import { parsePoliticsRuntime } from "./politics/state.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -615,6 +616,8 @@ function parseSimulation(
   if (typeof foreign === "string") return foreign;
   const foreignCountErr = foreignCounterError(foreign, counters);
   if (foreignCountErr) return foreignCountErr;
+  const politics = parsePoliticsRuntime(raw.politicsRuntime);
+  if (typeof politics === "string") return politics;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -729,6 +732,7 @@ function parseSimulation(
     organizationRuntime: organizations,
     mediaRuntime: media,
     foreignAffairsRuntime: foreign,
+    politicsRuntime: politics,
   };
 }
 
@@ -1811,3 +1815,38 @@ export function migrateSaveV18ToV19(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 18, toSchema: 19, migrate: migrateSaveV18ToV19 });
+
+/**
+ * Schema 20 adds Phase 12 politicsRuntime (careers, coalitions, open seats,
+ * org scorecards). Older saves get an empty runtime — no fabricated history.
+ */
+export function migrateSaveV19ToV20(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 20 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 20 };
+  if (!isRecord(sim.politicsRuntime)) {
+    sim.politicsRuntime = {
+      careerAmbitions: {},
+      partyLifecycleCooldown: {},
+      coalitionAgreements: {},
+      orgScorecards: {},
+      orgCampaigns: {},
+      openSeatContests: {},
+      leadershipSupportNotes: {},
+      lastAgencyMonth: null,
+      cabinetReshufflesThisYear: 0,
+      cabinetReshuffleYear: null,
+      lastCabinetReshuffleDate: null,
+      lifecycleEventsThisYear: 0,
+      lifecycleEventYear: null,
+      lifecycleFixtureOverride: null,
+      activityThisMonth: { careerActions: 0, recruitments: 0, orgCampaigns: 0 },
+      metadata: {},
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 19, toSchema: 20, migrate: migrateSaveV19ToV20 });
