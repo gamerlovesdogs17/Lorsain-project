@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   CONSTITUTION_CHANGE_SUBJECTS,
+  caseTitle,
   constitutionAlternative,
   constitutionSubjectsForArticle,
   constitutionSubjectById,
@@ -461,6 +462,28 @@ export function ConstitutionBrowser(props: {
                 </strong>
               </div>
               <p className="constitution-current-baseline">{currentText}</p>
+
+              {/* Legal cross-links: court cases referencing this clause */}
+              {(() => {
+                const articleNumber = selectedArticle?.number ? String(selectedArticle.number).toLowerCase() : "";
+                const relatedCases = Object.values(props.snap.constitutionalRuntime.courtCases).filter(
+                  (cc) =>
+                    (articleNumber && cc.constitutionalQuestion?.toLowerCase().includes(`article ${articleNumber}`)) ||
+                    (cc.constitutionalRule && selectedClause?.id && cc.constitutionalRule.includes(selectedClause.id)),
+                );
+                if (relatedCases.length === 0) return null;
+                return (
+                  <div className="constitution-cross-links">
+                    <div className="kicker">Related court cases</div>
+                    {relatedCases.slice(0, 4).map((cc) => (
+                      <div key={cc.id} className="cross-link-row">
+                        <span className="cross-link-icon">⚖</span>
+                        <span>{caseTitle(cc)} · {cc.status.replace(/_/g, " ")}{cc.filedDate ? ` · filed ${cc.filedDate}` : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
 
               {availableSubjects.length === 0 ? (
                 <p className="muted">

@@ -426,6 +426,18 @@ export function CourtsPage(props: {
                 {c.caseType.replace(/_/g, " ")} · filed {c.filedDate}
                 {c.expedited ? " · expedited" : ""}
               </div>
+              {/* Legal cross-link: Act/provision challenged */}
+              {c.challengedId && c.challengedKind === "law" ? (
+                <div className="cross-link-row muted">
+                  <span className="cross-link-icon">▣</span>
+                  Challenges: {snap.legislatureRuntime.enactedLaws[c.challengedId]?.title ?? c.challengedId}
+                </div>
+              ) : c.challengedId && c.challengedKind ? (
+                <div className="cross-link-row muted">
+                  <span className="cross-link-icon">▣</span>
+                  Challenges {c.challengedKind.replace(/_/g, " ")}: {c.challengedId}
+                </div>
+              ) : null}
               {judge &&
               c.participatingJudgeIds.includes(playerId) &&
               !snap.constitutionalRuntime.pendingPlayerVotes[`judicial:${c.id}`] ? (

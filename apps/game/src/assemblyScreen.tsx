@@ -2200,6 +2200,17 @@ export function AssemblyPage(props: {
                               .map((item) => policyItemDisplay(props.catalog, item))
                               .join("; ")}
                           </div>
+                          {/* Cross-link: court cases challenging this act */}
+                          {Object.values(props.snap.constitutionalRuntime.courtCases).filter(
+                            (cc) => cc.challengedId === law.id && cc.challengedKind === "law",
+                          ).length > 0 ? (
+                            <div className="cross-link-row muted">
+                              <span className="cross-link-icon">⚖</span>
+                              {Object.values(props.snap.constitutionalRuntime.courtCases).filter(
+                                (cc) => cc.challengedId === law.id && cc.challengedKind === "law",
+                              ).length} court case(s) reference this Act
+                            </div>
+                          ) : null}
                         </div>
                         <div className="lawbook-act-side">
                           <StatusBadge tone={law.operative ? "ok" : "warn"}>
