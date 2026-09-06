@@ -196,7 +196,6 @@ export default function App() {
     emptyNavHistory({ screen: initialRoute.screen, globalFocus: initialRoute.focus }),
   );
   const [monthSummaryOpen, setMonthSummaryOpen] = useState(false);
-  const [lastMonthDate, setLastMonthDate] = useState<string | null>(null);
   const qaBooted = useRef(false);
   const feedback = useCommandFeedback();
 
@@ -754,7 +753,6 @@ export default function App() {
           const prevDate = snap?.currentDate ?? "";
           const nextDate = restored.getSnapshot().currentDate;
           if (prevDate.slice(0, 7) !== nextDate.slice(0, 7) && shouldShowMonthSummary(newEvents)) {
-            setLastMonthDate(prevDate);
             setMonthSummaryOpen(true);
           }
         } else {

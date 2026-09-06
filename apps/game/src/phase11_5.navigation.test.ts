@@ -11,7 +11,6 @@ import {
   sortCategorizedAttention,
   shouldShowMonthSummary,
   resolveSearchEntry,
-  type NavHistory,
   type CategorizedAttention,
 } from "./navigation.js";
 

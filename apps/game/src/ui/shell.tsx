@@ -6,7 +6,6 @@ import { politicianDisplayName, partyDisplayName, partyColor } from "../presenta
 import type { CategorizedAttention } from "../navigation.js";
 import { notificationLevelLabel, notificationLevelTone } from "../navigation.js";
 import type { EntityLinkKind } from "./entityLink.js";
-import { entityScreen } from "./entityLink.js";
 
 type NavItem = { id: Screen; label: string; icon?: string };
 type NavGroup = { title: string; items: NavItem[] };

@@ -4,12 +4,10 @@ import {
   partyColor,
   partyDisplayName,
   partyLegalStatusLabel,
-  factionDisplayName,
   politicianDisplayName,
   eventDisplay,
   type PresentationCatalog,
 } from "../presentation.js";
-import { partyLegalStatus } from "@lorsain/sim";
 import { EntityLink, type EntityLinkKind } from "./entityLink.js";
 
 const officeLabelCache = new WeakMap<SimState, Map<string, string>>();

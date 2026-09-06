@@ -81,7 +81,9 @@ export function DebugWhyToggle() {
           setOn(next);
           try {
             window.localStorage.setItem("lorsain-debug-why", next ? "1" : "0");
-          } catch {}
+          } catch {
+            /* ignore quota / private-mode storage failures */
+          }
         }}
       />
       Debug weights
