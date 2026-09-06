@@ -143,12 +143,20 @@ export function emergencyDeclarationAllowed(
   courtReviewRequired: boolean;
 } {
   const mode = emergencyPowerMode(state);
-  if (mode === "assembly_declared_only" && byPresident) {
+  if (mode === "assembly_declared_only") {
+    if (byPresident) {
+      return {
+        allowed: false,
+        reason: "Emergency may be declared only by the National Assembly",
+        initialDays: 60,
+        requiresAssemblyConfirmation: false,
+        courtReviewRequired: true,
+      };
+    }
     return {
-      allowed: false,
-      reason: "Emergency may be declared only by the National Assembly",
-      initialDays: 14,
-      requiresAssemblyConfirmation: true,
+      allowed: true,
+      initialDays: 60,
+      requiresAssemblyConfirmation: false,
       courtReviewRequired: true,
     };
   }
@@ -165,7 +173,7 @@ export function emergencyDeclarationAllowed(
       requiresAssemblyConfirmation: true,
       courtReviewRequired: true,
     };
-    if (!byPresident) out.reason = "Assembly-supervised emergency required";
+    if (!byPresident) out.reason = "Use the presidential declaration path for this mode";
     return out;
   }
   if (mode === "broad_executive_emergency") {

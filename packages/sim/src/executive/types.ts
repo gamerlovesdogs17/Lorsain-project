@@ -7,6 +7,7 @@ export const MOTION_KINDS = [
   "ministerial_censure",
   "regulation_annulment",
   "budget_approval",
+  "emergency_declaration",
   "emergency_extension",
   "emergency_termination",
   "war_authorization",

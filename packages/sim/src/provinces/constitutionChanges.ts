@@ -127,11 +127,11 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         id: "unitary_party_republic",
         label: "Unitary party-guided republic",
         proposedClauseText:
-          "Terena is a unitary republic. The guiding political institution of the republic shall be designated by the National Assembly and shall direct the fundamental policies of the state.",
+          "Terena is a unitary republic. The National Assembly shall designate a single legal Party as the guiding political institution of the republic. That designation operates under the Party-system clause of this Constitution and does not itself create additional Party organs of state.",
         mechanicalEffects: [
-          "Party system set to single legal party; designatedPartyId is required on the amendment package.",
+          "Automatically sets partySystem to single_legal_party; designatedPartyId is required on the amendment package.",
           "Executive authority set to strengthened executive; judicial review set to deferential.",
-          "Opposition party registration requires certification by the guiding institution.",
+          "Competing party ballots are barred while the sole legal Party designation remains in force.",
         ],
         metricEffects: {
           politicalCompetition: -3,
@@ -1243,11 +1243,11 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         id: "narrow_assembly_supervised",
         label: "Narrowly defined emergency with ongoing Assembly supervision",
         proposedClauseText:
-          "A state of emergency may be declared by the President only upon approval of two-thirds of the National Assembly and only in response to a threat of armed insurrection, natural catastrophe, or foreign invasion. Emergency measures may not suspend civil or political rights. The Assembly may revoke the state of emergency by simple majority at any time.",
+          "The President may declare a national emergency for fourteen days. The National Assembly must confirm the declaration within thirty days or the emergency expires. The Assembly may terminate the emergency by simple majority at any time. Extension beyond the initial period requires Assembly approval in periods not exceeding thirty days.",
         mechanicalEffects: [
-          "President declares emergency; Assembly confirmation required within 30 days or emergency auto-expires.",
-          "Initial emergency period is 14 days; rights cannot be suspended during emergencies.",
-          "Assembly may terminate the emergency by simple majority at any time.",
+          "Who declares: President. Who confirms: National Assembly within 30 days (extension or termination motion counts as confirmation).",
+          "Initial duration: 14 days. Without confirmation within 30 days the emergency auto-expires.",
+          "Renewal: Assembly-approved extension in 30-day periods; Assembly may terminate at any time.",
         ],
         metricEffects: {
           civilLiberty: 2,
@@ -1260,11 +1260,11 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         id: "standard_emergency",
         label: "Standard emergency with time-limited executive decree",
         proposedClauseText:
-          "The President may declare a national emergency for fourteen days. Any extension, in periods not exceeding thirty days, requires National Assembly approval.",
+          "The President may declare a national emergency for fourteen days. The National Assembly must confirm the declaration within thirty days or the emergency expires. Any extension, in periods not exceeding thirty days, requires National Assembly approval.",
         mechanicalEffects: [
-          "President declares emergency for an initial 14-day period.",
-          "Assembly confirmation required within 30 days of declaration; emergency auto-expires without confirmation.",
-          "Extensions in 30-day periods require Assembly approval.",
+          "Who declares: President. Who confirms: National Assembly within 30 days.",
+          "Initial duration: 14 days. Unconfirmed emergencies expire after 30 days from declaration.",
+          "Renewal: Assembly-approved extension in 30-day periods.",
         ],
         metricEffects: {
           executiveCapacity: 1,
@@ -1274,13 +1274,13 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
       },
       {
         id: "broad_executive_emergency",
-        label: "Broad executive emergency with indefinite renewal",
+        label: "Broad executive emergency without Assembly confirmation",
         proposedClauseText:
-          "The President may declare a state of national emergency when, in the President's judgment, the security or stability of the republic so requires. Emergency decrees have the force of law. The state of emergency may be renewed at the President's discretion for successive periods of ninety days.",
+          "The President may declare a state of national emergency for ninety days when, in the President's judgment, the security or stability of the republic so requires. Assembly confirmation is not required. The Assembly may still terminate the emergency by majority vote. After expiry, a further emergency requires a new presidential declaration.",
         mechanicalEffects: [
-          "President determines emergency threshold unilaterally.",
-          "Initial emergency period is 90 days; no Assembly confirmation required.",
-          "Successive ninety-day renewals at presidential discretion sustain indefinite emergency rule.",
+          "Who declares: President. Who confirms: none required.",
+          "Initial duration: 90 days. Court review is not required by this mode.",
+          "Renewal: no automatic renewal; a new declaration is required after expiry. Assembly may terminate while active.",
         ],
         metricEffects: {
           executiveCapacity: 3,
@@ -1294,11 +1294,11 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         id: "assembly_declared_only",
         label: "Assembly-declared emergency only",
         proposedClauseText:
-          "A state of emergency may be declared only by the National Assembly by absolute majority vote. The President has no independent emergency decree power. Emergency legislation must be renewed every sixty days by the Assembly.",
+          "A state of emergency may be declared only by the National Assembly by absolute majority of its membership. The President has no independent power to declare an emergency. An Assembly-declared emergency lasts sixty days and must be renewed by the Assembly for successive sixty-day periods.",
         mechanicalEffects: [
-          "Executive cannot unilaterally declare an emergency.",
-          "Assembly must convene and vote before any emergency powers activate.",
-          "Emergency legislation lapses every 60 days without renewal.",
+          "Who declares: National Assembly via emergency_declaration motion (absolute majority of membership). President cannot declare.",
+          "Initial duration: 60 days. Confirmation is inherent in the declaring vote.",
+          "Renewal: Assembly emergency_extension every 60 days; without renewal the emergency expires.",
         ],
         metricEffects: {
           executiveCapacity: -2,
@@ -1336,9 +1336,9 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
       },
       {
         id: "joint_command",
-        label: "Joint civil-military command council",
+        label: "Shortened unilateral deployment window",
         proposedClauseText:
-          "Supreme command of the armed forces is exercised by a National Security Council composed of the President, the Prime Minister, and the Chief of the Defence Staff. Major deployment decisions require the concurrence of all three.",
+          "The President may direct offensive military action for a shortened unilateral period—half the ordinary constitutional window, and in no case fewer than seven days—without authorization by the National Assembly. After that period, continued operations require Assembly authorization.",
         mechanicalEffects: [
           "War unilateral window is halved compared to baseline (minimum 7 days); Assembly authorization is required sooner.",
           "Assembly authorization referral is auto-scheduled; war powers expire without authorization.",
@@ -1352,9 +1352,9 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
       },
       {
         id: "executive_command",
-        label: "Exclusive executive command without legislative oversight",
+        label: "Extended executive unilateral window",
         proposedClauseText:
-          "The President exercises sole command of the armed forces. Deployments and military operations are determined by the President in consultation with the Chief of the Defence Staff. The National Assembly has no prior approval role in military deployments.",
+          "The President exercises command of the armed forces and may direct offensive military action for an extended unilateral period—three times the ordinary constitutional window—before National Assembly authorization is required. Assembly authorization remains necessary after that window expires.",
         mechanicalEffects: [
           "War unilateral window is tripled compared to baseline; Assembly authorization is deferred.",
           "Assembly authorization referral is still scheduled but the extended window reduces urgency.",
@@ -1386,10 +1386,10 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         id: "assembly_ratification",
         label: "Assembly ratification by absolute majority",
         proposedClauseText:
-          "The President represents the Republic in foreign relations, recognizes foreign governments and negotiates treaties subject to ratification where law or this Constitution requires it.",
+          "Treaties other than ordinary trade agreements require ratification by a majority of the National Assembly before taking domestic effect. Ordinary trade agreements may take effect by executive action unless statute provides otherwise.",
         mechanicalEffects: [
-          "All treaties require Assembly majority approval before taking domestic effect.",
-          "President's treaty-making power is checked by legislative ratification.",
+          "Non-trade treaties require Assembly majority approval before taking domestic effect.",
+          "Trade treaties may skip Assembly ratification under this founding mode.",
         ],
         metricEffects: {
           institutionalStability: 1,
@@ -1399,12 +1399,12 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
       },
       {
         id: "assembly_and_provinces",
-        label: "Assembly and provincial assembly concurrent approval",
+        label: "Assembly ratification with provincial-impact report",
         proposedClauseText:
-          "Treaties affecting matters within provincial competence require ratification both by the National Assembly by absolute majority and by the assemblies of at least two-thirds of the provinces. Treaties that do not affect provincial competence require only National Assembly ratification.",
+          "All treaties require ratification by a majority of the National Assembly. Where a treaty affects matters within provincial competence, the Assembly committee report shall record the provincial impact before the ratification vote. Separate provincial assembly ratification is not required.",
         mechanicalEffects: [
-          "All treaties require National Assembly majority ratification.",
-          "Provincial competence concerns are recorded in committee debate but do not require a separate provincial vote.",
+          "All treaties (including trade) require National Assembly majority ratification.",
+          "Provincial competence concerns are recorded in committee debate; no separate provincial vote is held.",
         ],
         metricEffects: {
           provincialAutonomy: 2,
@@ -1417,11 +1417,10 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         id: "executive_alone",
         label: "Executive treaty-making without ratification",
         proposedClauseText:
-          "The President concludes and ratifies treaties on behalf of the Republic. No Assembly approval is required for a treaty to take effect in domestic law. The President shall inform the National Assembly of treaty obligations within thirty days of signature.",
+          "The President concludes and ratifies treaties on behalf of the Republic. No Assembly approval is required for a treaty to take effect in domestic law.",
         mechanicalEffects: [
           "President can bind the Republic by treaty without Assembly vote.",
-          "Assembly's role is reduced to subsequent information notification.",
-          "International commitments may accumulate without legislative scrutiny.",
+          "No Assembly ratification or mandatory notification procedure is enforced.",
         ],
         metricEffects: {
           executiveCapacity: 2,
@@ -1434,10 +1433,10 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         id: "supermajority_assembly",
         label: "Supermajority Assembly ratification",
         proposedClauseText:
-          "Treaties concluded by the President require ratification by two-thirds of the total membership of the National Assembly. Treaties ceding sovereign territory or transferring constitutional competences require ratification by three-quarters of the total membership.",
+          "Treaties concluded by the President require ratification by two-thirds of the total membership of the National Assembly before taking domestic effect.",
         mechanicalEffects: [
-          "All treaties require two-thirds Assembly approval.",
-          "Minority parties can block international commitments.",
+          "All treaties require two-thirds of Assembly membership (seat fraction).",
+          "Minority parties can more readily block international commitments.",
         ],
         metricEffects: {
           institutionalStability: 2,
@@ -1683,4 +1682,113 @@ export function subjectsCoveringAllArticles(): boolean {
   return required.every((articleId) =>
     CONSTITUTION_CHANGE_SUBJECTS.some((s) => s.articleId === articleId),
   );
+}
+
+export type OrderDependencyKind =
+  "compatible" | "requires_linked_change" | "tension" | "contradictory";
+
+export type OrderDependencyFinding = {
+  kind: OrderDependencyKind;
+  subjectIds: string[];
+  message: string;
+};
+
+/**
+ * Lightweight cross-clause dependency assessment for order-mode packages.
+ * Explicit rules only — not a general constitutional theorem prover.
+ */
+export function assessConstitutionOrderDependencies(
+  selections: Array<{ subjectId: string; alternativeId: string }>,
+  currentOrder?: Partial<ConstitutionalOrderState> | null,
+): OrderDependencyFinding[] {
+  const findings: OrderDependencyFinding[] = [];
+  const merged: Partial<ConstitutionalOrderState> = { ...(currentOrder ?? {}) };
+  for (const sel of selections) {
+    const alt = constitutionAlternative(sel.subjectId, sel.alternativeId);
+    if (alt?.orderPatch) Object.assign(merged, alt.orderPatch);
+  }
+  const selected = (subjectId: string) =>
+    selections.find((s) => s.subjectId === subjectId)?.alternativeId ?? null;
+
+  if (
+    merged.republicForm === "unitary_party_republic" &&
+    merged.partySystem &&
+    merged.partySystem !== "single_legal_party"
+  ) {
+    findings.push({
+      kind: "contradictory",
+      subjectIds: ["art1_republic_form", "art7_party_system"],
+      message:
+        "A unitary party-guided republic requires a single legal Party system; the selected Party-system alternative conflicts.",
+    });
+  } else if (
+    selected("art1_republic_form") === "unitary_party_republic" &&
+    !selections.some((s) => s.subjectId === "art7_party_system")
+  ) {
+    findings.push({
+      kind: "requires_linked_change",
+      subjectIds: ["art1_republic_form", "art7_party_system"],
+      message:
+        "Selecting a party-guided republic automatically sets single_legal_party; confirm Article VII remains coherent.",
+    });
+  }
+
+  if (
+    merged.presidentialElection === "assembly_selection" &&
+    merged.executiveAuthority === "strengthened_executive"
+  ) {
+    findings.push({
+      kind: "tension",
+      subjectIds: ["art3_presidential_election_mode", "art3_executive_authority"],
+      message:
+        "Assembly-selected presidency with a strengthened executive concentrates power through an indirectly chosen head of state.",
+    });
+  }
+
+  if (
+    merged.executiveAuthority === "assembly_dominant" &&
+    merged.cabinetFormation &&
+    merged.cabinetFormation !== "assembly_confidence" &&
+    merged.cabinetFormation !== "party_slate"
+  ) {
+    findings.push({
+      kind: "requires_linked_change",
+      subjectIds: ["art3_executive_authority", "art6_cabinet_formation"],
+      message:
+        "An Assembly-dominant executive ordinarily pairs with Assembly confidence or party-slate cabinet formation.",
+    });
+  }
+
+  if (
+    merged.entrenchment === "hard_core" &&
+    merged.amendmentProcess === "assembly_simple_plus_referendum"
+  ) {
+    findings.push({
+      kind: "tension",
+      subjectIds: ["art12_unamendable_core", "art12_amendment_process"],
+      message:
+        "Hard-core entrenchment with a simple-majority-plus-referendum amendment path creates an awkward dual regime for constitutional change.",
+    });
+  }
+
+  if (
+    selected("art11_treaty_approval") === "assembly_and_provinces" &&
+    merged.provincialCompetence === "national_supremacy"
+  ) {
+    findings.push({
+      kind: "tension",
+      subjectIds: ["art11_treaty_approval", "art9_provincial_competence"],
+      message:
+        "Provincial-impact treaty reporting sits awkwardly beside a national-supremacy competence model.",
+    });
+  }
+
+  if (findings.length === 0) {
+    findings.push({
+      kind: "compatible",
+      subjectIds: selections.map((s) => s.subjectId),
+      message: "No explicit order-mode contradictions detected for this package.",
+    });
+  }
+  return findings;
 }

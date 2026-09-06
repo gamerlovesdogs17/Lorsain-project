@@ -188,7 +188,7 @@
             { "id": "ART_X_S1_C3", "number": "3", "text": "Public accounts shall be audited independently and reported to the National Assembly and the people.", "amendment_difficulty": "substantial" }
           ]},
           { "id": "ARTICLE_X_SECTION_2", "number": "2", "title": "Emergency authority", "clauses": [
-            { "id": "ART_X_S2_C1", "number": "1", "text": "The President may declare a national emergency for fourteen days. Any extension, in periods not exceeding thirty days, requires National Assembly approval.", "amendment_difficulty": "foundational" },
+            { "id": "ART_X_S2_C1", "number": "1", "text": "The President may declare a national emergency for fourteen days. The National Assembly must confirm the declaration within thirty days or the emergency expires. Any extension, in periods not exceeding thirty days, requires National Assembly approval.", "amendment_difficulty": "foundational" },
             { "id": "ART_X_S2_C2", "number": "2", "text": "The Assembly may terminate an emergency, and the Constitutional Court shall provide expedited review. Measures must be necessary, proportionate and temporary.", "amendment_difficulty": "foundational" }
           ]},
           { "id": "ARTICLE_X_SECTION_3", "number": "3", "title": "Defense and war powers", "clauses": [
@@ -203,7 +203,7 @@
         "title": "Foreign Relations",
         "sections": [
           { "id": "ARTICLE_XI_SECTION_1", "number": "1", "title": "Diplomacy and treaties", "clauses": [
-            { "id": "ART_XI_S1_C1", "number": "1", "text": "The President represents the Republic in foreign relations, recognizes foreign governments and negotiates treaties subject to ratification where law or this Constitution requires it.", "amendment_difficulty": "substantial" },
+            { "id": "ART_XI_S1_C1", "number": "1", "text": "Treaties other than ordinary trade agreements require ratification by a majority of the National Assembly before taking domestic effect. Ordinary trade agreements may take effect by executive action unless statute provides otherwise.", "amendment_difficulty": "substantial" },
             { "id": "ART_XI_S1_C2", "number": "2", "text": "A ratified treaty forms part of the law of Terena according to its terms but may not override this Constitution.", "amendment_difficulty": "foundational" }
           ]},
           { "id": "ARTICLE_XI_SECTION_2", "number": "2", "title": "International measures", "clauses": [

@@ -64,7 +64,26 @@ export function chooseLegislativeVote(
   bill: BillState,
   rng: RngService,
 ): LegislativeVoteChoice {
-  if (politicianId === state.playerPoliticianId) return "abstain";
+  return explainLegislativeVote(world, state, politicianId, bill, rng).choice;
+}
+
+export type LegislativeVoteExplanation = {
+  choice: LegislativeVoteChoice;
+  factors: Array<{ label: string; direction: "support" | "oppose" | "neutral"; weight: number }>;
+  score: number;
+};
+
+/** Deterministic factor breakdown matching `chooseLegislativeVote` scoring. */
+export function explainLegislativeVote(
+  world: KernelWorld,
+  state: SimState,
+  politicianId: string,
+  bill: BillState,
+  rng: RngService,
+): LegislativeVoteExplanation {
+  if (politicianId === state.playerPoliticianId) {
+    return { choice: "abstain", factors: [], score: 0 };
+  }
   const pol = state.politicians[politicianId];
   const fit = billPolicyFit(world, state, politicianId, bill);
   const party = partyStance(state, pol?.partyId ?? null, bill.id);
@@ -102,19 +121,77 @@ export function chooseLegislativeVote(
       conscienceRoom * 0.32 +
       (factionConflict ? 0.12 : 0) +
       (constituencyConflict ? 0.1 : 0));
+  const policyTerm = fit * 0.36;
+  const partyTerm = partyPush * partyLoyalty * discipline * issueDiscipline * 0.38;
+  const factionTerm = factionPush * factionLoyalty * (factionConflict ? 0.3 : 0.2);
+  const districtTerm = district * 0.22;
+  const orgTerm = orgPressure * 0.68;
   const score =
-    fit * 0.36 +
-    partyPush * partyLoyalty * discipline * issueDiscipline * 0.38 +
-    factionPush * factionLoyalty * (factionConflict ? 0.3 : 0.2) +
-    district * 0.22 +
+    policyTerm +
+    partyTerm +
+    factionTerm +
+    districtTerm +
     currentLocalPressure +
-    orgPressure * 0.68 +
+    orgTerm +
     (pragmatism - 0.5) * 0.06 +
     (institutionalism - 0.5) * 0.04 +
     personalVariance;
-  if (score > 0.045) return "yes";
-  if (score < -0.045) return "no";
-  return "abstain";
+  const factors: LegislativeVoteExplanation["factors"] = [];
+  if (Math.abs(policyTerm) >= 0.02) {
+    factors.push({
+      label: fit >= 0 ? "Supports bill policy content" : "Opposes bill policy content",
+      direction: policyTerm >= 0 ? "support" : "oppose",
+      weight: policyTerm,
+    });
+  }
+  if ((party === "support" || party === "oppose") && Math.abs(partyTerm) >= 0.01) {
+    factors.push({
+      label:
+        party === "support" ? "Party leadership supports bill" : "Party leadership opposes bill",
+      direction: partyTerm >= 0 ? "support" : "oppose",
+      weight: partyTerm,
+    });
+  }
+  if ((faction === "support" || faction === "oppose") && Math.abs(factionTerm) >= 0.01) {
+    factors.push({
+      label: faction === "support" ? "Caucus supports bill" : "Caucus opposes bill",
+      direction: factionTerm >= 0 ? "support" : "oppose",
+      weight: factionTerm,
+    });
+  }
+  if (Math.abs(districtTerm) >= 0.02) {
+    factors.push({
+      label:
+        district >= 0 ? "Constituency/province prefers bill" : "Constituency/province resists bill",
+      direction: districtTerm >= 0 ? "support" : "oppose",
+      weight: districtTerm,
+    });
+  }
+  if (Math.abs(orgTerm) >= 0.02) {
+    factors.push({
+      label:
+        orgPressure >= 0
+          ? "Organization pressure favors bill"
+          : "Organization pressure against bill",
+      direction: orgTerm >= 0 ? "support" : "oppose",
+      weight: orgTerm,
+    });
+  }
+  if (Math.abs(currentLocalPressure) >= 0.02) {
+    factors.push({
+      label:
+        currentLocalPressure >= 0
+          ? "Local issue pressure favors bill"
+          : "Local issue pressure against bill",
+      direction: currentLocalPressure >= 0 ? "support" : "oppose",
+      weight: currentLocalPressure,
+    });
+  }
+  if (factors.length === 0) {
+    factors.push({ label: "No dominant public signal", direction: "neutral", weight: 0 });
+  }
+  const choice: LegislativeVoteChoice = score > 0.045 ? "yes" : score < -0.045 ? "no" : "abstain";
+  return { choice, factors, score };
 }
 
 function cidForPressure(

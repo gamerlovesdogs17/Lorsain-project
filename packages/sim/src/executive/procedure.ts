@@ -327,6 +327,26 @@ export function introduceMotion(
       return { error: reject("INVALID_BUDGET", args.targetId) };
     }
   }
+  if (args.kind === "emergency_declaration") {
+    const order = ensureOrder(state);
+    if (order.emergencyPowers !== "assembly_declared_only") {
+      return {
+        error: reject(
+          "ASSEMBLY_EMERGENCY_UNAVAILABLE",
+          "Assembly emergency declaration requires assembly_declared_only emergency powers",
+        ),
+      };
+    }
+    if (!state.executiveRuntime.emergencyTrigger) {
+      return { error: reject("NO_EMERGENCY_TRIGGER", "no legitimate emergency trigger") };
+    }
+    const active = Object.values(state.executiveRuntime.emergencies).some(
+      (e) => e.status === "active",
+    );
+    if (active) {
+      return { error: reject("EMERGENCY_ALREADY_ACTIVE", "an emergency is already active") };
+    }
+  }
   if (args.kind === "emergency_extension" || args.kind === "emergency_termination") {
     const emergency = state.executiveRuntime.emergencies[args.targetId];
     if (!emergency || emergency.status !== "active") {
@@ -357,12 +377,15 @@ export function introduceMotion(
   const strengthenedAnnulment =
     args.kind === "regulation_annulment" &&
     ensureOrder(state).executiveAuthority === "strengthened_executive";
+  const assemblyEmergencyDeclare = args.kind === "emergency_declaration";
   const fraction =
     args.kind === "ministerial_censure"
       ? world.executiveConstitution.assemblyCensureFraction
       : strengthenedAnnulment
         ? 2 / 3
-        : null;
+        : assemblyEmergencyDeclare
+          ? 0.5
+          : null;
   const motion: AssemblyMotion = {
     id: allocateMotionId(state),
     kind: args.kind,
@@ -373,7 +396,7 @@ export function introduceMotion(
     status: "scheduled",
     voteId: null,
     threshold:
-      args.kind === "ministerial_censure" || strengthenedAnnulment
+      args.kind === "ministerial_censure" || strengthenedAnnulment || assemblyEmergencyDeclare
         ? "assembly_fraction"
         : "simple_majority_cast",
     fraction,
@@ -518,10 +541,11 @@ export function recordMotionVote(
   }
   let passed = false;
   if (motion.threshold === "assembly_fraction") {
-    const needed = assemblyFractionYesNeeded(
-      world.legislativeConstitution.assemblySeatCount,
-      motion.fraction ?? 0.55,
-    );
+    const seats = world.legislativeConstitution.assemblySeatCount;
+    const needed =
+      motion.kind === "emergency_declaration"
+        ? Math.floor(seats / 2) + 1
+        : assemblyFractionYesNeeded(seats, motion.fraction ?? 0.55);
     passed = yes >= needed;
   } else {
     passed = yes + no > 0 && yes > no;
@@ -600,6 +624,47 @@ function applyMotionEffect(
         { budgetId: motion.targetId },
         commandId,
         0.85,
+      ),
+    ];
+  }
+  if (motion.kind === "emergency_declaration") {
+    const gate = emergencyDeclarationAllowed(state, false);
+    if (!gate.allowed) {
+      return [];
+    }
+    const emergency = {
+      id: allocateEmergencyId(state),
+      declaredBy: motion.sponsorId,
+      declaredDate: state.currentDate,
+      expiresDate: addDays(state.currentDate, gate.initialDays),
+      status: "active" as const,
+      extensionCount: 0,
+      metadata: {
+        courtReviewRequired: gate.courtReviewRequired,
+        requiresAssemblyConfirmation: false,
+        emergencyMode: "assembly_declared_only",
+        declaredByAssembly: true,
+        motionId: motion.id,
+      },
+    };
+    state.executiveRuntime.emergencies[emergency.id] = emergency;
+    state.executiveRuntime.emergencyTrigger = false;
+    // Retarget the motion so later extension/termination can find the emergency.
+    motion.targetId = emergency.id;
+    return [
+      event(
+        state,
+        "EMERGENCY_DECLARED",
+        [motion.sponsorId],
+        [emergency.id, motion.id],
+        {
+          emergencyId: emergency.id,
+          expiresDate: emergency.expiresDate,
+          declaredByAssembly: true,
+          initialDays: gate.initialDays,
+        },
+        commandId,
+        0.95,
       ),
     ];
   }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   CONSTITUTION_CHANGE_SUBJECTS,
+  assessConstitutionOrderDependencies,
   caseTitle,
   constitutionAlternative,
   constitutionSubjectsForArticle,
@@ -253,6 +254,26 @@ export function ConstitutionBrowser(props: {
             : {}),
         }
       : null;
+
+  const dependencyFindings = useMemo(() => {
+    const selections = [
+      ...amendmentPackage.map((row) => ({
+        subjectId: row.subjectId,
+        alternativeId: row.alternativeId,
+      })),
+    ];
+    if (draftPreview && !selections.some((row) => row.subjectId === draftPreview.subjectId)) {
+      selections.push({
+        subjectId: draftPreview.subjectId,
+        alternativeId: draftPreview.alternativeId,
+      });
+    }
+    if (selections.length === 0) return [];
+    return assessConstitutionOrderDependencies(
+      selections,
+      props.snap.provincialRuntime.constitutionalOrder ?? null,
+    );
+  }, [amendmentPackage, draftPreview, props.snap.provincialRuntime.constitutionalOrder]);
 
   const partyOptions = useMemo(() => {
     const ids = new Set<string>([
@@ -568,6 +589,29 @@ export function ConstitutionBrowser(props: {
                           <li key={effect}>{effect}</li>
                         ))}
                       </ul>
+                      {dependencyFindings.length > 0 ? (
+                        <>
+                          <div className="kicker">Cross-clause dependencies</div>
+                          <ul className="constitution-mechanical-list">
+                            {dependencyFindings.map((finding) => (
+                              <li key={`${finding.kind}:${finding.message}`}>
+                                <StatusBadge
+                                  tone={
+                                    finding.kind === "contradictory"
+                                      ? "warn"
+                                      : finding.kind === "compatible"
+                                        ? "ok"
+                                        : "idle"
+                                  }
+                                >
+                                  {finding.kind.replace(/_/g, " ")}
+                                </StatusBadge>{" "}
+                                {finding.message}
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : null}
                       <div className="kicker">Political / world effects</div>
                       <div className="policy-choice-effects">
                         {Object.entries(activeAlternative.metricEffects).map(([key, value]) =>

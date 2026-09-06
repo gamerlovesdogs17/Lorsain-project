@@ -10,6 +10,7 @@ import { legislativeHarnessWorld } from "./legislature/harness.js";
 import { jsonClone } from "./hash.js";
 import {
   CONSTITUTION_CHANGE_SUBJECTS,
+  assessConstitutionOrderDependencies,
   constitutionAlternative,
   constitutionSubjectById,
   subjectsCoveringAllArticles,
@@ -46,6 +47,7 @@ import {
   introduceMotion,
   declareEmergency,
   assemblyFractionYesNeeded,
+  recordMotionVote,
 } from "./executive/procedure.js";
 import {
   warUnilateralDaysForDefenseControl,
@@ -786,6 +788,56 @@ describe("Phase 11.4 mechanical-truth fixes", () => {
     expect(payload.turnout).toBeGreaterThan(0);
     expect(["passed", "failed"]).toContain(payload.result);
     expect(payload.amendmentId).toBe(amendment.id);
+  });
+
+  it("assembly_declared_only blocks president and allows Assembly emergency_declaration", () => {
+    const { world, state } = boot("EM-ASM");
+    ratifyPackage(world, state, "MP02", [
+      { subjectId: "art10_emergency_powers", alternativeId: "assembly_declared_only" },
+    ]);
+    armExecutiveTrigger(state, "emergency");
+    const barred = declareEmergency(world, state, { actorId: "P1" }, null);
+    expect("error" in barred).toBe(true);
+    if ("error" in barred) expect(barred.error.code).toBe("EMERGENCY_CONSTITUTIONALLY_BARRED");
+
+    const motion = introduceMotion(
+      world,
+      state,
+      { sponsorId: "MP02", kind: "emergency_declaration", targetId: "new" },
+      null,
+    );
+    expect("error" in motion).toBe(false);
+    if ("error" in motion) return;
+    const votes: Record<string, "yes" | "no" | "abstain"> = {};
+    for (const id of currentAssemblyMemberIds(world, state)) votes[id] = "yes";
+    const recorded = recordMotionVote(world, state, { motionId: motion.motion.id, votes }, null);
+    expect("error" in recorded).toBe(false);
+    if ("error" in recorded) return;
+    expect(recorded.passed).toBe(true);
+    const emergency = Object.values(state.executiveRuntime.emergencies).find(
+      (e) => e.status === "active",
+    );
+    expect(emergency).toBeTruthy();
+    expect(emergency?.metadata.declaredByAssembly).toBe(true);
+    expect(emergency?.metadata.emergencyMode).toBe("assembly_declared_only");
+  });
+
+  it("narrow emergency clause text matches post-declaration confirmation model", () => {
+    const alt = constitutionAlternative("art10_emergency_powers", "narrow_assembly_supervised");
+    expect(alt?.proposedClauseText).toMatch(/confirm the declaration within thirty days/i);
+    expect(alt?.proposedClauseText).not.toMatch(/only upon approval of two-thirds/i);
+    const joint = constitutionAlternative("art10_defense_control", "joint_command");
+    expect(joint?.proposedClauseText).not.toMatch(/concurrence of all three/i);
+    const treaty = constitutionAlternative("art11_treaty_approval", "supermajority_assembly");
+    expect(treaty?.proposedClauseText).not.toMatch(/three-quarters/i);
+  });
+
+  it("order dependency assessment flags party-guided vs competitive multiparty", () => {
+    const findings = assessConstitutionOrderDependencies([
+      { subjectId: "art1_republic_form", alternativeId: "unitary_party_republic" },
+      { subjectId: "art7_party_system", alternativeId: "competitive_multiparty" },
+    ]);
+    expect(findings.some((f) => f.kind === "contradictory")).toBe(true);
   });
 });
 
