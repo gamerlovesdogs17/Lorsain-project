@@ -202,7 +202,8 @@ describe("Phase 7 playable 2028–2029 path", () => {
       type: "ISSUE_REGULATION",
       ministryOfficeId: officeId,
       policyItems: [{ issueId: "ISS_REFORM", direction: 1, magnitude: 0.2, fiscalImpact: null }],
-      major: true,
+      // Founding constrained_dual_mandate blocks major regulations without legislative co-approval.
+      major: false,
     });
     advanceThroughInterrupts(president, 1);
     expect(Object.keys(president.getSnapshot().executiveRuntime.regulations).length).toBe(1);

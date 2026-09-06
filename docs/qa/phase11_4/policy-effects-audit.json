@@ -1,0 +1,161 @@
+{
+  "generatedAt": "2026-09-06T02:58:46.916Z",
+  "totalOptions": 226,
+  "foundingBaselines": 50,
+  "proposalOptions": 176,
+  "withProposalSpecificIndexDelta": 176,
+  "withParameterScaledDelta": 0,
+  "withRuntimeCoverage": 176,
+  "stillDirectionMagnitudeOnly": 0,
+  "coverageShare": 1,
+  "byIssue": {
+    "ISS_LABOR": {
+      "total": 27,
+      "covered": 27,
+      "provisions": [
+        "PROV_BARGAINING_SCOPE",
+        "PROV_UNION_RECOGNITION",
+        "PROV_STRIKE_NOTICE",
+        "PROV_VOCATIONAL_TRAINING",
+        "PROV_MINIMUM_WAGE",
+        "PROV_PLATFORM_WORK",
+        "PROV_PAID_LEAVE"
+      ]
+    },
+    "ISS_WELFARE": {
+      "total": 41,
+      "covered": 41,
+      "provisions": [
+        "PROV_CHILD_BENEFIT",
+        "PROV_PRIMARY_CARE",
+        "PROV_TUITION_SUPPORT",
+        "PROV_INCOME_TAX",
+        "PROV_UNEMPLOYMENT_INSURANCE",
+        "PROV_SCHOOL_MEALS",
+        "PROV_HEALTH_INSURANCE_MODEL",
+        "PROV_MEDICINE_PRICING",
+        "PROV_HOSPITAL_GOVERNANCE",
+        "PROV_CHILDCARE_MODEL",
+        "PROV_INHERITANCE_TAX",
+        "PROV_CORPORATE_TAX"
+      ]
+    },
+    "ISS_OWNERSHIP": {
+      "total": 16,
+      "covered": 16,
+      "provisions": [
+        "PROV_RAIL_OWNERSHIP",
+        "PROV_INFRASTRUCTURE_BANK",
+        "PROV_ELECTRICITY_MARKET",
+        "PROV_BROADBAND"
+      ]
+    },
+    "ISS_TRADE": {
+      "total": 10,
+      "covered": 10,
+      "provisions": [
+        "PROV_STRATEGIC_TARIFFS",
+        "PROV_FARM_STABILIZATION",
+        "PROV_FARMLAND_POLICY"
+      ]
+    },
+    "ISS_HOUSING": {
+      "total": 15,
+      "covered": 15,
+      "provisions": [
+        "PROV_HOUSING_APPROVALS",
+        "PROV_PUBLIC_HOUSING",
+        "PROV_TRANSIT_ZONING",
+        "PROV_RENT_POLICY",
+        "PROV_LAND_VALUE_TAX"
+      ]
+    },
+    "ISS_CLIMATE": {
+      "total": 14,
+      "covered": 14,
+      "provisions": [
+        "PROV_CLEAN_POWER",
+        "PROV_CARBON_PRICE",
+        "PROV_NUCLEAR_POLICY",
+        "PROV_WATER_ENFORCEMENT"
+      ]
+    },
+    "ISS_LIBERTY": {
+      "total": 6,
+      "covered": 6,
+      "provisions": [
+        "PROV_REPRODUCTIVE_LAW",
+        "PROV_SURVEILLANCE_WARRANT"
+      ]
+    },
+    "ISS_IMMIGRATION": {
+      "total": 7,
+      "covered": 7,
+      "provisions": [
+        "PROV_RESIDENCY_PATH",
+        "PROV_ASYLUM_PROCESS"
+      ]
+    },
+    "ISS_POLICING": {
+      "total": 10,
+      "covered": 10,
+      "provisions": [
+        "PROV_POLICE_COMPLAINTS",
+        "PROV_SENTENCING",
+        "PROV_FIREARMS_LICENSING"
+      ]
+    },
+    "ISS_DECENT": {
+      "total": 4,
+      "covered": 4,
+      "provisions": [
+        "PROV_REVENUE_DISCRETION"
+      ]
+    },
+    "ISS_EXEC": {
+      "total": 4,
+      "covered": 4,
+      "provisions": [
+        "PROV_EMERGENCY_RENEWAL"
+      ]
+    },
+    "ISS_REFORM": {
+      "total": 12,
+      "covered": 12,
+      "provisions": [
+        "PROV_DONOR_DISCLOSURE",
+        "PROV_ELECTION_ADMIN",
+        "PROV_ELECTORAL_FORMULA"
+      ]
+    },
+    "ISS_CONCORD": {
+      "total": 2,
+      "covered": 2,
+      "provisions": [
+        "PROV_CONCORD_PROCUREMENT"
+      ]
+    },
+    "ISS_VASKARA": {
+      "total": 4,
+      "covered": 4,
+      "provisions": [
+        "PROV_VASKARA_SANCTIONS"
+      ]
+    },
+    "ISS_DEFENSE": {
+      "total": 4,
+      "covered": 4,
+      "provisions": [
+        "PROV_READINESS_FUND"
+      ]
+    }
+  },
+  "optionCountDistribution": {
+    "2": 4,
+    "3": 21,
+    "4": 22,
+    "5": 1,
+    "6": 2
+  },
+  "sampleDirectionMagnitudeOnly": []
+}

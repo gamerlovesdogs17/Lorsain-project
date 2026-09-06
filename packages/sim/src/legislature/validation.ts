@@ -17,6 +17,7 @@ import {
   type LegislatureRuntime,
   type LegislativeVoteRecord,
   type PolicyItem,
+  type ProvisionEnactmentRecord,
 } from "./types.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -253,6 +254,25 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
           typeof rec.invalidatedByDecisionId === "string" ? rec.invalidatedByDecisionId : null,
         metadata: isRecord(rec.metadata) ? (rec.metadata as EnactedLawRecord["metadata"]) : {},
       };
+    }
+  }
+  if (isRecord(raw.provisionHistory)) {
+    for (const [provisionId, entries] of Object.entries(raw.provisionHistory)) {
+      if (!Array.isArray(entries)) continue;
+      const stack: ProvisionEnactmentRecord[] = [];
+      for (const entry of entries) {
+        if (!isRecord(entry)) continue;
+        if (typeof entry.lawId !== "string" || typeof entry.optionId !== "string") continue;
+        if (typeof entry.enactedDate !== "string" || !isIsoDate(entry.enactedDate)) continue;
+        stack.push({
+          lawId: entry.lawId,
+          optionId: entry.optionId,
+          enactedDate: entry.enactedDate,
+          previousOptionId:
+            typeof entry.previousOptionId === "string" ? entry.previousOptionId : null,
+        });
+      }
+      if (stack.length) runtime.provisionHistory[provisionId] = stack;
     }
   }
   if (isRecord(raw.pendingPlayerVotes)) {

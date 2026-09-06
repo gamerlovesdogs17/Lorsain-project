@@ -176,13 +176,19 @@ describe("Phase 7 executive kernel", () => {
   it("issues a regulation and allows Assembly annulment during the review window", () => {
     const world = executiveHarness();
     const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P7-REG" });
-    expectOk(sim, {
+    // Founding constrained_dual_mandate blocks major regulations; use standard presidential authority.
+    const save = jsonClone(sim.serializeSave());
+    const order = (save.simulation as { provincialRuntime?: { constitutionalOrder?: Record<string, unknown> } })
+      .provincialRuntime?.constitutionalOrder;
+    if (order) order.executiveAuthority = "standard_presidential";
+    const unlocked = restoreSimulation(save, world);
+    expectOk(unlocked, {
       type: "ISSUE_REGULATION",
       ministryOfficeId: "OFFICE_MINISTER_FINANCE",
       policyItems: [{ issueId: "ISS_TAX", direction: 1, magnitude: 0.3, fiscalImpact: null }],
       major: true,
     });
-    const mpSave = jsonClone(sim.serializeSave());
+    const mpSave = jsonClone(unlocked.serializeSave());
     mpSave.simulation.playerPoliticianId = "MP02";
     const asMp = restoreSimulation(mpSave, world);
     expectOk(asMp, {

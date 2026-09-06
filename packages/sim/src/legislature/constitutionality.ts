@@ -102,6 +102,14 @@ const PROVINCIAL_COMPETENCE_SUBJECTS = new Set([
   "PROV_WATER_ENFORCEMENT",
 ]);
 
+/** A5: Subjects that interact with localGovernment order (housing / local authority bills). */
+const LOCAL_GOVERNMENT_SUBJECTS = new Set([
+  "PROV_HOUSING_APPROVALS",
+  "PROV_TRANSIT_ZONING",
+  "PROV_PUBLIC_HOUSING",
+  "PROV_RENT_POLICY",
+]);
+
 const LIBERTY_SENSITIVE_ISSUES = new Set(["ISS_LIBERTY", "ISS_REFORM", "ISS_POLICING"]);
 
 function worstStatus(
@@ -167,6 +175,30 @@ export function assessBillConstitutionality(
       status = worstStatus(status, "potential_rights_issue");
       itemWarnings[key] ??=
         "This measure loosens safeguards in an area covered by qualified civil-liberties protections.";
+    }
+
+    // A5: localGovernment — national legislation on local/housing subjects may conflict
+    // with provincial_primary local government authority
+    if (
+      item.provisionId &&
+      LOCAL_GOVERNMENT_SUBJECTS.has(item.provisionId) &&
+      order.localGovernment === "provincial_primary" &&
+      option &&
+      Math.abs(option.direction) > 0.3
+    ) {
+      status = worstStatus(status, "potential_competence_issue");
+      itemWarnings[key] ??=
+        "National legislation on local government subjects may exceed competence when provinces hold primary local authority.";
+    }
+    if (
+      item.provisionId &&
+      LOCAL_GOVERNMENT_SUBJECTS.has(item.provisionId) &&
+      order.localGovernment === "nationally_directed" &&
+      option &&
+      option.direction > 0.4
+    ) {
+      // nationally_directed means national has full control — expanding local autonomy is consistent
+      // No warning needed
     }
   }
 

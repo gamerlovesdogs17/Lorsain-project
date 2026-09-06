@@ -21,6 +21,7 @@ import { addMonths } from "./calendar.js";
 import {
   processConstitutionalAmendmentsMonth,
   proposeConstitutionalAmendment,
+  proposeConstitutionalPackage,
   proposeConstitutionalTextAmendment,
   constitutionalSupportScore,
   constitutionalProposalImpetus,
@@ -173,17 +174,19 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
 
   it("uses policy-specific provision option identifiers while loading legacy aliases", () => {
     expect(LEGISLATIVE_PROVISIONS).toHaveLength(50);
-    expect(LEGISLATIVE_PROVISIONS.flatMap((definition) => definition.options)).toHaveLength(161);
-    expect(new Set(LEGISLATIVE_PROVISIONS.map((definition) => definition.options.length))).toEqual(
-      new Set([3, 4, 5]),
-    );
+    const allOptions = LEGISLATIVE_PROVISIONS.flatMap((definition) => definition.options);
+    expect(allOptions.length).toBeGreaterThanOrEqual(200);
+    const optionCounts = new Set(LEGISLATIVE_PROVISIONS.map((definition) => definition.options.length));
+    expect([...optionCounts].every((count) => count >= 2)).toBe(true);
+    expect(Math.max(...optionCounts)).toBeGreaterThanOrEqual(5);
     for (const definition of LEGISLATIVE_PROVISIONS) {
       expect(definition.options.length).toBeGreaterThanOrEqual(2);
-      expect(definition.options.filter((option) => option.current)).toHaveLength(1);
+      expect(definition.options.filter((option) => option.founding)).toHaveLength(1);
       expect(definition.options.every((option) => option.affectedGroups.length > 0)).toBe(true);
       expect(
         definition.options.some((option) => ["low", "current", "high"].includes(option.id)),
       ).toBe(false);
+      expect(definition.options.some((option) => /^Keep\b/i.test(option.label))).toBe(false);
       expect(defaultProvisionOptionId(definition.id)).not.toBe("");
       // Competing designs: option labels must not be a pure less/same/more triad.
       const labels = definition.options.map((option) => option.label.toLowerCase());
@@ -197,7 +200,7 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
           ),
       ).toBe(false);
     }
-    expect(LEGISLATIVE_PROVISIONS.some((definition) => definition.options.length === 5)).toBe(true);
+    expect(LEGISLATIVE_PROVISIONS.some((definition) => definition.options.length >= 5)).toBe(true);
     expect(
       LEGISLATIVE_PROVISIONS.flatMap((definition) => definition.options).some(
         (option) => Object.keys(option.dimensionEffects ?? {}).length > 1,
@@ -216,15 +219,17 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect(policyItemForProvision("PROV_REPRODUCTIVE_LAW", "high")?.optionId).toBe(
       "national_protection",
     );
-    // Remaining scalar-adjacent categories: a few fights are still partly about duration,
-    // eligibility bands, or appropriation size (e.g. unemployment weeks, school-meal income
-    // tests, donor disclosure timing). Those retain three genuine institutional designs rather
-    // than a disguised less/same/more slider.
-    expect(
-      LEGISLATIVE_PROVISIONS.find((row) => row.id === "PROV_UNEMPLOYMENT_INSURANCE")?.options.map(
-        (option) => option.id,
-      ),
-    ).toEqual(["shorter_insured_period", "keep_current_duration", "extended_downturn_benefit"]);
+    const unemploymentIds = LEGISLATIVE_PROVISIONS.find(
+      (row) => row.id === "PROV_UNEMPLOYMENT_INSURANCE",
+    )?.options.map((option) => option.id);
+    expect(unemploymentIds).toEqual(
+      expect.arrayContaining([
+        "founding_twelve_week_duration",
+        "eighteen_week_benefits",
+        "twenty_six_week_benefits",
+      ]),
+    );
+    expect(unemploymentIds?.length).toBeGreaterThanOrEqual(4);
   });
 
   it("seeds twenty-one population-scaled chambers and a named renewable political class", () => {
@@ -915,7 +920,7 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect(passProposal.amendment.status).toBe("ratified");
     expect(passState.provincialRuntime.constitutionalRules.presidential_term_limit?.value).toBe(1);
 
-    // 3) Foundational / radical text amendment faces overwhelming resistance.
+    // 3) Free-text constitutional amendments are rejected; use structured packages.
     const radical = proposeConstitutionalTextAmendment(
       world,
       state,
@@ -925,43 +930,37 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
       "centralize_national_power",
       "CMD_CERT_RADICAL",
     );
-    expect("error" in radical).toBe(false);
-    if ("error" in radical) return;
-    expect(radical.amendment.runtimeEffect).toBe("text_only");
-    expect(radical.amendment.politicalDifficulty).toBeGreaterThanOrEqual(0.9);
-    state.currentDate = addMonths(state.currentDate, 1);
-    processConstitutionalAmendmentsMonth(world, state, "CMD_CERT_RADICAL");
-    expect(radical.amendment.status).toBe("assembly_failed");
-    expect(radical.amendment.assemblyYes).toBeLessThan(140);
+    expect("error" in radical).toBe(true);
+    if ("error" in radical) {
+      expect(radical.error.code).toBe("STRUCTURED_CONSTITUTIONAL_AMENDMENT_REQUIRED");
+    }
 
-    // 5) Text-only ratification never mutates modeled runtime rules.
+    // 5) Structured package ratification can change clause text without free-text path.
     const textState = structuredClone(state);
     textState.provincialRuntime.constitutionalAmendments = {};
-    const textOnly = proposeConstitutionalTextAmendment(
+    const packageProposal = proposeConstitutionalPackage(
       world,
       textState,
       player,
-      "ART_VI_S2_C2",
-      "Administrative action affecting a person or organization shall receive written reasons, independent review and an effective remedy under law within a published timetable.",
-      "technical_clarification",
-      "CMD_CERT_TEXT",
+      [{ subjectId: "art6_cabinet_formation", alternativeId: "assembly_confidence" }],
+      "CMD_CERT_PKG",
     );
-    expect("error" in textOnly).toBe(false);
-    if ("error" in textOnly) return;
-    expect(textOnly.amendment.ruleId).toBeNull();
-    expect(textOnly.amendment.runtimeEffect).toBe("text_only");
+    expect("error" in packageProposal).toBe(false);
+    if ("error" in packageProposal) return;
+    expect(packageProposal.amendment.runtimeEffect).toBe("modeled_rule");
+    expect(packageProposal.amendment.packageChanges?.length).toBe(1);
     const rulesBefore = structuredClone(textState.provincialRuntime.constitutionalRules);
     for (const [index, id] of currentAssemblyMemberIds(world, textState).entries()) {
-      textOnly.amendment.assemblyVotes[id] = index < 280 ? "yes" : "no";
+      packageProposal.amendment.assemblyVotes[id] = index < 280 ? "yes" : "no";
     }
     for (const provinceId of world.provinceIds) {
       for (const memberId of textState.provincialRuntime.assemblies[provinceId]!.memberIds) {
-        const key = `pending:${textOnly.amendment.id}:${provinceId}:${memberId}`;
+        const key = `pending:${packageProposal.amendment.id}:${provinceId}:${memberId}`;
         textState.provincialRuntime.votes[key] = {
           id: key,
           provinceId,
           subjectKind: "constitutional_ratification",
-          subjectId: textOnly.amendment.id,
+          subjectId: packageProposal.amendment.id,
           date: textState.currentDate,
           votes: { [memberId]: "yes" },
           yes: 1,
@@ -972,16 +971,19 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
       }
     }
     textState.currentDate = addMonths(textState.currentDate, 1);
-    processConstitutionalAmendmentsMonth(world, textState, "CMD_CERT_TEXT");
+    processConstitutionalAmendmentsMonth(world, textState, "CMD_CERT_PKG");
     for (let month = 0; month < 8; month += 1) {
       textState.currentDate = addMonths(textState.currentDate, 1);
-      processConstitutionalAmendmentsMonth(world, textState, "CMD_CERT_TEXT");
+      processConstitutionalAmendmentsMonth(world, textState, "CMD_CERT_PKG");
     }
-    expect(textOnly.amendment.status).toBe("ratified");
-    expect(textState.provincialRuntime.constitutionalRules).toEqual(rulesBefore);
-    expect(currentConstitutionalClauseText(world, textState, "ART_VI_S2_C2")).toBe(
-      textOnly.amendment.proposedText,
+    expect(packageProposal.amendment.status).toBe("ratified");
+    expect(textState.provincialRuntime.constitutionalOrder.cabinetFormation).toBe(
+      "assembly_confidence",
     );
+    expect(textState.provincialRuntime.constitutionalRules).toEqual(rulesBefore);
+    expect(
+      currentConstitutionalClauseText(world, textState, "ART_VI_S1_C1"),
+    ).toContain("confidence");
   });
 
   it("lets a serving player legislator explicitly contest provincial leadership and archives the ballot", () => {
@@ -1143,32 +1145,44 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
         proposedValue: 9,
       }).ok,
     ).toBe(true);
-    const clauseId = "ART_VI_S2_C2";
-    const replacement =
-      "Administrative action affecting a person or organization shall receive written reasons, independent review and an effective remedy under law.";
+    // Free-text constitutional amendments are intentionally rejected.
     expect(
       mp.executeCommand({
         type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT",
-        clauseId,
-        proposedText: replacement,
+        clauseId: "ART_VI_S2_C2",
+        proposedText:
+          "Administrative action affecting a person or organization shall receive written reasons, independent review and an effective remedy under law.",
         intent: "technical_clarification",
       }).ok,
+    ).toBe(false);
+
+    // Structured packages require no open amendment; close the rule proposal first.
+    const clearedSave = mp.serializeSave();
+    for (const amendment of Object.values(
+      clearedSave.simulation.provincialRuntime.constitutionalAmendments,
+    )) {
+      if (amendment.status === "proposed" || amendment.status === "ratifying") {
+        amendment.status = "assembly_failed";
+      }
+    }
+    const cleared = restoreSimulation(clearedSave, world);
+    expect(
+      cleared.executeCommand({
+        type: "PROPOSE_CONSTITUTIONAL_PACKAGE",
+        changes: [{ subjectId: "art6_cabinet_formation", alternativeId: "assembly_confidence" }],
+      }).ok,
     ).toBe(true);
-    const textAmendment = Object.values(
-      mp.getSnapshot().provincialRuntime.constitutionalAmendments,
-    ).find((amendment) => amendment.documentClauseId === clauseId)!;
-    expect(textAmendment.currentText).toContain("Administrative action affecting");
-    expect(textAmendment.proposedText).toBe(replacement);
-    const adoptedSave = mp.serializeSave();
-    adoptedSave.simulation.provincialRuntime.constitutionalAmendments[textAmendment.id]!.status =
-      "ratified";
-    adoptedSave.simulation.provincialRuntime.constitutionalAmendments[
-      textAmendment.id
-    ]!.enactedDate = adoptedSave.simulation.currentDate;
-    const adopted = restoreSimulation(adoptedSave, world);
-    expect(currentConstitutionalClauseText(world, adopted.getSnapshot(), clauseId)).toBe(
-      replacement,
+    const packageAmendment = Object.values(
+      cleared.getSnapshot().provincialRuntime.constitutionalAmendments,
+    ).find((amendment) =>
+      amendment.packageChanges?.some((change) => change.subjectId === "art6_cabinet_formation"),
     );
+    expect(packageAmendment?.runtimeEffect).toBe("modeled_rule");
+    expect(packageAmendment?.packageChanges?.[0]?.proposedText.length).toBeGreaterThan(20);
+
+    const clauseId = "ART_VI_S2_C2";
+    const replacement =
+      "Administrative action affecting a person or organization shall receive written reasons, independent review and an effective remedy under law.";
 
     const invalidRoles = [
       { kind: "president", id: startingHolder(world, "president") },
@@ -1217,6 +1231,16 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
           }).ok,
         ).toBe(false);
         expect(sim.hashState()).toBe(beforeTextAmendment);
+        const beforePackage = sim.hashState();
+        expect(
+          sim.executeCommand({
+            type: "PROPOSE_CONSTITUTIONAL_PACKAGE",
+            changes: [
+              { subjectId: "art6_cabinet_formation", alternativeId: "assembly_confidence" },
+            ],
+          }).ok,
+        ).toBe(false);
+        expect(sim.hashState()).toBe(beforePackage);
       }
       const beforeLeadership = sim.hashState();
       expect(

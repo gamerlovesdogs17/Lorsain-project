@@ -151,6 +151,17 @@ export type EnactedLawRecord = {
   metadata: JsonObject;
 };
 
+/** One stack frame: an Act that set a provision to a concrete option. */
+export type ProvisionEnactmentRecord = {
+  lawId: string;
+  optionId: string;
+  enactedDate: IsoDate;
+  /** Option in force immediately before this enactment; null when departing founding baseline. */
+  previousOptionId: string | null;
+};
+
+export type LawProvenanceAction = "amend" | "replace" | "repeal";
+
 export type PendingPlayerVote = {
   billId: string;
   stage: LegislativeVoteStage;
@@ -204,6 +215,11 @@ export type LegislatureRuntime = {
   amendments: Record<string, AmendmentState>;
   legislativeVotes: Record<string, LegislativeVoteRecord>;
   enactedLaws: Record<string, EnactedLawRecord>;
+  /**
+   * Per-provision enactment stack (oldest → newest). Current law is the top entry;
+   * empty means founding baseline.
+   */
+  provisionHistory: Record<string, ProvisionEnactmentRecord[]>;
   partyRecommendations: Record<string, PartyRecommendation>;
   factionRecommendations: Record<string, FactionRecommendation>;
   caucusLeadership: Record<string, CaucusLeadershipState>;
@@ -221,6 +237,7 @@ export function emptyLegislatureRuntime(): LegislatureRuntime {
     amendments: {},
     legislativeVotes: {},
     enactedLaws: {},
+    provisionHistory: {},
     partyRecommendations: {},
     factionRecommendations: {},
     caucusLeadership: {},

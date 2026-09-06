@@ -9,13 +9,22 @@ import type {
   BillState,
   CommitteeId,
   EnactedLawRecord,
+  LawProvenanceAction,
   LegislativeVoteChoice,
   LegislativeVoteRecord,
   LegislativeVoteStage,
   PolicyItem,
+  ProvisionEnactmentRecord,
 } from "./types.js";
 import { pendingVoteKey } from "./types.js";
-import { concretePolicyItem, isNoOpProvisionChoice, naturalBillCopy } from "./provisions.js";
+import {
+  concretePolicyItem,
+  foundingOptionId,
+  isNoOpProvisionChoice,
+  naturalBillCopy,
+  previousProvisionOptionId,
+  restoreOptionForRepealedAct,
+} from "./provisions.js";
 import { assessBillConstitutionality, constitutionalityRejection } from "./constitutionality.js";
 import { absoluteMajorityNeeded, committeeForDimension, LEGISLATURE } from "./policy.js";
 import {
@@ -111,6 +120,10 @@ export function introduceBill(
     title?: string;
     summary?: string;
     cosponsorIds?: readonly string[];
+    /** Lawbook Amend / Replace / Repeal provenance linkage. */
+    lawAction?: LawProvenanceAction;
+    targetLawId?: string;
+    metadata?: JsonObject;
   },
   commandId: string | null,
 ): { bill: BillState; events: SimEvent[] } | { error: CommandError } {
@@ -129,6 +142,7 @@ export function introduceBill(
   }
   for (const item of items) {
     if (
+      args.lawAction !== "repeal" &&
       item.provisionId &&
       item.optionId &&
       isNoOpProvisionChoice(state, item.provisionId, item.optionId)
@@ -159,12 +173,20 @@ export function introduceBill(
     .filter((id) => id !== args.sponsorId && mps.has(id))
     .sort();
   const copy = naturalBillCopy(state, items);
-  const billMetadata: JsonObject = {};
+  const billMetadata: JsonObject = { ...(args.metadata ?? {}) };
+  if (args.lawAction) billMetadata.lawAction = args.lawAction;
+  if (args.targetLawId) billMetadata.targetLawId = args.targetLawId;
   if (constitutionality.status !== "no_obvious_conflict") {
     billMetadata.constitutionalityStatus = constitutionality.status;
   }
   if (Object.keys(constitutionality.itemWarnings).length > 0) {
     billMetadata.constitutionalityWarnings = constitutionality.itemWarnings;
+  }
+  if (args.lawAction === "repeal" || args.lawAction === "replace") {
+    const targetId = args.targetLawId;
+    if (!targetId || !state.legislatureRuntime.enactedLaws[targetId]) {
+      return { error: reject("UNKNOWN_LAW", args.targetLawId ?? "missing target law") };
+    }
   }
   const bill: BillState = {
     id: allocateBillId(state),
@@ -614,6 +636,107 @@ export function returnBill(
   };
 }
 
+function stackFor(state: SimState, provisionId: string): ProvisionEnactmentRecord[] {
+  const existing = state.legislatureRuntime.provisionHistory[provisionId];
+  if (existing) return existing;
+  const created: ProvisionEnactmentRecord[] = [];
+  state.legislatureRuntime.provisionHistory[provisionId] = created;
+  return created;
+}
+
+function markLawNonOperative(state: SimState, lawId: string, successorLawId: string | null): void {
+  const law = state.legislatureRuntime.enactedLaws[lawId];
+  if (!law || !law.operative) return;
+  law.operative = false;
+  law.metadata = {
+    ...law.metadata,
+    supersededByLawId: successorLawId,
+    supersededDate: state.currentDate,
+  };
+}
+
+/** Pop every stack frame written by `lawId` (Act repeal / replace). */
+function popActFromProvisionStacks(state: SimState, lawId: string): void {
+  const history = state.legislatureRuntime.provisionHistory;
+  for (const provisionId of Object.keys(history)) {
+    const stack = history[provisionId];
+    if (!stack?.length) continue;
+    history[provisionId] = stack.filter((entry) => entry.lawId !== lawId);
+  }
+}
+
+function pushProvisionEnactments(state: SimState, law: EnactedLawRecord): void {
+  for (const item of law.policyItems) {
+    if (!item.provisionId || !item.optionId) continue;
+    const stack = stackFor(state, item.provisionId);
+    const previousOptionId =
+      stack.at(-1)?.optionId ?? foundingOptionId(item.provisionId) ?? null;
+    if (previousOptionId === item.optionId) continue;
+    stack.push({
+      lawId: law.id,
+      optionId: item.optionId,
+      enactedDate: law.enactedDate,
+      previousOptionId,
+    });
+  }
+}
+
+function applyLawProvenance(
+  state: SimState,
+  law: EnactedLawRecord,
+  billMetadata: JsonObject,
+): void {
+  const action =
+    typeof billMetadata.lawAction === "string" ? billMetadata.lawAction : null;
+  const targetLawId =
+    typeof billMetadata.targetLawId === "string" ? billMetadata.targetLawId : null;
+
+  if (action === "repeal" && targetLawId) {
+    markLawNonOperative(state, targetLawId, law.id);
+    popActFromProvisionStacks(state, targetLawId);
+    law.metadata = {
+      ...law.metadata,
+      lawAction: "repeal",
+      targetLawId,
+      restoresPriorRules: true,
+    };
+    // Repeal restores prior stack entries; do not push the repeal Act as a new setter.
+    return;
+  }
+
+  if (action === "replace" && targetLawId) {
+    markLawNonOperative(state, targetLawId, law.id);
+    popActFromProvisionStacks(state, targetLawId);
+    law.metadata = {
+      ...law.metadata,
+      lawAction: "replace",
+      targetLawId,
+      replacesLawId: targetLawId,
+    };
+    pushProvisionEnactments(state, law);
+    return;
+  }
+
+  if (action === "amend" && targetLawId) {
+    law.metadata = {
+      ...law.metadata,
+      lawAction: "amend",
+      targetLawId,
+      amendsLawId: targetLawId,
+    };
+  }
+  pushProvisionEnactments(state, law);
+}
+
+/** Apply provenance stack updates for an already-recorded enacted law. */
+export function applyEnactedLawProvenance(
+  state: SimState,
+  law: EnactedLawRecord,
+  billMetadata: JsonObject = {},
+): void {
+  applyLawProvenance(state, law, billMetadata);
+}
+
 function enactLaw(state: SimState, bill: BillState, commandId: string | null): SimEvent[] {
   const law: EnactedLawRecord = {
     id: allocateLawId(state),
@@ -636,12 +759,22 @@ function enactLaw(state: SimState, bill: BillState, commandId: string | null): S
     "LAW_ENACTED",
     [bill.sponsorId],
     [bill.id, law.id],
-    { billId: bill.id, lawId: law.id },
+    {
+      billId: bill.id,
+      lawId: law.id,
+      ...(typeof bill.metadata.lawAction === "string"
+        ? { lawAction: bill.metadata.lawAction }
+        : {}),
+      ...(typeof bill.metadata.targetLawId === "string"
+        ? { targetLawId: bill.metadata.targetLawId }
+        : {}),
+    },
     commandId,
     0.95,
   );
   law.eventIds = [ev.id];
   state.legislatureRuntime.enactedLaws[law.id] = law;
+  applyLawProvenance(state, law, bill.metadata);
   bill.status = "enacted";
   bill.enactedDate = state.currentDate;
   bill.enactedLawId = law.id;
@@ -649,6 +782,16 @@ function enactLaw(state: SimState, bill: BillState, commandId: string | null): S
     (id) => id !== bill.id,
   );
   return [ev];
+}
+
+/** Restore option that Repeal should propose for a provision of a target Act. */
+export function repealRestoreOptionId(
+  state: SimState,
+  provisionId: string,
+  targetLawId?: string,
+): string | null {
+  if (targetLawId) return restoreOptionForRepealedAct(state, provisionId, targetLawId);
+  return previousProvisionOptionId(state, provisionId);
 }
 
 export function castPlayerVote(

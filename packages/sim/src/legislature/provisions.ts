@@ -1,8 +1,9 @@
 import type { SimState } from "../types.js";
 import { policyIndexDelta } from "../economy/policy.js";
 import type { NationalEconomyIndices } from "../economy/types.js";
-import type { PolicyItem } from "./types.js";
+import type { PolicyItem, ProvisionEnactmentRecord } from "./types.js";
 import type { IdeologyAxis } from "../agents/types.js";
+import type { IsoDate } from "../calendar.js";
 
 export type LegislativeProvisionOption = {
   id: string;
@@ -22,7 +23,7 @@ export type LegislativeProvisionOption = {
   dimensionEffects?: Partial<Record<IdeologyAxis, number>>;
   /** Discrete parameter for numeric/threshold-style controls. */
   parameterValue?: number;
-  controlHint?: "categorical" | "numeric" | "binary" | "threshold";
+  controlHint?: "categorical" | "numeric" | "binary" | "threshold" | "percentage" | "duration";
 };
 
 export type LegislativeProvisionDefinition = {
@@ -81,7 +82,7 @@ function option(
     affectedGroups?: readonly string[];
     dimensionEffects?: Partial<Record<IdeologyAxis, number>>;
     parameterValue?: number;
-    controlHint?: "categorical" | "numeric" | "binary" | "threshold";
+    controlHint?: "categorical" | "numeric" | "binary" | "threshold" | "percentage" | "duration";
   },
 ): LegislativeProvisionOption {
   return {
@@ -135,10 +136,10 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
         },
       ),
       option(
-        "keep_current_coverage",
+        "founding_workplace_bargaining",
         "Workplace bargaining with voluntary sector agreements",
         "Leaves existing workplace and voluntary sector agreements in force.",
-        "Collective Bargaining Continuity Bill",
+        "Collective Bargaining Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -224,10 +225,10 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
         },
       ),
       option(
-        "keep_income_test",
+        "founding_income_tested_benefit",
         "Income-tested benefit for low- and middle-income households",
         "Retains the present income-tested child benefit.",
-        "Family Support Continuity Bill",
+        "Family Support Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -332,10 +333,10 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
         },
       ),
       option(
-        "keep_mixed_system",
+        "founding_mixed_rail",
         "Mixed public infrastructure and private train operations",
         "Retains public infrastructure and private train operations.",
-        "Rail Operations Continuity Bill",
+        "Rail Operations Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -419,10 +420,10 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
         },
       ),
       option(
-        "keep_injury_test",
+        "founding_injury_safeguards",
         "Cabinet may impose temporary safeguards after an injury finding",
         "Retains temporary safeguards after an independent injury finding.",
-        "Trade Safeguards Continuity Bill",
+        "Trade Safeguards Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -493,10 +494,10 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
         },
       ),
       option(
-        "keep_current_rules",
+        "founding_provincial_approvals",
         "Provinces set approval rules within national safety law",
         "Retains provincial approvals under national safety law.",
-        "Planning Administration Continuity Bill",
+        "Planning Administration Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -567,10 +568,10 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
         },
       ),
       option(
-        "keep_current_schedule",
+        "founding_clean_power_schedule",
         "Utilities follow a gradual national clean-power schedule",
         "Retains the existing clean-power schedule.",
-        "Clean Power Continuity Bill",
+        "Clean Power Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -653,10 +654,10 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
         },
       ),
 option(
-        "keep_statutory_limit",
+        "founding_statutory_limit",
         "National law permits abortion within a statutory time limit",
         "Retains the existing national time limit and medical exceptions.",
-        "Reproductive Health Continuity Bill",
+        "Reproductive Health Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -725,10 +726,10 @@ option(
         },
       ),
 option(
-        "keep_five_year_route",
+        "founding_five_year_residency",
         "Five-year lawful-residence route with language and civic requirements",
         "Retains the present five-year route and civic requirements.",
-        "Residency Law Continuity Bill",
+        "Residency Law Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -796,10 +797,10 @@ option(
         },
       ),
 option(
-        "keep_provincial_review",
+        "founding_provincial_review",
         "Provincial bodies investigate complaints under national minimum standards",
         "Retains provincial review bodies and national minimum standards.",
-        "Police Review Continuity Bill",
+        "Police Review Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -868,10 +869,10 @@ option(
         },
       ),
 option(
-        "keep_limited_surcharge",
+        "founding_limited_surcharge",
         "Provinces may levy a limited property surcharge",
         "Retains the present provincial property-surcharge authority.",
-        "Provincial Revenue Continuity Bill",
+        "Provincial Revenue Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -941,10 +942,10 @@ option(
         },
       ),
 option(
-        "keep_current_renewal",
+        "founding_assembly_renewal",
         "Assembly approval is required after the initial emergency period",
         "Retains the existing Assembly renewal deadline.",
-        "Emergency Administration Continuity Bill",
+        "Emergency Powers Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -957,7 +958,7 @@ option(
         "cabinet_continuity_window",
         "Cabinet continuity window",
         "Allows Cabinet to maintain designated emergency measures for a longer initial window before a floor vote.",
-        "Emergency Continuity Bill",
+        "Emergency Continuity Window Act",
         {
           direction: 1,
           magnitude: 0.58,
@@ -1013,10 +1014,10 @@ option(
         },
       ),
 option(
-        "keep_current_disclosure",
+        "founding_campaign_disclosure",
         "Large donations are published during the campaign",
         "Retains campaign-period publication of large donations.",
-        "Election Disclosure Continuity Bill",
+        "Campaign Disclosure Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -1055,39 +1056,14 @@ option(
           magnitude: 0.52,
           fiscalImpact: -0.04,
           affectedGroups: groupsForIssue("ISS_CONCORD"),
-        },
-      ),
-            option(
-        "national_vendor_priority",
-        "National vendor priority",
-        "Requires national firms to receive preference in Concord procurement bids.",
-        "Defense Vendor Priority Bill",
-        {
-          direction: -0.25,
-          magnitude: 0.42,
-          fiscalImpact: -0.02,
-          affectedGroups: groupsForIssue("ISS_CONCORD"),
           controlHint: "binary",
         },
       ),
       option(
-        "multilateral_framework",
-        "Multilateral framework",
-        "Authorizes standing multilateral procurement with Concord allies.",
-        "Allied Procurement Framework Bill",
-        {
-          direction: 0.35,
-          magnitude: 0.55,
-          fiscalImpact: 0.05,
-          affectedGroups: groupsForIssue("ISS_CONCORD"),
-          controlHint: "categorical",
-        },
-      ),
-option(
-        "keep_project_review",
+        "founding_cabinet_review",
         "Lorsain may join projects after separate Cabinet approval",
         "Retains project-by-project participation after Cabinet review.",
-        "Defense Cooperation Continuity Bill",
+        "Defense Cooperation Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -1106,6 +1082,7 @@ option(
           magnitude: 0.66,
           fiscalImpact: 0.08,
           affectedGroups: groupsForIssue("ISS_CONCORD"),
+          controlHint: "binary",
         },
       ),
     ]
@@ -1155,10 +1132,10 @@ option(
         },
       ),
 option(
-        "keep_finding_process",
+        "founding_executive_finding",
         "Targeted sanctions require a published executive finding",
         "Retains targeted sanctions after a published executive finding.",
-        "Sanctions Procedure Continuity Bill",
+        "Sanctions Procedure Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -1226,10 +1203,10 @@ option(
         },
       ),
 option(
-        "keep_current_funding",
+        "founding_annual_budget",
         "Readiness funding follows the enacted annual budget",
         "Retains the current equipment-readiness appropriation.",
-        "Readiness Funding Continuity Bill",
+        "Defense Readiness Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -1298,10 +1275,10 @@ option(
         },
       ),
 option(
-        "keep_current_coverage",
+        "founding_limited_copayments",
         "National insurance covers essential primary care with limited copayments",
         "Retains existing primary-care benefits and copayments.",
-        "Primary Care Continuity Bill",
+        "Primary Care Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -1369,10 +1346,10 @@ option(
         },
       ),
 option(
-        "keep_capped_tuition",
+        "founding_capped_tuition",
         "Students pay capped tuition with income-tested grants",
         "Retains the current tuition cap and grant rules.",
-        "Higher Education Continuity Bill",
+        "Higher Education Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -1430,10 +1407,10 @@ option(
         },
       ),
       option(
-        "keep_current_schedule",
+        "founding_progressive_schedule",
         "37% top marginal rate",
         "Retains the current progressive schedule with a thirty-seven percent top rate.",
-        "Income Tax Continuity Bill",
+        "Income Tax Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -1495,10 +1472,10 @@ option(
         },
       ),
       option(
-        "keep_current_duration",
+        "founding_twelve_week_duration",
         "Twelve-week insured period",
         "Retains twelve weeks of earnings-related insured benefits.",
-        "Employment Insurance Continuity Bill",
+        "Employment Insurance Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -1589,7 +1566,7 @@ option(
         "mandatory_ballot",
         "Mandatory ballot",
         "Retains the supervised workplace ballot for recognition.",
-        "Union Ballot Continuity Bill",
+        "Union Recognition Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -1645,10 +1622,10 @@ option(
         },
       ),
 option(
-        "keep_seven_days",
+        "founding_seven_day_notice",
         "Unions must give seven days' notice before protected action",
         "Retains the seven-day notice requirement.",
-        "Strike Notice Continuity Bill",
+        "Strike Notice Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -1703,10 +1680,10 @@ option(
         },
       ),
 option(
-        "keep_current_fund",
+        "founding_provincial_cofinance",
         "The national fund co-finances provincial social housing",
         "Retains current public-housing capital grants.",
-        "Public Housing Continuity Bill",
+        "Public Housing Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -1761,10 +1738,10 @@ option(
         },
       ),
 option(
-        "keep_voluntary_grants",
+        "founding_voluntary_transit_grants",
         "Cities may seek grants for housing near major transit",
         "Retains voluntary grants for transit-oriented housing plans.",
-        "Transit Housing Continuity Bill",
+        "Transit Housing Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -1819,10 +1796,10 @@ option(
         },
       ),
 option(
-        "keep_current_finance",
+        "founding_ordinary_appropriations",
         "Large projects use ordinary appropriations and private lending",
         "Retains ordinary appropriations and project lending.",
-        "Infrastructure Finance Continuity Bill",
+        "Infrastructure Finance Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -1877,10 +1854,10 @@ option(
         },
       ),
 option(
-        "keep_emergency_support",
+        "founding_emergency_support",
         "Emergency farm support requires a declared market disruption",
         "Retains support after a declared market disruption.",
-        "Farm Support Continuity Bill",
+        "Farm Support Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -1938,10 +1915,10 @@ option(
         },
       ),
       option(
-        "keep_current_levy",
+        "founding_forty_five_levy",
         "45 per tonne levy",
         "Retains the current forty-five currency unit levy and rebate schedule.",
-        "Carbon Pricing Continuity Bill",
+        "Carbon Pricing Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -1998,27 +1975,14 @@ option(
           magnitude: 0.62,
           fiscalImpact: null,
           affectedGroups: groupsForIssue("ISS_LIBERTY"),
+          controlHint: "binary",
         },
       ),
-            option(
-        "warrant_within_twenty_four_hours",
-        "Warrant within twenty-four hours",
-        "Requires a warrant within twenty-four hours after any emergency access.",
-        "Surveillance Warrant Timing Bill",
-        {
-          direction: 0.25,
-          magnitude: 0.45,
-          fiscalImpact: 0.01,
-          affectedGroups: groupsForIssue("ISS_LIBERTY"),
-          parameterValue: 24,
-          controlHint: "numeric",
-        },
-      ),
-option(
-        "keep_prior_warrant",
+      option(
+        "founding_judicial_warrant",
         "Police need a judicial warrant to obtain private communications",
         "Retains the prior judicial-warrant requirement.",
-        "Communications Privacy Continuity Bill",
+        "Communications Privacy Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -2037,6 +2001,7 @@ option(
           magnitude: 0.62,
           fiscalImpact: 0.03,
           affectedGroups: groupsForIssue("ISS_LIBERTY"),
+          controlHint: "binary",
         },
       ),
     ]
@@ -2059,7 +2024,7 @@ option(
           affectedGroups: groupsForIssue("ISS_POLICING"),
         },
       ),
-            option(
+      option(
         "drug_treatment_alternative",
         "Drug-treatment alternative",
         "Expands court-ordered treatment as an alternative to custody for qualifying offenses.",
@@ -2072,11 +2037,11 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
-        "keep_judicial_ranges",
+      option(
+        "founding_judicial_ranges",
         "Judges apply statutory ranges with stated reasons for departure",
         "Retains current sentencing ranges and reasoned departures.",
-        "Sentencing Continuity Bill",
+        "Sentencing Code",
         {
           direction: 0,
           magnitude: 0.06,
@@ -2132,10 +2097,10 @@ option(
         },
       ),
       option(
-        "keep_shared_administration",
+        "founding_shared_administration",
         "National standards, provincial staffing",
         "Retains national standards with provincial staffing.",
-        "Election Administration Continuity Bill",
+        "Election Administration Code",
         {
           direction: 0,
           magnitude: 0.08,
@@ -2189,27 +2154,14 @@ option(
           magnitude: 0.57,
           fiscalImpact: -0.07,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
+          controlHint: "binary",
         },
       ),
-            option(
-        "middle_income_expansion",
-        "Middle-income expansion",
-        "Extends subsidized meals to households up to 150% of median income.",
-        "School Meals Expansion Bill",
-        {
-          direction: 0.35,
-          magnitude: 0.48,
-          fiscalImpact: 0.08,
-          affectedGroups: groupsForIssue("ISS_WELFARE"),
-          parameterValue: 150,
-          controlHint: "threshold",
-        },
-      ),
-option(
-        "keep_income_test",
+      option(
+        "founding_income_tested_meals",
         "Subsidized meals are available through an income test",
         "Retains current school-meal eligibility.",
-        "School Meals Continuity Bill",
+        "School Meals Code",
         {
           direction: 0,
           magnitude: 0.1,
@@ -2228,6 +2180,7 @@ option(
           magnitude: 0.74,
           fiscalImpact: 0.15,
           affectedGroups: groupsForIssue("ISS_WELFARE"),
+          controlHint: "binary",
         },
       ),
     ]
@@ -2266,7 +2219,7 @@ option(
         "national_insurance",
         "National insurance",
         "Retains national insurance with public and contracted providers.",
-        "Health Insurance Continuity Bill",
+        "Health Insurance Code",
         {
           direction: 0.15,
           magnitude: 0.2,
@@ -2323,7 +2276,7 @@ option(
         "negotiated_prices",
         "National negotiation",
         "Retains national negotiation with separate insurer reimbursement.",
-        "Medicines Purchasing Continuity Bill",
+        "Medicines Purchasing Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2381,7 +2334,7 @@ option(
         "public_hospital_boards",
         "Public hospital boards",
         "Retains locally governed public hospital boards under national standards.",
-        "Hospital Governance Continuity Bill",
+        "Hospital Governance Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2425,7 +2378,7 @@ option(
         "income_tested_subsidy",
         "Income-tested subsidy",
         "Retains income-tested support for licensed childcare.",
-        "Childcare Support Continuity Bill",
+        "Childcare Support Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2493,7 +2446,7 @@ option(
         "tripartite_apprenticeships",
         "Tripartite apprenticeships",
         "Retains joint employer, union and college apprenticeship standards.",
-        "Apprenticeship Continuity Bill",
+        "Apprenticeship Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2553,7 +2506,7 @@ option(
         "commission_recommendation",
         "15 per hour commission floor",
         "Retains annual recommendations from the independent wage commission at fifteen units.",
-        "Minimum Wage Continuity Bill",
+        "Minimum Wage Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2626,7 +2579,7 @@ option(
         "case_by_case_test",
         "Case-by-case test",
         "Retains the ordinary employment-status test for platform work.",
-        "Platform Work Continuity Bill",
+        "Platform Work Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2685,7 +2638,7 @@ option(
         "twelve_week_insurance",
         "Twelve-week insurance",
         "Retains twelve weeks of earnings-related social-insurance leave.",
-        "Family Leave Continuity Bill",
+        "Family Leave Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2752,26 +2705,14 @@ option(
           direction: -0.8,
           fiscalImpact: -0.03,
           affectedGroups: ["Renters", "Landlords", "Cities"],
-        },
-      ),
-            option(
-        "vacancy_rent_adjustment",
-        "Vacancy rent adjustment",
-        "Allows rent adjustments between tenancies in high-pressure areas with notice rules.",
-        "Vacancy Rent Adjustment Bill",
-        {
-          direction: 0.25,
-          magnitude: 0.45,
-          fiscalImpact: 0.02,
-          affectedGroups: groupsForIssue("ISS_HOUSING"),
           controlHint: "binary",
         },
       ),
-option(
+      option(
         "pressure_area_caps",
         "High-pressure area caps",
         "Retains local caps in designated high-pressure housing areas.",
-        "Rent Stabilization Continuity Bill",
+        "Rent Stabilization Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2789,6 +2730,7 @@ option(
           direction: 0.8,
           fiscalImpact: 0.08,
           affectedGroups: ["Renters", "Landlords", "Housing agencies"],
+          controlHint: "binary",
         },
       ),
     ]
@@ -2817,7 +2759,7 @@ option(
         "building_value_tax",
         "Property-value tax",
         "Retains taxation of both land and buildings under local assessment.",
-        "Property Tax Continuity Bill",
+        "Property Tax Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2884,7 +2826,7 @@ option(
         "protected_allowance",
         "Protected allowance",
         "Retains the current protected allowance and progressive estate rates.",
-        "Inheritance Tax Continuity Bill",
+        "Inheritance Tax Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -2943,7 +2885,7 @@ option(
         "current_tax_base",
         "21% national rate",
         "Retains the twenty-one percent national rate and current deduction rules.",
-        "Corporate Tax Continuity Bill",
+        "Corporate Tax Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -3016,7 +2958,7 @@ option(
         "mixed_regulated_system",
         "Mixed regulated system",
         "Retains regulated utilities and mixed public-private generation.",
-        "Electricity Market Continuity Bill",
+        "Electricity Market Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -3086,7 +3028,7 @@ option(
         "case_by_case_authorization",
         "Case-by-case authorization",
         "Retains separate legislative approval for each new nuclear project.",
-        "Nuclear Energy Continuity Bill",
+        "Nuclear Energy Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -3144,7 +3086,7 @@ option(
         "shared_enforcement",
         "Shared enforcement",
         "Retains provincial inspection under national discharge standards.",
-        "Water Standards Continuity Bill",
+        "Water Standards Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -3201,7 +3143,7 @@ option(
         "targeted_rural_grants",
         "Targeted rural grants",
         "Retains grants for unserved rural and remote communities.",
-        "Broadband Access Continuity Bill",
+        "Broadband Access Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -3246,7 +3188,7 @@ option(
         "standard_review",
         "Standard review",
         "Retains an interview, legal review and appeal during processing.",
-        "Asylum Procedure Continuity Bill",
+        "Asylum Procedure Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -3317,7 +3259,7 @@ option(
         "single_transferable_vote",
         "Single transferable vote",
         "Retains multi-member constituency elections by transferable vote.",
-        "Electoral System Continuity Bill",
+        "Electoral System Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -3391,7 +3333,7 @@ option(
         "training_and_storage_license",
         "Training and storage license",
         "Retains background, training, renewal and safe-storage requirements.",
-        "Firearms Licensing Continuity Bill",
+        "Firearms Licensing Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -3450,7 +3392,7 @@ option(
         "provincial_land_controls",
         "Provincial land controls",
         "Retains provincial conversion rules and national review of large foreign purchases.",
-        "Farmland Policy Continuity Bill",
+        "Farmland Policy Code",
         {
           direction: 0,
           magnitude: 0.2,
@@ -3503,6 +3445,11 @@ export function legislativeProvisionOption(
         .slice()
         .sort((a, b) => b.direction - a.direction || a.id.localeCompare(b.id))[0] ?? null
     );
+  // Phase 11.4: keep_current_* → founding_* migration aliases for old saves.
+  if (optionId.startsWith("keep_")) {
+    const founding = definition.options.find((candidate) => candidate.founding);
+    if (founding) return founding;
+  }
   return null;
 }
 
@@ -3555,6 +3502,10 @@ export function currentProvisionOption(
   state: SimState,
   provisionId: string,
 ): LegislativeProvisionOption | null {
+  const top = provisionHistory(state, provisionId).at(-1);
+  if (top) {
+    return legislativeProvisionOption(provisionId, top.optionId);
+  }
   const laws = Object.values(state.legislatureRuntime.enactedLaws)
     .filter((law) => law.operative)
     .sort((a, b) => b.enactedDate.localeCompare(a.enactedDate) || b.id.localeCompare(a.id));
@@ -3563,6 +3514,78 @@ export function currentProvisionOption(
     if (item) return optionForPolicyItem(item);
   }
   return legislativeProvision(provisionId)?.options.find((option) => option.founding) ?? null;
+}
+
+/** Enactment stack for a provision (oldest → newest). Empty means founding baseline. */
+export function provisionHistory(
+  state: SimState,
+  provisionId: string,
+): readonly ProvisionEnactmentRecord[] {
+  return state.legislatureRuntime.provisionHistory[provisionId] ?? [];
+}
+
+export type CurrentLawSource = {
+  provisionId: string;
+  optionId: string;
+  optionLabel: string;
+  lawId: string | null;
+  lawTitle: string | null;
+  enactedDate: IsoDate | null;
+  previousOptionId: string | null;
+  previousOptionLabel: string | null;
+  founding: boolean;
+};
+
+/** Source Act / prior rule metadata for Lawbook display. */
+export function currentLawSource(state: SimState, provisionId: string): CurrentLawSource {
+  const history = provisionHistory(state, provisionId);
+  const top = history.at(-1);
+  const foundingId = foundingOptionId(provisionId);
+  const current = currentProvisionOption(state, provisionId);
+  const optionId = top?.optionId ?? current?.id ?? foundingId ?? "";
+  const option = optionId ? legislativeProvisionOption(provisionId, optionId) : null;
+  const previousOptionId = top?.previousOptionId ?? null;
+  const previousOption = previousOptionId
+    ? legislativeProvisionOption(provisionId, previousOptionId)
+    : null;
+  const law = top ? (state.legislatureRuntime.enactedLaws[top.lawId] ?? null) : null;
+  return {
+    provisionId,
+    optionId,
+    optionLabel: option?.label ?? current?.label ?? "Founding statutory position",
+    lawId: top?.lawId ?? null,
+    lawTitle: law?.title ?? null,
+    enactedDate: top?.enactedDate ?? null,
+    previousOptionId,
+    previousOptionLabel: previousOption?.label ?? null,
+    founding: !top,
+  };
+}
+
+/** Option that would be restored if the current top Act for this provision were repealed. */
+export function previousProvisionOptionId(state: SimState, provisionId: string): string | null {
+  const history = provisionHistory(state, provisionId);
+  const top = history.at(-1);
+  if (!top) return foundingOptionId(provisionId);
+  if (top.previousOptionId) return top.previousOptionId;
+  const prior = history.at(-2);
+  return prior?.optionId ?? foundingOptionId(provisionId);
+}
+
+/**
+ * Option restored when a specific Act is repealed for this provision.
+ * Returns null when that Act did not set the provision or is not the current top
+ * (current law stays with a later Act — omit from repeal draft).
+ */
+export function restoreOptionForRepealedAct(
+  state: SimState,
+  provisionId: string,
+  targetLawId: string,
+): string | null {
+  const history = provisionHistory(state, provisionId);
+  const top = history.at(-1);
+  if (!top || top.lawId !== targetLawId) return null;
+  return top.previousOptionId ?? foundingOptionId(provisionId);
 }
 
 export function estimatedProvisionEffects(item: PolicyItem): Partial<NationalEconomyIndices> {

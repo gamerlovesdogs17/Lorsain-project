@@ -6,6 +6,7 @@ import {
   CONSTITUTIONAL_RULE_IDS,
   currentAssemblyMemberIds,
   currentProvisionOption,
+  currentLawSource,
   defaultProvisionOptionId,
   estimatedProvisionEffects,
   getAgentProfile,
@@ -15,6 +16,8 @@ import {
   legislativeProvision,
   partyLegalStatus,
   policyItemForProvision,
+  provisionHistory,
+  restoreOptionForRepealedAct,
   whipEstimate,
   type BillState,
   type CommandResult,
@@ -200,6 +203,7 @@ function provisionChoices(
   definition: (typeof LEGISLATIVE_PROVISIONS)[number];
   options: PolicyChoiceOption[];
   currentLabel: string;
+  controlHint: PolicyChoiceOption["controlHint"] | null;
 } {
   const definition = legislativeProvision(definitionId) ?? LEGISLATIVE_PROVISIONS[0]!;
   const current = currentProvisionOption(snap, definition.id);
@@ -215,15 +219,28 @@ function provisionChoices(
         summary: oneLine(opt.change),
         current: false,
         groups: opt.affectedGroups,
+        ...(opt.parameterValue != null ? { parameterValue: opt.parameterValue } : {}),
+        ...(opt.controlHint ? { controlHint: opt.controlHint } : {}),
       };
       if (cost) choice.cost = cost;
       if (effects?.length) choice.effects = effects;
       return choice;
     });
+  const controlHint =
+    options.find((opt) => opt.controlHint)?.controlHint ??
+    definition.options.find((opt) => opt.controlHint && !opt.founding)?.controlHint ??
+    null;
+  const currentParam =
+    current?.parameterValue != null
+      ? current.controlHint === "percentage"
+        ? ` (${current.parameterValue}%)`
+        : ` (${current.parameterValue})`
+      : "";
   return {
     definition,
     options,
-    currentLabel: current?.label ?? definition.currentLawLabel,
+    currentLabel: `${current?.label ?? definition.currentLawLabel}${currentParam}`,
+    controlHint,
   };
 }
 
@@ -297,6 +314,10 @@ export function AssemblyPage(props: {
   const [lawbookMode, setLawbookMode] = useState<LawbookBrowseMode>("provisions");
   const [lawbookArea, setLawbookArea] = useState("");
   const [lawbookActId, setLawbookActId] = useState("");
+  const [draftLawAction, setDraftLawAction] = useState<"amend" | "replace" | "repeal" | null>(
+    null,
+  );
+  const [draftTargetLawId, setDraftTargetLawId] = useState<string | null>(null);
 
   const mps = currentAssemblyMemberIds(props.world, props.snap);
   const seatCount = props.world.legislativeConstitution.assemblySeatCount;
@@ -376,11 +397,14 @@ export function AssemblyPage(props: {
       const definition = legislativeProvision(item.provisionId);
       if (!definition) return [];
       if (action === "repeal") {
-        const founding = definition.options.find((option) => option.founding);
+        const restoreId = restoreOptionForRepealedAct(props.snap, item.provisionId, law.id);
         return [
           {
             provisionId: item.provisionId,
-            optionId: founding?.id ?? defaultProvisionOptionId(item.provisionId),
+            optionId:
+              restoreId ??
+              item.optionId ??
+              defaultProvisionOptionId(item.provisionId),
           },
         ];
       }
@@ -393,6 +417,8 @@ export function AssemblyPage(props: {
     });
     if (!rows.length) return;
     setDraftProvisions(rows);
+    setDraftLawAction(action);
+    setDraftTargetLawId(law.id);
     setTitle(
       action === "amend"
         ? `Amendment to ${law.title}`
@@ -402,8 +428,10 @@ export function AssemblyPage(props: {
     );
     setSummary(
       action === "repeal"
-        ? `Returns operative provisions in ${law.title} to founding statutory baselines.`
-        : `Builds on provisions enacted in ${law.title} (${law.enactedDate}).`,
+        ? `Restores prior enacted rules superseded by ${law.title} (not founding baselines unless that Act was the first change).`
+        : action === "replace"
+          ? `Replaces operative provisions in ${law.title} (${law.enactedDate}).`
+          : `Builds on provisions enacted in ${law.title} (${law.enactedDate}).`,
     );
     setChamberTab("draft");
   };
@@ -1073,6 +1101,7 @@ export function AssemblyPage(props: {
                                     selectedId={selectedOption}
                                     onSelect={setAmendOption}
                                     options={target.options}
+                                    controlHint={target.controlHint ?? null}
                                   />
                                   <button
                                     type="button"
@@ -1493,7 +1522,7 @@ export function AssemblyPage(props: {
                   actions={<StatusBadge>{draftProvisions.length}/8 provisions</StatusBadge>}
                 />
                 {draftProvisions.map((draft, index) => {
-                  const { definition, options, currentLabel } = provisionChoices(
+                  const { definition, options, currentLabel, controlHint } = provisionChoices(
                     props.snap,
                     draft.provisionId,
                   );
@@ -1519,6 +1548,8 @@ export function AssemblyPage(props: {
                                   : row,
                               ),
                             );
+                            setDraftLawAction(null);
+                            setDraftTargetLawId(null);
                           }}
                         >
                           {LEGISLATIVE_PROVISIONS.map((candidate) => (
@@ -1540,6 +1571,7 @@ export function AssemblyPage(props: {
                         currentLabel={currentLabel}
                         options={options}
                         selectedId={draft.optionId}
+                        controlHint={controlHint ?? null}
                         onSelect={(optionId) =>
                           setDraftProvisions((rows) =>
                             rows.map((row, rowIndex) =>
@@ -1618,10 +1650,14 @@ export function AssemblyPage(props: {
                       title: title.trim(),
                       summary: summary.trim(),
                       policyItems: draftItems,
+                      ...(draftLawAction ? { lawAction: draftLawAction } : {}),
+                      ...(draftTargetLawId ? { targetLawId: draftTargetLawId } : {}),
                     });
                     if (props.report(r) && r.ok) {
                       setTitle("");
                       setSummary("");
+                      setDraftLawAction(null);
+                      setDraftTargetLawId(null);
                     }
                     props.onDone();
                   }}
@@ -2041,65 +2077,80 @@ export function AssemblyPage(props: {
                         .slice(0, 50)
                         .map((definition) => {
                           const option = currentProvisionOption(props.snap, definition.id);
-                          const sourceLaws = Object.values(
-                            props.snap.legislatureRuntime.enactedLaws,
-                          )
-                            .filter((law) =>
-                              law.policyItems.some((item) => item.provisionId === definition.id),
-                            )
-                            .sort(
-                              (a, b) =>
-                                b.enactedDate.localeCompare(a.enactedDate) || b.id.localeCompare(a.id),
-                            );
-                          const source = sourceLaws.find((law) => law.operative) ?? null;
+                          const source = currentLawSource(props.snap, definition.id);
+                          const history = provisionHistory(props.snap, definition.id);
+                          const sourceLaw = source.lawId
+                            ? props.snap.legislatureRuntime.enactedLaws[source.lawId]
+                            : null;
                           return (
                             <article key={definition.id} className="current-law-row">
                               <div className="kicker">{definition.category}</div>
                               <strong>{option?.label ?? "No operative rule recorded"}</strong>
                               {option?.change ? <p className="muted">{option.change}</p> : null}
-                              {source ? (
-                                <div className="current-law-source">
+                              <div className="current-law-source">
+                                {source.founding || !sourceLaw ? (
+                                  <span>Source Act: Founding statutory position</span>
+                                ) : (
                                   <span>
-                                    In force from {source.title} · {source.enactedDate}
-                                    {sourceLaws.length > 1
-                                      ? ` · ${sourceLaws.length - 1} earlier amendment${sourceLaws.length === 2 ? "" : "s"}`
-                                      : ""}
+                                    Source Act: {source.lawTitle} · {source.enactedDate}
                                   </span>
+                                )}
+                                {source.previousOptionLabel ? (
+                                  <span className="muted">
+                                    Prior rule: {source.previousOptionLabel}
+                                  </span>
+                                ) : null}
+                                {history.length > 0 ? (
+                                  <span className="muted">
+                                    History:{" "}
+                                    {history
+                                      .map((entry) => {
+                                        const law =
+                                          props.snap.legislatureRuntime.enactedLaws[entry.lawId];
+                                        const opt = legislativeProvision(
+                                          definition.id,
+                                        )?.options.find((row) => row.id === entry.optionId);
+                                        return `${law?.title ?? entry.lawId} → ${opt?.label ?? entry.optionId}`;
+                                      })
+                                      .join(" · ")}
+                                  </span>
+                                ) : (
+                                  <span className="muted">History: founding baseline only</span>
+                                )}
+                                {sourceLaw ? (
                                   <button
                                     type="button"
                                     className="link-button"
                                     onClick={() => {
                                       setChamberTab("business");
-                                      selectBill(source.billId);
+                                      selectBill(sourceLaw.billId);
                                       setBillTab("process");
                                     }}
                                   >
                                     Open act history
                                   </button>
-                                </div>
-                              ) : (
-                                <span className="muted">Founding statutory position</span>
-                              )}
-                              {mp && source ? (
+                                ) : null}
+                              </div>
+                              {mp && sourceLaw?.operative ? (
                                 <div className="lawbook-row-actions row">
                                   <button
                                     type="button"
                                     className="btn ghost"
-                                    onClick={() => preloadLawDraft(source, "amend")}
+                                    onClick={() => preloadLawDraft(sourceLaw, "amend")}
                                   >
                                     Amend
                                   </button>
                                   <button
                                     type="button"
                                     className="btn ghost"
-                                    onClick={() => preloadLawDraft(source, "replace")}
+                                    onClick={() => preloadLawDraft(sourceLaw, "replace")}
                                   >
                                     Replace
                                   </button>
                                   <button
                                     type="button"
                                     className="btn ghost"
-                                    onClick={() => preloadLawDraft(source, "repeal")}
+                                    onClick={() => preloadLawDraft(sourceLaw, "repeal")}
                                   >
                                     Repeal
                                   </button>

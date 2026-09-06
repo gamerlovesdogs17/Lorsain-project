@@ -90,11 +90,13 @@ describe("Phase 11.4 law depth", () => {
     expect(policyIndexDelta(longer).fiscalPressure).toBeCloseTo(longerFx!.fiscalPressure! + 0.16 * 0.04, 5);
   });
 
-  it("expands proposal option counts beyond two for most subjects", () => {
+  it("allows varied proposal option counts with no global minimum quota", () => {
     const counts = LEGISLATIVE_PROVISIONS.map(
       (definition) => proposalOptionsFor(definition.id).length,
     );
-    expect(Math.min(...counts)).toBeGreaterThanOrEqual(3);
+    expect(Math.min(...counts)).toBeGreaterThanOrEqual(1);
     expect(Math.max(...counts)).toBeGreaterThanOrEqual(5);
+    // No forced padding: option counts may differ across subjects.
+    expect(new Set(counts).size).toBeGreaterThan(1);
   });
 });

@@ -28,26 +28,9 @@ for (let i = 0; i < starts.length; i++) {
   const body = provisionsSrc.slice(start, end);
   const options = [...body.matchAll(/\boption\(\s*"/g)].length;
   optionCounts.push(options);
-  if (/controlHint:\s*"(threshold|numeric)"|parameterValue:/.test(body)) {
-    numerical += 1;
-    withParameter += 1;
-  } else if (options <= 3) binary += options === 2 ? 1 : 0;
-  else categorical += 1;
-  if (options >= 3 && !/controlHint:\s*"(threshold|numeric)"|parameterValue:/.test(body)) {
-    categorical += options === 2 ? 0 : 1;
-  }
-}
-// Recalculate categorical cleanly
-categorical = 0;
-binary = 0;
-numerical = 0;
-withParameter = 0;
-for (let i = 0; i < starts.length; i++) {
-  const start = starts[i].index ?? 0;
-  const end = i + 1 < starts.length ? (starts[i + 1].index ?? provisionsSrc.length) : provisionsSrc.length;
-  const body = provisionsSrc.slice(start, end);
-  const options = [...body.matchAll(/\boption\(\s*"/g)].length;
-  const isNumeric = /controlHint:\s*"(threshold|numeric)"|parameterValue:/.test(body);
+  const isNumeric = /controlHint:\s*"(threshold|numeric|percentage|duration)"|parameterValue:/.test(
+    body,
+  );
   if (isNumeric) {
     numerical += 1;
     withParameter += 1;
@@ -57,22 +40,31 @@ for (let i = 0; i < starts.length; i++) {
 
 const proposalCounts = optionCounts.map((n) => Math.max(0, n - 1));
 const distribution = {
+  1: proposalCounts.filter((n) => n === 1).length,
   2: proposalCounts.filter((n) => n === 2).length,
   3: proposalCounts.filter((n) => n === 3).length,
   4: proposalCounts.filter((n) => n === 4).length,
   "5+": proposalCounts.filter((n) => n >= 5).length,
 };
 
-const subjectIds = [...changesSrc.matchAll(/^\s+id:\s*"(art\d+_[^"]+)"/gm)].map((m) => m[1]);
-const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+const subjectBlocks = [
+  ...changesSrc.matchAll(
+    /^\s+\{\s*\n\s+id:\s*"(art\d+_[^"]+)",\s*\n\s+articleId:\s*"(ARTICLE_[IVX]+)"/gm,
+  ),
+];
+const subjectIds = subjectBlocks.map((m) => m[1]);
 const articleCoverage = {};
-for (let i = 1; i <= 12; i++) {
-  const prefix = `art${i}_`;
-  const subjects = subjectIds.filter((id) => id.startsWith(prefix));
-  articleCoverage[`ARTICLE_${roman[i - 1]}`] = {
-    subjects: subjects.length,
-    subjectIds: subjects,
-  };
+for (const article of constitution.document.articles) {
+  articleCoverage[article.id] = { subjects: 0, subjectIds: [] };
+}
+for (const match of subjectBlocks) {
+  const subjectId = match[1];
+  const articleId = match[2];
+  if (!articleCoverage[articleId]) {
+    articleCoverage[articleId] = { subjects: 0, subjectIds: [] };
+  }
+  articleCoverage[articleId].subjects += 1;
+  articleCoverage[articleId].subjectIds.push(subjectId);
 }
 
 const articles = constitution.document.articles;

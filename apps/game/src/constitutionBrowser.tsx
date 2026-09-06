@@ -13,6 +13,13 @@ import {
   type Simulation,
 } from "@lorsain/sim";
 import { SectionDivider, StatusBadge } from "./ui/kit.js";
+import { partyName } from "./format.js";
+
+type PackageChangeDraft = {
+  subjectId: string;
+  alternativeId: string;
+  designatedPartyId?: string | null;
+};
 
 const METRIC_EFFECT_LABELS: Record<string, string> = {
   institutionalStability: "Institutional stability",
@@ -44,6 +51,7 @@ type ConstitutionTopic = (typeof CONSTITUTION_TOPIC_CHIPS)[number];
 function constitutionSubjectTopic(subjectId: string): ConstitutionTopic {
   const byId: Record<string, ConstitutionTopic> = {
     art1_republic_form: "Rights",
+    art3_executive_authority: "Executive",
     art1_executive_authority: "Executive",
     art2_civil_liberties: "Rights",
     art2_citizenship_guard: "Rights",
@@ -54,6 +62,7 @@ function constitutionSubjectTopic(subjectId: string): ConstitutionTopic {
     art5_veto_override: "Legislature",
     art6_cabinet_formation: "Executive",
     art7_party_system: "Parties",
+    art2_press_freedom: "Rights",
     art7_press_freedom: "Rights",
     art8_court_term: "Judiciary",
     art8_judicial_review: "Judiciary",
@@ -168,8 +177,8 @@ function previewTextForClause(
   world: KernelWorld,
   snap: SimState,
   clauseId: string,
-  packageChanges: ReadonlyArray<{ subjectId: string; alternativeId: string }>,
-  draft?: { subjectId: string; alternativeId: string } | null,
+  packageChanges: ReadonlyArray<PackageChangeDraft>,
+  draft?: PackageChangeDraft | null,
 ): string | null {
   const matches = [
     ...packageChanges,
@@ -199,11 +208,10 @@ export function ConstitutionBrowser(props: {
   const [selectedClauseId, setSelectedClauseId] = useState(
     constitutionDocument?.articles[0]?.sections[0]?.clauses[0]?.id ?? "",
   );
-  const [amendmentPackage, setAmendmentPackage] = useState<
-    Array<{ subjectId: string; alternativeId: string }>
-  >([]);
+  const [amendmentPackage, setAmendmentPackage] = useState<PackageChangeDraft[]>([]);
   const [draftSubjectId, setDraftSubjectId] = useState("");
   const [draftAlternativeId, setDraftAlternativeId] = useState("");
+  const [draftDesignatedPartyId, setDraftDesignatedPartyId] = useState("");
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogArticleId, setCatalogArticleId] = useState("");
   const [catalogTopics, setCatalogTopics] = useState<ConstitutionTopic[]>([]);
@@ -248,8 +256,25 @@ export function ConstitutionBrowser(props: {
 
   const draftPreview =
     activeSubject && activeAlternative
-      ? { subjectId: activeSubject.id, alternativeId: activeAlternative.id }
+      ? {
+          subjectId: activeSubject.id,
+          alternativeId: activeAlternative.id,
+          ...(activeAlternative.orderPatch?.partySystem === "single_legal_party"
+            ? { designatedPartyId: draftDesignatedPartyId || null }
+            : {}),
+        }
       : null;
+
+  const partyOptions = useMemo(() => {
+    const ids = new Set<string>([
+      ...Object.keys(props.world.partyDefinitions ?? {}),
+      ...Object.keys(props.snap.partyStates ?? {}),
+      ...Object.keys(props.snap.dynamicParties ?? {}),
+    ]);
+    return [...ids]
+      .filter((id) => id !== props.world.independentAggregatePartyId)
+      .sort((a, b) => partyName(props.world, a).localeCompare(partyName(props.world, b)));
+  }, [props.world, props.snap.partyStates, props.snap.dynamicParties]);
 
   const articleNumberById = useMemo(() => {
     const map = new Map<string, string>();
@@ -471,7 +496,18 @@ export function ConstitutionBrowser(props: {
                     Proposed alternative
                     <select
                       value={activeAlternative?.id ?? ""}
-                      onChange={(event) => setDraftAlternativeId(event.target.value)}
+                      onChange={(event) => {
+                        setDraftAlternativeId(event.target.value);
+                        const alt = constitutionAlternative(
+                          activeSubject?.id ?? "",
+                          event.target.value,
+                        );
+                        if (alt?.orderPatch?.partySystem !== "single_legal_party") {
+                          setDraftDesignatedPartyId("");
+                        } else if (!draftDesignatedPartyId && partyOptions[0]) {
+                          setDraftDesignatedPartyId(partyOptions[0]);
+                        }
+                      }}
                     >
                       {proposalAlternatives.map((alt) => (
                         <option key={alt.id} value={alt.id}>
@@ -480,6 +516,22 @@ export function ConstitutionBrowser(props: {
                       ))}
                     </select>
                   </label>
+                  {activeAlternative?.orderPatch?.partySystem === "single_legal_party" ? (
+                    <label>
+                      Designated sole legal party
+                      <select
+                        value={draftDesignatedPartyId}
+                        onChange={(event) => setDraftDesignatedPartyId(event.target.value)}
+                      >
+                        <option value="">Select a party…</option>
+                        {partyOptions.map((partyId) => (
+                          <option key={partyId} value={partyId}>
+                            {partyName(props.world, partyId)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
 
                   {activeAlternative ? (
                     <>
@@ -512,7 +564,9 @@ export function ConstitutionBrowser(props: {
                           !activeSubject ||
                           !activeAlternative ||
                           amendmentPackage.some((row) => row.subjectId === activeSubject.id) ||
-                          amendmentPackage.length >= 8
+                          amendmentPackage.length >= 8 ||
+                          (activeAlternative.orderPatch?.partySystem === "single_legal_party" &&
+                            !draftDesignatedPartyId)
                         }
                         onClick={() => {
                           if (!activeSubject || !activeAlternative) return;
@@ -521,6 +575,9 @@ export function ConstitutionBrowser(props: {
                             {
                               subjectId: activeSubject.id,
                               alternativeId: activeAlternative.id,
+                              ...(activeAlternative.orderPatch?.partySystem === "single_legal_party"
+                                ? { designatedPartyId: draftDesignatedPartyId }
+                                : {}),
                             },
                           ]);
                         }}
@@ -549,6 +606,11 @@ export function ConstitutionBrowser(props: {
                           Change {index + 1}. {subject?.subject ?? change.subjectId}
                         </strong>
                         <span>{alt?.label ?? change.alternativeId}</span>
+                        {change.designatedPartyId ? (
+                          <span className="muted">
+                            Designated party: {partyName(props.world, change.designatedPartyId)}
+                          </span>
+                        ) : null}
                         <button
                           type="button"
                           className="btn ghost"
@@ -587,6 +649,10 @@ export function ConstitutionBrowser(props: {
                 <button
                   type="button"
                   className="btn"
+                  disabled={
+                    activeAlternative.orderPatch?.partySystem === "single_legal_party" &&
+                    !draftDesignatedPartyId
+                  }
                   onClick={() => {
                     const result = props.sim.executeCommand({
                       type: "PROPOSE_CONSTITUTIONAL_PACKAGE",
@@ -594,6 +660,9 @@ export function ConstitutionBrowser(props: {
                         {
                           subjectId: activeSubject.id,
                           alternativeId: activeAlternative.id,
+                          ...(activeAlternative.orderPatch?.partySystem === "single_legal_party"
+                            ? { designatedPartyId: draftDesignatedPartyId }
+                            : {}),
                         },
                       ],
                     });

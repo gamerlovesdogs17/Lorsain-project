@@ -243,6 +243,11 @@ function speakerSchedule(state: SimState, world: KernelWorld): void {
     return bill?.status === "repassage_scheduled";
   });
   const rest = queue.filter((id) => !privileged.includes(id));
+  const playerPendingFloor = new Set(
+    Object.values(state.legislatureRuntime.pendingPlayerVotes)
+      .filter((p) => p.stage === "floor" || p.stage === "repassage")
+      .map((p) => p.billId),
+  );
   if (speaker && speaker !== state.playerPoliticianId) {
     const party = state.politicians[speaker]?.partyId;
     const priorities = new Set(
@@ -260,10 +265,12 @@ function speakerSchedule(state: SimState, world: KernelWorld): void {
         ? state.legislatureRuntime.partyRecommendations[`${party}:${b}`]?.stance
         : null;
       const scoreA =
+        (playerPendingFloor.has(a) ? 8 : 0) +
         (priorities.has(a) ? 4 : 0) +
         (stanceA === "support" ? 2 : stanceA === "oppose" ? -1 : 0) +
         (pa === party ? 1 : 0);
       const scoreB =
+        (playerPendingFloor.has(b) ? 8 : 0) +
         (priorities.has(b) ? 4 : 0) +
         (stanceB === "support" ? 2 : stanceB === "oppose" ? -1 : 0) +
         (pb === party ? 1 : 0);
@@ -272,6 +279,13 @@ function speakerSchedule(state: SimState, world: KernelWorld): void {
         bb?.stageReadyDate ?? bb?.introducedDate ?? "",
       );
       if (ready !== 0) return ready;
+      return a.localeCompare(b);
+    });
+  } else if (playerPendingFloor.size > 0) {
+    rest.sort((a, b) => {
+      const pa = playerPendingFloor.has(a) ? 1 : 0;
+      const pb = playerPendingFloor.has(b) ? 1 : 0;
+      if (pa !== pb) return pb - pa;
       return a.localeCompare(b);
     });
   }

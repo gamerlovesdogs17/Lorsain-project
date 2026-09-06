@@ -338,6 +338,14 @@ export function DataTable(props: {
   );
 }
 
+export type PolicyControlHint =
+  | "categorical"
+  | "numeric"
+  | "binary"
+  | "threshold"
+  | "percentage"
+  | "duration";
+
 export type PolicyChoiceOption = {
   id: string;
   label: string;
@@ -346,7 +354,18 @@ export type PolicyChoiceOption = {
   cost?: string;
   current?: boolean;
   groups?: readonly string[];
+  parameterValue?: number;
+  controlHint?: PolicyControlHint;
 };
+
+function formatParameter(opt: PolicyChoiceOption): string | null {
+  if (opt.parameterValue == null) return null;
+  const hint = opt.controlHint;
+  if (hint === "percentage") return `${opt.parameterValue}%`;
+  if (hint === "duration") return `${opt.parameterValue}`;
+  if (hint === "threshold") return `${opt.parameterValue}`;
+  return String(opt.parameterValue);
+}
 
 /** Compact categorical policy chooser for current law and named legal alternatives. */
 export function PolicyChoiceGroup(props: {
@@ -356,47 +375,125 @@ export function PolicyChoiceGroup(props: {
   selectedId: string;
   onSelect: (id: string) => void;
   details?: ReactNode;
+  /** When set, renders control-specific UI instead of identical giant cards. */
+  controlHint?: PolicyControlHint | null;
 }) {
   const [open, setOpen] = useState(false);
+  const hint =
+    props.controlHint ??
+    props.options.find((o) => o.controlHint)?.controlHint ??
+    "categorical";
+  const selected = props.options.find((o) => o.id === props.selectedId) ?? null;
+  const useCards = hint === "categorical" && props.options.length > 4;
+
   return (
-    <div className="policy-choice-group">
+    <div className={`policy-choice-group control-${hint}`}>
       <div className="policy-choice-head">
         <h4>{props.title}</h4>
-        <div className="muted">
-          Current: <strong>{props.currentLabel}</strong>
+        <div className="policy-current-law" aria-label="Current law">
+          <span className="kicker">Current law</span>
+          <strong>{props.currentLabel}</strong>
         </div>
       </div>
-      <div className="policy-choice-options" role="listbox" aria-label={props.title}>
-        {props.options.map((opt) => (
-          <button
-            key={opt.id}
-            type="button"
-            role="option"
-            aria-selected={props.selectedId === opt.id}
-            className={`policy-choice-option${props.selectedId === opt.id ? " selected" : ""}${opt.current ? " is-current" : ""}`}
-            onClick={() => props.onSelect(opt.id)}
+
+      {hint === "binary" && props.options.length <= 2 ? (
+        <div className="policy-segmented" role="listbox" aria-label={props.title}>
+          {props.options.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              role="option"
+              aria-selected={props.selectedId === opt.id}
+              className={`policy-segment${props.selectedId === opt.id ? " selected" : ""}`}
+              onClick={() => props.onSelect(opt.id)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      ) : hint === "categorical" && !useCards ? (
+        <label className="policy-select-label">
+          Proposed rule
+          <select
+            value={props.selectedId}
+            onChange={(event) => props.onSelect(event.target.value)}
+            aria-label={`${props.title} proposed rule`}
           >
-            <div className="policy-choice-option-label">
-              <strong>{opt.label}</strong>
-              {opt.current ? <StatusBadge tone="idle">Current law</StatusBadge> : null}
-            </div>
-            <p className="policy-choice-summary">{opt.summary}</p>
-            {opt.effects?.length ? (
-              <div className="policy-choice-effects">
-                {opt.effects.map((e) => (
-                  <span key={e.label} className={`fx fx-${e.tone ?? "flat"}`}>
-                    {e.label}
-                  </span>
-                ))}
+            {props.options.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : hint === "numeric" ||
+        hint === "threshold" ||
+        hint === "percentage" ||
+        hint === "duration" ? (
+        <label className="policy-select-label">
+          Proposed {hint === "duration" ? "duration" : hint === "percentage" ? "rate" : "value"}
+          <select
+            value={props.selectedId}
+            onChange={(event) => props.onSelect(event.target.value)}
+            aria-label={`${props.title} proposed value`}
+          >
+            {props.options.map((opt) => {
+              const param = formatParameter(opt);
+              return (
+                <option key={opt.id} value={opt.id}>
+                  {param ? `${opt.label} (${param})` : opt.label}
+                </option>
+              );
+            })}
+          </select>
+        </label>
+      ) : (
+        <div className="policy-choice-options" role="listbox" aria-label={props.title}>
+          {props.options.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              role="option"
+              aria-selected={props.selectedId === opt.id}
+              className={`policy-choice-option${props.selectedId === opt.id ? " selected" : ""}${opt.current ? " is-current" : ""}`}
+              onClick={() => props.onSelect(opt.id)}
+            >
+              <div className="policy-choice-option-label">
+                <strong>{opt.label}</strong>
+                {opt.current ? <StatusBadge tone="idle">Current law</StatusBadge> : null}
               </div>
-            ) : null}
-            {opt.cost ? <div className="policy-choice-cost muted">{opt.cost}</div> : null}
-            {opt.groups?.length ? (
-              <div className="policy-choice-groups muted">Affects: {opt.groups.join(" · ")}</div>
-            ) : null}
-          </button>
-        ))}
-      </div>
+              <p className="policy-choice-summary">{opt.summary}</p>
+              {opt.effects?.length ? (
+                <div className="policy-choice-effects">
+                  {opt.effects.map((e) => (
+                    <span key={e.label} className={`fx fx-${e.tone ?? "flat"}`}>
+                      {e.label}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {opt.cost ? <div className="policy-choice-cost muted">{opt.cost}</div> : null}
+              {opt.groups?.length ? (
+                <div className="policy-choice-groups muted">Affects: {opt.groups.join(" · ")}</div>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selected && !useCards && hint !== "categorical" ? (
+        <p className="policy-choice-summary muted">{selected.summary}</p>
+      ) : null}
+      {selected?.effects?.length && !useCards ? (
+        <div className="policy-choice-effects">
+          {selected.effects.map((e) => (
+            <span key={e.label} className={`fx fx-${e.tone ?? "flat"}`}>
+              {e.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       {props.details ? (
         <div className="policy-choice-details">
           <button type="button" className="btn ghost" onClick={() => setOpen((v) => !v)}>

@@ -52,7 +52,7 @@ src = src.replace(
 );
 
 // Expand bargaining scope with richer alternatives
-const bargainingOld = /variableProvision\(\s*"PROV_BARGAINING_SCOPE"[\s\S]*?\n  \),/;
+const bargainingOld = /variableProvision\(\s*"PROV_BARGAINING_SCOPE"[\s\S]*?\n {2}\),/;
 const bargainingNew = `variableProvision(
     "PROV_BARGAINING_SCOPE",
     "ISS_LABOR",
@@ -160,7 +160,7 @@ if (bargainingOld.test(src)) {
   console.warn("PROV_BARGAINING_SCOPE block not found for expansion");
 }
 
-const railOld = /variableProvision\(\s*"PROV_RAIL_OWNERSHIP"[\s\S]*?\n  \),/;
+const railOld = /variableProvision\(\s*"PROV_RAIL_OWNERSHIP"[\s\S]*?\n {2}\),/;
 const railNew = `variableProvision(
     "PROV_RAIL_OWNERSHIP",
     "ISS_OWNERSHIP",
@@ -269,7 +269,7 @@ if (railOld.test(src)) {
 }
 
 // Expand child benefit with numeric-style discrete values
-const childOld = /variableProvision\(\s*"PROV_CHILD_BENEFIT_ELIGIBILITY"[\s\S]*?\n  \),/;
+const childOld = /variableProvision\(\s*"PROV_CHILD_BENEFIT_ELIGIBILITY"[\s\S]*?\n {2}\),/;
 const childNew = `variableProvision(
     "PROV_CHILD_BENEFIT_ELIGIBILITY",
     "ISS_WELFARE",

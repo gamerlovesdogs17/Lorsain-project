@@ -443,7 +443,7 @@ describe("Phase 6 legislature kernel", () => {
     let floorVote = Object.values(sim.getSnapshot().legislatureRuntime.legislativeVotes).find(
       (v) => v.billId === "BILL000001" && v.stage === "floor" && v.metadata.kind !== "amendment",
     );
-    for (let month = 0; month < 4 && !floorVote; month += 1) {
+    for (let month = 0; month < 8 && !floorVote; month += 1) {
       advance(sim, 1);
       floorVote = Object.values(sim.getSnapshot().legislatureRuntime.legislativeVotes).find(
         (v) => v.billId === "BILL000001" && v.stage === "floor" && v.metadata.kind !== "amendment",

@@ -161,7 +161,7 @@ describe("Phase 11.2 campaign geography", () => {
 });
 
 describe("Phase 11.2 concrete legislation", () => {
-  it("accepts one to three named provisions, generates public copy, and rejects a fourth", () => {
+  it("accepts multi-provision bills up to eight and rejects a ninth", () => {
     const world = loadTerenaWorld();
     const player = startingHolder(world, "assembly_member");
     const sim = createSimulation({ world, playerPoliticianId: player, seed: "P112-LAW-TEST" });
@@ -174,12 +174,23 @@ describe("Phase 11.2 concrete legislation", () => {
     expect(bill.title).toBe("Reproductive Health Protection Bill");
     expect(bill.summary).toContain("Guarantees lawful abortion access");
     expect(bill.title).not.toMatch(/NPC|ISS_|moderate on/i);
-    const tooMany = [
+    const four = [
       policyItemForProvision("PROV_BARGAINING_SCOPE", "high")!,
       policyItemForProvision("PROV_CHILD_BENEFIT", "high")!,
       policyItemForProvision("PROV_HOUSING_APPROVALS", "high")!,
       policyItemForProvision("PROV_CLEAN_POWER", "high")!,
     ];
+    const acceptedFour = sim.executeCommand({ type: "INTRODUCE_BILL", policyItems: four });
+    expect(acceptedFour.ok).toBe(true);
+    const tooMany = [
+      ...four,
+      policyItemForProvision("PROV_MINIMUM_WAGE", "high")!,
+      policyItemForProvision("PROV_RAIL_OWNERSHIP", "high")!,
+      policyItemForProvision("PROV_PRIMARY_CARE", "high")!,
+      policyItemForProvision("PROV_CARBON_PRICE", "high")!,
+      policyItemForProvision("PROV_UNION_RECOGNITION", "high")!,
+    ];
+    expect(tooMany).toHaveLength(9);
     const rejected = sim.executeCommand({ type: "INTRODUCE_BILL", policyItems: tooMany });
     expect(rejected.ok).toBe(false);
     if (!rejected.ok) expect(rejected.error.code).toBe("INVALID_BILL");
