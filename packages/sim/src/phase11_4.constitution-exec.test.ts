@@ -38,7 +38,15 @@ import {
 } from "./provinces/constitutionGameplay.js";
 import { partyAllowedUnderConstitution, partyLegalStatus } from "./parties/state.js";
 import { currentAssemblyMemberIds } from "./legislature/state.js";
-import { appointMinister, beginWarPowers, armExecutiveTrigger, issueRegulation, introduceMotion, declareEmergency, assemblyFractionYesNeeded } from "./executive/procedure.js";
+import {
+  appointMinister,
+  beginWarPowers,
+  armExecutiveTrigger,
+  issueRegulation,
+  introduceMotion,
+  declareEmergency,
+  assemblyFractionYesNeeded,
+} from "./executive/procedure.js";
 import {
   warUnilateralDaysForDefenseControl,
   assemblyPluralityPartyId,
@@ -268,12 +276,7 @@ describe("Phase 11.4 executable constitutional gameplay", () => {
     const presidentId = "P1";
     const plurality = assemblyPluralityPartyId(world, state);
     const nominee = Object.values(state.politicians).find(
-      (p) =>
-        p.alive &&
-        !p.retired &&
-        p.id !== presidentId &&
-        p.partyId &&
-        p.partyId !== plurality,
+      (p) => p.alive && !p.retired && p.id !== presidentId && p.partyId && p.partyId !== plurality,
     );
     expect(nominee).toBeTruthy();
     if (!nominee) return;
@@ -472,8 +475,12 @@ describe("Phase 11.4 executable constitutional gameplay", () => {
   it("subject id renames resolve via legacyIds", () => {
     expect(constitutionSubjectById("art3_executive_authority")).toBeTruthy();
     expect(constitutionSubjectById("art1_executive_authority")).toBeTruthy();
-    expect(constitutionSubjectById("art3_executive_authority")!.id).toBe("art3_executive_authority");
-    expect(constitutionSubjectById("art1_executive_authority")!.id).toBe("art3_executive_authority");
+    expect(constitutionSubjectById("art3_executive_authority")!.id).toBe(
+      "art3_executive_authority",
+    );
+    expect(constitutionSubjectById("art1_executive_authority")!.id).toBe(
+      "art3_executive_authority",
+    );
     expect(constitutionSubjectById("art2_press_freedom")).toBeTruthy();
     expect(constitutionSubjectById("art7_press_freedom")).toBeTruthy();
     expect(constitutionSubjectById("art2_press_freedom")!.id).toBe("art2_press_freedom");
@@ -488,20 +495,32 @@ describe("Phase 11.4 entrenchment mechanics", () => {
       { subjectId: "art12_unamendable_core", alternativeId: "hard_entrenchment" },
     ]);
     expect(ensureOrder(state).entrenchment).toBe("hard_core");
-    const blocked = proposeConstitutionalPackage(world, state, "MP02", [
-      { subjectId: "art1_republic_form", alternativeId: "peoples_republic" },
-    ], "CMD");
+    const blocked = proposeConstitutionalPackage(
+      world,
+      state,
+      "MP02",
+      [{ subjectId: "art1_republic_form", alternativeId: "peoples_republic" }],
+      "CMD",
+    );
     expect("error" in blocked).toBe(true);
     if ("error" in blocked) expect(blocked.error.code).toBe("ENTRENCHED_ARTICLE_BLOCKED");
-    const alsoBlocked = proposeConstitutionalPackage(world, state, "MP02", [
-      { subjectId: "art2_civil_liberties", alternativeId: "security_qualified_liberties" },
-    ], "CMD");
+    const alsoBlocked = proposeConstitutionalPackage(
+      world,
+      state,
+      "MP02",
+      [{ subjectId: "art2_civil_liberties", alternativeId: "security_qualified_liberties" }],
+      "CMD",
+    );
     expect("error" in alsoBlocked).toBe(true);
     if ("error" in alsoBlocked) expect(alsoBlocked.error.code).toBe("ENTRENCHED_ARTICLE_BLOCKED");
     // Non-core articles should still work
-    const allowed = proposeConstitutionalPackage(world, state, "MP02", [
-      { subjectId: "art4_assembly_term", alternativeId: "five_year_assembly" },
-    ], "CMD");
+    const allowed = proposeConstitutionalPackage(
+      world,
+      state,
+      "MP02",
+      [{ subjectId: "art4_assembly_term", alternativeId: "five_year_assembly" }],
+      "CMD",
+    );
     expect("error" in allowed).toBe(false);
   });
 
@@ -512,9 +531,13 @@ describe("Phase 11.4 entrenchment mechanics", () => {
     ]);
     expect(ensureOrder(state).entrenchment).toBe("election_interlock");
     // Propose a core article amendment
-    const proposed = proposeConstitutionalPackage(world, state, "MP02", [
-      { subjectId: "art2_civil_liberties", alternativeId: "broad_democratic_liberties" },
-    ], "CMD");
+    const proposed = proposeConstitutionalPackage(
+      world,
+      state,
+      "MP02",
+      [{ subjectId: "art2_civil_liberties", alternativeId: "broad_democratic_liberties" }],
+      "CMD",
+    );
     expect("error" in proposed).toBe(false);
     if ("error" in proposed) return;
     // Simulate federal passage manually (skip processConstitutionalAmendmentsMonth)
@@ -570,9 +593,13 @@ describe("Phase 11.4 entrenchment mechanics", () => {
     ]);
     expect(ensureOrder(state).entrenchment).toBe("hard_core");
     // Verify next amendment on non-core uses new lower threshold
-    const next = proposeConstitutionalPackage(world, state, "MP02", [
-      { subjectId: "art4_assembly_term", alternativeId: "five_year_assembly" },
-    ], "CMD");
+    const next = proposeConstitutionalPackage(
+      world,
+      state,
+      "MP02",
+      [{ subjectId: "art4_assembly_term", alternativeId: "five_year_assembly" }],
+      "CMD",
+    );
     expect("error" in next).toBe(false);
   });
 });
@@ -618,7 +645,10 @@ describe("Phase 11.4 mechanical-truth fixes", () => {
     expect(motion.motion.threshold).toBe("assembly_fraction");
     expect(motion.motion.fraction).toBeCloseTo(2 / 3, 5);
     // Need 2/3 of seats to pass
-    const needed = assemblyFractionYesNeeded(world.legislativeConstitution.assemblySeatCount, 2 / 3);
+    const needed = assemblyFractionYesNeeded(
+      world.legislativeConstitution.assemblySeatCount,
+      2 / 3,
+    );
     expect(needed).toBeGreaterThan(Math.ceil(world.legislativeConstitution.assemblySeatCount / 2));
   });
 
@@ -712,7 +742,12 @@ describe("Phase 11.4 mechanical-truth fixes", () => {
     // Also set expiresDate to far future so only confirmation gate triggers
     emergency.expiresDate = "2099-01-01" as IsoDate;
     state.executiveRuntime.lastMonthProcessed = null;
-    const events = processExecutiveMonth(state, world, createRngService("EMERG-CONFIRM"), "test-cmd");
+    const events = processExecutiveMonth(
+      state,
+      world,
+      createRngService("EMERG-CONFIRM"),
+      "test-cmd",
+    );
     expect(emergency.status).toBe("expired");
     const expiredEvent = events.find((e) => e.type === "EMERGENCY_EXPIRED");
     expect(expiredEvent).toBeTruthy();

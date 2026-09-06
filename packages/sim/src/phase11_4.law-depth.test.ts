@@ -9,10 +9,7 @@ import {
 } from "./legislature/provisions.js";
 import { introduceBill } from "./legislature/procedure.js";
 import { assessBillConstitutionality } from "./legislature/constitutionality.js";
-import {
-  policyIndexDelta,
-  proposalSpecificIndexDelta,
-} from "./economy/policy.js";
+import { policyIndexDelta, proposalSpecificIndexDelta } from "./economy/policy.js";
 
 describe("Phase 11.4 law depth", () => {
   it("uses varied control hints across provisions", () => {
@@ -77,8 +74,14 @@ describe("Phase 11.4 law depth", () => {
   });
 
   it("applies different proposal-specific effects when parameterValue differs at same direction", () => {
-    const shorter = policyItemForProvision("PROV_UNEMPLOYMENT_INSURANCE", "eighteen_week_benefits")!;
-    const longer = policyItemForProvision("PROV_UNEMPLOYMENT_INSURANCE", "twenty_six_week_benefits")!;
+    const shorter = policyItemForProvision(
+      "PROV_UNEMPLOYMENT_INSURANCE",
+      "eighteen_week_benefits",
+    )!;
+    const longer = policyItemForProvision(
+      "PROV_UNEMPLOYMENT_INSURANCE",
+      "twenty_six_week_benefits",
+    )!;
     expect(shorter.direction).toBeGreaterThan(0);
     expect(longer.direction).toBeGreaterThan(0);
     const shorterFx = proposalSpecificIndexDelta(shorter);
@@ -86,8 +89,14 @@ describe("Phase 11.4 law depth", () => {
     expect(shorterFx?.fiscalPressure).toBeDefined();
     expect(longerFx?.fiscalPressure).toBeDefined();
     expect(longerFx!.fiscalPressure! > (shorterFx!.fiscalPressure ?? 0)).toBe(true);
-    expect(policyIndexDelta(shorter).fiscalPressure).toBeCloseTo(shorterFx!.fiscalPressure! + 0.1 * 0.04, 5);
-    expect(policyIndexDelta(longer).fiscalPressure).toBeCloseTo(longerFx!.fiscalPressure! + 0.16 * 0.04, 5);
+    expect(policyIndexDelta(shorter).fiscalPressure).toBeCloseTo(
+      shorterFx!.fiscalPressure! + 0.1 * 0.04,
+      5,
+    );
+    expect(policyIndexDelta(longer).fiscalPressure).toBeCloseTo(
+      longerFx!.fiscalPressure! + 0.16 * 0.04,
+      5,
+    );
   });
 
   it("allows varied proposal option counts with no global minimum quota", () => {

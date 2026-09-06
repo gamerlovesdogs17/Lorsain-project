@@ -162,9 +162,7 @@ describe("Month summary threshold", () => {
   });
 
   it("returns true when elections/legislation/court events occur", () => {
-    const events = [
-      { type: "ELECTION_RESOLVED", importance: 0.3, visibility: "public" },
-    ];
+    const events = [{ type: "ELECTION_RESOLVED", importance: 0.3, visibility: "public" }];
     expect(shouldShowMonthSummary(events)).toBe(true);
   });
 

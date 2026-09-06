@@ -238,10 +238,13 @@ export function processTreatyRatificationVotes(
     }
     // A8: Wire treatyAssemblyFraction into ratification threshold
     const fraction = treatyAssemblyFraction(state);
-    const passed = fraction > 0.5
-      ? yes >= assemblyFractionYesNeeded(world.legislativeConstitution.assemblySeatCount, fraction)
-      : treatyRatificationPassed(yes, no);
-    const thresholdLabel = fraction > 0.5 ? "absolute_majority" as const : "simple_majority_cast" as const;
+    const passed =
+      fraction > 0.5
+        ? yes >=
+          assemblyFractionYesNeeded(world.legislativeConstitution.assemblySeatCount, fraction)
+        : treatyRatificationPassed(yes, no);
+    const thresholdLabel =
+      fraction > 0.5 ? ("absolute_majority" as const) : ("simple_majority_cast" as const);
 
     const voteRecord = {
       id: rat.voteId,

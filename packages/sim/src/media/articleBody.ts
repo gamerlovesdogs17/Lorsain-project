@@ -54,10 +54,7 @@ export function buildArticleBody(input: ArticleBodyInput): string[] {
         `${head} entered the public record on ${input.date}, with ${desk} stressing what follows rather than the procedural step alone.`,
       ];
     case "event_first":
-      return [
-        `${head}.`,
-        `The underlying development was recorded on ${input.date}.${extra}`,
-      ];
+      return [`${head}.`, `The underlying development was recorded on ${input.date}.${extra}`];
     case "institutional":
       return [
         `Institutions now have a concrete item on the ${input.category} docket: ${head.toLowerCase()}.`,

@@ -176,7 +176,9 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
     expect(LEGISLATIVE_PROVISIONS).toHaveLength(50);
     const allOptions = LEGISLATIVE_PROVISIONS.flatMap((definition) => definition.options);
     expect(allOptions.length).toBeGreaterThanOrEqual(200);
-    const optionCounts = new Set(LEGISLATIVE_PROVISIONS.map((definition) => definition.options.length));
+    const optionCounts = new Set(
+      LEGISLATIVE_PROVISIONS.map((definition) => definition.options.length),
+    );
     expect([...optionCounts].every((count) => count >= 2)).toBe(true);
     expect(Math.max(...optionCounts)).toBeGreaterThanOrEqual(5);
     for (const definition of LEGISLATIVE_PROVISIONS) {
@@ -981,9 +983,9 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
       "assembly_confidence",
     );
     expect(textState.provincialRuntime.constitutionalRules).toEqual(rulesBefore);
-    expect(
-      currentConstitutionalClauseText(world, textState, "ART_VI_S1_C1"),
-    ).toContain("confidence");
+    expect(currentConstitutionalClauseText(world, textState, "ART_VI_S1_C1")).toContain(
+      "confidence",
+    );
   });
 
   it("lets a serving player legislator explicitly contest provincial leadership and archives the ballot", () => {

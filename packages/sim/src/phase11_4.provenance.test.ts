@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSimulation } from "./engine.js";
 import { jsonClone } from "./hash.js";
 import { legislativeHarnessWorld } from "./legislature/harness.js";
-import {
-  applyEnactedLawProvenance,
-  repealRestoreOptionId,
-} from "./legislature/procedure.js";
+import { applyEnactedLawProvenance, repealRestoreOptionId } from "./legislature/procedure.js";
 import {
   currentLawSource,
   currentProvisionOption,

@@ -177,7 +177,10 @@ export function PoliticianProfile(props: {
 
   const recentHistory = props.state.history
     .filter(
-      (e) => e.visibility === "public" && e.actorIds.includes(props.politicianId) && e.type !== "TURN_COMPLETED",
+      (e) =>
+        e.visibility === "public" &&
+        e.actorIds.includes(props.politicianId) &&
+        e.type !== "TURN_COMPLETED",
     )
     .slice(-5)
     .reverse();
@@ -211,11 +214,37 @@ export function PoliticianProfile(props: {
             {!alive ? <span className="chip chip-deceased">Deceased</span> : null}
           </div>
           <dl className="dossier-facts compact">
-            {props.home ? <div><dt>Province</dt><dd>{props.onEntityNavigate ? (
-              <EntityLink kind="Province" id={props.home} label={props.home} onNavigate={props.onEntityNavigate}>{props.home}</EntityLink>
-            ) : props.home}</dd></div> : null}
-            {age != null ? <div><dt>Age</dt><dd>{age}</dd></div> : null}
-            {props.standing ? <div><dt>Standing</dt><dd>{props.standing}</dd></div> : null}
+            {props.home ? (
+              <div>
+                <dt>Province</dt>
+                <dd>
+                  {props.onEntityNavigate ? (
+                    <EntityLink
+                      kind="Province"
+                      id={props.home}
+                      label={props.home}
+                      onNavigate={props.onEntityNavigate}
+                    >
+                      {props.home}
+                    </EntityLink>
+                  ) : (
+                    props.home
+                  )}
+                </dd>
+              </div>
+            ) : null}
+            {age != null ? (
+              <div>
+                <dt>Age</dt>
+                <dd>{age}</dd>
+              </div>
+            ) : null}
+            {props.standing ? (
+              <div>
+                <dt>Standing</dt>
+                <dd>{props.standing}</dd>
+              </div>
+            ) : null}
           </dl>
         </div>
       </div>
@@ -226,13 +255,17 @@ export function PoliticianProfile(props: {
             {elections.slice(0, 4).map((e, i) => (
               <div key={`el-${i}`} className={`timeline-item ${e.won ? "win" : "loss"}`}>
                 <span className="timeline-date">{e.date.slice(0, 4)}</span>
-                <span>{e.type.replace(/_/g, " ")} — {e.won ? "Won" : "Ran"}</span>
+                <span>
+                  {e.type.replace(/_/g, " ")} — {e.won ? "Won" : "Ran"}
+                </span>
               </div>
             ))}
             {terms.slice(0, 4).map((t) => (
               <div key={t.id} className={`timeline-item ${t.status === "active" ? "active" : ""}`}>
                 <span className="timeline-date">{(t.startDate ?? "").slice(0, 4)}</span>
-                <span>{props.world.offices[t.officeId]?.title ?? "Office"} · {t.status}</span>
+                <span>
+                  {props.world.offices[t.officeId]?.title ?? "Office"} · {t.status}
+                </span>
               </div>
             ))}
           </div>

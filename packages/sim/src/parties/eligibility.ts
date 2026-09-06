@@ -162,7 +162,8 @@ export function evaluatePresidentialEligibility(
   const order = ensureOrder(state);
   if (order.citizenshipGuard === "duty_conditioned_citizenship") {
     const priorService = Object.values(state.officeTerms).some(
-      (term) => term.holderId === politicianId && (term.status === "ended" || term.status === "active"),
+      (term) =>
+        term.holderId === politicianId && (term.status === "ended" || term.status === "active"),
     );
     const candidateStanding = state.candidateStanding[politicianId];
     const hasExperience = priorService || (candidateStanding && candidateStanding.favorability > 0);

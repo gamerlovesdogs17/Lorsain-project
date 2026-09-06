@@ -329,7 +329,7 @@ const INSERT_BEFORE_FOUNDING = {
 const REPLACEMENTS = [
   {
     start: '  variableProvision(\n    "PROV_UNEMPLOYMENT_INSURANCE",',
-    end: "  ),\n  variableProvision(\n    \"PROV_UNION_RECOGNITION\",",
+    end: '  ),\n  variableProvision(\n    "PROV_UNION_RECOGNITION",',
     body: `  variableProvision(
     "PROV_UNEMPLOYMENT_INSURANCE",
     "ISS_WELFARE",
@@ -414,7 +414,7 @@ const REPLACEMENTS = [
   },
   {
     start: '  variableProvision(\n    "PROV_INCOME_TAX",',
-    end: "  ),\n  variableProvision(\n    \"PROV_UNEMPLOYMENT_INSURANCE\",",
+    end: '  ),\n  variableProvision(\n    "PROV_UNEMPLOYMENT_INSURANCE",',
     body: `  variableProvision(
     "PROV_INCOME_TAX",
     "ISS_WELFARE",
@@ -499,7 +499,7 @@ const REPLACEMENTS = [
   },
   {
     start: '  variableProvision(\n    "PROV_CARBON_PRICE",',
-    end: "  ),\n  variableProvision(\n    \"PROV_SURVEILLANCE_WARRANT\",",
+    end: '  ),\n  variableProvision(\n    "PROV_SURVEILLANCE_WARRANT",',
     body: `  variableProvision(
     "PROV_CARBON_PRICE",
     "ISS_CLIMATE",
@@ -584,7 +584,7 @@ const REPLACEMENTS = [
   },
   {
     start: '  variableProvision(\n    "PROV_PAID_LEAVE",',
-    end: "  ),\n  variableProvision(\n    \"PROV_RENT_POLICY\",",
+    end: '  ),\n  variableProvision(\n    "PROV_RENT_POLICY",',
     body: `  variableProvision(
     "PROV_PAID_LEAVE",
     "ISS_LABOR",
@@ -679,7 +679,7 @@ const REPLACEMENTS = [
   },
   {
     start: '  variableProvision(\n    "PROV_MINIMUM_WAGE",',
-    end: "  ),\n  variableProvision(\n    \"PROV_PLATFORM_WORK\",",
+    end: '  ),\n  variableProvision(\n    "PROV_PLATFORM_WORK",',
     body: `  variableProvision(
     "PROV_MINIMUM_WAGE",
     "ISS_LABOR",
@@ -762,7 +762,7 @@ const REPLACEMENTS = [
   },
   {
     start: '  variableProvision(\n    "PROV_CORPORATE_TAX",',
-    end: "  ),\n  variableProvision(\n    \"PROV_ELECTRICITY_MARKET\",",
+    end: '  ),\n  variableProvision(\n    "PROV_ELECTRICITY_MARKET",',
     body: `  variableProvision(
     "PROV_CORPORATE_TAX",
     "ISS_WELFARE",
@@ -845,7 +845,7 @@ const REPLACEMENTS = [
   },
   {
     start: '  variableProvision(\n    "PROV_ELECTION_ADMIN",',
-    end: "  ),\n  variableProvision(\n    \"PROV_SCHOOL_MEALS\",",
+    end: '  ),\n  variableProvision(\n    "PROV_SCHOOL_MEALS",',
     body: `  variableProvision(
     "PROV_ELECTION_ADMIN",
     "ISS_REFORM",
@@ -925,7 +925,7 @@ const REPLACEMENTS = [
   },
   {
     start: '  variableProvision(\n    "PROV_ELECTORAL_FORMULA",',
-    end: "  ),\n  variableProvision(\n    \"PROV_FIREARMS_LICENSING\",",
+    end: '  ),\n  variableProvision(\n    "PROV_FIREARMS_LICENSING",',
     body: `  variableProvision(
     "PROV_ELECTORAL_FORMULA",
     "ISS_REFORM",

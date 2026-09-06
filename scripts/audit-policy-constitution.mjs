@@ -2,7 +2,10 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const root = process.cwd();
-const provisionsSrc = readFileSync(join(root, "packages/sim/src/legislature/provisions.ts"), "utf8");
+const provisionsSrc = readFileSync(
+  join(root, "packages/sim/src/legislature/provisions.ts"),
+  "utf8",
+);
 const changesSrc = readFileSync(
   join(root, "packages/sim/src/provinces/constitutionChanges.ts"),
   "utf8",
@@ -24,7 +27,8 @@ let binary = 0;
 let withParameter = 0;
 for (let i = 0; i < starts.length; i++) {
   const start = starts[i].index ?? 0;
-  const end = i + 1 < starts.length ? (starts[i + 1].index ?? provisionsSrc.length) : provisionsSrc.length;
+  const end =
+    i + 1 < starts.length ? (starts[i + 1].index ?? provisionsSrc.length) : provisionsSrc.length;
   const body = provisionsSrc.slice(start, end);
   const options = [...body.matchAll(/\boption\(\s*"/g)].length;
   optionCounts.push(options);
@@ -72,10 +76,11 @@ let clauses = 0;
 const articleRows = [];
 for (const a of articles) {
   let ac = 0;
-  for (const s of a.sections) for (const _cl of s.clauses) {
-    clauses += 1;
-    ac += 1;
-  }
+  for (const s of a.sections)
+    for (const _cl of s.clauses) {
+      clauses += 1;
+      ac += 1;
+    }
   const coverage = articleCoverage[a.id] ?? { subjects: 0, subjectIds: [] };
   articleRows.push({
     id: a.id,

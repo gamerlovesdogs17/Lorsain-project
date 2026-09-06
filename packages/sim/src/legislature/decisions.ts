@@ -5,7 +5,11 @@ import type { BillState, LegislativeVoteChoice, PolicyItem } from "./types.js";
 import { billPolicyFit, factionStance, partyStance } from "./recommendations.js";
 import { mpConstituencyId } from "./state.js";
 import { organizationPressureForBill } from "../organizations/monthly.js";
-import { LEGISLATIVE_PROVISIONS, currentProvisionOption, policyItemForProvision } from "./provisions.js";
+import {
+  LEGISLATIVE_PROVISIONS,
+  currentProvisionOption,
+  policyItemForProvision,
+} from "./provisions.js";
 import { parliamentaryDiscipline } from "./discipline.js";
 import { constituencyPressureForBill } from "./constituency.js";
 

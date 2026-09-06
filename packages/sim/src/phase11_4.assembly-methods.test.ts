@@ -9,8 +9,15 @@ import { describe, expect, it } from "vitest";
 import { createSimulation } from "./engine.js";
 import { createRngService } from "./rng.js";
 import { jsonClone } from "./hash.js";
-import { resolveAssemblyConstituency, computeMmpTopUp, listRankScore } from "./elections/assembly.js";
-import { resolveAssemblyElection, ensurePlannedAssemblyElection } from "./elections/assembly-national.js";
+import {
+  resolveAssemblyConstituency,
+  computeMmpTopUp,
+  listRankScore,
+} from "./elections/assembly.js";
+import {
+  resolveAssemblyElection,
+  ensurePlannedAssemblyElection,
+} from "./elections/assembly-national.js";
 import { ensureAssemblyElectionCycle } from "./elections/assembly-cycle.js";
 import { miniElectorateWorld } from "./mini-electorate-world.js";
 import { emptyConstitutionalOrder } from "./provinces/constitutionalOrder.js";
@@ -186,7 +193,14 @@ describe("MMP result storage separates list and constituency winners", () => {
       weight: 1,
       turnoutPropensity: 0.66,
       partyHabit: { PARTY_LAB: 0.4, PARTY_NU: 0.6 },
-      ideology: { economic: -0.3, social: 0.2, authority: 0, green: 0.1, nationalism: 0, globalism: 0 },
+      ideology: {
+        economic: -0.3,
+        social: 0.2,
+        authority: 0,
+        green: 0.1,
+        nationalism: 0,
+        globalism: 0,
+      },
       issueSalience: { ISS_REFORM: 0.5 },
     };
     world.voterBlocIdsByConstituency.C002 = ["C002_B01"];
@@ -211,7 +225,20 @@ describe("MMP result storage separates list and constituency winners", () => {
       assemblySeatCount: 8,
     };
     // 16 candidates: 8 per constituency
-    const extraIds = ["P5", "P6", "P7", "P8", "P9", "P10", "P11", "P12", "P13", "P14", "P15", "P16"];
+    const extraIds = [
+      "P5",
+      "P6",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12",
+      "P13",
+      "P14",
+      "P15",
+      "P16",
+    ];
     for (const id of extraIds) {
       const partyId = Number(id.slice(1)) % 2 === 1 ? "PARTY_LAB" : "PARTY_NU";
       world.politicians.push({ id, alive: true, retired: false, partyId, factionId: null });

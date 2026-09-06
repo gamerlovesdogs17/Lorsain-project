@@ -430,7 +430,8 @@ export function CourtsPage(props: {
               {c.challengedId && c.challengedKind === "law" ? (
                 <div className="cross-link-row muted">
                   <span className="cross-link-icon">▣</span>
-                  Challenges: {snap.legislatureRuntime.enactedLaws[c.challengedId]?.title ?? c.challengedId}
+                  Challenges:{" "}
+                  {snap.legislatureRuntime.enactedLaws[c.challengedId]?.title ?? c.challengedId}
                 </div>
               ) : c.challengedId && c.challengedKind ? (
                 <div className="cross-link-row muted">

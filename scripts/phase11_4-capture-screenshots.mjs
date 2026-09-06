@@ -209,11 +209,7 @@ async function main() {
   await shot(page, "constitution-package-1440.png");
 
   // Draft legislation — assembly-worker fixture is a sitting MP
-  await gotoFixture(
-    page,
-    { qaFixture: "assembly-worker", qaScreen: "assembly" },
-    desk,
-  );
+  await gotoFixture(page, { qaFixture: "assembly-worker", qaScreen: "assembly" }, desk);
   const draftTabClicked = await page.evaluate(() => {
     const tab = [...document.querySelectorAll('[role="tab"],button')].find((el) =>
       /Introduce/i.test((el.textContent || "").replace(/\s+/g, " ").trim()),

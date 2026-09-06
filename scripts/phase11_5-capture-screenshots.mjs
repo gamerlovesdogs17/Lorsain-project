@@ -46,7 +46,11 @@ async function main() {
   const desk = { width: 1440, height: 900 };
   const mobile = { width: 390, height: 844 };
 
-  await gotoFixture(page, { qaFixture: "institutions", qaScreen: "home", qaPlayer: "NPC003" }, desk);
+  await gotoFixture(
+    page,
+    { qaFixture: "institutions", qaScreen: "home", qaPlayer: "NPC003" },
+    desk,
+  );
   await shot(page, "home-1440.png");
 
   await page.keyboard.press("Control+K");
@@ -59,7 +63,13 @@ async function main() {
 
   await gotoFixture(
     page,
-    { qaFixture: "institutions", qaScreen: "career", qaPlayer: "NPC003", qaFocusKind: "Politician", qaFocusId: "NPC003" },
+    {
+      qaFixture: "institutions",
+      qaScreen: "career",
+      qaPlayer: "NPC003",
+      qaFocusKind: "Politician",
+      qaFocusId: "NPC003",
+    },
     desk,
   );
   await shot(page, "politician-profile-1440.png");
@@ -73,30 +83,64 @@ async function main() {
   await page.waitForTimeout(500);
   await shot(page, "inspector-1440.png");
 
-  await gotoFixture(page, { qaFixture: "institutions", qaScreen: "party", qaPlayer: "NPC003" }, desk);
+  await gotoFixture(
+    page,
+    { qaFixture: "institutions", qaScreen: "party", qaPlayer: "NPC003" },
+    desk,
+  );
   await shot(page, "party-dossier-1440.png");
 
-  await gotoFixture(page, { qaFixture: "institutions", qaScreen: "terena", qaPlayer: "NPC003" }, desk);
+  await gotoFixture(
+    page,
+    { qaFixture: "institutions", qaScreen: "terena", qaPlayer: "NPC003" },
+    desk,
+  );
   await shot(page, "province-dossier-1440.png");
 
-  await gotoFixture(page, { qaFixture: "institutions", qaScreen: "situation", qaPlayer: "NPC003" }, desk);
+  await gotoFixture(
+    page,
+    { qaFixture: "institutions", qaScreen: "situation", qaPlayer: "NPC003" },
+    desk,
+  );
   await shot(page, "situation-room-1440.png");
 
-  await gotoFixture(page, { qaFixture: "institutions", qaScreen: "assembly", qaPlayer: "NPC003" }, desk);
+  await gotoFixture(
+    page,
+    { qaFixture: "institutions", qaScreen: "assembly", qaPlayer: "NPC003" },
+    desk,
+  );
   await shot(page, "assembly-1440.png");
 
-  await gotoFixture(page, { qaFixture: "institutions", qaScreen: "elections", qaPlayer: "NPC001" }, desk);
+  await gotoFixture(
+    page,
+    { qaFixture: "institutions", qaScreen: "elections", qaPlayer: "NPC001" },
+    desk,
+  );
   await shot(page, "elections-calendar-1440.png");
 
-  await gotoFixture(page, { qaFixture: "institutions", qaScreen: "news", qaPlayer: "NPC003" }, desk);
+  await gotoFixture(
+    page,
+    { qaFixture: "institutions", qaScreen: "news", qaPlayer: "NPC003" },
+    desk,
+  );
   await shot(page, "news-1440.png");
 
-  await gotoFixture(page, { qaFixture: "institutions", qaScreen: "home", qaPlayer: "NPC003" }, mobile);
+  await gotoFixture(
+    page,
+    { qaFixture: "institutions", qaScreen: "home", qaPlayer: "NPC003" },
+    mobile,
+  );
   await shot(page, "home-390.png");
 
   await gotoFixture(
     page,
-    { qaFixture: "institutions", qaScreen: "career", qaPlayer: "NPC003", qaFocusKind: "Politician", qaFocusId: "NPC003" },
+    {
+      qaFixture: "institutions",
+      qaScreen: "career",
+      qaPlayer: "NPC003",
+      qaFocusKind: "Politician",
+      qaFocusId: "NPC003",
+    },
     mobile,
   );
   await shot(page, "profile-390.png");

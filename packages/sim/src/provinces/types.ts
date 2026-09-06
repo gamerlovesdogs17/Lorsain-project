@@ -1,9 +1,6 @@
 import type { IsoDate } from "../calendar.js";
 import type { ElectionCertification } from "../elections/types.js";
-import {
-  emptyConstitutionalOrder,
-  type ConstitutionalOrderState,
-} from "./constitutionalOrder.js";
+import { emptyConstitutionalOrder, type ConstitutionalOrderState } from "./constitutionalOrder.js";
 
 export const PROVINCIAL_PRIORITIES = [
   "transport",

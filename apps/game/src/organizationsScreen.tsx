@@ -142,7 +142,12 @@ export function OrganizationsPage(props: {
           list={
             <>
               <SectionDivider title="Directory" />
-              {list.length === 0 ? <EmptyState>No civil society organizations are active in this scenario. Organizations appear when interest groups form or are loaded from scenario data.</EmptyState> : null}
+              {list.length === 0 ? (
+                <EmptyState>
+                  No civil society organizations are active in this scenario. Organizations appear
+                  when interest groups form or are loaded from scenario data.
+                </EmptyState>
+              ) : null}
               {list.map((o) => (
                 <EntityRow
                   key={o.id}

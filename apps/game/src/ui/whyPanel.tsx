@@ -47,10 +47,7 @@ export function WhyPanel(props: WhyPanelProps) {
           {props.factors.length > 0 ? (
             <ul className="why-panel-factors">
               {props.factors.map((f) => (
-                <li
-                  key={f.label}
-                  className={`why-factor why-factor-${f.direction ?? "neutral"}`}
-                >
+                <li key={f.label} className={`why-factor why-factor-${f.direction ?? "neutral"}`}>
                   <span className="why-factor-dir" aria-hidden>
                     {f.direction === "support" ? "+" : f.direction === "oppose" ? "−" : "·"}
                   </span>

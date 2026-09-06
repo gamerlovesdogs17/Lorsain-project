@@ -90,12 +90,7 @@ export function structuralHeadlineKey(headline: string): string {
 
 /** Event-family stem used to catch thin wrappers around the same event wording. */
 export function eventTypeStem(eventType: string): string {
-  return eventType
-    .toLowerCase()
-    .split("_")
-    .filter(Boolean)
-    .slice(0, 2)
-    .join(" ");
+  return eventType.toLowerCase().split("_").filter(Boolean).slice(0, 2).join(" ");
 }
 
 /**
@@ -106,8 +101,7 @@ export function eventWordingKey(eventType: string, headline: string): string {
   const stem = eventTypeStem(eventType);
   const fp = headlineFingerprint(headline);
   const stemParts = stem.split(" ").filter(Boolean);
-  const wrapsStem =
-    stemParts.length > 0 && stemParts.every((part) => fp.includes(part));
+  const wrapsStem = stemParts.length > 0 && stemParts.every((part) => fp.includes(part));
   if (wrapsStem) return `stem:${stem}`;
   return `stem:${stem}|${structuralHeadlineKey(headline)}`;
 }

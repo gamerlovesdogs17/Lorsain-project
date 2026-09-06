@@ -261,8 +261,7 @@ function estimateMpBillLean(
   if (party === "oppose") score -= 0.25 * loyalty;
   if (faction === "support") score += 0.12;
   if (faction === "oppose") score -= 0.12;
-  const lean: MpBillLean =
-    score > 0.18 ? "likely_yes" : score < -0.18 ? "likely_no" : "uncertain";
+  const lean: MpBillLean = score > 0.18 ? "likely_yes" : score < -0.18 ? "likely_no" : "uncertain";
   const factors: string[] = [];
   if (Math.abs(fit) >= 0.06) {
     factors.push(fit > 0 ? "Policy alignment" : "Policy opposition");
@@ -314,9 +313,7 @@ export function AssemblyPage(props: {
   const [lawbookMode, setLawbookMode] = useState<LawbookBrowseMode>("provisions");
   const [lawbookArea, setLawbookArea] = useState("");
   const [lawbookActId, setLawbookActId] = useState("");
-  const [draftLawAction, setDraftLawAction] = useState<"amend" | "replace" | "repeal" | null>(
-    null,
-  );
+  const [draftLawAction, setDraftLawAction] = useState<"amend" | "replace" | "repeal" | null>(null);
   const [draftTargetLawId, setDraftTargetLawId] = useState<string | null>(null);
 
   const mps = currentAssemblyMemberIds(props.world, props.snap);
@@ -401,10 +398,7 @@ export function AssemblyPage(props: {
         return [
           {
             provisionId: item.provisionId,
-            optionId:
-              restoreId ??
-              item.optionId ??
-              defaultProvisionOptionId(item.provisionId),
+            optionId: restoreId ?? item.optionId ?? defaultProvisionOptionId(item.provisionId),
           },
         ];
       }
@@ -1242,7 +1236,9 @@ export function AssemblyPage(props: {
                                             {mpLeanLabel(row.lean)}
                                           </StatusBadge>
                                         </td>
-                                        <td className="muted">{row.factors.slice(0, 2).join(" · ")}</td>
+                                        <td className="muted">
+                                          {row.factors.slice(0, 2).join(" · ")}
+                                        </td>
                                       </tr>
                                     ))}
                                   </DataTable>
@@ -2043,7 +2039,11 @@ export function AssemblyPage(props: {
                 </div>
                 {lawbookMode === "provisions" ? (
                   <>
-                    <div className="lawbook-area-chips" role="group" aria-label="Policy area filters">
+                    <div
+                      className="lawbook-area-chips"
+                      role="group"
+                      aria-label="Policy area filters"
+                    >
                       <button
                         type="button"
                         className={!lawbookArea ? "active" : ""}
@@ -2206,9 +2206,12 @@ export function AssemblyPage(props: {
                           ).length > 0 ? (
                             <div className="cross-link-row muted">
                               <span className="cross-link-icon">⚖</span>
-                              {Object.values(props.snap.constitutionalRuntime.courtCases).filter(
-                                (cc) => cc.challengedId === law.id && cc.challengedKind === "law",
-                              ).length} court case(s) reference this Act
+                              {
+                                Object.values(props.snap.constitutionalRuntime.courtCases).filter(
+                                  (cc) => cc.challengedId === law.id && cc.challengedKind === "law",
+                                ).length
+                              }{" "}
+                              court case(s) reference this Act
                             </div>
                           ) : null}
                         </div>

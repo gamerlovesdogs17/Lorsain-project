@@ -46,12 +46,7 @@ function structuralKey(text) {
 
 function headlineFamily(story) {
   const type = String(story.factEventType ?? "UNKNOWN");
-  const stem = type
-    .toLowerCase()
-    .split("_")
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("_");
+  const stem = type.toLowerCase().split("_").filter(Boolean).slice(0, 2).join("_");
   return `${story.category ?? "politics"}:${stem}`;
 }
 

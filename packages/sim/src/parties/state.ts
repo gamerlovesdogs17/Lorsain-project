@@ -32,12 +32,7 @@ export function partyAllowedUnderConstitution(
 }
 
 export type PartyLegalStatus =
-  | "registered"
-  | "restricted"
-  | "sole_recognized"
-  | "prohibited"
-  | "nonpartisan_only"
-  | "defunct";
+  "registered" | "restricted" | "sole_recognized" | "prohibited" | "nonpartisan_only" | "defunct";
 
 export function partyLegalStatus(
   state: SimState,

@@ -459,7 +459,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.55, authority: 0.35, globalism: -0.45 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_HOUSING_APPROVALS",
@@ -533,7 +533,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.55, authority: 0.6 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_CLEAN_POWER",
@@ -607,7 +607,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           dimensionEffects: { economic: 0.35, social: 0.75, authority: 0.45 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_REPRODUCTIVE_LAW",
@@ -627,7 +627,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           affectedGroups: groupsForIssue("ISS_LIBERTY"),
         },
       ),
-            option(
+      option(
         "early_statutory_limit",
         "Early statutory limit",
         "Shortens the national time limit while preserving medical exceptions.",
@@ -653,7 +653,7 @@ export const LEGISLATIVE_PROVISIONS: readonly LegislativeProvisionDefinition[] =
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "founding_statutory_limit",
         "National law permits abortion within a statutory time limit",
         "Retains the existing national time limit and medical exceptions.",
@@ -678,7 +678,7 @@ option(
           affectedGroups: groupsForIssue("ISS_LIBERTY"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_RESIDENCY_PATH",
@@ -698,7 +698,7 @@ option(
           affectedGroups: groupsForIssue("ISS_IMMIGRATION"),
         },
       ),
-            option(
+      option(
         "humanitarian_track",
         "Humanitarian settlement track",
         "Creates a two-year route for designated humanitarian arrivals meeting language requirements.",
@@ -725,7 +725,7 @@ option(
           controlHint: "numeric",
         },
       ),
-option(
+      option(
         "founding_five_year_residency",
         "Five-year lawful-residence route with language and civic requirements",
         "Retains the present five-year route and civic requirements.",
@@ -750,7 +750,7 @@ option(
           affectedGroups: groupsForIssue("ISS_IMMIGRATION"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_POLICE_COMPLAINTS",
@@ -770,7 +770,7 @@ option(
           affectedGroups: groupsForIssue("ISS_POLICING"),
         },
       ),
-            option(
+      option(
         "national_standards_only",
         "National standards only",
         "Sets national complaint standards but leaves investigations with provincial bodies.",
@@ -796,7 +796,7 @@ option(
           controlHint: "binary",
         },
       ),
-option(
+      option(
         "founding_provincial_review",
         "Provincial bodies investigate complaints under national minimum standards",
         "Retains provincial review bodies and national minimum standards.",
@@ -821,7 +821,7 @@ option(
           affectedGroups: groupsForIssue("ISS_POLICING"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_REVENUE_DISCRETION",
@@ -841,7 +841,7 @@ option(
           affectedGroups: groupsForIssue("ISS_DECENT"),
         },
       ),
-            option(
+      option(
         "fixed_surcharge_band",
         "Fixed surcharge band",
         "Sets a narrow statutory band for the provincial property surcharge.",
@@ -868,7 +868,7 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "founding_limited_surcharge",
         "Provinces may levy a limited property surcharge",
         "Retains the present provincial property-surcharge authority.",
@@ -893,7 +893,7 @@ option(
           affectedGroups: groupsForIssue("ISS_DECENT"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_EMERGENCY_RENEWAL",
@@ -913,7 +913,7 @@ option(
           affectedGroups: groupsForIssue("ISS_EXEC"),
         },
       ),
-            option(
+      option(
         "forty_eight_hour_renewal",
         "Forty-eight-hour renewal",
         "Requires Assembly renewal every forty-eight hours during declared emergencies.",
@@ -941,7 +941,7 @@ option(
           controlHint: "numeric",
         },
       ),
-option(
+      option(
         "founding_assembly_renewal",
         "Assembly approval is required after the initial emergency period",
         "Retains the existing Assembly renewal deadline.",
@@ -966,7 +966,7 @@ option(
           affectedGroups: groupsForIssue("ISS_EXEC"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_DONOR_DISCLOSURE",
@@ -986,7 +986,7 @@ option(
           affectedGroups: groupsForIssue("ISS_REFORM"),
         },
       ),
-            option(
+      option(
         "threshold_only_filing",
         "Threshold-only filing",
         "Requires disclosure only for donations above a higher statutory threshold.",
@@ -1013,7 +1013,7 @@ option(
           controlHint: "binary",
         },
       ),
-option(
+      option(
         "founding_campaign_disclosure",
         "Large donations are published during the campaign",
         "Retains campaign-period publication of large donations.",
@@ -1038,7 +1038,7 @@ option(
           affectedGroups: groupsForIssue("ISS_REFORM"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_CONCORD_PROCUREMENT",
@@ -1085,7 +1085,7 @@ option(
           controlHint: "binary",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_VASKARA_SANCTIONS",
@@ -1105,7 +1105,7 @@ option(
           affectedGroups: groupsForIssue("ISS_VASKARA"),
         },
       ),
-            option(
+      option(
         "sectoral_trade_restrictions",
         "Sectoral trade restrictions",
         "Adds sectoral import restrictions after a published security finding.",
@@ -1131,7 +1131,7 @@ option(
           controlHint: "binary",
         },
       ),
-option(
+      option(
         "founding_executive_finding",
         "Targeted sanctions require a published executive finding",
         "Retains targeted sanctions after a published executive finding.",
@@ -1156,7 +1156,7 @@ option(
           affectedGroups: groupsForIssue("ISS_VASKARA"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_READINESS_FUND",
@@ -1176,7 +1176,7 @@ option(
           affectedGroups: groupsForIssue("ISS_DEFENSE"),
         },
       ),
-            option(
+      option(
         "maintenance_only_budget",
         "Maintenance-only budget",
         "Limits readiness spending to depot maintenance for eighteen months.",
@@ -1202,7 +1202,7 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "founding_annual_budget",
         "Readiness funding follows the enacted annual budget",
         "Retains the current equipment-readiness appropriation.",
@@ -1227,7 +1227,7 @@ option(
           affectedGroups: groupsForIssue("ISS_DEFENSE"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_PRIMARY_CARE",
@@ -1247,7 +1247,7 @@ option(
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
-            option(
+      option(
         "means_tested_copay",
         "Means-tested copay",
         "Sets higher routine copays above an income threshold with hardship waivers.",
@@ -1274,7 +1274,7 @@ option(
           controlHint: "binary",
         },
       ),
-option(
+      option(
         "founding_limited_copayments",
         "National insurance covers essential primary care with limited copayments",
         "Retains existing primary-care benefits and copayments.",
@@ -1299,7 +1299,7 @@ option(
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_TUITION_SUPPORT",
@@ -1319,7 +1319,7 @@ option(
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
-            option(
+      option(
         "income_contingent_loans",
         "Income-contingent loans",
         "Replaces upfront tuition with income-contingent repayment after graduation.",
@@ -1345,7 +1345,7 @@ option(
           controlHint: "threshold",
         },
       ),
-option(
+      option(
         "founding_capped_tuition",
         "Students pay capped tuition with income-tested grants",
         "Retains the current tuition cap and grant rules.",
@@ -1370,7 +1370,7 @@ option(
           affectedGroups: groupsForIssue("ISS_WELFARE"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_INCOME_TAX",
@@ -1449,7 +1449,7 @@ option(
           controlHint: "numeric",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_UNEMPLOYMENT_INSURANCE",
@@ -1528,7 +1528,7 @@ option(
           controlHint: "numeric",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_UNION_RECOGNITION",
@@ -1548,7 +1548,7 @@ option(
           affectedGroups: groupsForIssue("ISS_LABOR"),
         },
       ),
-            option(
+      option(
         "card_check_threshold",
         "Card-check threshold",
         "Requires recognition when sixty percent of workers sign union authorization cards.",
@@ -1562,7 +1562,7 @@ option(
           controlHint: "threshold",
         },
       ),
-option(
+      option(
         "mandatory_ballot",
         "Mandatory ballot",
         "Retains the supervised workplace ballot for recognition.",
@@ -1587,7 +1587,7 @@ option(
           affectedGroups: groupsForIssue("ISS_LABOR"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_STRIKE_NOTICE",
@@ -1607,7 +1607,7 @@ option(
           affectedGroups: groupsForIssue("ISS_LABOR"),
         },
       ),
-            option(
+      option(
         "fourteen_day_notice",
         "Fourteen-day notice",
         "Requires fourteen days' notice before protected industrial action.",
@@ -1621,7 +1621,7 @@ option(
           controlHint: "numeric",
         },
       ),
-option(
+      option(
         "founding_seven_day_notice",
         "Unions must give seven days' notice before protected action",
         "Retains the seven-day notice requirement.",
@@ -1646,7 +1646,7 @@ option(
           affectedGroups: groupsForIssue("ISS_LABOR"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_PUBLIC_HOUSING",
@@ -1666,7 +1666,7 @@ option(
           affectedGroups: groupsForIssue("ISS_HOUSING"),
         },
       ),
-            option(
+      option(
         "capital_maintenance_only",
         "Capital maintenance only",
         "Limits new social-housing starts to maintenance of existing stock for three years.",
@@ -1679,7 +1679,7 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "founding_provincial_cofinance",
         "The national fund co-finances provincial social housing",
         "Retains current public-housing capital grants.",
@@ -1704,7 +1704,7 @@ option(
           affectedGroups: groupsForIssue("ISS_HOUSING"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_TRANSIT_ZONING",
@@ -1724,7 +1724,7 @@ option(
           affectedGroups: groupsForIssue("ISS_HOUSING"),
         },
       ),
-            option(
+      option(
         "mandatory_density_bonus",
         "Mandatory density bonus",
         "Requires cities near major transit to grant density bonuses for qualifying projects.",
@@ -1737,7 +1737,7 @@ option(
           controlHint: "binary",
         },
       ),
-option(
+      option(
         "founding_voluntary_transit_grants",
         "Cities may seek grants for housing near major transit",
         "Retains voluntary grants for transit-oriented housing plans.",
@@ -1762,7 +1762,7 @@ option(
           affectedGroups: groupsForIssue("ISS_HOUSING"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_INFRASTRUCTURE_BANK",
@@ -1782,7 +1782,7 @@ option(
           affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
         },
       ),
-            option(
+      option(
         "regional_finance_pools",
         "Regional finance pools",
         "Creates regional pools co-financing transport and water with provincial matching.",
@@ -1795,7 +1795,7 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "founding_ordinary_appropriations",
         "Large projects use ordinary appropriations and private lending",
         "Retains ordinary appropriations and project lending.",
@@ -1820,7 +1820,7 @@ option(
           affectedGroups: groupsForIssue("ISS_OWNERSHIP"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_FARM_STABILIZATION",
@@ -1840,7 +1840,7 @@ option(
           affectedGroups: groupsForIssue("ISS_TRADE"),
         },
       ),
-            option(
+      option(
         "price_floor_insurance",
         "Price-floor insurance",
         "Combines private crop insurance with a published price-floor backstop.",
@@ -1853,7 +1853,7 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "founding_emergency_support",
         "Emergency farm support requires a declared market disruption",
         "Retains support after a declared market disruption.",
@@ -1878,7 +1878,7 @@ option(
           affectedGroups: groupsForIssue("ISS_TRADE"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_CARBON_PRICE",
@@ -1957,7 +1957,7 @@ option(
           controlHint: "numeric",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_SURVEILLANCE_WARRANT",
@@ -2004,7 +2004,7 @@ option(
           controlHint: "binary",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_SENTENCING",
@@ -2062,7 +2062,7 @@ option(
           affectedGroups: groupsForIssue("ISS_POLICING"),
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_ELECTION_ADMIN",
@@ -2136,7 +2136,7 @@ option(
           controlHint: "binary",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_SCHOOL_MEALS",
@@ -2183,7 +2183,7 @@ option(
           controlHint: "binary",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_HEALTH_INSURANCE_MODEL",
@@ -2241,7 +2241,7 @@ option(
           dimensionEffects: { economic: 0.9, authority: 0.5 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_MEDICINE_PRICING",
@@ -2297,7 +2297,7 @@ option(
           dimensionEffects: { economic: 0.85, authority: 0.35 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_HOSPITAL_GOVERNANCE",
@@ -2317,7 +2317,7 @@ option(
           dimensionEffects: { economic: -0.45, authority: -0.3 },
         },
       ),
-            option(
+      option(
         "national_quality_standards",
         "National quality standards",
         "Sets national quality metrics while retaining local public hospital boards.",
@@ -2330,7 +2330,7 @@ option(
           controlHint: "binary",
         },
       ),
-option(
+      option(
         "public_hospital_boards",
         "Public hospital boards",
         "Retains locally governed public hospital boards under national standards.",
@@ -2355,7 +2355,7 @@ option(
           dimensionEffects: { economic: 0.35, authority: -0.25 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_CHILDCARE_MODEL",
@@ -2410,7 +2410,7 @@ option(
           dimensionEffects: { economic: 0.85, authority: 0.4 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_VOCATIONAL_TRAINING",
@@ -2429,7 +2429,7 @@ option(
           affectedGroups: ["Apprentices", "Employers", "Colleges"],
         },
       ),
-            option(
+      option(
         "national_skills_credential",
         "National skills credential",
         "Creates portable national credentials recognized across provinces.",
@@ -2442,7 +2442,7 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "tripartite_apprenticeships",
         "Tripartite apprenticeships",
         "Retains joint employer, union and college apprenticeship standards.",
@@ -2466,7 +2466,7 @@ option(
           affectedGroups: ["Young adults", "Colleges", "Employers"],
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_MINIMUM_WAGE",
@@ -2543,7 +2543,7 @@ option(
           controlHint: "numeric",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_PLATFORM_WORK",
@@ -2562,7 +2562,7 @@ option(
           affectedGroups: ["Platform workers", "Digital platforms", "Consumers"],
         },
       ),
-            option(
+      option(
         "hybrid_status_framework",
         "Hybrid status framework",
         "Creates a statutory hybrid status with portable benefits for platform workers.",
@@ -2575,7 +2575,7 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "case_by_case_test",
         "Case-by-case test",
         "Retains the ordinary employment-status test for platform work.",
@@ -2599,7 +2599,7 @@ option(
           affectedGroups: ["Platform workers", "Digital platforms", "Labor inspectors"],
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_PAID_LEAVE",
@@ -2688,7 +2688,7 @@ option(
           controlHint: "numeric",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_RENT_POLICY",
@@ -2733,7 +2733,7 @@ option(
           controlHint: "binary",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_LAND_VALUE_TAX",
@@ -2741,7 +2741,7 @@ option(
     "Land taxation",
     "Local property tax applies to assessed land and buildings",
     [
-            option(
+      option(
         "gradual_land_shift",
         "Gradual land-value shift",
         "Phases in higher land taxation over ten years while reducing building charges.",
@@ -2755,7 +2755,7 @@ option(
           controlHint: "numeric",
         },
       ),
-option(
+      option(
         "building_value_tax",
         "Property-value tax",
         "Retains taxation of both land and buildings under local assessment.",
@@ -2792,7 +2792,7 @@ option(
           dimensionEffects: { economic: 0.45, authority: -0.15 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_INHERITANCE_TAX",
@@ -2846,7 +2846,7 @@ option(
           affectedGroups: ["Large estates", "Heirs", "Public services"],
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_CORPORATE_TAX",
@@ -2923,7 +2923,7 @@ option(
           controlHint: "numeric",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_ELECTRICITY_MARKET",
@@ -2991,7 +2991,7 @@ option(
           dimensionEffects: { economic: 0.9, authority: 0.45, green: 0.3 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_NUCLEAR_POLICY",
@@ -3011,7 +3011,7 @@ option(
           dimensionEffects: { green: 0.55, authority: 0.15 },
         },
       ),
-            option(
+      option(
         "life_extension_refurbishment",
         "Life-extension refurbishment",
         "Authorizes refurbishment of existing reactors to extend licensed operating lives.",
@@ -3024,7 +3024,7 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "case_by_case_authorization",
         "Case-by-case authorization",
         "Retains separate legislative approval for each new nuclear project.",
@@ -3049,7 +3049,7 @@ option(
           dimensionEffects: { green: 0.35, authority: 0.45, economic: 0.2 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_WATER_ENFORCEMENT",
@@ -3069,7 +3069,7 @@ option(
           dimensionEffects: { green: -0.45, authority: -0.6 },
         },
       ),
-            option(
+      option(
         "industry_self_monitoring",
         "Industry self-monitoring",
         "Requires major dischargers to publish self-monitoring with random national audits.",
@@ -3082,7 +3082,7 @@ option(
           controlHint: "binary",
         },
       ),
-option(
+      option(
         "shared_enforcement",
         "Shared enforcement",
         "Retains provincial inspection under national discharge standards.",
@@ -3107,7 +3107,7 @@ option(
           dimensionEffects: { green: 0.8, authority: 0.5 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_BROADBAND",
@@ -3126,7 +3126,7 @@ option(
           affectedGroups: ["Rural households", "Network firms", "Taxpayers"],
         },
       ),
-            option(
+      option(
         "middle_mile_cooperative",
         "Middle-mile cooperative",
         "Funds nonprofit middle-mile fiber cooperatives serving underserved regions.",
@@ -3139,7 +3139,7 @@ option(
           controlHint: "categorical",
         },
       ),
-option(
+      option(
         "targeted_rural_grants",
         "Targeted rural grants",
         "Retains grants for unserved rural and remote communities.",
@@ -3164,7 +3164,7 @@ option(
           dimensionEffects: { economic: 0.75, authority: 0.35 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_ASYLUM_PROCESS",
@@ -3221,7 +3221,7 @@ option(
           dimensionEffects: { social: 0.45, economic: -0.1, globalism: 0.35 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_ELECTORAL_FORMULA",
@@ -3295,7 +3295,7 @@ option(
           controlHint: "categorical",
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_FIREARMS_LICENSING",
@@ -3315,7 +3315,7 @@ option(
           dimensionEffects: { social: -0.45, authority: -0.55 },
         },
       ),
-            option(
+      option(
         "renewal_every_five_years",
         "Five-year renewal",
         "Requires license renewal and storage inspection every five years.",
@@ -3329,7 +3329,7 @@ option(
           controlHint: "numeric",
         },
       ),
-option(
+      option(
         "training_and_storage_license",
         "Training and storage license",
         "Retains background, training, renewal and safe-storage requirements.",
@@ -3354,7 +3354,7 @@ option(
           dimensionEffects: { social: 0.45, authority: 0.65 },
         },
       ),
-    ]
+    ],
   ),
   variableProvision(
     "PROV_FARMLAND_POLICY",
@@ -3374,7 +3374,7 @@ option(
           dimensionEffects: { economic: -0.5, globalism: 0.55, authority: -0.35 },
         },
       ),
-            option(
+      option(
         "foreign_ownership_cap",
         "Foreign ownership cap",
         "Caps foreign ownership of designated farmland at fifteen percent of provincial acreage.",
@@ -3388,7 +3388,7 @@ option(
           controlHint: "threshold",
         },
       ),
-option(
+      option(
         "provincial_land_controls",
         "Provincial land controls",
         "Retains provincial conversion rules and national review of large foreign purchases.",
@@ -3413,7 +3413,7 @@ option(
           dimensionEffects: { economic: 0.35, nationalism: 0.4, green: 0.3 },
         },
       ),
-    ]
+    ],
   ),
 ] as const;
 
@@ -3651,16 +3651,13 @@ export function concretePolicyItem(item: PolicyItem): PolicyItem {
   return policyItemForProvision(definition.id, option.id) ?? { ...item };
 }
 
-
 export function foundingOptionId(provisionId: string): string | null {
   const definition = legislativeProvision(provisionId);
   return definition?.options.find((option) => option.founding)?.id ?? null;
 }
 
 /** Options that may appear as legislative proposals (excludes founding baseline). */
-export function proposalOptionsFor(
-  provisionId: string,
-): readonly LegislativeProvisionOption[] {
+export function proposalOptionsFor(provisionId: string): readonly LegislativeProvisionOption[] {
   const definition = legislativeProvision(provisionId);
   if (!definition) return [];
   return definition.options.filter((option) => !option.founding);

@@ -181,18 +181,13 @@ function previewTextForClause(
   packageChanges: ReadonlyArray<PackageChangeDraft>,
   draft?: PackageChangeDraft | null,
 ): string | null {
-  const matches = [
-    ...packageChanges,
-    ...(draft ? [draft] : []),
-  ].filter((change) => {
+  const matches = [...packageChanges, ...(draft ? [draft] : [])].filter((change) => {
     const subject = constitutionSubjectById(change.subjectId);
     return subject?.targetClauseId === clauseId;
   });
   if (!matches.length) return null;
   const last = matches[matches.length - 1]!;
-  return (
-    constitutionAlternative(last.subjectId, last.alternativeId)?.proposedClauseText ?? null
-  );
+  return constitutionAlternative(last.subjectId, last.alternativeId)?.proposedClauseText ?? null;
 }
 
 export function ConstitutionBrowser(props: {
@@ -229,23 +224,16 @@ export function ConstitutionBrowser(props: {
     null;
 
   const clauseSubjects = selectedClause ? subjectsForClause(selectedClause.id) : [];
-  const articleSubjects = selectedArticle
-    ? constitutionSubjectsForArticle(selectedArticle.id)
-    : [];
+  const articleSubjects = selectedArticle ? constitutionSubjectsForArticle(selectedArticle.id) : [];
   const availableSubjects = clauseSubjects.length ? clauseSubjects : articleSubjects;
 
-  const activeSubject =
-    constitutionSubjectById(draftSubjectId) ?? availableSubjects[0] ?? null;
+  const activeSubject = constitutionSubjectById(draftSubjectId) ?? availableSubjects[0] ?? null;
 
-  const currentText = selectedClause
-    ? clauseText(props.world, props.snap, selectedClause)
-    : "";
+  const currentText = selectedClause ? clauseText(props.world, props.snap, selectedClause) : "";
 
   const proposalAlternatives = useMemo(() => {
     if (!activeSubject) return [];
-    return activeSubject.alternatives.filter(
-      (alt) => alt.proposedClauseText !== currentText,
-    );
+    return activeSubject.alternatives.filter((alt) => alt.proposedClauseText !== currentText);
   }, [activeSubject, currentText]);
 
   const activeAlternative =
@@ -408,9 +396,7 @@ export function ConstitutionBrowser(props: {
                           const subjects = subjectsForClause(clause.id);
                           const first = subjects[0];
                           setDraftSubjectId(first?.id ?? "");
-                          const live = first
-                            ? clauseText(props.world, props.snap, clause)
-                            : "";
+                          const live = first ? clauseText(props.world, props.snap, clause) : "";
                           const firstAlt = first?.alternatives.find(
                             (alt) => alt.proposedClauseText !== live,
                           );
@@ -465,11 +451,20 @@ export function ConstitutionBrowser(props: {
 
               {/* Legal cross-links: court cases referencing this clause */}
               {(() => {
-                const articleNumber = selectedArticle?.number ? String(selectedArticle.number).toLowerCase() : "";
-                const relatedCases = Object.values(props.snap.constitutionalRuntime.courtCases).filter(
+                const articleNumber = selectedArticle?.number
+                  ? String(selectedArticle.number).toLowerCase()
+                  : "";
+                const relatedCases = Object.values(
+                  props.snap.constitutionalRuntime.courtCases,
+                ).filter(
                   (cc) =>
-                    (articleNumber && cc.constitutionalQuestion?.toLowerCase().includes(`article ${articleNumber}`)) ||
-                    (cc.constitutionalRule && selectedClause?.id && cc.constitutionalRule.includes(selectedClause.id)),
+                    (articleNumber &&
+                      cc.constitutionalQuestion
+                        ?.toLowerCase()
+                        .includes(`article ${articleNumber}`)) ||
+                    (cc.constitutionalRule &&
+                      selectedClause?.id &&
+                      cc.constitutionalRule.includes(selectedClause.id)),
                 );
                 if (relatedCases.length === 0) return null;
                 return (
@@ -478,7 +473,10 @@ export function ConstitutionBrowser(props: {
                     {relatedCases.slice(0, 4).map((cc) => (
                       <div key={cc.id} className="cross-link-row">
                         <span className="cross-link-icon">⚖</span>
-                        <span>{caseTitle(cc)} · {cc.status.replace(/_/g, " ")}{cc.filedDate ? ` · filed ${cc.filedDate}` : ""}</span>
+                        <span>
+                          {caseTitle(cc)} · {cc.status.replace(/_/g, " ")}
+                          {cc.filedDate ? ` · filed ${cc.filedDate}` : ""}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -624,7 +622,10 @@ export function ConstitutionBrowser(props: {
                     const subject = constitutionSubjectById(change.subjectId);
                     const alt = constitutionAlternative(change.subjectId, change.alternativeId);
                     return (
-                      <div className="constitution-annotation-amendment" key={`${change.subjectId}:${index}`}>
+                      <div
+                        className="constitution-annotation-amendment"
+                        key={`${change.subjectId}:${index}`}
+                      >
                         <strong>
                           Change {index + 1}. {subject?.subject ?? change.subjectId}
                         </strong>

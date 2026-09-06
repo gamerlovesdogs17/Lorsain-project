@@ -6,11 +6,7 @@ import { clampUnit } from "../elections/policy.js";
 import { provinceThemeLabel } from "../provinces/themes.js";
 import { allocateMediaStoryId } from "./state.js";
 import { articleStructureFor } from "./articleBody.js";
-import {
-  HEADLINE_COOLDOWN_CAP,
-  headlineCooldownKeys,
-  headlineOnCooldown,
-} from "./types.js";
+import { HEADLINE_COOLDOWN_CAP, headlineCooldownKeys, headlineOnCooldown } from "./types.js";
 import type { MediaCategory, MediaStory } from "./types.js";
 import { ensureOrder } from "../provinces/constitutionGameplay.js";
 
@@ -109,8 +105,7 @@ function resolveProvinceLabel(
 ): string | null {
   if (context?.provinceLabel) return context.provinceLabel;
   const provinceId =
-    context?.provinceId ??
-    (typeof payload?.provinceId === "string" ? payload.provinceId : null);
+    context?.provinceId ?? (typeof payload?.provinceId === "string" ? payload.provinceId : null);
   if (!provinceId) return null;
   return provinceThemeLabel(provinceId);
 }
@@ -157,7 +152,9 @@ export function headlineFor(
           ? [
               `Budget${fy} clears Assembly after tense debate`,
               "Fiscal vote ends weeks of capital brinkmanship",
-              desk ? `${desk} hails hard-won budget passage` : "Budget passage resets the fiscal calendar",
+              desk
+                ? `${desk} hails hard-won budget passage`
+                : "Budget passage resets the fiscal calendar",
             ]
           : critical
             ? [
@@ -168,7 +165,9 @@ export function headlineFor(
             : [
                 `Budget${fy} approved by the Assembly`,
                 "Spending plan receives institutional assent",
-                desk ? `${desk} notes orderly budget approval` : "Annual budget wins formal approval",
+                desk
+                  ? `${desk} notes orderly budget approval`
+                  : "Annual budget wins formal approval",
               ],
         variant,
       );
@@ -178,7 +177,9 @@ export function headlineFor(
         [
           "Interim budget authority remains in force",
           "Fiscal operations continue under standing authority",
-          desk ? `${desk}: spending authority rolls forward` : "Budget continuity keeps ministries funded",
+          desk
+            ? `${desk}: spending authority rolls forward`
+            : "Budget continuity keeps ministries funded",
         ],
         variant,
       );
@@ -196,7 +197,9 @@ export function headlineFor(
           ? [
               `Budget${fy} faces immediate scrutiny`,
               "Assembly critics target the spending outline",
-              desk ? `${desk} questions the fiscal priorities` : "Proposed budget draws institutional pushback",
+              desk
+                ? `${desk} questions the fiscal priorities`
+                : "Proposed budget draws institutional pushback",
             ]
           : sympathetic
             ? [
@@ -210,7 +213,9 @@ export function headlineFor(
                 province
                   ? `${province} interest rises as budget is tabled`
                   : "Spending outline enters the public record",
-                desk ? `${desk} covers the budget introduction` : "Treasury outlines spending priorities",
+                desk
+                  ? `${desk} covers the budget introduction`
+                  : "Treasury outlines spending priorities",
               ],
       variant,
     );
@@ -225,7 +230,9 @@ export function headlineFor(
           ? [
               `${theme[0]!.toUpperCase()}${theme.slice(1)} rattles diplomacy`,
               `Crisis desk: ${theme} threatens regional calm`,
-              desk ? `${desk} warns of fallout from ${theme}` : `Abroad, ${theme} hardens positions`,
+              desk
+                ? `${desk} warns of fallout from ${theme}`
+                : `Abroad, ${theme} hardens positions`,
             ]
           : critical
             ? [
@@ -294,8 +301,7 @@ export function headlineFor(
   }
   if (type === "TREATY_PROPOSED" || type === "TREATY_RATIFIED" || type === "TREATY_REJECTED") {
     const treatyName =
-      title ??
-      (typeof payload?.treatyName === "string" ? payload.treatyName : null);
+      title ?? (typeof payload?.treatyName === "string" ? payload.treatyName : null);
     if (type === "TREATY_REJECTED") {
       return treatyName
         ? pickVariant(
@@ -329,14 +335,13 @@ export function headlineFor(
       }
       return pickVariant(
         sensational
-          ? [
-              `${treatyName} proposed in diplomatic push`,
-              `Treaty push: ${treatyName} unveiled`,
-            ]
+          ? [`${treatyName} proposed in diplomatic push`, `Treaty push: ${treatyName} unveiled`]
           : [
               `${treatyName} proposed`,
               `Diplomats circulate ${treatyName}`,
-              desk ? `${desk} reports ${treatyName} draft` : `Treaty proposal advances: ${treatyName}`,
+              desk
+                ? `${desk} reports ${treatyName} draft`
+                : `Treaty proposal advances: ${treatyName}`,
             ],
         variant,
       );
@@ -393,7 +398,9 @@ export function headlineFor(
         sensational
           ? [
               "Court backs province in federal clash",
-              province ? `${province} wins federal-provincial showdown` : "Province prevails in court clash",
+              province
+                ? `${province} wins federal-provincial showdown`
+                : "Province prevails in court clash",
             ]
           : [
               "Provincial law survives constitutional challenge",
@@ -439,10 +446,7 @@ export function headlineFor(
       return pickVariant(
         sensational
           ? ["Court challenges landmark law", "Legislation faces judicial shock"]
-          : [
-              "Constitutional Court reviews legislation",
-              "Statute undergoes constitutional review",
-            ],
+          : ["Constitutional Court reviews legislation", "Statute undergoes constitutional review"],
         variant,
       );
     }
@@ -451,7 +455,9 @@ export function headlineFor(
         ? ["Court bombshell upends the rules", "Judicial ruling upends expectations"]
         : [
             "Constitutional Court issues a decision",
-            desk ? `${desk} covers a constitutional ruling` : "Bench publishes a constitutional holding",
+            desk
+              ? `${desk} covers a constitutional ruling`
+              : "Bench publishes a constitutional holding",
           ],
       variant,
     );
@@ -482,7 +488,9 @@ export function headlineFor(
             : [
                 `${kind} election results certified`,
                 `${kind} race called as votes are counted`,
-                desk ? `${desk} certifies the ${kind.toLowerCase()} result` : `${kind} tally enters the record`,
+                desk
+                  ? `${desk} certifies the ${kind.toLowerCase()} result`
+                  : `${kind} tally enters the record`,
               ],
       variant,
     );
@@ -511,10 +519,7 @@ export function headlineFor(
   if (type.includes("ELECTION_RESOLVED") || type.includes("ELECTION")) {
     return pickVariant(
       sensational
-        ? [
-            "Election result rattles the establishment",
-            "Campaign turmoil rocks the race",
-          ]
+        ? ["Election result rattles the establishment", "Campaign turmoil rocks the race"]
         : [
             "Election results confirmed",
             "Campaign and election developments",
@@ -525,18 +530,14 @@ export function headlineFor(
   }
   if (type.includes("CAMPAIGN") || type === "CAMPAIGN_LAUNCHED" || type === "DEBATE_HELD") {
     const concrete =
-      title ??
-      (typeof payload?.notableMoment === "string" ? payload.notableMoment : null);
+      title ?? (typeof payload?.notableMoment === "string" ? payload.notableMoment : null);
     if (concrete && concrete.length > 0) {
       return concrete;
     }
     if (type === "DEBATE_HELD") {
       return pickVariant(
         sensational
-          ? [
-              "Candidates clash in televised debate",
-              "Debate night turns confrontational",
-            ]
+          ? ["Candidates clash in televised debate", "Debate night turns confrontational"]
           : [
               "Candidates hold a public debate",
               "Campaign debate enters the public record",
@@ -559,9 +560,7 @@ export function headlineFor(
             "Election campaign activity continues",
             "Campaign organizations keep working the field",
             "Candidates maintain their public schedules",
-            desk
-              ? `${desk} tracks ongoing campaign activity`
-              : "Campaign period remains active",
+            desk ? `${desk} tracks ongoing campaign activity` : "Campaign period remains active",
             province
               ? `Organizers work ${province} ahead of election day`
               : "Field operations stay on schedule",
@@ -586,7 +585,9 @@ export function headlineFor(
         : [
             "Economic conditions update",
             "Statistical offices refresh the economic picture",
-            desk ? `${desk} briefs the economic read-out` : "Economy desk updates the public indicators",
+            desk
+              ? `${desk} briefs the economic read-out`
+              : "Economy desk updates the public indicators",
           ],
       variant,
     );
@@ -598,10 +599,7 @@ export function headlineFor(
     if (orgName) {
       return pickVariant(
         sensational
-          ? [
-              `${orgName} takes sides in political battle`,
-              `${orgName} throws weight into the race`,
-            ]
+          ? [`${orgName} takes sides in political battle`, `${orgName} throws weight into the race`]
           : [
               `${orgName} issues endorsement`,
               `Endorsement desk: ${orgName} declares`,
@@ -670,10 +668,7 @@ export function headlineFor(
               ? `${province} assembly braces for a legislative fight`
               : "Provincial bill fight breaks into the open",
           ]
-        : [
-            "Bill introduced in provincial assembly",
-            "Provincial legislature opens a new file",
-          ],
+        : ["Bill introduced in provincial assembly", "Provincial legislature opens a new file"],
       variant,
     );
   }
@@ -730,10 +725,7 @@ export function headlineFor(
   if (type.startsWith("ASSEMBLY_MOTION_")) {
     return pickVariant(
       sensational
-        ? [
-            "Assembly motion sparks floor drama",
-            "Chamber fight erupts over a formal motion",
-          ]
+        ? ["Assembly motion sparks floor drama", "Chamber fight erupts over a formal motion"]
         : [
             "Assembly motion advances",
             "Chamber records action on a motion",
@@ -746,10 +738,7 @@ export function headlineFor(
     return pickVariant(
       sensational
         ? ["Regulation fight hits the ministries", "Rulemaking controversy breaks open"]
-        : [
-            "Ministerial regulation recorded",
-            "Administrative rule enters the public file",
-          ],
+        : ["Ministerial regulation recorded", "Administrative rule enters the public file"],
       variant,
     );
   }
@@ -761,7 +750,9 @@ export function headlineFor(
         ? [
             "Presidential veto sparks standoff",
             "Veto showdown rocks the assembly",
-            desk ? `${desk}: veto jolts the capital` : "Executive veto upends the legislative calendar",
+            desk
+              ? `${desk}: veto jolts the capital`
+              : "Executive veto upends the legislative calendar",
           ]
         : [
             "Presidential veto issued",
@@ -774,7 +765,10 @@ export function headlineFor(
   if (type === "LAW_ENACTED") {
     return pickVariant(
       sensational
-        ? ["Major legislation enacted", title ? `${title} becomes law in dramatic vote` : "Landmark act takes effect"]
+        ? [
+            "Major legislation enacted",
+            title ? `${title} becomes law in dramatic vote` : "Landmark act takes effect",
+          ]
         : [
             "New law enacted by the assembly",
             title ? `${title} is enacted` : "Statute completes the legislative path",
@@ -787,10 +781,7 @@ export function headlineFor(
     if (title) {
       return pickVariant(
         sensational
-          ? [
-              `Legislative battle over ${title}`,
-              `${title} becomes a capitol flashpoint`,
-            ]
+          ? [`Legislative battle over ${title}`, `${title} becomes a capitol flashpoint`]
           : critical
             ? [`Scrutiny mounts over ${title}`, `${title} draws institutional criticism`]
             : [
@@ -803,14 +794,13 @@ export function headlineFor(
     }
     return pickVariant(
       sensational
-        ? [
-            "Legislative battle reaches its climax",
-            "Capitol showdown over a bill",
-          ]
+        ? ["Legislative battle reaches its climax", "Capitol showdown over a bill"]
         : [
             "Assembly passes new legislation",
             "Government legislative action",
-            desk ? `${desk} covers Assembly legislation` : "Legislative calendar moves a major file",
+            desk
+              ? `${desk} covers Assembly legislation`
+              : "Legislative calendar moves a major file",
           ],
       variant,
     );
@@ -820,10 +810,7 @@ export function headlineFor(
   if (type === "MINISTER_APPOINTED" || type === "CABINET_CHANGE" || type === "MINISTER_DISMISSED") {
     return pickVariant(
       sensational
-        ? [
-            "Cabinet reshuffle shakes government",
-            "Ministerial change rattles the executive",
-          ]
+        ? ["Cabinet reshuffle shakes government", "Ministerial change rattles the executive"]
         : [
             "Cabinet appointment announced",
             "Executive posts are reassigned",
@@ -835,14 +822,8 @@ export function headlineFor(
   if (type === "EMERGENCY_DECLARED") {
     return pickVariant(
       sensational
-        ? [
-            "Emergency powers invoked — crisis deepens",
-            "Emergency decree grips the capital",
-          ]
-        : [
-            "State of emergency declared",
-            "Emergency authority enters force",
-          ],
+        ? ["Emergency powers invoked — crisis deepens", "Emergency decree grips the capital"]
+        : ["State of emergency declared", "Emergency authority enters force"],
       variant,
     );
   }
@@ -861,10 +842,7 @@ export function headlineFor(
             "Court bench reshaped by new appointment",
             "Judicial nomination becomes a political fight",
           ]
-        : [
-            "Constitutional judge confirmed",
-            "Judicial vacancy process advances",
-          ],
+        : ["Constitutional judge confirmed", "Judicial vacancy process advances"],
       variant,
     );
   }
@@ -877,7 +855,11 @@ export function headlineFor(
   if (title) {
     return pickVariant(
       sensational
-        ? [`${title} ignites reaction`, `${title} rattles politics`, desk ? `${desk}: ${title} erupts` : `${title} dominates the cycle`]
+        ? [
+            `${title} ignites reaction`,
+            `${title} rattles politics`,
+            desk ? `${desk}: ${title} erupts` : `${title} dominates the cycle`,
+          ]
         : critical
           ? [`Scrutiny follows ${title}`, `${title} draws institutional criticism`]
           : sympathetic
@@ -899,10 +881,7 @@ export function headlineFor(
             `${narrativeTitle[0]!.toUpperCase()}${narrativeTitle.slice(1)} draws scrutiny`,
             `Storyline around ${narrativeTitle} hardens`,
           ]
-        : [
-            `Developments around ${narrativeTitle}`,
-            `Public attention turns to ${narrativeTitle}`,
-          ],
+        : [`Developments around ${narrativeTitle}`, `Public attention turns to ${narrativeTitle}`],
       variant,
     );
   }
@@ -912,8 +891,12 @@ export function headlineFor(
     government: [
       "Executive branch records a public action",
       "Government institutions update the public file",
-      desk ? `${desk} covers a government development` : "Capital institutions move a government file",
-      province ? `${province} feels a national government decision` : "National government action is logged",
+      desk
+        ? `${desk} covers a government development`
+        : "Capital institutions move a government file",
+      province
+        ? `${province} feels a national government decision`
+        : "National government action is logged",
     ],
     elections: [
       "Electoral calendar advances",
@@ -944,23 +927,19 @@ export function headlineFor(
       "Political developments enter the public record",
       "Partisan argument shifts after a new filing",
       desk ? `${desk} frames the political day` : "Political institutions log a new item",
-      province ? `Politics in ${province} absorb a national story` : "National politics absorb a new public item",
+      province
+        ? `Politics in ${province} absorb a national story`
+        : "National politics absorb a new public item",
     ],
   };
   const hotLines: Record<MediaCategory, string[]> = {
-    government: [
-      "Government move jolts the capital",
-      "Executive action dominates the news cycle",
-    ],
+    government: ["Government move jolts the capital", "Executive action dominates the news cycle"],
     elections: ["Election fight intensifies", "Campaign shockwaves hit the trail"],
     courts: ["Court drama grips the capital", "Judicial clash dominates coverage"],
     economy: ["Economic scare grips markets", "Fiscal nerves dominate the cycle"],
     organizations: ["Pressure politics erupt", "Interest-group clash turns public"],
     foreign: ["Foreign crisis dominates headlines", "Diplomacy takes a hard turn"],
-    politics: [
-      "Political scramble grips Valen",
-      "Partisan fight dominates the cycle",
-    ],
+    politics: ["Political scramble grips Valen", "Partisan fight dominates the cycle"],
   };
   const pool = sensational || critical ? hotLines[category] : categoryLines[category];
   return pickVariant(pool, variant);
@@ -1044,9 +1023,10 @@ export function processMediaMonth(
   const allOutlets = Object.values(world.mediaOutlets).sort((a, b) => (a.id < b.id ? -1 : 1));
   // licensed_press: reduce outlet diversity (only high-reputation outlets publish freely)
   // state_media_priority: bias toward government-sympathetic framing
-  const outlets = pressFreedom === "licensed_press"
-    ? allOutlets.filter((o) => o.factualReputation >= 0.5 || o.ideology <= 0)
-    : allOutlets;
+  const outlets =
+    pressFreedom === "licensed_press"
+      ? allOutlets.filter((o) => o.factualReputation >= 0.5 || o.ideology <= 0)
+      : allOutlets;
   for (const outlet of outlets) {
     const scored = pool
       .map((ev) => {
@@ -1086,13 +1066,16 @@ export function processMediaMonth(
       if (pressFreedom === "state_media_priority" && pick.cat === "government") {
         framing = "sympathetic";
       }
-      if (pressFreedom === "licensed_press" && framing === "critical" && pick.cat === "government") {
+      if (
+        pressFreedom === "licensed_press" &&
+        framing === "critical" &&
+        pick.cat === "government"
+      ) {
         framing = "restrained";
       }
       const evPayload = pick.ev.payload as Record<string, unknown> | undefined;
       const fingerprints = state.mediaRuntime.recentHeadlineFingerprints ?? [];
-      const provinceId =
-        typeof evPayload?.provinceId === "string" ? evPayload.provinceId : null;
+      const provinceId = typeof evPayload?.provinceId === "string" ? evPayload.provinceId : null;
       const headlineContext = {
         outletId: outlet.id,
         outletName: outlet.name,

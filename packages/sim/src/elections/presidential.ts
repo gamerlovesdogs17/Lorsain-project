@@ -17,7 +17,10 @@ import { scheduleAssumptionIfNeeded } from "./state.js";
 import type { ElectionCandidate, ElectionState } from "./types.js";
 import { FIELD } from "../campaigns/policy.js";
 import { constituencyGotvBoost } from "../campaigns/gotv.js";
-import { presidentialNominationCycleMetadata, partyAllowedUnderConstitution } from "../parties/state.js";
+import {
+  presidentialNominationCycleMetadata,
+  partyAllowedUnderConstitution,
+} from "../parties/state.js";
 import { certifyCount, certifyShareResult } from "./certification.js";
 import {
   describePresidentialElectionMethod,
@@ -246,13 +249,11 @@ export function resolvePresidentialElection(
       { rng: { nextUint32: () => rng.uint32("elections") } },
     );
     const totals = first.firstPreferences;
-    const ordered = candidateIds
-      .slice()
-      .sort((a, b) => {
-        const av = Number(totals[a]?.split("/")[0] ?? 0);
-        const bv = Number(totals[b]?.split("/")[0] ?? 0);
-        return bv - av || a.localeCompare(b);
-      });
+    const ordered = candidateIds.slice().sort((a, b) => {
+      const av = Number(totals[a]?.split("/")[0] ?? 0);
+      const bv = Number(totals[b]?.split("/")[0] ?? 0);
+      return bv - av || a.localeCompare(b);
+    });
     const top = ordered[0]!;
     const topVotes = Number(totals[top]?.split("/")[0] ?? 0);
     const totalValidNum = Number(first.totalValid.split("/")[0] ?? 0);

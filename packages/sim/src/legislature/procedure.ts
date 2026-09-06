@@ -669,8 +669,7 @@ function pushProvisionEnactments(state: SimState, law: EnactedLawRecord): void {
   for (const item of law.policyItems) {
     if (!item.provisionId || !item.optionId) continue;
     const stack = stackFor(state, item.provisionId);
-    const previousOptionId =
-      stack.at(-1)?.optionId ?? foundingOptionId(item.provisionId) ?? null;
+    const previousOptionId = stack.at(-1)?.optionId ?? foundingOptionId(item.provisionId) ?? null;
     if (previousOptionId === item.optionId) continue;
     stack.push({
       lawId: law.id,
@@ -686,8 +685,7 @@ function applyLawProvenance(
   law: EnactedLawRecord,
   billMetadata: JsonObject,
 ): void {
-  const action =
-    typeof billMetadata.lawAction === "string" ? billMetadata.lawAction : null;
+  const action = typeof billMetadata.lawAction === "string" ? billMetadata.lawAction : null;
   const targetLawId =
     typeof billMetadata.targetLawId === "string" ? billMetadata.targetLawId : null;
 

@@ -193,9 +193,7 @@ export function parseProvincialRuntime(raw: unknown): ProvincialRuntime | string
     runtime.constitutionalOrder = {
       ...runtime.constitutionalOrder,
       ...(raw.constitutionalOrder as ProvincialRuntime["constitutionalOrder"]),
-      clauseTexts: isRecord(
-        (raw.constitutionalOrder as { clauseTexts?: unknown }).clauseTexts,
-      )
+      clauseTexts: isRecord((raw.constitutionalOrder as { clauseTexts?: unknown }).clauseTexts)
         ? ((raw.constitutionalOrder as { clauseTexts: Record<string, string> }).clauseTexts ?? {})
         : {},
     };

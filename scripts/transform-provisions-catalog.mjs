@@ -13,7 +13,7 @@ let src = readFileSync(path, "utf8");
 src = src.replace(/current: boolean;/g, "founding: boolean;");
 src = src.replace(
   /current\?: boolean;/g,
-  "founding?: boolean;\n    controlHint?: \"categorical\" | \"numeric\" | \"binary\" | \"threshold\";",
+  'founding?: boolean;\n    controlHint?: "categorical" | "numeric" | "binary" | "threshold";',
 );
 src = src.replace(/current: args\.current === true,/g, "founding: args.founding === true,");
 src = src.replace(

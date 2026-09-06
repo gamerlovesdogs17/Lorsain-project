@@ -3,10 +3,7 @@ import type { KernelWorld, SimState } from "../types.js";
 import type { IdeologyAxis } from "../agents/types.js";
 import type { BillState, PolicyItem, RecommendationStance } from "./types.js";
 import { partyPlatformFit } from "../parties/platforms.js";
-import {
-  optionForPolicyItem,
-  provisionForPolicyItem,
-} from "./provisions.js";
+import { optionForPolicyItem, provisionForPolicyItem } from "./provisions.js";
 
 function axisForDimension(dimension: string): IdeologyAxis {
   if (dimension === "economic" || dimension === "economic-social") return "economic";
@@ -101,8 +98,10 @@ export function evaluateBillComponents(
     }
     if (profile && item.fiscalImpact != null && Math.abs(item.fiscalImpact) > 0.05) {
       const econ = profile.ideology.economic ?? 0;
-      if (item.fiscalImpact > 0 && econ > 0.2) factors.push("higher spending aligns with economic views");
-      if (item.fiscalImpact < 0 && econ < -0.2) factors.push("fiscal restraint aligns with economic views");
+      if (item.fiscalImpact > 0 && econ > 0.2)
+        factors.push("higher spending aligns with economic views");
+      if (item.fiscalImpact < 0 && econ < -0.2)
+        factors.push("fiscal restraint aligns with economic views");
     }
     if (fit > 0.15) factors.push("overall alignment");
     if (fit < -0.15) factors.push("overall conflict");

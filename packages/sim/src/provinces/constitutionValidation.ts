@@ -104,7 +104,8 @@ export function validateConstitutionChangeSubject(
       message: `Section ${subject.sectionId} should use canonical id ${canonicalSubjectSection}`,
     });
   }
-  const sectionArticle = index.sections.get(subject.sectionId) ?? index.sections.get(canonicalSubjectSection);
+  const sectionArticle =
+    index.sections.get(subject.sectionId) ?? index.sections.get(canonicalSubjectSection);
   if (!sectionArticle) {
     errors.push({
       subjectId: subject.id,
@@ -149,10 +150,10 @@ export function validateConstitutionChangeSubject(
       message: `Founding alternative ${subject.foundingAlternativeId} missing`,
     });
   } else if (options?.requireFoundingBaselineMatch !== false && clause) {
-    const expected =
-      options?.currentTexts?.[subject.targetClauseId] ??
-      clause.text;
-    if (normalizeConstitutionText(founding.proposedClauseText) !== normalizeConstitutionText(expected)) {
+    const expected = options?.currentTexts?.[subject.targetClauseId] ?? clause.text;
+    if (
+      normalizeConstitutionText(founding.proposedClauseText) !== normalizeConstitutionText(expected)
+    ) {
       errors.push({
         subjectId: subject.id,
         code: "FOUNDING_BASELINE_MISMATCH",

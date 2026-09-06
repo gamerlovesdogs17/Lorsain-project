@@ -54,12 +54,42 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
     living_wage_floor: { realWageIndex: 0.16, employmentIndex: -0.08, outputIndex: -0.1 },
   },
   PROV_BARGAINING_SCOPE: {
-    no_statutory_framework: { realWageIndex: -0.14, employmentIndex: 0.06, outputIndex: 0.08, confidenceIndex: -0.04 },
-    workplace_agreements_only: { realWageIndex: -0.08, employmentIndex: 0.04, outputIndex: 0.04, confidenceIndex: -0.02 },
-    enterprise_wide: { realWageIndex: 0.06, employmentIndex: -0.02, outputIndex: -0.04, confidenceIndex: 0.04 },
-    voluntary_sector_councils: { realWageIndex: 0.1, employmentIndex: -0.04, outputIndex: -0.06, confidenceIndex: 0.06 },
-    binding_sector_councils: { realWageIndex: 0.14, employmentIndex: -0.06, outputIndex: -0.1, confidenceIndex: 0.08 },
-    national_wage_council: { realWageIndex: 0.18, employmentIndex: -0.1, outputIndex: -0.14, confidenceIndex: 0.1 },
+    no_statutory_framework: {
+      realWageIndex: -0.14,
+      employmentIndex: 0.06,
+      outputIndex: 0.08,
+      confidenceIndex: -0.04,
+    },
+    workplace_agreements_only: {
+      realWageIndex: -0.08,
+      employmentIndex: 0.04,
+      outputIndex: 0.04,
+      confidenceIndex: -0.02,
+    },
+    enterprise_wide: {
+      realWageIndex: 0.06,
+      employmentIndex: -0.02,
+      outputIndex: -0.04,
+      confidenceIndex: 0.04,
+    },
+    voluntary_sector_councils: {
+      realWageIndex: 0.1,
+      employmentIndex: -0.04,
+      outputIndex: -0.06,
+      confidenceIndex: 0.06,
+    },
+    binding_sector_councils: {
+      realWageIndex: 0.14,
+      employmentIndex: -0.06,
+      outputIndex: -0.1,
+      confidenceIndex: 0.08,
+    },
+    national_wage_council: {
+      realWageIndex: 0.18,
+      employmentIndex: -0.1,
+      outputIndex: -0.14,
+      confidenceIndex: 0.1,
+    },
   },
   PROV_UNION_RECOGNITION: {
     voluntary_recognition: { realWageIndex: -0.1, employmentIndex: 0.04, confidenceIndex: -0.06 },
@@ -72,7 +102,11 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
     rolling_notice_window: { outputIndex: -0.06, employmentIndex: -0.02, realWageIndex: 0.06 },
   },
   PROV_PLATFORM_WORK: {
-    independent_contractor_safe_harbor: { employmentIndex: 0.06, realWageIndex: -0.08, outputIndex: 0.04 },
+    independent_contractor_safe_harbor: {
+      employmentIndex: 0.06,
+      realWageIndex: -0.08,
+      outputIndex: 0.04,
+    },
     hybrid_status_framework: { employmentIndex: 0.02, realWageIndex: 0.04, fiscalPressure: 0.02 },
     employee_presumption: { employmentIndex: -0.04, realWageIndex: 0.1, fiscalPressure: 0.04 },
   },
@@ -109,16 +143,28 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
   },
   PROV_TUITION_SUPPORT: {
     higher_tuition_cap: { fiscalPressure: -0.06, confidenceIndex: -0.04, employmentIndex: 0.02 },
-    income_contingent_loans: { fiscalPressure: -0.03, confidenceIndex: 0.02, employmentIndex: 0.02 },
+    income_contingent_loans: {
+      fiscalPressure: -0.03,
+      confidenceIndex: 0.02,
+      employmentIndex: 0.02,
+    },
     means_tested_stipend: { fiscalPressure: 0.06, confidenceIndex: 0.04, employmentIndex: 0.04 },
-    tuition_free_first_degree: { fiscalPressure: 0.12, confidenceIndex: 0.06, employmentIndex: 0.06 },
+    tuition_free_first_degree: {
+      fiscalPressure: 0.12,
+      confidenceIndex: 0.06,
+      employmentIndex: 0.06,
+    },
   },
   PROV_SCHOOL_MEALS: {
     narrow_income_test: { fiscalPressure: -0.04, confidenceIndex: -0.04 },
     universal_school_meals: { fiscalPressure: 0.08, confidenceIndex: 0.06 },
   },
   PROV_HEALTH_INSURANCE_MODEL: {
-    regulated_private_insurance: { fiscalPressure: -0.1, confidenceIndex: -0.06, outputIndex: 0.04 },
+    regulated_private_insurance: {
+      fiscalPressure: -0.1,
+      confidenceIndex: -0.06,
+      outputIndex: 0.04,
+    },
     nonprofit_insurance_funds: { fiscalPressure: 0.02, confidenceIndex: 0.02 },
     national_health_service: { fiscalPressure: 0.14, confidenceIndex: 0.08, employmentIndex: 0.04 },
   },
@@ -128,14 +174,26 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
     single_public_purchaser: { priceIndex: -0.08, fiscalPressure: 0.04, confidenceIndex: 0.04 },
   },
   PROV_HOSPITAL_GOVERNANCE: {
-    contracted_hospital_networks: { fiscalPressure: -0.03, outputIndex: 0.02, confidenceIndex: -0.04 },
+    contracted_hospital_networks: {
+      fiscalPressure: -0.03,
+      outputIndex: 0.02,
+      confidenceIndex: -0.04,
+    },
     national_quality_standards: { fiscalPressure: 0.02, confidenceIndex: 0.04 },
-    integrated_regional_authorities: { fiscalPressure: 0.06, confidenceIndex: 0.04, employmentIndex: 0.02 },
+    integrated_regional_authorities: {
+      fiscalPressure: 0.06,
+      confidenceIndex: 0.04,
+      employmentIndex: 0.02,
+    },
   },
   PROV_CHILDCARE_MODEL: {
     tax_credit: { fiscalPressure: -0.02, employmentIndex: 0.02, confidenceIndex: -0.02 },
     universal_fee_cap: { fiscalPressure: 0.08, employmentIndex: 0.06, confidenceIndex: 0.06 },
-    public_childcare_network: { fiscalPressure: 0.14, employmentIndex: 0.08, confidenceIndex: 0.08 },
+    public_childcare_network: {
+      fiscalPressure: 0.14,
+      employmentIndex: 0.08,
+      confidenceIndex: 0.08,
+    },
   },
   PROV_INHERITANCE_TAX: {
     repeal_estate_tax: { fiscalPressure: -0.1, confidenceIndex: -0.04, outputIndex: 0.04 },
@@ -145,12 +203,32 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
 
   // ── ISS_OWNERSHIP ──────────────────────────────────────────────────
   PROV_RAIL_OWNERSHIP: {
-    private_infrastructure: { outputIndex: 0.06, fiscalPressure: -0.1, employmentIndex: -0.04, confidenceIndex: -0.06 },
-    private_concessions: { outputIndex: 0.04, fiscalPressure: -0.06, employmentIndex: -0.02, confidenceIndex: -0.02 },
+    private_infrastructure: {
+      outputIndex: 0.06,
+      fiscalPressure: -0.1,
+      employmentIndex: -0.04,
+      confidenceIndex: -0.06,
+    },
+    private_concessions: {
+      outputIndex: 0.04,
+      fiscalPressure: -0.06,
+      employmentIndex: -0.02,
+      confidenceIndex: -0.02,
+    },
     open_access_private: { outputIndex: 0.02, fiscalPressure: -0.03, confidenceIndex: 0.02 },
     public_with_competition: { outputIndex: -0.02, fiscalPressure: 0.04, employmentIndex: 0.02 },
-    public_operator: { outputIndex: -0.04, fiscalPressure: 0.08, employmentIndex: 0.04, confidenceIndex: 0.04 },
-    integrated_public_authority: { outputIndex: -0.08, fiscalPressure: 0.12, employmentIndex: 0.06, confidenceIndex: 0.06 },
+    public_operator: {
+      outputIndex: -0.04,
+      fiscalPressure: 0.08,
+      employmentIndex: 0.04,
+      confidenceIndex: 0.04,
+    },
+    integrated_public_authority: {
+      outputIndex: -0.08,
+      fiscalPressure: 0.12,
+      employmentIndex: 0.06,
+      confidenceIndex: 0.06,
+    },
   },
   PROV_INFRASTRUCTURE_BANK: {
     private_project_finance: { outputIndex: 0.04, fiscalPressure: -0.04, employmentIndex: -0.02 },
@@ -192,7 +270,12 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
     province_discretion: { housingIndex: -0.08, confidenceIndex: -0.04, outputIndex: -0.02 },
     provincial_targets: { housingIndex: -0.04, confidenceIndex: 0.02 },
     supply_deadlines: { housingIndex: 0.1, outputIndex: 0.06, confidenceIndex: 0.04 },
-    national_zoning_override: { housingIndex: 0.16, outputIndex: 0.08, confidenceIndex: 0.06, fiscalPressure: 0.06 },
+    national_zoning_override: {
+      housingIndex: 0.16,
+      outputIndex: 0.08,
+      confidenceIndex: 0.06,
+      fiscalPressure: 0.06,
+    },
   },
   PROV_PUBLIC_HOUSING: {
     voucher_shift: { housingIndex: -0.06, fiscalPressure: -0.04, confidenceIndex: -0.04 },
@@ -229,8 +312,18 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
   PROV_CLEAN_POWER: {
     reliability_deferral: { outputIndex: 0.06, priceIndex: -0.08, employmentIndex: -0.02 },
     technology_neutral_standard: { outputIndex: 0.02, priceIndex: -0.02, employmentIndex: 0.02 },
-    accelerate_clean_power: { outputIndex: -0.08, priceIndex: 0.1, employmentIndex: 0.04, fiscalPressure: 0.06 },
-    zero_carbon_grid_mandate: { outputIndex: -0.14, priceIndex: 0.16, employmentIndex: 0.06, fiscalPressure: 0.12 },
+    accelerate_clean_power: {
+      outputIndex: -0.08,
+      priceIndex: 0.1,
+      employmentIndex: 0.04,
+      fiscalPressure: 0.06,
+    },
+    zero_carbon_grid_mandate: {
+      outputIndex: -0.14,
+      priceIndex: 0.16,
+      employmentIndex: 0.06,
+      fiscalPressure: 0.12,
+    },
   },
   PROV_NUCLEAR_POLICY: {
     managed_phaseout: { outputIndex: -0.04, priceIndex: 0.06, fiscalPressure: 0.06 },
@@ -240,7 +333,11 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
   PROV_WATER_ENFORCEMENT: {
     province_only_enforcement: { outputIndex: 0.03, fiscalPressure: -0.03, confidenceIndex: -0.04 },
     industry_self_monitoring: { outputIndex: 0.02, fiscalPressure: -0.01 },
-    national_enforcement_office: { outputIndex: -0.04, fiscalPressure: 0.06, confidenceIndex: 0.04 },
+    national_enforcement_office: {
+      outputIndex: -0.04,
+      fiscalPressure: 0.06,
+      confidenceIndex: 0.04,
+    },
   },
 
   // ── ISS_LIBERTY ────────────────────────────────────────────────────
@@ -257,15 +354,27 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
 
   // ── ISS_IMMIGRATION ────────────────────────────────────────────────
   PROV_RESIDENCY_PATH: {
-    points_and_sponsorship: { employmentIndex: 0.04, fiscalPressure: -0.02, confidenceIndex: -0.04 },
+    points_and_sponsorship: {
+      employmentIndex: 0.04,
+      fiscalPressure: -0.02,
+      confidenceIndex: -0.04,
+    },
     humanitarian_track: { employmentIndex: 0.02, fiscalPressure: 0.03, confidenceIndex: 0.04 },
     ten_year_residence: { employmentIndex: -0.04, confidenceIndex: -0.02, fiscalPressure: -0.02 },
     earned_settlement_track: { employmentIndex: 0.06, confidenceIndex: 0.04, fiscalPressure: 0.02 },
   },
   PROV_ASYLUM_PROCESS: {
-    safe_country_summary_process: { employmentIndex: -0.02, fiscalPressure: -0.03, confidenceIndex: -0.04 },
+    safe_country_summary_process: {
+      employmentIndex: -0.02,
+      fiscalPressure: -0.03,
+      confidenceIndex: -0.04,
+    },
     independent_case_agency: { confidenceIndex: 0.03, fiscalPressure: 0.04 },
-    right_to_work_after_six_months: { employmentIndex: 0.04, confidenceIndex: 0.04, fiscalPressure: 0.02 },
+    right_to_work_after_six_months: {
+      employmentIndex: 0.04,
+      confidenceIndex: 0.04,
+      fiscalPressure: 0.02,
+    },
   },
 
   // ── ISS_POLICING ───────────────────────────────────────────────────
@@ -338,10 +447,22 @@ const PROVISION_OPTION_EFFECTS: Record<string, Record<string, SpecificEffectTabl
 
   // ── ISS_DEFENSE ────────────────────────────────────────────────────
   PROV_READINESS_FUND: {
-    deferred_maintenance_freeze: { fiscalPressure: -0.08, employmentIndex: -0.04, confidenceIndex: -0.06 },
-    maintenance_only_budget: { fiscalPressure: -0.04, employmentIndex: -0.02, confidenceIndex: -0.03 },
+    deferred_maintenance_freeze: {
+      fiscalPressure: -0.08,
+      employmentIndex: -0.04,
+      confidenceIndex: -0.06,
+    },
+    maintenance_only_budget: {
+      fiscalPressure: -0.04,
+      employmentIndex: -0.02,
+      confidenceIndex: -0.03,
+    },
     rapid_reaction_brigade: { fiscalPressure: 0.06, employmentIndex: 0.04, confidenceIndex: 0.04 },
-    reserves_and_stockpile_plan: { fiscalPressure: 0.1, employmentIndex: 0.06, confidenceIndex: 0.06 },
+    reserves_and_stockpile_plan: {
+      fiscalPressure: 0.1,
+      employmentIndex: 0.06,
+      confidenceIndex: 0.06,
+    },
   },
 };
 
@@ -415,7 +536,9 @@ function foundingParameterValue(provisionId: string): number | null {
 }
 
 /** Proposal-specific deltas from option tables or parameterValue scaling. */
-export function proposalSpecificIndexDelta(item: PolicyItem): Partial<NationalEconomyIndices> | null {
+export function proposalSpecificIndexDelta(
+  item: PolicyItem,
+): Partial<NationalEconomyIndices> | null {
   // Prefer actual parameter values when present so numeric law uses the enacted figure.
   const option = optionForPolicyItem(item);
   if (option?.parameterValue != null && item.provisionId) {

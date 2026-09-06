@@ -74,11 +74,7 @@ export const ENTRENCHMENT_MODES = [
 export type EntrenchmentMode = (typeof ENTRENCHMENT_MODES)[number];
 
 /** Articles protected by entrenchment — core constitutional provisions. */
-export const ENTRENCHED_ARTICLE_IDS = [
-  "ARTICLE_I",
-  "ARTICLE_II",
-  "ARTICLE_VIII",
-] as const;
+export const ENTRENCHED_ARTICLE_IDS = ["ARTICLE_I", "ARTICLE_II", "ARTICLE_VIII"] as const;
 
 export const CIVIL_LIBERTY_MODES = [
   "broad_democratic_liberties",
@@ -183,7 +179,10 @@ export type ConstitutionalMetricEffects = {
   governmentLegitimacy?: number;
 };
 
-export function amendmentThresholds(order: ConstitutionalOrderState, coreArticle = false): {
+export function amendmentThresholds(
+  order: ConstitutionalOrderState,
+  coreArticle = false,
+): {
   assemblyFraction: number;
   provincesRequired: number;
   referendumRequired: boolean;

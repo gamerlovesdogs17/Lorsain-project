@@ -17,7 +17,11 @@ import {
   constitutionSubjectById,
   CONSTITUTION_CHANGE_SUBJECTS,
 } from "./constitutionChanges.js";
-import { amendmentThresholds, emptyConstitutionalOrder, isEntrenchedArticle } from "./constitutionalOrder.js";
+import {
+  amendmentThresholds,
+  emptyConstitutionalOrder,
+  isEntrenchedArticle,
+} from "./constitutionalOrder.js";
 import {
   applyAlternativeGameplayEffects,
   referendumRequiredForAmendments,
@@ -182,8 +186,7 @@ export function currentConstitutionalClauseText(
           ((amendment.documentClauseId === clauseId &&
             typeof amendment.proposedText === "string") ||
             amendment.packageChanges?.some(
-              (change) =>
-                change.clauseId === clauseId && typeof change.proposedText === "string",
+              (change) => change.clauseId === clauseId && typeof change.proposedText === "string",
             )),
       )
       .sort(
@@ -813,7 +816,9 @@ function federalVote(
   });
   const documentTouchesCore = amendment.documentClauseId
     ? CONSTITUTION_CHANGE_SUBJECTS.some(
-        (subject) => subject.targetClauseId === amendment.documentClauseId && isEntrenchedArticle(subject.articleId),
+        (subject) =>
+          subject.targetClauseId === amendment.documentClauseId &&
+          isEntrenchedArticle(subject.articleId),
       )
     : false;
   const touchesCore = packageTouchesCore || documentTouchesCore;
@@ -829,7 +834,10 @@ function federalVote(
       order.pendingInterlockAmendmentIds = pending;
     } else {
       const provincesNeeded = provincesRequiredForRatification(state);
-      if (referendumRequiredForAmendments(state) || (touchesCore && order.entrenchment === "referendum_core")) {
+      if (
+        referendumRequiredForAmendments(state) ||
+        (touchesCore && order.entrenchment === "referendum_core")
+      ) {
         amendment.status = "ratifying";
         amendment.ratificationDeadline = null;
         const pending = order.pendingReferendumAmendmentIds ?? [];
@@ -1130,9 +1138,7 @@ export function processConstitutionalAmendmentsMonth(
         events.push(
           pushHistory(state, {
             date: state.currentDate,
-            type: passed
-              ? "CONSTITUTIONAL_AMENDMENT_RATIFIED"
-              : "CONSTITUTIONAL_AMENDMENT_FAILED",
+            type: passed ? "CONSTITUTIONAL_AMENDMENT_RATIFIED" : "CONSTITUTIONAL_AMENDMENT_FAILED",
             importance: 1,
             visibility: "public",
             actorIds: [amendment.sponsorId],

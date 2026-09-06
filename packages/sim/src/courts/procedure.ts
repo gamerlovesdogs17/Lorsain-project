@@ -806,10 +806,7 @@ export function recordJudicialDecision(
   if (!courtCase || courtCase.status !== "pending") {
     return { error: reject("UNKNOWN_CASE", args.caseId) };
   }
-  const tallied = applyJudicialReviewModeToDisposition(
-    state,
-    tallyJudicialDisposition(args.votes),
-  );
+  const tallied = applyJudicialReviewModeToDisposition(state, tallyJudicialDisposition(args.votes));
   const decisionId = allocateDecisionId(state);
   courtCase.votes = { ...args.votes };
   courtCase.disposition = tallied.disposition;

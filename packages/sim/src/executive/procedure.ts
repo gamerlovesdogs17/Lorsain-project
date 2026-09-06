@@ -19,7 +19,14 @@ import {
   seedMinistriesIfNeeded,
 } from "./state.js";
 import type { AssemblyMotion, MotionKind, RegulationState } from "./types.js";
-import { emergencyDeclarationAllowed, warUnilateralDaysForDefenseControl, ensureOrder, assemblyPluralityPartyId, executiveAuthorityGateRegulation, executiveAuthorityGateEmergency } from "../provinces/constitutionGameplay.js";
+import {
+  emergencyDeclarationAllowed,
+  warUnilateralDaysForDefenseControl,
+  ensureOrder,
+  assemblyPluralityPartyId,
+  executiveAuthorityGateRegulation,
+  executiveAuthorityGateEmergency,
+} from "../provinces/constitutionGameplay.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -231,7 +238,12 @@ export function issueRegulation(
   if (err) return { error: err };
   const regGate = executiveAuthorityGateRegulation(state, args.major === true);
   if (!regGate.allowed) {
-    return { error: reject("EXECUTIVE_AUTHORITY_BLOCKED", regGate.reason ?? "regulation blocked by constitutional order") };
+    return {
+      error: reject(
+        "EXECUTIVE_AUTHORITY_BLOCKED",
+        regGate.reason ?? "regulation blocked by constitutional order",
+      ),
+    };
   }
   const office = world.offices[args.ministryOfficeId];
   if (!office || office.kind !== "minister") {
@@ -329,8 +341,16 @@ export function introduceMotion(
   }
   if (args.kind === "cabinet_no_confidence") {
     const order = ensureOrder(state);
-    if (order.cabinetFormation !== "assembly_confidence" && order.executiveAuthority !== "assembly_dominant") {
-      return { error: reject("NO_CONFIDENCE_UNAVAILABLE", "No-confidence motions require assembly_confidence cabinet formation or assembly_dominant executive") };
+    if (
+      order.cabinetFormation !== "assembly_confidence" &&
+      order.executiveAuthority !== "assembly_dominant"
+    ) {
+      return {
+        error: reject(
+          "NO_CONFIDENCE_UNAVAILABLE",
+          "No-confidence motions require assembly_confidence cabinet formation or assembly_dominant executive",
+        ),
+      };
     }
   }
   // Strengthened executive: regulation annulment requires 2/3 supermajority
@@ -738,7 +758,12 @@ export function declareEmergency(
   if (err) return { error: err };
   const emGate = executiveAuthorityGateEmergency(state);
   if (!emGate.allowed) {
-    return { error: reject("EXECUTIVE_AUTHORITY_BLOCKED", emGate.reason ?? "emergency blocked by constitutional order") };
+    return {
+      error: reject(
+        "EXECUTIVE_AUTHORITY_BLOCKED",
+        emGate.reason ?? "emergency blocked by constitutional order",
+      ),
+    };
   }
   if (!state.executiveRuntime.emergencyTrigger) {
     return { error: reject("NO_EMERGENCY_TRIGGER", "no legitimate emergency trigger") };

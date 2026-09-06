@@ -339,12 +339,7 @@ export function DataTable(props: {
 }
 
 export type PolicyControlHint =
-  | "categorical"
-  | "numeric"
-  | "binary"
-  | "threshold"
-  | "percentage"
-  | "duration";
+  "categorical" | "numeric" | "binary" | "threshold" | "percentage" | "duration";
 
 export type PolicyChoiceOption = {
   id: string;
@@ -380,9 +375,7 @@ export function PolicyChoiceGroup(props: {
 }) {
   const [open, setOpen] = useState(false);
   const hint =
-    props.controlHint ??
-    props.options.find((o) => o.controlHint)?.controlHint ??
-    "categorical";
+    props.controlHint ?? props.options.find((o) => o.controlHint)?.controlHint ?? "categorical";
   const selected = props.options.find((o) => o.id === props.selectedId) ?? null;
   const useCards = hint === "categorical" && props.options.length > 4;
 

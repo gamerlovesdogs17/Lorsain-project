@@ -178,8 +178,9 @@ describe("Phase 7 executive kernel", () => {
     const sim = createSimulation({ world, playerPoliticianId: "P1", seed: "P7-REG" });
     // Founding constrained_dual_mandate blocks major regulations; use standard presidential authority.
     const save = jsonClone(sim.serializeSave());
-    const order = (save.simulation as { provincialRuntime?: { constitutionalOrder?: Record<string, unknown> } })
-      .provincialRuntime?.constitutionalOrder;
+    const order = (
+      save.simulation as { provincialRuntime?: { constitutionalOrder?: Record<string, unknown> } }
+    ).provincialRuntime?.constitutionalOrder;
     if (order) order.executiveAuthority = "standard_presidential";
     const unlocked = restoreSimulation(save, world);
     expectOk(unlocked, {

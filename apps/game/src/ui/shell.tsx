@@ -402,7 +402,9 @@ export function GameShell(props: {
                 }
                 return [...grouped.entries()].map(([level, items]) => (
                   <div key={level} className="attention-level-group">
-                    <div className={`attention-level-header level-${level.toLowerCase().replace(/_/g, "-")}`}>
+                    <div
+                      className={`attention-level-header level-${level.toLowerCase().replace(/_/g, "-")}`}
+                    >
                       {notificationLevelLabel(level as CategorizedAttention["level"])}
                       <span className="attention-level-count">{items.length}</span>
                     </div>
@@ -508,13 +510,20 @@ export function GameShell(props: {
           </aside>
         ) : null}
         {props.monthSummaryOpen && props.briefingItems.length > 0 ? (
-          <aside className="political-drawer month-summary-drawer" aria-label="Month summary briefing">
+          <aside
+            className="political-drawer month-summary-drawer"
+            aria-label="Month summary briefing"
+          >
             <div className="political-drawer-head">
               <div>
                 <span className="kicker">Monthly briefing</span>
                 <h2>Month in review</h2>
               </div>
-              <button type="button" className="btn quiet" onClick={() => props.onCloseMonthSummary?.()}>
+              <button
+                type="button"
+                className="btn quiet"
+                onClick={() => props.onCloseMonthSummary?.()}
+              >
                 ×
               </button>
             </div>
@@ -667,10 +676,24 @@ function EntityInspectorContent(props: {
     return (
       <div className="inspector-body">
         <dl className="inspector-facts">
-          <div><dt>Office</dt><dd>{office ?? "Private citizen"}</dd></div>
-          <div><dt>Party</dt><dd>{party}</dd></div>
-          {home ? <div><dt>Province</dt><dd>{home}</dd></div> : null}
-          <div><dt>Status</dt><dd>{pol.alive ? "Active" : "Deceased"}</dd></div>
+          <div>
+            <dt>Office</dt>
+            <dd>{office ?? "Private citizen"}</dd>
+          </div>
+          <div>
+            <dt>Party</dt>
+            <dd>{party}</dd>
+          </div>
+          {home ? (
+            <div>
+              <dt>Province</dt>
+              <dd>{home}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>Status</dt>
+            <dd>{pol.alive ? "Active" : "Deceased"}</dd>
+          </div>
         </dl>
       </div>
     );
@@ -687,15 +710,27 @@ function EntityInspectorContent(props: {
         world.offices[t.officeId]?.kind === "assembly_member",
     ).length;
     const leaderId = partyState?.leaderId ?? null;
-    const leader = leaderId
-      ? politicianDisplayName(catalog, leaderId)
-      : "No leader";
+    const leader = leaderId ? politicianDisplayName(catalog, leaderId) : "No leader";
     return (
       <div className="inspector-body">
         <dl className="inspector-facts">
-          <div><dt>Leader</dt><dd>{leader}</dd></div>
-          <div><dt>Assembly seats</dt><dd>{seats}</dd></div>
-          <div><dt>Color</dt><dd><span className="inspector-color-swatch" style={{ background: partyColor(world, entry.id) }} /></dd></div>
+          <div>
+            <dt>Leader</dt>
+            <dd>{leader}</dd>
+          </div>
+          <div>
+            <dt>Assembly seats</dt>
+            <dd>{seats}</dd>
+          </div>
+          <div>
+            <dt>Color</dt>
+            <dd>
+              <span
+                className="inspector-color-swatch"
+                style={{ background: partyColor(world, entry.id) }}
+              />
+            </dd>
+          </div>
         </dl>
       </div>
     );
@@ -707,11 +742,23 @@ function EntityInspectorContent(props: {
     return (
       <div className="inspector-body">
         <dl className="inspector-facts">
-          <div><dt>Title</dt><dd>{bill.title}</dd></div>
-          <div><dt>Status</dt><dd>{bill.status.replace(/_/g, " ")}</dd></div>
-          <div><dt>Sponsor</dt><dd>{politicianDisplayName(catalog, bill.sponsorId)}</dd></div>
+          <div>
+            <dt>Title</dt>
+            <dd>{bill.title}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{bill.status.replace(/_/g, " ")}</dd>
+          </div>
+          <div>
+            <dt>Sponsor</dt>
+            <dd>{politicianDisplayName(catalog, bill.sponsorId)}</dd>
+          </div>
           {bill.policyItems?.length ? (
-            <div><dt>Policy items</dt><dd>{bill.policyItems.length}</dd></div>
+            <div>
+              <dt>Policy items</dt>
+              <dd>{bill.policyItems.length}</dd>
+            </div>
           ) : null}
         </dl>
       </div>
@@ -724,9 +771,18 @@ function EntityInspectorContent(props: {
     return (
       <div className="inspector-body">
         <dl className="inspector-facts">
-          <div><dt>Title</dt><dd>{law.title}</dd></div>
-          <div><dt>Enacted</dt><dd>{law.enactedDate}</dd></div>
-          <div><dt>In force</dt><dd>{law.operative ? "Yes" : "No"}</dd></div>
+          <div>
+            <dt>Title</dt>
+            <dd>{law.title}</dd>
+          </div>
+          <div>
+            <dt>Enacted</dt>
+            <dd>{law.enactedDate}</dd>
+          </div>
+          <div>
+            <dt>In force</dt>
+            <dd>{law.operative ? "Yes" : "No"}</dd>
+          </div>
         </dl>
       </div>
     );
@@ -744,8 +800,14 @@ function EntityInspectorContent(props: {
     return (
       <div className="inspector-body">
         <dl className="inspector-facts">
-          <div><dt>Province</dt><dd>{province?.name ?? entry.id}</dd></div>
-          <div><dt>Governor</dt><dd>{govName}</dd></div>
+          <div>
+            <dt>Province</dt>
+            <dd>{province?.name ?? entry.id}</dd>
+          </div>
+          <div>
+            <dt>Governor</dt>
+            <dd>{govName}</dd>
+          </div>
         </dl>
       </div>
     );
@@ -757,9 +819,20 @@ function EntityInspectorContent(props: {
     return (
       <div className="inspector-body">
         <dl className="inspector-facts">
-          <div><dt>Question</dt><dd>{cc.constitutionalQuestion}</dd></div>
-          <div><dt>Status</dt><dd>{cc.status.replace(/_/g, " ")}</dd></div>
-          {cc.filedDate ? <div><dt>Filed</dt><dd>{cc.filedDate}</dd></div> : null}
+          <div>
+            <dt>Question</dt>
+            <dd>{cc.constitutionalQuestion}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{cc.status.replace(/_/g, " ")}</dd>
+          </div>
+          {cc.filedDate ? (
+            <div>
+              <dt>Filed</dt>
+              <dd>{cc.filedDate}</dd>
+            </div>
+          ) : null}
         </dl>
       </div>
     );
@@ -768,8 +841,14 @@ function EntityInspectorContent(props: {
   return (
     <div className="inspector-body">
       <dl className="inspector-facts">
-        <div><dt>Type</dt><dd>{entry.kind}</dd></div>
-        <div><dt>Detail</dt><dd>{entry.detail}</dd></div>
+        <div>
+          <dt>Type</dt>
+          <dd>{entry.kind}</dd>
+        </div>
+        <div>
+          <dt>Detail</dt>
+          <dd>{entry.detail}</dd>
+        </div>
       </dl>
     </div>
   );

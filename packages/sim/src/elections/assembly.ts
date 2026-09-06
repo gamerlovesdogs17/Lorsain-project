@@ -11,7 +11,12 @@ import {
 import { publicCandidateFacts } from "./support.js";
 import { constituencyTurnout } from "./turnout.js";
 import { IDEOLOGY_AXES } from "../agents/types.js";
-import type { CandidateStanding, ElectionCandidate, ElectionState, PublicCandidateFacts } from "./types.js";
+import type {
+  CandidateStanding,
+  ElectionCandidate,
+  ElectionState,
+  PublicCandidateFacts,
+} from "./types.js";
 import { assemblyElectionMode } from "../provinces/constitutionGameplay.js";
 
 function reject(code: string, message: string): CommandError {
@@ -20,7 +25,10 @@ function reject(code: string, message: string): CommandError {
 
 export function listRankScore(standing: CandidateStanding): number {
   return (
-    standing.nameRecognition * 0.35 + ((standing.favorability + 1) / 2) * 0.45 + standing.enthusiasm * 0.2 + standing.momentum * 0.05
+    standing.nameRecognition * 0.35 +
+    ((standing.favorability + 1) / 2) * 0.45 +
+    standing.enthusiasm * 0.2 +
+    standing.momentum * 0.05
   );
 }
 
@@ -195,9 +203,8 @@ export function resolveAssemblyConstituency(
   const method = assemblyElectionMode(state);
   // For mixed_member, the constituency tier elects a subset by FPTP (plurality);
   // national compensatory top-up (Hare quota) fills the remainder in assembly-national.ts.
-  const effectiveSeats = method === "mixed_member"
-    ? Math.max(1, Math.floor(el.seats / 2))
-    : el.seats;
+  const effectiveSeats =
+    method === "mixed_member" ? Math.max(1, Math.floor(el.seats / 2)) : el.seats;
   const seen = new Set<string>();
   for (const id of args.candidateIds) {
     if (seen.has(id)) return { error: reject("INVALID_CANDIDATE", `duplicate ${id}`) };

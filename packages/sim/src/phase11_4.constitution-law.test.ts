@@ -75,9 +75,7 @@ describe("Phase 11.4 constitution correction model", () => {
       subject.alternatives.find((row) => row.id === subject.foundingAlternativeId)!
         .proposedClauseText;
     const segments = diffConstitutionalText(baseline, alt.proposedClauseText);
-    expect(segments.some((segment) => segment.kind === "add" || segment.kind === "del")).toBe(
-      true,
-    );
+    expect(segments.some((segment) => segment.kind === "add" || segment.kind === "del")).toBe(true);
 
     const proposed = proposeConstitutionalPackage(
       world,
@@ -90,8 +88,7 @@ describe("Phase 11.4 constitution correction model", () => {
     if ("error" in proposed) {
       expect(proposed.error.code).toBe("DESIGNATED_PARTY_REQUIRED");
     }
-    const designated =
-      state.politicians.MP02?.partyId ?? Object.keys(state.partyStates)[0] ?? null;
+    const designated = state.politicians.MP02?.partyId ?? Object.keys(state.partyStates)[0] ?? null;
     expect(designated).toBeTruthy();
     const proposedOk = proposeConstitutionalPackage(
       world,
@@ -159,9 +156,7 @@ describe("Phase 11.4 constitution correction model", () => {
     restore2.amendment.status = "ratified";
     restore2.amendment.enactedDate = state.currentDate;
     applyRatifiedAmendmentEffects(state, restore2.amendment);
-    expect(state.provincialRuntime.constitutionalOrder.partySystem).toBe(
-      "competitive_multiparty",
-    );
+    expect(state.provincialRuntime.constitutionalOrder.partySystem).toBe("competitive_multiparty");
   });
 
   it("uses amended clause text as the next redline baseline", () => {
@@ -228,9 +223,11 @@ describe("Phase 11.4 constitution correction model", () => {
 
 describe("Phase 11.4 legislative policy-state model", () => {
   it("does not require current:true and excludes founding/no-op proposals", () => {
-    expect(LEGISLATIVE_PROVISIONS.some((definition) => /current:\s*true/.test(JSON.stringify(definition)))).toBe(
-      false,
-    );
+    expect(
+      LEGISLATIVE_PROVISIONS.some((definition) =>
+        /current:\s*true/.test(JSON.stringify(definition)),
+      ),
+    ).toBe(false);
     for (const definition of LEGISLATIVE_PROVISIONS) {
       expect(definition.options.some((option) => option.founding)).toBe(true);
       expect(definition.options.every((option) => !/^Keep\b/i.test(option.label))).toBe(true);
@@ -238,7 +235,9 @@ describe("Phase 11.4 legislative policy-state model", () => {
       expect(proposals.every((option) => !option.founding)).toBe(true);
       expect(proposals.length).toBeGreaterThan(0);
     }
-    const counts = LEGISLATIVE_PROVISIONS.map((definition) => proposalOptionsFor(definition.id).length);
+    const counts = LEGISLATIVE_PROVISIONS.map(
+      (definition) => proposalOptionsFor(definition.id).length,
+    );
     expect(Math.max(...counts)).toBeGreaterThanOrEqual(5);
     expect(new Set(counts).size).toBeGreaterThan(1);
   });

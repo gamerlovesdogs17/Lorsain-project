@@ -967,9 +967,7 @@ function resolvedElectionWorldError(
       }
       if (result.archiveCompleteness === "full") {
         const archive = result.countArchive;
-        const expectedArchiveSeats = isMmp
-          ? Math.max(1, Math.floor(magnitude / 2))
-          : magnitude;
+        const expectedArchiveSeats = isMmp ? Math.max(1, Math.floor(magnitude / 2)) : magnitude;
         if (
           !archive ||
           archive.method !== "stv" ||

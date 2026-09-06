@@ -408,9 +408,15 @@ function Home(props: PageProps) {
                 </p>
               </div>
             ) : null}
-            {!interrupt && decisions.length === 0 && !terenaPublicCrisis && !(playerIsPresident && warTrigger) ? (
+            {!interrupt &&
+            decisions.length === 0 &&
+            !terenaPublicCrisis &&
+            !(playerIsPresident && warTrigger) ? (
               <div className="home-calm-state">
-                <p className="muted">Nothing currently requires your immediate action. Review developments and plan ahead.</p>
+                <p className="muted">
+                  Nothing currently requires your immediate action. Review developments and plan
+                  ahead.
+                </p>
               </div>
             ) : null}
 
@@ -478,7 +484,9 @@ function Home(props: PageProps) {
           <>
             {/* === 4. UPCOMING EVENTS / CALENDAR === */}
             <SectionDivider title="Upcoming elections & calendar" />
-            {upcoming.length === 0 ? <EmptyState>No pending elections on the calendar.</EmptyState> : null}
+            {upcoming.length === 0 ? (
+              <EmptyState>No pending elections on the calendar.</EmptyState>
+            ) : null}
             {upcoming.map((el) => (
               <div key={el.id} className="decision-row">
                 <div>
@@ -491,7 +499,12 @@ function Home(props: PageProps) {
               <button
                 type="button"
                 className="btn secondary btn-sm"
-                onClick={() => props.onEntityNavigate?.("Election" as import("./ui/entityLink.js").EntityLinkKind, upcoming[0]!.id)}
+                onClick={() =>
+                  props.onEntityNavigate?.(
+                    "Election" as import("./ui/entityLink.js").EntityLinkKind,
+                    upcoming[0]!.id,
+                  )
+                }
               >
                 Open elections calendar →
               </button>
@@ -2271,12 +2284,21 @@ function Party(props: PageProps) {
         })}
       </div>
       {party ? (
-        <div className={`party-banner legal-${legalStatusTone(partyLegalStatus(props.snap, partyId) as string)}`} style={{ borderLeftColor: partyColor(props.world, partyId) }}>
+        <div
+          className={`party-banner legal-${legalStatusTone(partyLegalStatus(props.snap, partyId) as string)}`}
+          style={{ borderLeftColor: partyColor(props.world, partyId) }}
+        >
           <StatusBadge tone="ok">
             {caucus} of {totalSeats} Assembly seats
           </StatusBadge>
           <StatusBadge>{position}</StatusBadge>
-          <StatusBadge tone={legalStatusTone(partyLegalStatus(props.snap, partyId) as string) === "danger" ? "warn" : "idle"}>
+          <StatusBadge
+            tone={
+              legalStatusTone(partyLegalStatus(props.snap, partyId) as string) === "danger"
+                ? "warn"
+                : "idle"
+            }
+          >
             {partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}
           </StatusBadge>
         </div>
@@ -2295,10 +2317,34 @@ function Party(props: PageProps) {
       <div className="party-dossier-grid">
         <SectionCard title="Party identity">
           <dl className="dossier-facts compact">
-            <div><dt>Legal status</dt><dd>{partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}</dd></div>
-            <div><dt>Assembly seats</dt><dd>{caucus} of {totalSeats}</dd></div>
-            <div><dt>Political position</dt><dd>{position}</dd></div>
-            <div><dt>Election status</dt><dd>{Object.values(props.snap.elections).some((e) => e.status !== "resolved" && Object.keys(e.candidates).some((cid) => props.snap.politicians[cid]?.partyId === partyId)) ? "Contesting upcoming election" : "No active candidacies"}</dd></div>
+            <div>
+              <dt>Legal status</dt>
+              <dd>{partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}</dd>
+            </div>
+            <div>
+              <dt>Assembly seats</dt>
+              <dd>
+                {caucus} of {totalSeats}
+              </dd>
+            </div>
+            <div>
+              <dt>Political position</dt>
+              <dd>{position}</dd>
+            </div>
+            <div>
+              <dt>Election status</dt>
+              <dd>
+                {Object.values(props.snap.elections).some(
+                  (e) =>
+                    e.status !== "resolved" &&
+                    Object.keys(e.candidates).some(
+                      (cid) => props.snap.politicians[cid]?.partyId === partyId,
+                    ),
+                )
+                  ? "Contesting upcoming election"
+                  : "No active candidacies"}
+              </dd>
+            </div>
           </dl>
         </SectionCard>
         {recent.length > 0 ? (
@@ -3070,35 +3116,82 @@ function Terena(props: PageProps) {
                             props.world.offices[t.officeId]?.kind === "governor" &&
                             props.world.offices[t.officeId]?.provinceId === sel.id,
                         );
-                        return <div><dt>Governor</dt><dd>{gov ? politicianDisplayName(props.catalog, gov.holderId) : "Vacant"}</dd></div>;
+                        return (
+                          <div>
+                            <dt>Governor</dt>
+                            <dd>
+                              {gov ? politicianDisplayName(props.catalog, gov.holderId) : "Vacant"}
+                            </dd>
+                          </div>
+                        );
                       })()}
-                      {regionPublicEcon ? <div><dt>Economy</dt><dd>{regionPublicEcon.summary}</dd></div> : null}
+                      {regionPublicEcon ? (
+                        <div>
+                          <dt>Economy</dt>
+                          <dd>{regionPublicEcon.summary}</dd>
+                        </div>
+                      ) : null}
                       {(() => {
                         const asm = props.snap.provincialRuntime.assemblies[sel.id];
-                        return asm ? <div><dt>Provincial assembly</dt><dd>{asm.seatCount} seats · next election {asm.nextElectionDate}</dd></div> : null;
+                        return asm ? (
+                          <div>
+                            <dt>Provincial assembly</dt>
+                            <dd>
+                              {asm.seatCount} seats · next election {asm.nextElectionDate}
+                            </dd>
+                          </div>
+                        ) : null;
                       })()}
                       {(() => {
                         const recentProvElections = [
-                          ...Object.values(props.snap.provincialRuntime.elections).filter((e) => e.provinceId === sel.id),
-                          ...Object.values(props.snap.provincialRuntime.assemblyElections).filter((e) => e.provinceId === sel.id),
-                        ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2);
+                          ...Object.values(props.snap.provincialRuntime.elections).filter(
+                            (e) => e.provinceId === sel.id,
+                          ),
+                          ...Object.values(props.snap.provincialRuntime.assemblyElections).filter(
+                            (e) => e.provinceId === sel.id,
+                          ),
+                        ]
+                          .sort((a, b) => b.date.localeCompare(a.date))
+                          .slice(0, 2);
                         return recentProvElections.length > 0 ? (
-                          <div><dt>Recent elections</dt><dd>{recentProvElections.map((e) => `${e.date} ${e.status.replace(/_/g, " ")}`).join(" · ")}</dd></div>
+                          <div>
+                            <dt>Recent elections</dt>
+                            <dd>
+                              {recentProvElections
+                                .map((e) => `${e.date} ${e.status.replace(/_/g, " ")}`)
+                                .join(" · ")}
+                            </dd>
+                          </div>
                         ) : null;
                       })()}
                       {(() => {
-                        const pressureId = props.snap.provincialRuntime.provinces[sel.id]?.activePressureId;
+                        const pressureId =
+                          props.snap.provincialRuntime.provinces[sel.id]?.activePressureId;
                         return pressureId ? (
-                          <div><dt>Active pressure</dt><dd>{pressureId.replace(/_/g, " ")}</dd></div>
+                          <div>
+                            <dt>Active pressure</dt>
+                            <dd>{pressureId.replace(/_/g, " ")}</dd>
+                          </div>
                         ) : null;
                       })()}
                     </dl>
-                    {props.snap.history.filter((e) => e.visibility === "public" && e.entityIds.includes(sel.id)).slice(-3).reverse().length > 0 ? (
+                    {props.snap.history
+                      .filter((e) => e.visibility === "public" && e.entityIds.includes(sel.id))
+                      .slice(-3)
+                      .reverse().length > 0 ? (
                       <>
                         <div className="kicker">Recent province news</div>
-                        {props.snap.history.filter((e) => e.visibility === "public" && e.entityIds.includes(sel.id)).slice(-3).reverse().map((e) => (
-                          <ActivityFeedItem key={e.id} date={e.date} text={eventDisplay(props.catalog, props.world, props.snap, e)} />
-                        ))}
+                        {props.snap.history
+                          .filter((e) => e.visibility === "public" && e.entityIds.includes(sel.id))
+                          .slice(-3)
+                          .reverse()
+                          .map((e) => (
+                            <ActivityFeedItem
+                              key={e.id}
+                              date={e.date}
+                              text={eventDisplay(props.catalog, props.world, props.snap, e)}
+                            />
+                          ))}
                       </>
                     ) : null}
                   </div>
@@ -3147,37 +3240,41 @@ function SituationRoom(props: PageProps) {
   const [sel, setSel] = useState<MapSelection | null>(null);
   const provinceIds = props.world.provinceIds;
   const economy = sel?.kind === "province" ? regionalPublicEconomy(props.snap, sel.id) : null;
-  const governor = sel?.kind === "province"
-    ? Object.values(props.snap.officeTerms).find(
-        (t) =>
-          t.status === "active" &&
-          props.world.offices[t.officeId]?.kind === "governor" &&
-          props.world.offices[t.officeId]?.provinceId === sel.id,
-      )
-    : null;
-  const provAssembly = sel?.kind === "province"
-    ? props.snap.provincialRuntime.assemblies[sel.id]
-    : null;
-  const partyControl = sel?.kind === "province"
-    ? (() => {
-        const members = Object.values(props.snap.officeTerms).filter(
+  const governor =
+    sel?.kind === "province"
+      ? Object.values(props.snap.officeTerms).find(
           (t) =>
             t.status === "active" &&
-            props.world.offices[t.officeId]?.kind === "assembly_member" &&
-            (props.snap.politicians[t.holderId]?.homeProvinceId === sel.id ||
-              props.world.politicianHomeProvince[t.holderId] === sel.id),
-        );
-        const counts = new Map<string, number>();
-        for (const t of members) {
-          const party = props.snap.politicians[t.holderId]?.partyId ?? "independent";
-          counts.set(party, (counts.get(party) ?? 0) + 1);
-        }
-        return [...counts.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
-          .map(([id, seats]) => `${partyDisplayName(props.world, id === "independent" ? null : id, props.snap)} ${seats}`);
-      })()
-    : [];
+            props.world.offices[t.officeId]?.kind === "governor" &&
+            props.world.offices[t.officeId]?.provinceId === sel.id,
+        )
+      : null;
+  const provAssembly =
+    sel?.kind === "province" ? props.snap.provincialRuntime.assemblies[sel.id] : null;
+  const partyControl =
+    sel?.kind === "province"
+      ? (() => {
+          const members = Object.values(props.snap.officeTerms).filter(
+            (t) =>
+              t.status === "active" &&
+              props.world.offices[t.officeId]?.kind === "assembly_member" &&
+              (props.snap.politicians[t.holderId]?.homeProvinceId === sel.id ||
+                props.world.politicianHomeProvince[t.holderId] === sel.id),
+          );
+          const counts = new Map<string, number>();
+          for (const t of members) {
+            const party = props.snap.politicians[t.holderId]?.partyId ?? "independent";
+            counts.set(party, (counts.get(party) ?? 0) + 1);
+          }
+          return [...counts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(
+              ([id, seats]) =>
+                `${partyDisplayName(props.world, id === "independent" ? null : id, props.snap)} ${seats}`,
+            );
+        })()
+      : [];
 
   return (
     <div>
@@ -3186,7 +3283,16 @@ function SituationRoom(props: PageProps) {
         title="Terena at a glance"
         subtitle="Map-centric overview — click a province for its dossier. This is an experimental view."
         actions={
-          <button type="button" className="btn secondary" onClick={() => props.onEntityNavigate?.("Province" as import("./ui/entityLink.js").EntityLinkKind, provinceIds[0] ?? "")}>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() =>
+              props.onEntityNavigate?.(
+                "Province" as import("./ui/entityLink.js").EntityLinkKind,
+                provinceIds[0] ?? "",
+              )
+            }
+          >
             Full provinces →
           </button>
         }
@@ -3207,7 +3313,17 @@ function SituationRoom(props: PageProps) {
             bundle={props.bundle}
             mode={mode}
             selectedId={sel?.id ?? null}
-            fillFor={(feature, kind) => mapFillFor(mode, props.world, props.snap, feature, kind, props.campaign?.organizationByConstituency, props.campaign?.organizationByProvince)}
+            fillFor={(feature, kind) =>
+              mapFillFor(
+                mode,
+                props.world,
+                props.snap,
+                feature,
+                kind,
+                props.campaign?.organizationByConstituency,
+                props.campaign?.organizationByProvince,
+              )
+            }
             showConstituencies={false}
             onSelect={setSel}
             tooltipFor={(s) => <strong>{s.name}</strong>}
@@ -3218,17 +3334,40 @@ function SituationRoom(props: PageProps) {
             <div className="situation-province-card">
               <h3>{sel.name}</h3>
               <dl className="dossier-facts compact">
-                <div><dt>Governor</dt><dd>{governor ? politicianDisplayName(props.catalog, governor.holderId) : "Vacant"}</dd></div>
-                {economy ? <div><dt>Economy</dt><dd>{economy.summary}</dd></div> : null}
-                {provAssembly ? <div><dt>Provincial assembly</dt><dd>{provAssembly.seatCount} seats</dd></div> : null}
-                {partyControl.length > 0 ? <div><dt>MP representation</dt><dd>{partyControl.join(" · ")}</dd></div> : null}
+                <div>
+                  <dt>Governor</dt>
+                  <dd>
+                    {governor ? politicianDisplayName(props.catalog, governor.holderId) : "Vacant"}
+                  </dd>
+                </div>
+                {economy ? (
+                  <div>
+                    <dt>Economy</dt>
+                    <dd>{economy.summary}</dd>
+                  </div>
+                ) : null}
+                {provAssembly ? (
+                  <div>
+                    <dt>Provincial assembly</dt>
+                    <dd>{provAssembly.seatCount} seats</dd>
+                  </div>
+                ) : null}
+                {partyControl.length > 0 ? (
+                  <div>
+                    <dt>MP representation</dt>
+                    <dd>{partyControl.join(" · ")}</dd>
+                  </div>
+                ) : null}
               </dl>
               <button
                 type="button"
                 className="btn secondary btn-sm"
                 onClick={() => {
                   props.setGlobalFocus({ kind: "Province", id: sel.id });
-                  props.onEntityNavigate?.("Province" as import("./ui/entityLink.js").EntityLinkKind, sel.id);
+                  props.onEntityNavigate?.(
+                    "Province" as import("./ui/entityLink.js").EntityLinkKind,
+                    sel.id,
+                  );
                 }}
               >
                 Open province dossier →
@@ -3238,12 +3377,7 @@ function SituationRoom(props: PageProps) {
             <p className="muted">Click a province on the map to view its dossier.</p>
           )
         }
-        legend={
-          <MapLegend
-            world={props.world}
-            mode={mode}
-          />
-        }
+        legend={<MapLegend world={props.world} mode={mode} />}
       />
     </div>
   );

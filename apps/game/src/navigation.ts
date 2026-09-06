@@ -66,7 +66,13 @@ export type CategorizedAttention = {
 };
 
 export function categorizeAttention(
-  item: { id: string; label: string; detail?: string; screen: Screen; tone?: "urgent" | "soon" | "info" },
+  item: {
+    id: string;
+    label: string;
+    detail?: string;
+    screen: Screen;
+    tone?: "urgent" | "soon" | "info";
+  },
   hasInterrupt: boolean,
 ): CategorizedAttention {
   if (item.tone === "urgent" || (hasInterrupt && item.id.startsWith("interrupt"))) {
@@ -149,10 +155,7 @@ export function shouldShowMonthSummary(
   threshold = 3,
 ): boolean {
   const meaningful = events.filter(
-    (e) =>
-      e.visibility === "public" &&
-      e.type !== "TURN_COMPLETED" &&
-      (e.importance ?? 0) >= 0.4,
+    (e) => e.visibility === "public" && e.type !== "TURN_COMPLETED" && (e.importance ?? 0) >= 0.4,
   );
   const hasElection = events.some(
     (e) =>

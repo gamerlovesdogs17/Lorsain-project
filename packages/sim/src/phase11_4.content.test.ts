@@ -8,15 +8,8 @@ import {
   provinceThemeId,
 } from "./provinces/themes.js";
 import { headlineFingerprint, type MediaStory } from "./media/types.js";
-import {
-  headlineFor,
-  selectHeadlineWithCooldown,
-} from "./media/monthly.js";
-import {
-  ARTICLE_STRUCTURES,
-  articleStructureFor,
-  buildArticleBody,
-} from "./media/articleBody.js";
+import { headlineFor, selectHeadlineWithCooldown } from "./media/monthly.js";
+import { ARTICLE_STRUCTURES, articleStructureFor, buildArticleBody } from "./media/articleBody.js";
 import { headlineOnCooldown } from "./media/types.js";
 import { CAMPAIGN_SITUATIONS } from "./campaigns/situations.js";
 import { assignCrisisTheme } from "./foreign/crisis-emergence.js";
@@ -173,13 +166,9 @@ describe("Phase 11.4 — Content Expansion", () => {
         [],
         { outletName: "Ledger" },
       );
-      const twin = headlineFor(
-        "BUDGET_PROPOSED",
-        "restrained",
-        { fiscalYear: 2031 },
-        0,
-        { outletName: "Ledger" },
-      );
+      const twin = headlineFor("BUDGET_PROPOSED", "restrained", { fiscalYear: 2031 }, 0, {
+        outletName: "Ledger",
+      });
       expect(twin).not.toBe(first.headline);
       expect(headlineOnCooldown(first.nextKeys, "BUDGET_PROPOSED", twin)).toBe(true);
     });

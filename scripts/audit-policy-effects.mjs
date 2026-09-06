@@ -13,15 +13,16 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const root = process.cwd();
-const provisionsSrc = readFileSync(join(root, "packages/sim/src/legislature/provisions.ts"), "utf8");
+const provisionsSrc = readFileSync(
+  join(root, "packages/sim/src/legislature/provisions.ts"),
+  "utf8",
+);
 const policySrc = readFileSync(join(root, "packages/sim/src/economy/policy.ts"), "utf8");
 
 // ── 1. Parse PROVISION_OPTION_EFFECTS table ──────────────────────────
 /** @type {Map<string, Set<string>>} */
 const specificEffects = new Map();
-const tableMatch = policySrc.match(
-  /const PROVISION_OPTION_EFFECTS[\s\S]*?=\s*\{([\s\S]*?)\n\};/,
-);
+const tableMatch = policySrc.match(/const PROVISION_OPTION_EFFECTS[\s\S]*?=\s*\{([\s\S]*?)\n\};/);
 if (tableMatch) {
   const body = tableMatch[1];
   const provBlocks = [...body.matchAll(/PROV_[A-Z0-9_]+\s*:\s*\{/g)];
@@ -37,9 +38,7 @@ if (tableMatch) {
 
 // ── 2. Parse parameterScaledDelta handled provisionIds ───────────────
 const paramHandled = new Set();
-const paramFnMatch = policySrc.match(
-  /function parameterScaledDelta\b[\s\S]*?\nfunction\s/,
-);
+const paramFnMatch = policySrc.match(/function parameterScaledDelta\b[\s\S]*?\nfunction\s/);
 if (paramFnMatch) {
   const fnBody = paramFnMatch[0];
   for (const m of fnBody.matchAll(/"(PROV_[A-Z0-9_]+)"/g)) {
@@ -63,7 +62,8 @@ const options = [];
 for (let i = 0; i < starts.length; i++) {
   const provisionId = starts[i][1];
   const start = starts[i].index ?? 0;
-  const end = i + 1 < starts.length ? (starts[i + 1].index ?? provisionsSrc.length) : provisionsSrc.length;
+  const end =
+    i + 1 < starts.length ? (starts[i + 1].index ?? provisionsSrc.length) : provisionsSrc.length;
   const body = provisionsSrc.slice(start, end);
 
   // Extract issueId
@@ -101,7 +101,12 @@ for (let i = 0; i < starts.length; i++) {
 
     // Runtime-true: in the effects table OR parameterScaledDelta returns non-null
     let paramScaledWorks = false;
-    if (hasParamValue && foundingPV != null && paramValueNum != null && paramValueNum !== foundingPV) {
+    if (
+      hasParamValue &&
+      foundingPV != null &&
+      paramValueNum != null &&
+      paramValueNum !== foundingPV
+    ) {
       paramScaledWorks = paramHandled.has(provisionId) || hasGenericParamFallback;
     }
     const runtimeTrue = specific || paramScaledWorks;
@@ -159,9 +164,7 @@ const report = {
   withRuntimeCoverage: withRuntimeCoverage.length,
   stillDirectionMagnitudeOnly: directionMagnitudeOnly.length,
   coverageShare:
-    proposals.length === 0
-      ? 0
-      : Number((withRuntimeCoverage.length / proposals.length).toFixed(4)),
+    proposals.length === 0 ? 0 : Number((withRuntimeCoverage.length / proposals.length).toFixed(4)),
   byIssue,
   optionCountDistribution: countDistribution,
   sampleDirectionMagnitudeOnly: directionMagnitudeOnly.slice(0, 25).map((o) => ({

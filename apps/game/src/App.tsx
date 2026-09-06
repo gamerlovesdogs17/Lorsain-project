@@ -1352,16 +1352,14 @@ export default function App() {
       : []),
   ];
   const categorizedItems: CategorizedAttention[] = sortCategorizedAttention(
-    attentionItems.map((item) =>
-      categorizeAttention(item, Boolean(interrupt?.requiresResolution)),
-    ),
+    attentionItems.map((item) => categorizeAttention(item, Boolean(interrupt?.requiresResolution))),
   );
   const lastSavedLabel = lastSavedAt
     ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
     : "Autosave runs before every turn and national count.";
 
   const inspectorFocus = globalFocus
-    ? searchEntries.find((e) => e.kind === globalFocus.kind && e.id === globalFocus.id) ?? null
+    ? (searchEntries.find((e) => e.kind === globalFocus.kind && e.id === globalFocus.id) ?? null)
     : null;
 
   return (

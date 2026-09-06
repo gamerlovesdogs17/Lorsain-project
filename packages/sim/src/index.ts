@@ -294,7 +294,8 @@ export type {
   CanonicalMediaOutlet,
   ArticleBodyStructure,
   HeadlineContext,
-} from "./media/index.js";export {
+} from "./media/index.js";
+export {
   processForeignAffairsMonth,
   seedForeignAffairsRuntime,
   emptyForeignAffairsRuntime,

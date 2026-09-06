@@ -68,8 +68,7 @@ export function applyConstitutionalMetricEffects(
     (effects.politicalCompetition ?? 0) * 0.15 +
     (effects.civilLiberty ?? 0) * 0.2 +
     (effects.institutionalStability ?? 0) * 0.25;
-  const output =
-    (effects.executiveCapacity ?? 0) * 0.12 + (effects.provincialAutonomy ?? 0) * 0.05;
+  const output = (effects.executiveCapacity ?? 0) * 0.12 + (effects.provincialAutonomy ?? 0) * 0.05;
   const employment = (effects.politicalCompetition ?? 0) * 0.04;
   addIndexDelta(
     national,
@@ -133,7 +132,10 @@ export function judicialReviewAllowsInvalidation(state: SimState): boolean {
   return judicialReviewMode(state) !== "legislative_finality";
 }
 
-export function emergencyDeclarationAllowed(state: SimState, byPresident: boolean): {
+export function emergencyDeclarationAllowed(
+  state: SimState,
+  byPresident: boolean,
+): {
   allowed: boolean;
   reason?: string;
   initialDays: number;
@@ -201,7 +203,10 @@ export function treatyAssemblyFraction(state: SimState): number {
 /** Whether competing party labels may appear on ballots / nominations. */
 export function competitivePartiesAllowed(state: SimState): boolean {
   const order = ensureOrder(state);
-  return order.partySystem === "competitive_multiparty" || order.partySystem === "restricted_registration";
+  return (
+    order.partySystem === "competitive_multiparty" ||
+    order.partySystem === "restricted_registration"
+  );
 }
 
 export function describePresidentialElectionMethod(mode: PresidentialElectionMode): string {
@@ -223,10 +228,7 @@ export function describePresidentialElectionMethod(mode: PresidentialElectionMod
  * civil_supremacy / joint_command require Assembly authorization sooner than
  * executive_command (which extends the unilateral window).
  */
-export function warUnilateralDaysForDefenseControl(
-  state: SimState,
-  baselineDays: number,
-): number {
+export function warUnilateralDaysForDefenseControl(state: SimState, baselineDays: number): number {
   const base = Math.max(1, Math.floor(baselineDays));
   const control = ensureOrder(state).defenseControl;
   if (control === "executive_command") return base * 3;
@@ -250,7 +252,8 @@ export function executiveAuthorityGateRegulation(
   if (authority === "assembly_dominant") {
     return {
       allowed: false,
-      reason: "assembly_dominant executive suspends presidential decree/regulation power; regulations must go through legislative process",
+      reason:
+        "assembly_dominant executive suspends presidential decree/regulation power; regulations must go through legislative process",
     };
   }
   if (authority === "constrained_dual_mandate" && major) {
@@ -264,14 +267,16 @@ export function executiveAuthorityGateRegulation(
 }
 
 /** A1: Gate emergency declaration based on executiveAuthority mode. */
-export function executiveAuthorityGateEmergency(
-  state: SimState,
-): { allowed: boolean; reason?: string } {
+export function executiveAuthorityGateEmergency(state: SimState): {
+  allowed: boolean;
+  reason?: string;
+} {
   const authority = ensureOrder(state).executiveAuthority;
   if (authority === "assembly_dominant") {
     return {
       allowed: false,
-      reason: "assembly_dominant executive cannot unilaterally declare emergencies; requires Assembly action",
+      reason:
+        "assembly_dominant executive cannot unilaterally declare emergencies; requires Assembly action",
     };
   }
   return { allowed: true };
@@ -288,4 +293,3 @@ export function assemblyPluralityPartyId(world: KernelWorld, state: SimState): s
   const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   return ranked[0]?.[0] ?? null;
 }
-
