@@ -2,7 +2,7 @@
  * Executable constitutional order helpers — maps order state into real gameplay rules.
  */
 import { addIndexDelta, clampIndex, clampFiscal } from "../economy/policy.js";
-import type { SimState } from "../types.js";
+import type { KernelWorld, SimState } from "../types.js";
 import {
   amendmentThresholds,
   emptyConstitutionalOrder,
@@ -15,6 +15,7 @@ import {
   type AssemblyElectionMode,
 } from "./constitutionalOrder.js";
 import type { ConstitutionChangeAlternative } from "./constitutionChanges.js";
+import { currentAssemblyMemberIds } from "../legislature/state.js";
 
 export function ensureOrder(state: SimState): ConstitutionalOrderState {
   if (!state.provincialRuntime.constitutionalOrder) {
@@ -23,6 +24,13 @@ export function ensureOrder(state: SimState): ConstitutionalOrderState {
   const order = state.provincialRuntime.constitutionalOrder;
   if (!order.orderMetrics) {
     order.orderMetrics = emptyOrderMetrics();
+  }
+  // Backfill entrenchment for saves created before this field existed
+  if (!order.entrenchment) {
+    order.entrenchment = "none";
+  }
+  if (!order.pendingInterlockAmendmentIds) {
+    order.pendingInterlockAmendmentIds = [];
   }
   return order;
 }
@@ -209,3 +217,75 @@ export function describePresidentialElectionMethod(mode: PresidentialElectionMod
       return "national_ranked_choice";
   }
 }
+
+/**
+ * War unilateral window from defenseControl relative to constitutional baseline days.
+ * civil_supremacy / joint_command require Assembly authorization sooner than
+ * executive_command (which extends the unilateral window).
+ */
+export function warUnilateralDaysForDefenseControl(
+  state: SimState,
+  baselineDays: number,
+): number {
+  const base = Math.max(1, Math.floor(baselineDays));
+  const control = ensureOrder(state).defenseControl;
+  if (control === "executive_command") return base * 3;
+  if (control === "joint_command") return Math.max(7, Math.floor(base / 2));
+  // civil_supremacy — founding unilateral ceiling (sooner than executive_command)
+  return base;
+}
+
+export function cabinetFormationMode(
+  state: SimState,
+): ConstitutionalOrderState["cabinetFormation"] {
+  return ensureOrder(state).cabinetFormation;
+}
+
+/** A1: Gate executive regulation issuance based on executiveAuthority mode. */
+export function executiveAuthorityGateRegulation(
+  state: SimState,
+  major: boolean,
+): { allowed: boolean; reason?: string } {
+  const authority = ensureOrder(state).executiveAuthority;
+  if (authority === "assembly_dominant") {
+    return {
+      allowed: false,
+      reason: "assembly_dominant executive suspends presidential decree/regulation power; regulations must go through legislative process",
+    };
+  }
+  if (authority === "constrained_dual_mandate" && major) {
+    return {
+      allowed: false,
+      reason: "constrained_dual_mandate requires legislative co-approval for major regulations",
+    };
+  }
+  // standard_presidential and strengthened_executive allow regulations
+  return { allowed: true };
+}
+
+/** A1: Gate emergency declaration based on executiveAuthority mode. */
+export function executiveAuthorityGateEmergency(
+  state: SimState,
+): { allowed: boolean; reason?: string } {
+  const authority = ensureOrder(state).executiveAuthority;
+  if (authority === "assembly_dominant") {
+    return {
+      allowed: false,
+      reason: "assembly_dominant executive cannot unilaterally declare emergencies; requires Assembly action",
+    };
+  }
+  return { allowed: true };
+}
+
+/** Party with the most sitting Assembly members (ties broken by party id). */
+export function assemblyPluralityPartyId(world: KernelWorld, state: SimState): string | null {
+  const counts: Record<string, number> = {};
+  for (const id of currentAssemblyMemberIds(world, state)) {
+    const partyId = state.politicians[id]?.partyId;
+    if (!partyId) continue;
+    counts[partyId] = (counts[partyId] ?? 0) + 1;
+  }
+  const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  return ranked[0]?.[0] ?? null;
+}
+

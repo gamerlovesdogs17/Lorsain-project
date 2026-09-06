@@ -19,7 +19,7 @@ import {
   seedMinistriesIfNeeded,
 } from "./state.js";
 import type { AssemblyMotion, MotionKind, RegulationState } from "./types.js";
-import { emergencyDeclarationAllowed } from "../provinces/constitutionGameplay.js";
+import { emergencyDeclarationAllowed, warUnilateralDaysForDefenseControl, ensureOrder, assemblyPluralityPartyId, executiveAuthorityGateRegulation, executiveAuthorityGateEmergency } from "../provinces/constitutionGameplay.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -77,6 +77,38 @@ export function appointMinister(
   }
   const holder = state.politicians[args.politicianId];
   if (!holder) return { error: reject("UNKNOWN_POLITICIAN", args.politicianId) };
+  const order = ensureOrder(state);
+  if (order.cabinetFormation === "assembly_confidence") {
+    const pluralityParty = assemblyPluralityPartyId(world, state);
+    const aligned = Boolean(holder.partyId && pluralityParty && holder.partyId === pluralityParty);
+    if (!aligned && !order.cabinetHasAssemblyConfidence) {
+      order.cabinetNeedsConfidence = true;
+      return {
+        error: reject(
+          "ASSEMBLY_CONFIDENCE_REQUIRED",
+          "cabinetFormation=assembly_confidence blocks unilateral ministerial appointment without Assembly confidence or majority-party alignment",
+        ),
+      };
+    }
+    if (aligned) {
+      order.cabinetHasAssemblyConfidence = true;
+      order.cabinetNeedsConfidence = false;
+    }
+  }
+  // A6: party_slate — ministerial appointments must be from president's party (or Assembly plurality party)
+  if (order.cabinetFormation === "party_slate") {
+    const presidentPartyId = state.politicians[args.actorId]?.partyId ?? null;
+    const pluralityParty = assemblyPluralityPartyId(world, state);
+    const governingParty = pluralityParty ?? presidentPartyId;
+    if (governingParty && holder.partyId !== governingParty) {
+      return {
+        error: reject(
+          "PARTY_SLATE_REQUIRED",
+          `cabinetFormation=party_slate requires ministers from the governing party (${governingParty})`,
+        ),
+      };
+    }
+  }
   const existingPortfolio = Object.values(state.officeTerms).find((term) => {
     const heldOffice = world.offices[term.officeId];
     return (
@@ -197,6 +229,10 @@ export function issueRegulation(
 ): { regulation: RegulationState; events: SimEvent[] } | { error: CommandError } {
   const err = requirePresident(world, state, args.actorId);
   if (err) return { error: err };
+  const regGate = executiveAuthorityGateRegulation(state, args.major === true);
+  if (!regGate.allowed) {
+    return { error: reject("EXECUTIVE_AUTHORITY_BLOCKED", regGate.reason ?? "regulation blocked by constitutional order") };
+  }
   const office = world.offices[args.ministryOfficeId];
   if (!office || office.kind !== "minister") {
     return { error: reject("NOT_MINISTER_OFFICE", args.ministryOfficeId) };
@@ -291,10 +327,22 @@ export function introduceMotion(
       return { error: reject("UNKNOWN_WAR_POWER", args.targetId) };
     }
   }
+  if (args.kind === "cabinet_no_confidence") {
+    const order = ensureOrder(state);
+    if (order.cabinetFormation !== "assembly_confidence" && order.executiveAuthority !== "assembly_dominant") {
+      return { error: reject("NO_CONFIDENCE_UNAVAILABLE", "No-confidence motions require assembly_confidence cabinet formation or assembly_dominant executive") };
+    }
+  }
+  // Strengthened executive: regulation annulment requires 2/3 supermajority
+  const strengthenedAnnulment =
+    args.kind === "regulation_annulment" &&
+    ensureOrder(state).executiveAuthority === "strengthened_executive";
   const fraction =
     args.kind === "ministerial_censure"
       ? world.executiveConstitution.assemblyCensureFraction
-      : null;
+      : strengthenedAnnulment
+        ? 2 / 3
+        : null;
   const motion: AssemblyMotion = {
     id: allocateMotionId(state),
     kind: args.kind,
@@ -304,7 +352,10 @@ export function introduceMotion(
     scheduledDate: null,
     status: "scheduled",
     voteId: null,
-    threshold: args.kind === "ministerial_censure" ? "assembly_fraction" : "simple_majority_cast",
+    threshold:
+      args.kind === "ministerial_censure" || strengthenedAnnulment
+        ? "assembly_fraction"
+        : "simple_majority_cast",
     fraction,
     result: null,
     stageReadyDate: state.currentDate,
@@ -586,6 +637,45 @@ function applyMotionEffect(
       ),
     ];
   }
+  if (motion.kind === "cabinet_no_confidence") {
+    const events: SimEvent[] = [];
+    const order = ensureOrder(state);
+    // Clear all minister terms — cabinet falls
+    for (const office of Object.values(world.offices)) {
+      if (office.kind !== "minister") continue;
+      for (const term of occupyingTerms(state, office.id)) {
+        if (term.status !== "active" && term.status !== "suspended") continue;
+        const ended = endTerm(state, term.id, state.currentDate, "no_confidence");
+        if (ended) {
+          events.push(
+            event(
+              state,
+              "MINISTER_REMOVED_NO_CONFIDENCE",
+              [ended.holderId],
+              [office.id, ended.id, motion.id],
+              { officeId: office.id, holderId: ended.holderId },
+              commandId,
+              0.9,
+            ),
+          );
+        }
+      }
+    }
+    order.cabinetHasAssemblyConfidence = false;
+    order.cabinetNeedsConfidence = true;
+    events.push(
+      event(
+        state,
+        "CABINET_NO_CONFIDENCE_PASSED",
+        [motion.sponsorId],
+        [motion.id],
+        { motionId: motion.id },
+        commandId,
+        1.0,
+      ),
+    );
+    return events;
+  }
   return [];
 }
 
@@ -646,6 +736,10 @@ export function declareEmergency(
 ): { events: SimEvent[] } | { error: CommandError } {
   const err = requirePresident(world, state, args.actorId);
   if (err) return { error: err };
+  const emGate = executiveAuthorityGateEmergency(state);
+  if (!emGate.allowed) {
+    return { error: reject("EXECUTIVE_AUTHORITY_BLOCKED", emGate.reason ?? "emergency blocked by constitutional order") };
+  }
   if (!state.executiveRuntime.emergencyTrigger) {
     return { error: reject("NO_EMERGENCY_TRIGGER", "no legitimate emergency trigger") };
   }
@@ -699,14 +793,21 @@ export function beginWarPowers(
   if (!state.executiveRuntime.warTrigger) {
     return { error: reject("NO_WAR_TRIGGER", "no legitimate war-power trigger") };
   }
+  const unilateralDays = warUnilateralDaysForDefenseControl(
+    state,
+    world.executiveConstitution.warUnilateralDays,
+  );
   const war = {
     id: allocateWarPowerId(state),
     startedBy: args.actorId,
     startDate: state.currentDate,
-    unilateralUntil: addDays(state.currentDate, world.executiveConstitution.warUnilateralDays),
+    unilateralUntil: addDays(state.currentDate, unilateralDays),
     status: "unilateral" as const,
     authorized: false,
-    metadata: {},
+    metadata: {
+      defenseControl: ensureOrder(state).defenseControl,
+      warUnilateralDays: unilateralDays,
+    },
   };
   state.executiveRuntime.warPowers[war.id] = war;
   state.executiveRuntime.warTrigger = false;

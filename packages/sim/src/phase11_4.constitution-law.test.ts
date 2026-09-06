@@ -86,10 +86,25 @@ describe("Phase 11.4 constitution correction model", () => {
       [{ subjectId: subject.id, alternativeId: alt.id }],
       "CMD_TEST",
     );
-    expect("error" in proposed).toBe(false);
-    if ("error" in proposed) throw new Error(proposed.error.message);
-    expect(proposed.amendment.packageChanges?.length).toBe(1);
-    expect(proposed.amendment.runtimeEffect).toBe("modeled_rule");
+    expect("error" in proposed).toBe(true);
+    if ("error" in proposed) {
+      expect(proposed.error.code).toBe("DESIGNATED_PARTY_REQUIRED");
+    }
+    const designated =
+      state.politicians.MP02?.partyId ?? Object.keys(state.partyStates)[0] ?? null;
+    expect(designated).toBeTruthy();
+    const proposedOk = proposeConstitutionalPackage(
+      world,
+      state,
+      "MP02",
+      [{ subjectId: subject.id, alternativeId: alt.id, designatedPartyId: designated }],
+      "CMD_TEST",
+    );
+    expect("error" in proposedOk).toBe(false);
+    if ("error" in proposedOk) throw new Error(proposedOk.error.message);
+    expect(proposedOk.amendment.packageChanges?.length).toBe(1);
+    expect(proposedOk.amendment.packageChanges?.[0]?.designatedPartyId).toBe(designated);
+    expect(proposedOk.amendment.runtimeEffect).toBe("modeled_rule");
   });
 
   it("enacts one-party constitutional order and later restores multiparty politics", () => {
@@ -100,11 +115,18 @@ describe("Phase 11.4 constitution correction model", () => {
     const oneParty = constitutionAlternative(partySubject.id, "single_legal_party");
     expect(oneParty?.orderPatch?.partySystem).toBe("single_legal_party");
 
+    const designated = state.politicians.MP02?.partyId ?? Object.keys(state.partyStates)[0]!;
     const proposed = proposeConstitutionalPackage(
       world,
       state,
       "MP02",
-      [{ subjectId: partySubject.id, alternativeId: "single_legal_party" }],
+      [
+        {
+          subjectId: partySubject.id,
+          alternativeId: "single_legal_party",
+          designatedPartyId: designated,
+        },
+      ],
       "CMD1",
     );
     expect("error" in proposed).toBe(false);
@@ -114,7 +136,7 @@ describe("Phase 11.4 constitution correction model", () => {
     applyRatifiedAmendmentEffects(state, proposed.amendment);
     expect(state.provincialRuntime.constitutionalOrder.partySystem).toBe("single_legal_party");
     const sole = state.provincialRuntime.constitutionalOrder.soleLegalPartyId;
-    expect(sole).toBeTruthy();
+    expect(sole).toBe(designated);
     const otherParty = Object.keys(state.partyStates).find((id) => id !== sole);
     expect(partyAllowedUnderConstitution(state, sole)).toBe(true);
     if (otherParty) expect(partyAllowedUnderConstitution(state, otherParty)).toBe(false);

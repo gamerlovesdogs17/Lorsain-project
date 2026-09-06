@@ -15,11 +15,13 @@ import { constitutionAlternativeFor } from "./constitutionAlternatives.js";
 import {
   constitutionAlternative,
   constitutionSubjectById,
+  CONSTITUTION_CHANGE_SUBJECTS,
 } from "./constitutionChanges.js";
-import { amendmentThresholds, emptyConstitutionalOrder } from "./constitutionalOrder.js";
+import { amendmentThresholds, emptyConstitutionalOrder, isEntrenchedArticle } from "./constitutionalOrder.js";
 import {
   applyAlternativeGameplayEffects,
   referendumRequiredForAmendments,
+  ensureOrder,
 } from "./constitutionGameplay.js";
 import type { ConstitutionalPackageChange } from "./types.js";
 
@@ -525,7 +527,11 @@ export function proposeConstitutionalPackage(
   world: KernelWorld,
   state: SimState,
   actorId: string,
-  changes: ReadonlyArray<{ subjectId: string; alternativeId: string }>,
+  changes: ReadonlyArray<{
+    subjectId: string;
+    alternativeId: string;
+    designatedPartyId?: string | null;
+  }>,
   commandId: string | null,
 ): { amendment: ConstitutionalAmendment; events: SimEvent[] } | { error: CommandError } {
   if (!isFederalMp(world, state, actorId)) return { error: reject("NOT_ASSEMBLY_MEMBER", actorId) };
@@ -534,6 +540,7 @@ export function proposeConstitutionalPackage(
   }
   const packageChanges: ConstitutionalPackageChange[] = [];
   const seenSubjects = new Set<string>();
+  const order = ensureOrder(state);
   for (const change of changes) {
     if (seenSubjects.has(change.subjectId)) {
       return { error: reject("DUPLICATE_AMENDMENT_SUBJECT", change.subjectId) };
@@ -541,6 +548,15 @@ export function proposeConstitutionalPackage(
     seenSubjects.add(change.subjectId);
     const subject = constitutionSubjectById(change.subjectId);
     if (!subject) return { error: reject("UNKNOWN_AMENDMENT_SUBJECT", change.subjectId) };
+    // B: hard_core entrenchment — block proposals targeting protected core articles
+    if (order.entrenchment === "hard_core" && isEntrenchedArticle(subject.articleId)) {
+      return {
+        error: reject(
+          "ENTRENCHED_ARTICLE_BLOCKED",
+          `Entrenchment (hard_core) prohibits amending ${subject.articleId} (${subject.subject}). These provisions are constitutionally unamendable.`,
+        ),
+      };
+    }
     const alt = constitutionAlternative(change.subjectId, change.alternativeId);
     if (!alt) return { error: reject("UNKNOWN_AMENDMENT_ALTERNATIVE", change.alternativeId) };
     const currentText =
@@ -552,12 +568,33 @@ export function proposeConstitutionalPackage(
     if (alt.proposedClauseText === currentText) {
       return { error: reject("NO_POLICY_CHANGE", change.subjectId) };
     }
+    if (alt.orderPatch?.partySystem === "single_legal_party") {
+      const designated = change.designatedPartyId?.trim() || null;
+      if (!designated) {
+        return {
+          error: reject(
+            "DESIGNATED_PARTY_REQUIRED",
+            "single_legal_party requires designatedPartyId",
+          ),
+        };
+      }
+      const knownParty =
+        Boolean(world.partyDefinitions[designated]) ||
+        Boolean(state.dynamicParties?.[designated]) ||
+        Boolean(state.partyStates[designated]);
+      if (!knownParty) {
+        return { error: reject("UNKNOWN_PARTY", designated) };
+      }
+    }
     packageChanges.push({
       subjectId: subject.id,
       alternativeId: alt.id,
       clauseId: subject.targetClauseId,
       currentText,
       proposedText: alt.proposedClauseText,
+      ...(alt.orderPatch?.partySystem === "single_legal_party"
+        ? { designatedPartyId: change.designatedPartyId!.trim() }
+        : {}),
     });
   }
   const open = Object.values(state.provincialRuntime.constitutionalAmendments).some((amendment) =>
@@ -673,10 +710,14 @@ export function applyRatifiedAmendmentEffects(
       }
     }
     applyAlternativeGameplayEffects(state, alt);
-  }
-  if (order.partySystem === "single_legal_party" && !order.soleLegalPartyId) {
-    // Designating Act model: sponsor party is provisionally designated until an Act names another.
-    order.soleLegalPartyId = state.politicians[amendment.sponsorId]?.partyId ?? null;
+    if (alt.orderPatch?.partySystem === "single_legal_party") {
+      const designated = change.designatedPartyId?.trim() || null;
+      order.soleLegalPartyId = designated;
+    }
+    if (alt.orderPatch?.cabinetFormation === "presidential_choice") {
+      order.cabinetHasAssemblyConfidence = false;
+      order.cabinetNeedsConfidence = false;
+    }
   }
   if (order.partySystem !== "single_legal_party") {
     order.soleLegalPartyId = null;
@@ -684,8 +725,8 @@ export function applyRatifiedAmendmentEffects(
   order.lastAmendedDate = state.currentDate;
 }
 
-export function assemblyVotesRequired(state: SimState): number {
-  const { assemblyFraction } = amendmentThresholds(ensureConstitutionalOrder(state));
+export function assemblyVotesRequired(state: SimState, coreArticle = false): number {
+  const { assemblyFraction } = amendmentThresholds(ensureConstitutionalOrder(state), coreArticle);
   return Math.ceil(420 * assemblyFraction);
 }
 
@@ -765,24 +806,44 @@ function federalVote(
   }
   amendment.assemblyYes = yes;
   amendment.assemblyVoteId = `CAVOTE_${amendment.id}`;
-  const required = assemblyVotesRequired(state);
+  // Determine if any package change targets a core entrenched article
+  const packageTouchesCore = (amendment.packageChanges ?? []).some((c) => {
+    const subject = constitutionSubjectById(c.subjectId);
+    return subject && isEntrenchedArticle(subject.articleId);
+  });
+  const documentTouchesCore = amendment.documentClauseId
+    ? CONSTITUTION_CHANGE_SUBJECTS.some(
+        (subject) => subject.targetClauseId === amendment.documentClauseId && isEntrenchedArticle(subject.articleId),
+      )
+    : false;
+  const touchesCore = packageTouchesCore || documentTouchesCore;
+  const required = assemblyVotesRequired(state, touchesCore);
   if (yes >= required) {
-    const provincesNeeded = provincesRequiredForRatification(state);
-    if (referendumRequiredForAmendments(state)) {
+    const order = ensureConstitutionalOrder(state);
+    // B: election_interlock — core amendments need an intervening election before finalization
+    if (touchesCore && order.entrenchment === "election_interlock") {
       amendment.status = "ratifying";
       amendment.ratificationDeadline = null;
-      const order = ensureConstitutionalOrder(state);
-      const pending = order.pendingReferendumAmendmentIds ?? [];
+      const pending = order.pendingInterlockAmendmentIds ?? [];
       if (!pending.includes(amendment.id)) pending.push(amendment.id);
-      order.pendingReferendumAmendmentIds = pending;
-    } else if (provincesNeeded <= 0) {
-      amendment.status = "ratified";
-      amendment.enactedDate = state.currentDate;
-      applyRatifiedAmendmentEffects(state, amendment);
-      amendment.ratificationDeadline = null;
+      order.pendingInterlockAmendmentIds = pending;
     } else {
-      amendment.status = "ratifying";
-      amendment.ratificationDeadline = null;
+      const provincesNeeded = provincesRequiredForRatification(state);
+      if (referendumRequiredForAmendments(state) || (touchesCore && order.entrenchment === "referendum_core")) {
+        amendment.status = "ratifying";
+        amendment.ratificationDeadline = null;
+        const pending = order.pendingReferendumAmendmentIds ?? [];
+        if (!pending.includes(amendment.id)) pending.push(amendment.id);
+        order.pendingReferendumAmendmentIds = pending;
+      } else if (provincesNeeded <= 0) {
+        amendment.status = "ratified";
+        amendment.enactedDate = state.currentDate;
+        applyRatifiedAmendmentEffects(state, amendment);
+        amendment.ratificationDeadline = null;
+      } else {
+        amendment.status = "ratifying";
+        amendment.ratificationDeadline = null;
+      }
     }
   } else {
     amendment.status = "assembly_failed";
@@ -844,6 +905,57 @@ export function processConstitutionalAmendmentsMonth(
   commandId: string,
 ): SimEvent[] {
   const events: SimEvent[] = [];
+
+  // B: election_interlock — release pending amendments after an intervening national election
+  const order = ensureConstitutionalOrder(state);
+  const pendingInterlock = order.pendingInterlockAmendmentIds ?? [];
+  if (pendingInterlock.length > 0) {
+    // Check if a national election (presidential or assembly) resolved after the amendment was proposed
+    const electionCompleted = Object.values(state.elections).some(
+      (e) =>
+        (e.type === "presidential" || e.type === "assembly") &&
+        e.status === "resolved" &&
+        pendingInterlock.some((aid) => {
+          const amendment = state.provincialRuntime.constitutionalAmendments[aid];
+          return amendment && e.date > amendment.proposedDate;
+        }),
+    );
+    if (electionCompleted) {
+      for (const aid of [...pendingInterlock]) {
+        const amendment = state.provincialRuntime.constitutionalAmendments[aid];
+        if (!amendment || amendment.status !== "ratifying") continue;
+        // Proceed to provincial ratification or referendum
+        const provincesNeeded = provincesRequiredForRatification(state);
+        if (referendumRequiredForAmendments(state)) {
+          const refPending = order.pendingReferendumAmendmentIds ?? [];
+          if (!refPending.includes(aid)) refPending.push(aid);
+          order.pendingReferendumAmendmentIds = refPending;
+        } else if (provincesNeeded <= 0) {
+          amendment.status = "ratified";
+          amendment.enactedDate = state.currentDate;
+          applyRatifiedAmendmentEffects(state, amendment);
+          events.push(
+            pushHistory(state, {
+              date: state.currentDate,
+              type: "CONSTITUTIONAL_AMENDMENT_RATIFIED",
+              importance: 1,
+              visibility: "public",
+              actorIds: [amendment.sponsorId],
+              entityIds: [amendment.id],
+              payload: { amendmentId: amendment.id, stage: "post_election_interlock" },
+              sourceScheduledEventId: null,
+              sourceCommandId: commandId,
+            }),
+          );
+        }
+        // Remove from interlock pending list
+        const idx = pendingInterlock.indexOf(aid);
+        if (idx >= 0) pendingInterlock.splice(idx, 1);
+      }
+      order.pendingInterlockAmendmentIds = pendingInterlock;
+    }
+  }
+
   const hasOpen = Object.values(state.provincialRuntime.constitutionalAmendments).some(
     (amendment) => ["proposed", "ratifying"].includes(amendment.status),
   );
@@ -971,8 +1083,10 @@ export function processConstitutionalAmendmentsMonth(
           state.provincialRuntime.constitutionalOrder?.orderMetrics?.politicalCompetition ?? 0;
         const support = Math.max(0.15, Math.min(0.85, yesShare * 0.7 + 0.25 + competition * 0.01));
         const electorate = 10_000_000;
-        amendment.referendumYes = Math.round(electorate * support);
-        amendment.referendumNo = electorate - amendment.referendumYes;
+        const turnoutRate = 0.62;
+        const totalVoters = Math.round(electorate * turnoutRate);
+        amendment.referendumYes = Math.round(totalVoters * support);
+        amendment.referendumNo = totalVoters - amendment.referendumYes;
         amendment.referendumHeldDate = state.currentDate;
         const passed = amendment.referendumYes > amendment.referendumNo;
         if (passed) {
@@ -982,9 +1096,36 @@ export function processConstitutionalAmendmentsMonth(
         } else {
           amendment.status = "failed";
         }
+        const yesTotal = amendment.referendumYes;
+        const noTotal = amendment.referendumNo;
+        const totalCast = yesTotal + noTotal;
         const order = ensureConstitutionalOrder(state);
         order.pendingReferendumAmendmentIds = (order.pendingReferendumAmendmentIds ?? []).filter(
           (id) => id !== amendment.id,
+        );
+        events.push(
+          pushHistory(state, {
+            date: state.currentDate,
+            type: "REFERENDUM_RESOLVED",
+            importance: 1,
+            visibility: "public",
+            actorIds: [amendment.sponsorId],
+            entityIds: [amendment.id],
+            payload: {
+              amendmentId: amendment.id,
+              question: amendment.title,
+              yesShare: totalCast > 0 ? Math.round((yesTotal / totalCast) * 10000) / 10000 : 0,
+              noShare: totalCast > 0 ? Math.round((noTotal / totalCast) * 10000) / 10000 : 0,
+              turnout: Math.round(turnoutRate * 10000) / 10000,
+              result: passed ? "passed" : "failed",
+              referendumYes: yesTotal,
+              referendumNo: noTotal,
+              stage: "simplified_national_referendum",
+              packageSize: amendment.packageChanges?.length ?? 0,
+            },
+            sourceScheduledEventId: null,
+            sourceCommandId: commandId,
+          }),
         );
         events.push(
           pushHistory(state, {
@@ -999,8 +1140,8 @@ export function processConstitutionalAmendmentsMonth(
             payload: {
               amendmentId: amendment.id,
               stage: "national_referendum",
-              referendumYes: amendment.referendumYes,
-              referendumNo: amendment.referendumNo,
+              referendumYes: yesTotal,
+              referendumNo: noTotal,
               packageSize: amendment.packageChanges?.length ?? 0,
             },
             sourceScheduledEventId: null,

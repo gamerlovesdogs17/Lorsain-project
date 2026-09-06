@@ -13,6 +13,8 @@ import { TERENA_WORLD_ID, type TreatyRecord } from "./types.js";
 import { isTerenaTreatyMember, terenaTreatyRequiresAssembly } from "./treaty-effects.js";
 import { publicActiveCrises } from "./crises.js";
 import { activateTreaty } from "./treaties.js";
+import { treatyAssemblyFraction } from "../provinces/constitutionGameplay.js";
+import { assemblyFractionYesNeeded } from "../executive/procedure.js";
 
 /**
  * Procedural default for treaty ratification: simple majority of votes cast
@@ -234,7 +236,12 @@ export function processTreatyRatificationVotes(
       else if (choice === "no") no += 1;
       else abstain += 1;
     }
-    const passed = treatyRatificationPassed(yes, no);
+    // A8: Wire treatyAssemblyFraction into ratification threshold
+    const fraction = treatyAssemblyFraction(state);
+    const passed = fraction > 0.5
+      ? yes >= assemblyFractionYesNeeded(world.legislativeConstitution.assemblySeatCount, fraction)
+      : treatyRatificationPassed(yes, no);
+    const thresholdLabel = fraction > 0.5 ? "absolute_majority" as const : "simple_majority_cast" as const;
 
     const voteRecord = {
       id: rat.voteId,
@@ -253,7 +260,7 @@ export function processTreatyRatificationVotes(
       no,
       abstain,
       passed,
-      threshold: "simple_majority_cast" as const,
+      threshold: thresholdLabel,
       metadata: {
         kind: "treaty_ratification",
         treatyId: treaty.id,

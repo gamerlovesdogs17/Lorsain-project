@@ -13,6 +13,7 @@ import type { SimState } from "../types.js";
 
 export type ConstitutionClauseRef = {
   articleId: string;
+  /** Canonical document section id (ARTICLE_X_SECTION_N). */
   sectionId: string;
   clauseId: string;
   text: string;
@@ -20,15 +21,22 @@ export type ConstitutionClauseRef = {
 
 export type ConstitutionCatalogIndex = {
   articles: Set<string>;
-  sections: Map<string, string>; // sectionId -> articleId
+  sections: Map<string, string>; // sectionId (canonical or short alias) -> articleId
   clauses: Map<string, ConstitutionClauseRef>;
 };
 
-/** Document section IDs use ARTICLE_X_SECTION_N; subject sectionId uses ART_X_SN. */
+/** Document section IDs use ARTICLE_X_SECTION_N; short alias is ART_X_SN. */
 export function shortSectionId(documentSectionId: string): string {
   const m = documentSectionId.match(/^ARTICLE_([IVX]+)_SECTION_(\d+)$/);
   if (!m) return documentSectionId;
   return `ART_${m[1]}_S${m[2]}`;
+}
+
+/** Prefer canonical ARTICLE_X_SECTION_N; resolve short ART_X_SN aliases. */
+export function canonicalSectionId(sectionId: string): string {
+  const short = sectionId.match(/^ART_([IVX]+)_S(\d+)$/);
+  if (short) return `ARTICLE_${short[1]}_SECTION_${short[2]}`;
+  return sectionId;
 }
 
 export function buildConstitutionCatalogIndex(
@@ -43,12 +51,13 @@ export function buildConstitutionCatalogIndex(
     articles.add(article.id);
     for (const section of article.sections) {
       const short = shortSectionId(section.id);
+      // Prefer canonical keys; keep short form as alias resolver only.
       sections.set(section.id, article.id);
-      sections.set(short, article.id);
+      if (short !== section.id) sections.set(short, article.id);
       for (const clause of section.clauses) {
         clauses.set(clause.id, {
           articleId: article.id,
-          sectionId: short,
+          sectionId: section.id,
           clauseId: clause.id,
           text: clause.text,
         });
@@ -69,7 +78,8 @@ export type ConstitutionSubjectValidationError = {
     | "CLAUSE_ARTICLE_MISMATCH"
     | "FOUNDING_ALT_MISSING"
     | "FOUNDING_BASELINE_MISMATCH"
-    | "DUPLICATE_TARGET_METADATA";
+    | "DUPLICATE_TARGET_METADATA"
+    | "NON_CANONICAL_SECTION_ID";
   message: string;
 };
 
@@ -86,7 +96,15 @@ export function validateConstitutionChangeSubject(
       message: `Article ${subject.articleId} does not exist`,
     });
   }
-  const sectionArticle = index.sections.get(subject.sectionId);
+  const canonicalSubjectSection = canonicalSectionId(subject.sectionId);
+  if (canonicalSubjectSection !== subject.sectionId) {
+    errors.push({
+      subjectId: subject.id,
+      code: "NON_CANONICAL_SECTION_ID",
+      message: `Section ${subject.sectionId} should use canonical id ${canonicalSubjectSection}`,
+    });
+  }
+  const sectionArticle = index.sections.get(subject.sectionId) ?? index.sections.get(canonicalSubjectSection);
   if (!sectionArticle) {
     errors.push({
       subjectId: subject.id,
@@ -108,7 +126,7 @@ export function validateConstitutionChangeSubject(
       message: `Clause ${subject.targetClauseId} does not exist`,
     });
   } else {
-    if (clause.sectionId !== subject.sectionId) {
+    if (clause.sectionId !== canonicalSubjectSection) {
       errors.push({
         subjectId: subject.id,
         code: "CLAUSE_SECTION_MISMATCH",

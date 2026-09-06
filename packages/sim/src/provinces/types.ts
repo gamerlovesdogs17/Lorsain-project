@@ -344,6 +344,11 @@ export type ConstitutionalPackageChange = {
   clauseId: string;
   currentText: string;
   proposedText: string;
+  /**
+   * Required when alternative sets partySystem to single_legal_party.
+   * Becomes soleLegalPartyId on ratification (not the sponsor's party).
+   */
+  designatedPartyId?: string | null;
 };
 
 export type ProvincialRuntime = {

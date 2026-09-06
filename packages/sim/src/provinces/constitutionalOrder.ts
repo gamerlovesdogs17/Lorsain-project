@@ -64,6 +64,22 @@ export const AMENDMENT_PROCESS_MODES = [
 ] as const;
 export type AmendmentProcessMode = (typeof AMENDMENT_PROCESS_MODES)[number];
 
+export const ENTRENCHMENT_MODES = [
+  "none",
+  "heightened_threshold",
+  "election_interlock",
+  "referendum_core",
+  "hard_core",
+] as const;
+export type EntrenchmentMode = (typeof ENTRENCHMENT_MODES)[number];
+
+/** Articles protected by entrenchment — core constitutional provisions. */
+export const ENTRENCHED_ARTICLE_IDS = [
+  "ARTICLE_I",
+  "ARTICLE_II",
+  "ARTICLE_VIII",
+] as const;
+
 export const CIVIL_LIBERTY_MODES = [
   "broad_democratic_liberties",
   "standard_charter",
@@ -96,9 +112,22 @@ export type ConstitutionalOrderState = {
   republicForm: "democratic_republic" | "peoples_republic" | "unitary_party_republic";
   citizenshipGuard: "equal_citizenship" | "duty_conditioned_citizenship";
   cabinetFormation: "presidential_choice" | "assembly_confidence" | "party_slate";
+  /**
+   * When cabinetFormation is assembly_confidence, presidential appointments are
+   * allowed only if this marker is set or the nominee's party holds the Assembly plurality.
+   */
+  cabinetHasAssemblyConfidence?: boolean;
+  /** Set when a unilateral appointment was blocked pending Assembly confidence. */
+  cabinetNeedsConfidence?: boolean;
   pressFreedom: "free_press" | "licensed_press" | "state_media_priority";
   localGovernment: "provincial_primary" | "shared" | "nationally_directed";
   defenseControl: "civil_supremacy" | "joint_command" | "executive_command";
+  entrenchment: EntrenchmentMode;
+  /**
+   * When entrenchment is election_interlock, tracks amendment ids that have passed
+   * first Assembly vote but are pending an intervening election before final ratification.
+   */
+  pendingInterlockAmendmentIds?: string[];
   /** Enacted clause text overrides keyed by clause id. */
   clauseTexts: Record<string, string>;
   /** Accumulated metric effects from ratified amendments (applied to gameplay). */
@@ -127,6 +156,8 @@ export function emptyConstitutionalOrder(): ConstitutionalOrderState {
     pressFreedom: "free_press",
     localGovernment: "provincial_primary",
     defenseControl: "civil_supremacy",
+    entrenchment: "none",
+    pendingInterlockAmendmentIds: [],
     clauseTexts: {},
     orderMetrics: {
       institutionalStability: 0,
@@ -152,20 +183,39 @@ export type ConstitutionalMetricEffects = {
   governmentLegitimacy?: number;
 };
 
-export function amendmentThresholds(order: ConstitutionalOrderState): {
+export function amendmentThresholds(order: ConstitutionalOrderState, coreArticle = false): {
   assemblyFraction: number;
   provincesRequired: number;
   referendumRequired: boolean;
 } {
+  let base: { assemblyFraction: number; provincesRequired: number; referendumRequired: boolean };
   switch (order.amendmentProcess) {
     case "assembly_three_fifths_plus_11_provinces":
-      return { assemblyFraction: 0.6, provincesRequired: 11, referendumRequired: false };
+      base = { assemblyFraction: 0.6, provincesRequired: 11, referendumRequired: false };
+      break;
     case "assembly_simple_plus_referendum":
-      return { assemblyFraction: 0.5, provincesRequired: 0, referendumRequired: true };
+      base = { assemblyFraction: 0.5, provincesRequired: 0, referendumRequired: true };
+      break;
     case "assembly_three_quarters_only":
-      return { assemblyFraction: 0.75, provincesRequired: 0, referendumRequired: false };
+      base = { assemblyFraction: 0.75, provincesRequired: 0, referendumRequired: false };
+      break;
     case "assembly_two_thirds_plus_13_provinces":
     default:
-      return { assemblyFraction: 2 / 3, provincesRequired: 13, referendumRequired: false };
+      base = { assemblyFraction: 2 / 3, provincesRequired: 13, referendumRequired: false };
+      break;
   }
+  // Entrenchment heightened threshold: core articles require higher fraction
+  if (coreArticle && order.entrenchment === "heightened_threshold") {
+    base.assemblyFraction = Math.min(0.75, base.assemblyFraction + 0.1);
+  }
+  // Entrenchment referendum_core: core articles require referendum even if process doesn't
+  if (coreArticle && order.entrenchment === "referendum_core") {
+    base.referendumRequired = true;
+  }
+  return base;
+}
+
+/** Check whether a subject targets a core entrenched article. */
+export function isEntrenchedArticle(articleId: string): boolean {
+  return (ENTRENCHED_ARTICLE_IDS as readonly string[]).includes(articleId);
 }

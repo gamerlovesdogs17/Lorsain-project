@@ -8,4 +8,6 @@ export * from "./constitutional.js";
 export * from "./constitutionAlternatives.js";
 export * from "./constitutionChanges.js";
 export * from "./constitutionalOrder.js";
+export * from "./constitutionGameplay.js";
+export * from "./constitutionValidation.js";
 export * from "./themes.js";

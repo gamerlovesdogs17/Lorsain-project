@@ -1,5 +1,6 @@
 import type { KernelWorld, OfficeTerm, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
+import { addDays } from "../calendar.js";
 import { monthStart } from "../campaigns/effects.js";
 import { pushHistory } from "../scheduler.js";
 import { currentAssemblyMemberIds } from "../legislature/state.js";
@@ -89,6 +90,41 @@ function expireClerical(state: SimState, commandId: string): SimEvent[] {
           sourceCommandId: commandId,
         }),
       );
+    }
+    // Assembly confirmation gate: if requiresAssemblyConfirmation and no
+    // Assembly action (extension/termination passed) within 30 days, auto-expire.
+    if (
+      emergency.status === "active" &&
+      emergency.metadata?.requiresAssemblyConfirmation === true
+    ) {
+      const confirmed = Object.values(state.executiveRuntime.motions).some(
+        (m) =>
+          (m.kind === "emergency_extension" || m.kind === "emergency_termination") &&
+          m.targetId === emergency.id &&
+          m.result === "passed",
+      );
+      if (!confirmed) {
+        const confirmationDeadline = addDays(emergency.declaredDate, 30);
+        if (state.currentDate > confirmationDeadline) {
+          emergency.status = "expired";
+          events.push(
+            pushHistory(state, {
+              date: state.currentDate,
+              type: "EMERGENCY_EXPIRED",
+              importance: 0.7,
+              visibility: "public",
+              actorIds: [emergency.declaredBy],
+              entityIds: [emergency.id],
+              payload: {
+                emergencyId: emergency.id,
+                reason: "assembly_confirmation_deadline_expired",
+              },
+              sourceScheduledEventId: null,
+              sourceCommandId: commandId,
+            }),
+          );
+        }
+      }
     }
   }
   for (const war of Object.values(state.executiveRuntime.warPowers)) {

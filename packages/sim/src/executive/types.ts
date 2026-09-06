@@ -10,6 +10,7 @@ export const MOTION_KINDS = [
   "emergency_extension",
   "emergency_termination",
   "war_authorization",
+  "cabinet_no_confidence",
 ] as const;
 export type MotionKind = (typeof MOTION_KINDS)[number];
 

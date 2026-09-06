@@ -11,16 +11,6 @@
 import type {
   ConstitutionalMetricEffects,
   ConstitutionalOrderState,
-  PartySystemMode,
-  PresidentialElectionMode,
-  AssemblyElectionMode,
-  JudicialReviewMode,
-  ProvincialCompetenceMode,
-  EmergencyPowerMode,
-  TreatyApprovalMode,
-  AmendmentProcessMode,
-  CivilLibertyMode,
-  ExecutiveAuthorityMode,
 } from "./constitutionalOrder.js";
 
 // ---------------------------------------------------------------------------
@@ -54,8 +44,17 @@ export type ConstitutionChangeAlternative = {
 
 export type ConstitutionChangeSubject = {
   id: string;
-  /** ARTICLE_I … ARTICLE_XII */
+  /**
+   * Legacy subject id aliases for save/lookup compatibility when ids were renamed.
+   * Prefer keeping stable `id` strings; use this only when an id must change.
+   */
+  legacyIds?: readonly string[];
+  /** ARTICLE_I … ARTICLE_XII — always the document article of the target clause. */
   articleId: string;
+  /**
+   * Canonical document section id, e.g. ARTICLE_III_SECTION_1.
+   * Short forms (ART_III_S1) are alias-resolved by validation only.
+   */
   sectionId: string;
   targetClauseId: string;
   /** Short subject title. */
@@ -77,7 +76,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art1_republic_form",
     articleId: "ARTICLE_I",
-    sectionId: "ART_I_S1",
+    sectionId: "ARTICLE_I_SECTION_1",
     targetClauseId: "ART_I_S1_C1",
     subject: "Form of the Republic",
     foundingAlternativeId: "democratic_republic",
@@ -88,8 +87,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Terena is a sovereign, democratic and indivisible republic founded upon the equal dignity of its people and the rule of law.",
         mechanicalEffects: [
-          "Multi-party elections remain the primary mechanism of government formation.",
-          "Constitutional Court retains authority to review legislation.",
+          "Multi-party elections remain the primary mechanism of government formation; party system set to competitive multiparty.",
+          "Constitutional Court retains standard or strong judicial review authority.",
           "International treaty obligations under standard democratic norms apply.",
         ],
         metricEffects: {
@@ -97,7 +96,10 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
           governmentLegitimacy: 2,
           civilLiberty: 1,
         },
-        orderPatch: { republicForm: "democratic_republic" },
+        orderPatch: {
+          republicForm: "democratic_republic",
+          partySystem: "competitive_multiparty",
+        },
       },
       {
         id: "peoples_republic",
@@ -105,8 +107,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Terena is a people's republic. Sovereignty is exercised by the people through the leading institutions of the republic, which are guided by the principles of popular solidarity and collective advancement.",
         mechanicalEffects: [
-          "Executive acquires expanded mandate to act in declared national interest.",
-          "Constitutional Court's scope of review is narrowed to procedural matters.",
+          "Executive acquires expanded mandate; executive authority set to strengthened executive.",
+          "Constitutional Court's scope of review is narrowed to deferential review.",
           "Political pluralism may be subject to subsequent legislative restriction.",
         ],
         metricEffects: {
@@ -118,6 +120,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         orderPatch: {
           republicForm: "peoples_republic",
           executiveAuthority: "strengthened_executive",
+          judicialReview: "deferential_review",
         },
       },
       {
@@ -126,8 +129,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Terena is a unitary republic. The guiding political institution of the republic shall be designated by the National Assembly and shall direct the fundamental policies of the state.",
         mechanicalEffects: [
-          "A single party may be designated as the guiding institution by legislative act.",
-          "Presidential elections are conducted under the supervision of the guiding institution.",
+          "Party system set to single legal party; designatedPartyId is required on the amendment package.",
+          "Executive authority set to strengthened executive; judicial review set to deferential.",
           "Opposition party registration requires certification by the guiding institution.",
         ],
         metricEffects: {
@@ -139,15 +142,18 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         },
         orderPatch: {
           republicForm: "unitary_party_republic",
+          partySystem: "single_legal_party",
           executiveAuthority: "strengthened_executive",
+          judicialReview: "deferential_review",
         },
       },
     ],
   },
   {
-    id: "art1_executive_authority",
+    id: "art3_executive_authority",
+    legacyIds: ["art1_executive_authority"],
     articleId: "ARTICLE_III",
-    sectionId: "ART_III_S2",
+    sectionId: "ARTICLE_III_SECTION_2",
     targetClauseId: "ART_III_S2_C1",
     subject: "Executive authority structure",
     foundingAlternativeId: "constrained_dual_mandate",
@@ -158,7 +164,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The President appoints and dismisses Ministers, directs the executive administration, conducts foreign relations and serves as commander in chief, subject to this Constitution and law.",
         mechanicalEffects: [
-          "Presidential decrees in reserved domains require countersignature.",
+          "Major executive regulations require legislative co-approval; minor regulations are allowed.",
           "Council of Ministers may delay presidential initiatives requiring legislative funding.",
         ],
         metricEffects: {
@@ -173,7 +179,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Executive authority is vested in a President elected by the people. The President appoints and directs the Council of Ministers and is solely responsible for the conduct of executive policy.",
         mechanicalEffects: [
-          "President has unilateral appointment and dismissal of ministers.",
+          "President may issue regulations including major ones without legislative co-approval.",
           "Council of Ministers countersignature requirement is abolished.",
           "Legislative oversight of executive appointments is limited to budgetary control.",
         ],
@@ -189,8 +195,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Executive authority is vested exclusively in the President. The President determines national policy, directs all executive agencies, and issues binding decrees on matters within the executive domain without requirement of legislative co-approval.",
         mechanicalEffects: [
-          "Presidential decrees take immediate effect in executive domains.",
-          "Legislative can only reverse presidential action by supermajority.",
+          "All executive regulations (including major ones) take immediate effect without legislative co-approval.",
+          "Assembly regulation annulment requires a two-thirds supermajority vote.",
           "Cabinet is purely advisory; dismissals require no confirmation.",
         ],
         metricEffects: {
@@ -207,8 +213,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Executive authority is exercised by a Council of Ministers collectively accountable to the National Assembly. The President performs ceremonial and representative functions and may not direct ministers without Assembly authorisation.",
         mechanicalEffects: [
-          "Government formation requires Assembly majority approval.",
-          "President's decree power is suspended.",
+          "President cannot issue executive regulations or unilaterally declare emergencies.",
+          "Cabinet no-confidence motion becomes available to the Assembly.",
           "Council of Ministers may be removed by a simple no-confidence vote.",
         ],
         metricEffects: {
@@ -227,7 +233,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art2_civil_liberties",
     articleId: "ARTICLE_II",
-    sectionId: "ART_II_S2",
+    sectionId: "ARTICLE_II_SECTION_2",
     targetClauseId: "ART_II_S2_C1",
     subject: "Scope of civil and political liberties",
     foundingAlternativeId: "standard_charter",
@@ -311,7 +317,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art2_citizenship_guard",
     articleId: "ARTICLE_II",
-    sectionId: "ART_II_S1",
+    sectionId: "ARTICLE_II_SECTION_1",
     targetClauseId: "ART_II_S1_C2",
     subject: "Citizenship equality and civic duty",
     foundingAlternativeId: "equal_citizenship",
@@ -337,9 +343,9 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Citizens of Terena who have completed their civic duties as defined by law, including national service where applicable, hold full political rights. Citizens who have not fulfilled their civic obligations may be subject to restrictions on the right to vote or stand for office as prescribed by law.",
         mechanicalEffects: [
-          "National service fulfilment becomes prerequisite for candidacy.",
-          "Voter rolls may be conditioned on civic-duty registry.",
-          "Legislature defines civic obligations by ordinary statute.",
+          "Presidential candidacy requires prior public office service (any held or ended office term) as a proxy for civic duty fulfilment.",
+          "Candidates without prior public service experience are ineligible for the presidency.",
+          "Legislature defines further civic obligations by ordinary statute.",
         ],
         metricEffects: {
           civilLiberty: -1,
@@ -357,7 +363,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art3_presidential_term_limit",
     articleId: "ARTICLE_III",
-    sectionId: "ART_III_S1",
+    sectionId: "ARTICLE_III_SECTION_1",
     targetClauseId: "ART_III_S1_C3",
     subject: "Presidential term limit",
     foundingAlternativeId: "two_term_limit",
@@ -430,7 +436,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art3_presidential_election_mode",
     articleId: "ARTICLE_III",
-    sectionId: "ART_III_S1",
+    sectionId: "ARTICLE_III_SECTION_1",
     targetClauseId: "ART_III_S1_C2",
     subject: "Method of presidential election",
     foundingAlternativeId: "national_rcv",
@@ -507,7 +513,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art4_assembly_term",
     articleId: "ARTICLE_IV",
-    sectionId: "ART_IV_S1",
+    sectionId: "ARTICLE_IV_SECTION_1",
     targetClauseId: "ART_IV_S1_C2",
     subject: "Assembly term length",
     foundingAlternativeId: "four_year_assembly",
@@ -577,7 +583,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art4_assembly_election_mode",
     articleId: "ARTICLE_IV",
-    sectionId: "ART_IV_S1",
+    sectionId: "ARTICLE_IV_SECTION_1",
     targetClauseId: "ART_IV_S1_C1",
     subject: "Assembly electoral system",
     foundingAlternativeId: "stv",
@@ -655,7 +661,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art5_veto_override",
     articleId: "ARTICLE_V",
-    sectionId: "ART_V_S1",
+    sectionId: "ARTICLE_V_SECTION_1",
     targetClauseId: "ART_V_S1_C2",
     subject: "Presidential veto override threshold",
     foundingAlternativeId: "two_thirds_override",
@@ -729,7 +735,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art6_cabinet_formation",
     articleId: "ARTICLE_VI",
-    sectionId: "ART_VI_S1",
+    sectionId: "ARTICLE_VI_SECTION_1",
     targetClauseId: "ART_VI_S1_C1",
     subject: "Cabinet formation and accountability",
     foundingAlternativeId: "presidential_choice",
@@ -755,8 +761,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The Council of Ministers is collectively accountable to the National Assembly. The President nominates a Prime Minister who must command the confidence of the National Assembly. The Council of Ministers may be removed by a vote of no confidence passed by absolute majority.",
         mechanicalEffects: [
-          "Government formation requires negotiation of an assembly majority.",
-          "Council can fall on a no-confidence vote; new elections or coalition renegotiation required.",
+          "Ministerial appointments are blocked unless the nominee's party holds the Assembly plurality or cabinet has Assembly confidence.",
+          "Assembly may introduce a cabinet no-confidence motion that dismisses all ministers and requires new cabinet formation.",
           "President's role in day-to-day government is reduced to supervision.",
         ],
         metricEffects: {
@@ -772,7 +778,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The Council of Ministers is constituted by the ministerial slate designated by the party or coalition that commands a majority in the National Assembly. The President has the power to reject individual nominees on grounds of legal incapacity only.",
         mechanicalEffects: [
-          "Governing party controls cabinet composition directly.",
+          "Ministerial appointments are restricted to members of the Assembly plurality party (or president's party if no plurality).",
           "Presidential influence over portfolio allocation is minimal.",
           "Coalition parties negotiate ministerial shares before government formation.",
         ],
@@ -792,7 +798,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art7_party_system",
     articleId: "ARTICLE_VII",
-    sectionId: "ART_VII_S2",
+    sectionId: "ARTICLE_VII_SECTION_2",
     targetClauseId: "ART_VII_S2_C1",
     subject: "Political party system",
     foundingAlternativeId: "competitive_multiparty",
@@ -839,7 +845,6 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         mechanicalEffects: [
           "All opposition party activity becomes illegal.",
           "Electoral competition is restricted to candidates within the single party.",
-          "Party organs acquire state powers over candidate selection and policy.",
           "Constitutional Court's ability to strike down party restrictions is removed.",
         ],
         metricEffects: {
@@ -871,9 +876,10 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
     ],
   },
   {
-    id: "art7_press_freedom",
+    id: "art2_press_freedom",
+    legacyIds: ["art7_press_freedom"],
     articleId: "ARTICLE_II",
-    sectionId: "ART_II_S2",
+    sectionId: "ARTICLE_II_SECTION_2",
     targetClauseId: "ART_II_S2_C2",
     subject: "Press and media freedom",
     foundingAlternativeId: "free_press",
@@ -884,7 +890,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The press and other public media are free. Prior restraint may be imposed only by a court under a law protecting an immediate and grave public interest.",
         mechanicalEffects: [
-          "Independent media can investigate and report without regulatory risk.",
+          "All media outlets publish freely; no framing bias is applied by the constitutional order.",
           "Government has no prior restraint power over publication.",
         ],
         metricEffects: {
@@ -899,9 +905,9 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The operation of media outlets requires a licence issued by the National Communications Authority. The Authority may condition, suspend, or revoke licences on grounds prescribed by law, including national security and social order.",
         mechanicalEffects: [
-          "Executive-appointed Authority controls media entry and exit.",
-          "Critical outlets risk licence suspension.",
-          "New independent outlets require government approval to operate.",
+          "Low-reputation and opposition-leaning outlets are filtered from active media coverage.",
+          "Critical framing of government stories is suppressed to restrained coverage.",
+          "Impeachment and censure stories receive reduced prominence.",
         ],
         metricEffects: {
           civilLiberty: -2,
@@ -916,9 +922,9 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The state shall maintain a national broadcasting service with priority access to public spectrum. Private media may operate on spectrum not reserved to the national service. The national broadcasting service shall provide balanced coverage of all registered political parties.",
         mechanicalEffects: [
-          "State broadcaster has preferential spectrum allocation.",
-          "Private media must operate on residual spectrum.",
-          "Government messaging has structural amplification advantage.",
+          "Government stories receive boosted media prominence and sympathetic framing.",
+          "Impeachment and censure stories receive reduced coverage priority.",
+          "Government messaging has structural amplification advantage in media coverage.",
         ],
         metricEffects: {
           civilLiberty: -1,
@@ -936,7 +942,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art8_court_term",
     articleId: "ARTICLE_VIII",
-    sectionId: "ART_VIII_S2",
+    sectionId: "ARTICLE_VIII_SECTION_2",
     targetClauseId: "ART_VIII_S2_C2",
     subject: "Constitutional Court judicial term",
     foundingAlternativeId: "twelve_year_court",
@@ -1006,7 +1012,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art8_judicial_review",
     articleId: "ARTICLE_VIII",
-    sectionId: "ART_VIII_S2",
+    sectionId: "ARTICLE_VIII_SECTION_2",
     targetClauseId: "ART_VIII_S2_C3",
     subject: "Scope of judicial review",
     foundingAlternativeId: "standard_review",
@@ -1087,7 +1093,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art9_provincial_competence",
     articleId: "ARTICLE_IX",
-    sectionId: "ART_IX_S2",
+    sectionId: "ARTICLE_IX_SECTION_2",
     targetClauseId: "ART_IX_S2_C1",
     subject: "Division of powers between nation and provinces",
     foundingAlternativeId: "concurrent_powers",
@@ -1169,7 +1175,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art9_local_government",
     articleId: "ARTICLE_IX",
-    sectionId: "ART_IX_S3",
+    sectionId: "ARTICLE_IX_SECTION_3",
     targetClauseId: "ART_IX_S3_C1",
     subject: "Local government authority",
     foundingAlternativeId: "provincial_primary",
@@ -1180,8 +1186,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Municipalities exercise local authority under national and provincial law through elected institutions, including Mayors where law provides.",
         mechanicalEffects: [
-          "Municipal structure varies by province; no uniform national local-government template.",
-          "Provinces control municipal finances and competences.",
+          "National bills on housing and local-government subjects (housing approvals, transit zoning, public housing, rent policy) raise potential competence issues.",
+          "Provincial autonomy metric is increased; provinces control municipal finances and competences.",
         ],
         metricEffects: {
           provincialAutonomy: 2,
@@ -1209,9 +1215,9 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Municipalities are creatures of national law. The national government prescribes the powers, functions, and internal structures of all municipalities. Provincial modification of municipal competences requires national ministerial approval.",
         mechanicalEffects: [
-          "Uniform municipal structure across all provinces.",
-          "National government can reorganise or merge municipalities unilaterally.",
-          "Provincial influence over local governance is minimal.",
+          "National bills on local-government subjects face no provincial competence objections.",
+          "National government can direct municipal policy without provincial consent.",
+          "Provincial autonomy metric is reduced; provincial influence over local governance is minimal.",
         ],
         metricEffects: {
           provincialAutonomy: -2,
@@ -1228,7 +1234,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art10_emergency_powers",
     articleId: "ARTICLE_X",
-    sectionId: "ART_X_S2",
+    sectionId: "ARTICLE_X_SECTION_2",
     targetClauseId: "ART_X_S2_C1",
     subject: "Scope and oversight of emergency powers",
     foundingAlternativeId: "standard_emergency",
@@ -1239,9 +1245,9 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "A state of emergency may be declared by the President only upon approval of two-thirds of the National Assembly and only in response to a threat of armed insurrection, natural catastrophe, or foreign invasion. Emergency measures may not suspend civil or political rights. The Assembly may revoke the state of emergency by simple majority at any time.",
         mechanicalEffects: [
-          "Emergency declaration requires supermajority Assembly approval.",
-          "Rights cannot be suspended during emergencies.",
-          "Assembly revocation power is immediate and by simple majority.",
+          "President declares emergency; Assembly confirmation required within 30 days or emergency auto-expires.",
+          "Initial emergency period is 14 days; rights cannot be suspended during emergencies.",
+          "Assembly may terminate the emergency by simple majority at any time.",
         ],
         metricEffects: {
           civilLiberty: 2,
@@ -1256,9 +1262,9 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The President may declare a national emergency for fourteen days. Any extension, in periods not exceeding thirty days, requires National Assembly approval.",
         mechanicalEffects: [
-          "President may act immediately; Assembly confirmation required within 30 days.",
-          "Emergency expires automatically after 90 days without renewal.",
-          "Foundational constitutional default for emergency governance.",
+          "President declares emergency for an initial 14-day period.",
+          "Assembly confirmation required within 30 days of declaration; emergency auto-expires without confirmation.",
+          "Extensions in 30-day periods require Assembly approval.",
         ],
         metricEffects: {
           executiveCapacity: 1,
@@ -1273,8 +1279,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
           "The President may declare a state of national emergency when, in the President's judgment, the security or stability of the republic so requires. Emergency decrees have the force of law. The state of emergency may be renewed at the President's discretion for successive periods of ninety days.",
         mechanicalEffects: [
           "President determines emergency threshold unilaterally.",
-          "Successive ninety-day renewals can sustain indefinite emergency rule.",
-          "Emergency decrees require no Assembly confirmation.",
+          "Initial emergency period is 90 days; no Assembly confirmation required.",
+          "Successive ninety-day renewals at presidential discretion sustain indefinite emergency rule.",
         ],
         metricEffects: {
           executiveCapacity: 3,
@@ -1307,7 +1313,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art10_defense_control",
     articleId: "ARTICLE_X",
-    sectionId: "ART_X_S3",
+    sectionId: "ARTICLE_X_SECTION_3",
     targetClauseId: "ART_X_S3_C1",
     subject: "Civil control of the armed forces",
     foundingAlternativeId: "civil_supremacy",
@@ -1318,8 +1324,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The President may direct offensive military action for no more than thirty days without authorization by the National Assembly.",
         mechanicalEffects: [
-          "Military is institutionally excluded from political decision-making.",
-          "Defence budget subject to full Assembly appropriations scrutiny.",
+          "War powers use the baseline unilateral window; Assembly authorization referral is auto-scheduled when window expires.",
+          "War powers expire if Assembly does not authorize before the unilateral deadline.",
         ],
         metricEffects: {
           civilLiberty: 1,
@@ -1334,8 +1340,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Supreme command of the armed forces is exercised by a National Security Council composed of the President, the Prime Minister, and the Chief of the Defence Staff. Major deployment decisions require the concurrence of all three.",
         mechanicalEffects: [
-          "Military leadership has formal advisory authority in security decisions.",
-          "Deployment authority is shared; unilateral presidential command is constrained.",
+          "War unilateral window is halved compared to baseline (minimum 7 days); Assembly authorization is required sooner.",
+          "Assembly authorization referral is auto-scheduled; war powers expire without authorization.",
         ],
         metricEffects: {
           executiveCapacity: 0,
@@ -1350,9 +1356,9 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The President exercises sole command of the armed forces. Deployments and military operations are determined by the President in consultation with the Chief of the Defence Staff. The National Assembly has no prior approval role in military deployments.",
         mechanicalEffects: [
-          "President may deploy forces without Assembly authorisation.",
-          "Military budget appropriations are the only legislative lever on defence.",
-          "Executive can sustain long-term operations without legislative oversight.",
+          "War unilateral window is tripled compared to baseline; Assembly authorization is deferred.",
+          "Assembly authorization referral is still scheduled but the extended window reduces urgency.",
+          "Executive can sustain longer-term operations before Assembly must authorize.",
         ],
         metricEffects: {
           executiveCapacity: 2,
@@ -1371,7 +1377,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art11_treaty_approval",
     articleId: "ARTICLE_XI",
-    sectionId: "ART_XI_S1",
+    sectionId: "ARTICLE_XI_SECTION_1",
     targetClauseId: "ART_XI_S1_C1",
     subject: "Treaty ratification process",
     foundingAlternativeId: "assembly_ratification",
@@ -1397,9 +1403,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Treaties affecting matters within provincial competence require ratification both by the National Assembly by absolute majority and by the assemblies of at least two-thirds of the provinces. Treaties that do not affect provincial competence require only National Assembly ratification.",
         mechanicalEffects: [
-          "Treaties in provincial domains require double ratification.",
-          "Provincial assemblies can block treaties affecting their competences.",
-          "Treaty-making is slower in areas of shared jurisdiction.",
+          "All treaties require National Assembly majority ratification.",
+          "Provincial competence concerns are recorded in committee debate but do not require a separate provincial vote.",
         ],
         metricEffects: {
           provincialAutonomy: 2,
@@ -1431,9 +1436,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "Treaties concluded by the President require ratification by two-thirds of the total membership of the National Assembly. Treaties ceding sovereign territory or transferring constitutional competences require ratification by three-quarters of the total membership.",
         mechanicalEffects: [
-          "Ordinary treaties need two-thirds Assembly approval.",
-          "Sovereignty-affecting treaties face near-unanimous threshold.",
-          "Minority parties can block international commitments in strategic domains.",
+          "All treaties require two-thirds Assembly approval.",
+          "Minority parties can block international commitments.",
         ],
         metricEffects: {
           institutionalStability: 2,
@@ -1451,7 +1455,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art12_amendment_process",
     articleId: "ARTICLE_XII",
-    sectionId: "ART_XII_S1",
+    sectionId: "ARTICLE_XII_SECTION_1",
     targetClauseId: "ART_XII_S1_C1",
     subject: "Constitutional amendment procedure",
     foundingAlternativeId: "two_thirds_plus_13_provinces",
@@ -1479,7 +1483,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
           "This Constitution may be amended by a bill passed by not less than three-fifths of the total membership of the National Assembly, provided that such bill is subsequently ratified by the assemblies of at least eleven of the twenty-one provinces within twelve months of its passage.",
         mechanicalEffects: [
           "Lower threshold than founding; amendment is more accessible.",
-          "Eleven provinces is a minority of twenty-one; provincial bloc less decisive.",
+          "Eleven provinces is a bare majority of twenty-one; lower provincial consensus threshold.",
         ],
         metricEffects: {
           institutionalStability: 1,
@@ -1495,7 +1499,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         mechanicalEffects: [
           "Lower legislative threshold but direct popular approval is required.",
           "Amendment requires both parliamentary and popular legitimacy.",
-          "Referendum campaign dynamics may diverge from legislative deliberation.",
+          "Simplified national referendum resolution (no campaign simulation); result recorded in History.",
         ],
         metricEffects: {
           governmentLegitimacy: 2,
@@ -1526,25 +1530,60 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
   {
     id: "art12_unamendable_core",
     articleId: "ARTICLE_XII",
-    sectionId: "ART_XII_S1",
+    sectionId: "ARTICLE_XII_SECTION_1",
     targetClauseId: "ART_XII_S1_C2",
     subject: "Entrenchment of unamendable constitutional core",
     foundingAlternativeId: "no_entrenchment",
     alternatives: [
       {
+        id: "heightened_threshold_core",
+        label: "Higher Assembly threshold for core provisions",
+        proposedClauseText:
+          "Amendments to Articles I, II, and VIII of this Constitution require an Assembly affirmative vote ten percentage points higher than the ordinary amendment threshold stated in this Article.",
+        mechanicalEffects: [
+          "Core articles (I, II, VIII) require a heightened Assembly approval fraction (+10 percentage points above the ordinary Article XII threshold).",
+          "Non-core articles continue to use the ordinary amendment process.",
+        ],
+        metricEffects: {
+          institutionalStability: 1,
+          civilLiberty: 1,
+          governmentLegitimacy: 1,
+        },
+        orderPatch: { entrenchment: "heightened_threshold" },
+      },
+      {
         id: "soft_entrenchment",
-        label: "Enhanced procedure for core provisions without absolute prohibition",
+        label: "Election between votes for core provisions",
         proposedClauseText:
           "Amendments to Articles I, II, and VIII of this Constitution require a further affirmative vote of the National Assembly following a dissolution and general election. No provision of this Constitution is entirely beyond amendment.",
         mechanicalEffects: [
-          "Core rights and structure articles require an election between proposal and ratification.",
-          "No provision is absolutely locked; the threshold for core articles is higher.",
+          "Core articles (I, II, VIII) require an intervening national election between first Assembly passage and final ratification (election interlock).",
+          "No provision is absolutely locked; only the procedural path for core articles is raised.",
+          "Core amendment proposals are tracked and blocked from finalization until an intervening election completes.",
         ],
         metricEffects: {
           institutionalStability: 2,
           civilLiberty: 1,
           governmentLegitimacy: 1,
         },
+        orderPatch: { entrenchment: "election_interlock" },
+      },
+      {
+        id: "referendum_core_entrenchment",
+        label: "Popular referendum required for core provisions",
+        proposedClauseText:
+          "Amendments to Articles I, II, and VIII of this Constitution do not take effect unless approved by a national referendum, in addition to the ordinary Assembly procedure.",
+        mechanicalEffects: [
+          "Core articles (I, II, VIII) require a national referendum even when the ordinary amendment process does not.",
+          "Simplified national referendum resolution (no campaign simulation); result recorded in History.",
+          "Non-core articles follow the ordinary Article XII process.",
+        ],
+        metricEffects: {
+          institutionalStability: 2,
+          civilLiberty: 1,
+          governmentLegitimacy: 2,
+        },
+        orderPatch: { entrenchment: "referendum_core" },
       },
       {
         id: "hard_entrenchment",
@@ -1552,9 +1591,8 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         proposedClauseText:
           "The republican form of government, the guarantee of equal citizenship, the separation of powers among the legislative, executive, and judicial branches, and the fundamental rights guaranteed by Article II may not be amended or abrogated. Any purported amendment to these provisions is void.",
         mechanicalEffects: [
-          "Core provisions are constitutionally locked regardless of majority size.",
-          "Court can void even supermajority-passed amendments touching locked provisions.",
-          "Fundamental rights and republican form cannot be removed by any legal process.",
+          "Amendments targeting core articles (I, II, VIII) are blocked at the proposal stage with a clear constitutional error.",
+          "Fundamental rights and republican form cannot enter the ordinary amendment pipeline under this mode.",
         ],
         metricEffects: {
           institutionalStability: 3,
@@ -1562,6 +1600,7 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
           judicialIndependence: 1,
           governmentLegitimacy: 1,
         },
+        orderPatch: { entrenchment: "hard_core" },
       },
       {
         id: "no_entrenchment",
@@ -1570,14 +1609,14 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
           "Every provision of this Constitution may be proposed for amendment. Political opposition to an amendment does not alter the formal thresholds stated in this Article.",
         mechanicalEffects: [
           "Any provision can be amended by the standard amendment procedure.",
-          "Courts cannot invalidate amendments on entrenchment grounds.",
-          "Constitutional protection of rights and structure is contingent on political consensus.",
+          "No additional core-article interlock, referendum, heightened threshold, or hard lock applies.",
         ],
         metricEffects: {
           institutionalStability: -1,
           civilLiberty: -1,
           governmentLegitimacy: -1,
         },
+        orderPatch: { entrenchment: "none" },
       },
     ],
   },
@@ -1604,10 +1643,12 @@ export function constitutionSubjectsForArticle(
 }
 
 /**
- * Returns the subject matching the given id, or `undefined` if not found.
+ * Returns the subject matching the given id (or a legacy alias), or `undefined`.
  */
 export function constitutionSubjectById(id: string): ConstitutionChangeSubject | undefined {
-  return CONSTITUTION_CHANGE_SUBJECTS.find((s) => s.id === id);
+  return CONSTITUTION_CHANGE_SUBJECTS.find(
+    (s) => s.id === id || (s.legacyIds?.includes(id) ?? false),
+  );
 }
 
 /**

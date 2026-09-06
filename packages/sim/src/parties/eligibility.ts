@@ -3,6 +3,7 @@ import { ageOnDate, getAgentProfile } from "../agents/profile.js";
 import type { IsoDate } from "../calendar.js";
 import type { KernelWorld, SimState } from "../types.js";
 import type { PresidentialEligibilityRules } from "./types.js";
+import { ensureOrder } from "../provinces/constitutionGameplay.js";
 
 /** Canonical eligibility office aliases → runtime office kinds. */
 export const ELIGIBILITY_OFFICE_KIND: Record<string, string> = {
@@ -155,6 +156,26 @@ export function evaluatePresidentialEligibility(
       ],
       deferred,
     };
+  }
+
+  // A3: citizenshipGuard — duty_conditioned_citizenship requires prior public service
+  const order = ensureOrder(state);
+  if (order.citizenshipGuard === "duty_conditioned_citizenship") {
+    const priorService = Object.values(state.officeTerms).some(
+      (term) => term.holderId === politicianId && (term.status === "ended" || term.status === "active"),
+    );
+    const candidateStanding = state.candidateStanding[politicianId];
+    const hasExperience = priorService || (candidateStanding && candidateStanding.favorability > 0);
+    if (!hasExperience) {
+      return {
+        eligible: false,
+        code: "CIVIC_DUTY_UNFULFILLED",
+        reasons: [
+          `${politicianId} has no prior public office service; duty-conditioned citizenship requires civic service for candidacy`,
+        ],
+        deferred,
+      };
+    }
   }
 
   const held = occupyingKinds(world, state, politicianId);
