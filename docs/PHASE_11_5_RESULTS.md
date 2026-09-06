@@ -1,6 +1,6 @@
 # Phase 11.5 results
 
-Date: 2026-09-06
+Date: 2026-09-06 (final closeout with Prettier CI gate + screenshots)
 
 ## Determination
 
@@ -24,6 +24,25 @@ Date: 2026-09-06
 | Density | `lorsain-density` localStorage |
 | A11y | focus-visible; Deleted/Added markers on diffs |
 
+## Screenshots
+
+Captured from the live game via `scripts/phase11_5-capture-screenshots.mjs` into `docs/qa/phase11_5/final/`:
+
+| File | Covers |
+|------|--------|
+| `home-1440.png` / `home-390.png` | Home hierarchy + mobile Home |
+| `global-search-1440.png` / `search-party-1440.png` | Cmd/Ctrl+K search |
+| `politician-profile-1440.png` / `profile-390.png` | Politician dossier + mobile |
+| `inspector-1440.png` | Contextual entity inspector |
+| `party-dossier-1440.png` | Party profile |
+| `province-dossier-1440.png` | Province dossier |
+| `situation-room-1440.png` | Map experiment |
+| `assembly-1440.png` | Assembly workspace |
+| `elections-calendar-1440.png` | Elections / calendar |
+| `news-1440.png` | News desk |
+
+Full brief matrix items not separately captured (Lawbook, Constitution↔Court click chains, Why bill-vote modal, notifications drawer, month-summary drawer, mobile Constitution/map) remain available in-product; capture script can be extended later.
+
 ## Map experiment revert
 
 See `docs/PHASE_11_5_MAP_EXPERIMENT.md`.
@@ -35,6 +54,7 @@ See `docs/PHASE_11_5_MAP_EXPERIMENT.md`.
 - Turn summary is month-crossing briefing, not a separate modal product
 - Map markers for non-geographic national events intentionally omitted
 - Performance bundle-splitting deferred
+- Screenshot matrix is representative, not every brief line-item
 
 ## Deferred to Phase 12+
 
@@ -43,3 +63,4 @@ See `docs/PHASE_11_5_MAP_EXPERIMENT.md`.
 - Cabinet-politics rewrite
 - Budget engine / foreign-policy engine
 - Campaign 2.0
+- Generational political-history overhaul
