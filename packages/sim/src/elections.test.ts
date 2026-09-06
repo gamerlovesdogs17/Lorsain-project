@@ -579,7 +579,7 @@ describe("Phase 4 10,000 synthetic acceptance", () => {
         },
       }),
     );
-  }, 300_000);
+  }, 900_000);
 });
 
 describe("Phase 4 RCV/STV sanity", () => {

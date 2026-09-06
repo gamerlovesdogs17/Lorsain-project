@@ -16,7 +16,7 @@ import {
 import { enqueueScheduled, pushHistory } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
-import { resolveAssemblyConstituency } from "./assembly.js";
+import { computeMmpTopUp, listRankScore, resolveAssemblyConstituency } from "./assembly.js";
 import { createDomainResolution } from "./resolution.js";
 import { plannedElection } from "./state.js";
 import type { ElectionCandidate, ElectionState, TurnoutRecord } from "./types.js";
@@ -27,6 +27,7 @@ import { ensureAssemblyElectionCycle } from "./assembly-cycle.js";
 import { candidateStandingOrDefault } from "./standing.js";
 import { seedCommitteesIfNeeded } from "../legislature/state.js";
 import { certifyCount } from "./certification.js";
+import { assemblyElectionMode } from "../provinces/constitutionGameplay.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -203,6 +204,7 @@ export function resolveAssemblyElection(
   const allCandidates = new Set<string>();
   const turnoutParts: TurnoutRecord[] = [];
   let totalSeats = 0;
+  const method = assemblyElectionMode(state);
 
   for (const cid of constituencyIds) {
     const officeId = officeByConst.get(cid);
@@ -258,7 +260,7 @@ export function resolveAssemblyElection(
     cycle.constituencyResults[cid] = {
       constituencyId: cid,
       constituencyElectionId: out.election.id,
-      magnitude: out.election.seats,
+      magnitude: world.constituencyElectorate[cid]!.seats,
       candidateIds: field.candidateIds.slice(),
       partyByCandidate: { ...field.partyByCandidate },
       firstPreferences: { ...out.election.countArchive.firstPreferences },
@@ -269,15 +271,101 @@ export function resolveAssemblyElection(
     };
   }
 
+  // ── MMP national compensatory top-up ──────────────────────────────────
+  const authorized = world.legislativeConstitution.assemblySeatCount;
+  let mmpMeta: Record<string, unknown> | null = null;
+
+  if (method === "mixed_member") {
+    const nationalPartyVotes: Record<string, number> = {};
+    const constituencyWinsByParty: Record<string, number> = {};
+    const electedSet = new Set(allWinners);
+
+    for (const cid of constituencyIds) {
+      const result = cycle.constituencyResults[cid]!;
+      for (const [candidateId, votesStr] of Object.entries(result.firstPreferences)) {
+        const votes = Number(votesStr);
+        const partyKey = result.partyByCandidate[candidateId] ?? `independent:${candidateId}`;
+        nationalPartyVotes[partyKey] = (nationalPartyVotes[partyKey] ?? 0) + votes;
+      }
+      for (const winnerId of result.electedIds) {
+        const partyKey = result.partyByCandidate[winnerId] ?? `independent:${winnerId}`;
+        constituencyWinsByParty[partyKey] = (constituencyWinsByParty[partyKey] ?? 0) + 1;
+      }
+    }
+
+    const listByParty: Record<string, Array<{ id: string; score: number }>> = {};
+    for (const cid of constituencyIds) {
+      const cField = cycle.constituencyFields[cid]!;
+      for (const candidateId of cField.candidateIds) {
+        if (electedSet.has(candidateId)) continue;
+        const candidate = election.candidates[candidateId];
+        if (!candidate || candidate.withdrawn) continue;
+        const partyKey = candidate.partyId ?? `independent:${candidateId}`;
+        if (!listByParty[partyKey]) listByParty[partyKey] = [];
+        const standing = candidateStandingOrDefault(world, state, candidateId);
+        listByParty[partyKey]!.push({ id: candidateId, score: listRankScore(standing) });
+      }
+    }
+    for (const list of Object.values(listByParty)) {
+      list.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+    }
+    const listCandidatesByParty: Record<string, string[]> = {};
+    for (const [party, list] of Object.entries(listByParty)) {
+      listCandidatesByParty[party] = list.map((x) => x.id);
+    }
+
+    const mmpResult = computeMmpTopUp({
+      totalChamberSeats: authorized,
+      nationalPartyVotes,
+      constituencyWinsByParty,
+      listCandidatesByParty,
+    });
+
+    const constituencySeats = totalSeats;
+    const mmpListWinners: string[] = [];
+    const mmpListWinnersByParty: Record<string, string[]> = {};
+    const mmpListWinnersByConstituency: Record<string, string[]> = {};
+    for (const [party, winners] of Object.entries(mmpResult.topUpWinnersByParty)) {
+      mmpListWinnersByParty[party] = [...winners];
+      for (const winnerId of winners) {
+        const candidacy = cycle.candidacies[winnerId];
+        const cid = candidacy?.constituencyId ?? constituencyIds[0]!;
+        if (!mmpListWinnersByConstituency[cid]) mmpListWinnersByConstituency[cid] = [];
+        mmpListWinnersByConstituency[cid]!.push(winnerId);
+        mmpListWinners.push(winnerId);
+        allWinners.push(winnerId);
+        totalSeats += 1;
+      }
+    }
+
+    mmpMeta = {
+      mmpOverhang: mmpResult.overhang,
+      mmpPartyEntitlements: mmpResult.partyEntitlements,
+      mmpExpandedChamberSize: mmpResult.expandedChamberSize,
+      mmpConstituencySeats: constituencySeats,
+      mmpTopUpSeats: totalSeats - constituencySeats,
+      mmpListWinners,
+      mmpListWinnersByParty,
+      mmpListWinnersByConstituency,
+    };
+  }
+
   if (new Set(allWinners).size !== allWinners.length) {
     return { error: reject("DUPLICATE_WINNERS", "same politician won multiple seats") };
   }
 
-  const authorized = world.legislativeConstitution.assemblySeatCount;
-  if (totalSeats !== authorized) {
-    return {
-      error: reject("SEAT_COUNT", `elected ${totalSeats} != authorized ${authorized}`),
-    };
+  if (method === "mixed_member") {
+    if (totalSeats < authorized) {
+      return {
+        error: reject("SEAT_COUNT", `MMP elected ${totalSeats} < authorized ${authorized}`),
+      };
+    }
+  } else {
+    if (totalSeats !== authorized) {
+      return {
+        error: reject("SEAT_COUNT", `elected ${totalSeats} != authorized ${authorized}`),
+      };
+    }
   }
 
   election.fieldFinalized = true;
@@ -293,9 +381,11 @@ export function resolveAssemblyElection(
   cycle.partySeatTotals = partySeatTotals;
   election.metadata = {
     ...election.metadata,
+    assemblyElectoralMethod: method,
     constituencyWinners,
     constituencyElectionIds,
     certifiedForAssumption: true,
+    ...(mmpMeta ?? {}),
   };
   election.certification = certifyCount({
     date: state.currentDate,
@@ -373,6 +463,23 @@ export function applyAssemblyAssumption(
     return { error: reject("MISSING_WINNERS", "no certified constituency winners") };
   }
   const constituencyWinners = winnersRaw as Record<string, string[]>;
+
+  // Merge constituency winners with MMP list winners for seating purposes.
+  // List winners are seated via their candidacy constituency's assembly office.
+  const seatableByConst: Record<string, string[]> = {};
+  for (const [cid, ids] of Object.entries(constituencyWinners)) {
+    seatableByConst[cid] = [...ids];
+  }
+  const mmpListByConst = election.metadata.mmpListWinnersByConstituency;
+  if (mmpListByConst && typeof mmpListByConst === "object" && !Array.isArray(mmpListByConst)) {
+    for (const [cid, ids] of Object.entries(mmpListByConst)) {
+      if (Array.isArray(ids) && ids.every((x) => typeof x === "string")) {
+        if (!seatableByConst[cid]) seatableByConst[cid] = [];
+        seatableByConst[cid]!.push(...(ids as string[]));
+      }
+    }
+  }
+
   const officeByConst = assemblyOfficeByConstituency(world);
   const events: SimEvent[] = [];
 
@@ -404,7 +511,7 @@ export function applyAssemblyAssumption(
     }
   }
 
-  for (const [cid, winners] of Object.entries(constituencyWinners).sort(([a], [b]) =>
+  for (const [cid, winners] of Object.entries(seatableByConst).sort(([a], [b]) =>
     a < b ? -1 : 1,
   )) {
     const officeId = officeByConst.get(cid);
@@ -474,7 +581,7 @@ export function applyAssemblyAssumption(
   const speakerOffice = world.offices.OFFICE_SPEAKER;
   if (speakerOffice) {
     const speakerTerms = occupyingTerms(state, "OFFICE_SPEAKER");
-    const winnerSet = new Set(Object.values(constituencyWinners).flat());
+    const winnerSet = new Set(Object.values(seatableByConst).flat());
     for (const term of speakerTerms) {
       if (!winnerSet.has(term.holderId)) {
         const ended = endTerm(state, term.id, args.date, "left_assembly");

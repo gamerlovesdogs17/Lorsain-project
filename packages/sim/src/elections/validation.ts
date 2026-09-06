@@ -11,6 +11,10 @@ import { isElectoralAggregatePartyId } from "./support.js";
 import { integerBallotWeightSum } from "./ballots.js";
 import { parseElectionCertification } from "./certification.js";
 import {
+  ASSEMBLY_ELECTION_MODES,
+  type AssemblyElectionMode,
+} from "../provinces/constitutionalOrder.js";
+import {
   isAssemblyCandidacyStatus,
   isAssemblyFilingStatus,
   isDomainResolutionType,
@@ -28,6 +32,10 @@ import {
   type PollRecord,
   type TurnoutRecord,
 } from "./types.js";
+
+function isAssemblyElectionMode(v: unknown): v is AssemblyElectionMode {
+  return typeof v === "string" && (ASSEMBLY_ELECTION_MODES as readonly string[]).includes(v);
+}
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
@@ -279,6 +287,13 @@ function parseAssemblyCycle(raw: unknown): AssemblyElectionCycle | null | string
     "assembly.partySeatTotals",
   );
   if (typeof partySeatTotals === "string") return partySeatTotals;
+  let electoralMethod: AssemblyElectionMode | undefined;
+  if (raw.electoralMethod != null) {
+    if (!isAssemblyElectionMode(raw.electoralMethod)) {
+      return "assembly.electoralMethod";
+    }
+    electoralMethod = raw.electoralMethod;
+  }
   return {
     filingStatus: raw.filingStatus,
     filingOpenDate: raw.filingOpenDate,
@@ -289,6 +304,7 @@ function parseAssemblyCycle(raw: unknown): AssemblyElectionCycle | null | string
     constituencyResults,
     previousPartySeatTotals,
     partySeatTotals,
+    ...(electoralMethod != null ? { electoralMethod } : {}),
   };
 }
 
@@ -908,6 +924,7 @@ function resolvedElectionWorldError(
       };
     }
     const allocatedCandidates = new Set<string>();
+    const isMmp = cycle.electoralMethod === "mixed_member";
     for (const cid of expectedConstituencies) {
       const field = cycle.constituencyFields[cid]!;
       const result = cycle.constituencyResults[cid]!;
@@ -918,7 +935,22 @@ function resolvedElectionWorldError(
           message: `election ${election.id} ${cid} magnitude mismatch`,
         };
       }
-      if (field.candidateIds.length < magnitude || result.electedIds.length !== magnitude) {
+      const minCandidates = isMmp ? Math.max(1, Math.floor(magnitude / 2)) : magnitude;
+      if (field.candidateIds.length < minCandidates) {
+        return {
+          code: "INVALID_SAVE_WORLD",
+          message: `election ${election.id} ${cid} invalid field or winners`,
+        };
+      }
+      if (isMmp) {
+        const expectedConstituencyElected = Math.max(1, Math.floor(magnitude / 2));
+        if (result.electedIds.length !== expectedConstituencyElected) {
+          return {
+            code: "INVALID_SAVE_WORLD",
+            message: `election ${election.id} ${cid} MMP constituency electedIds ${result.electedIds.length} != ${expectedConstituencyElected}`,
+          };
+        }
+      } else if (result.electedIds.length !== magnitude) {
         return {
           code: "INVALID_SAVE_WORLD",
           message: `election ${election.id} ${cid} invalid field or winners`,
@@ -935,18 +967,42 @@ function resolvedElectionWorldError(
       }
       if (result.archiveCompleteness === "full") {
         const archive = result.countArchive;
+        const expectedArchiveSeats = isMmp
+          ? Math.max(1, Math.floor(magnitude / 2))
+          : magnitude;
         if (
           !archive ||
           archive.method !== "stv" ||
-          archive.seats !== magnitude ||
-          archive.candidateIds.join("|") !== result.candidateIds.join("|") ||
-          new Set(archive.elected).size !== result.electedIds.length ||
-          result.electedIds.some((id) => !archive.elected.includes(id))
+          archive.seats !== expectedArchiveSeats ||
+          archive.candidateIds.join("|") !== result.candidateIds.join("|")
         ) {
           return {
             code: "INVALID_SAVE_WORLD",
             message: `election ${election.id} ${cid} invalid STV archive`,
           };
+        }
+        if (isMmp) {
+          // MMP: both archive.elected and result.electedIds contain constituency
+          // FPTP winners only (list top-up stored separately in metadata).
+          if (
+            new Set(archive.elected).size !== result.electedIds.length ||
+            result.electedIds.some((id) => !archive.elected.includes(id))
+          ) {
+            return {
+              code: "INVALID_SAVE_WORLD",
+              message: `election ${election.id} ${cid} invalid STV archive`,
+            };
+          }
+        } else {
+          if (
+            new Set(archive.elected).size !== result.electedIds.length ||
+            result.electedIds.some((id) => !archive.elected.includes(id))
+          ) {
+            return {
+              code: "INVALID_SAVE_WORLD",
+              message: `election ${election.id} ${cid} invalid STV archive`,
+            };
+          }
         }
       } else if (result.countArchive != null) {
         return {
@@ -956,7 +1012,7 @@ function resolvedElectionWorldError(
       }
     }
     const winnersMeta = election.metadata.constituencyWinners as Record<string, unknown>;
-    const flat: string[] = [];
+    const constituencyFlat: string[] = [];
     for (const cid of Object.keys(winnersMeta).sort()) {
       const row = winnersMeta[cid];
       if (!Array.isArray(row) || row.some((x) => typeof x !== "string")) {
@@ -965,11 +1021,26 @@ function resolvedElectionWorldError(
           message: `election ${election.id} constituencyWinners`,
         };
       }
-      flat.push(...(row as string[]));
+      constituencyFlat.push(...(row as string[]));
     }
-    if (
-      flat.length !== election.winnerIds.length ||
-      flat.some((id) => !election.winnerIds.includes(id))
+    if (isMmp) {
+      // MMP: constituencyWinners has FPTP winners only; list winners in mmpListWinners.
+      const listWinners = Array.isArray(election.metadata.mmpListWinners)
+        ? (election.metadata.mmpListWinners as string[])
+        : [];
+      const allMetaWinners = [...constituencyFlat, ...listWinners];
+      if (
+        allMetaWinners.length !== election.winnerIds.length ||
+        allMetaWinners.some((id) => !election.winnerIds.includes(id))
+      ) {
+        return {
+          code: "INVALID_SAVE_WORLD",
+          message: `election ${election.id} constituencyWinners+mmpListWinners mismatch`,
+        };
+      }
+    } else if (
+      constituencyFlat.length !== election.winnerIds.length ||
+      constituencyFlat.some((id) => !election.winnerIds.includes(id))
     ) {
       return {
         code: "INVALID_SAVE_WORLD",

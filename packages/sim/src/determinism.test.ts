@@ -38,7 +38,7 @@ describe("20-year kernel determinism", () => {
     const c = createSimulation({ world, playerPoliticianId: "P1" });
     advance(c, 240);
     expect(c.hashState()).toBe(a.hashState());
-    expect(a.hashState()).toBe("066c8072f413e5afd869df6e2a16bab3");
+    expect(a.hashState()).toBe("007e1e00c0e8a6e8f32c64c933badc21");
   });
 
   it("different seed with stochastic event produces a different valid hash", () => {
