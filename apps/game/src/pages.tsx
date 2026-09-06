@@ -495,6 +495,46 @@ function Home(props: PageProps) {
                 </dl>
               </SectionCard>
             )}
+            {(playerIsPresident || props.snap.governingRuntime?.fiscal?.lastUpdated) && (
+              <SectionCard title="Governing brief">
+                <dl className="dossier-facts compact">
+                  <div>
+                    <dt>Government agenda</dt>
+                    <dd>
+                      {(props.snap.governingRuntime?.agenda?.items ?? [])
+                        .filter((i) => i.status === "active")
+                        .slice(0, 4)
+                        .map((i) => i.title.replace(/^[^:]+:\s*/, ""))
+                        .join(" · ") || "No active agenda items"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Fiscal snapshot</dt>
+                    <dd>
+                      {(() => {
+                        const f = props.snap.governingRuntime?.fiscal;
+                        if (!f || !f.lastUpdated) return "Awaiting first governing month";
+                        const bal =
+                          f.balance > 0.5 ? "surplus" : f.balance < -0.5 ? "deficit" : "balanced";
+                        return `FY${f.fiscalYear} · revenue ${f.revenue.toFixed(0)} · spending ${f.expenditure.toFixed(0)} · ${bal} · debt ${f.debt.toFixed(0)}`;
+                      })()}
+                    </dd>
+                  </div>
+                  {props.snap.governingRuntime?.budgetCycle?.stage &&
+                  props.snap.governingRuntime.budgetCycle.stage !== "idle" ? (
+                    <div>
+                      <dt>Budget cycle</dt>
+                      <dd>
+                        {props.snap.governingRuntime.budgetCycle.stage.replaceAll("_", " ")}
+                        {props.snap.governingRuntime.budgetCycle.failureConsequence
+                          ? ` · ${props.snap.governingRuntime.budgetCycle.failureConsequence.replaceAll("_", " ")}`
+                          : ""}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </SectionCard>
+            )}
             <PoliticianProfile
               catalog={props.catalog}
               world={props.world}

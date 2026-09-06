@@ -60,6 +60,7 @@ import type {
   ProvincialRuntime,
 } from "./provinces/types.js";
 import type { Phase12Runtime } from "./politics/types.js";
+import type { Phase13Runtime } from "./governing/types.js";
 
 export type {
   CanonicalWorldCountry,
@@ -67,7 +68,7 @@ export type {
   CanonicalWorldLeader,
 } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 20 as const;
+export const SAVE_SCHEMA_VERSION = 21 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -241,6 +242,8 @@ export type SimState = {
   foreignAffairsRuntime: ForeignAffairsRuntime;
   /** Phase 12 political agency runtime (careers, coalitions, open seats, etc.). */
   politicsRuntime: Phase12Runtime;
+  /** Phase 13 governing / policy-depth runtime (implementation, fiscal, agenda). */
+  governingRuntime: Phase13Runtime;
 };
 
 export type Command =

@@ -17,6 +17,7 @@ import { parseMediaRuntime, mediaCounterError } from "./media/validation.js";
 import { parseForeignAffairsRuntime, foreignCounterError } from "./foreign/validation.js";
 import { parseProvincialRuntime } from "./provinces/validation.js";
 import { parsePoliticsRuntime } from "./politics/state.js";
+import { parseGoverningRuntime } from "./governing/state.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -618,6 +619,8 @@ function parseSimulation(
   if (foreignCountErr) return foreignCountErr;
   const politics = parsePoliticsRuntime(raw.politicsRuntime);
   if (typeof politics === "string") return politics;
+  const governing = parseGoverningRuntime(raw.governingRuntime);
+  if (typeof governing === "string") return governing;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -733,6 +736,7 @@ function parseSimulation(
     mediaRuntime: media,
     foreignAffairsRuntime: foreign,
     politicsRuntime: politics,
+    governingRuntime: governing,
   };
 }
 
@@ -1850,3 +1854,88 @@ export function migrateSaveV19ToV20(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 19, toSchema: 20, migrate: migrateSaveV19ToV20 });
+
+/**
+ * Schema 21 adds Phase 13 governingRuntime (implementation, fiscal, agenda,
+ * capacity, promises). Older saves get an empty runtime — no fabricated history.
+ */
+export function migrateSaveV20ToV21(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 21 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 21 };
+  if (!isRecord(sim.governingRuntime)) {
+    sim.governingRuntime = {
+      capacity: {
+        national: 0.55,
+        departments: {
+          finance: 0.55,
+          labour: 0.55,
+          health: 0.55,
+          education: 0.55,
+          interior: 0.55,
+          justice: 0.55,
+          transport: 0.55,
+          energy: 0.55,
+          foreign: 0.55,
+          defense: 0.55,
+          economy: 0.55,
+          agriculture: 0.55,
+        },
+        provinces: {},
+        strain: 0,
+      },
+      fiscal: {
+        fiscalYear: 2000,
+        revenue: 100,
+        expenditure: 100,
+        balance: 0,
+        debt: 40,
+        revenueBySource: {
+          income_tax: 0,
+          corporate_tax: 0,
+          consumption_tax: 0,
+          payroll_contributions: 0,
+          tariffs: 0,
+          other: 0,
+        },
+        spendingByCategory: {
+          healthcare: 0,
+          education: 0,
+          social_protection: 0,
+          infrastructure: 0,
+          defence: 0,
+          administration: 0,
+          other: 0,
+        },
+        lastUpdated: null,
+      },
+      services: {
+        healthcareAccess: 0.55,
+        educationQuality: 0.55,
+        infrastructureQuality: 0.55,
+        publicSafety: 0.55,
+        administrativeDelivery: 0.55,
+      },
+      implementations: {},
+      promises: {},
+      agenda: { updatedDate: null, items: [] },
+      interactions: {},
+      ministerialPerformance: {},
+      budgetCycle: {
+        fiscalYear: 2000,
+        stage: "idle",
+        budgetId: null,
+        failureConsequence: null,
+        lastProcessedDate: null,
+      },
+      lastGoverningMonth: null,
+      historyNotes: [],
+      metadata: {},
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 20, toSchema: 21, migrate: migrateSaveV20ToV21 });

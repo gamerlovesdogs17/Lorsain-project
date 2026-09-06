@@ -217,7 +217,7 @@ describe("Phase 11.4 constitution correction model", () => {
     ).constitutionalOrder as Record<string, unknown>;
     expect(order.partySystem).toBe("competitive_multiparty");
     expect(parseSaveFile(migrated, world.contentVersion).ok).toBe(true);
-    expect(SAVE_SCHEMA_VERSION).toBe(20);
+    expect(SAVE_SCHEMA_VERSION).toBe(21);
   });
 });
 

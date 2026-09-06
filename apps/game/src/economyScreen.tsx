@@ -7,6 +7,7 @@ import {
   MapDetailLayout,
   MetricStrip,
   PageHeader,
+  SectionCard,
   SectionDivider,
   StatCard,
   TabBar,
@@ -252,6 +253,35 @@ export function EconomyPage(props: { world: KernelWorld; snap: SimState; bundle:
             Fiscal pressure {publicMetrics.fiscalPressure.toLowerCase()} · lagged policy effects{" "}
             {props.snap.economyRuntime.laggedEffects.length}
           </p>
+          {props.snap.governingRuntime?.fiscal ? (
+            <SectionCard title="National fiscal summary">
+              <dl className="dossier-facts compact">
+                <div>
+                  <dt>Revenue</dt>
+                  <dd>{props.snap.governingRuntime.fiscal.revenue.toFixed(1)}</dd>
+                </div>
+                <div>
+                  <dt>Expenditure</dt>
+                  <dd>{props.snap.governingRuntime.fiscal.expenditure.toFixed(1)}</dd>
+                </div>
+                <div>
+                  <dt>Balance</dt>
+                  <dd>{props.snap.governingRuntime.fiscal.balance.toFixed(1)}</dd>
+                </div>
+                <div>
+                  <dt>Debt</dt>
+                  <dd>{props.snap.governingRuntime.fiscal.debt.toFixed(1)}</dd>
+                </div>
+              </dl>
+              <p className="muted">
+                Normalized units from current-law policy · FY
+                {props.snap.governingRuntime.fiscal.fiscalYear}
+                {props.snap.governingRuntime.fiscal.lastUpdated
+                  ? ` · updated ${props.snap.governingRuntime.fiscal.lastUpdated}`
+                  : " · awaiting first governing month"}
+              </p>
+            </SectionCard>
+          ) : null}
 
           <SectionDivider
             title="Regional conditions"

@@ -187,6 +187,9 @@ import { emptyForeignAffairsRuntime } from "./foreign/types.js";
 import { emptyPoliticsRuntime } from "./politics/types.js";
 import { processPoliticalAgencyMonth } from "./politics/agency.js";
 import { ensurePoliticsRuntime } from "./politics/state.js";
+import { emptyGoverningRuntime } from "./governing/types.js";
+import { processGoverningMonth } from "./governing/monthly.js";
+import { ensureGoverningRuntime } from "./governing/state.js";
 import { processForeignAffairsMonth } from "./foreign/monthly.js";
 import { processOrganizationForeignReactions } from "./foreign/organization-foreign-bridge.js";
 import { advanceForeignCalibrationMonths as advanceForeignCalibrationMonthsHarness } from "./foreign/calibration-harness.js";
@@ -356,6 +359,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     mediaRuntime: emptyMediaRuntime(),
     foreignAffairsRuntime: emptyForeignAffairsRuntime(),
     politicsRuntime: emptyPoliticsRuntime(),
+    governingRuntime: emptyGoverningRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -516,7 +520,7 @@ function applyScheduled(
   return { events, interrupt: null };
 }
 
-/** Month order: lifecycle → economy/provinces/parties → organizations → campaign/legislature/executive/courts → scheduled events → media last. */
+/** Month order: lifecycle → economy/provinces/parties → political_agency → organizations → campaign/legislature/executive → governing → courts → scheduled events → media last. */
 function runTowardTarget(
   state: SimState,
   world: KernelWorld,
@@ -553,6 +557,9 @@ function runTowardTarget(
   events.push(...timed("campaign", () => processCampaignMonth(state, world, rng, commandId)));
   events.push(...timed("legislature", () => processLegislatureMonth(state, world, rng, commandId)));
   events.push(...timed("executive", () => processExecutiveMonth(state, world, rng, commandId)));
+  // Phase 13 governing: after legislature/executive so enacted laws, budgets, and
+  // regulations exist for implementation lag, fiscal recompute, and budget cycle.
+  events.push(...timed("governing", () => processGoverningMonth(world, state, commandId)));
   events.push(...timed("courts", () => processCourtsMonth(state, world, rng, commandId)));
   sortScheduler(state);
   while (true) {
@@ -680,6 +687,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   state.provincialRuntime = seedProvincialRuntime(frozen, state, state.provincialRuntime);
   if (needsForeignAffairsSeed(state)) seedForeignAffairsRuntime(frozen, state);
   ensurePoliticsRuntime(state);
+  ensureGoverningRuntime(state);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
