@@ -8,7 +8,16 @@ import {
   provinceThemeId,
 } from "./provinces/themes.js";
 import { headlineFingerprint, type MediaStory } from "./media/types.js";
-import { headlineFor } from "./media/monthly.js";
+import {
+  headlineFor,
+  selectHeadlineWithCooldown,
+} from "./media/monthly.js";
+import {
+  ARTICLE_STRUCTURES,
+  articleStructureFor,
+  buildArticleBody,
+} from "./media/articleBody.js";
+import { headlineOnCooldown } from "./media/types.js";
 import { CAMPAIGN_SITUATIONS } from "./campaigns/situations.js";
 import { assignCrisisTheme } from "./foreign/crisis-emergence.js";
 import type { BilateralRelation, ForeignCountryRuntime } from "./foreign/types.js";
@@ -85,8 +94,131 @@ describe("Phase 11.4 — Content Expansion", () => {
       expect(new Set([bill, court, election]).size).toBe(3);
     });
 
+    it("uses event-specific budget templates instead of raw type wording", () => {
+      const a = headlineFor("BUDGET_PROPOSED", framing, { fiscalYear: 2030 }, 0);
+      const b = headlineFor("BUDGET_PROPOSED", framing, { fiscalYear: 2030 }, 1, {
+        outletName: "Ledger",
+      });
+      expect(a.toLowerCase()).not.toContain("budget proposed reported");
+      expect(b.toLowerCase()).not.toMatch(/^budget proposed\b/);
+      expect(a).not.toBe(b);
+    });
+
     it("fingerprints normalize Act suffixes", () => {
       expect(headlineFingerprint("Homes Delivery Act")).toBe(headlineFingerprint("homes delivery"));
+    });
+
+    it("cooldown reduces exact duplicate headlines in a recent window", () => {
+      let keys: string[] = [];
+      const produced: string[] = [];
+      const framings: MediaStory["framing"][] = [
+        "restrained",
+        "critical",
+        "sympathetic",
+        "sensational",
+      ];
+      for (let i = 0; i < 24; i += 1) {
+        const framingPick = framings[i % framings.length]!;
+        const selected = selectHeadlineWithCooldown(
+          "BUDGET_PROPOSED",
+          framingPick,
+          { fiscalYear: 2030 + (i % 3) },
+          keys,
+          {
+            outletName: ["Ledger", "Record", "Direct", "Worker"][i % 4],
+            outletId: `MED_${i % 4}`,
+            provinceId: i % 2 === 0 ? "P03" : "FDV",
+            date: `2030-${String((i % 12) + 1).padStart(2, "0")}-01`,
+          },
+        );
+        produced.push(selected.headline);
+        keys = selected.nextKeys;
+      }
+
+      const windowSize = 8;
+      let windowExactDupes = 0;
+      const recent: string[] = [];
+      for (const h of produced) {
+        const norm = headlineFingerprint(h);
+        if (recent.includes(norm)) windowExactDupes += 1;
+        recent.push(norm);
+        if (recent.length > windowSize) recent.shift();
+      }
+
+      // Naive fixed-template generation without cooldown would collide heavily.
+      const naive: string[] = [];
+      for (let i = 0; i < 24; i += 1) {
+        naive.push(headlineFor("BUDGET_PROPOSED", "restrained", { fiscalYear: 2030 }, 0));
+      }
+      let naiveWindowDupes = 0;
+      const naiveRecent: string[] = [];
+      for (const h of naive) {
+        const norm = headlineFingerprint(h);
+        if (naiveRecent.includes(norm)) naiveWindowDupes += 1;
+        naiveRecent.push(norm);
+        if (naiveRecent.length > windowSize) naiveRecent.shift();
+      }
+
+      expect(naiveWindowDupes).toBeGreaterThan(10);
+      expect(windowExactDupes).toBeLessThan(naiveWindowDupes);
+      expect(windowExactDupes).toBeLessThanOrEqual(2);
+      expect(new Set(produced).size).toBeGreaterThan(8);
+    });
+
+    it("cooldown blocks structurally identical headlines with different years", () => {
+      const first = selectHeadlineWithCooldown(
+        "BUDGET_PROPOSED",
+        "restrained",
+        { fiscalYear: 2030 },
+        [],
+        { outletName: "Ledger" },
+      );
+      const twin = headlineFor(
+        "BUDGET_PROPOSED",
+        "restrained",
+        { fiscalYear: 2031 },
+        0,
+        { outletName: "Ledger" },
+      );
+      expect(twin).not.toBe(first.headline);
+      expect(headlineOnCooldown(first.nextKeys, "BUDGET_PROPOSED", twin)).toBe(true);
+    });
+
+    it("cooldown blocks thin event-wording wrappers of the same stem", () => {
+      const withStem = ["w:stem:budget proposed"];
+      expect(headlineOnCooldown(withStem, "BUDGET_PROPOSED", "budget proposed reported")).toBe(
+        true,
+      );
+      expect(
+        headlineOnCooldown(withStem, "BUDGET_PROPOSED", "Government tables the annual budget"),
+      ).toBe(false);
+    });
+  });
+
+  describe("article body structure diversity", () => {
+    it("covers all five structures and keeps prose short", () => {
+      const seen = new Set<string>();
+      for (let i = 0; i < 40; i += 1) {
+        const structure = articleStructureFor({
+          id: `NEWS-${String(i).padStart(8, "0")}`,
+          outletId: `MED_${i % 3}`,
+          category: "government",
+          framing: "restrained",
+        });
+        seen.add(structure);
+        const body = buildArticleBody({
+          structure,
+          headline: "Government tables the annual budget",
+          date: "2030-01-01",
+          category: "government",
+          framing: "restrained",
+          provinceHint: "Industrial Corridor",
+          facts: ["Fiscal year: 2030"],
+        });
+        expect(body.length).toBeGreaterThanOrEqual(2);
+        expect(body.join(" ").length).toBeLessThan(420);
+      }
+      expect(seen.size).toBe(ARTICLE_STRUCTURES.length);
     });
   });
 

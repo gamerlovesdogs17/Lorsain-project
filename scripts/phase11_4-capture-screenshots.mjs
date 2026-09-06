@@ -2,6 +2,7 @@
  * Phase 11.4 current-HEAD presentation screenshot capture.
  * Requires a running Vite game server (default http://localhost:5174/Lorsain-project/).
  */
+/* eslint-disable no-undef -- Playwright page.evaluate() runs with browser globals */
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";

@@ -1,4 +1,6 @@
 import {
+  articleStructureFor,
+  buildArticleBody,
   storiesChronological,
   type KernelWorld,
   type MediaStory,
@@ -13,6 +15,7 @@ import {
   politicianDisplayName,
   type PresentationCatalog,
 } from "./presentation.js";
+import { EntityLink, type EntityLinkKind } from "./ui/entityLink.js";
 
 const TABS = [
   "all",
@@ -73,6 +76,7 @@ export function NewsPage(props: {
   world: KernelWorld;
   snap: SimState;
   catalog: PresentationCatalog;
+  onEntityNavigate?: (kind: EntityLinkKind, id: string) => void;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("all");
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
@@ -243,22 +247,36 @@ export function NewsPage(props: {
     sourceEvent: SimState["history"][number] | null,
     details: string[],
   ): string[] {
-    const lede = sourceEvent
+    const primary = group.stories[0]!;
+    const stored = primary.publicEffects?.bodyStructure;
+    const structure =
+      stored === "consequence_first" ||
+      stored === "event_first" ||
+      stored === "institutional" ||
+      stored === "political_reaction" ||
+      stored === "regional"
+        ? stored
+        : articleStructureFor(primary);
+    const headline = sourceEvent
       ? eventDisplay(props.catalog, props.world, props.snap, sourceEvent)
-      : outletHeadline(group.stories[0]!);
-    const paragraphs = [
-      `${lede}.`,
-      `The underlying event entered the public record on ${group.date}. The facts below are saved with the event; the headlines that follow are separate editorial treatments.`,
-    ];
-    if (details.length > 0) {
-      paragraphs.push(
-        `Public facts tied to this item include ${details
-          .slice(0, 4)
-          .map((detail) => detail.replace(/^[^:]+:\s*/, "").toLowerCase())
-          .join("; ")}.`,
-      );
-    }
-    return paragraphs;
+      : outletHeadline(primary);
+    const provinceId =
+      sourceEvent && typeof sourceEvent.payload.provinceId === "string"
+        ? sourceEvent.payload.provinceId
+        : null;
+    const provinceHint = provinceId
+      ? (props.catalog.places.get(provinceId)?.name ?? provinceId)
+      : null;
+    return buildArticleBody({
+      structure,
+      headline,
+      date: group.date,
+      category: group.category,
+      framing: primary.framing,
+      provinceHint,
+      outletName: props.world.mediaOutlets[primary.outletId]?.name ?? null,
+      facts: details,
+    });
   }
 
   function renderOutlets(group: StoryGroup) {
@@ -348,7 +366,13 @@ export function NewsPage(props: {
                 <aside className="news-article-figures">
                   <strong>Figures in this story</strong>
                   {relatedPoliticians.map((id) => (
-                    <span key={id}>{politicianDisplayName(props.catalog, id)}</span>
+                    <EntityLink
+                      key={id}
+                      kind="Politician"
+                      id={id}
+                      label={politicianDisplayName(props.catalog, id)}
+                      onNavigate={props.onEntityNavigate}
+                    />
                   ))}
                 </aside>
               ) : null}

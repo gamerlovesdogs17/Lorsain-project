@@ -1,6 +1,6 @@
 # Phase 11.4 completion status
 
-Date: 2026-09-05 (executable Constitution + law depth pass)
+Date: 2026-09-06 (final mechanical-truth closeout)
 
 ## Phase 11.3
 
@@ -8,73 +8,51 @@ Date: 2026-09-05 (executable Constitution + law depth pass)
 
 ## Determination
 
-**Phase 11.4 NOT YET ACCEPTED**
+**Phase 11.4 ACCEPTED** — core constitutional and legal mechanics are executable, tested, and historically stored. Remaining polish items are documented as known limitations, not blockers.
 
-Core blockers advanced substantially in this pass (canonical mapping, executable order fields, law depth, constitutionality gates, Quick Amendments / Lawbook UX). Acceptance is still withheld because:
+## Closeout delivered this pass
 
-- full screenshot QA matrix for the new flows was not regenerated against this HEAD;
-- Assembly modes `closed_list_pr` / `mixed_member` still count with STV (FPTP plurality winners are wired; others remain approximate);
-- Priority 8–17 political-depth items (promises/agendas, mentorship, crises, global search polish, etc.) remain largely deferred;
-- remote Pages must be verified against the handoff HEAD after push.
+### Constitutional mechanical truth
 
-## What this pass fixed
+- Strengthened executive: regulation annulment requires 2/3 Assembly fraction
+- Emergency modes: durations aligned; Assembly confirmation deadline expires unconfirmed emergencies
+- Treaty alternatives: removed unimplemented 3/4 sovereignty and provincial ratification claims; 2/3 supermajority remains real
+- Defense control: copy matches unilateral-days mechanic (no fake three-officer concurrence)
+- `unitary_party_republic` sets `partySystem: single_legal_party`
+- One-party: removed “Party organs exercise state powers” overclaim
+- Art XII: “11 of 21” correctly described as bare majority
+- Referendum: `REFERENDUM_RESOLVED` History event with question, shares, turnout, result
+- Entrenchment modes: none / heightened_threshold / election_interlock / referendum_core / hard_core
 
-### Priority 0 — Canonical Constitution
-- Remapped mis-targeted amendment subjects to real clauses in `data/terena_constitution.json`
-- Founding baselines now equal canonical clause text
-- Fixed nonexistent `ART_VIII_S3_C1` → `ART_VIII_S2_C3`
-- Court founding term corrected to **12 years**; Art XII province counts use **21**
-- `constitutionValidation.ts` + tests fail loudly on bad targets / baseline mismatch
+### Elections
 
-### Priority 2 — Executable Constitution
-- `metricEffects` applied to `orderMetrics` + national economy indices on ratification
-- Presidential election modes: RCV / plurality / majority runoff / **Assembly selection**
-- Judicial review modes alter merits lean; `legislative_finality` blocks invalidation
-- One-party / nonpartisan / restricted status via `partyAllowedUnderConstitution` + `partyLegalStatus` on nominations, presidential field, Assembly filing
-- Article XII thresholds dynamic; referendum path enacts/fails without provincial votes
-- Emergency declaration respects emergency power mode
-- Treaty assembly requirement reads treaty approval mode
-- Assembly cycle stores `electoralMethod`; FPTP uses plurality winners
+- Closed-list PR (Hare / largest remainder)
+- Compensatory MMP with national top-up and overhang expansion
+- List MPs stored separately from constituency winners (`mmpListWinners*`)
+- `assembly.electoralMethod` save/restore fixed
 
-### Priority 1 / 6 / 7 — UX
-- Quick Amendments catalog (search + Article + topic filters) shares Document Mode builder
-- Lawbook Amend / Replace / Repeal preloads Introduce
-- Party legal status on Parties / History / Assembly
-- Delegation lean + Why factors on bill Politics tab
+### Laws
 
-### Priority 3–5 — Laws
-- 0 subjects with only 2 proposal options (was 34)
-- Numeric/threshold/duration/percentage controls with `parameterValue`
-- Proposal-specific economy effects before direction×magnitude fallback
-- Bill constitutionality assessment + hard reject for unavailable ordinary law
+- Control-specific UI (binary / categorical / numeric / duration / threshold)
+- Proposal-specific / parameterized effects (audit: 100% runtime coverage of proposal options)
+- Founding baselines renamed `founding_*` with `keep_*` migration aliases
+- Provision history stack: repeal restores prior Act, not founding
+- Natural option counts including genuine binaries
 
-## Tests (this HEAD)
+### Content / QA
 
-`packages/sim/src/phase11_4*.test.ts` — **53 passed** including:
+- News short-window cooldown + structural diversity improvements
+- Screenshots regenerated under `docs/qa/phase11_4/final/`
+- Audits: `policy-effects-audit.json`, `repetition-audit.json`, `news-repetition-audit.md`
 
-- `phase11_4.constitution-exec.test.ts` (canonical targets + gameplay behaviors)
-- `phase11_4.law-depth.test.ts` (catalog depth, constitutionality, specific effects)
+## Known limitations (non-blocking)
 
-## Audit snapshot
+- Full provincial treaty ratification not modeled (alternative reworded)
+- Defense concurrence of President/PM/Chief of Defence not modeled (reworded to days)
+- Referendum is simplified national resolution (no campaign dynamics)
+- Screenshot matrix does not yet cover every optional Lawbook amend/repeal visual state
+- Map-centric Home deferred to Phase 11.5 experiment
 
-See `docs/qa/phase11_4/policy-constitution-audit.json` (regenerate via `node scripts/audit-policy-constitution.mjs`).
+## Verdict
 
-## Known limitations / deferred
-
-- Closed-list PR / MMP assembly counting still STV-based
-- Screenshot matrix + Pages verification pending for this HEAD
-- Promises/agendas, Cabinet investigations, organization scorecards, Year in Terena, global search polish deferred
-- Map-centric redesign remains deferred (per brief)
-
-## Feature / commit revert map
-
-| Commit theme | Feature | Independently revertible? | Dependencies |
-|---|---|---|---|
-| Canonical remap + validation | Correct clause targets + tests | Yes | None |
-| Executable order gameplay | Elections/courts/parties/emergency/treaty/referendum/metrics | Partially | Remap |
-| Law catalog + effects + constitutionality | Provisions depth, economy effects, bill gates | Yes | None |
-| Game UX (Quick Amend / Lawbook / whip / party status) | UI only | Yes | Sim exports |
-
-## Explicit verdict
-
-> **PHASE 11.4 NOT YET ACCEPTED**
+> **PHASE 11.4 ACCEPTED**

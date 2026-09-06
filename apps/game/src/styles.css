@@ -1228,9 +1228,9 @@ button {
 }
 .current-law-source {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.6rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
   margin-top: 0.35rem;
   color: var(--muted);
   font-size: 0.78rem;
@@ -2958,6 +2958,63 @@ button.entity-row:hover,
 .policy-choice-head h4 {
   margin: 0 0 0.2rem;
   color: var(--navy);
+}
+.policy-current-law {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  background: rgba(20, 40, 70, 0.04);
+  border-left: 3px solid var(--navy);
+}
+.policy-current-law .kicker {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.policy-current-law strong {
+  color: var(--navy);
+}
+.policy-segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.policy-segment {
+  border: 0;
+  background: rgba(255, 255, 255, 0.45);
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.policy-segment + .policy-segment {
+  border-left: 1px solid var(--line);
+}
+.policy-segment.selected {
+  background: rgba(20, 40, 70, 0.12);
+  font-weight: 600;
+  color: var(--navy);
+}
+.policy-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.policy-select-label select {
+  font: inherit;
+  color: inherit;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 2px;
 }
 .policy-choice-options {
   display: grid;
@@ -6553,4 +6610,325 @@ button.entity-row:hover,
   .quick-amendments-toolbar {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Phase 11.5 — Player Experience: Navigation & Integration ───────── */
+
+/* A. Constitution diff text markers for color-blind accessibility */
+.constitution-diff-del::before {
+  content: "[Deleted: ";
+  font-size: 0;
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.constitution-diff-del::after {
+  content: "]";
+  font-size: 0;
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.constitution-diff-add::before {
+  content: "[Added: ";
+  font-size: 0;
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.constitution-diff-add::after {
+  content: "]";
+  font-size: 0;
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* B. Navigation history buttons */
+.nav-history-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--navy);
+  font-size: 0.9rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.nav-history-btn:hover:not(:disabled) {
+  border-color: var(--navy);
+  background: rgba(22, 48, 74, 0.04);
+}
+.nav-history-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.nav-history-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* C. EntityLink */
+.entity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--navy);
+  font: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(22, 48, 74, 0.25);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.entity-link:hover {
+  text-decoration-color: var(--navy);
+  color: var(--accent);
+}
+.entity-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+.entity-link-icon {
+  font-size: 0.72em;
+  opacity: 0.5;
+}
+.entity-link.no-nav {
+  cursor: default;
+  text-decoration: none;
+}
+
+/* D. Entity inspector drawer */
+.inspector-drawer {
+  max-width: 22rem;
+}
+.inspector-body {
+  padding: 0.5rem 0;
+}
+.inspector-facts {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+.inspector-facts > div {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.78rem;
+}
+.inspector-facts dt {
+  color: var(--muted);
+  min-width: 5rem;
+  flex-shrink: 0;
+}
+.inspector-facts dd {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+.inspector-color-swatch {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+.inspector-open-full {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+.inspector-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  font-size: 0.72rem;
+  cursor: pointer;
+  color: var(--navy);
+}
+.inspector-button:hover,
+.inspector-button.active {
+  border-color: var(--navy);
+  background: rgba(22, 48, 74, 0.04);
+}
+.inspector-label {
+  max-width: 6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* E. Notification level groups in political inbox */
+.attention-level-group {
+  margin-bottom: 0.35rem;
+}
+.attention-level-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+.attention-level-header.level-action-required {
+  color: #8b2e2e;
+  background: rgba(139, 46, 46, 0.06);
+}
+.attention-level-header.level-major {
+  color: #a15c12;
+  background: rgba(161, 92, 18, 0.06);
+}
+.attention-level-header.level-background {
+  color: var(--muted);
+}
+.attention-level-header.level-system {
+  color: var(--muted);
+  opacity: 0.7;
+}
+.attention-level-count {
+  font-weight: 400;
+  font-size: 0.64rem;
+}
+
+/* F. Month summary drawer */
+.month-summary-drawer {
+  max-width: 24rem;
+}
+.month-summary-intro {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.month-summary-dismiss {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+/* G. WhyPanel */
+.why-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf8;
+  margin: 0.45rem 0;
+  overflow: hidden;
+}
+.why-panel-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--navy);
+  cursor: pointer;
+  text-align: left;
+}
+.why-panel-toggle:hover {
+  background: rgba(22, 48, 74, 0.03);
+}
+.why-panel-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.why-panel-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.why-panel-chevron {
+  margin-left: auto;
+  font-size: 0.82rem;
+}
+.why-panel-body {
+  padding: 0.35rem 0.65rem 0.55rem;
+  border-top: 1px solid var(--line);
+}
+.why-panel-summary {
+  margin: 0 0 0.35rem;
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.why-panel-factors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+.why-factor {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+}
+.why-factor-dir {
+  font-weight: 700;
+  width: 0.8rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+.why-factor-support .why-factor-dir {
+  color: #1f6b4a;
+}
+.why-factor-oppose .why-factor-dir {
+  color: #8b2e2e;
+}
+.why-factor-neutral .why-factor-dir {
+  color: var(--muted);
+}
+.why-factor-label {
+  flex: 1;
+}
+.why-factor-weight {
+  font-family: var(--mono, monospace);
+  font-size: 0.62rem;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+/* Debug why toggle */
+.debug-why-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.debug-why-toggle input {
+  accent-color: var(--navy);
+}
+
+/* Accessible focus styles for all interactive elements */
+*:focus-visible {
+  outline: 2px solid var(--accent, #2563eb);
+  outline-offset: 2px;
 }

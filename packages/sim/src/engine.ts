@@ -2344,6 +2344,8 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         ...(command.title != null ? { title: command.title } : {}),
         ...(command.summary != null ? { summary: command.summary } : {}),
         ...(command.cosponsorIds != null ? { cosponsorIds: command.cosponsorIds } : {}),
+        ...(command.lawAction != null ? { lawAction: command.lawAction } : {}),
+        ...(command.targetLawId != null ? { targetLawId: command.targetLawId } : {}),
       };
       const preview = introduceBill(world, jsonClone(state), args, null);
       if ("error" in preview) return fail(preview.error.code, preview.error.message);

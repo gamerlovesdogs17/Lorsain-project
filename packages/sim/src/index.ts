@@ -198,15 +198,24 @@ export {
   provisionForPolicyItem,
   optionForPolicyItem,
   currentProvisionOption,
+  provisionHistory,
+  currentLawSource,
+  previousProvisionOptionId,
+  restoreOptionForRepealedAct,
+  repealRestoreOptionId,
+  foundingOptionId,
+  applyEnactedLawProvenance,
   defaultProvisionOptionId,
   estimatedProvisionEffects,
   publicConstituencyPressures,
   constituencyPrimaryProvince,
 } from "./legislature/index.js";
-export type { PublicConstituencyPressure } from "./legislature/index.js";
+export type { PublicConstituencyPressure, CurrentLawSource } from "./legislature/index.js";
 export type {
   LegislatureRuntime,
   BillState,
+  ProvisionEnactmentRecord,
+  LawProvenanceAction,
   CommitteeState,
   PolicyItem,
 } from "./legislature/types.js";
@@ -268,8 +277,24 @@ export {
 } from "./organizations/index.js";
 export type { OrganizationRuntime, CanonicalInterestOrganization } from "./organizations/types.js";
 export { processMediaMonth, storiesChronological, emptyMediaRuntime } from "./media/index.js";
-export type { MediaRuntime, MediaStory, CanonicalMediaOutlet } from "./media/types.js";
 export {
+  headlineFor,
+  selectHeadlineWithCooldown,
+  articleStructureFor,
+  buildArticleBody,
+  ARTICLE_STRUCTURES,
+  headlineFingerprint,
+  structuralHeadlineKey,
+  headlineCooldownKeys,
+  headlineOnCooldown,
+} from "./media/index.js";
+export type {
+  MediaRuntime,
+  MediaStory,
+  CanonicalMediaOutlet,
+  ArticleBodyStructure,
+  HeadlineContext,
+} from "./media/index.js";export {
   processForeignAffairsMonth,
   seedForeignAffairsRuntime,
   emptyForeignAffairsRuntime,

@@ -64,7 +64,7 @@ export function parseMediaRuntime(raw: unknown): MediaRuntime | string {
   if (Array.isArray(raw.recentHeadlineFingerprints)) {
     runtime.recentHeadlineFingerprints = raw.recentHeadlineFingerprints
       .filter((x): x is string => typeof x === "string")
-      .slice(0, 24);
+      .slice(0, 60);
   }
   if (Array.isArray(raw.lingering)) {
     for (const rec of raw.lingering) {

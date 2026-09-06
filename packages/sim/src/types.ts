@@ -530,6 +530,8 @@ export type Command =
       title?: string;
       summary?: string;
       cosponsorIds?: string[];
+      lawAction?: "amend" | "replace" | "repeal";
+      targetLawId?: string;
     }
   | { type: "COSPONSOR_BILL"; billId: string }
   | { type: "PROPOSE_AMENDMENT"; billId: string; policyItems: PolicyItem[] }
@@ -558,7 +560,11 @@ export type Command =
     }
   | {
       type: "PROPOSE_CONSTITUTIONAL_PACKAGE";
-      changes: Array<{ subjectId: string; alternativeId: string }>;
+      changes: Array<{
+        subjectId: string;
+        alternativeId: string;
+        designatedPartyId?: string | null;
+      }>;
     }
   | {
       type: "PROPOSE_CONSTITUTIONAL_TEXT_AMENDMENT";

@@ -1,40 +1,200 @@
 {
-  "generatedAt": "2026-09-05T16:43:17.200Z",
+  "generatedAt": "2026-09-06T03:03:09.285Z",
   "seed": "P114-REPETITION-AUDIT-2030",
   "monthsAdvanced": 36,
   "mediaStories": {
     "total": 340,
-    "uniqueExact": 132,
-    "uniqueStructural": 93,
-    "exactDuplicateExtras": 208,
-    "structuralDuplicateExtras": 247,
-    "cooldownWindowDupes": 159,
+    "uniqueExact": 177,
+    "uniqueStructural": 117,
+    "exactDuplicateExtras": 163,
+    "structuralDuplicateExtras": 223,
+    "cooldownWindowDupes": 3,
     "sample": [
-      "budget proposed reported",
-      "budget proposed jolts the capital",
-      "Officials address budget proposed",
+      "Government tables budget for 2028",
+      "Budget for 2028 ignites a capital spending fight",
+      "Government tables the annual budget for 2028",
       "Election campaign activity continues",
-      "budget proposed dominates the news cycle",
-      "Developments around budget proposed",
+      "Budget for 2028 faces immediate scrutiny",
+      "Fiscal plan reaches the Assembly floor",
       "Campaign organizations keep working the field",
-      "budget proposed enters the public record",
+      "Spending outline enters the public record",
       "Candidates maintain their public schedules",
-      "budget proposed on 2028-01-01",
+      "Treasury presents a measured fiscal plan",
       "Terena–United Provinces of Kraker Trade Accord ratified",
       "Terena–United Provinces of Kraker Trade Accord ratified amid fanfare",
-      "treaty ratified on 2028-02-01",
-      "Government legislative action",
-      "treaty ratified on 2028-02-01",
-      "treaty ratified on 2028-02-01"
+      "Institutions finalize Terena–United Provinces of Kraker Trade Accord",
+      "Assembly passes new legislation",
+      "Ratification completes Terena–United Provinces of Kraker Trade Accord",
+      "Valen notes foreign development (2028-02-01)"
+    ],
+    "headlineFamilies": [
+      {
+        "key": "government:law_enacted",
+        "count": 122
+      },
+      {
+        "key": "politics:bill_signed",
+        "count": 39
+      },
+      {
+        "key": "courts:court_decision",
+        "count": 27
+      },
+      {
+        "key": "elections:presidential_election",
+        "count": 20
+      },
+      {
+        "key": "politics:presidential_assumption",
+        "count": 14
+      },
+      {
+        "key": "foreign:treaty_ratified",
+        "count": 13
+      },
+      {
+        "key": "foreign:treaty_proposed",
+        "count": 12
+      },
+      {
+        "key": "politics:party_contest",
+        "count": 12
+      },
+      {
+        "key": "politics:office_term",
+        "count": 11
+      },
+      {
+        "key": "government:bill_introduced",
+        "count": 10
+      },
+      {
+        "key": "politics:bill_floor",
+        "count": 9
+      },
+      {
+        "key": "courts:judge_confirmed",
+        "count": 7
+      },
+      {
+        "key": "government:budget_proposed",
+        "count": 7
+      },
+      {
+        "key": "politics:acting_president",
+        "count": 7
+      },
+      {
+        "key": "politics:assembly_assumption",
+        "count": 7
+      },
+      {
+        "key": "politics:bill_returned",
+        "count": 7
+      },
+      {
+        "key": "elections:campaign_launched",
+        "count": 3
+      },
+      {
+        "key": "elections:debate_held",
+        "count": 3
+      },
+      {
+        "key": "elections:speaker_selected",
+        "count": 3
+      },
+      {
+        "key": "organizations:organization_action",
+        "count": 3
+      }
+    ],
+    "outlets": [
+      {
+        "key": "MED_EXC",
+        "count": 68
+      },
+      {
+        "key": "MED_REC",
+        "count": 68
+      },
+      {
+        "key": "MED_TPS",
+        "count": 68
+      },
+      {
+        "key": "MED_CST",
+        "count": 34
+      },
+      {
+        "key": "MED_DIR",
+        "count": 34
+      },
+      {
+        "key": "MED_LED",
+        "count": 34
+      },
+      {
+        "key": "MED_WRK",
+        "count": 34
+      }
+    ],
+    "categories": [
+      {
+        "key": "government",
+        "count": 139
+      },
+      {
+        "key": "politics",
+        "count": 109
+      },
+      {
+        "key": "courts",
+        "count": 34
+      },
+      {
+        "key": "elections",
+        "count": 30
+      },
+      {
+        "key": "foreign",
+        "count": 25
+      },
+      {
+        "key": "organizations",
+        "count": 3
+      }
+    ],
+    "articleStructures": [
+      {
+        "key": "consequence_first",
+        "count": 80
+      },
+      {
+        "key": "event_first",
+        "count": 72
+      },
+      {
+        "key": "political_reaction",
+        "count": 66
+      },
+      {
+        "key": "regional",
+        "count": 63
+      },
+      {
+        "key": "institutional",
+        "count": 59
+      }
     ]
   },
   "regeneratedHeadlines": {
     "total": 340,
-    "uniqueExact": 80,
-    "uniqueStructural": 77,
-    "exactDuplicateExtras": 260,
-    "structuralDuplicateExtras": 263,
-    "cooldownWindowDupes": 204
+    "uniqueExact": 86,
+    "uniqueStructural": 79,
+    "exactDuplicateExtras": 254,
+    "structuralDuplicateExtras": 261,
+    "cooldownWindowDupes": 151
   },
   "crisisThemes": {
     "total": 40,
@@ -185,7 +345,8 @@
   },
   "notes": [
     "mediaStories are unique story.headlineKey values accumulated across the run.",
-    "Exact duplicates are acceptable for recurring institutional beats; structural duplicates deserve review when concentrated.",
-    "Crisis themes are sampled across posture fixtures, not only emergent crises."
+    "Cooldown keys cover exact (x:), structural (s:), and event-wording (w:) fingerprints.",
+    "Article structures are consequence_first | event_first | institutional | political_reaction | regional.",
+    "Exact duplicates remain acceptable for recurring institutional beats across long runs; recent-window dupes are the primary regression signal."
   ]
 }
