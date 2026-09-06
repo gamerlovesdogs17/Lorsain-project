@@ -62,6 +62,7 @@ export {
   migrateSaveV17ToV18,
   migrateSaveV18ToV19,
   migrateSaveV19ToV20,
+  migrateSaveV20ToV21,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -190,6 +191,7 @@ export {
   processLegislatureMonth,
   emptyLegislatureRuntime,
   whipEstimate,
+  explainLegislativeVote,
   parliamentaryDiscipline,
   PARLIAMENTARY_DISCIPLINE_LABELS,
   absoluteMajorityNeeded,
@@ -319,16 +321,46 @@ export {
   explainLeadershipSupport,
   recentPoliticalMemories,
   activeCoalition,
+  isWillingCabinet,
   AS_MAX_CAREER_ACTIONS_PER_MONTH,
   AS_MAX_RECRUITMENTS_PER_MONTH,
+  AS_AUDIT_BOUNDS_24M,
+  AS_AUDIT_BOUNDS_60M,
 } from "./politics/index.js";
 export type {
   Phase12Runtime,
   CareerAmbitionRecord,
+  CareerAmbitionStage,
   CoalitionAgreement,
   OpenSeatContest,
+  OpenSeatCategory,
   OrgScorecardEntry,
+  PartyFamilyLink,
+  AutonomousAgencyMetrics,
+  CabinetReshuffleReason,
 } from "./politics/types.js";
+export {
+  processGoverningMonth,
+  ensureGoverningRuntime,
+  emptyGoverningRuntime,
+  departmentForLawItems,
+  departmentForProvision,
+  recomputeFiscalFromCurrentLaw,
+  advanceImplementations,
+  detectPolicyInteractions,
+  refreshGovernmentAgenda,
+} from "./governing/index.js";
+export type {
+  Phase13Runtime,
+  ImplementationRecord,
+  FiscalState,
+  GovernmentAgenda,
+  PromiseRecord,
+  CapacityState,
+  ServiceOutcomes,
+  ImplementationStatus,
+  DepartmentId,
+} from "./governing/types.js";
 export type {
   Command,
   CommandResult,

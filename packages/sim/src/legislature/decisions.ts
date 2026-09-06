@@ -12,6 +12,8 @@ import {
 } from "./provisions.js";
 import { parliamentaryDiscipline } from "./discipline.js";
 import { constituencyPressureForBill } from "./constituency.js";
+import { partyPlatformIssueForBillItem } from "../parties/platforms.js";
+import { activeCoalition } from "../politics/coalitions.js";
 
 function constituencyFit(
   world: KernelWorld,
@@ -215,10 +217,18 @@ export function chooseIntroduce(
   if (!profile) return null;
   const definitions = LEGISLATIVE_PROVISIONS.slice().sort((a, b) => a.id.localeCompare(b.id));
   if (definitions.length === 0) return null;
-  const weighted = definitions.map((definition) => ({
-    definition,
-    weight: 0.2 + (profile.issueSalience[definition.issueId] ?? 0.25),
-  }));
+  const partyId = state.politicians[politicianId]?.partyId;
+  const demand = partyId
+    ? state.legislatureRuntime.caucusLeadership[partyId]?.platformDemand
+    : null;
+  const coalitionPriorities = activeCoalition(state)?.policyPriorities ?? [];
+  const weighted = definitions.map((definition) => {
+    let weight = 0.2 + (profile.issueSalience[definition.issueId] ?? 0.25);
+    const platform = partyPlatformIssueForBillItem(definition.issueId, definition.id);
+    if (demand && platform === demand) weight += 0.35;
+    if (coalitionPriorities.includes(platform)) weight += 0.25;
+    return { definition, weight };
+  });
   const total = weighted.reduce((sum, row) => sum + row.weight, 0);
   let pick = rng.float01("legislature") * total;
   let definition = weighted.at(-1)!.definition;

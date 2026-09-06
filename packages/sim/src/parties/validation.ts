@@ -452,8 +452,8 @@ export function parsePartyRuntime(
     ) {
       return `partyStates.${id} leader does not resolve`;
     }
-    if (rec.status === "leadership_vacant" && rec.leaderId != null) {
-      return `partyStates.${id} leadership_vacant requires null leaderId`;
+    if ((rec.status === "leadership_vacant" || rec.status === "defunct") && rec.leaderId != null) {
+      return `partyStates.${id} ${rec.status} requires null leaderId`;
     }
     if (rec.status === "active" && rec.leaderId == null) {
       return `partyStates.${id} active requires leaderId`;
@@ -885,6 +885,9 @@ export function validatePartyAgainstWorld(
     }
     if (party.status === "leadership_vacant" && party.leaderId != null) {
       return worldErr(`leadership_vacant party ${party.partyId} has a leader`);
+    }
+    if (party.status === "defunct" && party.leaderId != null) {
+      return worldErr(`defunct party ${party.partyId} has a leader`);
     }
   }
 

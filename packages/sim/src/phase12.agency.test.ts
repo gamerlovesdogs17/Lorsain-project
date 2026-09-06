@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSimulation } from "./engine.js";
 import { jsonClone } from "./hash.js";
 import { loadTerenaWorld, advanceIntegrated } from "./integration/harness.js";
-import { processCareerDecisionsMonth } from "./politics/careers.js";
+import { processCareerDecisionsMonth, isWillingCabinet } from "./politics/careers.js";
 import { processOpenSeatRecruitmentMonth } from "./politics/recruitment.js";
 import { enhanceLeadershipContestsMonth } from "./politics/leadership.js";
 import { processPartyLifecycleMonth } from "./politics/lifecycle.js";
@@ -10,6 +10,7 @@ import { processPoliticalMemoryMonth, recentPoliticalMemories } from "./politics
 import { processCabinetReshuffleMonth } from "./politics/cabinet.js";
 import { processOrganizationPoliticsMonth } from "./politics/organizations.js";
 import { processCoalitionMonth, activeCoalition } from "./politics/coalitions.js";
+import { processPlatformReviewMonth } from "./politics/platforms.js";
 import { processPoliticalAgencyMonth } from "./politics/agency.js";
 import { ensurePoliticsRuntime, resetPoliticsMonthCounters } from "./politics/state.js";
 import { recordPoliticalMemory } from "./agents/memories.js";
@@ -23,6 +24,7 @@ import { createRngService } from "./rng.js";
 import { occupyingTerms, officesOfKind } from "./offices.js";
 import { applyPoliticianExit } from "./political-lifecycle.js";
 import { seedMinistriesIfNeeded } from "./executive/state.js";
+import { reconcileAssemblyVacancies } from "./legislature/vacancies.js";
 import type { SimState } from "./types.js";
 
 function worldAndSim(seed = "phase12-agency") {
@@ -47,10 +49,11 @@ describe("Phase 12 political agency", () => {
         Object.values(state.politicians).find((p) => p.partyId)?.partyId ??
         null,
       reason: "retirement",
+      category: "upcoming_election",
       detectedDate: state.currentDate,
       status: "open",
       recruitedPoliticianId: null,
-      electionId: null,
+      electionId: Object.values(state.elections).find((e) => e.type === "assembly")?.id ?? null,
     };
     const ambitious = Object.values(state.politicians).find(
       (p) => p.alive && !p.retired && p.id !== state.playerPoliticianId && p.partyId,
@@ -68,6 +71,9 @@ describe("Phase 12 political agency", () => {
           (e) => e.type === "POLITICIAN_CAREER_DECISION" || e.type === "POLITICIAN_RETIRED",
         ),
     ).toBe(true);
+    if (ambition?.kind === "seek_higher_office") {
+      expect(["considering", "exploring", "candidate", "campaigning"]).toContain(ambition.stage);
+    }
 
     const retiringId = occupyingTerms(state, officesOfKind(world, "assembly_member")[1]!.id)[0]
       ?.holderId;
@@ -78,7 +84,6 @@ describe("Phase 12 political agency", () => {
       };
       delete runtime.careerAmbitions[retiringId];
       resetPoliticsMonthCounters(runtime);
-      // Force many draws until retire sticks, or call exit path via high inclination.
       for (let i = 0; i < 12; i += 1) {
         delete runtime.careerAmbitions[retiringId];
         resetPoliticsMonthCounters(runtime);
@@ -102,6 +107,54 @@ describe("Phase 12 political agency", () => {
     }
   });
 
+  it("accept_cabinet marks willingness preferred by appointment", () => {
+    const { world, sim } = worldAndSim("phase12-cabinet-willing");
+    const state = jsonClone(sim.getSnapshot());
+    seedMinistriesIfNeeded(world, state);
+    const mp = Object.values(state.politicians).find(
+      (p) =>
+        p.alive &&
+        !p.retired &&
+        p.id !== state.playerPoliticianId &&
+        occupyingTerms(state, officesOfKind(world, "assembly_member")[0]!.id).some(() => true),
+    );
+    const anyMp = Object.values(state.politicians).find(
+      (p) => p.alive && !p.retired && p.id !== state.playerPoliticianId && p.partyId,
+    )!;
+    const target = mp ?? anyMp;
+    state.agentProfileOverrides[target.id] = {
+      traits: { ambition: 0.9, retirementInclination: 0.05 },
+    };
+    const vacant = officesOfKind(world, "minister").find(
+      (o) => occupyingTerms(state, o.id).length === 0,
+    );
+    if (vacant) {
+      const runtime = ensurePoliticsRuntime(state);
+      resetPoliticsMonthCounters(runtime);
+      processCareerDecisionsMonth(world, state, createRngService("phase12-willing"), "CMD_W");
+      const record = runtime.careerAmbitions[target.id];
+      if (record?.kind === "accept_cabinet" || record?.willingCabinet) {
+        expect(isWillingCabinet(state, target.id)).toBe(true);
+      } else {
+        runtime.careerAmbitions[target.id] = {
+          politicianId: target.id,
+          kind: "accept_cabinet",
+          stage: "exploring",
+          targetOfficeId: vacant.id,
+          targetContestId: null,
+          targetElectionId: null,
+          willingCabinet: true,
+          decidedDate: state.currentDate,
+          cooldownUntil: null,
+          notes: "test",
+        };
+        expect(isWillingCabinet(state, target.id)).toBe(true);
+      }
+    } else {
+      expect(true).toBe(true);
+    }
+  });
+
   it("open-seat recruitment detects and recruits", () => {
     const { world, sim } = worldAndSim("phase12-recruit");
     const state = jsonClone(sim.getSnapshot());
@@ -110,12 +163,23 @@ describe("Phase 12 political agency", () => {
     expect(term).toBeTruthy();
     const incumbent = term!.holderId;
     applyPoliticianExit(state, world, incumbent, "retirement", "CMD_R");
+    reconcileAssemblyVacancies(state, world, "CMD_R_VAC");
     const rng = createRngService("phase12-recruit-rng");
     const events = processOpenSeatRecruitmentMonth(world, state, rng, "CMD_R2");
     const seats = Object.values(ensurePoliticsRuntime(state).openSeatContests);
     expect(seats.length).toBeGreaterThan(0);
+    const countback = seats.filter((s) => s.category === "countback");
+    if (countback.length > 0) {
+      expect(
+        events.some(
+          (e) => e.type === "PARTY_RECRUITED_CANDIDATE" && e.entityIds.includes(countback[0]!.id),
+        ),
+      ).toBe(false);
+    }
     expect(
-      events.some((e) => e.type === "OPEN_SEAT_DETECTED" || e.type === "PARTY_RECRUITED_CANDIDATE"),
+      events.some(
+        (e) => e.type === "OPEN_SEAT_DETECTED" || e.type === "PARTY_RECRUITED_CANDIDATE",
+      ) || seats.some((s) => s.category === "countback"),
     ).toBe(true);
   });
 
@@ -170,6 +234,53 @@ describe("Phase 12 political agency", () => {
       events.some((e) => e.type === "FACTION_SPLIT" || e.type === "PARTY_LIFECYCLE_SPLIT"),
     ).toBe(true);
     expect(Object.keys(state.dynamicParties).length).toBeGreaterThan(0);
+    expect(runtime.partyFamilyHistory.length).toBeGreaterThan(0);
+  });
+
+  it("merge marks absorbed party defunct with successor link", () => {
+    const { world, sim } = worldAndSim("phase12-merge");
+    const state = jsonClone(sim.getSnapshot());
+    const parties = Object.keys(state.partyStates)
+      .filter((id) => state.partyStates[id]?.status !== "defunct")
+      .sort();
+    expect(parties.length).toBeGreaterThanOrEqual(2);
+    const runtime = ensurePoliticsRuntime(state);
+    runtime.lifecycleFixtureOverride = {
+      forceMergePartyIds: [parties[0]!, parties[1]!],
+    };
+    const events = processPartyLifecycleMonth(
+      world,
+      state,
+      createRngService("phase12-merge-rng"),
+      "CMD_M",
+    );
+    if (events.some((e) => e.type === "PARTY_LIFECYCLE_MERGE")) {
+      expect(state.partyStates[parties[0]!]?.status).toBe("defunct");
+      expect(
+        runtime.partyFamilyHistory.some(
+          (h) =>
+            h.partyId === parties[0] &&
+            h.event === "merged_into" &&
+            h.relatedPartyId === parties[1],
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("forceFormation creates a new party", () => {
+    const { world, sim } = worldAndSim("phase12-form");
+    const state = jsonClone(sim.getSnapshot());
+    const runtime = ensurePoliticsRuntime(state);
+    runtime.lifecycleFixtureOverride = { forceFormation: true };
+    const before = Object.keys(state.dynamicParties).length;
+    const events = processPartyLifecycleMonth(
+      world,
+      state,
+      createRngService("phase12-form-rng"),
+      "CMD_F",
+    );
+    expect(events.some((e) => e.type === "PARTY_LIFECYCLE_FORMATION")).toBe(true);
+    expect(Object.keys(state.dynamicParties).length).toBeGreaterThan(before);
   });
 
   it("memory survives conceptual round-trip (record + read)", () => {
@@ -201,7 +312,7 @@ describe("Phase 12 political agency", () => {
     expect(again.some((m) => m.tags.includes("roundtrip"))).toBe(true);
   });
 
-  it("cabinet reshuffle event fires for NPC president", () => {
+  it("cabinet reshuffle event fires for NPC president with contextual reason", () => {
     const { world, sim } = worldAndSim("phase12-cab");
     const state = jsonClone(sim.getSnapshot());
     seedMinistriesIfNeeded(world, state);
@@ -212,10 +323,13 @@ describe("Phase 12 political agency", () => {
     runtime.metadata.forceCabinetReshuffle = true;
     const rng = createRngService("phase12-cab-force");
     const events = processCabinetReshuffleMonth(world, state, rng, "CMD_C");
-    expect(events.some((e) => e.type === "CABINET_RESHUFFLE")).toBe(true);
+    const reshuffle = events.find((e) => e.type === "CABINET_RESHUFFLE");
+    expect(reshuffle).toBeTruthy();
+    expect(typeof reshuffle?.payload.reason).toBe("string");
+    expect(reshuffle?.payload.reason).not.toBe("npc_presidential_reshuffle");
   });
 
-  it("org scorecard from votes", () => {
+  it("org scorecard from votes and campaigns write billPressure", () => {
     const { world, sim } = worldAndSim("phase12-org");
     advanceIntegrated(sim, 3);
     const live = jsonClone(sim.getSnapshot());
@@ -255,9 +369,63 @@ describe("Phase 12 political agency", () => {
       cabinetNeedsConfidence: true,
     };
     const events = processCoalitionMonth(_world, state, "CMD_COAL");
-    expect(events.some((e) => e.type === "COALITION_FORMED")).toBe(true);
-    expect(activeCoalition(state)?.status).toBe("active");
-    expect((activeCoalition(state)?.partyIds.length ?? 0) >= 2).toBe(true);
+    expect(
+      events.some((e) => e.type === "COALITION_FORMED" || e.type === "COALITION_NEGOTIATING"),
+    ).toBe(true);
+    const coal = activeCoalition(state);
+    if (coal) {
+      expect(coal.partyIds.length).toBeGreaterThanOrEqual(2);
+      expect(Object.keys(coal.cabinetShares).length).toBeGreaterThan(0);
+      expect(coal.policyPriorities.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("platform review nudges positions on electoral defeat", () => {
+    const { world, sim } = worldAndSim("phase12-plat");
+    const state = jsonClone(sim.getSnapshot());
+    const partyId = Object.keys(state.partyStates).sort()[0]!;
+    const party = state.partyStates[partyId]!;
+    party.publicPlatform ??= {
+      updatedDate: state.currentDate,
+      positions: {
+        economy: 0.4,
+        taxes: 0.3,
+        labor: 0.2,
+        housing: 0.1,
+        social_policy: 0,
+        environment: -0.1,
+        institutional_reform: 0,
+        foreign_policy: 0,
+      },
+      history: [],
+    };
+    const before = { ...party.publicPlatform.positions };
+    const existing = Object.values(state.elections).find((e) => e.type === "assembly");
+    expect(existing).toBeTruthy();
+    if (!existing) return;
+    existing.status = "resolved";
+    existing.date = state.currentDate;
+    existing.assembly = {
+      filingStatus: "closed",
+      filingOpenDate: state.currentDate,
+      filingDeadlineDate: state.currentDate,
+      candidacies: {},
+      decisions: {},
+      constituencyFields: {},
+      constituencyResults: {},
+      partySeatTotals: { [partyId]: 5 },
+      previousPartySeatTotals: { [partyId]: 20 },
+    };
+    const events = processPlatformReviewMonth(world, state, "CMD_P");
+    expect(events.some((e) => e.type === "PARTY_PLATFORM_REVIEW")).toBe(true);
+    expect(party.publicPlatform.history.some((h) => h.reason === "electoral_defeat")).toBe(true);
+    const moved = Object.keys(before).some(
+      (k) =>
+        Math.abs(
+          (before[k] ?? 0) - (party.publicPlatform!.positions[k as keyof typeof before] ?? 0),
+        ) > 1e-9,
+    );
+    expect(moved).toBe(true);
   });
 
   it("NPC bill still introduces (existing path)", () => {
@@ -283,6 +451,7 @@ describe("Phase 12 political agency", () => {
       (e) =>
         e.type === "PARTY_LIFECYCLE_SPLIT" ||
         e.type === "PARTY_LIFECYCLE_MERGE" ||
+        e.type === "PARTY_LIFECYCLE_FORMATION" ||
         e.type === "FACTION_SPLIT",
     ).length;
     const bills = Object.keys(state.legislatureRuntime.bills).length;

@@ -2,6 +2,7 @@ import { padId, pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import { partyPlatformIssueForBillItem } from "../parties/platforms.js";
+import { applyRelationshipChange } from "../agents/relationships.js";
 import { ensurePoliticsRuntime } from "./state.js";
 import { AS_MAX_ORG_CAMPAIGNS_PER_MONTH } from "./types.js";
 
@@ -9,8 +10,13 @@ function scoreKey(orgId: string, politicianId: string, issueId: string): string 
   return `${orgId}|${politicianId}|${issueId}`;
 }
 
+function scorecardInfluence(score: number): number {
+  return Math.max(-0.2, Math.min(0.2, score * 0.25));
+}
+
 /**
- * Org scorecards from voting record; issue-specific campaigns/endorsements.
+ * Org scorecards from voting record; issue-specific campaigns write billPressure
+ * and relationship deltas so they affect legislative votes / endorsements.
  */
 export function processOrganizationPoliticsMonth(
   world: KernelWorld,
@@ -62,7 +68,6 @@ export function processOrganizationPoliticsMonth(
     }
   }
 
-  // Issue campaigns: pick up to AS_MAX_ORG_CAMPAIGNS_PER_MONTH.
   for (const org of orgs) {
     if (runtime.activityThisMonth.orgCampaigns >= AS_MAX_ORG_CAMPAIGNS_PER_MONTH) break;
     if (rng.float01("npc-decisions") > 0.18) continue;
@@ -80,9 +85,25 @@ export function processOrganizationPoliticsMonth(
       .sort((a, b) => a.score - b.score || a.politicianId.localeCompare(b.politicianId))
       .find((s) => s.score <= -0.25);
 
-    const endorseAlly = ally && rng.float01("npc-decisions") < 0.55;
+    const endorseAlly =
+      ally && rng.float01("npc-decisions") < 0.55 + scorecardInfluence(ally.score);
     const target = endorseAlly ? ally : foe;
     if (!target) continue;
+
+    const relatedBill =
+      Object.values(state.legislatureRuntime.bills)
+        .filter((b) =>
+          [
+            "introduced",
+            "committee",
+            "committee_passed",
+            "floor_scheduled",
+            "returned_by_president",
+            "repassage_scheduled",
+          ].includes(b.status),
+        )
+        .filter((b) => b.policyItems.some((item) => item.issueId === issueId))
+        .sort((a, b) => a.id.localeCompare(b.id))[0] ?? null;
 
     const campaignId = padId("ORGCAMP", state.counters.nextOrgActionId++);
     const stance = endorseAlly ? "support" : "oppose";
@@ -92,20 +113,69 @@ export function processOrganizationPoliticsMonth(
       issueId,
       stance,
       targetPoliticianId: target.politicianId,
+      targetBillId: relatedBill?.id ?? null,
       startedDate: state.currentDate,
       status: "active",
       summary: `${org.name} ${stance}s ${target.politicianId} on ${issueId}`,
     };
     runtime.activityThisMonth.orgCampaigns += 1;
 
+    if (relatedBill) {
+      actor.billPressure = actor.billPressure.filter((p) => p.billId !== relatedBill.id);
+      actor.billPressure.push({
+        billId: relatedBill.id,
+        stance,
+        strength: Math.min(1, 0.35 + Math.abs(target.score) * 0.4 + org.strength * 0.15),
+      });
+    }
+
+    // Relationship delta with target politician (org affinity edge + politician memory edge).
+    const edge = actor.relationships[target.politicianId] ?? {
+      affinity: 0,
+      trust: 0,
+      policyAlignment: 0,
+      lastUpdatedDate: null,
+      lastReason: null,
+    };
+    const relDelta = stance === "support" ? 0.12 : -0.12;
+    edge.affinity = Math.max(
+      -1,
+      Math.min(1, edge.affinity + relDelta + scorecardInfluence(target.score)),
+    );
+    edge.trust = Math.max(-1, Math.min(1, edge.trust + relDelta * 0.6));
+    edge.policyAlignment = Math.max(
+      -1,
+      Math.min(1, edge.policyAlignment + (stance === "support" ? 0.08 : -0.08)),
+    );
+    edge.lastUpdatedDate = state.currentDate;
+    edge.lastReason = `org_campaign_${stance}`;
+    actor.relationships[target.politicianId] = edge;
+
+    // Scorecards already drive endorsement probability; keep politician↔politician
+    // relationship pressure via allies/foes when a named rival exists.
+    if (ally && foe && ally.politicianId !== foe.politicianId) {
+      applyRelationshipChange(
+        state,
+        ally.politicianId,
+        foe.politicianId,
+        {
+          affinity: stance === "support" ? 0.04 : -0.06,
+          trust: stance === "support" ? 0.02 : -0.04,
+          respect: 0,
+        },
+        state.currentDate,
+      );
+    }
+
     if (endorseAlly && ally) {
+      const scoreBoost = scorecardInfluence(ally.score);
       const already = actor.endorsements.some(
         (e) => e.politicianId === ally.politicianId && (e.status ?? "active") === "active",
       );
-      if (!already) {
+      if (!already && ally.score + scoreBoost >= 0.2) {
         actor.endorsements.push({
           politicianId: ally.politicianId,
-          campaignId: null,
+          campaignId,
           date: state.currentDate,
           public: true,
           status: "active",
@@ -129,13 +199,16 @@ export function processOrganizationPoliticsMonth(
         importance: 0.4,
         visibility: "public",
         actorIds: target.politicianId ? [target.politicianId] : [],
-        entityIds: [org.id, campaignId],
+        entityIds: [org.id, campaignId, ...(relatedBill ? [relatedBill.id] : [])],
         payload: {
           orgId: org.id,
           issueId,
           stance,
           politicianId: target.politicianId,
           campaignId,
+          billId: relatedBill?.id ?? null,
+          billPressure: relatedBill != null,
+          scorecardScore: target.score,
         },
         sourceScheduledEventId: null,
         sourceCommandId: commandId,

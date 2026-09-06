@@ -191,6 +191,10 @@ export type CaucusLeadershipState = {
   selectedDate: IsoDate | null;
   nextElectionDate: IsoDate;
   priorityBillIds: string[];
+  /** Optional Phase 12 caucus agenda extensions (backward-compatible). */
+  leadershipCandidateId?: string | null;
+  platformDemand?: string | null;
+  coalitionPreference?: string[] | null;
 };
 
 export type CaucusLeadershipContest = {

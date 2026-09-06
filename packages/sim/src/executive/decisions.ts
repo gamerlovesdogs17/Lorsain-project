@@ -4,6 +4,10 @@ import type { KernelWorld, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import type { PolicyItem } from "../legislature/types.js";
 import { currentMinisterHolderId, ministerOfficeIds } from "./state.js";
+import { isWillingCabinet } from "../politics/careers.js";
+import { activeCoalition } from "../politics/coalitions.js";
+import { partyPlatformIssueForBillItem } from "../parties/platforms.js";
+import { PARTY_PLATFORM_ISSUES, type PartyPlatformIssue } from "../parties/types.js";
 
 export function chooseMinisterAppointment(
   world: KernelWorld,
@@ -30,12 +34,42 @@ export function chooseMinisterAppointment(
     .filter((p) => canAssumeOffice(state, world, officeId, p.id, "substantive") == null)
     .sort((a, b) => (a.id < b.id ? -1 : 1));
   if (candidates.length === 0) return null;
+
+  const coalition = activeCoalition(state);
+  const coalitionSeats = coalition
+    ? Object.fromEntries(
+        coalition.partyIds.map((partyId) => [
+          partyId,
+          Object.values(state.officeTerms).filter(
+            (term) =>
+              (term.status === "active" || term.status === "suspended") &&
+              world.offices[term.officeId]?.kind === "minister" &&
+              state.politicians[term.holderId]?.partyId === partyId,
+          ).length,
+        ]),
+      )
+    : {};
+
   const scored = candidates.map((p) => {
     const profile = getAgentProfile(world, state, p.id);
     const sameParty = p.partyId && p.partyId === president.partyId ? 1 : 0;
     const admin = profile?.skills.administration ?? 0.4;
-    const noise = rng.float01("legislature") * 0.15;
-    return { id: p.id, score: sameParty * 0.6 + admin * 0.4 + noise };
+    const willing = isWillingCabinet(state, p.id) ? 0.35 : 0;
+    let coalitionFit = 0;
+    if (coalition && p.partyId && coalition.partyIds.includes(p.partyId)) {
+      const share = coalition.cabinetShares[p.partyId] ?? 0;
+      const held = coalitionSeats[p.partyId] ?? 0;
+      const totalMinisters = Math.max(1, ministerOfficeIds(world).length);
+      const currentShare = held / totalMinisters;
+      coalitionFit = 0.25 + Math.max(0, share - currentShare) * 0.5;
+    } else if (coalition && p.partyId && !coalition.partyIds.includes(p.partyId)) {
+      coalitionFit = -0.15;
+    }
+    const noise = rng.float01("legislature") * 0.12;
+    return {
+      id: p.id,
+      score: sameParty * 0.45 + admin * 0.3 + willing + coalitionFit + noise,
+    };
   });
   scored.sort((a, b) => b.score - a.score || (a.id < b.id ? -1 : 1));
   return scored[0]?.id ?? null;
@@ -57,7 +91,24 @@ export function chooseRegulationIssue(
   const officeId = ministries[Math.floor(rng.float01("legislature") * ministries.length)]!;
   const issues = world.issueIds.slice().sort();
   if (issues.length === 0) return null;
-  const issueId = issues[Math.floor(rng.float01("legislature") * issues.length)]!;
+
+  const presidentPol = state.politicians[presidentId];
+  const coalition = activeCoalition(state);
+  const demand =
+    (presidentPol?.partyId
+      ? state.legislatureRuntime.caucusLeadership[presidentPol.partyId]?.platformDemand
+      : null) ??
+    coalition?.policyPriorities[0] ??
+    null;
+  let issueId = issues[Math.floor(rng.float01("legislature") * issues.length)]!;
+  if (demand && (PARTY_PLATFORM_ISSUES as readonly string[]).includes(demand)) {
+    const mapped = issues.find((id) => {
+      const platform = partyPlatformIssueForBillItem(id, null);
+      return platform === (demand as PartyPlatformIssue);
+    });
+    if (mapped && rng.float01("legislature") < 0.55) issueId = mapped;
+  }
+
   const axis = world.issueDimensions[issueId] ?? "institutional";
   const lean =
     axis === "economic" || axis === "economic-social"

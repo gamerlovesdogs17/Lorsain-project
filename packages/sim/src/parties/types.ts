@@ -5,7 +5,7 @@ import type { IrvResult } from "@lorsain/election-math";
 export const MEMBERSHIP_PARTY_ORGANIZATION = "membership_party" as const;
 export const INDEPENDENT_AGGREGATE_ORGANIZATION = "independent_aggregate" as const;
 
-export const PARTY_STATUSES = ["active", "leadership_vacant"] as const;
+export const PARTY_STATUSES = ["active", "leadership_vacant", "defunct"] as const;
 export type PartyStatus = (typeof PARTY_STATUSES)[number];
 
 /**

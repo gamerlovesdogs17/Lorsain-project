@@ -15,18 +15,64 @@ export const AS_CABINET_RESHUFFLE_COOLDOWN_MONTHS = 10;
 export const AS_MEMORY_ALLIANCE_THRESHOLD = 3;
 export const AS_MEMORY_RIVALRY_THRESHOLD = 2;
 
+/** Documented autonomous activity bounds (per seed run). Used by audit tests/docs. */
+export const AS_AUDIT_BOUNDS_24M = {
+  careerMin: 1,
+  careerMax: 200,
+  recruitMin: 0,
+  recruitMax: 100,
+  openSeatMin: 0,
+  openSeatMax: 120,
+  caucusMin: 0,
+  caucusMax: 160,
+  reshuffleMin: 0,
+  reshuffleMax: 6,
+  lifecycleMin: 0,
+  lifecycleMax: 3,
+  orgCampaignMin: 0,
+  orgCampaignMax: 80,
+  meaningfulMin: 1,
+} as const;
+
+export const AS_AUDIT_BOUNDS_60M = {
+  careerMin: 2,
+  careerMax: 480,
+  recruitMin: 0,
+  recruitMax: 240,
+  openSeatMin: 0,
+  openSeatMax: 280,
+  caucusMin: 0,
+  caucusMax: 400,
+  reshuffleMin: 0,
+  reshuffleMax: 12,
+  lifecycleMin: 0,
+  lifecycleMax: 5,
+  orgCampaignMin: 0,
+  orgCampaignMax: 180,
+  meaningfulMin: 3,
+} as const;
+
 export type CareerAmbitionKind =
   "seek_higher_office" | "contest_leadership" | "accept_cabinet" | "retire" | "hold_course";
+
+export type CareerAmbitionStage =
+  "considering" | "exploring" | "candidate" | "campaigning" | "won" | "lost" | "withdrew";
 
 export type CareerAmbitionRecord = {
   politicianId: string;
   kind: CareerAmbitionKind;
+  stage: CareerAmbitionStage;
   targetOfficeId: string | null;
   targetContestId: string | null;
+  targetElectionId: string | null;
+  willingCabinet: boolean;
   decidedDate: IsoDate;
   cooldownUntil: IsoDate | null;
   notes: string;
 };
+
+export type OpenSeatCategory =
+  "countback" | "upcoming_election" | "by_election" | "future_open_seat" | "midterm_exit";
 
 export type OpenSeatContest = {
   id: string;
@@ -34,9 +80,10 @@ export type OpenSeatContest = {
   officeKind: string;
   constituencyId: string | null;
   partyId: string | null;
-  reason: "retirement" | "resignation" | "death" | "upcoming_election";
+  reason: "retirement" | "resignation" | "death" | "upcoming_election" | "by_election";
+  category: OpenSeatCategory;
   detectedDate: IsoDate;
-  status: "open" | "recruited" | "filled" | "expired";
+  status: "open" | "recruited" | "filled" | "expired" | "skipped_countback";
   recruitedPoliticianId: string | null;
   electionId: string | null;
 };
@@ -44,7 +91,7 @@ export type OpenSeatContest = {
 export type CoalitionAgreement = {
   id: string;
   formedDate: IsoDate;
-  status: "active" | "broken";
+  status: "active" | "broken" | "negotiating";
   brokenDate: IsoDate | null;
   partyIds: string[];
   policyPriorities: PartyPlatformIssue[];
@@ -52,6 +99,8 @@ export type CoalitionAgreement = {
   cabinetShares: Record<string, number>;
   trigger: "assembly_confidence" | "no_plurality";
   breakdownReason: string | null;
+  negotiationScore: number;
+  alternativeOptions: Array<{ partyIds: string[]; score: number }>;
   metadata: JsonObject;
 };
 
@@ -70,6 +119,7 @@ export type OrgIssueCampaign = {
   issueId: string;
   stance: "support" | "oppose";
   targetPoliticianId: string | null;
+  targetBillId: string | null;
   startedDate: IsoDate;
   status: "active" | "closed";
   summary: string;
@@ -81,6 +131,14 @@ export type PartyLifecycleCooldown = {
   lastKind: "split" | "merge" | "formation";
 };
 
+export type PartyFamilyLink = {
+  partyId: string;
+  event: "split_from" | "merged_into" | "formed" | "absorbed";
+  relatedPartyId: string | null;
+  date: IsoDate;
+  notes: string;
+};
+
 export type LeadershipSupportExplanation = {
   contestId: string;
   supporterId: string;
@@ -89,12 +147,36 @@ export type LeadershipSupportExplanation = {
   recordedDate: IsoDate;
 };
 
+export type CabinetReshuffleReason =
+  | "poor_performance"
+  | "coalition_balance"
+  | "faction_pressure"
+  | "upcoming_election"
+  | "forced_fixture";
+
+export type AutonomousAgencyMetrics = {
+  seed: string;
+  months: number;
+  careerDecisions: number;
+  recruitments: number;
+  openSeatsDetected: number;
+  caucusAgendas: number;
+  cabinetReshuffles: number;
+  lifecycleEvents: number;
+  orgCampaigns: number;
+  coalitionsFormed: number;
+  platformReviews: number;
+  billsIntroduced: number;
+  meaningfulActivity: number;
+};
+
 /**
  * Phase 12 political-agency runtime. Empty on migration — never fabricates history.
  */
 export type Phase12Runtime = {
   careerAmbitions: Record<string, CareerAmbitionRecord>;
   partyLifecycleCooldown: Record<string, PartyLifecycleCooldown>;
+  partyFamilyHistory: PartyFamilyLink[];
   coalitionAgreements: Record<string, CoalitionAgreement>;
   orgScorecards: Record<string, OrgScorecardEntry>;
   orgCampaigns: Record<string, OrgIssueCampaign>;
@@ -125,6 +207,7 @@ export function emptyPoliticsRuntime(): Phase12Runtime {
   return {
     careerAmbitions: {},
     partyLifecycleCooldown: {},
+    partyFamilyHistory: [],
     coalitionAgreements: {},
     orgScorecards: {},
     orgCampaigns: {},

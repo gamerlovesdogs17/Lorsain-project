@@ -36,6 +36,9 @@ export function parsePoliticsRuntime(raw: unknown): Phase12Runtime | string {
     base.partyLifecycleCooldown =
       obj.partyLifecycleCooldown as Phase12Runtime["partyLifecycleCooldown"];
   }
+  if (Array.isArray(obj.partyFamilyHistory)) {
+    base.partyFamilyHistory = obj.partyFamilyHistory as Phase12Runtime["partyFamilyHistory"];
+  }
   if (
     obj.coalitionAgreements &&
     typeof obj.coalitionAgreements === "object" &&

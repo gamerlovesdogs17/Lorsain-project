@@ -8,7 +8,11 @@ import { occupyingTerms, officesOfKind } from "../offices.js";
 import type { RngService } from "../rng.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { ensurePoliticsRuntime } from "./state.js";
-import { AS_MAX_RECRUITMENTS_PER_MONTH, type OpenSeatContest } from "./types.js";
+import {
+  AS_MAX_RECRUITMENTS_PER_MONTH,
+  type OpenSeatCategory,
+  type OpenSeatContest,
+} from "./types.js";
 
 function stableHash(text: string): number {
   let hash = 2166136261;
@@ -17,6 +21,24 @@ function stableHash(text: string): number {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
+}
+
+function officeFilled(state: SimState, officeId: string): boolean {
+  return occupyingTerms(state, officeId).length > 0;
+}
+
+function nextAssemblyElectionId(state: SimState): string | null {
+  return (
+    Object.values(state.elections)
+      .filter(
+        (e) =>
+          e.type === "assembly" &&
+          e.status !== "resolved" &&
+          e.status !== "cancelled" &&
+          e.date >= state.currentDate,
+      )
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0]?.id ?? null
+  );
 }
 
 function detectOpenSeats(world: KernelWorld, state: SimState): OpenSeatContest[] {
@@ -29,6 +51,18 @@ function detectOpenSeats(world: KernelWorld, state: SimState): OpenSeatContest[]
         e.date.slice(0, 7) === state.currentDate.slice(0, 7),
     )
     .sort((a, b) => a.id.localeCompare(b.id));
+
+  const countbackFilledThisMonth = new Set(
+    state.history
+      .filter(
+        (e) =>
+          e.type === "ASSEMBLY_CASUAL_VACANCY_FILLED" &&
+          e.date === state.currentDate &&
+          String(e.payload.method ?? "") === "countback",
+      )
+      .map((e) => e.entityIds[0])
+      .filter((id): id is string => typeof id === "string"),
+  );
 
   for (const exit of recentExits) {
     const politicianId = exit.actorIds[0];
@@ -45,21 +79,46 @@ function detectOpenSeats(world: KernelWorld, state: SimState): OpenSeatContest[]
       const office = world.offices[term.officeId];
       if (!office) continue;
       if (office.kind !== "assembly_member" && office.kind !== "governor") continue;
-      // Still treat as open for recruitment even if countback already filled the seat.
       const id = `OPEN_${term.officeId}_${politicianId}_${state.currentDate.slice(0, 7).replace("-", "")}`;
       if (runtime.openSeatContests[id] || found.some((s) => s.id === id)) continue;
       const partyId = state.politicians[politicianId]?.partyId ?? null;
+      const filledByCountback =
+        office.kind === "assembly_member" &&
+        (countbackFilledThisMonth.has(office.id) || officeFilled(state, office.id));
+      const category: OpenSeatCategory = filledByCountback
+        ? "countback"
+        : office.kind === "governor"
+          ? "by_election"
+          : "midterm_exit";
+      const nextElection = nextAssemblyElectionId(state);
       found.push({
         id,
         officeId: term.officeId,
         officeKind: office.kind,
         constituencyId: office.constituencyId ?? null,
         partyId,
-        reason: exit.type === "POLITICIAN_DIED" ? "death" : "retirement",
+        reason:
+          category === "by_election"
+            ? "by_election"
+            : exit.type === "POLITICIAN_DIED"
+              ? "death"
+              : "retirement",
+        category,
         detectedDate: state.currentDate,
-        status: "open",
-        recruitedPoliticianId: null,
-        electionId: null,
+        status: filledByCountback
+          ? "skipped_countback"
+          : officeFilled(state, term.officeId)
+            ? "filled"
+            : "open",
+        recruitedPoliticianId: filledByCountback
+          ? (occupyingTerms(state, term.officeId)[0]?.holderId ?? null)
+          : null,
+        electionId: (() => {
+          const fromCountback = state.history.find(
+            (e) => e.type === "ASSEMBLY_CASUAL_VACANCY_FILLED" && e.entityIds[0] === office.id,
+          )?.entityIds[2];
+          return typeof fromCountback === "string" ? fromCountback : nextElection;
+        })(),
       });
     }
   }
@@ -79,7 +138,25 @@ function detectOpenSeats(world: KernelWorld, state: SimState): OpenSeatContest[]
     )) {
       const holders = occupyingTerms(state, office.id);
       const holder = holders[0]?.holderId;
-      if (!holder) continue;
+      if (!holder) {
+        // Truly vacant seat ahead of election → future open seat / by-election style recruit.
+        const id = `OPEN_VACANT_${election.id}_${office.id}`;
+        if (runtime.openSeatContests[id] || found.some((s) => s.id === id)) continue;
+        found.push({
+          id,
+          officeId: office.id,
+          officeKind: "assembly_member",
+          constituencyId: office.constituencyId ?? null,
+          partyId: null,
+          reason: "upcoming_election",
+          category: "future_open_seat",
+          detectedDate: state.currentDate,
+          status: "open",
+          recruitedPoliticianId: null,
+          electionId: election.id,
+        });
+        continue;
+      }
       const pol = state.politicians[holder];
       if (!pol?.partyId) continue;
       const retiringSoon =
@@ -102,6 +179,7 @@ function detectOpenSeats(world: KernelWorld, state: SimState): OpenSeatContest[]
         constituencyId: office.constituencyId ?? null,
         partyId: pol.partyId,
         reason: "upcoming_election",
+        category: "upcoming_election",
         detectedDate: state.currentDate,
         status: "open",
         recruitedPoliticianId: null,
@@ -113,20 +191,76 @@ function detectOpenSeats(world: KernelWorld, state: SimState): OpenSeatContest[]
   return found;
 }
 
-function recruitScore(world: KernelWorld, state: SimState, politicianId: string): number {
+function ideologyDistance(
+  world: KernelWorld,
+  state: SimState,
+  politicianId: string,
+  partyId: string,
+): number {
+  const profile = getAgentProfile(world, state, politicianId);
+  const partyPos = state.partyStates[partyId]?.publicPlatform?.positions;
+  if (!profile || !partyPos) return 0.5;
+  const axes = [
+    Math.abs((profile.ideology.economic ?? 0) - (partyPos.economy ?? 0)),
+    Math.abs((profile.ideology.social ?? 0) - (partyPos.social_policy ?? 0)),
+    Math.abs((profile.ideology.green ?? 0) - (partyPos.environment ?? 0)),
+  ];
+  return axes.reduce((a, b) => a + b, 0) / axes.length;
+}
+
+function priorCandidacyBoost(state: SimState, politicianId: string): number {
+  let n = 0;
+  for (const election of Object.values(state.elections)) {
+    if (election.assembly?.candidacies[politicianId]) n += 1;
+    if (election.candidates[politicianId]) n += 1;
+  }
+  for (const election of Object.values(state.provincialRuntime.elections ?? {})) {
+    if (election.candidates[politicianId]) n += 1;
+  }
+  return Math.min(0.25, n * 0.08);
+}
+
+function recruitScore(
+  world: KernelWorld,
+  state: SimState,
+  politicianId: string,
+  seat: OpenSeatContest,
+): number {
   const profile = getAgentProfile(world, state, politicianId);
   if (!profile) return 0;
+  const pol = state.politicians[politicianId];
+  const province =
+    seat.officeKind === "governor"
+      ? (world.offices[seat.officeId]?.provinceId ?? null)
+      : seat.constituencyId
+        ? (world.constituencyProvinceShares[seat.constituencyId]
+            ?.slice()
+            .sort((a, b) => b.share - a.share || a.provinceId.localeCompare(b.provinceId))[0]
+            ?.provinceId ?? null)
+        : null;
+  const home = pol?.homeProvinceId ?? world.politicianHomeProvince?.[politicianId] ?? null;
+  const provinceTie = province && home && province === home ? 0.22 : 0;
+  const ideologyFit = seat.partyId
+    ? Math.max(0, 0.28 - ideologyDistance(world, state, politicianId, seat.partyId) * 0.28)
+    : 0;
+  const electoralFit =
+    (profile.skills.campaigning * 0.18 + (profile.traits.ambition ?? 0) * 0.1) *
+    (seat.category === "upcoming_election" || seat.category === "future_open_seat" ? 1.15 : 1);
   return (
-    profile.traits.ambition * 0.35 +
-    profile.skills.campaigning * 0.3 +
-    profile.skills.legislation * 0.2 +
-    profile.traits.partyLoyalty * 0.15
+    profile.traits.ambition * 0.22 +
+    profile.skills.campaigning * 0.2 +
+    profile.skills.legislation * 0.12 +
+    profile.traits.partyLoyalty * 0.12 +
+    provinceTie +
+    ideologyFit +
+    electoralFit +
+    priorCandidacyBoost(state, politicianId)
   );
 }
 
 /**
  * Detect open seats from retiring/resigned incumbents and recruit plausible party candidates.
- * Respects partyLegalStatus / competitivePartiesAllowed.
+ * Countback-filled seats are classified and do not generate phantom recruitment news.
  */
 export function processOpenSeatRecruitmentMonth(
   world: KernelWorld,
@@ -142,6 +276,10 @@ export function processOpenSeatRecruitmentMonth(
 
   for (const seat of detectOpenSeats(world, state)) {
     runtime.openSeatContests[seat.id] = seat;
+    if (seat.category === "countback" || seat.status === "skipped_countback") {
+      // Record for bookkeeping but skip recruit news / phantom open-seat churn.
+      continue;
+    }
     events.push(
       pushHistory(state, {
         date: state.currentDate,
@@ -155,6 +293,7 @@ export function processOpenSeatRecruitmentMonth(
           officeId: seat.officeId,
           partyId: seat.partyId,
           reason: seat.reason,
+          category: seat.category,
           electionId: seat.electionId,
         },
         sourceScheduledEventId: null,
@@ -163,8 +302,29 @@ export function processOpenSeatRecruitmentMonth(
     );
   }
 
+  // Mark occupied open seats as filled.
+  for (const seat of Object.values(runtime.openSeatContests)) {
+    if (
+      seat.status === "open" &&
+      officeFilled(state, seat.officeId) &&
+      seat.category !== "upcoming_election"
+    ) {
+      seat.status = "filled";
+      seat.recruitedPoliticianId =
+        seat.recruitedPoliticianId ?? occupyingTerms(state, seat.officeId)[0]?.holderId ?? null;
+    }
+  }
+
   const open = Object.values(runtime.openSeatContests)
-    .filter((s) => s.status === "open")
+    .filter(
+      (s) =>
+        s.status === "open" &&
+        s.category !== "countback" &&
+        (s.category === "upcoming_election" ||
+          s.category === "future_open_seat" ||
+          s.category === "by_election" ||
+          s.category === "midterm_exit"),
+    )
     .sort((a, b) => a.id.localeCompare(b.id));
 
   for (const seat of open) {
@@ -190,11 +350,16 @@ export function processOpenSeatRecruitmentMonth(
         const alreadyMp = officesOfKind(world, "assembly_member").some((o) =>
           occupyingTerms(state, o.id).some((t) => t.holderId === id),
         );
-        return !alreadyMp || seat.reason === "upcoming_election";
+        return (
+          !alreadyMp ||
+          seat.category === "upcoming_election" ||
+          seat.category === "future_open_seat"
+        );
       })
       .sort(
         (a, b) =>
-          recruitScore(world, state, b) - recruitScore(world, state, a) || a.localeCompare(b),
+          recruitScore(world, state, b, seat) - recruitScore(world, state, a, seat) ||
+          a.localeCompare(b),
       );
 
     if (pool.length === 0) continue;
@@ -203,19 +368,26 @@ export function processOpenSeatRecruitmentMonth(
       Math.floor(rng.float01("npc-decisions") * Math.min(3, pool.length)),
     );
     const recruitId = pool[pickIndex]!;
-    // Prefer top-scoring with light noise via hash when RNG is flat.
     const preferred =
       pool.find(
         (id) =>
-          recruitScore(world, state, id) >= recruitScore(world, state, recruitId) - 0.05 &&
+          recruitScore(world, state, id, seat) >=
+            recruitScore(world, state, recruitId, seat) - 0.05 &&
           stableHash(`${seat.id}:${id}:recruit`) % 100 < 70,
       ) ?? recruitId;
 
     seat.status = "recruited";
     seat.recruitedPoliticianId = preferred;
+    if (!seat.electionId) seat.electionId = nextAssemblyElectionId(state);
     runtime.activityThisMonth.recruitments += 1;
 
-    if (seat.electionId && seat.constituencyId && seat.reason === "upcoming_election") {
+    if (
+      seat.electionId &&
+      seat.constituencyId &&
+      (seat.category === "upcoming_election" ||
+        seat.category === "future_open_seat" ||
+        seat.category === "by_election")
+    ) {
       const filed = fileAssemblyCandidacy(
         state,
         world,
@@ -226,7 +398,10 @@ export function processOpenSeatRecruitmentMonth(
         },
         commandId,
       );
-      if (!("error" in filed)) events.push(...filed.events);
+      if (!("error" in filed)) {
+        events.push(...filed.events);
+        seat.status = "filled";
+      }
     }
 
     events.push(
@@ -243,6 +418,8 @@ export function processOpenSeatRecruitmentMonth(
           partyId: seat.partyId,
           officeId: seat.officeId,
           electionId: seat.electionId,
+          category: seat.category,
+          score: recruitScore(world, state, preferred, seat),
         },
         sourceScheduledEventId: null,
         sourceCommandId: commandId,

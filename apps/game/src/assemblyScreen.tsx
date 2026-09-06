@@ -4,12 +4,13 @@ import {
   billPolicyFit,
   collectPlayerActionableDecisions,
   CONSTITUTIONAL_RULE_IDS,
+  createRngService,
   currentAssemblyMemberIds,
   currentProvisionOption,
   currentLawSource,
   defaultProvisionOptionId,
   estimatedProvisionEffects,
-  getAgentProfile,
+  explainLegislativeVote,
   partyStance,
   factionStance,
   LEGISLATIVE_PROVISIONS,
@@ -251,29 +252,61 @@ function estimateMpBillLean(
   snap: SimState,
   bill: BillState,
   politicianId: string,
-): { lean: MpBillLean; factors: string[]; fit: number } {
-  const pol = snap.politicians[politicianId];
-  const fit = billPolicyFit(world, snap, politicianId, bill);
-  const party = partyStance(snap, pol?.partyId ?? null, bill.id);
-  const faction = factionStance(snap, pol?.factionId ?? null, bill.id);
-  const profile = getAgentProfile(world, snap, politicianId);
-  const loyalty = profile?.traits.partyLoyalty ?? 0.5;
-  let score = fit;
-  if (party === "support") score += 0.25 * loyalty;
-  if (party === "oppose") score -= 0.25 * loyalty;
-  if (faction === "support") score += 0.12;
-  if (faction === "oppose") score -= 0.12;
-  const lean: MpBillLean = score > 0.18 ? "likely_yes" : score < -0.18 ? "likely_no" : "uncertain";
-  const factors: string[] = [];
-  if (Math.abs(fit) >= 0.06) {
-    factors.push(fit > 0 ? "Policy alignment" : "Policy opposition");
+): {
+  lean: MpBillLean;
+  factors: Array<{ label: string; direction: "support" | "oppose" | "neutral"; weight: number }>;
+  fit: number;
+} {
+  // UI prediction uses the same scoring path as NPC floor votes (explainLegislativeVote),
+  // with a forked deterministic RNG so the live simulation stream is not consumed.
+  const rng = createRngService(`assembly-why:${bill.id}:${politicianId}`);
+  if (politicianId === snap.playerPoliticianId) {
+    const fit = billPolicyFit(world, snap, politicianId, bill);
+    const party = partyStance(snap, snap.politicians[politicianId]?.partyId ?? null, bill.id);
+    const factors: Array<{
+      label: string;
+      direction: "support" | "oppose" | "neutral";
+      weight: number;
+    }> = [
+      {
+        label:
+          Math.abs(fit) < 0.06
+            ? "Mixed fit with recorded positions"
+            : fit > 0
+              ? "Policy alignment with recorded positions"
+              : "Policy divergence from recorded positions",
+        direction: Math.abs(fit) < 0.06 ? "neutral" : fit > 0 ? "support" : "oppose",
+        weight: fit,
+      },
+    ];
+    if (party === "support") {
+      factors.push({
+        label: "Party leadership supports bill",
+        direction: "support",
+        weight: 0.25,
+      });
+    } else if (party === "oppose") {
+      factors.push({
+        label: "Party leadership opposes bill",
+        direction: "oppose",
+        weight: -0.25,
+      });
+    }
+    const lean: MpBillLean = fit > 0.18 ? "likely_yes" : fit < -0.18 ? "likely_no" : "uncertain";
+    return { lean, factors, fit };
   }
-  if (party === "support") factors.push("Party support");
-  else if (party === "oppose") factors.push("Party oppose");
-  if (faction === "support") factors.push("Caucus support");
-  else if (faction === "oppose") factors.push("Caucus oppose");
-  if (!factors.length) factors.push("No strong public signals");
-  return { lean, factors, fit };
+  const explanation = explainLegislativeVote(world, snap, politicianId, bill, rng);
+  const lean: MpBillLean =
+    explanation.choice === "yes"
+      ? "likely_yes"
+      : explanation.choice === "no"
+        ? "likely_no"
+        : "uncertain";
+  return {
+    lean,
+    factors: explanation.factors,
+    fit: explanation.score,
+  };
 }
 
 function mpLeanLabel(lean: MpBillLean): string {
@@ -1184,7 +1217,7 @@ export function AssemblyPage(props: {
                           <>
                             <SectionDivider
                               title="Delegation lean"
-                              hint="Public estimate from policy fit and party signals"
+                              hint="Predicted from the same vote engine NPCs use on the floor"
                             />
                             {(() => {
                               const focusParty =
@@ -1205,65 +1238,24 @@ export function AssemblyPage(props: {
                                   memberId,
                                   ...estimateMpBillLean(props.world, props.snap, bill, memberId),
                                 }));
-                              const playerFit = billPolicyFit(
+                              const playerLean = estimateMpBillLean(
                                 props.world,
                                 props.snap,
-                                props.snap.playerPoliticianId,
                                 bill,
+                                props.snap.playerPoliticianId,
                               );
-                              const playerWhy =
-                                Math.abs(playerFit) >= 0.06
-                                  ? playerFit > 0
-                                    ? "Your recorded positions align with this bill's provisions."
-                                    : "Your recorded positions diverge from this bill's provisions."
-                                  : "Your ideological fit with this bill is mixed across provisions.";
                               return (
                                 <>
                                   <WhyPanel
                                     title="Why this bill for you?"
-                                    summary={playerWhy}
-                                    factors={[
-                                      {
-                                        label:
-                                          playerFit >= 0
-                                            ? "Policy alignment with recorded positions"
-                                            : "Policy divergence from recorded positions",
-                                        direction:
-                                          Math.abs(playerFit) < 0.06
-                                            ? "neutral"
-                                            : playerFit > 0
-                                              ? "support"
-                                              : "oppose",
-                                        weight: playerFit,
-                                      },
-                                      ...(partyStance(
-                                        props.snap,
-                                        props.snap.politicians[props.snap.playerPoliticianId]
-                                          ?.partyId ?? null,
-                                        bill.id,
-                                      ) === "support"
-                                        ? [
-                                            {
-                                              label: "Party leadership supports bill",
-                                              direction: "support" as const,
-                                              weight: 0.25,
-                                            },
-                                          ]
-                                        : partyStance(
-                                              props.snap,
-                                              props.snap.politicians[props.snap.playerPoliticianId]
-                                                ?.partyId ?? null,
-                                              bill.id,
-                                            ) === "oppose"
-                                          ? [
-                                              {
-                                                label: "Party leadership opposes bill",
-                                                direction: "oppose" as const,
-                                                weight: -0.25,
-                                              },
-                                            ]
-                                          : []),
-                                    ]}
+                                    summary={
+                                      playerLean.lean === "likely_yes"
+                                        ? "Your recorded positions and party signals lean toward support."
+                                        : playerLean.lean === "likely_no"
+                                          ? "Your recorded positions and party signals lean against."
+                                          : "Signals are mixed; your vote remains yours to cast."
+                                    }
+                                    factors={playerLean.factors}
                                   />
                                   <DataTable dense headers={["Member", "Lean", "Why"]}>
                                     {sample.map((row) => (
@@ -1297,17 +1289,7 @@ export function AssemblyPage(props: {
                                           </StatusBadge>
                                         </td>
                                         <td>
-                                          <WhyPanel
-                                            title="Why?"
-                                            factors={row.factors.map((label) => ({
-                                              label,
-                                              direction: /oppose|resist|against/i.test(label)
-                                                ? ("oppose" as const)
-                                                : /support|align|prefer/i.test(label)
-                                                  ? ("support" as const)
-                                                  : ("neutral" as const),
-                                            }))}
-                                          />
+                                          <WhyPanel title="Why?" factors={row.factors} />
                                         </td>
                                       </tr>
                                     ))}
@@ -2265,6 +2247,20 @@ export function AssemblyPage(props: {
                             Enacted {law.enactedDate} · Sponsor{" "}
                             {politicianDisplayName(props.catalog, law.sponsorId)}
                           </div>
+                          {(() => {
+                            const impl = props.snap.governingRuntime?.implementations?.[law.id];
+                            if (!impl) return null;
+                            const statusLabel = impl.status.replaceAll("_", " ");
+                            return (
+                              <div className="muted">
+                                Implementation: {statusLabel}
+                                {` · ${impl.departmentId}`}
+                                {" · "}
+                                {Math.round(impl.progress * 100)}%
+                                {impl.posture !== "standard" ? ` · ${impl.posture}` : ""}
+                              </div>
+                            );
+                          })()}
                           <div className="muted">
                             {law.policyItems
                               .map((item) => policyItemDisplay(props.catalog, item))
