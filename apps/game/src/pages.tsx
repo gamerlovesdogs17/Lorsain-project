@@ -17,6 +17,7 @@ import {
   publicConstituencyPressures,
   storiesChronological,
   TERENA_WORLD_ID,
+  activeCoalition,
   type CommandResult,
   type KernelWorld,
   type SimEvent,
@@ -66,6 +67,7 @@ import {
 } from "./presentation.js";
 import { decisionDisplayLabel, interruptDisplay } from "./presentation/display.js";
 import { nationalPublicEconomy, regionalPublicEconomy } from "./presentation/economy.js";
+import { EntityLink } from "./ui/entityLink.js";
 import {
   ActivityFeedItem,
   BriefStrip,
@@ -187,6 +189,7 @@ export function GamePages(props: PageProps) {
       snap={props.snap}
       bundle={props.bundle}
       catalog={props.catalog}
+      {...(props.onEntityNavigate ? { onEntityNavigate: props.onEntityNavigate } : {})}
     />
   );
 }
@@ -270,6 +273,29 @@ function Home(props: PageProps) {
     isPublicCrisisStage(crisis.stage),
   ).length;
   const votesDue = decisions.filter((decision) => decision.kind.endsWith("vote")).length;
+  const coalition = activeCoalition(props.snap);
+  const openSeats = Object.values(props.snap.politicsRuntime?.openSeatContests ?? {}).filter(
+    (s) => s.status === "open" || s.status === "recruited",
+  );
+  const openLeadership = Object.values(props.snap.partyContests).filter(
+    (c) => c.type === "party_leadership" && c.status !== "resolved" && c.status !== "cancelled",
+  );
+  const seatCounts: Record<string, number> = {};
+  for (const id of currentAssemblyMemberIds(props.world, props.snap)) {
+    const partyId = props.snap.politicians[id]?.partyId;
+    if (!partyId) continue;
+    seatCounts[partyId] = (seatCounts[partyId] ?? 0) + 1;
+  }
+  const rankedParties = Object.entries(seatCounts).sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  );
+  const governingPartyId = rankedParties[0]?.[0] ?? null;
+  const oppositionPartyId = rankedParties.find(([id]) => id !== governingPartyId)?.[0] ?? null;
+  const oppositionLeaderId = oppositionPartyId
+    ? (props.snap.legislatureRuntime.caucusLeadership[oppositionPartyId]?.floorLeaderId ??
+      props.snap.partyStates[oppositionPartyId]?.leaderId ??
+      null)
+    : null;
   const briefTitle = playerIsPresident
     ? "Presidential briefing"
     : governedProvince
@@ -422,6 +448,53 @@ function Home(props: PageProps) {
 
             {/* === 2. CURRENT POLITICAL STATE === */}
             <SectionDivider title="Current political state" />
+            {(oppositionLeaderId ||
+              coalition ||
+              openSeats.length > 0 ||
+              openLeadership.length > 0) && (
+              <SectionCard title="Political landscape">
+                <dl className="dossier-facts compact">
+                  {oppositionLeaderId ? (
+                    <div>
+                      <dt>Opposition leader</dt>
+                      <dd>
+                        {politicianDisplayName(props.catalog, oppositionLeaderId)}
+                        {oppositionPartyId
+                          ? ` · ${partyDisplayName(props.world, oppositionPartyId, props.snap)}`
+                          : ""}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {coalition ? (
+                    <div>
+                      <dt>Coalition</dt>
+                      <dd>
+                        {coalition.partyIds
+                          .map((id) => partyDisplayName(props.world, id, props.snap))
+                          .join(" · ")}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {openSeats.length > 0 ? (
+                    <div>
+                      <dt>Open seats</dt>
+                      <dd>{openSeats.length} contested or recruiting</dd>
+                    </div>
+                  ) : null}
+                  {openLeadership.length > 0 ? (
+                    <div>
+                      <dt>Leadership contests</dt>
+                      <dd>
+                        {openLeadership
+                          .slice(0, 2)
+                          .map((c) => partyDisplayName(props.world, c.partyId, props.snap))
+                          .join(", ")}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </SectionCard>
+            )}
             <PoliticianProfile
               catalog={props.catalog}
               world={props.world}
@@ -2345,6 +2418,35 @@ function Party(props: PageProps) {
                   : "No active candidacies"}
               </dd>
             </div>
+            <div>
+              <dt>Leadership contest</dt>
+              <dd>
+                {Object.values(props.snap.partyContests).some(
+                  (c) =>
+                    c.partyId === partyId &&
+                    c.type === "party_leadership" &&
+                    c.status !== "resolved" &&
+                    c.status !== "cancelled",
+                )
+                  ? "Open leadership contest"
+                  : runtime?.status === "leadership_vacant"
+                    ? "Leadership vacant"
+                    : "Settled"}
+              </dd>
+            </div>
+            <div>
+              <dt>Lifecycle</dt>
+              <dd>
+                {(() => {
+                  const cool =
+                    partyId != null
+                      ? props.snap.politicsRuntime?.partyLifecycleCooldown?.[partyId]
+                      : undefined;
+                  if (!cool) return "Stable";
+                  return `Recent ${cool.lastKind} (${cool.lastEventDate})`;
+                })()}
+              </dd>
+            </div>
           </dl>
         </SectionCard>
         {recent.length > 0 ? (
@@ -3307,7 +3409,7 @@ function SituationRoom(props: PageProps) {
       />
       <MapDetailLayout
         className="situation-room-workspace"
-        detailVisible={sel != null}
+        detailVisible
         map={
           <TerenaMap
             bundle={props.bundle}
@@ -3331,15 +3433,51 @@ function SituationRoom(props: PageProps) {
         }
         detail={
           sel ? (
-            <div className="situation-province-card">
+            <div className="situation-province-card" data-qa="situation-province-selected">
               <h3>{sel.name}</h3>
+              {mode === "political" ? (
+                <p className="muted situation-legend">
+                  Political layer colors provinces by the sitting Governor&apos;s Party.
+                </p>
+              ) : null}
               <dl className="dossier-facts compact">
                 <div>
                   <dt>Governor</dt>
                   <dd>
-                    {governor ? politicianDisplayName(props.catalog, governor.holderId) : "Vacant"}
+                    {governor && props.onEntityNavigate ? (
+                      <EntityLink
+                        kind="Politician"
+                        id={governor.holderId}
+                        label={politicianDisplayName(props.catalog, governor.holderId)}
+                        onNavigate={props.onEntityNavigate}
+                      />
+                    ) : governor ? (
+                      politicianDisplayName(props.catalog, governor.holderId)
+                    ) : (
+                      "Vacant"
+                    )}
                   </dd>
                 </div>
+                {governor ? (
+                  <div>
+                    <dt>Governor party</dt>
+                    <dd>
+                      {(() => {
+                        const partyId = props.snap.politicians[governor.holderId]?.partyId ?? null;
+                        return props.onEntityNavigate && partyId ? (
+                          <EntityLink
+                            kind="Party"
+                            id={partyId}
+                            label={partyDisplayName(props.world, partyId, props.snap)}
+                            onNavigate={props.onEntityNavigate}
+                          />
+                        ) : (
+                          partyDisplayName(props.world, partyId, props.snap)
+                        );
+                      })()}
+                    </dd>
+                  </div>
+                ) : null}
                 {economy ? (
                   <div>
                     <dt>Economy</dt>
@@ -3374,7 +3512,10 @@ function SituationRoom(props: PageProps) {
               </button>
             </div>
           ) : (
-            <p className="muted">Click a province on the map to view its dossier.</p>
+            <p className="muted" data-qa="situation-province-empty">
+              Click a province on the map to view its dossier. Political coloring shows Governor
+              Party control.
+            </p>
           )
         }
         legend={<MapLegend world={props.world} mode={mode} />}

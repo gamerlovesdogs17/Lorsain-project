@@ -185,6 +185,22 @@ export function PoliticianProfile(props: {
     .slice(-5)
     .reverse();
 
+  const careerAmbition = props.state.politicsRuntime?.careerAmbitions?.[props.politicianId];
+  const ambitionLabel =
+    careerAmbition?.kind === "seek_higher_office"
+      ? "Seeking higher office"
+      : careerAmbition?.kind === "contest_leadership"
+        ? "Contesting party leadership"
+        : careerAmbition?.kind === "accept_cabinet"
+          ? "Open to cabinet service"
+          : careerAmbition?.kind === "retire"
+            ? "Considering retirement"
+            : null;
+  const memories = Object.values(props.state.memories ?? {})
+    .filter((m) => m.ownerId === props.politicianId)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
+    .slice(0, 5);
+
   return (
     <header className="politician-profile dossier">
       <div className="dossier-header">
@@ -245,6 +261,12 @@ export function PoliticianProfile(props: {
                 <dd>{props.standing}</dd>
               </div>
             ) : null}
+            {ambitionLabel ? (
+              <div>
+                <dt>Public ambition</dt>
+                <dd>{ambitionLabel}</dd>
+              </div>
+            ) : null}
           </dl>
         </div>
       </div>
@@ -279,6 +301,24 @@ export function PoliticianProfile(props: {
             <div key={e.id} className="dossier-event-row">
               <time className="muted">{e.date}</time>
               <span>{eventDisplay(props.catalog, props.world, props.state, e)}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {memories.length > 0 ? (
+        <div className="dossier-recent">
+          <div className="kicker">Political memory</div>
+          {memories.map((m) => (
+            <div key={m.id} className="dossier-event-row">
+              <time className="muted">{m.date}</time>
+              <span>
+                {m.kind.replaceAll("_", " ")}
+                {m.tags.includes("alliance")
+                  ? " · alliance"
+                  : m.tags.includes("rivalry")
+                    ? " · rivalry"
+                    : ""}
+              </span>
             </div>
           ))}
         </div>
