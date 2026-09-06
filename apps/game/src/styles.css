@@ -2123,11 +2123,13 @@ select:focus-visible,
 .map-province {
   stroke: rgba(36, 58, 62, 0.5);
   stroke-width: 0.3;
+  vector-effect: non-scaling-stroke;
 }
 
 .map-constituency {
   stroke: rgba(23, 53, 82, 0.23);
   stroke-width: 0.15;
+  vector-effect: non-scaling-stroke;
 }
 
 .map-province:hover,
@@ -2139,7 +2141,9 @@ select:focus-visible,
 .map-province.is-selected,
 .map-constituency.is-selected {
   stroke: #fff;
-  filter: brightness(0.94) drop-shadow(0 0 2px rgba(23, 53, 82, 0.85));
+  stroke-width: 0.45;
+  vector-effect: non-scaling-stroke;
+  filter: brightness(0.94);
 }
 
 .map-election-picker {
@@ -6931,6 +6935,54 @@ button.entity-row:hover,
 *:focus-visible {
   outline: 2px solid var(--accent, #2563eb);
   outline-offset: 2px;
+}
+
+.terena-map,
+.world-map {
+  /* Never let focus chrome use SVG user-space lengths */
+  outline: none !important;
+}
+.terena-map *:focus,
+.terena-map *:focus-visible,
+.world-map *:focus,
+.world-map *:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
+/*
+ * Map SVG hit-targets use role="button" inside a geographic viewBox (degrees).
+ * Global outline lengths resolve in that user space and become enormous rings.
+ * Prefer non-scaling strokes for keyboard focus instead.
+ * Cover both :focus and :focus-visible (programmatic focus / Playwright).
+ */
+.terena-map [role="button"]:focus,
+.terena-map [role="button"]:focus-visible,
+.world-map [role="button"]:focus,
+.world-map [role="button"]:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+.terena-map .map-province:focus,
+.terena-map .map-province:focus-visible,
+.terena-map .map-constituency:focus,
+.terena-map .map-constituency:focus-visible,
+.world-map .map-country:focus,
+.world-map .map-country:focus-visible {
+  stroke: var(--navy);
+  stroke-width: 0.55;
+  vector-effect: non-scaling-stroke;
+}
+.terena-map .map-city circle:focus,
+.terena-map .map-city circle:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  stroke: var(--focus-ring, #f3bd4c);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
 }
 
 /* ===================== PHASE 11.5 ===================== */

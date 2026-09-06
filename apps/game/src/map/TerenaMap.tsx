@@ -183,9 +183,10 @@ export function TerenaMap(props: {
             data-id={p.id}
             fill={props.fillFor?.(p, "province") ?? "#e7efe6"}
             onClick={() => select({ id: p.id, kind: "province", name: p.name })}
-            tabIndex={0}
+            tabIndex={-1}
             role="button"
             aria-label={p.name}
+            style={{ outline: "none" }}
             onKeyDown={(event) =>
               selectOnKey({ id: p.id, kind: "province", name: p.name }, event.key)
             }
@@ -207,9 +208,10 @@ export function TerenaMap(props: {
                 data-id={c.id}
                 fill={props.fillFor?.(c, "constituency") ?? "transparent"}
                 onClick={() => select({ id: c.id, kind: "constituency", name: c.name })}
-                tabIndex={0}
+                tabIndex={-1}
                 role="button"
                 aria-label={c.name}
+                style={{ outline: "none" }}
                 onKeyDown={(event) =>
                   selectOnKey({ id: c.id, kind: "constituency", name: c.name }, event.key)
                 }
@@ -230,9 +232,10 @@ export function TerenaMap(props: {
               cy={city.y}
               r={prepared.transform.width * 0.0045}
               onClick={() => select({ id: city.id, kind: "city", name: city.name })}
-              tabIndex={0}
+              tabIndex={-1}
               role="button"
               aria-label={city.name}
+              style={{ outline: "none" }}
               onKeyDown={(event) =>
                 selectOnKey({ id: city.id, kind: "city", name: city.name }, event.key)
               }

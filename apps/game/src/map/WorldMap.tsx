@@ -96,9 +96,10 @@ export function WorldMap(props: {
             data-id={p.id}
             fill={props.fillFor?.(p.id) ?? "#e3e8e0"}
             onClick={() => props.onSelect?.(p.id)}
-            tabIndex={0}
+            tabIndex={-1}
             role="button"
             aria-label={p.name ?? "Unnamed country"}
+            style={{ outline: "none" }}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") props.onSelect?.(p.id);
             }}
