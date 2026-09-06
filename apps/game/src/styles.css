@@ -6932,3 +6932,67 @@ button.entity-row:hover,
   outline: 2px solid var(--accent, #2563eb);
   outline-offset: 2px;
 }
+
+/* ===================== PHASE 11.5 ===================== */
+
+/* Density preference */
+[data-density="compact"] .page { font-size: 0.82rem; line-height: 1.35; }
+[data-density="compact"] .card { padding: 0.6rem; }
+[data-density="compact"] .decision-row { padding: 0.3rem 0; }
+[data-density="compact"] .entity-row { padding: 0.35rem 0.5rem; }
+[data-density="compact"] .section-divider { margin-block: 0.6rem; }
+[data-density="comfortable"] .page { font-size: 0.92rem; }
+[data-density="comfortable"] .card { padding: 1rem; }
+
+/* Politician dossier profile */
+.politician-profile.dossier { display: flex; flex-direction: column; gap: 0.6rem; }
+.dossier-header { display: flex; gap: 1rem; align-items: flex-start; }
+.dossier-identity { flex: 1; min-width: 0; }
+.dossier-facts.compact { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 0.3rem; font-size: 0.78rem; }
+.dossier-facts.compact div { display: flex; gap: 0.3rem; }
+.dossier-facts.compact dt { color: var(--muted); font-weight: 500; }
+.dossier-facts.compact dt::after { content: ":"; }
+.dossier-facts.compact dd { margin: 0; }
+.chip-deceased { background: var(--signal-soft); color: var(--signal); border-color: var(--signal); }
+
+/* Dossier timeline */
+.dossier-timeline { border-left: 2px solid var(--line); padding-left: 0.8rem; margin: 0.4rem 0; }
+.dossier-timeline .kicker { margin-bottom: 0.3rem; }
+.timeline-items { display: flex; flex-direction: column; gap: 0.25rem; }
+.timeline-item { display: flex; gap: 0.6rem; font-size: 0.78rem; align-items: baseline; }
+.timeline-item.win::before { content: "●"; color: var(--ok); font-size: 0.6rem; }
+.timeline-item.loss::before { content: "○"; color: var(--muted); font-size: 0.6rem; }
+.timeline-item.active::before { content: "●"; color: var(--accent); font-size: 0.6rem; }
+.timeline-date { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3ch; }
+
+/* Dossier recent events */
+.dossier-recent { margin-top: 0.3rem; }
+.dossier-recent .kicker { margin-bottom: 0.2rem; }
+.dossier-event-row { display: flex; gap: 0.5rem; font-size: 0.78rem; padding: 0.15rem 0; }
+.dossier-event-row time { color: var(--muted); min-width: 7ch; }
+
+/* Party dossier */
+.party-dossier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.8rem; margin: 0.8rem 0; }
+.party-banner.legal-warn { border-left-width: 4px; background: var(--warn-soft); }
+.party-banner.legal-danger { border-left-width: 4px; background: var(--signal-soft); }
+
+/* Province dossier inline */
+.province-dossier-inline { margin-top: 0.4rem; }
+.province-dossier-inline .kicker { margin-top: 0.5rem; margin-bottom: 0.2rem; }
+
+/* Situation room */
+.situation-room-workspace { min-height: 400px; }
+.situation-province-card { padding: 0.5rem; }
+.situation-province-card h3 { margin: 0 0 0.4rem; font-family: var(--serif); }
+
+/* Cross-links */
+.cross-link-row { display: flex; gap: 0.3rem; align-items: baseline; font-size: 0.78rem; padding: 0.15rem 0; }
+.cross-link-icon { font-size: 0.7rem; opacity: 0.6; }
+.constitution-cross-links { margin: 0.5rem 0; padding: 0.4rem 0; border-top: 1px solid var(--line); }
+.constitution-cross-links .kicker { margin-bottom: 0.2rem; }
+
+/* Home calm state */
+.home-calm-state { padding: 0.5rem 0; }
+
+/* Improved empty states */
+.empty-state { color: var(--muted); font-style: italic; padding: 0.5rem 0; }

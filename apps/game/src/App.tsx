@@ -44,6 +44,21 @@ import {
 } from "./ui/shell.js";
 import { StatusBadge } from "./ui/kit.js";
 import { PoliticianAvatar, PoliticianCard } from "./ui/politician.js";
+import {
+  emptyNavHistory,
+  navPush,
+  navBack,
+  navForward,
+  navCurrent,
+  canGoBack,
+  canGoForward,
+  categorizeAttention,
+  sortCategorizedAttention,
+  shouldShowMonthSummary,
+  type NavHistory,
+  type CategorizedAttention,
+} from "./navigation.js";
+import { entityScreen, type EntityLinkKind } from "./ui/entityLink.js";
 
 const QA_SCREENS = new Set<Screen>([
   "home",
@@ -61,6 +76,7 @@ const QA_SCREENS = new Set<Screen>([
   "foreign",
   "terena",
   "archive",
+  "situation",
 ]);
 
 function monthsBetween(startDate: string, endDate: string): number {
@@ -176,6 +192,11 @@ export default function App() {
     }
   });
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [navHistory, setNavHistory] = useState<NavHistory>(
+    emptyNavHistory({ screen: initialRoute.screen, globalFocus: initialRoute.focus }),
+  );
+  const [monthSummaryOpen, setMonthSummaryOpen] = useState(false);
+  const [lastMonthDate, setLastMonthDate] = useState<string | null>(null);
   const qaBooted = useRef(false);
   const feedback = useCommandFeedback();
 
@@ -455,6 +476,43 @@ export default function App() {
         screen: "archive",
       });
     }
+    if (world.constitutionalDocument) {
+      for (const article of world.constitutionalDocument.articles) {
+        entries.push({
+          id: article.id,
+          kind: "Article",
+          label: `Article ${article.number}: ${article.title}`,
+          detail: `${article.sections.length} section${article.sections.length === 1 ? "" : "s"} · Constitution`,
+          screen: "assembly",
+        });
+        for (const section of article.sections) {
+          for (const clause of section.clauses) {
+            entries.push({
+              id: clause.id,
+              kind: "Clause",
+              label: `Art. ${article.number} §${section.number}.${clause.number}`,
+              detail: clause.text.slice(0, 80) + (clause.text.length > 80 ? "…" : ""),
+              screen: "assembly",
+            });
+          }
+        }
+      }
+    }
+    for (const [officeId, office] of Object.entries(world.offices)) {
+      entries.push({
+        id: officeId,
+        kind: "Office",
+        label: office.title,
+        detail: `${office.kind.replace(/_/g, " ")} office`,
+        screen: "executive",
+      });
+    }
+    const seen = new Set<string>();
+    for (const provisionStack of Object.values(snap.legislatureRuntime.provisionHistory)) {
+      const current = provisionStack[provisionStack.length - 1];
+      if (!current || seen.has(current.lawId)) continue;
+      seen.add(current.lawId);
+    }
     return entries;
   }, [world, snap, catalog]);
 
@@ -486,10 +544,38 @@ export default function App() {
     setSnap(next.getSnapshot());
   }
 
+  function navigateTo(nextScreen: Screen, focus: { kind: string; id: string } | null) {
+    setScreen(nextScreen);
+    setGlobalFocus(focus);
+    setNavHistory((h) => navPush(h, { screen: nextScreen, globalFocus: focus }));
+  }
+
   function selectSearchEntry(entry: ShellSearchEntry) {
-    setGlobalFocus(entry.kind === "Page" ? null : { kind: entry.kind, id: entry.id });
+    const focus = entry.kind === "Page" ? null : { kind: entry.kind, id: entry.id };
     if (entry.kind === "Bill") setSelectedBill(entry.id);
+    navigateTo(entry.screen, focus);
+  }
+
+  function handleEntityNavigate(kind: EntityLinkKind, id: string) {
+    const scr = entityScreen(kind) as Screen;
+    if (kind === "Bill") setSelectedBill(id);
+    navigateTo(scr, { kind, id });
+  }
+
+  function goBack() {
+    const next = navBack(navHistory);
+    setNavHistory(next);
+    const entry = navCurrent(next);
     setScreen(entry.screen);
+    setGlobalFocus(entry.globalFocus);
+  }
+
+  function goForward() {
+    const next = navForward(navHistory);
+    setNavHistory(next);
+    const entry = navCurrent(next);
+    setScreen(entry.screen);
+    setGlobalFocus(entry.globalFocus);
   }
 
   function startGame(politicianId: string) {
@@ -661,9 +747,16 @@ export default function App() {
       try {
         if (event.data.ok) {
           const restored = restoreSimulation(event.data.save, world);
-          setTurnEvents(restored.getSnapshot().history.slice(before));
+          const newEvents = restored.getSnapshot().history.slice(before);
+          setTurnEvents(newEvents);
           refresh(restored);
           if (!event.data.result.ok) feedback.setNotice(event.data.result.error.message);
+          const prevDate = snap?.currentDate ?? "";
+          const nextDate = restored.getSnapshot().currentDate;
+          if (prevDate.slice(0, 7) !== nextDate.slice(0, 7) && shouldShowMonthSummary(newEvents)) {
+            setLastMonthDate(prevDate);
+            setMonthSummaryOpen(true);
+          }
         } else {
           feedback.setNotice(event.data.message);
         }
@@ -1260,13 +1353,23 @@ export default function App() {
       ? [`${monthsRemaining} month${monthsRemaining === 1 ? "" : "s"} to election`]
       : []),
   ];
+  const categorizedItems: CategorizedAttention[] = sortCategorizedAttention(
+    attentionItems.map((item) =>
+      categorizeAttention(item, Boolean(interrupt?.requiresResolution)),
+    ),
+  );
   const lastSavedLabel = lastSavedAt
     ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
     : "Autosave runs before every turn and national count.";
+
+  const inspectorFocus = globalFocus
+    ? searchEntries.find((e) => e.kind === globalFocus.kind && e.id === globalFocus.id) ?? null
+    : null;
+
   return (
     <GameShell
       screen={screen}
-      onNavigate={setScreen}
+      onNavigate={(s: Screen) => navigateTo(s, null)}
       date={snap.currentDate}
       playerLine={`${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`}
       decisionCount={attentionItems.length}
@@ -1277,6 +1380,18 @@ export default function App() {
       endTurnDisabled={Boolean(interrupt?.requiresResolution)}
       onEndTurn={() => void endTurn()}
       onSave={() => void saveGame()}
+      canGoBack={canGoBack(navHistory)}
+      canGoForward={canGoForward(navHistory)}
+      onBack={goBack}
+      onForward={goForward}
+      categorizedItems={categorizedItems}
+      inspectorFocus={inspectorFocus}
+      world={world}
+      snap={snap}
+      catalog={catalog}
+      onEntityNavigate={handleEntityNavigate}
+      monthSummaryOpen={monthSummaryOpen}
+      onCloseMonthSummary={() => setMonthSummaryOpen(false)}
       onExport={() => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`)}
       searchEntries={searchEntries}
       onSearchSelect={selectSearchEntry}
@@ -1340,6 +1455,7 @@ export default function App() {
         askConfirm={feedback.askConfirm}
         globalFocus={globalFocus}
         setGlobalFocus={setGlobalFocus}
+        onEntityNavigate={handleEntityNavigate}
       />
       {import.meta.env.DEV ? (
         <output

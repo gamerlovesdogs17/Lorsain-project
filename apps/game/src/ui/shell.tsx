@@ -1,5 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Screen } from "../pages.js";
+import type { KernelWorld, SimState } from "@lorsain/sim";
+import type { PresentationCatalog } from "../presentation.js";
+import { politicianDisplayName, partyDisplayName, partyColor } from "../presentation.js";
+import type { CategorizedAttention } from "../navigation.js";
+import { notificationLevelLabel, notificationLevelTone } from "../navigation.js";
+import type { EntityLinkKind } from "./entityLink.js";
+import { entityScreen } from "./entityLink.js";
 
 type NavItem = { id: Screen; label: string; icon?: string };
 type NavGroup = { title: string; items: NavItem[] };
@@ -44,6 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "executive", label: "President & Cabinet", icon: "★" },
       { id: "economy", label: "Economy", icon: "↗" },
       { id: "terena", label: "Provinces & Map", icon: "◎" },
+      { id: "situation", label: "Situation Room", icon: "🗺" },
     ],
   },
   {
@@ -85,6 +93,18 @@ export function GameShell(props: {
   onToggleWatch: (entry: ShellSearchEntry) => void;
   statusSegments: string[];
   lastSavedLabel: string;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
+  onBack?: () => void;
+  onForward?: () => void;
+  categorizedItems?: CategorizedAttention[];
+  inspectorFocus?: ShellSearchEntry | null;
+  world?: KernelWorld;
+  snap?: SimState;
+  catalog?: PresentationCatalog;
+  onEntityNavigate?: (kind: EntityLinkKind, id: string) => void;
+  monthSummaryOpen?: boolean;
+  onCloseMonthSummary?: () => void;
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -93,6 +113,7 @@ export function GameShell(props: {
   const [searchQuery, setSearchQuery] = useState("");
   const [attentionOpen, setAttentionOpen] = useState(false);
   const [briefingOpen, setBriefingOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -217,6 +238,30 @@ export function GameShell(props: {
             </div>
           </div>
           <div className="topbar-actions">
+            {props.onBack ? (
+              <button
+                type="button"
+                className="nav-history-btn"
+                disabled={!props.canGoBack}
+                onClick={props.onBack}
+                aria-label="Go back"
+                title="Back"
+              >
+                ←
+              </button>
+            ) : null}
+            {props.onForward ? (
+              <button
+                type="button"
+                className="nav-history-btn"
+                disabled={!props.canGoForward}
+                onClick={props.onForward}
+                aria-label="Go forward"
+                title="Forward"
+              >
+                →
+              </button>
+            ) : null}
             <button
               type="button"
               className="global-search-button"
@@ -246,9 +291,25 @@ export function GameShell(props: {
                 onClick={() => {
                   setBriefingOpen((open) => !open);
                   setAttentionOpen(false);
+                  setInspectorOpen(false);
                 }}
               >
                 This turn <b>{props.briefingItems.length}</b>
+              </button>
+            ) : null}
+            {props.inspectorFocus ? (
+              <button
+                type="button"
+                className={`inspector-button${inspectorOpen ? " active" : ""}`}
+                aria-expanded={inspectorOpen}
+                onClick={() => {
+                  setInspectorOpen((open) => !open);
+                  setAttentionOpen(false);
+                  setBriefingOpen(false);
+                }}
+                title={`Inspect ${props.inspectorFocus.kind}: ${props.inspectorFocus.label}`}
+              >
+                ◎ <span className="inspector-label">{props.inspectorFocus.kind}</span>
               </button>
             ) : null}
             {props.busy ? (
@@ -306,7 +367,7 @@ export function GameShell(props: {
             </div>
           </div>
         </header>
-        {attentionOpen || briefingOpen ? (
+        {attentionOpen || briefingOpen || inspectorOpen || props.monthSummaryOpen ? (
           <button
             type="button"
             className="shell-drawer-backdrop"
@@ -314,6 +375,8 @@ export function GameShell(props: {
             onClick={() => {
               setAttentionOpen(false);
               setBriefingOpen(false);
+              setInspectorOpen(false);
+              props.onCloseMonthSummary?.();
             }}
           />
         ) : null}
@@ -328,8 +391,39 @@ export function GameShell(props: {
                 ×
               </button>
             </div>
-            {props.attentionItems.length === 0 ? (
+            {(props.categorizedItems ?? props.attentionItems).length === 0 ? (
               <p className="empty-state">Nothing currently requires your decision.</p>
+            ) : props.categorizedItems ? (
+              (() => {
+                const grouped = new Map<string, CategorizedAttention[]>();
+                for (const ci of props.categorizedItems) {
+                  const list = grouped.get(ci.level) ?? [];
+                  list.push(ci);
+                  grouped.set(ci.level, list);
+                }
+                return [...grouped.entries()].map(([level, items]) => (
+                  <div key={level} className="attention-level-group">
+                    <div className={`attention-level-header level-${level.toLowerCase().replace(/_/g, "-")}`}>
+                      {notificationLevelLabel(level as CategorizedAttention["level"])}
+                      <span className="attention-level-count">{items.length}</span>
+                    </div>
+                    {items.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`attention-item ${notificationLevelTone(item.level)}`}
+                        onClick={() => {
+                          props.onNavigate(item.screen);
+                          setAttentionOpen(false);
+                        }}
+                      >
+                        <strong>{item.label}</strong>
+                        {item.detail ? <span>{item.detail}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                ));
+              })()
             ) : (
               [...props.attentionItems]
                 .sort((a, b) => {
@@ -383,6 +477,68 @@ export function GameShell(props: {
                 {item.watched ? <b>Following</b> : null}
               </div>
             ))}
+          </aside>
+        ) : null}
+        {inspectorOpen && props.inspectorFocus && props.world && props.snap && props.catalog ? (
+          <aside className="political-drawer inspector-drawer" aria-label="Entity inspector">
+            <div className="political-drawer-head">
+              <div>
+                <span className="kicker">{props.inspectorFocus.kind}</span>
+                <h2>{props.inspectorFocus.label}</h2>
+              </div>
+              <button type="button" className="btn quiet" onClick={() => setInspectorOpen(false)}>
+                ×
+              </button>
+            </div>
+            <EntityInspectorContent
+              entry={props.inspectorFocus}
+              world={props.world}
+              snap={props.snap}
+              catalog={props.catalog}
+            />
+            <button
+              type="button"
+              className="btn secondary inspector-open-full"
+              onClick={() => {
+                props.onNavigate(props.inspectorFocus!.screen);
+                setInspectorOpen(false);
+              }}
+            >
+              Open full view →
+            </button>
+          </aside>
+        ) : null}
+        {props.monthSummaryOpen && props.briefingItems.length > 0 ? (
+          <aside className="political-drawer month-summary-drawer" aria-label="Month summary briefing">
+            <div className="political-drawer-head">
+              <div>
+                <span className="kicker">Monthly briefing</span>
+                <h2>Month in review</h2>
+              </div>
+              <button type="button" className="btn quiet" onClick={() => props.onCloseMonthSummary?.()}>
+                ×
+              </button>
+            </div>
+            <p className="month-summary-intro">
+              Significant events occurred this month that may affect your political position.
+            </p>
+            {props.briefingItems.slice(0, 8).map((item) => (
+              <div
+                key={item.id}
+                className={`briefing-drawer-item${item.watched ? " watched" : ""}`}
+              >
+                <time>{item.date}</time>
+                <span>{item.label}</span>
+                {item.watched ? <b>Following</b> : null}
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn month-summary-dismiss"
+              onClick={() => props.onCloseMonthSummary?.()}
+            >
+              Continue
+            </button>
           </aside>
         ) : null}
         {searchOpen ? (
@@ -486,6 +642,136 @@ export function GameShell(props: {
           </button>
         </nav>
       </div>
+    </div>
+  );
+}
+
+function EntityInspectorContent(props: {
+  entry: ShellSearchEntry;
+  world: KernelWorld;
+  snap: SimState;
+  catalog: PresentationCatalog;
+}) {
+  const { entry, world, snap, catalog } = props;
+
+  if (entry.kind === "Politician") {
+    const pol = snap.politicians[entry.id];
+    if (!pol) return <p className="muted">Politician not found in current state.</p>;
+    const party = pol.partyId ? partyDisplayName(world, pol.partyId, snap) : "Independent";
+    const home = pol.homeProvinceId
+      ? (catalog.places.get(pol.homeProvinceId)?.name ?? pol.homeProvinceId)
+      : (catalog.places.get(world.politicianHomeProvince[pol.id] ?? "")?.name ?? null);
+    const activeTerm = Object.values(snap.officeTerms).find(
+      (t) => t.holderId === pol.id && (t.status === "active" || t.status === "suspended"),
+    );
+    const office = activeTerm ? (world.offices[activeTerm.officeId]?.title ?? null) : null;
+    return (
+      <div className="inspector-body">
+        <dl className="inspector-facts">
+          <div><dt>Office</dt><dd>{office ?? "Private citizen"}</dd></div>
+          <div><dt>Party</dt><dd>{party}</dd></div>
+          {home ? <div><dt>Province</dt><dd>{home}</dd></div> : null}
+          <div><dt>Status</dt><dd>{pol.alive ? "Active" : "Deceased"}</dd></div>
+        </dl>
+      </div>
+    );
+  }
+
+  if (entry.kind === "Party") {
+    const def = world.partyDefinitions[entry.id];
+    if (!def) return <p className="muted">Party not found.</p>;
+    const partyState = snap.partyStates[entry.id] ?? null;
+    const seats = Object.values(snap.officeTerms).filter(
+      (t) =>
+        t.status === "active" &&
+        snap.politicians[t.holderId]?.partyId === entry.id &&
+        world.offices[t.officeId]?.kind === "assembly_member",
+    ).length;
+    const leaderId = partyState?.leaderId ?? null;
+    const leader = leaderId
+      ? politicianDisplayName(catalog, leaderId)
+      : "No leader";
+    return (
+      <div className="inspector-body">
+        <dl className="inspector-facts">
+          <div><dt>Leader</dt><dd>{leader}</dd></div>
+          <div><dt>Assembly seats</dt><dd>{seats}</dd></div>
+          <div><dt>Color</dt><dd><span className="inspector-color-swatch" style={{ background: partyColor(world, entry.id) }} /></dd></div>
+        </dl>
+      </div>
+    );
+  }
+
+  if (entry.kind === "Bill") {
+    const bill = snap.legislatureRuntime.bills[entry.id];
+    if (!bill) return <p className="muted">Bill not found.</p>;
+    return (
+      <div className="inspector-body">
+        <dl className="inspector-facts">
+          <div><dt>Title</dt><dd>{bill.title}</dd></div>
+          <div><dt>Status</dt><dd>{bill.status.replace(/_/g, " ")}</dd></div>
+          <div><dt>Sponsor</dt><dd>{politicianDisplayName(catalog, bill.sponsorId)}</dd></div>
+          {bill.policyItems?.length ? (
+            <div><dt>Policy items</dt><dd>{bill.policyItems.length}</dd></div>
+          ) : null}
+        </dl>
+      </div>
+    );
+  }
+
+  if (entry.kind === "Law") {
+    const law = snap.legislatureRuntime.enactedLaws[entry.id];
+    if (!law) return <p className="muted">Law not found.</p>;
+    return (
+      <div className="inspector-body">
+        <dl className="inspector-facts">
+          <div><dt>Title</dt><dd>{law.title}</dd></div>
+          <div><dt>Enacted</dt><dd>{law.enactedDate}</dd></div>
+          <div><dt>In force</dt><dd>{law.operative ? "Yes" : "No"}</dd></div>
+        </dl>
+      </div>
+    );
+  }
+
+  if (entry.kind === "Province") {
+    const province = catalog.places.get(entry.id);
+    const governor = Object.values(snap.officeTerms).find(
+      (t) =>
+        t.status === "active" &&
+        world.offices[t.officeId]?.kind === "governor" &&
+        world.offices[t.officeId]?.provinceId === entry.id,
+    );
+    const govName = governor ? politicianDisplayName(catalog, governor.holderId) : "Vacant";
+    return (
+      <div className="inspector-body">
+        <dl className="inspector-facts">
+          <div><dt>Province</dt><dd>{province?.name ?? entry.id}</dd></div>
+          <div><dt>Governor</dt><dd>{govName}</dd></div>
+        </dl>
+      </div>
+    );
+  }
+
+  if (entry.kind === "Court case") {
+    const cc = snap.constitutionalRuntime.courtCases[entry.id];
+    if (!cc) return <p className="muted">Case not found.</p>;
+    return (
+      <div className="inspector-body">
+        <dl className="inspector-facts">
+          <div><dt>Question</dt><dd>{cc.constitutionalQuestion}</dd></div>
+          <div><dt>Status</dt><dd>{cc.status.replace(/_/g, " ")}</dd></div>
+          {cc.filedDate ? <div><dt>Filed</dt><dd>{cc.filedDate}</dd></div> : null}
+        </dl>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inspector-body">
+      <dl className="inspector-facts">
+        <div><dt>Type</dt><dd>{entry.kind}</dd></div>
+        <div><dt>Detail</dt><dd>{entry.detail}</dd></div>
+      </dl>
     </div>
   );
 }

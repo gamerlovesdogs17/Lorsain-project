@@ -82,7 +82,7 @@ import {
   StatusBadge,
   WorkLayout,
 } from "./ui/kit.js";
-import { PoliticianProfile, PoliticianCard } from "./ui/politician.js";
+import { PoliticianProfile, PoliticianCard, legalStatusTone } from "./ui/politician.js";
 import { MapLegend } from "./ui/mapLegend.js";
 import { TerenaMap, type MapMode, type MapSelection } from "./map/TerenaMap.js";
 import { constituencySittingSeatBreakdown, mapFillFor } from "./map/fills.js";
@@ -102,7 +102,8 @@ export type Screen =
   | "news"
   | "foreign"
   | "terena"
-  | "archive";
+  | "archive"
+  | "situation";
 
 export type Figure = {
   id: string;
@@ -149,6 +150,7 @@ type PageProps = {
   }) => void;
   globalFocus: { kind: string; id: string } | null;
   setGlobalFocus: (focus: { kind: string; id: string } | null) => void;
+  onEntityNavigate?: (kind: import("./ui/entityLink.js").EntityLinkKind, id: string) => void;
 };
 
 const PARTY_PLATFORM_LABELS: Record<PartyPlatformIssue, string> = {
@@ -178,6 +180,7 @@ export function GamePages(props: PageProps) {
   if (screen === "news") return <NewsPage {...props} />;
   if (screen === "foreign") return <ForeignAffairsPage {...props} />;
   if (screen === "terena") return <Terena {...props} />;
+  if (screen === "situation") return <SituationRoom {...props} />;
   return (
     <HistoryPage
       world={props.world}
@@ -353,24 +356,11 @@ function Home(props: PageProps) {
               </div>
               <BriefStrip items={briefItems} />
             </div>
-            <PoliticianProfile
-              catalog={props.catalog}
-              world={props.world}
-              state={props.snap}
-              politicianId={playerId}
-              office={props.offices[0] ?? "Private citizen"}
-              party={partyDisplayName(props.world, runtime?.partyId ?? null, props.snap)}
-              faction={factionDisplayName(props.world, runtime?.factionId ?? null)}
-              {...(figure?.home ? { home: figure.home } : {})}
-              standing={`Public standing: ${standingLabel}`}
-              {...((figure?.notes ?? figure?.display_summary)
-                ? { biography: figure?.notes ?? figure?.display_summary }
-                : {})}
-            />
           </>
         }
         main={
           <>
+            {/* === 1. WHAT REQUIRES ATTENTION === */}
             {interrupt ? (
               <div className="briefing-urgent alert">
                 <strong>Urgent</strong>
@@ -388,17 +378,6 @@ function Home(props: PageProps) {
                 ))}
               </div>
             ) : null}
-            <div className="lead-block">
-              {lead ? (
-                <LeadStory
-                  kicker="Lead story"
-                  headline={eventDisplay(props.catalog, props.world, props.snap, lead)}
-                  date={lead.date}
-                />
-              ) : (
-                <EmptyState>No major developments this month.</EmptyState>
-              )}
-            </div>
             {terenaPublicCrisis ? (
               <div className="briefing-urgent alert">
                 <strong>International crisis</strong>
@@ -429,6 +408,42 @@ function Home(props: PageProps) {
                 </p>
               </div>
             ) : null}
+            {!interrupt && decisions.length === 0 && !terenaPublicCrisis && !(playerIsPresident && warTrigger) ? (
+              <div className="home-calm-state">
+                <p className="muted">Nothing currently requires your immediate action. Review developments and plan ahead.</p>
+              </div>
+            ) : null}
+
+            {/* === 2. CURRENT POLITICAL STATE === */}
+            <SectionDivider title="Current political state" />
+            <PoliticianProfile
+              catalog={props.catalog}
+              world={props.world}
+              state={props.snap}
+              politicianId={playerId}
+              office={props.offices[0] ?? "Private citizen"}
+              party={partyDisplayName(props.world, runtime?.partyId ?? null, props.snap)}
+              faction={factionDisplayName(props.world, runtime?.factionId ?? null)}
+              {...(figure?.home ? { home: figure.home } : {})}
+              standing={`Public standing: ${standingLabel}`}
+              {...((figure?.notes ?? figure?.display_summary)
+                ? { biography: figure?.notes ?? figure?.display_summary }
+                : {})}
+              onEntityNavigate={props.onEntityNavigate ?? undefined}
+            />
+
+            {/* === 3. RECENT MAJOR DEVELOPMENTS === */}
+            <div className="lead-block">
+              {lead ? (
+                <LeadStory
+                  kicker="Lead story"
+                  headline={eventDisplay(props.catalog, props.world, props.snap, lead)}
+                  date={lead.date}
+                />
+              ) : (
+                <EmptyState>No major developments this month.</EmptyState>
+              )}
+            </div>
             <SectionDivider title="Recent activity" />
             {feed.length === 0 ? <EmptyState>Quiet month in public records.</EmptyState> : null}
             {feed.map((e) => (
@@ -461,8 +476,9 @@ function Home(props: PageProps) {
         }
         rail={
           <>
-            <SectionDivider title="Calendar" />
-            {upcoming.length === 0 ? <EmptyState>No pending elections.</EmptyState> : null}
+            {/* === 4. UPCOMING EVENTS / CALENDAR === */}
+            <SectionDivider title="Upcoming elections & calendar" />
+            {upcoming.length === 0 ? <EmptyState>No pending elections on the calendar.</EmptyState> : null}
             {upcoming.map((el) => (
               <div key={el.id} className="decision-row">
                 <div>
@@ -471,6 +487,15 @@ function Home(props: PageProps) {
                 </div>
               </div>
             ))}
+            {upcoming.length > 0 ? (
+              <button
+                type="button"
+                className="btn secondary btn-sm"
+                onClick={() => props.onEntityNavigate?.("Election" as import("./ui/entityLink.js").EntityLinkKind, upcoming[0]!.id)}
+              >
+                Open elections calendar →
+              </button>
+            ) : null}
             <SectionDivider title="Campaign" />
             {props.campaign ? (
               <div>
@@ -2246,12 +2271,12 @@ function Party(props: PageProps) {
         })}
       </div>
       {party ? (
-        <div className="party-banner" style={{ borderLeftColor: partyColor(props.world, partyId) }}>
+        <div className={`party-banner legal-${legalStatusTone(partyLegalStatus(props.snap, partyId) as string)}`} style={{ borderLeftColor: partyColor(props.world, partyId) }}>
           <StatusBadge tone="ok">
             {caucus} of {totalSeats} Assembly seats
           </StatusBadge>
           <StatusBadge>{position}</StatusBadge>
-          <StatusBadge>
+          <StatusBadge tone={legalStatusTone(partyLegalStatus(props.snap, partyId) as string) === "danger" ? "warn" : "idle"}>
             {partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}
           </StatusBadge>
         </div>
@@ -2267,6 +2292,27 @@ function Party(props: PageProps) {
       ) : (
         <EmptyState>Leadership is vacant.</EmptyState>
       )}
+      <div className="party-dossier-grid">
+        <SectionCard title="Party identity">
+          <dl className="dossier-facts compact">
+            <div><dt>Legal status</dt><dd>{partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}</dd></div>
+            <div><dt>Assembly seats</dt><dd>{caucus} of {totalSeats}</dd></div>
+            <div><dt>Political position</dt><dd>{position}</dd></div>
+            <div><dt>Election status</dt><dd>{Object.values(props.snap.elections).some((e) => e.status !== "resolved" && Object.keys(e.candidates).some((cid) => props.snap.politicians[cid]?.partyId === partyId)) ? "Contesting upcoming election" : "No active candidacies"}</dd></div>
+          </dl>
+        </SectionCard>
+        {recent.length > 0 ? (
+          <SectionCard title="Recent party history">
+            {recent.slice(0, 5).map((e) => (
+              <ActivityFeedItem
+                key={e.id}
+                date={e.date}
+                text={eventDisplay(props.catalog, props.world, props.snap, e)}
+              />
+            ))}
+          </SectionCard>
+        ) : null}
+      </div>
       <SectionCard title="Public platform">
         {runtime?.publicPlatform ? (
           <>
@@ -3014,6 +3060,49 @@ function Terena(props: PageProps) {
                       ? "Province"
                       : "City · public geographic label"}
                 </div>
+                {sel.kind === "province" ? (
+                  <div className="province-dossier-inline">
+                    <dl className="dossier-facts compact">
+                      {(() => {
+                        const gov = Object.values(props.snap.officeTerms).find(
+                          (t) =>
+                            t.status === "active" &&
+                            props.world.offices[t.officeId]?.kind === "governor" &&
+                            props.world.offices[t.officeId]?.provinceId === sel.id,
+                        );
+                        return <div><dt>Governor</dt><dd>{gov ? politicianDisplayName(props.catalog, gov.holderId) : "Vacant"}</dd></div>;
+                      })()}
+                      {regionPublicEcon ? <div><dt>Economy</dt><dd>{regionPublicEcon.summary}</dd></div> : null}
+                      {(() => {
+                        const asm = props.snap.provincialRuntime.assemblies[sel.id];
+                        return asm ? <div><dt>Provincial assembly</dt><dd>{asm.seatCount} seats · next election {asm.nextElectionDate}</dd></div> : null;
+                      })()}
+                      {(() => {
+                        const recentProvElections = [
+                          ...Object.values(props.snap.provincialRuntime.elections).filter((e) => e.provinceId === sel.id),
+                          ...Object.values(props.snap.provincialRuntime.assemblyElections).filter((e) => e.provinceId === sel.id),
+                        ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2);
+                        return recentProvElections.length > 0 ? (
+                          <div><dt>Recent elections</dt><dd>{recentProvElections.map((e) => `${e.date} ${e.status.replace(/_/g, " ")}`).join(" · ")}</dd></div>
+                        ) : null;
+                      })()}
+                      {(() => {
+                        const pressureId = props.snap.provincialRuntime.provinces[sel.id]?.activePressureId;
+                        return pressureId ? (
+                          <div><dt>Active pressure</dt><dd>{pressureId.replace(/_/g, " ")}</dd></div>
+                        ) : null;
+                      })()}
+                    </dl>
+                    {props.snap.history.filter((e) => e.visibility === "public" && e.entityIds.includes(sel.id)).slice(-3).reverse().length > 0 ? (
+                      <>
+                        <div className="kicker">Recent province news</div>
+                        {props.snap.history.filter((e) => e.visibility === "public" && e.entityIds.includes(sel.id)).slice(-3).reverse().map((e) => (
+                          <ActivityFeedItem key={e.id} date={e.date} text={eventDisplay(props.catalog, props.world, props.snap, e)} />
+                        ))}
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
                 {org != null ? <div>Your Ground Game: {groundGameStrength(org)}/100</div> : null}
                 {mode === "political" && sel.kind === "constituency"
                   ? constituencySittingSeatBreakdown(props.world, props.snap, sel.id).map((row) => (
@@ -3043,6 +3132,119 @@ function Terena(props: PageProps) {
           Hovering {hoverSel.name}; click or tap to keep its details open.
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * PHASE 11.5 MAP EXPERIMENT — Situation Room
+ * A standalone map-centric screen. Revertible: remove this function,
+ * the "situation" Screen union member, the route in GamePages,
+ * the QA_SCREENS entry, and the NAV_GROUPS entry.
+ */
+function SituationRoom(props: PageProps) {
+  const [mode, setMode] = useState<MapMode>("political");
+  const [sel, setSel] = useState<MapSelection | null>(null);
+  const provinceIds = props.world.provinceIds;
+  const economy = sel?.kind === "province" ? regionalPublicEconomy(props.snap, sel.id) : null;
+  const governor = sel?.kind === "province"
+    ? Object.values(props.snap.officeTerms).find(
+        (t) =>
+          t.status === "active" &&
+          props.world.offices[t.officeId]?.kind === "governor" &&
+          props.world.offices[t.officeId]?.provinceId === sel.id,
+      )
+    : null;
+  const provAssembly = sel?.kind === "province"
+    ? props.snap.provincialRuntime.assemblies[sel.id]
+    : null;
+  const partyControl = sel?.kind === "province"
+    ? (() => {
+        const members = Object.values(props.snap.officeTerms).filter(
+          (t) =>
+            t.status === "active" &&
+            props.world.offices[t.officeId]?.kind === "assembly_member" &&
+            (props.snap.politicians[t.holderId]?.homeProvinceId === sel.id ||
+              props.world.politicianHomeProvince[t.holderId] === sel.id),
+        );
+        const counts = new Map<string, number>();
+        for (const t of members) {
+          const party = props.snap.politicians[t.holderId]?.partyId ?? "independent";
+          counts.set(party, (counts.get(party) ?? 0) + 1);
+        }
+        return [...counts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([id, seats]) => `${partyDisplayName(props.world, id === "independent" ? null : id, props.snap)} ${seats}`);
+      })()
+    : [];
+
+  return (
+    <div>
+      <PageHeader
+        kicker="Situation room"
+        title="Terena at a glance"
+        subtitle="Map-centric overview — click a province for its dossier. This is an experimental view."
+        actions={
+          <button type="button" className="btn secondary" onClick={() => props.onEntityNavigate?.("Province" as import("./ui/entityLink.js").EntityLinkKind, provinceIds[0] ?? "")}>
+            Full provinces →
+          </button>
+        }
+      />
+      <TabBar
+        tabs={[
+          { id: "political", label: "Political" },
+          { id: "economy", label: "Economy" },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
+      <MapDetailLayout
+        className="situation-room-workspace"
+        detailVisible={sel != null}
+        map={
+          <TerenaMap
+            bundle={props.bundle}
+            mode={mode}
+            selectedId={sel?.id ?? null}
+            fillFor={(feature, kind) => mapFillFor(mode, props.world, props.snap, feature, kind, props.campaign?.organizationByConstituency, props.campaign?.organizationByProvince)}
+            showConstituencies={false}
+            onSelect={setSel}
+            tooltipFor={(s) => <strong>{s.name}</strong>}
+          />
+        }
+        detail={
+          sel ? (
+            <div className="situation-province-card">
+              <h3>{sel.name}</h3>
+              <dl className="dossier-facts compact">
+                <div><dt>Governor</dt><dd>{governor ? politicianDisplayName(props.catalog, governor.holderId) : "Vacant"}</dd></div>
+                {economy ? <div><dt>Economy</dt><dd>{economy.summary}</dd></div> : null}
+                {provAssembly ? <div><dt>Provincial assembly</dt><dd>{provAssembly.seatCount} seats</dd></div> : null}
+                {partyControl.length > 0 ? <div><dt>MP representation</dt><dd>{partyControl.join(" · ")}</dd></div> : null}
+              </dl>
+              <button
+                type="button"
+                className="btn secondary btn-sm"
+                onClick={() => {
+                  props.setGlobalFocus({ kind: "Province", id: sel.id });
+                  props.onEntityNavigate?.("Province" as import("./ui/entityLink.js").EntityLinkKind, sel.id);
+                }}
+              >
+                Open province dossier →
+              </button>
+            </div>
+          ) : (
+            <p className="muted">Click a province on the map to view its dossier.</p>
+          )
+        }
+        legend={
+          <MapLegend
+            world={props.world}
+            mode={mode}
+          />
+        }
+      />
     </div>
   );
 }
