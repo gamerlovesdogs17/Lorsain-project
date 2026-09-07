@@ -1,11 +1,27 @@
 ﻿import { useEffect, useState } from "react";
 import {
+  activeCaucusesForParty,
+  addMonths,
+  ALLOCATION_BUCKETS,
+  CAMPAIGN_STRATEGY_CATALOG,
+  countActiveCaucuses,
   currentAssemblyMemberIds,
+  getCampaignStrategy,
+  getPartyPriority,
+  getPartyRules,
   isDeclaredContestCandidate,
+  ISSUE_EMPHASIS_LEVELS,
+  leadershipStability,
+  listPartyPriorities,
+  normalizeSupportAllocations,
   PARTY_PLATFORM_ISSUES,
   partyLegalStatus,
   partyPlatformLabel,
+  PLATFORM_POLICY_OPTIONS,
+  type AllocationBucketId,
+  type CaucusGrowthStrategy,
   type CommandResult,
+  type IssueEmphasisLevel,
   type KernelWorld,
   type PartyPlatformIssue,
   type SimState,
@@ -48,6 +64,26 @@ const PARTY_PLATFORM_LABELS: Record<PartyPlatformIssue, string> = {
   foreign_policy: "Foreign policy",
 };
 
+const CAUCUS_GROWTH_OPTIONS: CaucusGrowthStrategy[] = [
+  "recruit_members",
+  "recruit_mps",
+  "win_committee",
+  "win_leadership",
+  "influence_platform",
+  "back_primaries",
+  "provincial_base",
+];
+
+const ALLOCATION_BUCKET_IDS = Object.keys(ALLOCATION_BUCKETS) as AllocationBucketId[];
+
+function titleCaseWords(value: string): string {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function stabilityLabel(value: string): string {
+  return titleCaseWords(value);
+}
+
 type PartyTab = "overview" | "leadership" | "caucuses" | "platform" | "organization" | "history";
 
 export type PartyPageProps = {
@@ -76,13 +112,13 @@ export function PartyPage(props: PartyPageProps) {
   const [selectedFactionId, setSelectedFactionId] = useState<string | null>(
     props.globalFocus?.kind === "Caucus" ? props.globalFocus.id : null,
   );
-  const [priorityDraft, setPriorityDraft] = useState("");
-  const [positionIssue, setPositionIssue] = useState<PartyPlatformIssue>("economy");
+  const [priorityPick, setPriorityPick] = useState("");
+  const [plankIssue, setPlankIssue] = useState<string>("labor");
+  const [plankOption, setPlankOption] = useState("");
+  const [liveBillId, setLiveBillId] = useState("");
   const [campaignStrategyDraft, setCampaignStrategyDraft] = useState("persuasion");
-  const [supportTarget, setSupportTarget] = useState("national");
-  const [supportShare, setSupportShare] = useState("0.5");
-  const [coalitionPartnerId, setCoalitionPartnerId] = useState("");
-  const [endorseCandidateId, setEndorseCandidateId] = useState("");
+  const [allocationDraft, setAllocationDraft] = useState<Record<string, number>>({});
+  const [endorseContestFilter, setEndorseContestFilter] = useState<string>("all");
   const [disciplineTargetId, setDisciplineTargetId] = useState("");
   const [disciplineKind, setDisciplineKind] = useState<"warning" | "censure" | "suspend_support">(
     "warning",
@@ -90,6 +126,10 @@ export function PartyPage(props: PartyPageProps) {
   const [partyTab, setPartyTab] = useState<PartyTab>("overview");
   const [caucusPriorityDraft, setCaucusPriorityDraft] = useState("");
   const [caucusEndorseId, setCaucusEndorseId] = useState("");
+  const [caucusPrimaryEndorseId, setCaucusPrimaryEndorseId] = useState("");
+  const [caucusAllianceId, setCaucusAllianceId] = useState("");
+  const [caucusGrowthDraft, setCaucusGrowthDraft] =
+    useState<CaucusGrowthStrategy>("recruit_members");
   useEffect(() => {
     if (props.globalFocus?.kind === "Party" && props.world.partyDefinitions[props.globalFocus.id]) {
       setSelectedPartyId(props.globalFocus.id);
@@ -609,9 +649,14 @@ export function PartyPage(props: PartyPageProps) {
     : [];
   const currentPriorities = partyId ? (partyOrg?.priorities?.[partyId] ?? []) : [];
   const currentStrategy = partyId ? (partyOrg?.campaignStrategies?.[partyId] ?? "") : "";
-  const currentPosition =
-    partyId && positionIssue ? (partyOrg?.positions?.[partyId]?.[positionIssue] ?? null) : null;
+  const issueEmphasis = partyId ? (partyOrg?.issueEmphasis?.[partyId] ?? {}) : {};
+  const platformPlanks = partyId ? (partyOrg?.platformPlanks?.[partyId] ?? {}) : {};
   const nationalCommittee = partyId ? (partyOrg?.nationalCommittee?.[partyId] ?? []) : [];
+  const pendingCommitteeVotes = partyId
+    ? Object.values(partyOrg?.pendingCommitteeVotes ?? {}).filter(
+        (vote) => vote.partyId === partyId && vote.status === "pending",
+      )
+    : [];
   const committeeVotes = partyId
     ? props.snap.history
         .filter((e) => e.type === "PARTY_COMMITTEE_VOTE" && e.payload.partyId === partyId)
@@ -625,26 +670,114 @@ export function PartyPage(props: PartyPageProps) {
     : null;
   const chairAssumed = partyOfficers?.chair?.assumedDate ?? null;
   const isNationalTreasurer = partyOfficers?.treasurer?.politicianId === playerId;
-  const caucusRows = (party?.factionIds ?? [])
-    .map((fid) => {
-      const row = props.snap.caucusRuntime?.caucuses[fid];
-      const chair = props.snap.factionStates[fid]?.chairId ?? row?.leaderId ?? null;
-      return {
-        fid,
-        name: factionDisplayName(props.world, fid),
-        membershipPct: Math.round((row?.membershipShare ?? 0) * 100),
-        mpPct: Math.round((row?.assemblyShare ?? 0) * 100),
-        institutionalPct: Math.round((row?.institutionalInfluence ?? 0) * 100),
-        leaderId: chair,
-        stance: row?.stanceTowardChair ?? "cooperative",
-        row,
-      };
-    })
-    .sort((a, b) => b.membershipPct - a.membershipPct || a.name.localeCompare(b.name));
-  const conflictCaucuses = caucusRows.filter(
+  const partyRules = partyId ? getPartyRules(props.snap, props.world, partyId) : null;
+  const chairStability = partyId ? leadershipStability(props.snap, partyId) : null;
+  const activeCaucusCount = partyId ? countActiveCaucuses(props.snap, partyId) : 0;
+  const liveFloorBills = Object.values(props.snap.legislatureRuntime?.bills ?? {})
+    .filter(
+      (bill) =>
+        bill.status === "floor_scheduled" ||
+        bill.status === "repassage_scheduled" ||
+        bill.status === "sent_to_president",
+    )
+    .sort((a, b) => a.title.localeCompare(b.title))
+    .slice(0, 8);
+  const supportAllocations = partyId ? (partyOrg?.supportAllocations?.[partyId] ?? {}) : {};
+  useEffect(() => {
+    if (!partyId) {
+      setAllocationDraft({});
+      return;
+    }
+    const seeded: Record<string, number> = {};
+    for (const id of ALLOCATION_BUCKET_IDS) {
+      seeded[id] = Number(supportAllocations[id] ?? 0);
+    }
+    setAllocationDraft(normalizeSupportAllocations(seeded));
+  }, [partyId, props.snap.currentDate, supportAllocations]);
+  useEffect(() => {
+    if (currentStrategy && CAMPAIGN_STRATEGY_CATALOG[currentStrategy]) {
+      setCampaignStrategyDraft(currentStrategy);
+    }
+  }, [currentStrategy]);
+  const caucusRows = partyId
+    ? activeCaucusesForParty(props.snap, partyId)
+        .map((row) => {
+          const fid = row.factionId;
+          const chair = props.snap.factionStates[fid]?.chairId ?? row.leaderId ?? null;
+          return {
+            fid,
+            name: factionDisplayName(props.world, fid),
+            membershipPct: Math.round((row.partyMemberSupport ?? 0) * 100),
+            mpPct: Math.round((row.assemblyShare ?? 0) * 100),
+            institutionalPct: Math.round((row.institutionalInfluence ?? 0) * 100),
+            leaderId: chair,
+            stance: row.stanceTowardChair ?? "cooperative",
+            growthStrategy: row.growthStrategy ?? "recruit_members",
+            row,
+          };
+        })
+        .sort((a, b) => b.membershipPct - a.membershipPct || a.name.localeCompare(b.name))
+    : [];
+  const unalignedShares = partyId
+    ? props.snap.caucusRuntime?.unalignedByParty?.[partyId]
+    : undefined;
+  const supportingCaucuses = caucusRows.filter(
+    (c) => c.stance === "loyal" || c.stance === "cooperative",
+  );
+  const opposingCaucuses = caucusRows.filter(
     (c) => c.stance === "critical" || c.stance === "oppositional",
   );
   const biggestCaucuses = caucusRows.slice(0, 3);
+  const termEndDate =
+    chairAssumed && partyRules && partyRules.termMonths > 0
+      ? addMonths(chairAssumed, partyRules.termMonths)
+      : null;
+  const nextChairElectionLabel = openChairElection
+    ? `Open now · ${openChairElection.candidates.length} candidates`
+    : termEndDate
+      ? `Scheduled around ${termEndDate}`
+      : partyRules?.termMonths === 0
+        ? "Indefinite until vacancy or challenge"
+        : "Not scheduled";
+  const playerLedCaucus = caucusRows.find((c) => c.leaderId === playerId) ?? null;
+  const activePrimaryCandidates = contests
+    .filter(
+      (c) =>
+        c.status !== "resolved" &&
+        c.status !== "cancelled" &&
+        (c.type === "presidential_nomination" || c.type === "party_leadership"),
+    )
+    .flatMap((c) =>
+      Object.values(c.entries)
+        .filter((entry) => entry.status === "declared" || entry.status === "qualified")
+        .map((entry) => ({
+          contest: c,
+          entry,
+        })),
+    );
+  const chairElectionCandidates = openChairElection?.candidates ?? [];
+  const endorsementCandidates = contests
+    .filter((c) => c.status !== "resolved" && c.status !== "cancelled")
+    .flatMap((c) =>
+      Object.values(c.entries)
+        .filter((entry) => entry.status === "declared" || entry.status === "qualified")
+        .map((entry) => ({ contest: c, entry })),
+    )
+    .filter((row) => endorseContestFilter === "all" || row.contest.type === endorseContestFilter);
+  const metaFunds =
+    partyId && partyOrg?.metadata
+      ? (partyOrg.metadata[`funds_${partyId}`] ??
+        partyOrg.metadata[`party_funds_${partyId}`] ??
+        partyOrg.metadata.funds)
+      : undefined;
+  const metaReserves =
+    partyId && partyOrg?.metadata
+      ? (partyOrg.metadata[`reserves_${partyId}`] ??
+        partyOrg.metadata[`party_reserves_${partyId}`] ??
+        partyOrg.metadata.reserves)
+      : undefined;
+  const budgetRecommendation =
+    partyId && partyOrg?.metadata ? partyOrg.metadata[`budget_recommend_${partyId}`] : undefined;
 
   return (
     <div className="party-page">
@@ -732,21 +865,20 @@ export function PartyPage(props: PartyPageProps) {
           <BriefStrip
             items={[
               {
-                label: "Priorities",
-                value: currentPriorities.slice(0, 3).join(" · ") || "None set",
+                label: "Active caucuses",
+                value: activeCaucusCount,
               },
               {
-                label: "Internal conflict",
-                value:
-                  conflictCaucuses.length === 0
-                    ? "Quiet"
-                    : `${conflictCaucuses.length} caucus${conflictCaucuses.length === 1 ? "" : "es"} critical`,
+                label: "Chair stability",
+                value: chairStability ? stabilityLabel(chairStability) : "—",
               },
               {
-                label: "Delegation",
-                value: caucusLeadership?.floorLeaderId
-                  ? politicianDisplayName(props.catalog, caucusLeadership.floorLeaderId)
-                  : "Floor leader vacant",
+                label: "Term",
+                value: chairAssumed
+                  ? termEndDate
+                    ? `${chairAssumed} → ${termEndDate}`
+                    : `Since ${chairAssumed}`
+                  : "Vacant",
               },
               {
                 label: "Seats",
@@ -755,10 +887,14 @@ export function PartyPage(props: PartyPageProps) {
             ]}
           />
           <SectionCard title="Biggest caucuses">
+            <p className="muted small">{activeCaucusCount} active caucuses</p>
             {biggestCaucuses.length === 0 ? (
-              <EmptyState>No caucus shares recorded yet.</EmptyState>
+              <EmptyState>No active caucuses recorded yet.</EmptyState>
             ) : (
-              <DataTable dense headers={["Caucus", "Membership", "MPs", "Stance"]}>
+              <DataTable
+                dense
+                headers={["Caucus", "Party members", "MPs", "Institutional", "Stance"]}
+              >
                 {biggestCaucuses.map((c) => (
                   <tr key={c.fid}>
                     <td>
@@ -775,6 +911,7 @@ export function PartyPage(props: PartyPageProps) {
                     </td>
                     <td>{c.membershipPct}%</td>
                     <td>{c.mpPct}%</td>
+                    <td>{c.institutionalPct}%</td>
                     <td>{c.stance}</td>
                   </tr>
                 ))}
@@ -901,409 +1038,962 @@ export function PartyPage(props: PartyPageProps) {
 
       {partyTab === "leadership" ? (
         <>
-          {partyId && props.snap.partyOrgRuntime?.officers?.[partyId] ? (
-            <SectionCard title="Party organization (national)">
-              <dl className="dossier-facts compact">
+          <div data-qa="party-leadership">
+            <SectionCard title="National Chair">
+              {partyOfficers?.chair?.politicianId ? (
+                <PoliticianCard
+                  catalog={props.catalog}
+                  world={props.world}
+                  state={props.snap}
+                  politicianId={partyOfficers.chair.politicianId}
+                  office="National Chair"
+                />
+              ) : (
+                <EmptyState>National Chair is vacant.</EmptyState>
+              )}
+              <BriefStrip
+                items={[
+                  {
+                    label: "Term",
+                    value: chairAssumed
+                      ? termEndDate
+                        ? `${chairAssumed} → ${termEndDate}`
+                        : `Since ${chairAssumed}`
+                      : "—",
+                  },
+                  { label: "Next election", value: nextChairElectionLabel },
+                  {
+                    label: "Stability",
+                    value: chairStability ? stabilityLabel(chairStability) : "—",
+                  },
+                  {
+                    label: "Method",
+                    value: partyRules ? titleCaseWords(partyRules.chairElectionMethod) : "—",
+                  },
+                ]}
+              />
+              <div className="row" style={{ gap: "1.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
                 <div>
-                  <dt>National Chair</dt>
-                  <dd>
-                    {props.snap.partyOrgRuntime.officers[partyId]?.chair?.politicianId
-                      ? politicianDisplayName(
-                          props.catalog,
-                          props.snap.partyOrgRuntime.officers[partyId]!.chair!.politicianId,
-                        )
-                      : "Vacant"}
-                  </dd>
+                  <div className="muted small">Supporting caucuses</div>
+                  <div>
+                    {supportingCaucuses.length === 0
+                      ? "None clearly aligned"
+                      : supportingCaucuses
+                          .slice(0, 4)
+                          .map((c) => c.name)
+                          .join(" · ")}
+                  </div>
                 </div>
                 <div>
-                  <dt>Vice Chair</dt>
-                  <dd>
-                    {props.snap.partyOrgRuntime.officers[partyId]?.vice_chair?.politicianId
-                      ? politicianDisplayName(
-                          props.catalog,
-                          props.snap.partyOrgRuntime.officers[partyId]!.vice_chair!.politicianId,
-                        )
-                      : "Vacant"}
-                  </dd>
+                  <div className="muted small">Opposing caucuses</div>
+                  <div>
+                    {opposingCaucuses.length === 0
+                      ? "No open rebellion"
+                      : opposingCaucuses
+                          .slice(0, 4)
+                          .map((c) => c.name)
+                          .join(" · ")}
+                  </div>
                 </div>
-                <div>
-                  <dt>Treasurer</dt>
-                  <dd>
-                    {props.snap.partyOrgRuntime.officers[partyId]?.treasurer?.politicianId
-                      ? politicianDisplayName(
-                          props.catalog,
-                          props.snap.partyOrgRuntime.officers[partyId]!.treasurer!.politicianId,
-                        )
-                      : "Vacant"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Priorities</dt>
-                  <dd>
-                    {(props.snap.partyOrgRuntime.priorities?.[partyId] ?? [])
-                      .slice(0, 3)
-                      .join(" · ") || "None set"}
-                  </dd>
-                </div>
-              </dl>
-              <p className="muted small">
-                National Chair leads the Party organization. Assembly Delegation leadership (floor
-                leader / whip) is a separate institution elected by sitting MPs.
+              </div>
+              <p className="muted small" style={{ marginTop: "0.5rem" }}>
+                National Chair leads the party organization. Assembly Delegation leadership is a
+                separate institution elected by sitting MPs.
               </p>
+              {(isNationalViceChair || isNationalTreasurer) && !isNationalChair ? (
+                <p className="muted small">
+                  {isNationalViceChair
+                    ? "You hold the Vice Chair seat — you may act for the Chair on organization business when substituting."
+                    : null}
+                  {isNationalTreasurer
+                    ? " You hold the Treasurer seat — budget recommendation and resource allocation are your workspace."
+                    : null}
+                </p>
+              ) : null}
+            </SectionCard>
+          </div>
+
+          <div data-qa="structured-priorities">
+            <SectionCard title="Current leadership agenda">
+              {currentPriorities.length === 0 ? (
+                <EmptyState>No structured priorities set.</EmptyState>
+              ) : (
+                <ol style={{ margin: "0 0 0.75rem", paddingLeft: "1.25rem" }}>
+                  {currentPriorities.slice(0, 5).map((id, index) => {
+                    const def = getPartyPriority(id);
+                    return (
+                      <li key={`${id}-${index}`} style={{ marginBottom: "0.45rem" }}>
+                        <strong>{def?.label ?? titleCaseWords(id)}</strong>
+                        {def?.effectsHint ? (
+                          <div className="muted small">{def.effectsHint}</div>
+                        ) : null}
+                        {showNationalChairWorkspace ? (
+                          <div
+                            className="row"
+                            style={{ gap: "0.35rem", flexWrap: "wrap", marginTop: "0.25rem" }}
+                          >
+                            <button
+                              type="button"
+                              className="btn secondary btn-sm"
+                              disabled={index === 0}
+                              onClick={() => {
+                                const next = [...currentPriorities];
+                                const tmp = next[index - 1]!;
+                                next[index - 1] = next[index]!;
+                                next[index] = tmp;
+                                run({
+                                  type: "SET_PARTY_PRIORITIES",
+                                  partyId: partyId!,
+                                  priorities: next,
+                                });
+                              }}
+                            >
+                              Up
+                            </button>
+                            <button
+                              type="button"
+                              className="btn secondary btn-sm"
+                              disabled={index >= currentPriorities.length - 1}
+                              onClick={() => {
+                                const next = [...currentPriorities];
+                                const tmp = next[index + 1]!;
+                                next[index + 1] = next[index]!;
+                                next[index] = tmp;
+                                run({
+                                  type: "SET_PARTY_PRIORITIES",
+                                  partyId: partyId!,
+                                  priorities: next,
+                                });
+                              }}
+                            >
+                              Down
+                            </button>
+                            <button
+                              type="button"
+                              className="btn danger quiet btn-sm"
+                              onClick={() => {
+                                const next = currentPriorities.filter((_, i) => i !== index);
+                                run({
+                                  type: "SET_PARTY_PRIORITIES",
+                                  partyId: partyId!,
+                                  priorities: next,
+                                });
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+              {showNationalChairWorkspace && partyId ? (
+                <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                  <select
+                    value={priorityPick}
+                    onChange={(event) => setPriorityPick(event.target.value)}
+                  >
+                    <option value="">Add priority from catalog…</option>
+                    {listPartyPriorities()
+                      .filter((def) => !currentPriorities.includes(def.id))
+                      .map((def) => (
+                        <option key={def.id} value={def.id}>
+                          {def.label} ({def.kind})
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={!priorityPick || currentPriorities.length >= 5}
+                    onClick={() => {
+                      if (!priorityPick) return;
+                      const next = [...currentPriorities, priorityPick].slice(0, 5);
+                      run({ type: "SET_PARTY_PRIORITIES", partyId, priorities: next });
+                      setPriorityPick("");
+                    }}
+                  >
+                    Add to agenda
+                  </button>
+                </div>
+              ) : null}
+            </SectionCard>
+          </div>
+
+          {(pendingCommitteeVotes.length > 0 || openChairElection) && partyId ? (
+            <SectionCard title="Action required">
+              {pendingCommitteeVotes.map((vote) => (
+                <div key={vote.id} className="decision-row" style={{ marginBottom: "0.5rem" }}>
+                  <div>
+                    <strong>{titleCaseWords(vote.proposalKind)}</strong>
+                    <div className="muted small">
+                      Pending since {vote.createdDate} · NPC lean {vote.npcYes} yes / {vote.npcNo}{" "}
+                      no / {vote.npcAbstain} abstain
+                    </div>
+                  </div>
+                  {partyId === playerPartyId ? (
+                    <div className="row" style={{ gap: "0.35rem" }}>
+                      {(["yes", "no", "abstain"] as const).map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={() =>
+                            run({ type: "CAST_NATIONAL_COMMITTEE_VOTE", voteId: vote.id, choice })
+                          }
+                        >
+                          {choice}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+              {openChairElection ? (
+                <EntityRow
+                  title="Chair election open"
+                  meta={`Stage ${titleCaseWords(openChairElection.stage)} · ${openChairElection.candidates.length} candidates · opened ${openChairElection.openedDate}`}
+                  status={<StatusBadge tone="warn">Open</StatusBadge>}
+                />
+              ) : null}
             </SectionCard>
           ) : null}
 
           {showNationalChairWorkspace && partyId ? (
-            <SectionCard title="National Chair workspace">
-              <p className="muted">
-                Extra-parliamentary party powers. These commands do not set Assembly Delegation whip
-                lines or floor strategy — those live under the Caucuses tab · Assembly Delegation.
-              </p>
-              <SectionDivider title="Priorities" hint="Ordered list (comma-separated)" />
-              <div
-                className="row"
-                style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}
-              >
-                <input
-                  type="text"
-                  value={priorityDraft}
-                  placeholder={
-                    currentPriorities.length > 0
-                      ? currentPriorities.join(", ")
-                      : "housing, healthcare, jobs"
-                  }
-                  onChange={(event) => setPriorityDraft(event.target.value)}
-                  style={{ minWidth: "16rem", flex: 1 }}
-                />
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => {
-                    const priorities = priorityDraft
-                      .split(",")
-                      .map((part) => part.trim())
-                      .filter(Boolean);
-                    if (priorities.length === 0) return;
-                    run({ type: "SET_PARTY_PRIORITIES", partyId, priorities });
-                    setPriorityDraft("");
-                  }}
-                >
-                  Set priorities
-                </button>
-              </div>
-              {currentPriorities.length > 0 ? (
-                <p className="muted small">Current: {currentPriorities.join(" · ")}</p>
-              ) : null}
+            <>
+              <SectionCard title="Issue emphasis">
+                <p className="muted small">
+                  Messaging weight per platform issue — not a floor stance on legislation.
+                </p>
+                <DataTable dense headers={["Issue", "Emphasis"]}>
+                  {PARTY_PLATFORM_ISSUES.map((issue) => {
+                    const level = (issueEmphasis[issue] ?? "medium") as IssueEmphasisLevel;
+                    return (
+                      <tr key={issue}>
+                        <td>{PARTY_PLATFORM_LABELS[issue]}</td>
+                        <td>
+                          <div className="row" style={{ gap: "0.3rem", flexWrap: "wrap" }}>
+                            {ISSUE_EMPHASIS_LEVELS.map((opt) => (
+                              <button
+                                key={opt}
+                                type="button"
+                                className={`btn btn-sm${level === opt ? "" : " secondary"}`}
+                                onClick={() =>
+                                  run({
+                                    type: "SET_ISSUE_EMPHASIS",
+                                    partyId,
+                                    issueId: issue,
+                                    level: opt,
+                                  })
+                                }
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </DataTable>
+              </SectionCard>
 
-              <SectionDivider title="Official position" hint="Public stance on a platform issue" />
-              <div
-                className="row"
-                style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}
-              >
-                <select
-                  value={positionIssue}
-                  onChange={(event) => setPositionIssue(event.target.value as PartyPlatformIssue)}
-                >
-                  {PARTY_PLATFORM_ISSUES.map((issue) => (
-                    <option key={issue} value={issue}>
-                      {PARTY_PLATFORM_LABELS[issue]}
-                    </option>
-                  ))}
-                </select>
-                {(["support", "oppose", "neutral"] as const).map((stance) => (
+              <SectionCard title="Platform planks">
+                <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                  <select
+                    value={plankIssue}
+                    onChange={(event) => {
+                      setPlankIssue(event.target.value);
+                      setPlankOption("");
+                    }}
+                  >
+                    {Object.keys(PLATFORM_POLICY_OPTIONS).map((issue) => (
+                      <option key={issue} value={issue}>
+                        {PARTY_PLATFORM_LABELS[issue as PartyPlatformIssue] ??
+                          titleCaseWords(issue)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={plankOption || (PLATFORM_POLICY_OPTIONS[plankIssue]?.[0]?.id ?? "")}
+                    onChange={(event) => setPlankOption(event.target.value)}
+                  >
+                    {(PLATFORM_POLICY_OPTIONS[plankIssue] ?? []).map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                   <button
-                    key={stance}
                     type="button"
-                    className={`btn btn-sm${currentPosition === stance ? "" : " secondary"}`}
+                    className="btn"
+                    onClick={() => {
+                      const optionId = plankOption || PLATFORM_POLICY_OPTIONS[plankIssue]?.[0]?.id;
+                      if (!optionId) return;
+                      run({
+                        type: "PROPOSE_PLATFORM_PLANK",
+                        partyId,
+                        issueId: plankIssue,
+                        optionId,
+                      });
+                    }}
+                  >
+                    Propose plank
+                  </button>
+                </div>
+                {Object.keys(platformPlanks).length > 0 ? (
+                  <ul className="muted small" style={{ marginTop: "0.5rem" }}>
+                    {Object.entries(platformPlanks).map(([issue, optionId]) => {
+                      const label =
+                        PLATFORM_POLICY_OPTIONS[issue]?.find((o) => o.id === optionId)?.label ??
+                        optionId;
+                      return (
+                        <li key={issue}>
+                          {PARTY_PLATFORM_LABELS[issue as PartyPlatformIssue] ??
+                            titleCaseWords(issue)}
+                          : {label}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+              </SectionCard>
+
+              <SectionCard title="Official position">
+                {liveFloorBills.length === 0 ? (
+                  <EmptyState>No live floor question selected.</EmptyState>
+                ) : (
+                  <>
+                    <p className="muted small">
+                      Public party stance on live Assembly business only.
+                    </p>
+                    <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                      <select
+                        value={liveBillId || liveFloorBills[0]?.id || ""}
+                        onChange={(event) => setLiveBillId(event.target.value)}
+                      >
+                        {liveFloorBills.map((bill) => (
+                          <option key={bill.id} value={bill.id}>
+                            {bill.title} ({bill.status.replaceAll("_", " ")})
+                          </option>
+                        ))}
+                      </select>
+                      {(["support", "oppose", "neutral"] as const).map((stance) => {
+                        const issueId = liveBillId || liveFloorBills[0]?.id;
+                        const current =
+                          issueId && partyOrg?.positions?.[partyId]?.[issueId]
+                            ? partyOrg.positions[partyId]![issueId]
+                            : null;
+                        return (
+                          <button
+                            key={stance}
+                            type="button"
+                            className={`btn btn-sm${current === stance ? "" : " secondary"}`}
+                            disabled={!issueId}
+                            onClick={() => {
+                              if (!issueId) return;
+                              run({
+                                type: "SET_PARTY_OFFICIAL_POSITION",
+                                partyId,
+                                issueId,
+                                stance,
+                              });
+                            }}
+                          >
+                            {stance}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </SectionCard>
+
+              <SectionCard title="Campaign strategy">
+                <div
+                  className="row"
+                  style={{ gap: "0.4rem", flexWrap: "wrap", alignItems: "flex-start" }}
+                >
+                  <select
+                    value={campaignStrategyDraft}
+                    onChange={(event) => setCampaignStrategyDraft(event.target.value)}
+                  >
+                    {Object.values(CAMPAIGN_STRATEGY_CATALOG).map((def) => (
+                      <option key={def.id} value={def.id}>
+                        {def.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn"
                     onClick={() =>
                       run({
-                        type: "SET_PARTY_OFFICIAL_POSITION",
+                        type: "SET_PARTY_CAMPAIGN_STRATEGY",
                         partyId,
-                        issueId: positionIssue,
-                        stance,
+                        strategy: campaignStrategyDraft,
                       })
                     }
                   >
-                    {stance}
+                    Set strategy
                   </button>
-                ))}
+                </div>
+                {(() => {
+                  const def =
+                    getCampaignStrategy(campaignStrategyDraft) ??
+                    getCampaignStrategy(currentStrategy);
+                  if (!def) return null;
+                  return (
+                    <dl className="dossier-facts compact" style={{ marginTop: "0.6rem" }}>
+                      <div>
+                        <dt>Approach</dt>
+                        <dd>{def.explanation}</dd>
+                      </div>
+                      <div>
+                        <dt>Strengths</dt>
+                        <dd>{def.strengths}</dd>
+                      </div>
+                      <div>
+                        <dt>Tradeoffs</dt>
+                        <dd>{def.tradeoffs}</dd>
+                      </div>
+                    </dl>
+                  );
+                })()}
+              </SectionCard>
+
+              <div data-qa="resource-allocator">
+                <SectionCard title="Resource allocation">
+                  <DataTable dense headers={["Bucket", "Share %"]}>
+                    {ALLOCATION_BUCKET_IDS.map((bucketId) => {
+                      const pct = Math.round((allocationDraft[bucketId] ?? 0) * 100);
+                      return (
+                        <tr key={bucketId}>
+                          <td>{ALLOCATION_BUCKETS[bucketId].label}</td>
+                          <td>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={pct}
+                              onChange={(event) => {
+                                const next = {
+                                  ...allocationDraft,
+                                  [bucketId]: Number(event.target.value) / 100,
+                                };
+                                setAllocationDraft(normalizeSupportAllocations(next));
+                              }}
+                              style={{ verticalAlign: "middle", marginRight: "0.5rem" }}
+                            />
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={pct}
+                              onChange={(event) => {
+                                const next = {
+                                  ...allocationDraft,
+                                  [bucketId]: Number(event.target.value) / 100,
+                                };
+                                setAllocationDraft(normalizeSupportAllocations(next));
+                              }}
+                              style={{ width: "4rem" }}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </DataTable>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ marginTop: "0.5rem" }}
+                    onClick={() =>
+                      run({
+                        type: "ALLOCATE_PARTY_SUPPORT",
+                        partyId,
+                        allocations: normalizeSupportAllocations(allocationDraft),
+                      })
+                    }
+                  >
+                    Commit allocation
+                  </button>
+                  {isNationalTreasurer ? (
+                    <div style={{ marginTop: "0.75rem" }}>
+                      <SectionDivider title="Treasurer workspace" hint="Budget recommendation" />
+                      {metaFunds != null || metaReserves != null ? (
+                        <BriefStrip
+                          items={[
+                            ...(metaFunds != null
+                              ? [{ label: "Funds", value: String(metaFunds) }]
+                              : []),
+                            ...(metaReserves != null
+                              ? [{ label: "Reserves", value: String(metaReserves) }]
+                              : []),
+                          ]}
+                        />
+                      ) : null}
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        onClick={() =>
+                          run({
+                            type: "RECOMMEND_PARTY_BUDGET",
+                            partyId,
+                            allocations: normalizeSupportAllocations(allocationDraft),
+                          })
+                        }
+                      >
+                        Recommend party budget
+                      </button>
+                      {budgetRecommendation && typeof budgetRecommendation === "object" ? (
+                        <p className="muted small" style={{ marginTop: "0.35rem" }}>
+                          Last recommendation:{" "}
+                          {Object.entries(budgetRecommendation as Record<string, number>)
+                            .map(([k, v]) => `${k} ${Math.round(Number(v) * 100)}%`)
+                            .join(" · ")}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </SectionCard>
               </div>
 
-              <SectionDivider title="Campaign strategy" hint="National organisation descriptor" />
-              <div
-                className="row"
-                style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}
-              >
-                <select
-                  value={campaignStrategyDraft}
-                  onChange={(event) => setCampaignStrategyDraft(event.target.value)}
-                >
-                  <option value="persuasion">Persuasion</option>
-                  <option value="base_turnout">Base turnout</option>
-                  <option value="attack">Attack</option>
-                  <option value="coalition_focus">Coalition focus</option>
-                  <option value="governance_record">Governance record</option>
-                </select>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() =>
-                    run({
-                      type: "SET_PARTY_CAMPAIGN_STRATEGY",
-                      partyId,
-                      strategy: campaignStrategyDraft,
-                    })
-                  }
-                >
-                  Set strategy
-                </button>
-              </div>
-              {currentStrategy ? (
-                <p className="muted small">Current: {currentStrategy.replaceAll("_", " ")}</p>
-              ) : null}
+              <SectionCard title="Coalition talks">
+                <div className="politician-card-grid">
+                  {partnerPartyOptions.map((partnerId) => {
+                    const partnerSeats = members.filter(
+                      (memberId) => props.snap.politicians[memberId]?.partyId === partnerId,
+                    ).length;
+                    const combined = caucus + partnerSeats;
+                    const majority = Math.floor(totalSeats / 2) + 1;
+                    const authorized =
+                      partyOrg?.coalitionTalks?.[partyId]?.[partnerId]?.authorized === true;
+                    const affinity =
+                      partyOfficers?.chair?.politicianId &&
+                      props.snap.partyStates[partnerId]?.leaderId
+                        ? props.snap.relationships[partyOfficers.chair.politicianId]?.[
+                            props.snap.partyStates[partnerId]!.leaderId!
+                          ]?.affinity
+                        : null;
+                    const relationship =
+                      affinity == null
+                        ? "Relationship thin"
+                        : affinity >= 0.25
+                          ? "Warm working relationship"
+                          : affinity >= 0
+                            ? "Correct but cool"
+                            : "Frosty";
+                    return (
+                      <div className="faction-card" key={partnerId}>
+                        <strong>{partyDisplayName(props.world, partnerId, props.snap)}</strong>
+                        <div className="muted small">
+                          {partnerSeats} seats · with you {combined}/{totalSeats} (
+                          {combined >= majority ? "majority path" : "short of majority"})
+                        </div>
+                        <div className="muted small">{relationship}</div>
+                        {authorized ? <StatusBadge tone="ok">Talks authorised</StatusBadge> : null}
+                        <div
+                          className="row"
+                          style={{ gap: "0.35rem", marginTop: "0.4rem", flexWrap: "wrap" }}
+                        >
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            onClick={() =>
+                              run({
+                                type: "AUTHORIZE_COALITION_TALKS",
+                                partyId,
+                                partnerPartyId: partnerId,
+                                authorize: true,
+                              })
+                            }
+                          >
+                            Authorise talks
+                          </button>
+                          <button
+                            type="button"
+                            className="btn secondary btn-sm"
+                            onClick={() =>
+                              run({
+                                type: "AUTHORIZE_COALITION_TALKS",
+                                partyId,
+                                partnerPartyId: partnerId,
+                                authorize: false,
+                              })
+                            }
+                          >
+                            Rescind
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {partnerPartyOptions.length === 0 ? (
+                  <EmptyState>No partner parties available.</EmptyState>
+                ) : null}
+              </SectionCard>
 
-              <SectionDivider title="Allocate support" hint="Share 0–1 toward a target key" />
-              <div
-                className="row"
-                style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}
-              >
-                <input
-                  type="text"
-                  value={supportTarget}
-                  onChange={(event) => setSupportTarget(event.target.value)}
-                  placeholder="national"
-                  style={{ width: "8rem" }}
-                />
-                <input
-                  type="number"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={supportShare}
-                  onChange={(event) => setSupportShare(event.target.value)}
-                  style={{ width: "5rem" }}
-                />
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => {
-                    const share = Number(supportShare);
-                    if (!supportTarget.trim() || !Number.isFinite(share)) return;
-                    run({
-                      type: "ALLOCATE_PARTY_SUPPORT",
-                      partyId,
-                      allocations: {
-                        ...(partyOrg?.supportAllocations?.[partyId] ?? {}),
-                        [supportTarget.trim()]: share,
-                      },
-                    });
-                  }}
-                >
-                  Allocate
-                </button>
-              </div>
-
-              <SectionDivider title="Coalition talks" hint="Authorise talks with a partner party" />
-              <div
-                className="row"
-                style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}
-              >
-                <select
-                  value={coalitionPartnerId || partnerPartyOptions[0] || ""}
-                  onChange={(event) => setCoalitionPartnerId(event.target.value)}
-                >
-                  {partnerPartyOptions.map((id) => (
-                    <option key={id} value={id}>
-                      {partyDisplayName(props.world, id, props.snap)}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={partnerPartyOptions.length === 0}
-                  onClick={() => {
-                    const partnerPartyId = coalitionPartnerId || partnerPartyOptions[0];
-                    if (!partnerPartyId) return;
-                    run({
-                      type: "AUTHORIZE_COALITION_TALKS",
-                      partyId,
-                      partnerPartyId,
-                      authorize: true,
-                    });
-                  }}
-                >
-                  Authorise talks
-                </button>
-                <button
-                  type="button"
-                  className="btn secondary"
-                  disabled={partnerPartyOptions.length === 0}
-                  onClick={() => {
-                    const partnerPartyId = coalitionPartnerId || partnerPartyOptions[0];
-                    if (!partnerPartyId) return;
-                    run({
-                      type: "AUTHORIZE_COALITION_TALKS",
-                      partyId,
-                      partnerPartyId,
-                      authorize: false,
-                    });
-                  }}
-                >
-                  Rescind
-                </button>
-              </div>
-
-              <SectionDivider title="Endorse candidate" hint="Chair-level endorsement" />
-              <div
-                className="row"
-                style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}
-              >
-                <select
-                  value={endorseCandidateId || partyMemberOptions[0]?.id || ""}
-                  onChange={(event) => setEndorseCandidateId(event.target.value)}
-                >
-                  {partyMemberOptions.map((politician) => (
-                    <option key={politician.id} value={politician.id}>
-                      {politicianDisplayName(props.catalog, politician.id)}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={partyMemberOptions.length === 0}
-                  onClick={() => {
-                    const candidateId = endorseCandidateId || partyMemberOptions[0]?.id;
-                    if (!candidateId) return;
-                    run({
-                      type: "ENDORSE_CANDIDATE_AS_CHAIR",
-                      partyId,
-                      candidateId,
-                    });
-                  }}
-                >
-                  Endorse
-                </button>
+              <div data-qa="endorsement-browser">
+                <SectionCard title="Endorsement browser">
+                  <div className="row" style={{ gap: "0.4rem", marginBottom: "0.5rem" }}>
+                    <select
+                      value={endorseContestFilter}
+                      onChange={(event) => setEndorseContestFilter(event.target.value)}
+                    >
+                      <option value="all">All contest types</option>
+                      <option value="presidential_nomination">Presidential nomination</option>
+                      <option value="party_leadership">Party leadership</option>
+                      <option value="faction_chair">Faction chair</option>
+                    </select>
+                  </div>
+                  {endorsementCandidates.length === 0 ? (
+                    <EmptyState>No active nomination contests.</EmptyState>
+                  ) : (
+                    <div className="politician-card-grid">
+                      {endorsementCandidates.map(({ contest, entry }) => {
+                        const pol = props.snap.politicians[entry.politicianId];
+                        const caucusName = pol?.factionId
+                          ? factionDisplayName(props.world, pol.factionId)
+                          : "Unaligned";
+                        const poll = Object.values(props.snap.polls ?? {})
+                          .filter(
+                            (p) =>
+                              typeof p.metadata?.contestId === "string" &&
+                              p.metadata.contestId === contest.id,
+                          )
+                          .sort((a, b) => b.publicationDate.localeCompare(a.publicationDate))[0];
+                        const pollShare = poll?.firstPreference.find(
+                          (row) => row.politicianId === entry.politicianId,
+                        )?.share;
+                        const pollPct =
+                          pollShare != null && Number.isFinite(pollShare)
+                            ? Math.round(pollShare * 100)
+                            : null;
+                        return (
+                          <div className="faction-card" key={`${contest.id}:${entry.politicianId}`}>
+                            <PoliticianCard
+                              catalog={props.catalog}
+                              world={props.world}
+                              state={props.snap}
+                              politicianId={entry.politicianId}
+                              compact
+                              descriptor={entry.status.replaceAll("_", " ")}
+                            />
+                            <div className="muted small">
+                              {contestDisplayName(props.snap, props.world, contest.id)} ·{" "}
+                              {caucusName}
+                              {pollPct != null ? ` · Poll ${pollPct}%` : ""}
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              style={{ marginTop: "0.35rem" }}
+                              onClick={() =>
+                                run({
+                                  type: "ENDORSE_CANDIDATE_AS_CHAIR",
+                                  partyId,
+                                  candidateId: entry.politicianId,
+                                  contestId: contest.id,
+                                })
+                              }
+                            >
+                              Endorse as Chair
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </SectionCard>
               </div>
 
-              <SectionDivider title="Recommend discipline" hint="Pending action against a member" />
-              <div
-                className="row"
-                style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}
-              >
-                <select
-                  value={disciplineTargetId || partyMemberOptions[0]?.id || ""}
-                  onChange={(event) => setDisciplineTargetId(event.target.value)}
+              <SectionCard title="Recommend discipline">
+                <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                  <select
+                    value={disciplineTargetId || partyMemberOptions[0]?.id || ""}
+                    onChange={(event) => setDisciplineTargetId(event.target.value)}
+                  >
+                    {partyMemberOptions.map((politician) => (
+                      <option key={politician.id} value={politician.id}>
+                        {politicianDisplayName(props.catalog, politician.id)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={disciplineKind}
+                    onChange={(event) =>
+                      setDisciplineKind(
+                        event.target.value as "warning" | "censure" | "suspend_support",
+                      )
+                    }
+                  >
+                    <option value="warning">Warning</option>
+                    <option value="censure">Censure</option>
+                    <option value="suspend_support">Suspend support</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="btn danger"
+                    disabled={partyMemberOptions.length === 0}
+                    onClick={() => {
+                      const targetPoliticianId = disciplineTargetId || partyMemberOptions[0]?.id;
+                      if (!targetPoliticianId) return;
+                      run({
+                        type: "RECOMMEND_PARTY_DISCIPLINE",
+                        partyId,
+                        targetPoliticianId,
+                        kind: disciplineKind,
+                      });
+                    }}
+                  >
+                    Recommend
+                  </button>
+                </div>
+              </SectionCard>
+            </>
+          ) : isNationalTreasurer && partyId ? (
+            <div data-qa="resource-allocator">
+              <SectionCard title="Resource allocation">
+                <DataTable dense headers={["Bucket", "Share %"]}>
+                  {ALLOCATION_BUCKET_IDS.map((bucketId) => {
+                    const pct = Math.round((allocationDraft[bucketId] ?? 0) * 100);
+                    return (
+                      <tr key={bucketId}>
+                        <td>{ALLOCATION_BUCKETS[bucketId].label}</td>
+                        <td>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={pct}
+                            onChange={(event) => {
+                              const next = {
+                                ...allocationDraft,
+                                [bucketId]: Number(event.target.value) / 100,
+                              };
+                              setAllocationDraft(normalizeSupportAllocations(next));
+                            }}
+                            style={{ width: "4rem" }}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </DataTable>
+                <div
+                  className="row"
+                  style={{ gap: "0.4rem", marginTop: "0.5rem", flexWrap: "wrap" }}
                 >
-                  {partyMemberOptions.map((politician) => (
-                    <option key={politician.id} value={politician.id}>
-                      {politicianDisplayName(props.catalog, politician.id)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={disciplineKind}
-                  onChange={(event) =>
-                    setDisciplineKind(
-                      event.target.value as "warning" | "censure" | "suspend_support",
-                    )
-                  }
-                >
-                  <option value="warning">Warning</option>
-                  <option value="censure">Censure</option>
-                  <option value="suspend_support">Suspend support</option>
-                </select>
-                <button
-                  type="button"
-                  className="btn danger"
-                  disabled={partyMemberOptions.length === 0}
-                  onClick={() => {
-                    const targetPoliticianId = disciplineTargetId || partyMemberOptions[0]?.id;
-                    if (!targetPoliticianId) return;
-                    run({
-                      type: "RECOMMEND_PARTY_DISCIPLINE",
-                      partyId,
-                      targetPoliticianId,
-                      kind: disciplineKind,
-                    });
-                  }}
-                >
-                  Recommend
-                </button>
-              </div>
-            </SectionCard>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() =>
+                      run({
+                        type: "ALLOCATE_PARTY_SUPPORT",
+                        partyId,
+                        allocations: normalizeSupportAllocations(allocationDraft),
+                      })
+                    }
+                  >
+                    Commit allocation
+                  </button>
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    onClick={() =>
+                      run({
+                        type: "RECOMMEND_PARTY_BUDGET",
+                        partyId,
+                        allocations: normalizeSupportAllocations(allocationDraft),
+                      })
+                    }
+                  >
+                    Recommend party budget
+                  </button>
+                </div>
+                {metaFunds != null || metaReserves != null ? (
+                  <BriefStrip
+                    items={[
+                      ...(metaFunds != null ? [{ label: "Funds", value: String(metaFunds) }] : []),
+                      ...(metaReserves != null
+                        ? [{ label: "Reserves", value: String(metaReserves) }]
+                        : []),
+                    ]}
+                  />
+                ) : null}
+              </SectionCard>
+            </div>
           ) : null}
 
-          <SectionCard title="Chair term">
+          <SectionCard title="Chair election">
             <dl className="dossier-facts compact">
+              <div>
+                <dt>Stage</dt>
+                <dd>
+                  {openChairElection ? titleCaseWords(openChairElection.stage) : "No open election"}
+                </dd>
+              </div>
+              <div>
+                <dt>Method</dt>
+                <dd>
+                  {openChairElection
+                    ? titleCaseWords(openChairElection.method)
+                    : partyRules
+                      ? titleCaseWords(partyRules.chairElectionMethod)
+                      : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt>Voting system</dt>
+                <dd>
+                  {openChairElection?.votingSystem
+                    ? titleCaseWords(openChairElection.votingSystem)
+                    : partyRules
+                      ? titleCaseWords(partyRules.votingSystem)
+                      : "—"}
+                </dd>
+              </div>
               <div>
                 <dt>Assumed</dt>
                 <dd>{chairAssumed ?? "—"}</dd>
               </div>
-              <div>
-                <dt>Open election</dt>
-                <dd>
-                  {openChairElection
-                    ? `Open since ${openChairElection.openedDate} · ${openChairElection.candidates.length} candidates`
-                    : "None"}
-                </dd>
-              </div>
             </dl>
-            {partyId &&
-            partyId === playerPartyId &&
-            !openChairElection &&
-            (isNationalChair || isNationalViceChair) ? (
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={() => run({ type: "OPEN_PARTY_CHAIR_ELECTION", partyId })}
-              >
-                Open chair election
-              </button>
+            {openChairElection ? (
+              <div className="politician-card-grid" style={{ marginTop: "0.5rem" }}>
+                {chairElectionCandidates.map((candidateId) => {
+                  const program = openChairElection.programs?.[candidateId];
+                  return (
+                    <div className="faction-card" key={candidateId}>
+                      <PoliticianCard
+                        catalog={props.catalog}
+                        world={props.world}
+                        state={props.snap}
+                        politicianId={candidateId}
+                        compact
+                        descriptor="Chair candidate"
+                      />
+                      {program ? (
+                        <div className="muted small">
+                          {getPartyPriority(program.priorityIssue)?.label ??
+                            titleCaseWords(program.priorityIssue)}{" "}
+                          · {titleCaseWords(program.campaignStrategy)} ·{" "}
+                          {titleCaseWords(program.unityStrategy)}
+                        </div>
+                      ) : (
+                        <div className="muted small">Program not yet filed</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             ) : null}
-            {isNationalTreasurer && !isNationalChair ? (
-              <p className="muted small">
-                You hold the Treasurer seat — finance workspace is limited in this build.
-              </p>
-            ) : null}
+            <div className="row" style={{ gap: "0.4rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+              {partyId &&
+              partyId === playerPartyId &&
+              !openChairElection &&
+              (isNationalChair || isNationalViceChair) ? (
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => run({ type: "OPEN_PARTY_CHAIR_ELECTION", partyId })}
+                >
+                  Open chair election
+                </button>
+              ) : null}
+              {openChairElection && partyId === playerPartyId ? (
+                <>
+                  {!openChairElection.candidates.includes(playerId) ? (
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() =>
+                        run({
+                          type: "DECLARE_CHAIR_CANDIDACY",
+                          electionId: openChairElection.id,
+                          politicianId: playerId,
+                        })
+                      }
+                    >
+                      Declare candidacy
+                    </button>
+                  ) : null}
+                  {isNationalChair || isNationalViceChair ? (
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      onClick={() =>
+                        run({
+                          type: "RESOLVE_PARTY_CHAIR_ELECTION",
+                          electionId: openChairElection.id,
+                        })
+                      }
+                    >
+                      Resolve election
+                    </button>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
           </SectionCard>
-          <SectionCard title="National Committee">
-            {nationalCommittee.length === 0 ? (
-              <EmptyState>Committee not seeded.</EmptyState>
-            ) : (
-              <>
-                <p className="muted">{nationalCommittee.length} members</p>
-                <div className="politician-card-grid">
-                  {nationalCommittee.slice(0, 24).map((id) => (
-                    <PoliticianCard
-                      key={id}
-                      catalog={props.catalog}
-                      world={props.world}
-                      state={props.snap}
-                      politicianId={id}
-                      compact
-                      descriptor="Committee"
+
+          <div data-qa="national-committee">
+            <SectionCard title="National Committee">
+              {nationalCommittee.length === 0 ? (
+                <EmptyState>
+                  National Committee roster is empty for this Party. Advance one month or open a
+                  Chair action to initialize the committee.
+                </EmptyState>
+              ) : (
+                <>
+                  <p className="muted">{nationalCommittee.length} members</p>
+                  <DataTable dense headers={["Member", "Caucus"]}>
+                    {nationalCommittee.slice(0, 36).map((id) => {
+                      const factionId = props.snap.politicians[id]?.factionId;
+                      return (
+                        <tr key={id}>
+                          <td>{politicianDisplayName(props.catalog, id)}</td>
+                          <td>
+                            {factionId ? factionDisplayName(props.world, factionId) : "Unaligned"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </DataTable>
+                </>
+              )}
+              {pendingCommitteeVotes.length > 0 ? (
+                <div style={{ marginTop: "0.75rem" }}>
+                  <SectionDivider title="Pending decisions" />
+                  {pendingCommitteeVotes.map((vote) => (
+                    <EntityRow
+                      key={vote.id}
+                      title={titleCaseWords(vote.proposalKind)}
+                      meta={`Since ${vote.createdDate}`}
+                      status={<StatusBadge tone="warn">Pending</StatusBadge>}
                     />
                   ))}
                 </div>
-              </>
-            )}
-          </SectionCard>
-          <SectionCard title="Recent committee votes">
-            {committeeVotes.length === 0 ? (
-              <EmptyState>No committee votes recorded.</EmptyState>
-            ) : (
-              committeeVotes.map((e) => (
-                <EntityRow
-                  key={e.id}
-                  title={String(e.payload.proposalKind ?? "Proposal")}
-                  meta={`${e.date} · ${e.payload.yes ?? 0} yes / ${e.payload.no ?? 0} no · ${e.payload.passed ? "Passed" : "Rejected"}`}
-                />
-              ))
-            )}
-          </SectionCard>
-          <SectionCard title="Nominations and leadership">
+              ) : null}
+              {committeeVotes.length > 0 ? (
+                <div style={{ marginTop: "0.75rem" }}>
+                  <SectionDivider title="Recent votes" />
+                  {committeeVotes.map((e) => (
+                    <EntityRow
+                      key={e.id}
+                      title={String(e.payload.proposalKind ?? "Proposal")}
+                      meta={`${e.date} · ${e.payload.yes ?? 0} yes / ${e.payload.no ?? 0} no · ${e.payload.passed ? "Passed" : "Rejected"}`}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </SectionCard>
+          </div>
+
+          <SectionCard title="Nominations and leadership contests">
             {contests.length === 0 ? <EmptyState>No current party contests.</EmptyState> : null}
             {contests.map((c) => {
               const publicEndorsements = Object.values(props.snap.endorsements)
@@ -1461,12 +2151,21 @@ export function PartyPage(props: PartyPageProps) {
       {partyTab === "caucuses" ? (
         <>
           <SectionCard title="Caucuses">
+            <p className="muted small">{activeCaucusCount} active · dissolved caucuses hidden</p>
             {caucusRows.length === 0 ? (
-              <EmptyState>No caucuses listed for this party.</EmptyState>
+              <EmptyState>No active caucuses for this party.</EmptyState>
             ) : (
               <DataTable
                 dense
-                headers={["Caucus", "Membership %", "MP %", "Institutional %", "Leader", "Stance"]}
+                headers={[
+                  "Caucus",
+                  "Party members %",
+                  "MPs %",
+                  "Institutional %",
+                  "Leader",
+                  "Stance",
+                  "Growth strategy",
+                ]}
               >
                 {caucusRows.map((c) => (
                   <tr key={c.fid}>
@@ -1489,12 +2188,229 @@ export function PartyPage(props: PartyPageProps) {
                       {c.leaderId ? politicianDisplayName(props.catalog, c.leaderId) : "vacant"}
                     </td>
                     <td>{c.stance}</td>
+                    <td>{titleCaseWords(c.growthStrategy)}</td>
                   </tr>
                 ))}
               </DataTable>
             )}
-            <p className="muted small">Select a caucus for detail and chair actions.</p>
+            {unalignedShares ? (
+              <p className="muted small" style={{ marginTop: "0.5rem" }}>
+                Unaligned party members:{" "}
+                {Math.round((unalignedShares.partyMemberSupport ?? 0) * 100)}% support ·{" "}
+                {Math.round((unalignedShares.assemblyShare ?? 0) * 100)}% of MPs
+              </p>
+            ) : null}
           </SectionCard>
+
+          {playerLedCaucus && partyId === playerPartyId ? (
+            <SectionCard title={`Caucus leader workspace · ${playerLedCaucus.name}`}>
+              <SectionDivider title="Growth strategy" />
+              <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                <select
+                  value={caucusGrowthDraft || playerLedCaucus.growthStrategy}
+                  onChange={(event) =>
+                    setCaucusGrowthDraft(event.target.value as CaucusGrowthStrategy)
+                  }
+                >
+                  {CAUCUS_GROWTH_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {titleCaseWords(opt)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() =>
+                    run({
+                      type: "SET_CAUCUS_GROWTH_STRATEGY",
+                      factionId: playerLedCaucus.fid,
+                      growthStrategy: caucusGrowthDraft || playerLedCaucus.growthStrategy,
+                    })
+                  }
+                >
+                  Set growth strategy
+                </button>
+              </div>
+
+              <SectionDivider title="Endorse primary" hint="Active nomination candidates only" />
+              {activePrimaryCandidates.length === 0 ? (
+                <EmptyState>No active primary candidates.</EmptyState>
+              ) : (
+                <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                  <select
+                    value={
+                      caucusPrimaryEndorseId || activePrimaryCandidates[0]?.entry.politicianId || ""
+                    }
+                    onChange={(event) => setCaucusPrimaryEndorseId(event.target.value)}
+                  >
+                    {activePrimaryCandidates.map(({ contest, entry }) => (
+                      <option
+                        key={`${contest.id}:${entry.politicianId}`}
+                        value={entry.politicianId}
+                      >
+                        {politicianDisplayName(props.catalog, entry.politicianId)} ·{" "}
+                        {contestDisplayName(props.snap, props.world, contest.id)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      const candidateId =
+                        caucusPrimaryEndorseId || activePrimaryCandidates[0]?.entry.politicianId;
+                      if (!candidateId) return;
+                      run({
+                        type: "ENDORSE_PRIMARY_AS_CAUCUS",
+                        factionId: playerLedCaucus.fid,
+                        candidateId,
+                      });
+                    }}
+                  >
+                    Endorse primary
+                  </button>
+                </div>
+              )}
+
+              <SectionDivider title="Endorse chair candidate" />
+              <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                <select
+                  value={
+                    caucusEndorseId || chairElectionCandidates[0] || partyMemberOptions[0]?.id || ""
+                  }
+                  onChange={(event) => setCaucusEndorseId(event.target.value)}
+                >
+                  {(chairElectionCandidates.length > 0
+                    ? chairElectionCandidates
+                    : partyMemberOptions.map((p) => p.id)
+                  ).map((id) => (
+                    <option key={id} value={id}>
+                      {politicianDisplayName(props.catalog, id)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    const candidateId =
+                      caucusEndorseId || chairElectionCandidates[0] || partyMemberOptions[0]?.id;
+                    if (!candidateId) return;
+                    run({
+                      type: "ENDORSE_CHAIR_AS_CAUCUS",
+                      factionId: playerLedCaucus.fid,
+                      candidateId,
+                    });
+                  }}
+                >
+                  Endorse chair candidate
+                </button>
+              </div>
+
+              <SectionDivider title="Alliance" />
+              <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                <select
+                  value={
+                    caucusAllianceId ||
+                    caucusRows.find((c) => c.fid !== playerLedCaucus.fid)?.fid ||
+                    ""
+                  }
+                  onChange={(event) => setCaucusAllianceId(event.target.value)}
+                >
+                  {caucusRows
+                    .filter((c) => c.fid !== playerLedCaucus.fid)
+                    .map((c) => (
+                      <option key={c.fid} value={c.fid}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={caucusRows.length < 2}
+                  onClick={() => {
+                    const otherFactionId =
+                      caucusAllianceId ||
+                      caucusRows.find((c) => c.fid !== playerLedCaucus.fid)?.fid;
+                    if (!otherFactionId) return;
+                    run({
+                      type: "FORM_CAUCUS_ALLIANCE",
+                      factionId: playerLedCaucus.fid,
+                      otherFactionId,
+                      kind: "alliance",
+                    });
+                  }}
+                >
+                  Form alliance
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  disabled={caucusRows.length < 2}
+                  onClick={() => {
+                    const otherFactionId =
+                      caucusAllianceId ||
+                      caucusRows.find((c) => c.fid !== playerLedCaucus.fid)?.fid;
+                    if (!otherFactionId) return;
+                    run({
+                      type: "FORM_CAUCUS_ALLIANCE",
+                      factionId: playerLedCaucus.fid,
+                      otherFactionId,
+                      kind: "rivalry",
+                    });
+                  }}
+                >
+                  Mark rivalry
+                </button>
+              </div>
+
+              <SectionDivider title="Structure" hint="Form, split, or dissolve" />
+              <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() =>
+                    run({
+                      type: "FORM_CAUCUS",
+                      partyId: partyId!,
+                      politicianIds: [playerId],
+                    })
+                  }
+                >
+                  Form new caucus
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() =>
+                    run({
+                      type: "SPLIT_CAUCUS",
+                      factionId: playerLedCaucus.fid,
+                      politicianIds: [playerId],
+                    })
+                  }
+                >
+                  Split caucus
+                </button>
+                <button
+                  type="button"
+                  className="btn danger"
+                  onClick={() =>
+                    run({
+                      type: "DISSOLVE_CAUCUS",
+                      factionId: playerLedCaucus.fid,
+                    })
+                  }
+                >
+                  Dissolve caucus
+                </button>
+              </div>
+            </SectionCard>
+          ) : null}
+
+          <SectionDivider title="Assembly Delegation" hint="Separate from national party offices" />
           <SectionCard title="Assembly Delegation">
             <p className="muted">
               Sitting MPs elect floor leader and whip. This is not National Leadership (Chair / Vice

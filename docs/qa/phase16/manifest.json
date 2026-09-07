@@ -1,0 +1,129 @@
+{
+  "phase": 16,
+  "generatedAt": "2026-09-07T19:13:13.630Z",
+  "base": "http://localhost:5174/Lorsain-project/",
+  "shots": [
+    {
+      "file": "party-overview-1440.png",
+      "screen": "party-overview",
+      "assertions": [
+        "text Party"
+      ],
+      "ok": true,
+      "sha256": "f091a5a7f1d5f4e65df01c8fa97f5a323fb2696e4ea42a3f72d79ad933e4598a",
+      "bytes": 202341
+    },
+    {
+      "file": "party-leadership-1440.png",
+      "screen": "party-leadership",
+      "assertions": [
+        "data-qa party-leadership"
+      ],
+      "ok": true,
+      "sha256": "5b1390a952206f8aaac2f32aa146eced30a87132d79f9d6eaa8e6286a5ba53cb",
+      "bytes": 207136
+    },
+    {
+      "file": "national-committee-1440.png",
+      "screen": "national-committee",
+      "assertions": [
+        "National Committee",
+        "rows=15"
+      ],
+      "ok": true,
+      "sha256": "4e6f58261114717adbe11a3493a2114fd2a79146bb38a61b1df8a54cb41460de",
+      "bytes": 172199
+    },
+    {
+      "file": "caucuses-overview-1440.png",
+      "screen": "caucuses-overview",
+      "assertions": [
+        "text Caucus"
+      ],
+      "ok": true,
+      "sha256": "fb991b79b15a8343dd1c4ff418230109bde3bc8cc616635a64ecd6de12cf3993",
+      "bytes": 205397
+    },
+    {
+      "file": "candidate-primary-map-1440.png",
+      "screen": "candidate-primary-map",
+      "assertions": [
+        "text Primary polling",
+        "negatives absent"
+      ],
+      "ok": true,
+      "sha256": "a1252cc2dd3744dd37f3d948acc27528065a1769d00fc9d9247840d101cc268a",
+      "bytes": 284731
+    },
+    {
+      "file": "fa-overview-1440.png",
+      "screen": "fa-overview",
+      "assertions": [
+        "data-qa foreign-affairs"
+      ],
+      "ok": true,
+      "sha256": "2649a15ff64df4e1a6f8d16dca5ec3817427022c9a3f84a2e47fe5f0367b723e",
+      "bytes": 217604
+    },
+    {
+      "file": "history-15-1440.png",
+      "screen": "history-15",
+      "assertions": [
+        "History of Terena"
+      ],
+      "ok": true,
+      "sha256": "e5e897d615c0f9e9f125c9dfb44ceb9ab7f2436ec0bfa049196fd6807238760d",
+      "bytes": 223339
+    },
+    {
+      "file": "history-eras-1440.png",
+      "screen": "history-eras",
+      "assertions": [
+        "Long-term tab content"
+      ],
+      "ok": true,
+      "sha256": "738f3cd9fd1ebdce6a30cfa2e3b07c7d2bbf51ca10a97c991cd8127647ba5eea",
+      "bytes": 150835
+    },
+    {
+      "file": "situation-map-selected-1440.png",
+      "screen": "situation-map-selected",
+      "assertions": [
+        "data-qa situation-province-selected"
+      ],
+      "ok": true,
+      "sha256": "3e820c7e54837bb3fb259faba86bb4dc1e3e04e36eb579648e2551c86359c5eb",
+      "bytes": 188232
+    },
+    {
+      "file": "home-2-1440.png",
+      "screen": "home-2",
+      "assertions": [
+        "text Action"
+      ],
+      "ok": true,
+      "sha256": "4f4aa95b15bc429c69e1e71ebdcc9144598a460994fcff65487c67b111a9953a",
+      "bytes": 344514
+    },
+    {
+      "file": "government-2-1440.png",
+      "screen": "government-2",
+      "assertions": [
+        "text Cabinet"
+      ],
+      "ok": true,
+      "sha256": "c93c9cc292c189112d272d7d46fd933199ca9d4677efec83cd4322261d0e4140",
+      "bytes": 157470
+    },
+    {
+      "file": "mobile-party-390.png",
+      "screen": "mobile-party",
+      "assertions": [
+        "text Party"
+      ],
+      "ok": true,
+      "sha256": "7964f86dc48b3f46632689ff2bd8cf55876ff0f333a1f2b740801afe4e7300c8",
+      "bytes": 78226
+    }
+  ]
+}

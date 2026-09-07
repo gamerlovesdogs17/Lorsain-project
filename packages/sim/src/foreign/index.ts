@@ -20,4 +20,6 @@ export * from "./terena-diplomacy.js";
 export * from "./monthly.js";
 export * from "./procedure.js";
 export * from "./decisions.js";
+export * from "./organization-foreign-bridge.js";
+export * from "./domesticPolitics.js";
 export { parseForeignAffairsRuntime, foreignCounterError } from "./validation.js";
