@@ -78,7 +78,18 @@ describe("partyOrg national committee", () => {
     const roster = seedNationalCommittee(world, state, partyId);
     expect(roster.length).toBeGreaterThanOrEqual(12);
 
-    for (const memberId of roster) {
+    // Keep the player off this roster so the vote can finalize without a pending ballot.
+    runtime.nationalCommittee[partyId] = roster.filter((id) => id !== state.playerPoliticianId);
+    if (runtime.nationalCommittee[partyId]!.length < 12) {
+      for (const id of roster) {
+        if (runtime.nationalCommittee[partyId]!.length >= 12) break;
+        if (!runtime.nationalCommittee[partyId]!.includes(id) && id !== state.playerPoliticianId) {
+          runtime.nationalCommittee[partyId]!.push(id);
+        }
+      }
+    }
+
+    for (const memberId of runtime.nationalCommittee[partyId]!) {
       if (memberId === chairId) continue;
       if (!state.relationships[memberId]) state.relationships[memberId] = {};
       state.relationships[memberId]![chairId!] = {
@@ -102,6 +113,7 @@ describe("partyOrg national committee", () => {
       proposalPayload: { allocations: { national: 1 } },
       commandId: "CMD_VOTE_REJECT",
     });
+    expect(vote.pendingPlayer).toBeFalsy();
     expect(vote.passed).toBe(false);
     expect(vote.no).toBeGreaterThan(vote.yes);
 

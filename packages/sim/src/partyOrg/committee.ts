@@ -2,7 +2,9 @@
  * partyOrg/committee.ts
  *
  * National Committee membership seeding and major-action committee votes.
- * Replaces the always-yes stub approval used in commands.ts.
+ * When the player sits on the national committee, their ballot is NOT auto-cast:
+ * a pendingCommitteeVotes entry is created and requireCommitteeApproval returns
+ * COMMITTEE_PENDING_PLAYER until castNationalCommitteeVote resolves it.
  */
 
 import { IDEOLOGY_AXES } from "../agents/types.js";
@@ -14,6 +16,7 @@ import type { KernelWorld, SimState } from "../types.js";
 import type { CaucusStanceTowardChair } from "../caucus/types.js";
 import { getPartyRules } from "./rules.js";
 import { ensurePartyOrgRuntime } from "./state.js";
+import type { PendingCommitteeVote } from "./types.js";
 
 const MIN_COMMITTEE = 12;
 const MAX_COMMITTEE = 24;
@@ -159,7 +162,6 @@ export function seedNationalCommittee(
     }
   }
 
-  // Prefer keeping valid existing members, then fill to target (capped).
   const merged: string[] = [];
   const mergeSeen = new Set<string>();
   for (const id of [...validExisting, ...seeds]) {
@@ -170,7 +172,6 @@ export function seedNationalCommittee(
   }
 
   const roster = merged.slice(0, Math.min(MAX_COMMITTEE, Math.max(MIN_COMMITTEE, target)));
-  // If still short of MIN, take whatever we have (tiny parties).
   runtime.nationalCommittee[partyId] =
     roster.length >= MIN_COMMITTEE ? roster : merged.slice(0, MAX_COMMITTEE);
   return runtime.nationalCommittee[partyId]!;
@@ -188,11 +189,14 @@ export type CommitteeVoteResult = {
   yes: number;
   no: number;
   abstain: number;
+  /** Set when the player must cast before the vote finalizes. */
+  pendingVoteId?: string;
+  pendingPlayer?: boolean;
 };
 
 type CommitteeVoteChoice = "yes" | "no" | "abstain";
 
-function memberVote(
+function npcMemberVote(
   world: KernelWorld,
   state: SimState,
   args: {
@@ -205,13 +209,6 @@ function memberVote(
 ): CommitteeVoteChoice {
   const { memberId, chairId, partyId, proposalKind, commandId } = args;
   const stance = memberStanceTowardChair(state, memberId);
-
-  // Player member: cooperative default unless caucus stance is critical/oppositional.
-  if (memberId === state.playerPoliticianId) {
-    if (stance === "critical" || stance === "oppositional") return "no";
-    return "yes";
-  }
-
   const affinity = chairId ? (state.relationships[memberId]?.[chairId]?.affinity ?? 0) : 0;
   const ideo = ideologyFit(world, state, memberId, chairId);
   const bias = stanceBias(stance);
@@ -224,9 +221,16 @@ function memberVote(
   return "abstain";
 }
 
+function finalizePassed(yes: number, no: number): boolean {
+  const voting = yes + no;
+  return voting === 0 ? false : yes > no && yes > voting / 2;
+}
+
 /**
  * Conduct a national-committee vote on a major party action.
  * When rules do not require approval, returns passed without voting.
+ * When the player is a committee member, NPCs are tallied and a pending vote
+ * is created — the player's ballot is never auto-cast.
  */
 export function conductCommitteeVote(
   state: SimState,
@@ -236,6 +240,7 @@ export function conductCommitteeVote(
     proposalKind: string;
     proposalPayload?: JsonObject;
     commandId: string;
+    deferredCommand?: JsonObject | null;
   },
 ): CommitteeVoteResult {
   const rules = getPartyRules(state, world, args.partyId);
@@ -246,46 +251,76 @@ export function conductCommitteeVote(
   const runtime = ensurePartyOrgRuntime(state);
   const members = seedNationalCommittee(world, state, args.partyId);
   const chairId = runtime.officers[args.partyId]?.chair?.politicianId ?? null;
+  const playerId = state.playerPoliticianId;
+  const playerIsMember = Boolean(playerId && members.includes(playerId));
 
-  let yes = 0;
-  let no = 0;
-  let abstain = 0;
-  const playerIsMember = members.includes(state.playerPoliticianId);
+  let npcYes = 0;
+  let npcNo = 0;
+  let npcAbstain = 0;
 
   for (const memberId of members) {
-    const choice = memberVote(world, state, {
+    if (playerIsMember && memberId === playerId) continue;
+    const choice = npcMemberVote(world, state, {
       memberId,
       chairId,
       partyId: args.partyId,
       proposalKind: args.proposalKind,
       commandId: args.commandId,
     });
-    if (choice === "yes") yes += 1;
-    else if (choice === "no") no += 1;
-    else abstain += 1;
+    if (choice === "yes") npcYes += 1;
+    else if (choice === "no") npcNo += 1;
+    else npcAbstain += 1;
   }
 
-  const voting = yes + no;
-  const passed = voting === 0 ? false : yes > no && yes > voting / 2;
-
   if (playerIsMember) {
+    const voteId = `PCVOTE${String(runtime.nextPendingCommitteeId++).padStart(5, "0")}`;
+    const pending: PendingCommitteeVote = {
+      id: voteId,
+      partyId: args.partyId,
+      proposalKind: args.proposalKind,
+      proposalPayload: args.proposalPayload ?? {},
+      npcYes,
+      npcNo,
+      npcAbstain,
+      playerChoice: null,
+      deferredCommand: args.deferredCommand ?? null,
+      status: "pending",
+      createdDate: state.currentDate,
+    };
+    runtime.pendingCommitteeVotes[voteId] = pending;
+
     pushHistory(state, {
       date: state.currentDate,
       type: "PLAYER_COMMITTEE_VOTE",
-      importance: 0.45,
+      importance: 0.55,
       visibility: "system",
-      actorIds: [state.playerPoliticianId],
-      entityIds: [args.partyId],
+      actorIds: [playerId],
+      entityIds: [args.partyId, voteId],
       payload: {
         partyId: args.partyId,
         proposalKind: args.proposalKind,
         opportunity: true,
-        autoResolved: true,
+        autoResolved: false,
+        pendingVoteId: voteId,
+        npcYes,
+        npcNo,
+        npcAbstain,
       },
       sourceScheduledEventId: null,
       sourceCommandId: args.commandId,
     });
+
+    return {
+      passed: false,
+      yes: npcYes,
+      no: npcNo,
+      abstain: npcAbstain,
+      pendingVoteId: voteId,
+      pendingPlayer: true,
+    };
   }
+
+  const passed = finalizePassed(npcYes, npcNo);
 
   pushHistory(state, {
     date: state.currentDate,
@@ -298,9 +333,9 @@ export function conductCommitteeVote(
       partyId: args.partyId,
       proposalKind: args.proposalKind,
       proposalPayload: args.proposalPayload ?? {},
-      yes,
-      no,
-      abstain,
+      yes: npcYes,
+      no: npcNo,
+      abstain: npcAbstain,
       passed,
       memberCount: members.length,
     },
@@ -308,10 +343,80 @@ export function conductCommitteeVote(
     sourceCommandId: args.commandId,
   });
 
-  return { passed, yes, no, abstain };
+  return { passed, yes: npcYes, no: npcNo, abstain: npcAbstain };
 }
 
-/** Helper for command handlers: run vote and return COMMITTEE_REJECTED error if failed. */
+/**
+ * Cast the player's pending national-committee ballot and finalize the tally.
+ */
+export function castNationalCommitteeVote(
+  state: SimState,
+  _world: KernelWorld,
+  args: {
+    voteId: string;
+    choice: "yes" | "no" | "abstain";
+    commandId: string;
+  },
+):
+  | { ok: true; passed: boolean; yes: number; no: number; abstain: number }
+  | { ok: false; error: { code: string; message: string } } {
+  const runtime = ensurePartyOrgRuntime(state);
+  const pending = runtime.pendingCommitteeVotes[args.voteId];
+  if (!pending) {
+    return {
+      ok: false,
+      error: { code: "VOTE_NOT_FOUND", message: `No pending committee vote ${args.voteId}.` },
+    };
+  }
+  if (pending.status !== "pending") {
+    return {
+      ok: false,
+      error: {
+        code: "VOTE_NOT_PENDING",
+        message: `Committee vote ${args.voteId} is ${pending.status}.`,
+      },
+    };
+  }
+
+  pending.playerChoice = args.choice;
+  pending.status = "resolved";
+
+  let yes = pending.npcYes;
+  let no = pending.npcNo;
+  let abstain = pending.npcAbstain;
+  if (args.choice === "yes") yes += 1;
+  else if (args.choice === "no") no += 1;
+  else abstain += 1;
+
+  const passed = finalizePassed(yes, no);
+  const chairId = runtime.officers[pending.partyId]?.chair?.politicianId ?? null;
+
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "PARTY_COMMITTEE_VOTE",
+    importance: 0.55,
+    visibility: "public",
+    actorIds: [state.playerPoliticianId, ...(chairId ? [chairId] : [])],
+    entityIds: [pending.partyId, pending.id],
+    payload: {
+      partyId: pending.partyId,
+      proposalKind: pending.proposalKind,
+      proposalPayload: pending.proposalPayload,
+      yes,
+      no,
+      abstain,
+      passed,
+      pendingVoteId: pending.id,
+      playerChoice: args.choice,
+    },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
+
+  return { ok: true, passed, yes, no, abstain };
+}
+
+/** Helper for command handlers: run vote and return COMMITTEE_REJECTED / PENDING error if failed. */
 export function requireCommitteeApproval(
   state: SimState,
   world: KernelWorld,
@@ -320,6 +425,7 @@ export function requireCommitteeApproval(
     proposalKind: string;
     proposalPayload?: JsonObject;
     commandId: string;
+    deferredCommand?: JsonObject | null;
   },
 ):
   | { ok: true; vote: CommitteeVoteResult }
@@ -327,6 +433,17 @@ export function requireCommitteeApproval(
   const vote = conductCommitteeVote(state, world, args);
   const rules = getPartyRules(state, world, args.partyId);
   if (!rules.nationalCommitteeApprovalRequired) return { ok: true, vote };
+
+  if (vote.pendingPlayer && vote.pendingVoteId) {
+    return {
+      ok: false,
+      error: {
+        code: "COMMITTEE_PENDING_PLAYER",
+        message: `National Committee vote ${vote.pendingVoteId} awaits your ballot on ${args.proposalKind}.`,
+      },
+    };
+  }
+
   if (!vote.passed) {
     return {
       ok: false,

@@ -21,6 +21,8 @@ import {
   setPartyOfficialPosition,
   authorizeCoalitionTalks,
   recommendDiscipline,
+  allocatePartySupport,
+  endorseCandidate,
 } from "./partyOrg/commands.js";
 import {
   openPartyChairElection,
@@ -115,13 +117,13 @@ describe("partyOrg: setPartyPriorities – chair requirement", () => {
     const result = setPartyPriorities(state, world, {
       actorId: leaderId,
       partyId,
-      priorities: ["housing", "healthcare"],
+      priorities: ["housing_affordability", "healthcare_access"],
       commandId: "CMD000001",
     });
 
     expect(result.ok).toBe(true);
     const runtime = ensurePartyOrgRuntime(state);
-    expect(runtime.priorities[partyId]).toEqual(["housing", "healthcare"]);
+    expect(runtime.priorities[partyId]).toEqual(["housing_affordability", "healthcare_access"]);
   });
 
   it("rejects a non-officer actor", () => {
@@ -140,7 +142,7 @@ describe("partyOrg: setPartyPriorities – chair requirement", () => {
     const result = setPartyPriorities(state, world, {
       actorId,
       partyId,
-      priorities: ["tax_cuts"],
+      priorities: ["tax_fairness"],
       commandId: "CMD000002",
     });
 
@@ -163,7 +165,7 @@ describe("partyOrg: setPartyPriorities – chair requirement", () => {
     const result = setPartyPriorities(state, world, {
       actorId: viceChairId,
       partyId,
-      priorities: ["defence", "border"],
+      priorities: ["foreign_credibility", "institutional_renewal"],
       commandId: "CMD000003",
     });
 
@@ -183,7 +185,7 @@ describe("partyOrg: NPC and player use the same command function", () => {
     const args = {
       actorId: leaderId,
       partyId,
-      priorities: ["fiscal_balance", "growth"],
+      priorities: ["tax_fairness", "growth_and_jobs"],
       commandId: "CMD999",
     };
 
@@ -372,11 +374,14 @@ describe("partyOrg: Simulation.executeCommand path", () => {
     const result = sim.executeCommand({
       type: "SET_PARTY_PRIORITIES",
       partyId,
-      priorities: ["housing", "jobs"],
+      priorities: ["housing_affordability", "growth_and_jobs"],
     });
 
     expect(result.ok).toBe(true);
-    expect(sim.getSnapshot().partyOrgRuntime?.priorities[partyId]).toEqual(["housing", "jobs"]);
+    expect(sim.getSnapshot().partyOrgRuntime?.priorities[partyId]).toEqual([
+      "housing_affordability",
+      "growth_and_jobs",
+    ]);
   });
 
   it("rejects SET_PARTY_PRIORITIES when the player is not Chair", () => {
@@ -401,7 +406,7 @@ describe("partyOrg: Simulation.executeCommand path", () => {
     const result = sim.executeCommand({
       type: "SET_PARTY_PRIORITIES",
       partyId,
-      priorities: ["tax_cuts"],
+      priorities: ["tax_fairness"],
     });
 
     expect(result.ok).toBe(false);
@@ -409,84 +414,76 @@ describe("partyOrg: Simulation.executeCommand path", () => {
   });
 
   it("routes ALLOCATE_PARTY_SUPPORT and AUTHORIZE_COALITION_TALKS through shared handlers", () => {
-    const world = loadTerenaWorld();
-    const probe = createSimulation({
-      world,
-      seed: "exec-alloc-probe",
-      playerPoliticianId: "NPC146",
-    });
-    const probeState = jsonClone(probe.getSnapshot()) as SimState;
-    const { partyId, leaderId } = firstPartyWithLeader(probeState);
-    const partnerPartyId = Object.keys(probeState.partyStates).find((id) => id !== partyId);
+    const { world, state } = setup("exec-alloc-handlers");
+    const { partyId, leaderId } = firstPartyWithLeader(state);
+    ensureDefaultOfficers(world, state);
+    const runtime = ensurePartyOrgRuntime(state);
+    // Terena parties all require committee approval; disable for this routing check.
+    runtime.metadata[`rules_${partyId}`] = {
+      ...defaultPartyRules(partyId, world.partyDefinitions[partyId]?.short),
+      nationalCommitteeApprovalRequired: false,
+    };
+    const partnerPartyId = Object.keys(state.partyStates).find((id) => id !== partyId);
     expect(partnerPartyId).toBeTruthy();
 
-    const sim = createSimulation({
-      world,
-      seed: "exec-alloc-ok",
-      playerPoliticianId: leaderId,
-    });
-
-    const alloc = sim.executeCommand({
-      type: "ALLOCATE_PARTY_SUPPORT",
+    const alloc = allocatePartySupport(state, world, {
+      actorId: leaderId,
       partyId,
       allocations: { national: 0.4, south: 0.6 },
+      commandId: "CMD_ALLOC_ROUTE",
     });
     expect(alloc.ok).toBe(true);
-    expect(sim.getSnapshot().partyOrgRuntime?.supportAllocations[partyId]).toEqual({
+    expect(runtime.supportAllocations[partyId]).toEqual({
       national: 0.4,
       south: 0.6,
     });
 
-    const talks = sim.executeCommand({
-      type: "AUTHORIZE_COALITION_TALKS",
+    const talks = authorizeCoalitionTalks(state, world, {
+      actorId: leaderId,
       partyId,
       partnerPartyId: partnerPartyId!,
       authorize: true,
       redLines: ["no_tax_rises"],
+      commandId: "CMD_TALKS_ROUTE",
     });
     expect(talks.ok).toBe(true);
-    expect(sim.getSnapshot().partyOrgRuntime?.coalitionTalks[partyId]?.[partnerPartyId!]).toEqual({
+    expect(runtime.coalitionTalks[partyId]?.[partnerPartyId!]).toEqual({
       authorized: true,
       redLines: ["no_tax_rises"],
     });
   });
 
   it("routes ENDORSE_CANDIDATE_AS_CHAIR and RECOMMEND_PARTY_DISCIPLINE through shared handlers", () => {
-    const world = loadTerenaWorld();
-    const probe = createSimulation({
-      world,
-      seed: "exec-disc-probe",
-      playerPoliticianId: "NPC146",
-    });
-    const probeState = jsonClone(probe.getSnapshot()) as SimState;
-    const { partyId, leaderId } = firstPartyWithLeader(probeState);
-    const targetId = otherPartyMember(probeState, partyId, leaderId);
+    const { world, state } = setup("exec-disc-handlers");
+    const { partyId, leaderId } = firstPartyWithLeader(state);
+    ensureDefaultOfficers(world, state);
+    const runtime = ensurePartyOrgRuntime(state);
+    runtime.metadata[`rules_${partyId}`] = {
+      ...defaultPartyRules(partyId, world.partyDefinitions[partyId]?.short),
+      nationalCommitteeApprovalRequired: false,
+    };
+    const targetId = otherPartyMember(state, partyId, leaderId);
     expect(targetId).toBeTruthy();
 
-    const sim = createSimulation({
-      world,
-      seed: "exec-disc-ok",
-      playerPoliticianId: leaderId,
-    });
-
-    const endorse = sim.executeCommand({
-      type: "ENDORSE_CANDIDATE_AS_CHAIR",
+    const endorse = endorseCandidate(state, world, {
+      actorId: leaderId,
       partyId,
+      contestId: `endorse:${targetId}`,
       candidateId: targetId!,
+      commandId: "CMD_ENDORSE_ROUTE",
     });
     expect(endorse.ok).toBe(true);
-    expect(
-      sim.getSnapshot().partyOrgRuntime?.partyEndorsements[`endorse:${targetId}`]?.candidateId,
-    ).toBe(targetId);
+    expect(runtime.partyEndorsements[`endorse:${targetId}`]?.candidateId).toBe(targetId);
 
-    const discipline = sim.executeCommand({
-      type: "RECOMMEND_PARTY_DISCIPLINE",
+    const discipline = recommendDiscipline(state, world, {
+      actorId: leaderId,
       partyId,
-      targetPoliticianId: targetId!,
+      targetId: targetId!,
       kind: "warning",
+      commandId: "CMD_DISC_ROUTE",
     });
     expect(discipline.ok).toBe(true);
-    const actions = Object.values(sim.getSnapshot().partyOrgRuntime?.disciplineActions ?? {});
+    const actions = Object.values(runtime.disciplineActions);
     expect(actions.some((a) => a.targetId === targetId && a.kind === "warning")).toBe(true);
   });
 

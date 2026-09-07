@@ -18,6 +18,14 @@
 
 import { pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
+import {
+  ALLOCATION_BUCKETS,
+  ISSUE_EMPHASIS_LEVELS,
+  PLATFORM_POLICY_OPTIONS,
+  normalizePartyPriorities,
+  normalizeSupportAllocations,
+  type IssueEmphasisLevel,
+} from "./catalog.js";
 import { requireCommitteeApproval } from "./committee.js";
 import { ensurePartyOrgRuntime } from "./state.js";
 
@@ -49,9 +57,7 @@ function requireChairAuth(state: SimState, partyId: string, actorId: string): Er
   const chair = officers.chair;
   const viceChair = officers.vice_chair;
 
-  // Primary: chair
   if (chair && chair.politicianId === actorId) return null;
-  // Fallback: vice chair when chair seat is vacant
   if (!chair && viceChair && viceChair.politicianId === actorId) return null;
 
   return err(
@@ -60,12 +66,28 @@ function requireChairAuth(state: SimState, partyId: string, actorId: string): Er
   );
 }
 
+function requireTreasurerOrChairAuth(
+  state: SimState,
+  partyId: string,
+  actorId: string,
+): ErrResult | null {
+  const chairErr = requireChairAuth(state, partyId, actorId);
+  if (!chairErr) return null;
+  const runtime = ensurePartyOrgRuntime(state);
+  const treasurer = runtime.officers[partyId]?.treasurer;
+  if (treasurer && treasurer.politicianId === actorId) return null;
+  return err(
+    "NOT_PARTY_TREASURER",
+    `Politician ${actorId} is not Chair/Vice Chair/Treasurer for party ${partyId}.`,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Exported command handlers
 // ---------------------------------------------------------------------------
 
 /**
- * Set the ordered priority list for a party.
+ * Set the ordered priority list for a party (max 5 catalog ids).
  * Requires: actor is Chair (or Vice Chair substituting).
  */
 export function setPartyPriorities(
@@ -79,7 +101,7 @@ export function setPartyPriorities(
   const runtime = ensurePartyOrgRuntime(state);
   const events: SimEvent[] = [];
 
-  runtime.priorities[args.partyId] = args.priorities.slice(0, 10);
+  runtime.priorities[args.partyId] = normalizePartyPriorities(args.priorities);
 
   events.push(
     pushHistory(state, {
@@ -99,7 +121,112 @@ export function setPartyPriorities(
 }
 
 /**
- * Set an official party stance on an issue.
+ * Set messaging emphasis for a platform issue.
+ * Requires: actor is Chair (or Vice Chair substituting).
+ */
+export function setIssueEmphasis(
+  state: SimState,
+  _world: KernelWorld,
+  args: {
+    actorId: string;
+    partyId: string;
+    issueId: string;
+    level: IssueEmphasisLevel;
+    commandId: string;
+  },
+): CommandOutcome {
+  const authErr = requireChairAuth(state, args.partyId, args.actorId);
+  if (authErr) return authErr;
+
+  if (!(ISSUE_EMPHASIS_LEVELS as readonly string[]).includes(args.level)) {
+    return err("INVALID_EMPHASIS", `Emphasis level must be high|medium|low.`);
+  }
+
+  const runtime = ensurePartyOrgRuntime(state);
+  if (!runtime.issueEmphasis[args.partyId]) runtime.issueEmphasis[args.partyId] = {};
+  runtime.issueEmphasis[args.partyId]![args.issueId] = args.level;
+
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "PARTY_ISSUE_EMPHASIS_SET",
+    importance: 0.35,
+    visibility: "system",
+    actorIds: [args.actorId],
+    entityIds: [args.partyId],
+    payload: { partyId: args.partyId, issueId: args.issueId, level: args.level },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
+
+  return ok();
+}
+
+/**
+ * Propose / set a platform plank option for an issue.
+ * Major action — subject to committee approval when rules require it.
+ */
+export function proposePlatformPlank(
+  state: SimState,
+  world: KernelWorld,
+  args: {
+    actorId: string;
+    partyId: string;
+    issueId: string;
+    optionId: string;
+    commandId: string;
+  },
+): CommandOutcome {
+  const authErr = requireChairAuth(state, args.partyId, args.actorId);
+  if (authErr) return authErr;
+
+  const options = PLATFORM_POLICY_OPTIONS[args.issueId];
+  if (!options || !options.some((o) => o.id === args.optionId)) {
+    return err(
+      "INVALID_PLANK",
+      `Unknown platform option ${args.optionId} for issue ${args.issueId}.`,
+    );
+  }
+
+  const committee = requireCommitteeApproval(state, world, {
+    partyId: args.partyId,
+    proposalKind: "platform_plank",
+    proposalPayload: { issueId: args.issueId, optionId: args.optionId },
+    commandId: args.commandId,
+    deferredCommand: {
+      type: "PROPOSE_PLATFORM_PLANK",
+      partyId: args.partyId,
+      issueId: args.issueId,
+      optionId: args.optionId,
+    },
+  });
+  if (!committee.ok) return committee;
+
+  const runtime = ensurePartyOrgRuntime(state);
+  if (!runtime.platformPlanks[args.partyId]) runtime.platformPlanks[args.partyId] = {};
+  runtime.platformPlanks[args.partyId]![args.issueId] = args.optionId;
+
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "PARTY_PLATFORM_PLANK_SET",
+    importance: 0.5,
+    visibility: "public",
+    actorIds: [args.actorId],
+    entityIds: [args.partyId],
+    payload: { partyId: args.partyId, issueId: args.issueId, optionId: args.optionId },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
+
+  return ok();
+}
+
+/**
+ * Set an official party stance on a live question (bill, amendment, floor motion).
+ *
+ * Prefer issueIds that look like bill/amendment ids when possible. Platform issue
+ * keys (labor, housing, …) remain accepted for compatibility with older callers;
+ * durable platform planks should use proposePlatformPlank instead.
+ *
  * Requires: actor is Chair (or Vice Chair substituting).
  */
 export function setPartyOfficialPosition(
@@ -230,7 +357,7 @@ export function endorseCandidate(
 
 /**
  * Allocate party support resources across targets (contests, regions, etc.).
- * Values are 0–1 shares; they are clamped and stored as-is (caller decides meaning).
+ * Known ALLOCATION_BUCKETS keys are renormalized to sum ~1.
  * Major action — subject to committee approval when rules require it.
  * Requires: actor is Chair (or Vice Chair substituting).
  */
@@ -261,7 +388,10 @@ export function allocatePartySupport(
   for (const [key, val] of Object.entries(args.allocations)) {
     clamped[key] = Math.max(0, Math.min(1, Number.isFinite(val) ? val : 0));
   }
-  runtime.supportAllocations[args.partyId] = clamped;
+  const hasKnownBucket = Object.keys(ALLOCATION_BUCKETS).some((k) => k in clamped);
+  runtime.supportAllocations[args.partyId] = hasKnownBucket
+    ? normalizeSupportAllocations(clamped)
+    : clamped;
 
   pushHistory(state, {
     date: state.currentDate,
@@ -270,7 +400,56 @@ export function allocatePartySupport(
     visibility: "system",
     actorIds: [args.actorId],
     entityIds: [args.partyId],
-    payload: { partyId: args.partyId, allocations: clamped },
+    payload: {
+      partyId: args.partyId,
+      allocations: runtime.supportAllocations[args.partyId] ?? {},
+    },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
+
+  return ok();
+}
+
+/**
+ * Treasurer helper: recommend a balanced budget across allocation buckets.
+ * Does not commit allocations — writes a recommendation into metadata and history.
+ * Requires: Chair/Vice Chair or Treasurer.
+ */
+export function recommendPartyBudget(
+  state: SimState,
+  _world: KernelWorld,
+  args: {
+    actorId: string;
+    partyId: string;
+    allocations?: Record<string, number>;
+    commandId: string;
+  },
+): CommandOutcome {
+  const authErr = requireTreasurerOrChairAuth(state, args.partyId, args.actorId);
+  if (authErr) return authErr;
+
+  const runtime = ensurePartyOrgRuntime(state);
+  const recommended = normalizeSupportAllocations(
+    args.allocations ?? {
+      presidential: 0.25,
+      assembly: 0.3,
+      gubernatorial: 0.15,
+      field_organization: 0.2,
+      party_infrastructure: 0.1,
+    },
+  );
+
+  runtime.metadata[`budget_recommend_${args.partyId}`] = recommended;
+
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "PARTY_BUDGET_RECOMMENDED",
+    importance: 0.35,
+    visibility: "system",
+    actorIds: [args.actorId],
+    entityIds: [args.partyId],
+    payload: { partyId: args.partyId, allocations: recommended },
     sourceScheduledEventId: null,
     sourceCommandId: args.commandId,
   });

@@ -1,5 +1,11 @@
 import type { KernelWorld, SimState } from "../types.js";
-import type { LeadershipElectionMethod, NominationMethodForOffice, PartyRules } from "./types.js";
+import type {
+  LeadershipElectionMethod,
+  NominationMethodForOffice,
+  OfficerSelectionMethod,
+  PartyRules,
+  VotingSystem,
+} from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -25,9 +31,9 @@ function shortHash(s: string): number {
  * Derives default PartyRules for a party from its identity.
  *
  * Three governance archetypes keyed by `hash(partyShort + partyId) % 3`:
- *   0 – centralized  : committee chair election, committee nomination, approval required, 24-month term
- *   1 – membership   : membership ballot, self-nomination, no approval, 48-month term
- *   2 – convention   : convention-delegates election, committee nomination, approval required, 36-month term
+ *   0 – centralized  : committee chair election, plurality/runoff, committee/appointment officers
+ *   1 – membership   : membership ballot, ranked_choice, membership officer elections
+ *   2 – convention   : convention-delegates, multiple_ballot/runoff, committee officer selection
  *
  * @param partyId   Canonical party identifier
  * @param partyShort  Short display name / ticker (optional — used to add variation)
@@ -40,26 +46,48 @@ export function defaultPartyRules(partyId: string, partyShort?: string): PartyRu
   let nominationMethodForChair: NominationMethodForOffice;
   let nationalCommitteeApprovalRequired: boolean;
   let termMonths: number;
+  let votingSystem: VotingSystem;
+  let viceChairSelection: OfficerSelectionMethod;
+  let treasurerSelection: OfficerSelectionMethod;
+  let challengeMechanism: string;
 
   switch (archetype) {
-    case 0: // centralized
+    case 0: {
+      // centralized
       chairElectionMethod = "committee";
       nominationMethodForChair = "committee_nomination";
       nationalCommitteeApprovalRequired = true;
       termMonths = 24;
+      votingSystem = seed % 2 === 0 ? "plurality" : "runoff";
+      viceChairSelection = seed % 2 === 0 ? "committee" : "chair_appointment_confirmed";
+      treasurerSelection = seed % 2 === 0 ? "chair_appointment_confirmed" : "committee";
+      challengeMechanism = "National committee challenge petition";
       break;
-    case 1: // membership-driven
+    }
+    case 1: {
+      // membership-driven
       chairElectionMethod = "membership";
       nominationMethodForChair = "self_nomination";
       nationalCommitteeApprovalRequired = false;
       termMonths = 48;
+      votingSystem = "ranked_choice";
+      viceChairSelection = "membership";
+      treasurerSelection = "membership";
+      challengeMechanism = "Membership recall ballot";
       break;
-    default: // convention-based
+    }
+    default: {
+      // convention-based
       chairElectionMethod = "convention_delegates";
       nominationMethodForChair = "committee_nomination";
       nationalCommitteeApprovalRequired = true;
       termMonths = 36;
+      votingSystem = seed % 2 === 0 ? "multiple_ballot" : "runoff";
+      viceChairSelection = "committee";
+      treasurerSelection = "committee";
+      challengeMechanism = "Convention challenge floor motion";
       break;
+    }
   }
 
   return {
@@ -68,6 +96,10 @@ export function defaultPartyRules(partyId: string, partyShort?: string): PartyRu
     nationalCommitteeApprovalRequired,
     nominationMethodForChair,
     termMonths,
+    votingSystem,
+    viceChairSelection,
+    treasurerSelection,
+    challengeMechanism,
   };
 }
 
@@ -86,7 +118,8 @@ export function defaultPartyRules(partyId: string, partyShort?: string): PartyRu
 export function getPartyRules(state: SimState, world: KernelWorld, partyId: string): PartyRules {
   const override = state.partyOrgRuntime?.metadata?.[`rules_${partyId}`];
   if (override && typeof override === "object" && !Array.isArray(override)) {
-    return override as PartyRules;
+    const base = defaultPartyRules(partyId, world.partyDefinitions[partyId]?.short);
+    return { ...base, ...(override as Partial<PartyRules>), partyId };
   }
   const partyDef = world.partyDefinitions[partyId];
   return defaultPartyRules(partyId, partyDef?.short);

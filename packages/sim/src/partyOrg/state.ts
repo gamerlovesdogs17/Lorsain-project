@@ -1,10 +1,16 @@
 import type { SimState } from "../types.js";
 import {
   emptyPartyOrgRuntime,
+  CHAIR_ELECTION_STAGES,
   LEADERSHIP_ELECTION_METHODS,
   NATIONAL_OFFICE_ROLES,
   PARTY_DISCIPLINE_KINDS,
+  VOTING_SYSTEMS,
+  type ChairCandidateProgram,
+  type ChairElectionStage,
   type PartyOrgRuntime,
+  type PendingCommitteeVote,
+  type VotingSystem,
 } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -14,8 +20,15 @@ import {
 export function ensurePartyOrgRuntime(state: SimState): PartyOrgRuntime {
   if (!state.partyOrgRuntime) {
     state.partyOrgRuntime = emptyPartyOrgRuntime();
-  } else if (!state.partyOrgRuntime.nationalCommittee) {
-    state.partyOrgRuntime.nationalCommittee = {};
+  } else {
+    const rt = state.partyOrgRuntime;
+    if (!rt.nationalCommittee) rt.nationalCommittee = {};
+    if (!rt.issueEmphasis) rt.issueEmphasis = {};
+    if (!rt.platformPlanks) rt.platformPlanks = {};
+    if (!rt.pendingCommitteeVotes) rt.pendingCommitteeVotes = {};
+    if (typeof rt.nextPendingCommitteeId !== "number" || rt.nextPendingCommitteeId < 1) {
+      rt.nextPendingCommitteeId = 1;
+    }
   }
   return state.partyOrgRuntime;
 }
@@ -145,6 +158,36 @@ export function parsePartyOrgRuntime(raw: unknown): PartyOrgRuntime | string {
         r.status === "open" || r.status === "resolved" || r.status === "cancelled"
           ? r.status
           : "open";
+      const stage =
+        typeof r.stage === "string" &&
+        (CHAIR_ELECTION_STAGES as readonly string[]).includes(r.stage)
+          ? (r.stage as ChairElectionStage)
+          : status === "resolved"
+            ? "aftermath"
+            : "opening";
+      const votingSystem =
+        typeof r.votingSystem === "string" &&
+        (VOTING_SYSTEMS as readonly string[]).includes(r.votingSystem)
+          ? (r.votingSystem as VotingSystem)
+          : undefined;
+      const programs: Record<string, ChairCandidateProgram> = {};
+      if (r.programs && typeof r.programs === "object" && !Array.isArray(r.programs)) {
+        for (const [cid, prog] of Object.entries(r.programs as Record<string, unknown>)) {
+          if (!prog || typeof prog !== "object" || Array.isArray(prog)) continue;
+          const p = prog as Record<string, unknown>;
+          programs[cid] = {
+            platformDirection: typeof p.platformDirection === "string" ? p.platformDirection : "",
+            coalitionStrategy: typeof p.coalitionStrategy === "string" ? p.coalitionStrategy : "",
+            campaignStrategy: typeof p.campaignStrategy === "string" ? p.campaignStrategy : "",
+            priorityIssue: typeof p.priorityIssue === "string" ? p.priorityIssue : "",
+            unityStrategy: typeof p.unityStrategy === "string" ? p.unityStrategy : "",
+          };
+        }
+      }
+      const tally =
+        r.tally && typeof r.tally === "object" && !Array.isArray(r.tally)
+          ? (r.tally as Record<string, number>)
+          : undefined;
       base.chairElections[id] = {
         id,
         partyId: typeof r.partyId === "string" ? r.partyId : "",
@@ -156,6 +199,11 @@ export function parsePartyOrgRuntime(raw: unknown): PartyOrgRuntime | string {
         winnerId: typeof r.winnerId === "string" ? r.winnerId : null,
         resolvedDate: typeof r.resolvedDate === "string" ? r.resolvedDate : null,
         method,
+        stage,
+        triggerReason: typeof r.triggerReason === "string" ? r.triggerReason : "scheduled",
+        programs,
+        ...(tally ? { tally } : {}),
+        ...(votingSystem ? { votingSystem } : {}),
       };
     }
   }
@@ -210,6 +258,85 @@ export function parsePartyOrgRuntime(raw: unknown): PartyOrgRuntime | string {
     base.provincialOrganizations = dst;
   }
 
+  if (
+    obj.issueEmphasis &&
+    typeof obj.issueEmphasis === "object" &&
+    !Array.isArray(obj.issueEmphasis)
+  ) {
+    const raw_ie = obj.issueEmphasis as Record<string, unknown>;
+    for (const [partyId, issueMap] of Object.entries(raw_ie)) {
+      if (!issueMap || typeof issueMap !== "object" || Array.isArray(issueMap)) continue;
+      const dst: Record<string, "high" | "medium" | "low"> = {};
+      for (const [issueId, level] of Object.entries(issueMap as Record<string, unknown>)) {
+        if (level === "high" || level === "medium" || level === "low") dst[issueId] = level;
+      }
+      base.issueEmphasis[partyId] = dst;
+    }
+  }
+
+  if (
+    obj.platformPlanks &&
+    typeof obj.platformPlanks === "object" &&
+    !Array.isArray(obj.platformPlanks)
+  ) {
+    const raw_pp = obj.platformPlanks as Record<string, unknown>;
+    for (const [partyId, issueMap] of Object.entries(raw_pp)) {
+      if (!issueMap || typeof issueMap !== "object" || Array.isArray(issueMap)) continue;
+      const dst: Record<string, string> = {};
+      for (const [issueId, optionId] of Object.entries(issueMap as Record<string, unknown>)) {
+        if (typeof optionId === "string") dst[issueId] = optionId;
+      }
+      base.platformPlanks[partyId] = dst;
+    }
+  }
+
+  if (
+    obj.pendingCommitteeVotes &&
+    typeof obj.pendingCommitteeVotes === "object" &&
+    !Array.isArray(obj.pendingCommitteeVotes)
+  ) {
+    const raw_pcv = obj.pendingCommitteeVotes as Record<string, unknown>;
+    for (const [id, rec] of Object.entries(raw_pcv)) {
+      if (!rec || typeof rec !== "object" || Array.isArray(rec)) continue;
+      const r = rec as Record<string, unknown>;
+      const status =
+        r.status === "pending" || r.status === "resolved" || r.status === "cancelled"
+          ? r.status
+          : "pending";
+      const playerChoice =
+        r.playerChoice === "yes" || r.playerChoice === "no" || r.playerChoice === "abstain"
+          ? r.playerChoice
+          : null;
+      const pending: PendingCommitteeVote = {
+        id,
+        partyId: typeof r.partyId === "string" ? r.partyId : "",
+        proposalKind: typeof r.proposalKind === "string" ? r.proposalKind : "",
+        proposalPayload:
+          r.proposalPayload &&
+          typeof r.proposalPayload === "object" &&
+          !Array.isArray(r.proposalPayload)
+            ? (r.proposalPayload as PendingCommitteeVote["proposalPayload"])
+            : {},
+        npcYes: typeof r.npcYes === "number" ? r.npcYes : 0,
+        npcNo: typeof r.npcNo === "number" ? r.npcNo : 0,
+        npcAbstain: typeof r.npcAbstain === "number" ? r.npcAbstain : 0,
+        playerChoice,
+        deferredCommand:
+          r.deferredCommand &&
+          typeof r.deferredCommand === "object" &&
+          !Array.isArray(r.deferredCommand)
+            ? (r.deferredCommand as PendingCommitteeVote["deferredCommand"])
+            : null,
+        status,
+        createdDate: typeof r.createdDate === "string" ? r.createdDate : "2000-01-01",
+      };
+      base.pendingCommitteeVotes[id] = pending;
+    }
+  }
+
+  if (typeof obj.nextPendingCommitteeId === "number" && obj.nextPendingCommitteeId > 0) {
+    base.nextPendingCommitteeId = obj.nextPendingCommitteeId;
+  }
   if (typeof obj.nextElectionId === "number" && obj.nextElectionId > 0) {
     base.nextElectionId = obj.nextElectionId;
   }

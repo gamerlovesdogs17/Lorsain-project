@@ -30,6 +30,28 @@ export type NominationMethodForOffice = (typeof NOMINATION_METHODS_FOR_OFFICE)[n
 export const PARTY_DISCIPLINE_KINDS = ["warning", "censure", "suspend_support"] as const;
 export type PartyDisciplineKind = (typeof PARTY_DISCIPLINE_KINDS)[number];
 
+export const VOTING_SYSTEMS = ["plurality", "runoff", "ranked_choice", "multiple_ballot"] as const;
+export type VotingSystem = (typeof VOTING_SYSTEMS)[number];
+
+export const OFFICER_SELECTION_METHODS = [
+  "membership",
+  "committee",
+  "chair_ticket",
+  "chair_appointment",
+  "chair_appointment_confirmed",
+] as const;
+export type OfficerSelectionMethod = (typeof OFFICER_SELECTION_METHODS)[number];
+
+export const CHAIR_ELECTION_STAGES = [
+  "opening",
+  "nominations",
+  "campaign",
+  "ballot",
+  "result",
+  "aftermath",
+] as const;
+export type ChairElectionStage = (typeof CHAIR_ELECTION_STAGES)[number];
+
 // ---------------------------------------------------------------------------
 // Domain types
 // ---------------------------------------------------------------------------
@@ -52,6 +74,14 @@ export type PartyRules = {
   nominationMethodForChair: NominationMethodForOffice;
   /** Chair term length in months (0 = indefinite until replaced). */
   termMonths: number;
+  /** Ballot rule used when resolving chair elections. */
+  votingSystem: VotingSystem;
+  /** How the vice chair is selected after a chair is seated. */
+  viceChairSelection: OfficerSelectionMethod;
+  /** How the treasurer is selected after a chair is seated. */
+  treasurerSelection: OfficerSelectionMethod;
+  /** Optional free-text description of how challenges to the chair are opened. */
+  challengeMechanism?: string;
 };
 
 /** A single officer record — one per (partyId, role) combination. */
@@ -90,6 +120,15 @@ export type PartyDisciplineAction = {
   status: "pending" | "applied" | "dismissed";
 };
 
+/** Candidate program snapshot attached to a chair election. */
+export type ChairCandidateProgram = {
+  platformDirection: string;
+  coalitionStrategy: string;
+  campaignStrategy: string;
+  priorityIssue: string;
+  unityStrategy: string;
+};
+
 /** A national chair election cycle. */
 export type ChairElection = {
   id: string;
@@ -101,6 +140,29 @@ export type ChairElection = {
   winnerId: string | null;
   resolvedDate: IsoDate | null;
   method: LeadershipElectionMethod;
+  stage: ChairElectionStage;
+  /** Why this election opened (e.g. scheduled, vacancy, challenge). */
+  triggerReason: string;
+  /** Per-candidate programs keyed by politicianId. */
+  programs: Record<string, ChairCandidateProgram>;
+  /** Final (or latest) vote tally when resolved. */
+  tally?: Record<string, number>;
+  votingSystem?: VotingSystem;
+};
+
+/** Pending national-committee vote awaiting an explicit player choice. */
+export type PendingCommitteeVote = {
+  id: string;
+  partyId: string;
+  proposalKind: string;
+  proposalPayload: JsonObject;
+  npcYes: number;
+  npcNo: number;
+  npcAbstain: number;
+  playerChoice: "yes" | "no" | "abstain" | null;
+  deferredCommand: JsonObject | null;
+  status: "pending" | "resolved" | "cancelled";
+  createdDate: IsoDate;
 };
 
 // ---------------------------------------------------------------------------
@@ -150,6 +212,13 @@ export type PartyOrgRuntime = {
     string,
     { partyId: string; provinceId: string; chairId: string | null; assemblyLeaderId: string | null }
   >;
+  /** partyId → issueId → emphasis level for messaging. */
+  issueEmphasis: Record<string, Record<string, "high" | "medium" | "low">>;
+  /** partyId → issueId → selected PLATFORM_POLICY_OPTIONS id. */
+  platformPlanks: Record<string, Record<string, string>>;
+  /** Pending committee votes awaiting player ballot. */
+  pendingCommitteeVotes: Record<string, PendingCommitteeVote>;
+  nextPendingCommitteeId: number;
   /** Auto-increment counters private to this runtime (avoids touching shared Counters). */
   nextElectionId: number;
   nextDisciplineId: number;
@@ -173,6 +242,10 @@ export function emptyPartyOrgRuntime(): PartyOrgRuntime {
     partyEndorsements: {},
     supportAllocations: {},
     nationalCommittee: {},
+    issueEmphasis: {},
+    platformPlanks: {},
+    pendingCommitteeVotes: {},
+    nextPendingCommitteeId: 1,
     nextElectionId: 1,
     nextDisciplineId: 1,
     lastOrgMonth: null,
