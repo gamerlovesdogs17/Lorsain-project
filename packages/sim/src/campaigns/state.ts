@@ -2,6 +2,7 @@ import { padId } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimState } from "../types.js";
 import { CAMPAIGN_ACTION_POINTS } from "./policy.js";
 import { actionPointMax, monthStart } from "./effects.js";
+import { attachNominationMethodMetadata, campaignUsesNominationMetadata } from "./nominations.js";
 import type { CampaignState, CampaignType, CampaignRuntime } from "./types.js";
 import { emptyCampaignRuntime } from "./types.js";
 
@@ -87,6 +88,9 @@ export function createCampaignRecord(
     },
     metadata: { ...(partial.metadata ?? {}) },
   };
+  if (campaignUsesNominationMetadata(rec.type)) {
+    attachNominationMethodMetadata(world, state, rec);
+  }
   state.campaignRuntime.campaigns[id] = rec;
   return rec;
 }

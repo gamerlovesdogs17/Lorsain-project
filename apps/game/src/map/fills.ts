@@ -75,10 +75,28 @@ export function constituencySittingPartyId(
   return plurality;
 }
 
-export function latestPublicPoll(snap: SimState): (typeof snap.polls)[string] | undefined {
-  const polls = Object.values(snap.polls).sort((a, b) =>
-    a.publicationDate < b.publicationDate ? 1 : a.publicationDate > b.publicationDate ? -1 : 0,
-  );
+export function latestPublicPoll(
+  snap: SimState,
+  opts?: { contestId?: string | null; electionId?: string | null },
+): (typeof snap.polls)[string] | undefined {
+  const contestId = opts?.contestId ?? null;
+  const electionId = contestId ? null : (opts?.electionId ?? null);
+  const polls = Object.values(snap.polls)
+    .filter((poll) => {
+      const purpose = typeof poll.metadata.purpose === "string" ? poll.metadata.purpose : null;
+      const pollContest =
+        typeof poll.metadata.contestId === "string" ? poll.metadata.contestId : null;
+      if (contestId) return pollContest === contestId;
+      if (electionId) {
+        if ((poll.electionId ?? null) !== electionId) return false;
+        if (purpose === "nomination") return false;
+        return true;
+      }
+      return purpose !== "nomination";
+    })
+    .sort((a, b) =>
+      a.publicationDate < b.publicationDate ? 1 : a.publicationDate > b.publicationDate ? -1 : 0,
+    );
   return polls[0] ?? undefined;
 }
 

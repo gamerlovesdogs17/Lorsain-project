@@ -55,16 +55,34 @@ function pollElectionId(poll: PollRecord): string | null {
   );
 }
 
+function pollContestId(poll: PollRecord): string | null {
+  return typeof poll.metadata.contestId === "string" ? poll.metadata.contestId : null;
+}
+
+function pollPurpose(poll: PollRecord): string | null {
+  return typeof poll.metadata.purpose === "string" ? poll.metadata.purpose : null;
+}
+
 export function latestGeographicPoll(
   state: SimState,
   electionId: string | null,
   kind: "province" | "constituency",
   geographyId: string,
+  contestId?: string | null,
 ): PollRecord | null {
   return (
     Object.values(state.polls)
       .filter((poll) => {
-        if (electionId && pollElectionId(poll) !== electionId) return false;
+        if (contestId) {
+          // Nomination/primary: only polls for THIS contest.
+          if (pollContestId(poll) !== contestId) return false;
+        } else if (electionId) {
+          if (pollElectionId(poll) !== electionId) return false;
+          // General: exclude nomination-only polls.
+          if (pollPurpose(poll) === "nomination" && !pollElectionId(poll)) return false;
+        } else if (pollPurpose(poll) === "nomination") {
+          return false;
+        }
         return kind === "province"
           ? poll.geographyKind === "province" && poll.provinceId === geographyId
           : poll.geographyKind === "constituency" && poll.constituencyId === geographyId;
@@ -75,13 +93,65 @@ export function latestGeographicPoll(
   );
 }
 
-function latestNationalPoll(state: SimState, electionId: string | null): PollRecord | null {
+/**
+ * Poll scope for a campaign map layer.
+ * Nomination campaigns use contestId only. General (and other) campaigns use
+ * electionId only — even when contestId remains set as source-nomination lineage.
+ */
+export function campaignPollScope(campaign: CampaignState): {
+  contestId: string | null;
+  electionId: string | null;
+} {
+  if (campaign.type === "presidential_nomination") {
+    return { contestId: campaign.contestId ?? null, electionId: null };
+  }
+  return { contestId: null, electionId: campaign.electionId ?? null };
+}
+
+function latestNationalPoll(
+  state: SimState,
+  electionId: string | null,
+  contestId?: string | null,
+): PollRecord | null {
   return (
     Object.values(state.polls)
       .filter((poll) => {
         if (poll.geographyKind !== "national") return false;
-        if (electionId && pollElectionId(poll) !== electionId) return false;
+        if (contestId) {
+          if (pollContestId(poll) !== contestId) return false;
+          return true;
+        }
+        if (electionId) {
+          if (pollElectionId(poll) !== electionId) return false;
+          if (pollPurpose(poll) === "nomination") return false;
+          return true;
+        }
+        if (pollPurpose(poll) === "nomination") return false;
         return true;
+      })
+      .sort(
+        (a, b) => b.publicationDate.localeCompare(a.publicationDate) || b.id.localeCompare(a.id),
+      )[0] ?? null
+  );
+}
+
+/** Latest published poll scoped to a nomination contest or general election (never mixed). */
+export function latestScopedPublicPoll(
+  state: SimState,
+  opts: { contestId?: string | null; electionId?: string | null } = {},
+): PollRecord | null {
+  const contestId = opts.contestId ?? null;
+  const electionId = contestId ? null : (opts.electionId ?? null);
+  return (
+    Object.values(state.polls)
+      .filter((poll) => {
+        if (contestId) return pollContestId(poll) === contestId;
+        if (electionId) {
+          if (pollElectionId(poll) !== electionId) return false;
+          if (pollPurpose(poll) === "nomination") return false;
+          return true;
+        }
+        return pollPurpose(poll) !== "nomination";
       })
       .sort(
         (a, b) => b.publicationDate.localeCompare(a.publicationDate) || b.id.localeCompare(a.id),
@@ -456,7 +526,7 @@ export function publicForecast(
   geographyId: string,
 ): PublicGeographicDatum {
   const asOf = state.currentDate;
-  const electionId = campaign.electionId ?? null;
+  const { contestId, electionId } = campaignPollScope(campaign);
   const blended: PartyShare = new Map();
   const signals: string[] = [];
   let evidence = 0;
@@ -464,7 +534,7 @@ export function publicForecast(
   let hasLocalPoll = false;
   let hasFreshLocalPoll = false;
 
-  const local = latestGeographicPoll(state, electionId, kind, geographyId);
+  const local = latestGeographicPoll(state, electionId, kind, geographyId, contestId);
   if (local) {
     const freshness = pollFreshnessWeight(local.publicationDate, asOf);
     addWeightedShares(blended, pollShares(local), 1.15 * freshness);
@@ -481,7 +551,7 @@ export function publicForecast(
     );
   }
 
-  const national = latestNationalPoll(state, electionId);
+  const national = latestNationalPoll(state, electionId, contestId);
   if (national) {
     const freshness = pollFreshnessWeight(national.publicationDate, asOf);
     const weight = (hasLocalPoll ? 0.28 : 0.7) * freshness;
@@ -613,15 +683,27 @@ export function publicPolling(
   kind: "province" | "constituency",
   geographyId: string,
 ): PublicGeographicDatum {
-  const poll = latestGeographicPoll(state, campaign.electionId ?? null, kind, geographyId);
-  return poll
-    ? pollDatum(poll)
-    : {
-        truth: "no_data",
-        leaderPartyId: null,
-        label: "No direct local poll",
-        detail: "This area remains neutral because no published poll sampled it directly.",
-        asOf: null,
-        confidence: "none",
+  const { contestId, electionId } = campaignPollScope(campaign);
+  const poll = latestGeographicPoll(state, electionId, kind, geographyId, contestId);
+  if (poll) {
+    // During nomination, prefer candidate-labeled leaders over party-only general labels.
+    const datum = pollDatum(poll);
+    if (contestId && poll.metadata.purpose === "nomination") {
+      return {
+        ...datum,
+        detail: `${datum.detail} Primary/nomination contest field only.`,
       };
+    }
+    return datum;
+  }
+  return {
+    truth: "no_data",
+    leaderPartyId: null,
+    label: contestId ? "No primary poll in this area" : "No direct local poll",
+    detail: contestId
+      ? "This area remains neutral because no published nomination poll sampled it for the current contest."
+      : "This area remains neutral because no published poll sampled it directly.",
+    asOf: null,
+    confidence: "none",
+  };
 }

@@ -70,12 +70,13 @@ function event(
   payload: JsonObject,
   commandId: string | null,
   importance = 0.4,
+  visibility: SimEvent["visibility"] = "public",
 ): SimEvent {
   return pushHistory(state, {
     date: state.currentDate,
     type,
     importance,
-    visibility: "public",
+    visibility,
     actorIds,
     entityIds,
     payload,
@@ -1325,6 +1326,7 @@ export function campaignPrepareDebate(
         { campaignId: campaign.id, debatePrep: campaign.debatePrep },
         commandId,
         0.25,
+        "system",
       ),
     ],
   };

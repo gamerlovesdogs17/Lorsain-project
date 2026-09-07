@@ -4,8 +4,12 @@ import {
   activeRaceCampaigns,
   campaignMonthsRemaining,
   campaignTargetDate,
+  candidateStandingOrDefault,
   gotvActivations,
   isDeclaredContestCandidate,
+  nominationCalendarDates,
+  nominationMethodForCampaign,
+  nominationMethodLabel,
   politiciansAreActiveRaceRivals,
   shouldHoldDebate,
   type CampaignState,
@@ -42,6 +46,8 @@ import { MapLegend } from "./ui/mapLegend.js";
 import { TerenaMap, type MapSelection } from "./map/TerenaMap.js";
 import { mapFillFor } from "./map/fills.js";
 import {
+  campaignPollScope,
+  latestScopedPublicPoll,
   publicForecast,
   publicPolling,
   previousPublicResult,
@@ -236,8 +242,8 @@ export function CampaignPage(props: {
     return (
       <div className="page-tone-campaign">
         <PageHeader
-          kicker="War room"
-          title="Campaign"
+          kicker="War room · Campaign 2.0"
+          title="Campaign HQ"
           subtitle="You are not running an active campaign."
         />
         {assemblyElection ? (
@@ -390,7 +396,76 @@ export function CampaignPage(props: {
             : c.type === "provincial_assembly" && campaignProvinceId
               ? `Provincial Assembly · ${props.catalog.places.get(campaignProvinceId)?.name ?? "Province"}`
               : "Political campaign";
-  const poll = latestPublicPoll(props.snap);
+  const pollScope = campaignPollScope(c);
+  const racePoll = latestScopedPublicPoll(props.snap, pollScope);
+  const poll = racePoll ?? latestPublicPoll(props.snap, pollScope);
+  const playerStanding = candidateStandingOrDefault(
+    props.world,
+    props.snap,
+    props.snap.playerPoliticianId,
+  );
+  const nominationMethod = nominationMethodForCampaign(props.world, props.snap, c);
+  const standingLine =
+    playerStanding.favorability >= 0.12
+      ? "Favorable public standing"
+      : playerStanding.favorability <= -0.12
+        ? "Soft public standing"
+        : "Competitive public standing";
+  const momentumLine =
+    playerStanding.momentum > 0.04
+      ? "gaining momentum"
+      : playerStanding.momentum < -0.04
+        ? "losing momentum"
+        : "steady momentum";
+  const pollProjection =
+    poll && poll.firstPreference.length
+      ? pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)
+      : null;
+  const pathFraming =
+    c.type === "presidential_nomination"
+      ? "Path: win the party nomination, then contest the general election."
+      : c.type === "presidential_general"
+        ? "Path: secure a national plurality through ranked-choice transfers."
+        : c.type === "assembly"
+          ? "Path: hold the filed constituency on election day."
+          : c.type === "gubernatorial"
+            ? "Path: win the province-wide gubernatorial contest."
+            : "Path: contest the scheduled election on the recorded calendar.";
+  const calendarItems: Array<{ date: string; label: string }> = [];
+  if (c.type === "assembly" && c.electionId) {
+    const assembly = props.snap.elections[c.electionId]?.assembly;
+    if (assembly?.filingDeadlineDate) {
+      calendarItems.push({ date: assembly.filingDeadlineDate, label: "Filing deadline" });
+    }
+  }
+  if (c.type === "presidential_nomination" && contest) {
+    const electionDate =
+      typeof contest.metadata.electionDate === "string" ? contest.metadata.electionDate : null;
+    if (electionDate) {
+      const cal = nominationCalendarDates(electionDate);
+      calendarItems.push({ date: cal.open, label: "Nomination contest window" });
+      calendarItems.push({ date: cal.resolve, label: "Nomination decision" });
+    }
+  }
+  for (const debate of Object.values(props.snap.campaignRuntime.debates)) {
+    if (debate.status !== "held") continue;
+    const sameContest = pollScope.contestId && debate.contestId === pollScope.contestId;
+    const sameElection = pollScope.electionId && debate.electionId === pollScope.electionId;
+    if (!sameContest && !sameElection) continue;
+    calendarItems.push({ date: debate.date, label: "Debate held" });
+  }
+  if (campaignElectionDate) {
+    calendarItems.push({
+      date: campaignElectionDate,
+      label: c.type === "presidential_nomination" ? "Nomination day" : "Election day",
+    });
+  }
+  calendarItems.sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label));
+  const uniqueCalendar = calendarItems.filter(
+    (item, index, arr) =>
+      arr.findIndex((other) => other.date === item.date && other.label === item.label) === index,
+  );
+
   const recentActivity = props.snap.history
     .filter(
       (e) =>
@@ -436,6 +511,34 @@ export function CampaignPage(props: {
         b.endorsement.date.localeCompare(a.endorsement.date) ||
         a.organizationId.localeCompare(b.organizationId),
     );
+  const partySupportCount =
+    contestEndorsements.filter((e) => e.status === "active").length +
+    interestEndorsements.filter((row) => (row.endorsement.status ?? "active") === "active").length;
+  const pollShareFor = (politicianId: string): number | null => {
+    if (!poll) return null;
+    const row = poll.firstPreference.find((entry) => entry.politicianId === politicianId);
+    return row ? row.share : null;
+  };
+  const strategicMemo = (() => {
+    const parts: string[] = [];
+    parts.push(`${standingLine} with ${momentumLine}.`);
+    if (monthsRemaining != null) {
+      parts.push(
+        monthsRemaining <= 1
+          ? "Closing period: convert organization into turnout where Ground Game is ready."
+          : `About ${monthsRemaining} months remain on the recorded calendar.`,
+      );
+    }
+    if (c.cashOnHand < 15_000) parts.push("Cash is tight relative to paid media needs.");
+    else if (c.fieldOrganization < 0.2)
+      parts.push("Field organization still needs durable build-out.");
+    else parts.push("Resources support continued field and message work.");
+    if (rivals.length)
+      parts.push(
+        `${rivals.length} active opponent${rivals.length === 1 ? "" : "s"} in this contest.`,
+      );
+    return parts.join(" ");
+  })();
   const activeGotv = gotvActivations(c);
   const gotvOrganization =
     gotvKind === "province"
@@ -513,7 +616,7 @@ export function CampaignPage(props: {
   return (
     <div className="campaign-page page-tone-campaign campaign-hq-v7">
       <PageHeader
-        kicker="Command center"
+        kicker="Campaign HQ · Campaign 2.0"
         title={campaignTypeLabel(c.type).replace(/^./, (letter) => letter.toUpperCase())}
         subtitle={`${raceDescription} · Election ${campaignElectionDate ?? "upcoming"}`}
         actions={<StatusBadge tone={noActions ? "warn" : "ok"}>{c.status}</StatusBadge>}
@@ -544,6 +647,43 @@ export function CampaignPage(props: {
         </div>
       )}
 
+      <section className="campaign-strategic-overview" aria-label="Strategic overview">
+        <div className="kicker">Strategic overview</div>
+        <div className="campaign-overview-grid">
+          <div>
+            <span className="muted">Contest</span>
+            <strong>{campaignTypeLabel(c.type)}</strong>
+            <small>{raceDescription}</small>
+          </div>
+          <div>
+            <span className="muted">Standing</span>
+            <strong>{standingLine}</strong>
+            <small>{momentumLine}</small>
+          </div>
+          <div>
+            <span className="muted">
+              {pollScope.contestId ? "Primary polling" : "Polling / projection"}
+            </span>
+            <strong>{pollProjection ? "Published sample" : "No race poll yet"}</strong>
+            <small>{pollProjection ?? "Map layers stay contest-scoped when polls exist."}</small>
+          </div>
+          <div>
+            <span className="muted">Path</span>
+            <strong>
+              {monthsRemaining == null
+                ? "Calendar open"
+                : monthsRemaining <= 1
+                  ? "Final stretch"
+                  : `${monthsRemaining} months out`}
+            </strong>
+            <small>
+              {pathFraming}
+              {nominationMethod ? ` · ${nominationMethodLabel(nominationMethod)}` : ""}
+            </small>
+          </div>
+        </div>
+      </section>
+
       <div className="campaign-command-v5">
         <aside className="campaign-left">
           <PoliticianProfile
@@ -563,7 +703,7 @@ export function CampaignPage(props: {
               <strong>{Math.round(c.cashOnHand).toLocaleString()}</strong>
             </div>
             <div>
-              <div className="kicker">Ground Game</div>
+              <div className="kicker">Organization</div>
               <strong>{groundGameStrength(c.fieldOrganization)}/100</strong>
             </div>
             <div>
@@ -571,6 +711,11 @@ export function CampaignPage(props: {
               <strong className={noActions ? "text-warn" : ""}>
                 {c.actionPointsRemaining}/{c.actionPointsMax}
               </strong>
+            </div>
+            <div>
+              <div className="kicker">Party support</div>
+              <strong>{partySupportCount}</strong>
+              <small className="muted">active public endorsements</small>
             </div>
           </div>
           <p className="muted campaign-actions-note">
@@ -587,20 +732,34 @@ export function CampaignPage(props: {
               The field operation is locked for counting.
             </p>
           ) : null}
-          <SectionDivider title="Rivals" {...(rivals.length ? {} : { hint: "No active rivals" })} />
+          <SectionDivider
+            title="Opponents"
+            {...(rivals.length ? {} : { hint: "No active opponents" })}
+          />
           {rivals.length === 0 ? <EmptyState>Field is clear for now.</EmptyState> : null}
-          {rivals.slice(0, 6).map((r) => (
-            <EntityRow
-              key={r.politicianId}
-              title={politicianDisplayName(props.catalog, r.politicianId)}
-              meta={partyDisplayName(
-                props.world,
-                props.snap.politicians[r.politicianId]?.partyId ?? null,
-                props.snap,
-              )}
-              status={<StatusBadge>Rival</StatusBadge>}
-            />
-          ))}
+          {rivals.slice(0, 6).map((r) => {
+            const share = pollShareFor(r.politicianId);
+            return (
+              <EntityRow
+                key={r.politicianId}
+                title={politicianDisplayName(props.catalog, r.politicianId)}
+                meta={
+                  share != null
+                    ? `${partyDisplayName(
+                        props.world,
+                        props.snap.politicians[r.politicianId]?.partyId ?? null,
+                        props.snap,
+                      )} · Poll ${Math.round(share * 1000) / 10}%`
+                    : partyDisplayName(
+                        props.world,
+                        props.snap.politicians[r.politicianId]?.partyId ?? null,
+                        props.snap,
+                      )
+                }
+                status={<StatusBadge>Opponent</StatusBadge>}
+              />
+            );
+          })}
         </aside>
 
         <div className="campaign-center">
@@ -835,6 +994,21 @@ export function CampaignPage(props: {
       </div>
 
       <div className="campaign-footer">
+        <SectionDivider title="Campaign calendar" hint="Recorded sim dates only" />
+        {uniqueCalendar.length === 0 ? (
+          <EmptyState>No scheduled campaign dates are recorded for this race yet.</EmptyState>
+        ) : (
+          <div className="campaign-calendar-list">
+            {uniqueCalendar.map((item) => (
+              <div className="campaign-calendar-row" key={`${item.date}:${item.label}`}>
+                <strong>{item.date}</strong>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <SectionDivider title="Strategic memo" hint="Derived from campaign state" />
+        <p className="campaign-strategic-memo">{strategicMemo}</p>
         <SectionDivider title="Strategy board" hint="Public campaign information only" />
         <div className="campaign-strategy-grid">
           <SectionCard title="Ground Game priorities">

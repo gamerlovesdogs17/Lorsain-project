@@ -469,7 +469,7 @@ export function ElectionsPage(props: Props) {
   const elections = Object.values(props.snap.elections);
   const presidentialDue = props.snap.pendingInterrupt?.code === "PRESIDENTIAL_ELECTION_DUE";
   const assemblyDue = props.snap.pendingInterrupt?.code === "ASSEMBLY_ELECTION_DUE";
-  const poll = latestPublicPoll(props.snap);
+  // Prefer election-scoped polls on the presidential tab; never mix nomination samples.
   const [selection, setSelection] = useState<MapSelection | null>(null);
   const [revealedNight, setRevealedNight] = useState<Record<string, boolean>>({});
   const [assemblyMapMode, setAssemblyMapMode] = useState<
@@ -660,6 +660,7 @@ export function ElectionsPage(props: Props) {
   ].sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
 
   function presidentialView(election: (typeof elections)[number]) {
+    const electionPoll = latestPublicPoll(props.snap, { electionId: election.id }) ?? null;
     const firstPreferences =
       election.countArchive && "firstPreferences" in election.countArchive
         ? election.countArchive.firstPreferences
@@ -706,7 +707,7 @@ export function ElectionsPage(props: Props) {
       revealed: revealedNight[replayKey] === true,
     });
     const pollByCandidate = new Map(
-      (poll?.firstPreference ?? []).map((row) => [row.politicianId, row.share] as const),
+      (electionPoll?.firstPreference ?? []).map((row) => [row.politicianId, row.share] as const),
     );
 
     return (
@@ -802,7 +803,7 @@ export function ElectionsPage(props: Props) {
                 are no province-level presidential returns to map.
               </p>
             </div>
-            {poll ? (
+            {electionPoll ? (
               <div className="presidential-poll-compare">
                 <SectionDivider
                   title={
@@ -812,8 +813,8 @@ export function ElectionsPage(props: Props) {
                   }
                   hint={
                     election.status === "resolved"
-                      ? `Final published poll ${poll.publicationDate} vs certified first preferences`
-                      : `Published ${poll.publicationDate} · national sample, not a geographic map`
+                      ? `Final published poll ${electionPoll.publicationDate} vs certified first preferences`
+                      : `Published ${electionPoll.publicationDate} · national sample, not a geographic map`
                   }
                 />
                 {election.status === "resolved" && totalVotes > 0 ? (
@@ -837,7 +838,12 @@ export function ElectionsPage(props: Props) {
                   </DataTable>
                 ) : (
                   <p className="muted">
-                    {pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)}
+                    {pollShareLine(
+                      props.catalog,
+                      props.world,
+                      props.snap,
+                      electionPoll.firstPreference,
+                    )}
                   </p>
                 )}
               </div>
@@ -1877,70 +1883,164 @@ export function ElectionsPage(props: Props) {
         </div>
         {partyContest ? (
           <SectionCard title={contestDisplayName(props.snap, props.world, partyContest.id)}>
-            {partyContest.status === "resolved" ? (
-              <ElectionNightPanel
-                phase="certified"
-                title={
-                  partyContest.winnerId
-                    ? `${politicianDisplayName(props.catalog, partyContest.winnerId)} wins`
-                    : "Internal result certified"
-                }
-                detail="The result is drawn from the recorded selector count."
-                outcome={
-                  partyContest.entries[props.snap.playerPoliticianId]
-                    ? partyContest.winnerId === props.snap.playerPoliticianId
-                      ? "You won."
-                      : "You were not elected."
-                    : null
-                }
-              />
-            ) : null}
-            <SectionDivider
-              title="Field"
-              hint={`${partyDisplayName(props.world, partyContest.partyId, props.snap)} · ${statusLabel(partyContest.status)}`}
-            />
-            {Object.values(partyContest.entries)
-              .filter((entry) => entry.status !== "potential")
-              .sort(
-                (a, b) =>
-                  Number(b.politicianId === partyContest.winnerId) -
-                    Number(a.politicianId === partyContest.winnerId) ||
-                  a.politicianId.localeCompare(b.politicianId),
-              )
-              .map((entry) => (
-                <EntityRow
-                  key={entry.politicianId}
-                  title={politicianDisplayName(props.catalog, entry.politicianId)}
-                  meta={statusLabel(entry.status)}
-                  status={
-                    partyContest.winnerId === entry.politicianId ? (
-                      <StatusBadge tone="ok">Winner</StatusBadge>
-                    ) : (
-                      <StatusBadge>{statusLabel(entry.status)}</StatusBadge>
+            {(() => {
+              const isNomination = partyContest.type === "presidential_nomination";
+              const primaryEntries = Object.values(partyContest.entries).filter(
+                (entry) => entry.status !== "potential",
+              );
+              const nominationPoll = isNomination
+                ? latestPublicPoll(props.snap, { contestId: partyContest.id })
+                : null;
+              const rounds = partyContest.countArchive?.rounds ?? [];
+              const nightEvents: ElectionNightEvent[] = rounds.map((round, index) => ({
+                id: `${partyContest.id}:round:${round.round ?? index + 1}`,
+                title: round.electedId
+                  ? `${politicianDisplayName(props.catalog, round.electedId)} nominated`
+                  : round.eliminatedId
+                    ? `${politicianDisplayName(props.catalog, round.eliminatedId)} eliminated`
+                    : `Round ${round.round ?? index + 1} completed`,
+                detail: "Party nomination count — same-party field only",
+                pauseAfter: Boolean(round.electedId),
+              }));
+              const replayKey = `nomination:${partyContest.id}`;
+              const resolveDate =
+                partyContest.resolvedDate ??
+                (typeof partyContest.metadata.electionDate === "string"
+                  ? nominationCalendarDates(partyContest.metadata.electionDate).resolve
+                  : props.snap.currentDate);
+              const historicalReplay = !isFreshElectionNight(resolveDate);
+              const finalVisible = electionNightFinalVisible({
+                status: partyContest.status === "resolved" ? "resolved" : partyContest.status,
+                eventCount: nightEvents.length,
+                historical: historicalReplay,
+                revealed: revealedNight[replayKey] === true,
+              });
+              return (
+                <>
+                  {partyContest.status === "resolved" ? (
+                    <ElectionNightPanel
+                      phase="certified"
+                      title={
+                        partyContest.winnerId
+                          ? `${politicianDisplayName(props.catalog, partyContest.winnerId)} wins${isNomination ? " the nomination" : ""}`
+                          : "Internal result certified"
+                      }
+                      detail={
+                        isNomination
+                          ? `${partyDisplayName(props.world, partyContest.partyId, props.snap)} primary field only — not the general election.`
+                          : "The result is drawn from the recorded selector count."
+                      }
+                      outcome={
+                        partyContest.entries[props.snap.playerPoliticianId]
+                          ? partyContest.winnerId === props.snap.playerPoliticianId
+                            ? "You won."
+                            : "You were not elected."
+                          : null
+                      }
+                    />
+                  ) : null}
+                  {isNomination &&
+                  partyContest.status === "resolved" &&
+                  rounds.length > 0 &&
+                  finalVisible ? (
+                    <ElectionNightReplay
+                      replayKey={replayKey}
+                      title={`${partyDisplayName(props.world, partyContest.partyId, props.snap)} nomination night`}
+                      subtitle="Primary candidates only. Opposing general-election parties are not shown."
+                      events={nightEvents}
+                      unitLabel="Count rounds shown"
+                      historical={historicalReplay}
+                      onRevealChange={(complete) => revealState(replayKey, complete)}
+                      renderVisual={(visibleCount) => (
+                        <PresidentialNightVisual
+                          replayKey={replayKey}
+                          visibleCount={visibleCount}
+                          rounds={rounds}
+                          firstPreferences={
+                            partyContest.countArchive?.firstPreferences ??
+                            Object.fromEntries(primaryEntries.map((e) => [e.politicianId, "0"]))
+                          }
+                          exhaustedFinal={voteWeight(partyContest.countArchive?.exhausted)}
+                          candidates={primaryEntries.map((entry) => ({
+                            politicianId: entry.politicianId,
+                            partyId: partyContest.partyId,
+                          }))}
+                          winnerId={partyContest.winnerId}
+                          world={props.world}
+                          catalog={props.catalog}
+                        />
+                      )}
+                    />
+                  ) : null}
+                  <SectionDivider
+                    title={isNomination ? "Primary field" : "Field"}
+                    hint={`${partyDisplayName(props.world, partyContest.partyId, props.snap)} · ${statusLabel(partyContest.status)}`}
+                  />
+                  {isNomination && nominationPoll ? (
+                    <p className="muted">
+                      Nomination poll {nominationPoll.publicationDate}:{" "}
+                      {pollShareLine(
+                        props.catalog,
+                        props.world,
+                        props.snap,
+                        nominationPoll.firstPreference,
+                      )}
+                    </p>
+                  ) : null}
+                  {primaryEntries
+                    .slice()
+                    .sort(
+                      (a, b) =>
+                        Number(b.politicianId === partyContest.winnerId) -
+                          Number(a.politicianId === partyContest.winnerId) ||
+                        a.politicianId.localeCompare(b.politicianId),
                     )
-                  }
-                  selected={partyContest.winnerId === entry.politicianId}
-                />
-              ))}
-            {partyContest.countArchive?.rounds.length ? (
-              <>
-                <SectionDivider title="Ranked-choice count" hint="Recorded elimination sequence" />
-                <DataTable headers={["Round", "Outcome"]} dense>
-                  {partyContest.countArchive.rounds.map((round, index) => (
-                    <tr key={index}>
-                      <td>{round.round}</td>
-                      <td>
-                        {round.eliminatedId
-                          ? `Excluded ${politicianDisplayName(props.catalog, round.eliminatedId)}`
-                          : round.electedId
-                            ? `Elected ${politicianDisplayName(props.catalog, round.electedId)}`
-                            : "Count complete"}
-                      </td>
-                    </tr>
-                  ))}
-                </DataTable>
-              </>
-            ) : null}
+                    .map((entry) => (
+                      <EntityRow
+                        key={entry.politicianId}
+                        title={politicianDisplayName(props.catalog, entry.politicianId)}
+                        meta={
+                          isNomination
+                            ? `${statusLabel(entry.status)} · same party`
+                            : statusLabel(entry.status)
+                        }
+                        status={
+                          partyContest.winnerId === entry.politicianId ? (
+                            <StatusBadge tone="ok">
+                              {isNomination ? "Nominee" : "Winner"}
+                            </StatusBadge>
+                          ) : (
+                            <StatusBadge>{statusLabel(entry.status)}</StatusBadge>
+                          )
+                        }
+                        selected={partyContest.winnerId === entry.politicianId}
+                      />
+                    ))}
+                  {partyContest.countArchive?.rounds.length ? (
+                    <>
+                      <SectionDivider
+                        title="Ranked-choice count"
+                        hint="Recorded elimination sequence"
+                      />
+                      <DataTable headers={["Round", "Outcome"]} dense>
+                        {partyContest.countArchive.rounds.map((round, index) => (
+                          <tr key={index}>
+                            <td>{round.round}</td>
+                            <td>
+                              {round.eliminatedId
+                                ? `Excluded ${politicianDisplayName(props.catalog, round.eliminatedId)}`
+                                : round.electedId
+                                  ? `Elected ${politicianDisplayName(props.catalog, round.electedId)}`
+                                  : "Count complete"}
+                            </td>
+                          </tr>
+                        ))}
+                      </DataTable>
+                    </>
+                  ) : null}
+                </>
+              );
+            })()}
           </SectionCard>
         ) : caucusContest ? (
           <SectionCard
@@ -2040,14 +2140,20 @@ export function ElectionsPage(props: Props) {
       />
       {tab === "presidential" ? (
         <div>
-          {poll ? (
-            <p className="muted">
-              Latest national poll {poll.publicationDate}:{" "}
-              {pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)}
-            </p>
-          ) : (
-            <EmptyState>No current national presidential poll has been published.</EmptyState>
-          )}
+          {(() => {
+            const headerPoll =
+              presidential[0] != null
+                ? latestPublicPoll(props.snap, { electionId: presidential[0].id })
+                : latestPublicPoll(props.snap);
+            return headerPoll ? (
+              <p className="muted">
+                Latest national poll {headerPoll.publicationDate}:{" "}
+                {pollShareLine(props.catalog, props.world, props.snap, headerPoll.firstPreference)}
+              </p>
+            ) : (
+              <EmptyState>No current national presidential poll has been published.</EmptyState>
+            );
+          })()}
           {presidential.length === 0 ? (
             <EmptyState>No presidential election is scheduled.</EmptyState>
           ) : null}

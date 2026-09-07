@@ -11,6 +11,7 @@ export * from "./decisions.js";
 export * from "./monthly.js";
 export * from "./gotv.js";
 export * from "./situations.js";
+export * from "./nominations.js";
 export {
   parseCampaignRuntime,
   campaignCounterError,
