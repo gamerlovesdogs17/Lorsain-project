@@ -53,6 +53,55 @@ export type GenerationalCohort = {
   source: "first_office" | "birth_plus_25" | "unknown";
 };
 
+export type ConstitutionalEra = {
+  id: string;
+  label: string;
+  startDate: IsoDate;
+  endDate: IsoDate | null;
+  keyAmendments: string[];
+  electoralSystem: string;
+  executiveStructure: string;
+  legislatureStructure: string;
+};
+
+export type PrecedentLinkRelation =
+  "relies_on" | "follows" | "distinguishes" | "limits" | "overturns";
+
+export type PrecedentLink = {
+  fromDecisionId: string;
+  toDecisionId: string;
+  relation: PrecedentLinkRelation;
+};
+
+export type PoliticianLegacy = {
+  politicianId: string;
+  closedDate: IsoDate;
+  offices: string[];
+  partyLeadership: string[];
+  majorLaws: string[];
+  elections: string[];
+  notes: string[];
+};
+
+export type ChronicleEntryBase = {
+  date: IsoDate;
+  kind: string;
+  detail: string;
+};
+
+export type CaucusChronicleEntry = ChronicleEntryBase & {
+  caucusId: string;
+  partyId: string;
+};
+
+export type OrganizationChronicleEntry = ChronicleEntryBase & {
+  orgId: string;
+};
+
+export type ProvinceChronicleEntry = ChronicleEntryBase & {
+  provinceId: string;
+};
+
 /**
  * Phase 15 long-term history runtime.
  * Empty on migration — never fabricates eras, governments, or yearbooks.
@@ -64,6 +113,12 @@ export type History15Runtime = {
   yearbooks: YearRetrospective[];
   realignments: RealignmentSignal[];
   cohorts: Record<string, GenerationalCohort>;
+  constitutionalEras: ConstitutionalEra[];
+  precedentLinks: PrecedentLink[];
+  politicianLegacies: Record<string, PoliticianLegacy>;
+  caucusChronicles: CaucusChronicleEntry[];
+  organizationChronicles: OrganizationChronicleEntry[];
+  provinceChronicles: ProvinceChronicleEntry[];
   lastHistoryMonth: IsoDate | null;
   nextGovernmentId: number;
   nextRealignmentId: number;
@@ -84,6 +139,12 @@ export function emptyHistory15Runtime(): History15Runtime {
     yearbooks: [],
     realignments: [],
     cohorts: {},
+    constitutionalEras: [],
+    precedentLinks: [],
+    politicianLegacies: {},
+    caucusChronicles: [],
+    organizationChronicles: [],
+    provinceChronicles: [],
     lastHistoryMonth: null,
     nextGovernmentId: 1,
     nextRealignmentId: 1,

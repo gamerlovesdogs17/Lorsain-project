@@ -1,11 +1,24 @@
 import type { SimState } from "../types.js";
-import { emptyHistory15Runtime, type History15Runtime, type GenerationalCohort } from "./types.js";
+import {
+  emptyHistory15Runtime,
+  type History15Runtime,
+  type GenerationalCohort,
+  type PrecedentLinkRelation,
+} from "./types.js";
 
 export function ensureHistory15Runtime(state: SimState): History15Runtime {
   if (!state.history15Runtime) {
     state.history15Runtime = emptyHistory15Runtime();
   }
-  return state.history15Runtime;
+  const runtime = state.history15Runtime;
+  // Forward-compat: older saves / partial objects
+  if (!runtime.constitutionalEras) runtime.constitutionalEras = [];
+  if (!runtime.precedentLinks) runtime.precedentLinks = [];
+  if (!runtime.politicianLegacies) runtime.politicianLegacies = {};
+  if (!runtime.caucusChronicles) runtime.caucusChronicles = [];
+  if (!runtime.organizationChronicles) runtime.organizationChronicles = [];
+  if (!runtime.provinceChronicles) runtime.provinceChronicles = [];
+  return runtime;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -25,6 +38,14 @@ function parseCohort(politicianId: string, raw: unknown): GenerationalCohort | n
       : "unknown";
   return { politicianId, entryYear, source };
 }
+
+const PRECEDENT_RELATIONS = new Set([
+  "relies_on",
+  "follows",
+  "distinguishes",
+  "limits",
+  "overturns",
+]);
 
 export function parseHistory15Runtime(raw: unknown): History15Runtime | string {
   if (raw == null) return emptyHistory15Runtime();
@@ -124,6 +145,126 @@ export function parseHistory15Runtime(raw: unknown): History15Runtime | string {
     for (const [id, rec] of Object.entries(raw.cohorts)) {
       const parsed = parseCohort(id, rec);
       if (parsed) base.cohorts[id] = parsed;
+    }
+  }
+
+  if (Array.isArray(raw.constitutionalEras)) {
+    for (const row of raw.constitutionalEras) {
+      if (!isRecord(row) || typeof row.id !== "string" || typeof row.label !== "string") continue;
+      if (typeof row.startDate !== "string") continue;
+      base.constitutionalEras.push({
+        id: row.id,
+        label: row.label,
+        startDate: row.startDate,
+        endDate: typeof row.endDate === "string" ? row.endDate : null,
+        keyAmendments: Array.isArray(row.keyAmendments)
+          ? row.keyAmendments.filter((x): x is string => typeof x === "string")
+          : [],
+        electoralSystem: typeof row.electoralSystem === "string" ? row.electoralSystem : "unknown",
+        executiveStructure:
+          typeof row.executiveStructure === "string" ? row.executiveStructure : "unknown",
+        legislatureStructure:
+          typeof row.legislatureStructure === "string" ? row.legislatureStructure : "unknown",
+      });
+    }
+  }
+
+  if (Array.isArray(raw.precedentLinks)) {
+    for (const row of raw.precedentLinks) {
+      if (
+        !isRecord(row) ||
+        typeof row.fromDecisionId !== "string" ||
+        typeof row.toDecisionId !== "string" ||
+        typeof row.relation !== "string" ||
+        !PRECEDENT_RELATIONS.has(row.relation)
+      ) {
+        continue;
+      }
+      base.precedentLinks.push({
+        fromDecisionId: row.fromDecisionId,
+        toDecisionId: row.toDecisionId,
+        relation: row.relation as PrecedentLinkRelation,
+      });
+    }
+  }
+
+  if (isRecord(raw.politicianLegacies)) {
+    for (const [id, rec] of Object.entries(raw.politicianLegacies)) {
+      if (!isRecord(rec) || typeof rec.politicianId !== "string") continue;
+      if (typeof rec.closedDate !== "string") continue;
+      const strArr = (v: unknown) =>
+        Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+      base.politicianLegacies[id] = {
+        politicianId: rec.politicianId,
+        closedDate: rec.closedDate,
+        offices: strArr(rec.offices),
+        partyLeadership: strArr(rec.partyLeadership),
+        majorLaws: strArr(rec.majorLaws),
+        elections: strArr(rec.elections),
+        notes: strArr(rec.notes),
+      };
+    }
+  }
+
+  if (Array.isArray(raw.caucusChronicles)) {
+    for (const row of raw.caucusChronicles) {
+      if (
+        !isRecord(row) ||
+        typeof row.caucusId !== "string" ||
+        typeof row.partyId !== "string" ||
+        typeof row.date !== "string" ||
+        typeof row.kind !== "string" ||
+        typeof row.detail !== "string"
+      ) {
+        continue;
+      }
+      base.caucusChronicles.push({
+        caucusId: row.caucusId,
+        partyId: row.partyId,
+        date: row.date,
+        kind: row.kind,
+        detail: row.detail,
+      });
+    }
+  }
+
+  if (Array.isArray(raw.organizationChronicles)) {
+    for (const row of raw.organizationChronicles) {
+      if (
+        !isRecord(row) ||
+        typeof row.orgId !== "string" ||
+        typeof row.date !== "string" ||
+        typeof row.kind !== "string" ||
+        typeof row.detail !== "string"
+      ) {
+        continue;
+      }
+      base.organizationChronicles.push({
+        orgId: row.orgId,
+        date: row.date,
+        kind: row.kind,
+        detail: row.detail,
+      });
+    }
+  }
+
+  if (Array.isArray(raw.provinceChronicles)) {
+    for (const row of raw.provinceChronicles) {
+      if (
+        !isRecord(row) ||
+        typeof row.provinceId !== "string" ||
+        typeof row.date !== "string" ||
+        typeof row.kind !== "string" ||
+        typeof row.detail !== "string"
+      ) {
+        continue;
+      }
+      base.provinceChronicles.push({
+        provinceId: row.provinceId,
+        date: row.date,
+        kind: row.kind,
+        detail: row.detail,
+      });
     }
   }
 

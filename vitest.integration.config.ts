@@ -31,6 +31,7 @@ export default mergeConfig(
         "packages/sim/src/legislature.vertical.test.ts",
         "packages/sim/src/phase12.autonomous-audit.test.ts",
         "packages/sim/src/phase15.longrun.test.ts",
+        "packages/sim/src/phase15.multiseed.test.ts",
         "scripts/dist-exports.smoke.test.ts",
       ],
       testTimeout: 900_000,

@@ -5,6 +5,9 @@ import { activeCoalition } from "../politics/coalitions.js";
 import { ensurePartyOrgRuntime } from "../partyOrg/state.js";
 import { padId } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
+import { syncConstitutionalEras, ensureFoundingConstitutionalEra } from "./constitutionalEras.js";
+import { syncPoliticianLegacies } from "./legacy.js";
+import { syncPrecedentLinks } from "./precedents.js";
 import { ensureHistory15Runtime } from "./state.js";
 import type { History15Runtime } from "./types.js";
 
@@ -365,6 +368,99 @@ function tagGenerationalCohorts(
   }
 }
 
+function syncChronicles(state: SimState, runtime: History15Runtime): void {
+  const recent = state.history.slice(-60);
+  const seenCaucus = new Set(
+    runtime.caucusChronicles.map((c) => `${c.date}:${c.caucusId}:${c.kind}:${c.detail}`),
+  );
+  for (const ev of recent) {
+    if (!ev.type.startsWith("CAUCUS_")) continue;
+    const caucusId =
+      (typeof ev.payload?.factionId === "string" && ev.payload.factionId) ||
+      (typeof ev.payload?.originFactionId === "string" && ev.payload.originFactionId) ||
+      ev.entityIds[0];
+    const partyId =
+      (typeof ev.payload?.partyId === "string" && ev.payload.partyId) ||
+      ev.entityIds.find((id) => state.partyStates[id]) ||
+      "";
+    if (!caucusId) continue;
+    const detail = ev.type.replace(/^CAUCUS_/, "").toLowerCase();
+    const key = `${ev.date}:${caucusId}:${ev.type}:${detail}`;
+    if (seenCaucus.has(key)) continue;
+    runtime.caucusChronicles.push({
+      caucusId,
+      partyId,
+      date: ev.date,
+      kind: ev.type,
+      detail,
+    });
+    seenCaucus.add(key);
+  }
+  if (runtime.caucusChronicles.length > 200) {
+    runtime.caucusChronicles = runtime.caucusChronicles.slice(-200);
+  }
+
+  const seenOrg = new Set(
+    runtime.organizationChronicles.map((c) => `${c.date}:${c.orgId}:${c.kind}`),
+  );
+  for (const ev of recent) {
+    if (
+      ev.type !== "ORG_ISSUE_CAMPAIGN" &&
+      ev.type !== "PARTY_ORG_PRIORITY_SET" &&
+      !ev.type.includes("ORGANIZATION")
+    ) {
+      continue;
+    }
+    const orgId =
+      ev.entityIds[0] ?? (typeof ev.payload?.orgId === "string" ? ev.payload.orgId : null);
+    if (!orgId) continue;
+    const key = `${ev.date}:${orgId}:${ev.type}`;
+    if (seenOrg.has(key)) continue;
+    runtime.organizationChronicles.push({
+      orgId,
+      date: ev.date,
+      kind: ev.type,
+      detail: typeof ev.payload?.detail === "string" ? ev.payload.detail : ev.type,
+    });
+    seenOrg.add(key);
+  }
+  if (runtime.organizationChronicles.length > 200) {
+    runtime.organizationChronicles = runtime.organizationChronicles.slice(-200);
+  }
+
+  const seenProv = new Set(
+    runtime.provinceChronicles.map((c) => `${c.date}:${c.provinceId}:${c.kind}`),
+  );
+  for (const ev of recent) {
+    if (
+      ev.type !== "PROVINCIAL_ELECTION_RESULT" &&
+      ev.type !== "PROVINCIAL_GOVERNMENT_FORMED" &&
+      !ev.type.startsWith("PROVINCIAL_")
+    ) {
+      continue;
+    }
+    const provinceId =
+      (typeof ev.payload?.provinceId === "string" && ev.payload.provinceId) ||
+      ev.entityIds.find(
+        (id) => id.startsWith("PROV") || state.provincialRuntime?.assemblies?.[id],
+      ) ||
+      null;
+    if (!provinceId) continue;
+    const key = `${ev.date}:${provinceId}:${ev.type}`;
+    if (seenProv.has(key)) continue;
+    runtime.provinceChronicles.push({
+      provinceId,
+      date: ev.date,
+      kind: ev.type,
+      detail: typeof ev.payload?.detail === "string" ? ev.payload.detail : ev.type,
+    });
+    seenProv.add(key);
+  }
+  if (runtime.provinceChronicles.length > 200) {
+    runtime.provinceChronicles = runtime.provinceChronicles.slice(-200);
+  }
+}
+
 /**
  * Phase 15 long-term history monthly pass.
  * Runs quarterly (01/04/07/10). Yearbook + realignment on January only.
@@ -381,6 +477,10 @@ export function processHistory15Month(
 
   const monthNum = Number(state.currentDate.slice(5, 7));
   if (!QUARTER_MONTHS.has(monthNum)) {
+    // Light sync still runs monthly for precedents/legacies/eras seed
+    ensureFoundingConstitutionalEra(state);
+    syncPrecedentLinks(state);
+    syncPoliticianLegacies(state);
     runtime.lastHistoryMonth = month;
     return [];
   }
@@ -388,6 +488,11 @@ export function processHistory15Month(
   syncLeadershipAndEras(state, runtime);
   syncGovernmentTerms(world, state, runtime);
   tagGenerationalCohorts(world, state, runtime);
+  ensureFoundingConstitutionalEra(state);
+  syncConstitutionalEras(state);
+  syncPrecedentLinks(state);
+  syncPoliticianLegacies(state);
+  syncChronicles(state, runtime);
 
   if (monthNum === 1) {
     const priorYear = Number(state.currentDate.slice(0, 4)) - 1;

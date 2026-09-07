@@ -2,7 +2,12 @@ import { useMemo, useState } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import {
   caseTitle,
+  compareElections,
+  courtPrecedentChain,
   PARTY_PLATFORM_ISSUES,
+  partyFamilyChildren,
+  partyFamilyParents,
+  partyFamilyTimeline,
   partyLegalStatus,
   partyPlatformLabel,
   type KernelWorld,
@@ -242,6 +247,36 @@ export function HistoryPage(props: {
         section: "longform",
         title: "Years in Terena",
         deck: "High-importance yearbook headlines compiled from the saved record.",
+        date: props.snap.currentDate,
+      });
+    }
+    if (history15 && history15.constitutionalEras.length > 0) {
+      longform.push({
+        id: "longform:constitutional-eras",
+        section: "longform",
+        title: "Constitutional eras",
+        deck: "Founding and amendment-era structure of Terena's constitution.",
+        date: props.snap.currentDate,
+      });
+    }
+    const resolvedNational = Object.values(props.snap.elections).filter(
+      (row) => row.status === "resolved",
+    );
+    if (resolvedNational.length >= 2) {
+      longform.push({
+        id: "longform:election-compare",
+        section: "longform",
+        title: "Election comparison",
+        deck: "Side-by-side vote shares, seats and turnout for two certified elections.",
+        date: props.snap.currentDate,
+      });
+    }
+    if (history15 && history15.organizationChronicles.length > 0) {
+      longform.push({
+        id: "longform:org-chronicles",
+        section: "longform",
+        title: "Organization chronicles",
+        deck: "Interest-group reactions and campaigns recorded in the long-term archive.",
         date: props.snap.currentDate,
       });
     }
@@ -952,6 +987,32 @@ export function HistoryPage(props: {
             </DataTable>
           </>
         ) : null}
+        {(() => {
+          const legacy = props.snap.history15Runtime?.politicianLegacies[id];
+          if (!legacy) return null;
+          return (
+            <>
+              <h2 id="legacy">Legacy dossier</h2>
+              <div className="wiki-result-banner" data-qa="politician-legacy">
+                <span>Closed {legacy.closedDate}</span>
+                <strong>
+                  {legacy.offices.length} office{legacy.offices.length === 1 ? "" : "s"} ·{" "}
+                  {legacy.elections.length} election record
+                  {legacy.elections.length === 1 ? "" : "s"}
+                </strong>
+                <small>
+                  {legacy.partyLeadership.length > 0
+                    ? `Leadership: ${legacy.partyLeadership.slice(0, 4).join(", ")}`
+                    : "No party leadership tenure recorded"}
+                  {legacy.majorLaws.length > 0
+                    ? ` · Major Acts: ${legacy.majorLaws.slice(0, 4).join(", ")}`
+                    : ""}
+                  {legacy.notes.length > 0 ? ` · ${legacy.notes.slice(0, 3).join(" · ")}` : ""}
+                </small>
+              </div>
+            </>
+          );
+        })()}
       </>
     );
   }
@@ -1019,6 +1080,86 @@ export function HistoryPage(props: {
             ))}
           </div>
         )}
+        {(() => {
+          const parents = partyFamilyParents(props.snap, id);
+          const children = partyFamilyChildren(props.snap, id);
+          const timeline = partyFamilyTimeline(props.snap, id);
+          if (parents.length === 0 && children.length === 0 && timeline.length === 0) return null;
+          return (
+            <>
+              <h2 id="family">Party family tree</h2>
+              <div data-qa="party-family-tree">
+                {parents.length > 0 ? (
+                  <p>
+                    Parents / sources:{" "}
+                    {parents
+                      .map((link) =>
+                        partyDisplayName(
+                          props.world,
+                          link.relatedPartyId ?? link.partyId,
+                          props.snap,
+                        ),
+                      )
+                      .join(", ")}
+                  </p>
+                ) : null}
+                {children.length > 0 ? (
+                  <p>
+                    Children / successors:{" "}
+                    {children
+                      .map((link) => partyDisplayName(props.world, link.partyId, props.snap))
+                      .join(", ")}
+                  </p>
+                ) : null}
+                {timeline.length > 0 ? (
+                  <ol className="wiki-timeline">
+                    {timeline.slice(0, 12).map((link, index) => (
+                      <li key={`${link.date}:${link.partyId}:${index}`}>
+                        <time>{link.date}</time>
+                        <span>
+                          <strong>{link.event.replaceAll("_", " ")}</strong>
+                          <small>
+                            {partyDisplayName(props.world, link.partyId, props.snap)}
+                            {link.relatedPartyId
+                              ? ` ↔ ${partyDisplayName(props.world, link.relatedPartyId, props.snap)}`
+                              : ""}
+                          </small>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+              </div>
+            </>
+          );
+        })()}
+        {(() => {
+          const peers = Object.keys(props.world.partyDefinitions)
+            .filter((pid) => pid !== id && pid !== props.world.independentAggregatePartyId)
+            .slice(0, 1);
+          const peerId = peers[0];
+          if (!peerId) return null;
+          const self = props.snap.partyStates[id]?.publicPlatform?.positions;
+          const peer = props.snap.partyStates[peerId]?.publicPlatform?.positions;
+          if (!self || !peer) return null;
+          return (
+            <>
+              <h2 id="ideology-compare">Ideological comparison</h2>
+              <p className="muted" data-qa="party-ideology-compare">
+                Current platform planks versus {partyDisplayName(props.world, peerId, props.snap)}.
+              </p>
+              <DataTable dense headers={["Issue", "This party", "Peer"]}>
+                {PARTY_PLATFORM_ISSUES.map((issue) => (
+                  <tr key={issue}>
+                    <td>{issue.replace(/_/g, " ")}</td>
+                    <td>{partyPlatformLabel(issue, self[issue] ?? 0)}</td>
+                    <td>{partyPlatformLabel(issue, peer[issue] ?? 0)}</td>
+                  </tr>
+                ))}
+              </DataTable>
+            </>
+          );
+        })()}
       </>
     );
   }
@@ -1094,6 +1235,31 @@ export function HistoryPage(props: {
             </li>
           ))}
         </ul>
+        {(() => {
+          const chronicles =
+            props.snap.history15Runtime?.caucusChronicles.filter((row) => row.caucusId === id) ??
+            [];
+          if (chronicles.length === 0) return null;
+          return (
+            <>
+              <h2 id="chronicles">Caucus chronicles</h2>
+              <ol className="wiki-timeline" data-qa="caucus-chronicles">
+                {[...chronicles]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .slice(0, 40)
+                  .map((row, index) => (
+                    <li key={`${row.date}:${index}`}>
+                      <time>{row.date}</time>
+                      <span>
+                        <strong>{row.kind.replaceAll("_", " ")}</strong>
+                        <small>{row.detail}</small>
+                      </span>
+                    </li>
+                  ))}
+              </ol>
+            </>
+          );
+        })()}
       </>
     );
   }
@@ -1198,6 +1364,32 @@ export function HistoryPage(props: {
             </>
           );
         })()}
+        {(() => {
+          const chronicles =
+            props.snap.history15Runtime?.provinceChronicles.filter(
+              (row) => row.provinceId === id,
+            ) ?? [];
+          if (chronicles.length === 0) return null;
+          return (
+            <>
+              <h2 id="chronicles">Province chronicles</h2>
+              <ol className="wiki-timeline" data-qa="province-chronicles">
+                {[...chronicles]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .slice(0, 40)
+                  .map((row, index) => (
+                    <li key={`${row.date}:${index}`}>
+                      <time>{row.date}</time>
+                      <span>
+                        <strong>{row.kind.replaceAll("_", " ")}</strong>
+                        <small>{row.detail}</small>
+                      </span>
+                    </li>
+                  ))}
+              </ol>
+            </>
+          );
+        })()}
       </>
     );
   }
@@ -1206,6 +1398,7 @@ export function HistoryPage(props: {
     const amendments = Object.values(props.snap.provincialRuntime.constitutionalAmendments).sort(
       (a, b) => a.proposedDate.localeCompare(b.proposedDate),
     );
+    const eras = props.snap.history15Runtime?.constitutionalEras ?? [];
     return (
       <>
         <p className="wiki-lead">
@@ -1213,6 +1406,29 @@ export function HistoryPage(props: {
           have modeled runtime rules; other ratified replacements change the authoritative legal
           text only.
         </p>
+        {eras.length > 0 ? (
+          <>
+            <h2 id="eras">Constitutional eras</h2>
+            <ol className="wiki-timeline" data-qa="constitutional-eras">
+              {[...eras]
+                .sort((a, b) => b.startDate.localeCompare(a.startDate))
+                .map((era) => (
+                  <li key={era.id}>
+                    <time>
+                      {era.startDate}
+                      {era.endDate ? ` – ${era.endDate}` : " – present"}
+                    </time>
+                    <span>
+                      <strong>{era.label}</strong>
+                      <small>
+                        {era.executiveStructure} · {era.legislatureStructure}
+                      </small>
+                    </span>
+                  </li>
+                ))}
+            </ol>
+          </>
+        ) : null}
         <h2 id="rules">Operational rules</h2>
         <DataTable dense headers={["Rule", "Current value", "Last amended"]}>
           {Object.values(props.snap.provincialRuntime.constitutionalRules).map((rule) => (
@@ -1438,6 +1654,117 @@ export function HistoryPage(props: {
       );
     }
 
+    if (id === "constitutional-eras") {
+      const rows = [...history15.constitutionalEras].sort((a, b) =>
+        b.startDate.localeCompare(a.startDate),
+      );
+      return (
+        <>
+          <p className="wiki-lead" data-qa="constitutional-eras">
+            Constitutional eras mark founding and structural amendment periods preserved in the
+            long-term archive.
+          </p>
+          <h2 id="constitutional-eras">Constitutional eras</h2>
+          <ol className="wiki-timeline">
+            {rows.map((era) => (
+              <li key={era.id}>
+                <time>
+                  {era.startDate}
+                  {era.endDate ? ` – ${era.endDate}` : " – present"}
+                </time>
+                <span>
+                  <strong>{era.label}</strong>
+                  <small>
+                    {era.executiveStructure} · {era.legislatureStructure} · {era.electoralSystem}
+                    {era.keyAmendments.length > 0
+                      ? ` · ${era.keyAmendments.length} key amendment${era.keyAmendments.length === 1 ? "" : "s"}`
+                      : ""}
+                  </small>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </>
+      );
+    }
+
+    if (id === "election-compare") {
+      const resolved = Object.values(props.snap.elections)
+        .filter((row) => row.status === "resolved")
+        .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
+      const a = resolved[0];
+      const b = resolved[1];
+      if (!a || !b) return <EmptyState>Need at least two certified elections.</EmptyState>;
+      const cmp = compareElections(props.snap, a.id, b.id);
+      const partyIds = [
+        ...new Set([
+          ...Object.keys(cmp.voteSharesA),
+          ...Object.keys(cmp.voteSharesB),
+          ...Object.keys(cmp.seatsA),
+          ...Object.keys(cmp.seatsB),
+        ]),
+      ].sort();
+      return (
+        <>
+          <p className="wiki-lead" data-qa="election-comparison">
+            Comparing {electionDisplayName(a.id)} ({a.date}) with {electionDisplayName(b.id)} (
+            {b.date}).
+          </p>
+          <h2 id="comparison">Side-by-side</h2>
+          <DataTable dense headers={["Party", "Share A", "Share B", "Seats A", "Seats B"]}>
+            {partyIds.map((partyId) => (
+              <tr key={partyId}>
+                <td>{partyDisplayName(props.world, partyId, props.snap)}</td>
+                <td>
+                  {cmp.voteSharesA[partyId] != null
+                    ? `${(cmp.voteSharesA[partyId]! * 100).toFixed(1)}%`
+                    : "—"}
+                </td>
+                <td>
+                  {cmp.voteSharesB[partyId] != null
+                    ? `${(cmp.voteSharesB[partyId]! * 100).toFixed(1)}%`
+                    : "—"}
+                </td>
+                <td>{cmp.seatsA[partyId] ?? "—"}</td>
+                <td>{cmp.seatsB[partyId] ?? "—"}</td>
+              </tr>
+            ))}
+          </DataTable>
+          <p className="muted">
+            Turnout A: {cmp.turnoutA != null ? `${(cmp.turnoutA * 100).toFixed(1)}%` : "n/a"} ·
+            Turnout B: {cmp.turnoutB != null ? `${(cmp.turnoutB * 100).toFixed(1)}%` : "n/a"}
+          </p>
+        </>
+      );
+    }
+
+    if (id === "org-chronicles") {
+      const rows = [...history15.organizationChronicles].sort((a, b) =>
+        b.date.localeCompare(a.date),
+      );
+      return (
+        <>
+          <p className="wiki-lead" data-qa="organization-chronicles">
+            Organization chronicles list interest-group actions already present in the save.
+          </p>
+          <h2 id="org-chronicles">Organization chronicles</h2>
+          <ol className="wiki-timeline">
+            {rows.slice(0, 80).map((row, index) => (
+              <li key={`${row.orgId}:${row.date}:${index}`}>
+                <time>{row.date}</time>
+                <span>
+                  <strong>{row.orgId}</strong>
+                  <small>
+                    {row.kind.replaceAll("_", " ")} · {row.detail}
+                  </small>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </>
+      );
+    }
+
     const books = [...history15.yearbooks].sort((a, b) => b.year - a.year);
     return (
       <>
@@ -1530,6 +1857,39 @@ export function HistoryPage(props: {
             </tr>
           ))}
         </DataTable>
+        {(() => {
+          const chain = courtPrecedentChain(props.snap, decision.id);
+          if (chain.length <= 1) return null;
+          const links = props.snap.history15Runtime?.precedentLinks ?? [];
+          return (
+            <>
+              <h2 id="precedents">Precedent chain</h2>
+              <ol className="wiki-timeline" data-qa="court-precedent-chain">
+                {chain.map((row, index) => {
+                  const prior = chain[index - 1];
+                  const link = prior
+                    ? links.find(
+                        (l) =>
+                          l.fromDecisionId === prior.decisionId &&
+                          l.toDecisionId === row.decisionId,
+                      )
+                    : null;
+                  return (
+                    <li key={row.decisionId}>
+                      <time>{row.decisionDate}</time>
+                      <span>
+                        <strong>{row.constitutionalQuestion}</strong>
+                        <small>
+                          {link ? link.relation.replaceAll("_", " ") : "anchor"} · {row.disposition}
+                        </small>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </>
+          );
+        })()}
       </>
     );
   }
@@ -1568,6 +1928,10 @@ export function HistoryPage(props: {
       const id = article.id.slice("longform:".length);
       if (id === "governments") return [{ id: "timeline", label: "Governments timeline" }];
       if (id === "eras") return [{ id: "eras", label: "Party eras" }];
+      if (id === "constitutional-eras")
+        return [{ id: "constitutional-eras", label: "Constitutional eras" }];
+      if (id === "election-compare") return [{ id: "comparison", label: "Side-by-side" }];
+      if (id === "org-chronicles") return [{ id: "org-chronicles", label: "Chronicles" }];
       return [{ id: "yearbooks", label: "Years in Terena" }];
     }
     if (kind === "election") {
@@ -1594,17 +1958,21 @@ export function HistoryPage(props: {
         { id: "career", label: "Career" },
         { id: "elections", label: "Elections" },
         { id: "votes", label: "Roll calls" },
+        { id: "legacy", label: "Legacy" },
       ];
     if (kind === "party")
       return [
         { id: "platform", label: "Platform" },
         { id: "leadership", label: "Leadership" },
         { id: "assembly", label: "Assembly" },
+        { id: "family", label: "Family tree" },
+        { id: "ideology-compare", label: "Ideology" },
       ];
     if (kind === "caucus")
       return [
         { id: "leadership", label: "Leadership" },
         { id: "members", label: "Members" },
+        { id: "chronicles", label: "Chronicles" },
       ];
     if (kind === "province")
       return [
@@ -1612,9 +1980,11 @@ export function HistoryPage(props: {
         { id: "elections", label: "Elections" },
         { id: "legislation", label: "Legislation" },
         { id: "economy", label: "Economy" },
+        { id: "chronicles", label: "Chronicles" },
       ];
     if (kind === "constitution")
       return [
+        { id: "eras", label: "Eras" },
         { id: "rules", label: "Operational rules" },
         { id: "amendments", label: "Amendments" },
         { id: "articles", label: "Articles" },
@@ -1633,6 +2003,7 @@ export function HistoryPage(props: {
     return [
       { id: "holding", label: "Holding" },
       { id: "votes", label: "Court vote" },
+      { id: "precedents", label: "Precedents" },
     ];
   }
 

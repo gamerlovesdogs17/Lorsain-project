@@ -3,24 +3,30 @@ import { createSimulation } from "./engine.js";
 import { loadTerenaWorld, advanceIntegrated } from "./integration/harness.js";
 import { ensureHistory15Runtime } from "./history15/state.js";
 import { partyFamilyTimeline } from "./history15/family.js";
-import { migrateSaveV23ToV24, parseSaveFile } from "./save.js";
+import { migrateSaveV23ToV24, migrateSaveV24ToV25, parseSaveFile } from "./save.js";
 import { SAVE_SCHEMA_VERSION, type SimState } from "./types.js";
 import { emptyHistory15Runtime } from "./history15/types.js";
 
 describe("Phase 15 history foundation smoke", () => {
   it("schema 24 seeds empty history15Runtime on migration", () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(24);
+    expect(SAVE_SCHEMA_VERSION).toBe(25);
     const legacy = {
       schemaVersion: 23,
       contentVersion: "x",
       scenarioId: "terena",
       simulation: { schemaVersion: 23 },
     };
-    const migrated = migrateSaveV23ToV24(legacy) as {
+    const to24 = migrateSaveV23ToV24(legacy) as {
       schemaVersion: number;
       simulation: { history15Runtime: unknown };
     };
-    expect(migrated.schemaVersion).toBe(24);
+    expect(to24.schemaVersion).toBe(24);
+    expect(to24.simulation.history15Runtime).toEqual(emptyHistory15Runtime());
+    const migrated = migrateSaveV24ToV25(to24) as {
+      schemaVersion: number;
+      simulation: { history15Runtime: unknown };
+    };
+    expect(migrated.schemaVersion).toBe(25);
     expect(migrated.simulation.history15Runtime).toEqual(emptyHistory15Runtime());
   });
 
@@ -46,7 +52,7 @@ describe("Phase 15 history foundation smoke", () => {
     const parsed = parseSaveFile(save, world.contentVersion);
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
-      expect(parsed.save.schemaVersion).toBe(24);
+      expect(parsed.save.schemaVersion).toBe(25);
       expect(parsed.save.simulation.history15Runtime?.eras.length).toBeGreaterThan(0);
     }
   });
