@@ -54,24 +54,36 @@ export function createPartyContest(
   if (jsonErr) return { error: reject("NON_JSON_PAYLOAD", jsonErr) };
 
   let ruleId = "";
-  if (args.type === "presidential_nomination") {
-    const election = Object.values(state.elections)
-      .filter(
-        (candidate) =>
-          candidate.type === "presidential" &&
-          candidate.status !== "resolved" &&
-          candidate.status !== "cancelled" &&
-          candidate.date >= state.currentDate,
-      )
-      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
-    if (election && typeof metadata.electionId !== "string") {
-      metadata.electionId = election.id;
-      metadata.electionDate = election.date;
-      metadata.cycle = election.date.slice(0, 4);
-      metadata.cycleYear = Number(election.date.slice(0, 4));
-      metadata.partyId = args.partyId;
-      metadata.candidateSource =
-        election.id === "ELEC_PRES_2028" ? "scenario_start" : "runtime_politics";
+  const isOfficeNomination =
+    args.type === "presidential_nomination" ||
+    args.type === "gubernatorial_nomination" ||
+    args.type === "assembly_nomination";
+  if (isOfficeNomination) {
+    if (args.type === "presidential_nomination") {
+      const election = Object.values(state.elections)
+        .filter(
+          (candidate) =>
+            candidate.type === "presidential" &&
+            candidate.status !== "resolved" &&
+            candidate.status !== "cancelled" &&
+            candidate.date >= state.currentDate,
+        )
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0];
+      if (election && typeof metadata.electionId !== "string") {
+        metadata.electionId = election.id;
+        metadata.electionDate = election.date;
+        metadata.cycle = election.date.slice(0, 4);
+        metadata.cycleYear = Number(election.date.slice(0, 4));
+        metadata.partyId = args.partyId;
+        metadata.candidateSource =
+          election.id === "ELEC_PRES_2028" ? "scenario_start" : "runtime_politics";
+      }
+    } else {
+      metadata.officeKind = args.type === "gubernatorial_nomination" ? "gubernatorial" : "assembly";
+      if (typeof metadata.partyId !== "string") metadata.partyId = args.partyId;
+      if (typeof metadata.candidateSource !== "string") {
+        metadata.candidateSource = "runtime_politics";
+      }
     }
     ruleId = args.ruleId ?? def?.nominationRuleId ?? dyn?.nominationRuleId ?? "";
     if (!world.nominationRules[ruleId]) {
@@ -83,6 +95,19 @@ export function createPartyContest(
       return {
         error: reject("INVALID_CONTEST", "nomination rule does not belong to contest party"),
       };
+    }
+    // Stamp rule weights so weighted_ranked_choice selectorates resolve for office races.
+    const rule = world.nominationRules[ruleId]!;
+    if (rule.method === "weighted_ranked_choice") {
+      if (typeof metadata.memberWeight !== "number" && typeof rule.memberWeight === "number") {
+        metadata.memberWeight = rule.memberWeight;
+      }
+      if (
+        typeof metadata.affiliateUnionDelegateWeight !== "number" &&
+        typeof rule.affiliateUnionDelegateWeight === "number"
+      ) {
+        metadata.affiliateUnionDelegateWeight = rule.affiliateUnionDelegateWeight;
+      }
     }
   } else {
     const methodRaw = metadata.selectorMethod;

@@ -203,22 +203,30 @@ import { emptyCaucusRuntime } from "./caucus/types.js";
 import { processHistory15Month } from "./history15/monthly.js";
 import { emptyHistory15Runtime } from "./history15/types.js";
 import {
+  dissolveCaucus,
   endorseChairCandidate,
   endorsePrimaryCandidate,
+  formCaucus,
   formCaucusAlliance,
   proposeCaucusMerger,
   recruitToCaucus,
+  setCaucusGrowthStrategy,
   setCaucusPriorities,
+  splitCaucus,
 } from "./caucus/commands.js";
 import {
   allocatePartySupport,
   authorizeCoalitionTalks,
   endorseCandidate as endorseCandidateAsChair,
+  proposePlatformPlank,
   recommendDiscipline,
+  recommendPartyBudget,
   setCampaignStrategy,
+  setIssueEmphasis,
   setPartyOfficialPosition,
   setPartyPriorities,
 } from "./partyOrg/commands.js";
+import { castNationalCommitteeVote } from "./partyOrg/committee.js";
 import {
   declareChairCandidacy,
   openPartyChairElection,
@@ -226,6 +234,7 @@ import {
 } from "./partyOrg/elections.js";
 import { processForeignAffairsMonth } from "./foreign/monthly.js";
 import { processOrganizationForeignReactions } from "./foreign/organization-foreign-bridge.js";
+import { processDomesticForeignPolitics } from "./foreign/domesticPolitics.js";
 import { advanceForeignCalibrationMonths as advanceForeignCalibrationMonthsHarness } from "./foreign/calibration-harness.js";
 import { seedForeignAffairsRuntime } from "./foreign/baseline.js";
 import { needsForeignAffairsSeed } from "./foreign/state.js";
@@ -636,6 +645,11 @@ function runTowardTarget(
       processOrganizationForeignReactions(state, world, commandId, foreignEvents),
     ),
   );
+  events.push(
+    ...timed("domestic_foreign_politics", () =>
+      processDomesticForeignPolitics(state, world, commandId, foreignEvents),
+    ),
+  );
   events.push(...timed("media", () => processMediaMonth(state, world, rng, commandId)));
   // Phase 15 long-term history: late observational pass after domestic/foreign/media.
   events.push(...timed("history15", () => processHistory15Month(world, state, commandId)));
@@ -736,6 +750,8 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   ensureGoverningRuntime(state);
   ensurePartyOrgRuntime(state);
   ensureCaucusRuntime(state);
+  ensureDefaultOfficers(frozen, state);
+  recomputeCaucusShares(frozen, state);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
@@ -3440,7 +3456,11 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
     ): CommandResult => {
       ensureDefaultOfficers(world, state);
       const preview = op(jsonClone(state), "PREVIEW");
-      if (!preview.ok) return fail(preview.error.code, preview.error.message);
+      // COMMITTEE_PENDING_PLAYER is not a validation failure — the real call must
+      // run so the pending vote is persisted for castNationalCommitteeVote.
+      if (!preview.ok && preview.error.code !== "COMMITTEE_PENDING_PLAYER") {
+        return fail(preview.error.code, preview.error.message);
+      }
       const commandId = nextCommandId();
       const before = state.history.length;
       const out = op(state, commandId);
@@ -3471,6 +3491,30 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       );
     }
 
+    if (command.type === "SET_ISSUE_EMPHASIS") {
+      return runPartyOrgCommand((target, commandId) =>
+        setIssueEmphasis(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          issueId: command.issueId,
+          level: command.level,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "PROPOSE_PLATFORM_PLANK") {
+      return runPartyOrgCommand((target, commandId) =>
+        proposePlatformPlank(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          issueId: command.issueId,
+          optionId: command.optionId,
+          commandId,
+        }),
+      );
+    }
+
     if (command.type === "SET_PARTY_CAMPAIGN_STRATEGY") {
       return runPartyOrgCommand((target, commandId) =>
         setCampaignStrategy(target, world, {
@@ -3489,6 +3533,17 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
           partyId: command.partyId,
           allocations: command.allocations,
           commandId,
+        }),
+      );
+    }
+
+    if (command.type === "RECOMMEND_PARTY_BUDGET") {
+      return runPartyOrgCommand((target, commandId) =>
+        recommendPartyBudget(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          commandId,
+          ...(command.allocations ? { allocations: command.allocations } : {}),
         }),
       );
     }
@@ -3532,7 +3587,11 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
 
     if (command.type === "OPEN_PARTY_CHAIR_ELECTION") {
       return runPartyOrgCommand((target, commandId) =>
-        openPartyChairElection(target, world, { partyId: command.partyId, commandId }),
+        openPartyChairElection(target, world, {
+          partyId: command.partyId,
+          commandId,
+          ...(command.triggerReason != null ? { triggerReason: command.triggerReason } : {}),
+        }),
       );
     }
 
@@ -3550,6 +3609,35 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return runPartyOrgCommand((target, commandId) =>
         resolveChairElection(target, world, { electionId: command.electionId, commandId }),
       );
+    }
+
+    if (command.type === "CAST_NATIONAL_COMMITTEE_VOTE") {
+      return runPartyOrgCommand((target, commandId) => {
+        const runtime = ensurePartyOrgRuntime(target);
+        const pending = runtime.pendingCommitteeVotes[command.voteId];
+        const deferred = pending?.deferredCommand ?? null;
+        const cast = castNationalCommitteeVote(target, world, {
+          voteId: command.voteId,
+          choice: command.choice,
+          commandId,
+        });
+        if (!cast.ok) return cast;
+        if (cast.passed && deferred && typeof deferred.type === "string") {
+          // Re-apply approved major actions without re-opening a committee ballot.
+          if (
+            deferred.type === "PROPOSE_PLATFORM_PLANK" &&
+            typeof deferred.partyId === "string" &&
+            typeof deferred.issueId === "string" &&
+            typeof deferred.optionId === "string"
+          ) {
+            if (!runtime.platformPlanks[deferred.partyId]) {
+              runtime.platformPlanks[deferred.partyId] = {};
+            }
+            runtime.platformPlanks[deferred.partyId]![deferred.issueId] = deferred.optionId;
+          }
+        }
+        return { ok: true as const };
+      });
     }
 
     // ── Caucuses 2.0 (shared human/NPC command layer) ──
@@ -3573,6 +3661,17 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
           actorId: target.playerPoliticianId,
           factionId: command.factionId,
           priorities: command.priorities,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "SET_CAUCUS_GROWTH_STRATEGY") {
+      return runCaucusCommand((target, commandId) =>
+        setCaucusGrowthStrategy(target, world, {
+          actorId: target.playerPoliticianId,
+          factionId: command.factionId,
+          growthStrategy: command.growthStrategy,
           commandId,
         }),
       );
@@ -3608,6 +3707,42 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
           otherFactionId: command.otherFactionId,
           kind: command.kind,
           commandId,
+          ...(command.goal != null ? { goal: command.goal } : {}),
+        }),
+      );
+    }
+
+    if (command.type === "FORM_CAUCUS") {
+      return runCaucusCommand((target, commandId) =>
+        formCaucus(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          politicianIds: command.politicianIds,
+          commandId,
+          ...(command.name != null ? { name: command.name } : {}),
+        }),
+      );
+    }
+
+    if (command.type === "DISSOLVE_CAUCUS") {
+      return runCaucusCommand((target, commandId) =>
+        dissolveCaucus(target, world, {
+          actorId: target.playerPoliticianId,
+          factionId: command.factionId,
+          commandId,
+          ...(command.reason != null ? { reason: command.reason } : {}),
+        }),
+      );
+    }
+
+    if (command.type === "SPLIT_CAUCUS") {
+      return runCaucusCommand((target, commandId) =>
+        splitCaucus(target, world, {
+          actorId: target.playerPoliticianId,
+          factionId: command.factionId,
+          politicianIds: command.politicianIds,
+          commandId,
+          ...(command.name != null ? { name: command.name } : {}),
         }),
       );
     }

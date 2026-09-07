@@ -736,6 +736,7 @@ function parseSimulation(
     endorsements: party.endorsements,
     partyContests: party.partyContests,
     dynamicParties: party.dynamicParties,
+    dynamicFactions: party.dynamicFactions ?? {},
     elections: electoral.elections,
     candidateStanding: electoral.candidateStanding,
     electoralEnvironment: electoral.electoralEnvironment,
@@ -888,6 +889,7 @@ export function migrateSaveV2ToV3(raw: unknown): unknown {
   sim.endorsements = isRecord(sim.endorsements) ? sim.endorsements : {};
   sim.partyContests = isRecord(sim.partyContests) ? sim.partyContests : {};
   sim.dynamicParties = isRecord(sim.dynamicParties) ? sim.dynamicParties : {};
+  sim.dynamicFactions = isRecord(sim.dynamicFactions) ? sim.dynamicFactions : {};
   if (isRecord(sim.counters)) {
     sim.counters = {
       ...sim.counters,
@@ -2050,3 +2052,78 @@ export function migrateSaveV23ToV24(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 23, toSchema: 24, migrate: migrateSaveV23ToV24 });
+
+/**
+ * Schema 25: Caucuses 2.0 completion + Phase 15 encyclopedia fields.
+ * Seeds missing history15 arrays/maps and caucus partyMemberSupport defaults
+ * without fabricating narrative content. Caller bumps SAVE_SCHEMA_VERSION to 25.
+ */
+export function migrateSaveV24ToV25(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 25 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 25 };
+
+  if (!isRecord(sim.history15Runtime)) {
+    sim.history15Runtime = emptyHistory15Runtime();
+  } else {
+    const h15: Record<string, unknown> = { ...sim.history15Runtime };
+    if (!Array.isArray(h15.constitutionalEras)) h15.constitutionalEras = [];
+    if (!Array.isArray(h15.precedentLinks)) h15.precedentLinks = [];
+    if (!isRecord(h15.politicianLegacies)) h15.politicianLegacies = {};
+    if (!Array.isArray(h15.caucusChronicles)) h15.caucusChronicles = [];
+    if (!Array.isArray(h15.organizationChronicles)) h15.organizationChronicles = [];
+    if (!Array.isArray(h15.provinceChronicles)) h15.provinceChronicles = [];
+    sim.history15Runtime = h15;
+  }
+
+  if (!isRecord(sim.caucusRuntime)) {
+    sim.caucusRuntime = emptyCaucusRuntime();
+  } else {
+    const caucus: Record<string, unknown> = { ...sim.caucusRuntime };
+    if (isRecord(caucus.caucuses)) {
+      const nextCaucuses: Record<string, unknown> = { ...caucus.caucuses };
+      for (const [fid, row] of Object.entries(nextCaucuses)) {
+        if (!isRecord(row)) continue;
+        nextCaucuses[fid] = {
+          ...row,
+          partyMemberSupport:
+            typeof row.partyMemberSupport === "number" ? row.partyMemberSupport : 0,
+          growthStrategy:
+            typeof row.growthStrategy === "string" ? row.growthStrategy : "recruit_members",
+          history: Array.isArray(row.history) ? row.history : [],
+        };
+      }
+      caucus.caucuses = nextCaucuses;
+    }
+    if (isRecord(caucus.unalignedByParty)) {
+      const nextUnaligned: Record<string, unknown> = { ...caucus.unalignedByParty };
+      for (const [partyId, row] of Object.entries(nextUnaligned)) {
+        if (!isRecord(row)) continue;
+        nextUnaligned[partyId] = {
+          ...row,
+          partyMemberSupport:
+            typeof row.partyMemberSupport === "number" ? row.partyMemberSupport : 0,
+        };
+      }
+      caucus.unalignedByParty = nextUnaligned;
+    }
+    sim.caucusRuntime = caucus;
+  }
+
+  if (isRecord(sim.partyOrgRuntime) && !isRecord(sim.partyOrgRuntime.nationalCommittee)) {
+    sim.partyOrgRuntime = {
+      ...sim.partyOrgRuntime,
+      nationalCommittee: {},
+    };
+  }
+
+  if (!isRecord(sim.dynamicFactions)) {
+    sim.dynamicFactions = {};
+  }
+
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 24, toSchema: 25, migrate: migrateSaveV24ToV25 });

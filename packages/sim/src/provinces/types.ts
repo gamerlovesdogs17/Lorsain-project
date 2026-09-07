@@ -64,6 +64,8 @@ export type GubernatorialCandidate = {
   incumbent: boolean;
   source: "player" | "npc";
   withdrawn: boolean;
+  /** Party office-nomination contest that produced this candidate, when applicable. */
+  sourceContestId?: string | null;
 };
 
 export const GUBERNATORIAL_INCUMBENT_DECISIONS = [

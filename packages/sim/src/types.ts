@@ -71,7 +71,7 @@ export type {
   CanonicalWorldLeader,
 } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 24 as const;
+export const SAVE_SCHEMA_VERSION = 25 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -229,6 +229,8 @@ export type SimState = {
   endorsements: Record<string, EndorsementRecord>;
   partyContests: Record<string, PartyContest>;
   dynamicParties: Record<string, DynamicPartyDefinition>;
+  /** Runtime-created factions (caucus splits/formations); world.factionDefinitions is frozen. */
+  dynamicFactions: Record<string, FactionDefinition>;
   elections: Record<string, ElectionState>;
   candidateStanding: Record<string, CandidateStanding>;
   electoralEnvironment: ElectoralEnvironment;
@@ -688,11 +690,28 @@ export type Command =
       issueId: string;
       stance: "support" | "oppose" | "neutral";
     }
+  | {
+      type: "SET_ISSUE_EMPHASIS";
+      partyId: string;
+      issueId: string;
+      level: "high" | "medium" | "low";
+    }
+  | {
+      type: "PROPOSE_PLATFORM_PLANK";
+      partyId: string;
+      issueId: string;
+      optionId: string;
+    }
   | { type: "SET_PARTY_CAMPAIGN_STRATEGY"; partyId: string; strategy: string }
   | {
       type: "ALLOCATE_PARTY_SUPPORT";
       partyId: string;
       allocations: Record<string, number>;
+    }
+  | {
+      type: "RECOMMEND_PARTY_BUDGET";
+      partyId: string;
+      allocations?: Record<string, number>;
     }
   | {
       type: "AUTHORIZE_COALITION_TALKS";
@@ -713,11 +732,28 @@ export type Command =
       targetPoliticianId: string;
       kind: "warning" | "censure" | "suspend_support";
     }
-  | { type: "OPEN_PARTY_CHAIR_ELECTION"; partyId: string }
+  | { type: "OPEN_PARTY_CHAIR_ELECTION"; partyId: string; triggerReason?: string }
   | { type: "DECLARE_CHAIR_CANDIDACY"; electionId: string; politicianId?: string }
   | { type: "RESOLVE_PARTY_CHAIR_ELECTION"; electionId: string }
+  | {
+      type: "CAST_NATIONAL_COMMITTEE_VOTE";
+      voteId: string;
+      choice: "yes" | "no" | "abstain";
+    }
   // ── Caucuses 2.0 (shared human/NPC command layer) ──
   | { type: "SET_CAUCUS_PRIORITIES"; factionId: string; priorities: string[] }
+  | {
+      type: "SET_CAUCUS_GROWTH_STRATEGY";
+      factionId: string;
+      growthStrategy:
+        | "recruit_members"
+        | "recruit_mps"
+        | "win_committee"
+        | "win_leadership"
+        | "influence_platform"
+        | "back_primaries"
+        | "provincial_base";
+    }
   | { type: "ENDORSE_CHAIR_AS_CAUCUS"; factionId: string; candidateId: string }
   | { type: "ENDORSE_PRIMARY_AS_CAUCUS"; factionId: string; candidateId: string }
   | {
@@ -725,6 +761,20 @@ export type Command =
       factionId: string;
       otherFactionId: string;
       kind: "alliance" | "rivalry";
+      goal?: string;
+    }
+  | {
+      type: "FORM_CAUCUS";
+      partyId: string;
+      politicianIds: string[];
+      name?: string;
+    }
+  | { type: "DISSOLVE_CAUCUS"; factionId: string; reason?: string }
+  | {
+      type: "SPLIT_CAUCUS";
+      factionId: string;
+      politicianIds: string[];
+      name?: string;
     }
   | {
       type: "PROPOSE_CAUCUS_MERGER";

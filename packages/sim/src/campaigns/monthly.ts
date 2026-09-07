@@ -26,6 +26,7 @@ import {
 import { chooseCampaignAction, chooseDeclare, shouldConsiderWithdraw } from "./decisions.js";
 import { holdDebate, shouldHoldDebate } from "./debates.js";
 import { openDueNominationContests, processNominationCalendar } from "./timeline.js";
+import { processOfficeNominationsMonth } from "../parties/officeNominations.js";
 import { currentPresidentialElection } from "./timeline.js";
 import { presidentialNominationContestsForElection } from "../parties/state.js";
 import type { CampaignGeography, CampaignMessageType, CampaignState } from "./types.js";
@@ -161,6 +162,11 @@ export function processCampaignMonth(
   events.push(...timed("polls", () => maybePublicPolls(state, world, rng, commandId)));
   events.push(
     ...timed("nomination_calendar", () => processNominationCalendar(state, world, rng, commandId)),
+  );
+  events.push(
+    ...timed("office_nominations", () =>
+      processOfficeNominationsMonth(state, world, rng, commandId),
+    ),
   );
   state.campaignRuntime.lastMonthProcessed = month;
   return events;
