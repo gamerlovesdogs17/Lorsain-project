@@ -1,6 +1,6 @@
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import type { JsonObject } from "../json.js";
-import { addDays, addYears, compareIsoDate, type IsoDate } from "../calendar.js";
+import { addDays, addYears, compareIsoDate, daysBetween, type IsoDate } from "../calendar.js";
 import { monthStart } from "../campaigns/effects.js";
 import { enqueueScheduled, pushHistory } from "../scheduler.js";
 import {
@@ -49,8 +49,13 @@ import type {
 } from "./types.js";
 import { MAX_ACTIVE_COURT_CASES } from "./types.js";
 import { hasExplicitLegalCareer, materializeLegalCandidates } from "./legal-careers.js";
-import { recordExplicitPrecedentLinks } from "../history15/precedents.js";
+import {
+  filterValidPrecedentTreatments,
+  isControllingPrecedent,
+  recordExplicitPrecedentLinks,
+} from "../history15/precedents.js";
 import type { PrecedentLinkRelation } from "../history15/types.js";
+import type { RngService } from "../rng.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -594,14 +599,214 @@ export function castJudicialVote(
   return {};
 }
 
-export function similarPrecedent(state: SimState, courtCase: CourtCase): PrecedentRecord | null {
-  const matches = Object.values(state.constitutionalRuntime.precedents)
+const MAX_PRECEDENT_TREATMENTS = 3;
+
+/** Candidate priors by caseType + constitutionalRule (question boost when present). */
+export function candidatePrecedents(
+  state: SimState,
+  courtCase: Pick<CourtCase, "caseType" | "constitutionalRule" | "constitutionalQuestion">,
+  opts?: { includeOverturned?: boolean; asOfDate?: IsoDate },
+): PrecedentRecord[] {
+  const asOf = opts?.asOfDate ?? state.currentDate;
+  const includeOverturned = opts?.includeOverturned === true;
+  return Object.values(state.constitutionalRuntime.precedents)
     .filter(
       (p) =>
-        p.caseType === courtCase.caseType && p.constitutionalRule === courtCase.constitutionalRule,
+        p.caseType === courtCase.caseType &&
+        p.constitutionalRule === courtCase.constitutionalRule &&
+        compareIsoDate(p.decisionDate, asOf) < 0 &&
+        (includeOverturned || isControllingPrecedent(state, p.decisionId)),
     )
-    .sort((a, b) => (a.decisionDate < b.decisionDate ? 1 : -1));
-  return matches[0] ?? null;
+    .sort((a, b) => {
+      const aq = a.constitutionalQuestion === courtCase.constitutionalQuestion ? 1 : 0;
+      const bq = b.constitutionalQuestion === courtCase.constitutionalQuestion ? 1 : 0;
+      if (aq !== bq) return bq - aq;
+      if (a.decisionDate !== b.decisionDate) {
+        return a.decisionDate < b.decisionDate ? 1 : -1;
+      }
+      return a.decisionId < b.decisionId ? -1 : 1;
+    });
+}
+
+/** Strongest controlling similar prior (skips overturned-without-restore). */
+export function similarPrecedent(state: SimState, courtCase: CourtCase): PrecedentRecord | null {
+  return candidatePrecedents(state, courtCase)[0] ?? null;
+}
+
+function judgeIdeologyLean(world: KernelWorld, state: SimState, judgeId: string): number {
+  const profile = getAgentProfile(world, state, judgeId);
+  if (!profile) return 0;
+  return ((profile.ideology.authority ?? 0) + (profile.ideology.economic ?? 0)) / 2;
+}
+
+function meanLean(world: KernelWorld, state: SimState, judgeIds: string[]): number {
+  if (judgeIds.length === 0) return 0;
+  let sum = 0;
+  for (const id of judgeIds) sum += judgeIdeologyLean(world, state, id);
+  return sum / judgeIds.length;
+}
+
+function priorBenchIds(state: SimState, prior: PrecedentRecord): string[] {
+  const courtCase = state.constitutionalRuntime.courtCases[prior.caseId];
+  if (courtCase?.participatingJudgeIds?.length) {
+    return [...courtCase.participatingJudgeIds].sort();
+  }
+  const decision = state.constitutionalRuntime.courtDecisions[prior.decisionId];
+  if (decision) return Object.keys(decision.votes).sort();
+  return [];
+}
+
+function priorMajorityIds(state: SimState, prior: PrecedentRecord): string[] {
+  const decision = state.constitutionalRuntime.courtDecisions[prior.decisionId];
+  if (!decision) return priorBenchIds(state, prior);
+  const majority: JudicialVoteChoice = prior.disposition === "UPHOLD" ? "uphold" : "invalidate";
+  return Object.entries(decision.votes)
+    .filter(([, v]) => v === majority)
+    .map(([id]) => id)
+    .sort();
+}
+
+function compositionOverlap(currentIds: string[], priorIds: string[]): number {
+  if (currentIds.length === 0 && priorIds.length === 0) return 1;
+  const cur = new Set(currentIds);
+  const pri = new Set(priorIds);
+  let inter = 0;
+  for (const id of cur) if (pri.has(id)) inter += 1;
+  const union = new Set([...cur, ...pri]).size;
+  return union === 0 ? 1 : inter / union;
+}
+
+function precedentStrength(prior: PrecedentRecord): number {
+  const total = prior.uphold + prior.invalidate;
+  if (total <= 0) return 0.35;
+  return Math.abs(prior.uphold - prior.invalidate) / total;
+}
+
+function pickWeightedTreatment(
+  weights: Array<{ relation: PrecedentLinkRelation | "ignore"; w: number }>,
+  roll: number,
+): PrecedentLinkRelation | "ignore" {
+  const positive = weights.filter((x) => x.w > 0);
+  if (positive.length === 0) return "ignore";
+  const sum = positive.reduce((a, b) => a + b.w, 0);
+  let cursor = Math.max(0, Math.min(0.999999, roll)) * sum;
+  for (const row of positive) {
+    cursor -= row.w;
+    if (cursor <= 0) return row.relation;
+  }
+  return positive[positive.length - 1]!.relation;
+}
+
+/**
+ * Decide explicit cite treatments for a new decision against candidate priors.
+ * Independent of mere disposition equality; overturn is rare.
+ */
+export function decidePrecedentTreatments(
+  world: KernelWorld,
+  state: SimState,
+  args: {
+    courtCase: CourtCase;
+    disposition: CourtDisposition;
+    decisionId: string;
+    decisionDate: IsoDate;
+    currentJudgeIds: string[];
+    rng?: RngService | null;
+  },
+): Array<{ priorDecisionId: string; relation: PrecedentLinkRelation }> {
+  const candidates = candidatePrecedents(state, args.courtCase, {
+    asOfDate: args.decisionDate,
+    includeOverturned: false,
+  }).slice(0, MAX_PRECEDENT_TREATMENTS);
+
+  const currentLean = meanLean(world, state, args.currentJudgeIds);
+  const treatments: Array<{ priorDecisionId: string; relation: PrecedentLinkRelation }> = [];
+
+  for (const prior of candidates) {
+    const sameQuestion =
+      prior.constitutionalQuestion === args.courtCase.constitutionalQuestion ? 1 : 0;
+    const relevance = 0.45 + sameQuestion * 0.45 + Math.min(0.1, precedentStrength(prior) * 0.1);
+    const ageYears = Math.max(0, daysBetween(prior.decisionDate, args.decisionDate) / 365.25);
+    const ageFactor = Math.min(1, ageYears / 12);
+    const strength = precedentStrength(prior);
+    const priorIds = priorBenchIds(state, prior);
+    const overlap = compositionOverlap(args.currentJudgeIds, priorIds);
+    const compositionChange = 1 - overlap;
+    const priorLean = meanLean(world, state, priorMajorityIds(state, prior));
+    const leanDelta = Math.abs(currentLean - priorLean);
+    const oppositeDisposition = prior.disposition !== args.disposition;
+
+    // Institutional pull toward continuity from current bench.
+    let institutionalism = 0.5;
+    for (const id of args.currentJudgeIds) {
+      institutionalism += getAgentProfile(world, state, id)?.traits.institutionalism ?? 0.5;
+    }
+    institutionalism /= Math.max(1, args.currentJudgeIds.length + 1);
+
+    const roll = args.rng
+      ? args.rng.float01("npc-decisions")
+      : ((args.decisionId.length * 17 + prior.decisionId.length * 31) % 1000) / 1000;
+
+    // Soft gate: weak relevance often yields no link.
+    if (relevance < 0.5 && roll < 0.55) continue;
+    if (relevance < 0.72 && sameQuestion === 0 && roll < 0.35) continue;
+
+    const followW =
+      relevance *
+      (oppositeDisposition ? 0.12 : 0.9) *
+      (0.35 + institutionalism) *
+      (0.4 + (1 - leanDelta)) *
+      (0.45 + overlap);
+    const reliesW =
+      relevance * (0.25 + strength) * (sameQuestion ? 0.85 : 0.35) * (0.5 + (1 - leanDelta) * 0.5);
+    const distinguishW =
+      (sameQuestion ? 0.18 : 0.95) *
+      relevance *
+      (0.35 + compositionChange * 0.4 + Math.abs(args.courtCase.meritsLean) * 0.15);
+    const limitsW =
+      relevance *
+      (oppositeDisposition ? 0.22 : 0.55) *
+      (0.25 + leanDelta * 0.55 + compositionChange * 0.25) *
+      (sameQuestion ? 0.8 : 0.35);
+    // Overturn: rare separate gate — needs opposite outcome + lean/composition shift.
+    const overturnChance = oppositeDisposition
+      ? Math.min(
+          0.08,
+          Math.max(
+            0,
+            0.01 +
+              leanDelta * 0.04 +
+              compositionChange * 0.035 +
+              ageFactor * 0.02 +
+              (1 - institutionalism) * 0.03 -
+              strength * 0.015,
+          ) * relevance,
+        )
+      : 0;
+
+    const overturnRoll = args.rng
+      ? args.rng.float01("npc-decisions")
+      : ((roll * 997 + prior.decisionId.charCodeAt(0)) % 1000) / 1000;
+    if (overturnChance > 0 && overturnRoll < overturnChance) {
+      treatments.push({ priorDecisionId: prior.decisionId, relation: "overturns" });
+      continue;
+    }
+
+    const ignoreW = 0.18 + (1 - relevance) * 0.55 + (sameQuestion ? 0 : 0.12);
+    const chosen = pickWeightedTreatment(
+      [
+        { relation: "follows", w: followW },
+        { relation: "relies_on", w: reliesW },
+        { relation: "distinguishes", w: distinguishW },
+        { relation: "limits", w: limitsW },
+        { relation: "ignore", w: ignoreW },
+      ],
+      roll,
+    );
+    if (chosen === "ignore") continue;
+    treatments.push({ priorDecisionId: prior.decisionId, relation: chosen });
+  }
+
+  return filterValidPrecedentTreatments(state, args.decisionId, treatments, args.decisionDate);
 }
 
 export function tallyJudicialDisposition(votes: Record<string, JudicialVoteChoice>): {
@@ -804,6 +1009,7 @@ export function recordJudicialDecision(
   state: SimState,
   args: { caseId: string; votes: Record<string, JudicialVoteChoice> },
   commandId: string | null,
+  rng?: RngService | null,
 ): { events: SimEvent[] } | { error: CommandError } {
   const courtCase = state.constitutionalRuntime.courtCases[args.caseId];
   if (!courtCase || courtCase.status !== "pending") {
@@ -840,13 +1046,18 @@ export function recordJudicialDecision(
     : null;
 
   // Explicit cite only — never inferred later by syncPrecedentLinks.
-  const prior = similarPrecedent(state, courtCase);
-  const precedentTreatments: NonNullable<CourtDecision["precedentTreatments"]> = [];
-  if (prior && prior.decisionId !== decisionId) {
-    const relation: PrecedentLinkRelation =
-      prior.disposition === tallied.disposition ? "follows" : "distinguishes";
-    precedentTreatments.push({ priorDecisionId: prior.decisionId, relation });
-  }
+  const currentJudgeIds =
+    courtCase.participatingJudgeIds.length > 0
+      ? [...courtCase.participatingJudgeIds].sort()
+      : Object.keys(args.votes).sort();
+  const precedentTreatments = decidePrecedentTreatments(world, state, {
+    courtCase,
+    disposition: tallied.disposition,
+    decisionId,
+    decisionDate: state.currentDate,
+    currentJudgeIds,
+    rng: rng ?? null,
+  });
 
   const decision: CourtDecision = {
     id: decisionId,
@@ -902,11 +1113,32 @@ export function recordJudicialDecision(
         nonparticipation: tallied.nonparticipation,
         constitutionalQuestion: courtCase.constitutionalQuestion,
         caseType: courtCase.caseType,
+        precedentTreatments,
       },
       commandId,
       0.95,
     ),
   ];
+  for (const t of precedentTreatments) {
+    if (t.relation !== "overturns") continue;
+    events.push(
+      event(
+        state,
+        "PRECEDENT_OVERTURNED",
+        currentJudgeIds,
+        [decisionId, t.priorDecisionId, courtCase.id],
+        {
+          decisionId,
+          priorDecisionId: t.priorDecisionId,
+          caseId: courtCase.id,
+          constitutionalRule: courtCase.constitutionalRule,
+          caseType: courtCase.caseType,
+        },
+        commandId,
+        0.98,
+      ),
+    );
+  }
   events.push(...applyDisposition(world, state, courtCase, tallied.disposition, commandId));
   if (courtCase.caseType === "IMPEACHMENT_JUDGMENT") {
     const proceeding = Object.values(state.constitutionalRuntime.impeachments).find(

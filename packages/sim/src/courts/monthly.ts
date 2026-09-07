@@ -130,7 +130,7 @@ function docketWork(
     }
     votes[id] = chooseJudicialVote(world, state, id, courtCase, rng, precedent);
   }
-  const out = recordJudicialDecision(world, state, { caseId: courtCase.id, votes }, commandId);
+  const out = recordJudicialDecision(world, state, { caseId: courtCase.id, votes }, commandId, rng);
   if (!("error" in out)) events.push(...out.events);
   return events;
 }
