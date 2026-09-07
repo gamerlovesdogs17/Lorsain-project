@@ -103,6 +103,15 @@ export type CourtDecision = {
   constitutionalQuestion: string;
   constitutionalRule: string;
   caseType: CourtCaseType;
+  /**
+   * Explicit cite-graph treatments recorded when the bench decides.
+   * Never inferred later from similar questions — only these (and history15
+   * precedentLinks written from them) feed courtPrecedentChain.
+   */
+  precedentTreatments?: Array<{
+    priorDecisionId: string;
+    relation: "relies_on" | "follows" | "distinguishes" | "limits" | "overturns";
+  }>;
   metadata: JsonObject;
 };
 

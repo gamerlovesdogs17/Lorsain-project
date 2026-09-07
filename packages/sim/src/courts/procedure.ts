@@ -39,6 +39,7 @@ import type {
   ConstitutionalGroundsRecord,
   CourtCase,
   CourtCaseType,
+  CourtDecision,
   CourtDisposition,
   CourtNomination,
   GroundsSourceKind,
@@ -48,6 +49,8 @@ import type {
 } from "./types.js";
 import { MAX_ACTIVE_COURT_CASES } from "./types.js";
 import { hasExplicitLegalCareer, materializeLegalCandidates } from "./legal-careers.js";
+import { recordExplicitPrecedentLinks } from "../history15/precedents.js";
+import type { PrecedentLinkRelation } from "../history15/types.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -835,7 +838,17 @@ export function recordJudicialDecision(
       ? "The dissent would invalidate the challenged act because the asserted authority exceeds the constitutional limit."
       : "The dissent would uphold the challenged act and defer to the responsible elected institution."
     : null;
-  const decision = {
+
+  // Explicit cite only — never inferred later by syncPrecedentLinks.
+  const prior = similarPrecedent(state, courtCase);
+  const precedentTreatments: NonNullable<CourtDecision["precedentTreatments"]> = [];
+  if (prior && prior.decisionId !== decisionId) {
+    const relation: PrecedentLinkRelation =
+      prior.disposition === tallied.disposition ? "follows" : "distinguishes";
+    precedentTreatments.push({ priorDecisionId: prior.decisionId, relation });
+  }
+
+  const decision: CourtDecision = {
     id: decisionId,
     caseId: courtCase.id,
     decisionDate: state.currentDate,
@@ -847,6 +860,7 @@ export function recordJudicialDecision(
     constitutionalQuestion: courtCase.constitutionalQuestion,
     constitutionalRule: courtCase.constitutionalRule,
     caseType: courtCase.caseType,
+    ...(precedentTreatments.length > 0 ? { precedentTreatments } : {}),
     metadata: {
       majorityOpinion,
       majorityAuthorId,
@@ -870,6 +884,9 @@ export function recordJudicialDecision(
     uphold: tallied.uphold,
     invalidate: tallied.invalidate,
   };
+  if (precedentTreatments.length > 0) {
+    recordExplicitPrecedentLinks(state, decisionId, precedentTreatments);
+  }
   const events: SimEvent[] = [
     event(
       state,

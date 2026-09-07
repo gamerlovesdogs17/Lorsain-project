@@ -8,7 +8,11 @@ import { loadTerenaWorld } from "./integration/harness.js";
 import { compareElections } from "./history15/comparison.js";
 import { ensureFoundingConstitutionalEra } from "./history15/constitutionalEras.js";
 import { recordPoliticianLegacy } from "./history15/legacy.js";
-import { courtPrecedentChain, syncPrecedentLinks } from "./history15/precedents.js";
+import {
+  courtPrecedentChain,
+  recordExplicitPrecedentLinks,
+  syncPrecedentLinks,
+} from "./history15/precedents.js";
 import { ensureHistory15Runtime } from "./history15/state.js";
 import { processHistory15Month } from "./history15/monthly.js";
 import { emptyHistory15Runtime } from "./history15/types.js";
@@ -73,6 +77,11 @@ describe("Phase 15 completion", () => {
     };
 
     syncPrecedentLinks(state);
+    // sync no longer fabricates similarity links — must record explicitly
+    expect(state.history15Runtime!.precedentLinks.length).toBe(0);
+    recordExplicitPrecedentLinks(state, "DEC_B", [
+      { priorDecisionId: "DEC_A", relation: "distinguishes" },
+    ]);
     const links = state.history15Runtime!.precedentLinks;
     expect(links.length).toBeGreaterThan(0);
     expect(links.some((l) => l.fromDecisionId === "DEC_B" && l.toDecisionId === "DEC_A")).toBe(

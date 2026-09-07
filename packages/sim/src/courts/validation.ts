@@ -113,6 +113,23 @@ export function parseConstitutionalRuntime(raw: unknown): ConstitutionalRuntime 
           if (typeof choice === "string" && isJudicialVoteChoice(choice)) votes[pid] = choice;
         }
       }
+      const precedentTreatments: CourtDecision["precedentTreatments"] = [];
+      if (Array.isArray(rec.precedentTreatments)) {
+        for (const row of rec.precedentTreatments) {
+          if (!isRecord(row) || typeof row.priorDecisionId !== "string") continue;
+          const relation = row.relation;
+          if (
+            relation !== "relies_on" &&
+            relation !== "follows" &&
+            relation !== "distinguishes" &&
+            relation !== "limits" &&
+            relation !== "overturns"
+          ) {
+            continue;
+          }
+          precedentTreatments.push({ priorDecisionId: row.priorDecisionId, relation });
+        }
+      }
       runtime.courtDecisions[id] = {
         id,
         caseId: typeof rec.caseId === "string" ? rec.caseId : "",
@@ -133,6 +150,7 @@ export function parseConstitutionalRuntime(raw: unknown): ConstitutionalRuntime 
           typeof rec.caseType === "string" && isCourtCaseType(rec.caseType)
             ? rec.caseType
             : "LAW_REVIEW",
+        ...(precedentTreatments.length > 0 ? { precedentTreatments } : {}),
         metadata: isRecord(rec.metadata) ? (rec.metadata as CourtDecision["metadata"]) : {},
       };
     }
