@@ -24,6 +24,8 @@ import {
   WHIP_PERSUADE_APPROACHES,
   canShowExactInternals,
   formatWhipLean,
+  formatWhipVoteOutlook,
+  playerEffectiveInformationAccess,
   explainVoteQualitative,
   type BillState,
   type WhipStrength,
@@ -578,12 +580,14 @@ export function AssemblyPage(props: {
     }
     return true;
   });
-  const supportOutlook = (() => {
-    if (!whip) return "Outlook unclear";
-    const total = Math.max(1, whip.likelyYes + whip.likelyNo + whip.uncertain);
-    const lean = (whip.likelyYes - whip.likelyNo) / total;
-    return formatWhipLean(lean);
-  })();
+  const whipInfoAccess = playerEffectiveInformationAccess(
+    props.world,
+    props.snap,
+    props.snap.playerPoliticianId,
+    "whip_votes",
+    props.debug ?? debugMode,
+  );
+  const supportOutlook = formatWhipVoteOutlook(whip, whipInfoAccess);
 
   const speakerHolderId =
     Object.values(props.snap.officeTerms).find(

@@ -3,6 +3,8 @@ import type { ContentBundle } from "@lorsain/content-loader";
 import {
   TERENA_WORLD_ID,
   bilateralKey,
+  describeDiplomaticRelation,
+  playerEffectiveInformationAccess,
   type Command,
   type CommandResult,
   type KernelWorld,
@@ -10,6 +12,7 @@ import {
   type Simulation,
 } from "@lorsain/sim";
 import { isPresident, qualitativeStanding } from "./format.js";
+import { useSettings } from "./settingsContext.js";
 import {
   countryDisplayName,
   countryRecentEvents,
@@ -124,7 +127,15 @@ export function ForeignAffairsPage(props: {
   }) => void;
 }) {
   const { world, snap, sim, bundle, catalog } = props;
+  const { debugMode } = useSettings();
   const president = isPresident(world, snap, snap.playerPoliticianId);
+  const diplomacyAccess = playerEffectiveInformationAccess(
+    world,
+    snap,
+    snap.playerPoliticianId,
+    "diplomacy",
+    debugMode,
+  );
   const [deskTab, setDeskTab] = useState<ForeignDeskTab>("overview");
   const mode = mapModeForDeskTab(deskTab);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -479,8 +490,12 @@ export function ForeignAffairsPage(props: {
                           <>
                             <div>
                               <span className="kicker">Relations with Terena</span>
-                              <div>{terenaBilateralRelationLabel(world, snap, selectedId)}</div>
-                              {bilateral ? (
+                              <div>
+                                {diplomacyAccess === "public"
+                                  ? terenaBilateralRelationLabel(world, snap, selectedId)
+                                  : describeDiplomaticRelation(bilateral, diplomacyAccess)}
+                              </div>
+                              {bilateral && diplomacyAccess === "public" ? (
                                 <div className="muted">
                                   Trust {qualitativeStanding(bilateral.trust)} · economic ties{" "}
                                   {qualitativeStanding(bilateral.economicTies)}
