@@ -36,6 +36,13 @@ const qaFixtures = new Map([
     "election-night-partial",
     resolve(__dirname, "../../docs/qa/phase11_4/fixtures/election-night-partial-browser-save.json"),
   ],
+  [
+    "labour-primary-poll",
+    resolve(
+      __dirname,
+      "../../docs/qa/institutional/fixtures/labour-primary-poll-browser-save.json",
+    ),
+  ],
 ]);
 
 export default defineConfig({

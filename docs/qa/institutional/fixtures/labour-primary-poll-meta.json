@@ -1,0 +1,58 @@
+{
+  "fixture": "labour-primary-poll",
+  "contestId": "CONTEST000003",
+  "contestType": "presidential_nomination",
+  "partyId": "PARTY_LAB",
+  "playerPoliticianId": "NPC989",
+  "candidatePoliticianIds": [
+    "NPC989",
+    "NPC012",
+    "NPC003"
+  ],
+  "nationalPollId": "POLL000003",
+  "provincePollId": "POLL000002",
+  "provinceId": "FDV",
+  "nationalShares": [
+    {
+      "politicianId": "NPC989",
+      "share": 0.52,
+      "percentLabel": "52.0%"
+    },
+    {
+      "politicianId": "NPC012",
+      "share": 0.36,
+      "percentLabel": "36.0%"
+    },
+    {
+      "politicianId": "NPC003",
+      "share": 0.12,
+      "percentLabel": "12.0%"
+    }
+  ],
+  "provinceShares": [
+    {
+      "politicianId": "NPC989",
+      "share": 0.55,
+      "percentLabel": "55.0%"
+    },
+    {
+      "politicianId": "NPC012",
+      "share": 0.33,
+      "percentLabel": "33.0%"
+    },
+    {
+      "politicianId": "NPC003",
+      "share": 0.12,
+      "percentLabel": "12.0%"
+    }
+  ],
+  "currentDate": "2028-02-01",
+  "expectedUi": {
+    "primaryPolling": true,
+    "publishedSample": true,
+    "absentCopy": [
+      "No race poll yet",
+      "You are not running an active campaign"
+    ]
+  }
+}

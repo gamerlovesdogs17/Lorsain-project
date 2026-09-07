@@ -1,6 +1,6 @@
 {
   "phase": "16b-institutional",
-  "generatedAt": "2026-09-07T20:30:15.684Z",
+  "generatedAt": "2026-09-07T21:20:11.819Z",
   "base": "http://localhost:5174/Lorsain-project/",
   "warnings": [],
   "shots": [
@@ -89,8 +89,21 @@
         "qualitative shares (caucuses)"
       ],
       "ok": true,
-      "sha256": "3bbb90bfdb6e0635a56ad3ee98bd739032f145e293110f21a668d53fc05dc83b",
-      "bytes": 220258
+      "sha256": "d414bb268cd864b2e721a1f7f14dfee112642879b3b0c76285c3d2fa87560a06",
+      "bytes": 219240
+    },
+    {
+      "file": "candidate-primary-map-1440.png",
+      "screen": "candidate-primary-map",
+      "assertions": [
+        "primary poll shares",
+        "candidate names",
+        "Published sample",
+        "negatives absent"
+      ],
+      "ok": true,
+      "sha256": "95653bc286a538f0c0d58664af76e06497fce115e39493a7c57180fba6d039d8",
+      "bytes": 290165
     },
     {
       "file": "fa-overview-1440.png",

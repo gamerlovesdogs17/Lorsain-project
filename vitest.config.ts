@@ -10,8 +10,10 @@ export default defineConfig({
     environment: "node",
     testTimeout: 90_000,
     hookTimeout: 90_000,
-    teardownTimeout: 90_000,
+    teardownTimeout: 120_000,
     fileParallelism: false,
+    pool: "forks",
+    maxWorkers: 1,
   },
   resolve: {
     // Unit tests import TypeScript sources; package.json exports target dist for runtime consumers.

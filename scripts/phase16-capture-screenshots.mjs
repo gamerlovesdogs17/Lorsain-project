@@ -322,65 +322,81 @@ async function main() {
   );
 
   // —— Candidate / primary map ——
-  // Use active-campaign fixture (open presidential_nomination contests).
-  let primaryCaptured = false;
-  for (const screen of ["campaign", "elections"]) {
-    if (primaryCaptured) break;
-    await gotoFixture(
-      page,
-      { qaFixture: "active-campaign", qaScreen: screen, qaPlayer: "NPC003" },
-      desk,
-    );
-    await dismissOverlays(page);
-    try {
-      shots.push(
-        await captureShot(page, {
-          file: "candidate-primary-map-1440.png",
-          screen: "candidate-primary-map",
-          assertions: ["Primary|Nomination|map SVG|candidate name"],
-          assert: async () => {
-            await assertNoneVisible(
-              page,
-              [
-                /No open nomination contest is available to join right now/i,
-                /You are not running an active campaign/i,
-              ],
-              "candidate-primary-map",
-            );
-            const positive = await assertAny(
-              page,
-              [
-                {
-                  description: "text Primary polling",
-                  check: textVisible(page, /Primary polling/i),
-                },
-                { description: "text Nomination", check: textVisible(page, /Nomination/i) },
-                { description: "text Campaign HQ", check: textVisible(page, /Campaign HQ/i) },
-                {
-                  description: "map svg",
-                  check: countAtLeast(page, "svg.terena-map, svg path.map-province, svg path", 8),
-                },
-                {
-                  description: "candidate field",
-                  check: textVisible(page, /primary candidates|Primary field|rival|polling/i),
-                },
-              ],
-              "candidate-primary-map",
-            );
-            return [positive, "negatives absent"];
-          },
-        }),
-      );
-      primaryCaptured = true;
-    } catch (err) {
-      console.warn(`primary not proven on ${screen}: ${err.message}`);
-    }
+  // Purpose-built Labour nomination fixture with published candidate polls.
+  const primaryMeta = JSON.parse(
+    readFileSync(
+      resolve(ROOT, "docs/qa/institutional/fixtures/labour-primary-poll-meta.json"),
+      "utf8",
+    ),
+  );
+  const primaryPlayer = primaryMeta.playerPoliticianId;
+  const primaryPercents = primaryMeta.nationalShares.map((row) => row.percentLabel);
+  await gotoFixture(
+    page,
+    { qaFixture: "labour-primary-poll", qaScreen: "campaign", qaPlayer: primaryPlayer },
+    desk,
+  );
+  await dismissOverlays(page);
+  // Prefer polling layer so legend shows candidate names.
+  const pollingBtn = page.getByRole("button", { name: /Polling|Primary polling/i }).first();
+  if ((await pollingBtn.count()) > 0) {
+    await pollingBtn.click({ force: true }).catch(() => null);
+    await page.waitForTimeout(280);
   }
-  if (!primaryCaptured) {
-    throw new Error(
-      "[candidate-primary-map] FAIL — could not prove Primary/Nomination without negative placeholder copy",
-    );
-  }
+  shots.push(
+    await captureShot(page, {
+      file: "candidate-primary-map-1440.png",
+      screen: "candidate-primary-map",
+      assertions: [
+        "Primary polling",
+        "Published sample",
+        ...primaryPercents,
+        "map SVG",
+        "candidate legend",
+      ],
+      assert: async () => {
+        await assertNoneVisible(
+          page,
+          [
+            /No race poll yet/i,
+            /You are not running an active campaign/i,
+            /No open nomination contest is available to join right now/i,
+          ],
+          "candidate-primary-map",
+        );
+        for (const pct of primaryPercents) {
+          if (!(await textVisible(page, new RegExp(pct.replace(".", "\\.")))())) {
+            throw new Error(`[candidate-primary-map] missing published share ${pct}`);
+          }
+        }
+        if (!(await textVisible(page, /Primary polling/i)())) {
+          throw new Error("[candidate-primary-map] missing Primary polling");
+        }
+        if (!(await textVisible(page, /Published sample/i)())) {
+          throw new Error("[candidate-primary-map] missing Published sample");
+        }
+        if (!(await countAtLeast(page, "svg.terena-map, svg path.map-province, svg path", 8)())) {
+          throw new Error("[candidate-primary-map] missing map");
+        }
+        if (!(await locatorVisible(page, ".map-legend .legend-item")())) {
+          throw new Error("[candidate-primary-map] missing candidate legend items");
+        }
+        // General-election opposing party short names must not dominate the primary legend.
+        const legendText = (
+          (await page
+            .locator(".map-legend")
+            .innerText()
+            .catch(() => "")) ?? ""
+        ).toLowerCase();
+        for (const party of ["national union", "party_nu", "civic reform"]) {
+          if (legendText.includes(party) && !legendText.includes("labour")) {
+            throw new Error(`[candidate-primary-map] legend looks like general-election parties`);
+          }
+        }
+        return ["primary poll shares", "Published sample", "Primary polling", "legend"];
+      },
+    }),
+  );
 
   // —— Foreign Affairs overview ——
   await gotoFixture(

@@ -29,6 +29,7 @@ const CRITICAL = new Set([
   "settings-debug-off",
   "legislation-list",
   "selected-bill",
+  "candidate-primary-map",
 ]);
 
 const QUALITATIVE_SHARE = new RegExp(
@@ -570,6 +571,66 @@ async function main() {
           leadershipOk ? "data-qa party-leadership" : "Leadership visited",
           `qualitative shares (${shareSource})`,
         ];
+      },
+    });
+  });
+
+  // —— PRIMARY POLL MAP (critical) ——
+  await tryCapture({ screen: "candidate-primary-map" }, async () => {
+    const primaryMeta = JSON.parse(
+      readFileSync(
+        resolve(ROOT, "docs/qa/institutional/fixtures/labour-primary-poll-meta.json"),
+        "utf8",
+      ),
+    );
+    const primaryPercents = primaryMeta.nationalShares.map((row) => row.percentLabel);
+    await gotoFixture(
+      page,
+      {
+        qaFixture: "labour-primary-poll",
+        qaScreen: "campaign",
+        qaPlayer: primaryMeta.playerPoliticianId,
+      },
+      desk,
+    );
+    await dismissOverlays(page);
+    const pollingBtn = page.getByRole("button", { name: /Polling|Primary polling/i }).first();
+    if ((await pollingBtn.count()) > 0) {
+      await pollingBtn.click({ force: true }).catch(() => null);
+      await page.waitForTimeout(280);
+    }
+    return captureShot(page, {
+      file: "candidate-primary-map-1440.png",
+      screen: "candidate-primary-map",
+      assertions: ["Primary polling", "Published sample", ...primaryPercents],
+      assert: async () => {
+        await assertNoneVisible(
+          page,
+          [
+            /No race poll yet/i,
+            /You are not running an active campaign/i,
+            /No open nomination contest/i,
+          ],
+          "candidate-primary-map",
+        );
+        for (const pct of primaryPercents) {
+          if (!(await textVisible(page, new RegExp(pct.replace(".", "\\.")))())) {
+            throw new Error(`[candidate-primary-map] missing published share ${pct}`);
+          }
+        }
+        // Candidate names from the published sample line must be present.
+        for (const name of ["Ulric Linden", "Jonah Ravel"]) {
+          if (!(await textVisible(page, new RegExp(name))())) {
+            throw new Error(`[candidate-primary-map] missing candidate ${name}`);
+          }
+        }
+        if (!(await textVisible(page, /Primary polling/i)())) {
+          throw new Error("[candidate-primary-map] missing Primary polling");
+        }
+        if (!(await textVisible(page, /Published sample/i)())) {
+          throw new Error("[candidate-primary-map] missing Published sample");
+        }
+        return ["primary poll shares", "candidate names", "Published sample", "negatives absent"];
       },
     });
   });
