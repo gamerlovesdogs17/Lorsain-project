@@ -3613,29 +3613,12 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
 
     if (command.type === "CAST_NATIONAL_COMMITTEE_VOTE") {
       return runPartyOrgCommand((target, commandId) => {
-        const runtime = ensurePartyOrgRuntime(target);
-        const pending = runtime.pendingCommitteeVotes[command.voteId];
-        const deferred = pending?.deferredCommand ?? null;
         const cast = castNationalCommitteeVote(target, world, {
           voteId: command.voteId,
           choice: command.choice,
           commandId,
         });
         if (!cast.ok) return cast;
-        if (cast.passed && deferred && typeof deferred.type === "string") {
-          // Re-apply approved major actions without re-opening a committee ballot.
-          if (
-            deferred.type === "PROPOSE_PLATFORM_PLANK" &&
-            typeof deferred.partyId === "string" &&
-            typeof deferred.issueId === "string" &&
-            typeof deferred.optionId === "string"
-          ) {
-            if (!runtime.platformPlanks[deferred.partyId]) {
-              runtime.platformPlanks[deferred.partyId] = {};
-            }
-            runtime.platformPlanks[deferred.partyId]![deferred.issueId] = deferred.optionId;
-          }
-        }
         return { ok: true as const };
       });
     }

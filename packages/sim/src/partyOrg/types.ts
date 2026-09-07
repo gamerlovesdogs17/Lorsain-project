@@ -161,8 +161,35 @@ export type PendingCommitteeVote = {
   npcAbstain: number;
   playerChoice: "yes" | "no" | "abstain" | null;
   deferredCommand: JsonObject | null;
+  /** Linked unified pending action id when present. */
+  pendingActionId?: string | null;
   status: "pending" | "resolved" | "cancelled";
   createdDate: IsoDate;
+};
+
+export const PENDING_PARTY_ACTION_STATUSES = [
+  "awaiting_committee",
+  "approved",
+  "rejected",
+  "executed",
+  "cancelled",
+] as const;
+export type PendingPartyActionStatus = (typeof PENDING_PARTY_ACTION_STATUSES)[number];
+
+/**
+ * Deferred major party-org action awaiting (or following) National Committee approval.
+ * Payload is applied exactly once via executePendingPartyAction when approved.
+ */
+export type PendingPartyAction = {
+  id: string;
+  partyId: string;
+  actionType: string;
+  payload: JsonObject;
+  createdBy: string;
+  committeeVoteId: string | null;
+  status: PendingPartyActionStatus;
+  createdDate: IsoDate;
+  executedDate: IsoDate | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -219,6 +246,9 @@ export type PartyOrgRuntime = {
   /** Pending committee votes awaiting player ballot. */
   pendingCommitteeVotes: Record<string, PendingCommitteeVote>;
   nextPendingCommitteeId: number;
+  /** Deferred major actions linked to committee votes (unified execute-on-pass). */
+  pendingActions: Record<string, PendingPartyAction>;
+  nextPendingActionId: number;
   /** Auto-increment counters private to this runtime (avoids touching shared Counters). */
   nextElectionId: number;
   nextDisciplineId: number;
@@ -246,6 +276,8 @@ export function emptyPartyOrgRuntime(): PartyOrgRuntime {
     platformPlanks: {},
     pendingCommitteeVotes: {},
     nextPendingCommitteeId: 1,
+    pendingActions: {},
+    nextPendingActionId: 1,
     nextElectionId: 1,
     nextDisciplineId: 1,
     lastOrgMonth: null,

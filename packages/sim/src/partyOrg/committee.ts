@@ -17,6 +17,11 @@ import type { CaucusStanceTowardChair } from "../caucus/types.js";
 import { getPartyRules } from "./rules.js";
 import { ensurePartyOrgRuntime } from "./state.js";
 import type { PendingCommitteeVote } from "./types.js";
+import {
+  executePendingPartyAction,
+  findPendingActionByVoteId,
+  markPendingPartyActionRejected,
+} from "./pendingActions.js";
 
 const MIN_COMMITTEE = 12;
 const MAX_COMMITTEE = 24;
@@ -241,6 +246,7 @@ export function conductCommitteeVote(
     proposalPayload?: JsonObject;
     commandId: string;
     deferredCommand?: JsonObject | null;
+    pendingActionId?: string | null;
   },
 ): CommitteeVoteResult {
   const rules = getPartyRules(state, world, args.partyId);
@@ -284,10 +290,15 @@ export function conductCommitteeVote(
       npcAbstain,
       playerChoice: null,
       deferredCommand: args.deferredCommand ?? null,
+      pendingActionId: args.pendingActionId ?? null,
       status: "pending",
       createdDate: state.currentDate,
     };
     runtime.pendingCommitteeVotes[voteId] = pending;
+    if (args.pendingActionId) {
+      const action = runtime.pendingActions[args.pendingActionId];
+      if (action) action.committeeVoteId = voteId;
+    }
 
     pushHistory(state, {
       date: state.currentDate,
@@ -302,6 +313,7 @@ export function conductCommitteeVote(
         opportunity: true,
         autoResolved: false,
         pendingVoteId: voteId,
+        pendingActionId: args.pendingActionId ?? null,
         npcYes,
         npcNo,
         npcAbstain,
@@ -338,6 +350,7 @@ export function conductCommitteeVote(
       abstain: npcAbstain,
       passed,
       memberCount: members.length,
+      pendingActionId: args.pendingActionId ?? null,
     },
     sourceScheduledEventId: null,
     sourceCommandId: args.commandId,
@@ -348,10 +361,11 @@ export function conductCommitteeVote(
 
 /**
  * Cast the player's pending national-committee ballot and finalize the tally.
+ * On pass, executes any linked PendingPartyAction exactly once.
  */
 export function castNationalCommitteeVote(
   state: SimState,
-  _world: KernelWorld,
+  world: KernelWorld,
   args: {
     voteId: string;
     choice: "yes" | "no" | "abstain";
@@ -408,10 +422,24 @@ export function castNationalCommitteeVote(
       passed,
       pendingVoteId: pending.id,
       playerChoice: args.choice,
+      pendingActionId: pending.pendingActionId ?? null,
     },
     sourceScheduledEventId: null,
     sourceCommandId: args.commandId,
   });
+
+  const linked =
+    (pending.pendingActionId ? runtime.pendingActions[pending.pendingActionId] : null) ??
+    findPendingActionByVoteId(state, args.voteId);
+
+  if (linked) {
+    if (passed) {
+      const exec = executePendingPartyAction(state, world, linked.id, args.commandId);
+      if (!exec.ok) return exec;
+    } else {
+      markPendingPartyActionRejected(state, linked.id);
+    }
+  }
 
   return { ok: true, passed, yes, no, abstain };
 }
@@ -426,6 +454,7 @@ export function requireCommitteeApproval(
     proposalPayload?: JsonObject;
     commandId: string;
     deferredCommand?: JsonObject | null;
+    pendingActionId?: string | null;
   },
 ):
   | { ok: true; vote: CommitteeVoteResult }
@@ -445,6 +474,7 @@ export function requireCommitteeApproval(
   }
 
   if (!vote.passed) {
+    if (args.pendingActionId) markPendingPartyActionRejected(state, args.pendingActionId);
     return {
       ok: false,
       error: {

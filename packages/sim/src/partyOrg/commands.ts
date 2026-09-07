@@ -5,21 +5,22 @@
  * Both NPC AI and the player invoke the SAME functions — the UI layer
  * wraps the same call with a confirmation step.
  *
- * Every handler returns  { ok: true }  or  { ok: false, error: { code, message } }.
+ * Every handler returns  { ok: true }  or  { ok: false; error: { code, message } }.
  *
  * Auth model
  * ----------
  * • The actor (`actorId`) must hold the Chair role for the party.
  * • If the Chair seat is vacant, the Vice Chair may substitute.
- * • For "major" actions (coalition talks, candidate endorsement, resource
- *   allocation, discipline) a national-committee vote is required when
- *   `partyRules.nationalCommitteeApprovalRequired` is true.
+ * • For "major" actions (coalition talks, discipline, large endorsements)
+ *   a national-committee vote is required when
+ *   `partyRules.nationalCommitteeApprovalRequired` is true. Deferred payloads
+ *   live in PendingPartyAction and execute exactly once on approval.
  */
 
 import { pushHistory } from "../scheduler.js";
+import type { JsonObject } from "../json.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import {
-  ALLOCATION_BUCKETS,
   ISSUE_EMPHASIS_LEVELS,
   PLATFORM_POLICY_OPTIONS,
   normalizePartyPriorities,
@@ -27,6 +28,8 @@ import {
   type IssueEmphasisLevel,
 } from "./catalog.js";
 import { requireCommitteeApproval } from "./committee.js";
+import { createPendingPartyAction, executePendingPartyAction } from "./pendingActions.js";
+import { getPartyRules } from "./rules.js";
 import { ensurePartyOrgRuntime } from "./state.js";
 
 // ---------------------------------------------------------------------------
@@ -80,6 +83,59 @@ function requireTreasurerOrChairAuth(
     "NOT_PARTY_TREASURER",
     `Politician ${actorId} is not Chair/Vice Chair/Treasurer for party ${partyId}.`,
   );
+}
+
+/**
+ * Committee-gated major actions: create PendingPartyAction, open vote when needed,
+ * execute exactly once on pass (including immediate NPC pass).
+ */
+function runCommitteeGatedAction(
+  state: SimState,
+  world: KernelWorld,
+  args: {
+    actorId: string;
+    partyId: string;
+    actionType: string;
+    proposalKind: string;
+    payload: JsonObject;
+    commandId: string;
+  },
+): CommandOutcome {
+  const rules = getPartyRules(state, world, args.partyId);
+  if (!rules.nationalCommitteeApprovalRequired) {
+    const pending = createPendingPartyAction(state, {
+      partyId: args.partyId,
+      actionType: args.actionType,
+      payload: args.payload,
+      createdBy: args.actorId,
+    });
+    pending.status = "approved";
+    return executePendingPartyAction(state, world, pending.id, args.commandId);
+  }
+
+  const pending = createPendingPartyAction(state, {
+    partyId: args.partyId,
+    actionType: args.actionType,
+    payload: args.payload,
+    createdBy: args.actorId,
+  });
+
+  const committee = requireCommitteeApproval(state, world, {
+    partyId: args.partyId,
+    proposalKind: args.proposalKind,
+    proposalPayload: args.payload,
+    commandId: args.commandId,
+    pendingActionId: pending.id,
+    deferredCommand: {
+      type: args.actionType,
+      pendingActionId: pending.id,
+      partyId: args.partyId,
+      ...args.payload,
+    },
+  });
+  if (!committee.ok) return committee;
+
+  return executePendingPartyAction(state, world, pending.id, args.commandId);
 }
 
 // ---------------------------------------------------------------------------
@@ -187,37 +243,14 @@ export function proposePlatformPlank(
     );
   }
 
-  const committee = requireCommitteeApproval(state, world, {
+  return runCommitteeGatedAction(state, world, {
+    actorId: args.actorId,
     partyId: args.partyId,
+    actionType: "platform_plank",
     proposalKind: "platform_plank",
-    proposalPayload: { issueId: args.issueId, optionId: args.optionId },
+    payload: { issueId: args.issueId, optionId: args.optionId },
     commandId: args.commandId,
-    deferredCommand: {
-      type: "PROPOSE_PLATFORM_PLANK",
-      partyId: args.partyId,
-      issueId: args.issueId,
-      optionId: args.optionId,
-    },
   });
-  if (!committee.ok) return committee;
-
-  const runtime = ensurePartyOrgRuntime(state);
-  if (!runtime.platformPlanks[args.partyId]) runtime.platformPlanks[args.partyId] = {};
-  runtime.platformPlanks[args.partyId]![args.issueId] = args.optionId;
-
-  pushHistory(state, {
-    date: state.currentDate,
-    type: "PARTY_PLATFORM_PLANK_SET",
-    importance: 0.5,
-    visibility: "public",
-    actorIds: [args.actorId],
-    entityIds: [args.partyId],
-    payload: { partyId: args.partyId, issueId: args.issueId, optionId: args.optionId },
-    sourceScheduledEventId: null,
-    sourceCommandId: args.commandId,
-  });
-
-  return ok();
 }
 
 /**
@@ -319,40 +352,14 @@ export function endorseCandidate(
   const authErr = requireChairAuth(state, args.partyId, args.actorId);
   if (authErr) return authErr;
 
-  const committee = requireCommitteeApproval(state, world, {
+  return runCommitteeGatedAction(state, world, {
+    actorId: args.actorId,
     partyId: args.partyId,
+    actionType: "endorse_candidate",
     proposalKind: "endorse_candidate",
-    proposalPayload: { contestId: args.contestId, candidateId: args.candidateId },
+    payload: { contestId: args.contestId, candidateId: args.candidateId },
     commandId: args.commandId,
   });
-  if (!committee.ok) return committee;
-
-  const runtime = ensurePartyOrgRuntime(state);
-
-  runtime.partyEndorsements[args.contestId] = {
-    partyId: args.partyId,
-    candidateId: args.candidateId,
-    actorId: args.actorId,
-    date: state.currentDate,
-  };
-
-  pushHistory(state, {
-    date: state.currentDate,
-    type: "PARTY_CANDIDATE_ENDORSED",
-    importance: 0.6,
-    visibility: "public",
-    actorIds: [args.actorId, args.candidateId],
-    entityIds: [args.partyId, args.contestId],
-    payload: {
-      partyId: args.partyId,
-      contestId: args.contestId,
-      candidateId: args.candidateId,
-    },
-    sourceScheduledEventId: null,
-    sourceCommandId: args.commandId,
-  });
-
-  return ok();
 }
 
 /**
@@ -374,41 +381,14 @@ export function allocatePartySupport(
   const authErr = requireChairAuth(state, args.partyId, args.actorId);
   if (authErr) return authErr;
 
-  const committee = requireCommitteeApproval(state, world, {
+  return runCommitteeGatedAction(state, world, {
+    actorId: args.actorId,
     partyId: args.partyId,
+    actionType: "allocate_support",
     proposalKind: "allocate_support",
-    proposalPayload: { allocations: args.allocations },
+    payload: { allocations: args.allocations },
     commandId: args.commandId,
   });
-  if (!committee.ok) return committee;
-
-  const runtime = ensurePartyOrgRuntime(state);
-
-  const clamped: Record<string, number> = {};
-  for (const [key, val] of Object.entries(args.allocations)) {
-    clamped[key] = Math.max(0, Math.min(1, Number.isFinite(val) ? val : 0));
-  }
-  const hasKnownBucket = Object.keys(ALLOCATION_BUCKETS).some((k) => k in clamped);
-  runtime.supportAllocations[args.partyId] = hasKnownBucket
-    ? normalizeSupportAllocations(clamped)
-    : clamped;
-
-  pushHistory(state, {
-    date: state.currentDate,
-    type: "PARTY_SUPPORT_ALLOCATED",
-    importance: 0.4,
-    visibility: "system",
-    actorIds: [args.actorId],
-    entityIds: [args.partyId],
-    payload: {
-      partyId: args.partyId,
-      allocations: runtime.supportAllocations[args.partyId] ?? {},
-    },
-    sourceScheduledEventId: null,
-    sourceCommandId: args.commandId,
-  });
-
-  return ok();
 }
 
 /**
@@ -485,44 +465,18 @@ export function authorizeCoalitionTalks(
 
   const authorize = args.authorize ?? true;
 
-  const committee = requireCommitteeApproval(state, world, {
+  return runCommitteeGatedAction(state, world, {
+    actorId: args.actorId,
     partyId: args.partyId,
+    actionType: "authorize_coalition",
     proposalKind: "authorize_coalition_talks",
-    proposalPayload: {
+    payload: {
       partnerPartyId: args.partnerPartyId,
       authorize,
       redLines: args.redLines ?? [],
     },
     commandId: args.commandId,
   });
-  if (!committee.ok) return committee;
-
-  const runtime = ensurePartyOrgRuntime(state);
-
-  if (!runtime.coalitionTalks[args.partyId]) runtime.coalitionTalks[args.partyId] = {};
-  runtime.coalitionTalks[args.partyId]![args.partnerPartyId] = {
-    authorized: authorize,
-    redLines: args.redLines ?? [],
-  };
-
-  pushHistory(state, {
-    date: state.currentDate,
-    type: authorize ? "PARTY_COALITION_TALKS_AUTHORIZED" : "PARTY_COALITION_TALKS_RESCINDED",
-    importance: 0.65,
-    visibility: "public",
-    actorIds: [args.actorId],
-    entityIds: [args.partyId, args.partnerPartyId],
-    payload: {
-      partyId: args.partyId,
-      partnerPartyId: args.partnerPartyId,
-      authorized: authorize,
-      redLines: args.redLines ?? [],
-    },
-    sourceScheduledEventId: null,
-    sourceCommandId: args.commandId,
-  });
-
-  return ok();
 }
 
 /**
@@ -548,43 +502,12 @@ export function recommendDiscipline(
     return err("SELF_DISCIPLINE", "The chair cannot recommend discipline against themselves.");
   }
 
-  const committee = requireCommitteeApproval(state, world, {
+  return runCommitteeGatedAction(state, world, {
+    actorId: args.actorId,
     partyId: args.partyId,
+    actionType: "recommend_discipline",
     proposalKind: `discipline_${args.kind}`,
-    proposalPayload: { targetId: args.targetId, kind: args.kind },
+    payload: { targetId: args.targetId, kind: args.kind },
     commandId: args.commandId,
   });
-  if (!committee.ok) return committee;
-
-  const runtime = ensurePartyOrgRuntime(state);
-
-  const id = `PDISC${String(runtime.nextDisciplineId++).padStart(6, "0")}`;
-  runtime.disciplineActions[id] = {
-    id,
-    partyId: args.partyId,
-    targetId: args.targetId,
-    kind: args.kind,
-    recommendedByActorId: args.actorId,
-    date: state.currentDate,
-    status: "pending",
-  };
-
-  pushHistory(state, {
-    date: state.currentDate,
-    type: "PARTY_DISCIPLINE_RECOMMENDED",
-    importance: 0.55,
-    visibility: "public",
-    actorIds: [args.actorId, args.targetId],
-    entityIds: [args.partyId],
-    payload: {
-      id,
-      partyId: args.partyId,
-      targetId: args.targetId,
-      kind: args.kind,
-    },
-    sourceScheduledEventId: null,
-    sourceCommandId: args.commandId,
-  });
-
-  return ok();
 }

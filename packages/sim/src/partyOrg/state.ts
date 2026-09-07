@@ -10,8 +10,10 @@ import {
   type ChairElectionStage,
   type PartyOrgRuntime,
   type PendingCommitteeVote,
+  type PendingPartyAction,
   type VotingSystem,
 } from "./types.js";
+import { PENDING_PARTY_ACTION_STATUSES } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Ensure / lazy-init
@@ -28,6 +30,10 @@ export function ensurePartyOrgRuntime(state: SimState): PartyOrgRuntime {
     if (!rt.pendingCommitteeVotes) rt.pendingCommitteeVotes = {};
     if (typeof rt.nextPendingCommitteeId !== "number" || rt.nextPendingCommitteeId < 1) {
       rt.nextPendingCommitteeId = 1;
+    }
+    if (!rt.pendingActions) rt.pendingActions = {};
+    if (typeof rt.nextPendingActionId !== "number" || rt.nextPendingActionId < 1) {
+      rt.nextPendingActionId = 1;
     }
   }
   return state.partyOrgRuntime;
@@ -327,6 +333,7 @@ export function parsePartyOrgRuntime(raw: unknown): PartyOrgRuntime | string {
           !Array.isArray(r.deferredCommand)
             ? (r.deferredCommand as PendingCommitteeVote["deferredCommand"])
             : null,
+        pendingActionId: typeof r.pendingActionId === "string" ? r.pendingActionId : null,
         status,
         createdDate: typeof r.createdDate === "string" ? r.createdDate : "2000-01-01",
       };
@@ -334,8 +341,43 @@ export function parsePartyOrgRuntime(raw: unknown): PartyOrgRuntime | string {
     }
   }
 
+  if (
+    obj.pendingActions &&
+    typeof obj.pendingActions === "object" &&
+    !Array.isArray(obj.pendingActions)
+  ) {
+    const raw_pa = obj.pendingActions as Record<string, unknown>;
+    for (const [id, rec] of Object.entries(raw_pa)) {
+      if (!rec || typeof rec !== "object" || Array.isArray(rec)) continue;
+      const r = rec as Record<string, unknown>;
+      const status =
+        typeof r.status === "string" &&
+        (PENDING_PARTY_ACTION_STATUSES as readonly string[]).includes(r.status)
+          ? (r.status as PendingPartyAction["status"])
+          : "awaiting_committee";
+      const action: PendingPartyAction = {
+        id,
+        partyId: typeof r.partyId === "string" ? r.partyId : "",
+        actionType: typeof r.actionType === "string" ? r.actionType : "",
+        payload:
+          r.payload && typeof r.payload === "object" && !Array.isArray(r.payload)
+            ? (r.payload as PendingPartyAction["payload"])
+            : {},
+        createdBy: typeof r.createdBy === "string" ? r.createdBy : "",
+        committeeVoteId: typeof r.committeeVoteId === "string" ? r.committeeVoteId : null,
+        status,
+        createdDate: typeof r.createdDate === "string" ? r.createdDate : "2000-01-01",
+        executedDate: typeof r.executedDate === "string" ? r.executedDate : null,
+      };
+      base.pendingActions[id] = action;
+    }
+  }
+
   if (typeof obj.nextPendingCommitteeId === "number" && obj.nextPendingCommitteeId > 0) {
     base.nextPendingCommitteeId = obj.nextPendingCommitteeId;
+  }
+  if (typeof obj.nextPendingActionId === "number" && obj.nextPendingActionId > 0) {
+    base.nextPendingActionId = obj.nextPendingActionId;
   }
   if (typeof obj.nextElectionId === "number" && obj.nextElectionId > 0) {
     base.nextElectionId = obj.nextElectionId;
