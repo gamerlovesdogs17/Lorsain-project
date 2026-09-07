@@ -1,0 +1,125 @@
+{
+  "shots": [
+    {
+      "file": "party-overview-1440.png",
+      "screen": "party-overview",
+      "assertions": [
+        "text Party"
+      ],
+      "ok": true,
+      "sha256": "388ccc96ebaaabae2d4045c756320372bee35ac616335989ad6f3c5848303145",
+      "bytes": 202068
+    },
+    {
+      "file": "party-leadership-1440.png",
+      "screen": "party-leadership",
+      "assertions": [
+        "text National Chair"
+      ],
+      "ok": true,
+      "sha256": "739a3b3ca29281976fb589e3315234eea5cea8f1c7b3059f7f1203a50e5d502d",
+      "bytes": 192856
+    },
+    {
+      "file": "national-committee-1440.png",
+      "screen": "national-committee",
+      "assertions": [
+        "National Committee"
+      ],
+      "ok": true,
+      "sha256": "c39b29f9d1a88a5a4cfab8b2ade5957ffb55b999b401694b1365df0d545d16b3",
+      "bytes": 146959
+    },
+    {
+      "file": "caucuses-overview-1440.png",
+      "screen": "caucuses-overview",
+      "assertions": [
+        "text Membership"
+      ],
+      "ok": true,
+      "sha256": "c5ead18fee841eea579566274c6108efc72da80f4af9893110568c62dffb98a3",
+      "bytes": 197961
+    },
+    {
+      "file": "assembly-delegation-1440.png",
+      "screen": "assembly-delegation",
+      "assertions": [
+        "Assembly Delegation"
+      ],
+      "ok": true,
+      "sha256": "b562270f6ac91e29ec4698f6c62ef1a9ec4f93ad2be3774f540bf4f8ab320f6c",
+      "bytes": 177902
+    },
+    {
+      "file": "whip-desk-1440.png",
+      "screen": "whip-desk",
+      "assertions": [
+        "text Whip"
+      ],
+      "ok": true,
+      "sha256": "5ac7bad71e4ff75b88202356925a7e8bf06dfc381b676a1aa306ac103e63ff81",
+      "bytes": 286965
+    },
+    {
+      "file": "candidate-primary-map-1440.png",
+      "screen": "candidate-primary-map",
+      "assertions": [
+        "text Nomination"
+      ],
+      "ok": true,
+      "sha256": "55fade103f7678b10d190309c093eeb8a06986214621dbaf561160043b462f24",
+      "bytes": 138440
+    },
+    {
+      "file": "home-2-1440.png",
+      "screen": "home-2",
+      "assertions": [
+        "text Action"
+      ],
+      "ok": true,
+      "sha256": "4f4aa95b15bc429c69e1e71ebdcc9144598a460994fcff65487c67b111a9953a",
+      "bytes": 344514
+    },
+    {
+      "file": "government-2-1440.png",
+      "screen": "government-2",
+      "assertions": [
+        "Government",
+        "tab Cabinet"
+      ],
+      "ok": true,
+      "sha256": "5fdd8b816ce73a2d1a25d04dcebf10d2c5d30d6334f06e5e470804c3f8245ff3",
+      "bytes": 167197
+    },
+    {
+      "file": "history-15-1440.png",
+      "screen": "history-15",
+      "assertions": [
+        "text History"
+      ],
+      "ok": true,
+      "sha256": "e5e897d615c0f9e9f125c9dfb44ceb9ab7f2436ec0bfa049196fd6807238760d",
+      "bytes": 223339
+    },
+    {
+      "file": "situation-map-selected-1440.png",
+      "screen": "situation-map-selected",
+      "assertions": [
+        "data-qa situation-province-selected"
+      ],
+      "ok": true,
+      "sha256": "3e820c7e54837bb3fb259faba86bb4dc1e3e04e36eb579648e2551c86359c5eb",
+      "bytes": 188232
+    },
+    {
+      "file": "mobile-party-390.png",
+      "screen": "mobile-party",
+      "assertions": [
+        "text Party"
+      ],
+      "ok": true,
+      "sha256": "38c4d62a58e8583144ce0cc5b4051e4302dff884905852fbd3960405a5e023ba",
+      "bytes": 78012
+    }
+  ]
+}
