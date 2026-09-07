@@ -28,6 +28,7 @@ import {
   isSelectorTendency,
   type ContestCountInput,
   type ContestEntry,
+  type FactionDefinition,
   type DynamicPartyDefinition,
   type EndorsementRecord,
   type FactionState,
@@ -374,6 +375,7 @@ export type ParsedPartyRuntime = {
   endorsements: SimState["endorsements"];
   partyContests: SimState["partyContests"];
   dynamicParties: SimState["dynamicParties"];
+  dynamicFactions: SimState["dynamicFactions"];
 };
 
 export function parsePartyRuntime(
@@ -428,6 +430,33 @@ export function parsePartyRuntime(
       nominationRuleId: rec.nominationRuleId,
       createdDate: rec.createdDate,
     };
+  }
+
+  const dynamicFactions: Record<string, FactionDefinition> = {};
+  if (raw.dynamicFactions != null) {
+    if (!isRecord(raw.dynamicFactions)) return "dynamicFactions must be an object";
+    for (const [id, rec] of Object.entries(raw.dynamicFactions)) {
+      if (!isRecord(rec)) return `dynamicFactions.${id} must be an object`;
+      if (rec.factionId !== id) return `dynamicFactions.${id} id mismatch`;
+      if (typeof rec.partyId !== "string" || rec.partyId.length === 0) {
+        return `dynamicFactions.${id} partyId`;
+      }
+      if (typeof rec.name !== "string" || rec.name.trim() === "") {
+        return `dynamicFactions.${id} name`;
+      }
+      if (typeof rec.share !== "number" || !Number.isFinite(rec.share)) {
+        return `dynamicFactions.${id} share`;
+      }
+      if (parseCanonicalAllocatedId("DFACTION", id) == null) {
+        return `dynamicFactions.${id} id must be DFACTION followed by a positive integer`;
+      }
+      dynamicFactions[id] = {
+        factionId: id,
+        partyId: rec.partyId,
+        name: rec.name,
+        share: rec.share,
+      };
+    }
   }
 
   const partyStates: Record<string, PartyState> = {};
@@ -820,7 +849,14 @@ export function parsePartyRuntime(
     };
   }
 
-  return { partyStates, factionStates, endorsements, partyContests, dynamicParties };
+  return {
+    partyStates,
+    factionStates,
+    endorsements,
+    partyContests,
+    dynamicParties,
+    dynamicFactions,
+  };
 }
 
 export function partyCounterError(
@@ -896,7 +932,8 @@ export function validatePartyAgainstWorld(
     if (!state.factionStates[factionId]) return worldErr(`missing FactionState ${factionId}`);
   }
   for (const fac of Object.values(state.factionStates)) {
-    const def = world.factionDefinitions[fac.factionId];
+    const def =
+      world.factionDefinitions[fac.factionId] ?? state.dynamicFactions?.[fac.factionId] ?? null;
     if (!def) return worldErr(`unknown FactionState ${fac.factionId}`);
     if (def.partyId !== fac.partyId) {
       return worldErr(`faction ${fac.factionId} party linkage`);
@@ -969,9 +1006,15 @@ export function validatePartyAgainstWorld(
       return worldErr(`${p.id} unknown party ${p.partyId}`);
     }
     if (p.factionId) {
-      const fac = world.factionDefinitions[p.factionId] ?? state.factionStates[p.factionId];
+      const fac =
+        world.factionDefinitions[p.factionId] ??
+        state.dynamicFactions?.[p.factionId] ??
+        state.factionStates[p.factionId];
       if (!fac) return worldErr(`${p.id} unknown faction ${p.factionId}`);
-      const facParty = world.factionDefinitions[p.factionId]?.partyId ?? fac.partyId;
+      const facParty =
+        world.factionDefinitions[p.factionId]?.partyId ??
+        state.dynamicFactions?.[p.factionId]?.partyId ??
+        fac.partyId;
       if (facParty !== p.partyId) return worldErr(`${p.id} faction/party mismatch`);
     }
     if (!p.partyId && p.factionId) return worldErr(`${p.id} independent with faction`);
@@ -1005,6 +1048,21 @@ export function validatePartyAgainstWorld(
         ) {
           return worldErr(`contest ${contest.id} presidential cycle linkage`);
         }
+      }
+    }
+    if (contest.type === "gubernatorial_nomination" || contest.type === "assembly_nomination") {
+      const rule = world.nominationRules[contest.ruleId];
+      if (!rule) return worldErr(`contest ${contest.id} nomination rule does not resolve`);
+      if (rule.partyId !== contest.partyId && !state.dynamicParties[contest.partyId]) {
+        return worldErr(`contest ${contest.id} rule/party mismatch`);
+      }
+      const officeKind = contest.metadata.officeKind;
+      const electionId = contest.metadata.electionId;
+      if (officeKind !== "gubernatorial" && officeKind !== "assembly") {
+        return worldErr(`contest ${contest.id} missing officeKind`);
+      }
+      if (typeof electionId !== "string") {
+        return worldErr(`contest ${contest.id} missing electionId`);
       }
     }
     if (contest.type === "faction_chair") {

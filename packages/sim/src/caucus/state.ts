@@ -1,11 +1,13 @@
 import type { SimState } from "../types.js";
 import {
+  CAUCUS_GROWTH_STRATEGIES,
   CAUCUS_RELATION_KINDS,
   CAUCUS_STANCES_TOWARD_CHAIR,
   emptyCaucusAncestry,
   emptyCaucusFactionRuntime,
   emptyCaucusRuntime,
   type CaucusFactionRuntime,
+  type CaucusGrowthStrategy,
   type CaucusRuntime,
   type CaucusStanceTowardChair,
 } from "./types.js";
@@ -38,6 +40,10 @@ function isStance(v: unknown): v is CaucusStanceTowardChair {
   return typeof v === "string" && (CAUCUS_STANCES_TOWARD_CHAIR as readonly string[]).includes(v);
 }
 
+function isGrowthStrategy(v: unknown): v is CaucusGrowthStrategy {
+  return typeof v === "string" && (CAUCUS_GROWTH_STRATEGIES as readonly string[]).includes(v);
+}
+
 function parseCaucusFaction(factionId: string, raw: unknown): CaucusFactionRuntime | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const r = raw as Record<string, unknown>;
@@ -49,6 +55,7 @@ function parseCaucusFaction(factionId: string, raw: unknown): CaucusFactionRunti
     typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : fallback;
 
   base.membershipShare = num(r.membershipShare, 0);
+  base.partyMemberSupport = num(r.partyMemberSupport, 0);
   base.assemblyShare = num(r.assemblyShare, 0);
   base.institutionalInfluence = num(r.institutionalInfluence, 0);
   base.leaderId = typeof r.leaderId === "string" ? r.leaderId : null;
@@ -62,6 +69,21 @@ function parseCaucusFaction(factionId: string, raw: unknown): CaucusFactionRunti
   base.endorsedPrimaryCandidateId =
     typeof r.endorsedPrimaryCandidateId === "string" ? r.endorsedPrimaryCandidateId : null;
   base.endorsementMomentum = num(r.endorsementMomentum, 0.35);
+  base.growthStrategy = isGrowthStrategy(r.growthStrategy) ? r.growthStrategy : "recruit_members";
+  if (Array.isArray(r.history)) {
+    base.history = r.history
+      .filter(
+        (h): h is { date: string; kind: string; detail: string } =>
+          !!h &&
+          typeof h === "object" &&
+          !Array.isArray(h) &&
+          typeof (h as { date?: unknown }).date === "string" &&
+          typeof (h as { kind?: unknown }).kind === "string" &&
+          typeof (h as { detail?: unknown }).detail === "string",
+      )
+      .slice(-80)
+      .map((h) => ({ date: h.date, kind: h.kind, detail: h.detail }));
+  }
 
   if (r.alliances && typeof r.alliances === "object" && !Array.isArray(r.alliances)) {
     for (const [otherId, edge] of Object.entries(r.alliances as Record<string, unknown>)) {
@@ -72,7 +94,11 @@ function parseCaucusFaction(factionId: string, raw: unknown): CaucusFactionRunti
           ? (e.kind as "alliance" | "rivalry")
           : null;
       if (!kind || typeof e.since !== "string") continue;
-      base.alliances[otherId] = { kind, since: e.since };
+      base.alliances[otherId] = {
+        kind,
+        since: e.since,
+        ...(typeof e.goal === "string" ? { goal: e.goal } : {}),
+      };
     }
   }
 
@@ -119,6 +145,7 @@ export function parseCaucusRuntime(raw: unknown): CaucusRuntime | string {
         typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
       base.unalignedByParty[partyId] = {
         membershipShare: clamp(r.membershipShare),
+        partyMemberSupport: clamp(r.partyMemberSupport),
         assemblyShare: clamp(r.assemblyShare),
         institutionalInfluence: clamp(r.institutionalInfluence),
       };

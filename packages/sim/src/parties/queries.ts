@@ -1,7 +1,15 @@
 import { officesOfKind, occupyingTerms } from "../offices.js";
 import type { KernelWorld, SimState } from "../types.js";
 import { INDEPENDENT_AGGREGATE_ID } from "./policy.js";
-import type { DynamicPartyDefinition, PartyDefinition } from "./types.js";
+import type { DynamicPartyDefinition, FactionDefinition, PartyDefinition } from "./types.js";
+
+export function resolveFactionDefinition(
+  world: KernelWorld,
+  state: SimState,
+  factionId: string,
+): FactionDefinition | null {
+  return world.factionDefinitions[factionId] ?? state.dynamicFactions?.[factionId] ?? null;
+}
 
 export function membershipPartyIds(world: KernelWorld): string[] {
   return Object.keys(world.partyDefinitions).sort();

@@ -1,24 +1,32 @@
 /**
  * caucus/monthly.ts
  *
- * Gradual caucus share drift, rare alliances, rare merge/split with viability
- * thresholds, endorsement-history growth, and faction-chair → caucus-leader sync.
+ * Gradual caucus share / partyMemberSupport drift, rare alliances, rare
+ * merge/split/formation/dissolution, endorsement-history growth, and
+ * faction-chair → caucus-leader sync.
  *
  * Engine placement: immediately after processPartyOrgMonth.
  */
 
 import { monthStart } from "../campaigns/effects.js";
 import { changeFaction } from "../parties/membership.js";
-import { factionMembers } from "../parties/queries.js";
+import { factionAssemblyCaucus, factionMembers, partyMembers } from "../parties/queries.js";
 import { pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import {
+  dissolveCaucus,
+  formCaucus,
   formCaucusAlliance,
   proposeCaucusMerger,
   scoreCaucusMergeCompatibility,
+  splitCaucus,
 } from "./commands.js";
 import { ensureCaucusRuntime } from "./state.js";
-import { recomputeCaucusShares } from "./shares.js";
+import {
+  activeCaucusesForParty,
+  rebalancePartyMemberSupport,
+  recomputeCaucusShares,
+} from "./shares.js";
 import type { CaucusFactionRuntime } from "./types.js";
 
 const MIN_ACTIVE_CAUCUSES_BEFORE_MERGE = 2;
@@ -28,6 +36,10 @@ const MERGE_COMPAT_THRESHOLD = 0.62;
 const SPLIT_MIN_SHARE = 0.42;
 const SPLIT_MOVE_FRACTION = 0.18;
 const DRIFT_RATE = 0.04;
+const PMS_DRIFT = 0.018;
+const DISSOLVE_SUPPORT = 0.025;
+const DISSOLVE_STREAK_MONTHS = 4;
+const FORM_CHANCE = 0.015;
 
 function deterministicRoll(key: string, dateStr: string): number {
   let h = 0;
@@ -42,13 +54,8 @@ function isActive(row: CaucusFactionRuntime): boolean {
   return row.ancestry.dissolved == null;
 }
 
-function activeCaucusesForParty(
-  runtime: ReturnType<typeof ensureCaucusRuntime>,
-  partyId: string,
-): CaucusFactionRuntime[] {
-  return Object.values(runtime.caucuses)
-    .filter((c) => c.partyId === partyId && isActive(c))
-    .sort((a, b) => a.factionId.localeCompare(b.factionId));
+function lowSupportStreakKey(factionId: string): string {
+  return `lowSupportStreak:${factionId}`;
 }
 
 /** Sync factionStates.chairId → caucus leaderId; pick a light deputy from members. */
@@ -78,14 +85,51 @@ function syncLeadersFromFactionChairs(state: SimState): void {
   }
 }
 
-/** Soft membership drift toward endorsementMomentum / cohesion targets (bounded). */
-function applyShareDrift(state: SimState, month: string): void {
+function stanceDriftFactor(stance: CaucusFactionRuntime["stanceTowardChair"]): number {
+  switch (stance) {
+    case "loyal":
+      return 0.012;
+    case "cooperative":
+      return 0.006;
+    case "conditional":
+      return 0;
+    case "critical":
+      return -0.006;
+    case "oppositional":
+      return -0.012;
+    default:
+      return 0;
+  }
+}
+
+function strategyDrift(c: CaucusFactionRuntime): number {
+  switch (c.growthStrategy) {
+    case "recruit_members":
+      return 0.01;
+    case "recruit_mps":
+      return c.assemblyShare > 0.05 ? 0.008 : -0.004;
+    case "win_committee":
+      return c.institutionalInfluence > 0.08 ? 0.007 : -0.002;
+    case "win_leadership":
+      return c.endorsementMomentum * 0.02 - 0.004;
+    case "influence_platform":
+      return c.priorities.length > 0 ? 0.006 : 0;
+    case "back_primaries":
+      return c.endorsedPrimaryCandidateId ? 0.009 : -0.003;
+    case "provincial_base":
+      return 0.005;
+    default:
+      return 0;
+  }
+}
+
+/** Soft membership drift + gradual partyMemberSupport drift by strategy. */
+function applyShareDrift(world: KernelWorld, state: SimState, month: string): void {
   const runtime = ensureCaucusRuntime(state);
   for (const partyId of Object.keys(state.partyStates).sort()) {
-    const caucuses = activeCaucusesForParty(runtime, partyId);
+    const caucuses = activeCaucusesForParty(state, partyId);
     if (caucuses.length === 0) continue;
 
-    // Relative attraction weights from momentum + cohesion
     const weights: Record<string, number> = {};
     let sumW = 0;
     for (const c of caucuses) {
@@ -97,24 +141,46 @@ function applyShareDrift(state: SimState, month: string): void {
     if (sumW <= 0) continue;
 
     const alignedShare = Math.max(0, 1 - (runtime.unalignedByParty[partyId]?.membershipShare ?? 0));
+    let recentElectionBoost = 0;
+    const recent = state.history.slice(-40);
+    for (let i = recent.length - 1; i >= 0; i--) {
+      const ev = recent[i]!;
+      if (
+        (ev.type === "PRESIDENTIAL_ELECTION_RESULT" || ev.type === "ASSEMBLY_ELECTION_RESULT") &&
+        ev.entityIds.includes(partyId)
+      ) {
+        recentElectionBoost = 0.006;
+        break;
+      }
+    }
+
     for (const c of caucuses) {
       const target = alignedShare * ((weights[c.factionId] ?? 0) / sumW);
       const delta = (target - c.membershipShare) * DRIFT_RATE;
-      // Drift is informational until recruit/merge moves people; nudge momentum instead
-      // so subsequent rare recruits bias toward growing caucuses.
       if (delta > 0.002) {
         c.endorsementMomentum = Math.min(1, c.endorsementMomentum + 0.01);
       } else if (delta < -0.002) {
         c.endorsementMomentum = Math.max(0, c.endorsementMomentum - 0.008);
       }
-      // Tiny stance drift toward chair when loyal/endorsing
+
+      const pmsDelta =
+        strategyDrift(c) +
+        (c.endorsementMomentum - 0.35) * 0.02 +
+        stanceDriftFactor(c.stanceTowardChair) +
+        recentElectionBoost;
+      c.partyMemberSupport = Math.max(0, Math.min(1, c.partyMemberSupport + pmsDelta * PMS_DRIFT));
+
       if (c.endorsedChairCandidateId) {
         const roll = deterministicRoll(`${c.factionId}:stance:${month}`, month);
         if (roll < 0.08 && c.stanceTowardChair === "conditional") {
           c.stanceTowardChair = "cooperative";
         }
       }
+
+      void world;
     }
+
+    rebalancePartyMemberSupport(state, partyId);
   }
 }
 
@@ -125,11 +191,9 @@ function maybeFormAlliance(
   commandId: string,
   events: SimEvent[],
 ): void {
-  const runtime = ensureCaucusRuntime(state);
   for (const partyId of Object.keys(state.partyStates).sort()) {
-    const caucuses = activeCaucusesForParty(runtime, partyId);
+    const caucuses = activeCaucusesForParty(state, partyId);
     if (caucuses.length < 2) continue;
-    // ~4% chance per party-month
     if (deterministicRoll(`${partyId}:ally:${month}`, month) > 0.04) continue;
 
     for (let i = 0; i < caucuses.length; i++) {
@@ -147,11 +211,12 @@ function maybeFormAlliance(
           otherFactionId: b.factionId,
           kind: "alliance",
           commandId,
+          goal: score > 0.7 ? "joint_platform" : "mutual_support",
         });
         if (result.ok) {
           const last = state.history[state.history.length - 1];
           if (last) events.push(last);
-          return; // at most one alliance event per month
+          return;
         }
       }
     }
@@ -165,19 +230,21 @@ function maybeMerge(
   commandId: string,
   events: SimEvent[],
 ): void {
-  const runtime = ensureCaucusRuntime(state);
   for (const partyId of Object.keys(state.partyStates).sort()) {
-    const caucuses = activeCaucusesForParty(runtime, partyId);
+    const caucuses = activeCaucusesForParty(state, partyId);
     if (caucuses.length < MIN_ACTIVE_CAUCUSES_BEFORE_MERGE) continue;
-    // Prefer merge when too many caucuses; otherwise rare
     const overcrowded = caucuses.length > MAX_ACTIVE_CAUCUSES_SOFT;
     const chance = overcrowded ? 0.08 : 0.025;
     if (deterministicRoll(`${partyId}:merge:${month}`, month) > chance) continue;
 
-    // Smallest viable absorb target
-    const sorted = [...caucuses].sort((a, b) => a.membershipShare - b.membershipShare);
+    const sorted = [...caucuses].sort(
+      (a, b) =>
+        a.partyMemberSupport - b.partyMemberSupport || a.membershipShare - b.membershipShare,
+    );
     const absorb = sorted[0]!;
-    if (absorb.membershipShare > MERGE_VIABILITY_SHARE) continue;
+    if (absorb.membershipShare > MERGE_VIABILITY_SHARE && absorb.partyMemberSupport > 0.1) {
+      continue;
+    }
 
     let bestInto: CaucusFactionRuntime | null = null;
     let bestScore = 0;
@@ -208,8 +275,7 @@ function maybeMerge(
 }
 
 /**
- * Rare soft split: peel a minority from an oversized caucus into unaligned or a
- * previously dissolved sibling (revive), never inventing dozens of new caucuses.
+ * Rare split: prefer creating a NEW dynamic faction/caucus; revive dissolved siblings first.
  */
 function maybeSplit(
   state: SimState,
@@ -218,15 +284,13 @@ function maybeSplit(
   commandId: string,
   events: SimEvent[],
 ): void {
-  const runtime = ensureCaucusRuntime(state);
   for (const partyId of Object.keys(state.partyStates).sort()) {
-    const caucuses = activeCaucusesForParty(runtime, partyId);
-    // Don't split when already many active caucuses
+    const caucuses = activeCaucusesForParty(state, partyId);
     if (caucuses.length >= MAX_ACTIVE_CAUCUSES_SOFT) continue;
     if (deterministicRoll(`${partyId}:split:${month}`, month) > 0.02) continue;
 
     const oversized = [...caucuses]
-      .filter((c) => c.membershipShare >= SPLIT_MIN_SHARE)
+      .filter((c) => c.membershipShare >= SPLIT_MIN_SHARE || c.partyMemberSupport >= 0.4)
       .sort((a, b) => b.membershipShare - a.membershipShare)[0];
     if (!oversized) continue;
 
@@ -234,78 +298,132 @@ function maybeSplit(
     const moveCount = Math.max(1, Math.floor(members.length * SPLIT_MOVE_FRACTION));
     if (moveCount < 2 || members.length - moveCount < 3) continue;
 
-    // Prefer reviving a dissolved same-party caucus that merged into this one
-    let reviveId: string | null = null;
-    for (const [fid, row] of Object.entries(runtime.caucuses)) {
-      if (row.partyId !== partyId) continue;
-      if (!row.ancestry.dissolved) continue;
-      if (row.ancestry.successor === oversized.factionId || oversized.ancestry.mergedWith === fid) {
-        reviveId = fid;
-        break;
-      }
-    }
-
     const movers = members.slice(-moveCount);
-    if (reviveId) {
-      const revived = runtime.caucuses[reviveId]!;
-      revived.ancestry.dissolved = null;
-      revived.ancestry.splitFrom = oversized.factionId;
-      revived.ancestry.successor = null;
-      const fac = state.factionStates[reviveId];
-      if (fac) fac.status = "chair_vacant";
+    const actorId = oversized.leaderId ?? movers[0];
+    if (!actorId) continue;
 
-      for (const id of movers) {
-        changeFaction(state, world, id, reviveId, commandId);
-      }
-      revived.leaderId = movers[0] ?? null;
-      if (fac && revived.leaderId) {
-        fac.chairId = revived.leaderId;
-        fac.status = "active";
-      }
-      oversized.ancestry.splitFrom = null;
-
-      events.push(
-        pushHistory(state, {
-          date: state.currentDate,
-          type: "CAUCUS_SPLIT",
-          importance: 0.65,
-          visibility: "public",
-          actorIds: movers.slice(0, 3),
-          entityIds: [oversized.factionId, reviveId, partyId],
-          payload: {
-            originFactionId: oversized.factionId,
-            newFactionId: reviveId,
-            membersMoved: movers.length,
-            revived: true,
-          },
-          sourceScheduledEventId: null,
-          sourceCommandId: commandId,
-        }),
-      );
-    } else {
-      // Soft split to unaligned — pressure without spawning new caucus ids
-      for (const id of movers) {
-        changeFaction(state, world, id, null, commandId);
-      }
-      events.push(
-        pushHistory(state, {
-          date: state.currentDate,
-          type: "CAUCUS_SOFT_SPLIT",
-          importance: 0.45,
-          visibility: "public",
-          actorIds: movers.slice(0, 3),
-          entityIds: [oversized.factionId, partyId],
-          payload: {
-            originFactionId: oversized.factionId,
-            membersMoved: movers.length,
-            toUnaligned: true,
-          },
-          sourceScheduledEventId: null,
-          sourceCommandId: commandId,
-        }),
-      );
+    const result = splitCaucus(state, world, {
+      actorId,
+      factionId: oversized.factionId,
+      politicianIds: movers,
+      commandId,
+    });
+    if (result.ok) {
+      const last = state.history[state.history.length - 1];
+      if (last) events.push(last);
+      return;
     }
+
+    // Fallback: soft split to unaligned if dynamic faction registration failed auth-wise
+    for (const id of movers) {
+      changeFaction(state, world, id, null, commandId);
+    }
+    events.push(
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "CAUCUS_SOFT_SPLIT",
+        importance: 0.45,
+        visibility: "public",
+        actorIds: movers.slice(0, 3),
+        entityIds: [oversized.factionId, partyId],
+        payload: {
+          originFactionId: oversized.factionId,
+          membersMoved: movers.length,
+          toUnaligned: true,
+        },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    );
     return;
+  }
+}
+
+function maybeDissolve(
+  state: SimState,
+  world: KernelWorld,
+  month: string,
+  commandId: string,
+  events: SimEvent[],
+): void {
+  const runtime = ensureCaucusRuntime(state);
+  for (const partyId of Object.keys(state.partyStates).sort()) {
+    for (const c of activeCaucusesForParty(state, partyId)) {
+      const mps = factionAssemblyCaucus(world, state, c.factionId).length;
+      const key = lowSupportStreakKey(c.factionId);
+      const prev =
+        typeof runtime.metadata[key] === "number" ? (runtime.metadata[key] as number) : 0;
+      if (c.partyMemberSupport < DISSOLVE_SUPPORT && mps === 0) {
+        runtime.metadata[key] = prev + 1;
+      } else {
+        runtime.metadata[key] = 0;
+        continue;
+      }
+      if ((runtime.metadata[key] as number) < DISSOLVE_STREAK_MONTHS) continue;
+      if (deterministicRoll(`${c.factionId}:dissolve:${month}`, month) > 0.55) continue;
+
+      const actorId = c.leaderId ?? factionMembers(state, c.factionId)[0];
+      if (!actorId) {
+        c.ancestry.dissolved = state.currentDate;
+        c.partyMemberSupport = 0;
+        continue;
+      }
+      const result = dissolveCaucus(state, world, {
+        actorId,
+        factionId: c.factionId,
+        commandId,
+        reason: "low_party_member_support",
+      });
+      if (result.ok) {
+        runtime.metadata[key] = 0;
+        const last = state.history[state.history.length - 1];
+        if (last) events.push(last);
+        return;
+      }
+    }
+  }
+}
+
+function maybeFormFromUnaligned(
+  state: SimState,
+  world: KernelWorld,
+  month: string,
+  commandId: string,
+  events: SimEvent[],
+): void {
+  const runtime = ensureCaucusRuntime(state);
+  for (const partyId of Object.keys(state.partyStates).sort()) {
+    if (deterministicRoll(`${partyId}:form:${month}`, month) > FORM_CHANCE) continue;
+    const caucuses = activeCaucusesForParty(state, partyId);
+    if (caucuses.length >= MAX_ACTIVE_CAUCUSES_SOFT) continue;
+
+    const unalignedSupport = runtime.unalignedByParty[partyId]?.partyMemberSupport ?? 0;
+    if (unalignedSupport < 0.12) continue;
+
+    const unaligned = partyMembers(state, partyId).filter((id) => {
+      const p = state.politicians[id]!;
+      return (
+        !p.factionId ||
+        !runtime.caucuses[p.factionId] ||
+        runtime.caucuses[p.factionId]!.ancestry.dissolved != null
+      );
+    });
+    if (unaligned.length < 3) continue;
+
+    const founders = unaligned.slice(0, Math.min(4, unaligned.length));
+    const actorId = founders[0]!;
+    const result = formCaucus(state, world, {
+      actorId,
+      partyId,
+      politicianIds: founders,
+      name: `Reform bloc ${month}`,
+      commandId,
+    });
+    if (result.ok) {
+      const last = state.history[state.history.length - 1];
+      if (last) events.push(last);
+      return;
+    }
   }
 }
 
@@ -322,10 +440,12 @@ export function processCaucusMonth(
 
   syncLeadersFromFactionChairs(state);
   recomputeCaucusShares(world, state);
-  applyShareDrift(state, month);
+  applyShareDrift(world, state, month);
   maybeFormAlliance(state, world, month, commandId, events);
   maybeMerge(state, world, month, commandId, events);
   maybeSplit(state, world, month, commandId, events);
+  maybeDissolve(state, world, month, commandId, events);
+  maybeFormFromUnaligned(state, world, month, commandId, events);
   recomputeCaucusShares(world, state);
 
   runtime.lastCaucusMonth = month;

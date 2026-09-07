@@ -7,19 +7,34 @@
 
 import { IDEOLOGY_AXES } from "../agents/types.js";
 import { changeFaction } from "../parties/membership.js";
-import { factionMembers } from "../parties/queries.js";
-import { pushHistory } from "../scheduler.js";
+import { factionMembers, partyMembers } from "../parties/queries.js";
+import { padId, pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { ensureCaucusRuntime } from "./state.js";
-import { recomputeCaucusShares } from "./shares.js";
-import type { CaucusRelationKind, CaucusStanceTowardChair } from "./types.js";
+import {
+  activeCaucusesForParty,
+  countActiveCaucuses,
+  rebalancePartyMemberSupport,
+  recomputeCaucusShares,
+} from "./shares.js";
+import {
+  emptyCaucusFactionRuntime,
+  type CaucusGrowthStrategy,
+  type CaucusRelationKind,
+  type CaucusStanceTowardChair,
+  CAUCUS_GROWTH_STRATEGIES,
+} from "./types.js";
 
-type OkResult = { ok: true };
+type OkResult = { ok: true; factionId?: string };
 type ErrResult = { ok: false; error: { code: string; message: string } };
 type CommandOutcome = OkResult | ErrResult;
 
-function ok(): OkResult {
-  return { ok: true };
+const FORM_MIN_UNALIGNED_POLS = 3;
+const FORM_MIN_UNALIGNED_SUPPORT = 0.08;
+const MAX_ACTIVE_CAUCUSES = 8;
+
+function ok(extra?: { factionId: string }): OkResult {
+  return extra ? { ok: true, factionId: extra.factionId } : { ok: true };
 }
 function err(code: string, message: string): ErrResult {
   return { ok: false, error: { code, message } };
@@ -51,6 +66,87 @@ function activeSameParty(state: SimState, a: string, b: string): boolean {
   const cb = runtime.caucuses[b];
   if (!ca || !cb || ca.ancestry.dissolved || cb.ancestry.dissolved) return false;
   return ca.partyId === cb.partyId;
+}
+
+function nextDynamicFactionId(state: SimState): string {
+  const runtime = ensureCaucusRuntime(state);
+  const raw = runtime.metadata.nextDynamicFactionId;
+  const n = typeof raw === "number" && Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 1;
+  runtime.metadata.nextDynamicFactionId = n + 1;
+  return padId("DFACTION", n);
+}
+
+/**
+ * Register a runtime faction + caucus via state.dynamicFactions + factionStates
+ * (world.factionDefinitions is frozen after createSimulation).
+ */
+export function registerDynamicCaucusFaction(
+  world: KernelWorld,
+  state: SimState,
+  args: {
+    partyId: string;
+    name: string;
+    share?: number;
+    chairId?: string | null;
+    splitFrom?: string | null;
+  },
+): string {
+  const factionId = nextDynamicFactionId(state);
+  const share = args.share ?? 0.05;
+  if (!state.dynamicFactions) state.dynamicFactions = {};
+  state.dynamicFactions[factionId] = {
+    factionId,
+    partyId: args.partyId,
+    name: args.name,
+    share,
+  };
+  // Best-effort mirror onto world when still mutable (tests with unfrozen worlds).
+  try {
+    if (Object.isExtensible(world.factionDefinitions)) {
+      world.factionDefinitions[factionId] = state.dynamicFactions[factionId]!;
+      const partyDef = world.partyDefinitions[args.partyId];
+      if (partyDef && Object.isExtensible(partyDef) && !partyDef.factionIds.includes(factionId)) {
+        partyDef.factionIds = [...partyDef.factionIds, factionId].sort();
+        if (Object.isExtensible(partyDef.canonicalFactionShares)) {
+          partyDef.canonicalFactionShares = {
+            ...partyDef.canonicalFactionShares,
+            [factionId]: share,
+          };
+        }
+      }
+    }
+  } catch {
+    // Frozen world — state.dynamicFactions is authoritative.
+  }
+
+  state.factionStates[factionId] = {
+    factionId,
+    partyId: args.partyId,
+    chairId: args.chairId ?? null,
+    status: args.chairId ? "active" : "chair_vacant",
+    cohesion: 0.55,
+  };
+
+  const runtime = ensureCaucusRuntime(state);
+  const row = emptyCaucusFactionRuntime(factionId, args.partyId);
+  row.leaderId = args.chairId ?? null;
+  row.ancestry.founded = state.currentDate;
+  row.ancestry.splitFrom = args.splitFrom ?? null;
+  row.history.push({
+    date: state.currentDate,
+    kind: args.splitFrom ? "split_formed" : "formed",
+    detail: args.splitFrom ? `Split from ${args.splitFrom}` : `Formed in party ${args.partyId}`,
+  });
+  runtime.caucuses[factionId] = row;
+  return factionId;
+}
+
+function pushCaucusHistory(state: SimState, factionId: string, kind: string, detail: string): void {
+  const runtime = ensureCaucusRuntime(state);
+  const row = runtime.caucuses[factionId];
+  if (!row) return;
+  row.history.push({ date: state.currentDate, kind, detail });
+  if (row.history.length > 80) row.history = row.history.slice(-80);
 }
 
 /** Ideology + share + alliance compatibility in [0,1]. Hard veto below ~0.4. */
@@ -123,6 +219,41 @@ export function setCaucusPriorities(
     sourceCommandId: args.commandId,
   });
 
+  return ok();
+}
+
+export function setCaucusGrowthStrategy(
+  state: SimState,
+  _world: KernelWorld,
+  args: {
+    actorId: string;
+    factionId: string;
+    growthStrategy: CaucusGrowthStrategy;
+    commandId: string;
+  },
+): CommandOutcome {
+  const authErr = requireCaucusLeader(state, args.factionId, args.actorId);
+  if (authErr) return authErr;
+  if (!(CAUCUS_GROWTH_STRATEGIES as readonly string[]).includes(args.growthStrategy)) {
+    return err("INVALID_STRATEGY", `Unknown growth strategy ${args.growthStrategy}.`);
+  }
+
+  const runtime = ensureCaucusRuntime(state);
+  const row = runtime.caucuses[args.factionId]!;
+  row.growthStrategy = args.growthStrategy;
+  pushCaucusHistory(state, args.factionId, "growth_strategy", args.growthStrategy);
+
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "CAUCUS_GROWTH_STRATEGY_SET",
+    importance: 0.35,
+    visibility: "system",
+    actorIds: [args.actorId],
+    entityIds: [args.factionId, row.partyId],
+    payload: { factionId: args.factionId, growthStrategy: args.growthStrategy },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
   return ok();
 }
 
@@ -217,6 +348,7 @@ export function formCaucusAlliance(
     otherFactionId: string;
     kind: CaucusRelationKind;
     commandId: string;
+    goal?: string;
   },
 ): CommandOutcome {
   const authErr = requireCaucusLeader(state, args.factionId, args.actorId);
@@ -232,9 +364,12 @@ export function formCaucusAlliance(
   const runtime = ensureCaucusRuntime(state);
   const row = runtime.caucuses[args.factionId]!;
   const other = runtime.caucuses[args.otherFactionId]!;
-  const edge = { kind: args.kind, since: state.currentDate };
+  const edge = {
+    kind: args.kind,
+    since: state.currentDate,
+    ...(args.goal ? { goal: args.goal.slice(0, 80) } : {}),
+  };
   row.alliances[args.otherFactionId] = edge;
-  // Reciprocal for alliances; rivalries may be one-sided initially but we mirror lightly.
   if (args.kind === "alliance" || !other.alliances[args.factionId]) {
     other.alliances[args.factionId] = { ...edge };
   }
@@ -250,12 +385,263 @@ export function formCaucusAlliance(
       factionId: args.factionId,
       otherFactionId: args.otherFactionId,
       kind: args.kind,
+      ...(args.goal ? { goal: args.goal } : {}),
     },
     sourceScheduledEventId: null,
     sourceCommandId: args.commandId,
   });
 
   return ok();
+}
+
+/**
+ * Form a new caucus from unaligned party politicians when viability thresholds hold.
+ */
+export function formCaucus(
+  state: SimState,
+  world: KernelWorld,
+  args: {
+    actorId: string;
+    partyId: string;
+    politicianIds: string[];
+    name?: string;
+    commandId: string;
+  },
+): CommandOutcome {
+  const actor = state.politicians[args.actorId];
+  if (!actor?.alive || actor.retired || actor.partyId !== args.partyId) {
+    return err(
+      "INVALID_ACTOR",
+      `Actor ${args.actorId} is not an active member of ${args.partyId}.`,
+    );
+  }
+  if (countActiveCaucuses(state, args.partyId) >= MAX_ACTIVE_CAUCUSES) {
+    return err(
+      "TOO_MANY_CAUCUSES",
+      `Party ${args.partyId} already has the maximum active caucuses.`,
+    );
+  }
+
+  const runtime = ensureCaucusRuntime(state);
+  const unalignedSupport = runtime.unalignedByParty[args.partyId]?.partyMemberSupport ?? 0;
+  const unalignedPols = partyMembers(state, args.partyId).filter((id) => {
+    const p = state.politicians[id]!;
+    return (
+      !p.factionId ||
+      !runtime.caucuses[p.factionId] ||
+      runtime.caucuses[p.factionId]!.ancestry.dissolved != null
+    );
+  });
+  if (unalignedPols.length < FORM_MIN_UNALIGNED_POLS) {
+    return err(
+      "INSUFFICIENT_UNALIGNED",
+      `Need at least ${FORM_MIN_UNALIGNED_POLS} unaligned politicians to form a caucus.`,
+    );
+  }
+  if (unalignedSupport < FORM_MIN_UNALIGNED_SUPPORT && unalignedPols.length < 6) {
+    return err(
+      "VIABILITY_THRESHOLD",
+      `Unaligned party-member support ${unalignedSupport.toFixed(2)} is below viability.`,
+    );
+  }
+
+  const founders = [...new Set(args.politicianIds)].filter((id) => unalignedPols.includes(id));
+  if (founders.length < 2) {
+    return err("INSUFFICIENT_FOUNDERS", "At least two unaligned founders are required.");
+  }
+  if (!founders.includes(args.actorId)) founders.unshift(args.actorId);
+
+  const factionId = registerDynamicCaucusFaction(world, state, {
+    partyId: args.partyId,
+    name: args.name?.trim() || `Caucus ${founders[0]}`,
+    chairId: args.actorId,
+  });
+
+  for (const id of founders) {
+    changeFaction(state, world, id, factionId, args.commandId);
+  }
+
+  const row = runtime.caucuses[factionId]!;
+  const take = Math.min(0.25, Math.max(0.05, unalignedSupport * 0.4));
+  row.partyMemberSupport = take;
+  const u = runtime.unalignedByParty[args.partyId];
+  if (u) u.partyMemberSupport = Math.max(0, u.partyMemberSupport - take);
+  rebalancePartyMemberSupport(state, args.partyId);
+
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "CAUCUS_FORMED",
+    importance: 0.65,
+    visibility: "public",
+    actorIds: [args.actorId, ...founders.slice(0, 4)],
+    entityIds: [factionId, args.partyId],
+    payload: { factionId, partyId: args.partyId, founders },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
+
+  recomputeCaucusShares(world, state);
+  return ok({ factionId });
+}
+
+/** Dissolve an active caucus; members become unaligned. */
+export function dissolveCaucus(
+  state: SimState,
+  world: KernelWorld,
+  args: {
+    actorId: string;
+    factionId: string;
+    commandId: string;
+    reason?: string;
+  },
+): CommandOutcome {
+  const authErr = requireCaucusLeader(state, args.factionId, args.actorId);
+  if (authErr) return authErr;
+
+  const runtime = ensureCaucusRuntime(state);
+  const row = runtime.caucuses[args.factionId]!;
+  const members = factionMembers(state, args.factionId);
+  for (const id of members) {
+    changeFaction(state, world, id, null, args.commandId);
+  }
+
+  const support = row.partyMemberSupport;
+  row.ancestry.dissolved = state.currentDate;
+  row.leaderId = null;
+  row.deputyId = null;
+  row.alliances = {};
+  row.membershipShare = 0;
+  row.assemblyShare = 0;
+  row.institutionalInfluence = 0;
+  row.partyMemberSupport = 0;
+  pushCaucusHistory(state, args.factionId, "dissolved", args.reason ?? "dissolved by leadership");
+
+  const fac = state.factionStates[args.factionId];
+  if (fac) {
+    fac.chairId = null;
+    fac.status = "split_origin";
+  }
+
+  const u = runtime.unalignedByParty[row.partyId];
+  if (u) u.partyMemberSupport = Math.min(1, (u.partyMemberSupport ?? 0) + support);
+  rebalancePartyMemberSupport(state, row.partyId);
+
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "CAUCUS_DISSOLVED",
+    importance: 0.6,
+    visibility: "public",
+    actorIds: [args.actorId],
+    entityIds: [args.factionId, row.partyId],
+    payload: {
+      factionId: args.factionId,
+      reason: args.reason ?? null,
+      membersReleased: members.length,
+    },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
+
+  recomputeCaucusShares(world, state);
+  return ok();
+}
+
+/**
+ * Split an oversized caucus into a new dynamic faction/caucus when possible.
+ */
+export function splitCaucus(
+  state: SimState,
+  world: KernelWorld,
+  args: {
+    actorId: string;
+    factionId: string;
+    politicianIds: string[];
+    name?: string;
+    commandId: string;
+  },
+): CommandOutcome {
+  const authErr = requireCaucusLeader(state, args.factionId, args.actorId);
+  if (authErr) return authErr;
+
+  const runtime = ensureCaucusRuntime(state);
+  const origin = runtime.caucuses[args.factionId]!;
+  if (countActiveCaucuses(state, origin.partyId) >= MAX_ACTIVE_CAUCUSES) {
+    return err("TOO_MANY_CAUCUSES", "Cannot split: party already at caucus cap.");
+  }
+
+  const members = factionMembers(state, args.factionId);
+  const movers = [...new Set(args.politicianIds)].filter((id) => members.includes(id));
+  if (movers.length < 2) {
+    return err("INSUFFICIENT_MOVERS", "Split requires at least two members to leave.");
+  }
+  if (members.length - movers.length < 2) {
+    return err("ORIGIN_TOO_SMALL", "Origin caucus would be left below viability.");
+  }
+
+  // Prefer reviving a dissolved sibling before minting a new faction id.
+  let newFactionId: string | null = null;
+  let revived = false;
+  for (const [fid, row] of Object.entries(runtime.caucuses)) {
+    if (row.partyId !== origin.partyId || !row.ancestry.dissolved) continue;
+    if (row.ancestry.successor === args.factionId || origin.ancestry.mergedWith === fid) {
+      newFactionId = fid;
+      revived = true;
+      row.ancestry.dissolved = null;
+      row.ancestry.splitFrom = args.factionId;
+      row.ancestry.successor = null;
+      const fac = state.factionStates[fid];
+      if (fac) fac.status = "chair_vacant";
+      break;
+    }
+  }
+
+  if (!newFactionId) {
+    newFactionId = registerDynamicCaucusFaction(world, state, {
+      partyId: origin.partyId,
+      name: args.name?.trim() || `Split from ${args.factionId}`,
+      chairId: movers[0] ?? null,
+      splitFrom: args.factionId,
+    });
+  }
+
+  for (const id of movers) {
+    changeFaction(state, world, id, newFactionId, args.commandId);
+  }
+
+  const created = runtime.caucuses[newFactionId]!;
+  created.leaderId = movers[0] ?? null;
+  const fac = state.factionStates[newFactionId];
+  if (fac && created.leaderId) {
+    fac.chairId = created.leaderId;
+    fac.status = "active";
+  }
+
+  const take = Math.min(origin.partyMemberSupport * 0.35, 0.25);
+  created.partyMemberSupport = take;
+  origin.partyMemberSupport = Math.max(0, origin.partyMemberSupport - take);
+  pushCaucusHistory(state, args.factionId, "split", `Split → ${newFactionId}`);
+  pushCaucusHistory(state, newFactionId, "split_formed", `From ${args.factionId}`);
+  rebalancePartyMemberSupport(state, origin.partyId);
+
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "CAUCUS_SPLIT",
+    importance: 0.65,
+    visibility: "public",
+    actorIds: [args.actorId, ...movers.slice(0, 3)],
+    entityIds: [args.factionId, newFactionId, origin.partyId],
+    payload: {
+      originFactionId: args.factionId,
+      newFactionId,
+      membersMoved: movers.length,
+      revived,
+    },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
+
+  recomputeCaucusShares(world, state);
+  return ok({ factionId: newFactionId });
 }
 
 /**
@@ -276,7 +662,6 @@ export function proposeCaucusMerger(
 ): CommandOutcome {
   const authErr = requireCaucusLeader(state, args.absorbFactionId, args.actorId);
   if (authErr) {
-    // Also allow the receiving caucus leader to propose absorption of a weak peer
     const alt = requireCaucusLeader(state, args.intoFactionId, args.actorId);
     if (alt) return authErr;
   }
@@ -311,6 +696,7 @@ export function proposeCaucusMerger(
     events.push(...result.events);
   }
 
+  into.partyMemberSupport = Math.min(1, into.partyMemberSupport + absorb.partyMemberSupport * 0.85);
   absorb.ancestry.dissolved = state.currentDate;
   absorb.ancestry.successor = args.intoFactionId;
   absorb.ancestry.mergedWith = args.intoFactionId;
@@ -320,6 +706,9 @@ export function proposeCaucusMerger(
   absorb.membershipShare = 0;
   absorb.assemblyShare = 0;
   absorb.institutionalInfluence = 0;
+  absorb.partyMemberSupport = 0;
+  pushCaucusHistory(state, args.absorbFactionId, "merged", `Into ${args.intoFactionId}`);
+  pushCaucusHistory(state, args.intoFactionId, "absorbed", `Absorbed ${args.absorbFactionId}`);
 
   into.ancestry.mergedWith = args.absorbFactionId;
   delete into.alliances[args.absorbFactionId];
@@ -347,6 +736,7 @@ export function proposeCaucusMerger(
     sourceCommandId: args.commandId,
   });
 
+  rebalancePartyMemberSupport(state, absorb.partyId);
   recomputeCaucusShares(world, state);
   return ok();
 }
@@ -433,3 +823,6 @@ export function setCaucusStanceTowardChair(
   });
   return ok();
 }
+
+/** Re-export helpers used by monthly / tests. */
+export { activeCaucusesForParty, countActiveCaucuses };

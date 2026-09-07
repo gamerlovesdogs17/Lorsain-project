@@ -20,6 +20,8 @@ export type FactionStatus = (typeof FACTION_STATUSES)[number];
 
 export const CONTEST_TYPES = [
   "presidential_nomination",
+  "gubernatorial_nomination",
+  "assembly_nomination",
   "party_leadership",
   "faction_chair",
 ] as const;

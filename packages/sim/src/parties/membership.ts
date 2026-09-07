@@ -4,7 +4,7 @@ import { recordPoliticalMemory } from "../agents/memories.js";
 import { applyRelationshipChange } from "../agents/relationships.js";
 import { pushHistory } from "../scheduler.js";
 import { INDEPENDENT_AGGREGATE_ID } from "./policy.js";
-import { isJoinablePartyId } from "./queries.js";
+import { isJoinablePartyId, resolveFactionDefinition } from "./queries.js";
 import { reconcilePoliticianContestParticipation } from "./lifecycle.js";
 import { reconcileUnresolvedElectionCandidacies } from "../elections/field.js";
 import { assertIndependentMembership } from "./state.js";
@@ -195,7 +195,7 @@ export function changeFaction(
     reconcileUnresolvedElectionCandidacies(world, state, politicianId);
     return { events, previousPartyId: pol.partyId, previousFactionId };
   }
-  const facDef = world.factionDefinitions[factionId];
+  const facDef = resolveFactionDefinition(world, state, factionId);
   if (!facDef) return { error: reject("INVALID_FACTION", factionId) };
   if (pol.partyId == null) {
     return { error: reject("INVALID_FACTION", "independent politician cannot join a faction") };

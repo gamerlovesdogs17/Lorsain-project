@@ -34,6 +34,29 @@ import type {
 import { isNominationMethod } from "./types.js";
 import { publicElectabilitySignal } from "../elections/electability.js";
 import { contestPollAverage } from "../elections/polls.js";
+import { activeCaucusesForParty } from "../caucus/shares.js";
+
+/**
+ * Caucus primary-endorsement bonus for presidential_nomination / party contests.
+ *
+ * When any active caucus in the contest's party has
+ * `endorsedPrimaryCandidateId === candidateId`, add a bounded bonus proportional
+ * to that caucus's `partyMemberSupport`. Multiple caucuses stack but the total
+ * is capped at ~0.20 (within the 0.15–0.25 mandate band).
+ */
+export function caucusPrimaryEndorsementBonus(
+  state: SimState,
+  partyId: string,
+  candidateId: string,
+): number {
+  let bonus = 0;
+  for (const caucus of activeCaucusesForParty(state, partyId)) {
+    if (caucus.endorsedPrimaryCandidateId === candidateId) {
+      bonus += caucus.partyMemberSupport * 0.45;
+    }
+  }
+  return Math.max(0, Math.min(0.2, bonus));
+}
 
 function shareToRational(share: number): Rational {
   const den = 1_000_000;
@@ -333,6 +356,16 @@ function publicScore(
     score += cohesion * SELECTOR_PUBLIC_WEIGHTS.discipline;
   }
   score += cached.electability;
+  // Caucus mass-membership endorsements matter most for primaries / party contests.
+  if (
+    contest.type === "presidential_nomination" ||
+    contest.type === "gubernatorial_nomination" ||
+    contest.type === "assembly_nomination" ||
+    contest.type === "party_leadership" ||
+    contest.type === "faction_chair"
+  ) {
+    score += caucusPrimaryEndorsementBonus(state, contest.partyId, candidateId);
+  }
   score += groupIdiosyncrasy(group.id, candidateId) * SELECTOR_GROUP_IDIOSYNCRASY;
   return score;
 }
@@ -705,7 +738,11 @@ export function selectorateForRule(
   const chairFaction = contest.type === "faction_chair" ? contest.factionId : null;
   switch (method) {
     case "weighted_ranked_choice": {
-      if (contest.type === "presidential_nomination") {
+      if (
+        contest.type === "presidential_nomination" ||
+        contest.type === "gubernatorial_nomination" ||
+        contest.type === "assembly_nomination"
+      ) {
         return labourSelectorate(world, state, contest.partyId);
       }
       const mw = contest.metadata.memberWeight;

@@ -127,7 +127,12 @@ function reject(code: string, message: string): CommandError {
 
 export function emptyPartyRuntime(): Pick<
   SimState,
-  "partyStates" | "factionStates" | "endorsements" | "partyContests" | "dynamicParties"
+  | "partyStates"
+  | "factionStates"
+  | "endorsements"
+  | "partyContests"
+  | "dynamicParties"
+  | "dynamicFactions"
 > {
   return {
     partyStates: {},
@@ -135,6 +140,7 @@ export function emptyPartyRuntime(): Pick<
     endorsements: {},
     partyContests: {},
     dynamicParties: {},
+    dynamicFactions: {},
   };
 }
 
