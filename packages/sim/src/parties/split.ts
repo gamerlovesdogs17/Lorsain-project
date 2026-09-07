@@ -109,6 +109,7 @@ export function splitFaction(
         foreign_policy:
           state.partyStates[facDef.partyId]?.publicPlatform?.positions.foreign_policy ?? 0,
       },
+      salience: { ...(state.partyStates[facDef.partyId]?.publicPlatform?.salience ?? {}) },
       history: [],
     },
   };

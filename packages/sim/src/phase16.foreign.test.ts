@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createSimulation } from "./engine.js";
 import { loadTerenaWorld } from "./integration/harness.js";
-import { processDomesticForeignPolitics } from "./foreign/domesticPolitics.js";
+import {
+  decayPartyForeignPolicySalience,
+  processDomesticForeignPolitics,
+} from "./foreign/domesticPolitics.js";
 import { imposeSanctions } from "./foreign/sanctions.js";
 import { TERENA_WORLD_ID } from "./foreign/types.js";
 import { ensureCaucusRuntime } from "./caucus/state.js";
@@ -15,7 +18,7 @@ function jsonClone<T>(value: T): T {
 }
 
 describe("Phase 16 domestic foreign politics bridge", () => {
-  it("reacts to sanctions with selective caucus priorities, platform nudge, and history event", () => {
+  it("reacts to sanctions with selective caucus priorities; bumps salience not position", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({ world, seed: "p16-dom-a", playerPoliticianId: "NPC146" });
     const state = jsonClone(sim.getSnapshot() as SimState);
@@ -38,9 +41,9 @@ describe("Phase 16 domestic foreign politics bridge", () => {
     if ("error" in imposed) return;
 
     const foreignEvents: SimEvent[] = imposed.events;
-    const beforeFp =
-      Object.values(state.partyStates).find((p) => p.publicPlatform)?.publicPlatform?.positions
-        .foreign_policy ?? 0;
+    const partyWithPlatform = Object.values(state.partyStates).find((p) => p.publicPlatform)!;
+    const beforeFp = partyWithPlatform.publicPlatform!.positions.foreign_policy ?? 0;
+    const beforeSalience = partyWithPlatform.publicPlatform!.salience?.foreign_policy ?? 0;
 
     const beforePriorities = Object.values(ensureCaucusRuntime(state).caucuses).map((c) => [
       c.factionId,
@@ -57,10 +60,10 @@ describe("Phase 16 domestic foreign politics bridge", () => {
     const allForcedForeign = afterCaucuses.every((c) => c.priorities[0] === "foreign_policy");
     expect(allForcedForeign).toBe(false);
 
-    const afterFp =
-      Object.values(state.partyStates).find((p) => p.publicPlatform)?.publicPlatform?.positions
-        .foreign_policy ?? 0;
-    expect(Math.abs(afterFp - beforeFp)).toBeGreaterThan(0);
+    const afterFp = partyWithPlatform.publicPlatform!.positions.foreign_policy ?? 0;
+    const afterSalience = partyWithPlatform.publicPlatform!.salience?.foreign_policy ?? 0;
+    expect(afterFp).toBe(beforeFp);
+    expect(afterSalience).toBeGreaterThan(beforeSalience);
 
     // Priorities may change for some caucuses but must remain actor-specific.
     const changed = afterCaucuses.filter((c) => {
@@ -72,6 +75,24 @@ describe("Phase 16 domestic foreign politics bridge", () => {
 
     const again = processDomesticForeignPolitics(state, world, "CMD_D2", foreignEvents);
     expect(again.length).toBe(0);
+
+    // Clear foreign pressure so monthly salience decay can run.
+    for (const s of Object.values(state.foreignAffairsRuntime.sanctions)) {
+      s.active = false;
+    }
+    for (const c of Object.values(state.foreignAffairsRuntime.crises)) {
+      c.stage = "settled";
+    }
+    const meta = state.organizationRuntime.metadata;
+    for (const key of Object.keys(meta)) {
+      if (key.startsWith("foreignPressure:")) delete meta[key];
+    }
+
+    const beforeDecay = partyWithPlatform.publicPlatform!.salience?.foreign_policy ?? 0;
+    const decayed = decayPartyForeignPolicySalience(state);
+    expect(decayed).toBeGreaterThan(0);
+    const afterDecay = partyWithPlatform.publicPlatform!.salience?.foreign_policy ?? 0;
+    expect(afterDecay).toBeLessThan(beforeDecay);
   });
 
   it("feeds foreign minister performance from active crises/sanctions", () => {

@@ -67,8 +67,12 @@ export function StatCard(props: { label: string; value: string; hint?: string })
   );
 }
 
-export function MetricStrip(props: { children: ReactNode }) {
-  return <div className="metric-strip">{props.children}</div>;
+export function MetricStrip(props: { children: ReactNode; "data-qa"?: string }) {
+  return (
+    <div className="metric-strip" data-qa={props["data-qa"]}>
+      {props.children}
+    </div>
+  );
 }
 
 export function TabBar<T extends string>(props: {

@@ -2127,3 +2127,7 @@ export function migrateSaveV24ToV25(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 24, toSchema: 25, migrate: migrateSaveV24ToV25 });
+
+// TODO(schema26): migrateSaveV25ToV26 should seed party publicPlatform.salience
+// (Partial<Record<PartyPlatformIssue, number>>) with defaults ({} / foreign_policy: 0)
+// once SAVE_SCHEMA_VERSION bumps past 25. Parse/ensure paths already default missing salience.

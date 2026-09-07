@@ -54,6 +54,7 @@ function parsePublicPlatform(
       positions: Object.fromEntries(
         PARTY_PLATFORM_ISSUES.map((issue) => [issue, 0]),
       ) as PartyPublicPlatform["positions"],
+      salience: {},
       history: [],
     };
   }
@@ -70,6 +71,20 @@ function parsePublicPlatform(
       return `publicPlatform.positions.${issue}`;
     }
     positions[issue] = value;
+  }
+  // Salience is optional on schema 25; missing → {} (treat unset issues as 0).
+  // TODO(schema26): migrateSaveV25ToV26 should explicitly seed salience on all platforms.
+  const salience: Partial<Record<(typeof PARTY_PLATFORM_ISSUES)[number], number>> = {};
+  if (raw.salience != null) {
+    if (!isRecord(raw.salience)) return "publicPlatform.salience";
+    for (const issue of PARTY_PLATFORM_ISSUES) {
+      const value = raw.salience[issue];
+      if (value === undefined) continue;
+      if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
+        return `publicPlatform.salience.${issue}`;
+      }
+      salience[issue] = value;
+    }
   }
   if (!Array.isArray(raw.history) || raw.history.length > 12) return "publicPlatform.history";
   const history: PartyPublicPlatform["history"] = [];
@@ -106,7 +121,7 @@ function parsePublicPlatform(
       positions: snapshot,
     });
   }
-  return { updatedDate: raw.updatedDate, positions, history };
+  return { updatedDate: raw.updatedDate, positions, salience, history };
 }
 
 const EVIDENCE_KEYS = [

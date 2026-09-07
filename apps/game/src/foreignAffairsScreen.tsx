@@ -229,39 +229,6 @@ export function ForeignAffairsPage(props: {
         onChange={(id) => setDeskTab(id as ForeignDeskTab)}
       />
 
-      {deskTab === "overview" ? (
-        <div data-qa="fa-overview">
-          <MetricStrip>
-            <StatCard
-              label="Diplomatic capacity"
-              value={president ? `${capacityUsed}/${MAX_DIPLOMATIC_ACTIONS_PER_MONTH}` : "—"}
-              hint={president ? `${capacityLeft} remaining this month` : "Presidential prerogative"}
-            />
-            <StatCard
-              label="Active crises"
-              value={String(publicCrises.length)}
-              hint="Public international crises"
-            />
-            <StatCard
-              label="Strategic tension"
-              value={tensionClimateLabel(latentTensions.length)}
-              hint="Background tensions not yet public crises"
-            />
-            <StatCard
-              label="Active treaties"
-              value={String(
-                Object.values(runtime.treaties).filter((t) => t.status === "active").length,
-              )}
-            />
-            <StatCard label="Active sanctions" value={String(activeSanctions.length)} />
-            <StatCard
-              label="Terena posture"
-              value={militaryPostureLabel(terenaRuntime?.posture ?? "normal")}
-            />
-          </MetricStrip>
-        </div>
-      ) : null}
-
       {deskTab === "treaties" ? (
         <div data-qa="fa-treaties">
           <SectionCard title="Treaties">
@@ -400,7 +367,7 @@ export function ForeignAffairsPage(props: {
       ) : null}
 
       {deskTab === "overview" || deskTab === "relations" ? (
-        <>
+        <div data-qa={deskTab === "overview" ? "fa-overview" : "fa-relations"}>
           {president && warTrigger ? (
             <div className="briefing-urgent alert foreign-war-urgent">
               <strong>War powers required</strong>
@@ -443,7 +410,7 @@ export function ForeignAffairsPage(props: {
           ) : null}
 
           <div data-qa="fa-map-desk">
-            <MetricStrip>
+            <MetricStrip data-qa="fa-summary-strip">
               <StatCard
                 label="Diplomatic capacity"
                 value={president ? `${capacityUsed}/${MAX_DIPLOMATIC_ACTIONS_PER_MONTH}` : "—"}
@@ -875,7 +842,7 @@ export function ForeignAffairsPage(props: {
               </SectionCard>
             </div>
           </div>
-        </>
+        </div>
       ) : null}
 
       {president && drawer ? (

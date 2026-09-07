@@ -69,13 +69,14 @@ export function seedPublicPartyPlatform(
   return {
     updatedDate: state.currentDate,
     positions,
+    salience: {},
     history: includeOpeningRecord ? [opening] : [],
   };
 }
 
 /** Deterministic structural default for a migrated save before the next monthly update. */
 export function neutralPublicPartyPlatform(date: string): PartyPublicPlatform {
-  return { updatedDate: date, positions: emptyPositions(), history: [] };
+  return { updatedDate: date, positions: emptyPositions(), salience: {}, history: [] };
 }
 
 function meanMemberPosition(

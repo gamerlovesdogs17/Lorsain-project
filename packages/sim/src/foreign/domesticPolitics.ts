@@ -4,6 +4,9 @@
  * On major public FA events, nudge actor-specific priorities, platform salience,
  * org pressure, and (for migration themes) border-province chronicle pressure.
  * Does NOT push foreign_policy onto every caucus identically.
+ *
+ * Platform `positions.foreign_policy` (stance) is left alone; crises bump
+ * `salience.foreign_policy` instead.
  */
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { pushHistory } from "../scheduler.js";
@@ -12,12 +15,17 @@ import { ensureGoverningRuntime } from "../governing/state.js";
 import { clampUnit } from "../governing/capacity.js";
 import { getAgentProfile } from "../agents/profile.js";
 import { provinceThemeId } from "../provinces/themes.js";
+import { TERENA_WORLD_ID } from "./types.js";
+import { publicActiveCrises } from "./crises.js";
 
 const FOREIGN_PRIORITY = "foreign_policy";
 const TRADE_PRIORITY = "trade";
 const SECURITY_PRIORITY = "security";
 const RIGHTS_PRIORITY = "rights";
 const MIGRATION_PRIORITY = "migration";
+
+/** Monthly decay of foreign_policy salience when no active foreign pressure. */
+const FOREIGN_SALIENCE_DECAY = 0.04;
 
 type DomesticTheme =
   "trade" | "sanctions" | "defense" | "rights" | "migration" | "treaty" | "crisis" | "posture";
@@ -142,23 +150,70 @@ function bumpRelevantCaucusPriorities(
   return touched;
 }
 
+/**
+ * Bump party public-platform salience for foreign_policy (not stance/position).
+ * Crises and other major FA themes raise how much parties emphasize the issue.
+ */
 function bumpPartyPlatformSalience(state: SimState, theme: DomesticTheme): number {
   let touched = 0;
   for (const party of Object.values(state.partyStates)) {
     if (!party.publicPlatform) continue;
-    const positions = party.publicPlatform.positions;
-    const current = positions.foreign_policy ?? 0;
+    party.publicPlatform.salience ??= {};
+    const current = party.publicPlatform.salience.foreign_policy ?? 0;
     const delta =
       theme === "sanctions" || theme === "crisis"
-        ? 0.02
+        ? 0.08
         : theme === "trade" || theme === "defense"
-          ? 0.015
+          ? 0.06
           : theme === "rights" || theme === "migration"
-            ? 0.012
-            : 0.008;
-    const next = Math.max(-1, Math.min(1, current + (current >= 0 ? delta : -delta)));
+            ? 0.05
+            : 0.03;
+    const next = Math.max(0, Math.min(1, current + delta));
     if (next !== current) {
-      positions.foreign_policy = next;
+      party.publicPlatform.salience.foreign_policy = next;
+      party.publicPlatform.updatedDate = state.currentDate;
+      touched += 1;
+    }
+  }
+  return touched;
+}
+
+/** True when public crises, Terena-linked sanctions, or org foreign pressure remain. */
+export function hasActiveForeignPressure(state: SimState): boolean {
+  if (publicActiveCrises(state.foreignAffairsRuntime).length > 0) return true;
+  const sanctions = Object.values(state.foreignAffairsRuntime.sanctions);
+  if (
+    sanctions.some(
+      (s) =>
+        s.active && (s.imposerId === TERENA_WORLD_ID || s.targetId === TERENA_WORLD_ID),
+    )
+  ) {
+    return true;
+  }
+  const meta = state.organizationRuntime.metadata;
+  for (const [key, value] of Object.entries(meta)) {
+    if (key.startsWith("foreignPressure:") && typeof value === "number" && value > 0.05) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Decay `salience.foreign_policy` toward 0 when there is no active foreign pressure.
+ * Exported for tests and monthly FA/domestic hooks.
+ */
+export function decayPartyForeignPolicySalience(state: SimState): number {
+  if (hasActiveForeignPressure(state)) return 0;
+  let touched = 0;
+  for (const party of Object.values(state.partyStates)) {
+    if (!party.publicPlatform) continue;
+    party.publicPlatform.salience ??= {};
+    const current = party.publicPlatform.salience.foreign_policy ?? 0;
+    if (current <= 0) continue;
+    const next = Math.max(0, current - FOREIGN_SALIENCE_DECAY);
+    party.publicPlatform.salience.foreign_policy = next;
+    if (next !== current) {
       party.publicPlatform.updatedDate = state.currentDate;
       touched += 1;
     }
@@ -267,9 +322,26 @@ function bumpBorderProvincePressure(state: SimState, theme: DomesticTheme): numb
 }
 
 /**
+ * Soft monthly decay of org foreignPressure:* metadata so salience can recover
+ * once crises/sanctions clear.
+ */
+function decayOrgForeignPressure(state: SimState): void {
+  const meta = state.organizationRuntime.metadata;
+  for (const key of Object.keys(meta)) {
+    if (!key.startsWith("foreignPressure:")) continue;
+    const value = meta[key];
+    if (typeof value !== "number") continue;
+    const next = Math.max(0, value - 0.03);
+    if (next <= 0) delete meta[key];
+    else meta[key] = next;
+  }
+}
+
+/**
  * Apply domestic political reactions to major foreign events emitted this month.
  * Runs after organization-foreign-bridge in the monthly engine.
  * Dedupes via organizationRuntime.metadata.domesticPoliticsKeys.
+ * Always applies monthly salience decay when foreign pressure is absent.
  */
 export function processDomesticForeignPolitics(
   state: SimState,
@@ -341,6 +413,10 @@ export function processDomesticForeignPolitics(
       }),
     );
   }
+
+  // Soften stale org pressure, then decay platform salience if calm.
+  decayOrgForeignPressure(state);
+  decayPartyForeignPolicySalience(state);
 
   return events;
 }

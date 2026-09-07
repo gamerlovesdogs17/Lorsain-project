@@ -175,6 +175,12 @@ export type PartyPlatformHistoryEntry = {
 export type PartyPublicPlatform = {
   updatedDate: IsoDate;
   positions: Record<PartyPlatformIssue, number>;
+  /**
+   * How salient each issue currently is to the party’s public messaging (0–1).
+   * Distinct from `positions` (stance). Optional on schema 25 saves — default 0.
+   * TODO(schema26): migrateSaveV25ToV26 should seed missing salience maps.
+   */
+  salience?: Partial<Record<PartyPlatformIssue, number>>;
   history: PartyPlatformHistoryEntry[];
 };
 
