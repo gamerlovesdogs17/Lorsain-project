@@ -32,6 +32,7 @@ import { provinceReportingOrder } from "./electionNight.js";
 
 type HistorySection =
   | "years"
+  | "longform"
   | "elections"
   | "people"
   | "parties"
@@ -51,6 +52,7 @@ type ArticleRef = {
 
 const SECTION_LABELS: Record<HistorySection, string> = {
   years: "Years",
+  longform: "Long-term",
   elections: "Elections",
   people: "People",
   parties: "Parties",
@@ -214,8 +216,38 @@ export function HistoryPage(props: {
         date: props.snap.currentDate,
       },
     ];
+    const history15 = props.snap.history15Runtime;
+    const longform: ArticleRef[] = [];
+    if (history15 && history15.governments.length > 0) {
+      longform.push({
+        id: "longform:governments",
+        section: "longform",
+        title: "Governments of Terena",
+        deck: "Sitting governments and coalitions recorded from the public record.",
+        date: props.snap.currentDate,
+      });
+    }
+    if (history15 && history15.eras.length > 0) {
+      longform.push({
+        id: "longform:eras",
+        section: "longform",
+        title: "Party eras",
+        deck: "National chair eras derived from leadership transitions.",
+        date: props.snap.currentDate,
+      });
+    }
+    if (history15 && history15.yearbooks.length > 0) {
+      longform.push({
+        id: "longform:yearbooks",
+        section: "longform",
+        title: "Years in Terena",
+        deck: "High-importance yearbook headlines compiled from the saved record.",
+        date: props.snap.currentDate,
+      });
+    }
     return [
       ...yearRows,
+      ...longform,
       ...elections,
       ...governorElections,
       ...provincialElections,
@@ -270,6 +302,7 @@ export function HistoryPage(props: {
     const foreignEvents = events.filter((event) =>
       /TREATY|SANCTION|CRISIS|CONFLICT|WAR|DIPLOMATIC|FOREIGN/.test(event.type),
     );
+    const yearbook = props.snap.history15Runtime?.yearbooks.find((y) => String(y.year) === year);
     return (
       <>
         <p className="wiki-lead">
@@ -277,6 +310,18 @@ export function HistoryPage(props: {
           {elections.length} certified national election{elections.length === 1 ? "" : "s"}, and{" "}
           {laws.length} enacted Act{laws.length === 1 ? "" : "s"}.
         </p>
+        {yearbook && yearbook.headlines.length > 0 ? (
+          <>
+            <h2 id="yearbook">Yearbook headlines</h2>
+            <ol className="wiki-timeline">
+              {yearbook.headlines.map((line) => (
+                <li key={line}>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : null}
         <h2 id="officeholders">Government and officeholders</h2>
         {officeholders.length === 0 ? (
           <p>No national or provincial office transition is recorded for this year.</p>
@@ -1311,6 +1356,119 @@ export function HistoryPage(props: {
     );
   }
 
+  function renderLongform(id: string) {
+    const history15 = props.snap.history15Runtime;
+    if (!history15) return <EmptyState>No long-term history has been recorded yet.</EmptyState>;
+
+    if (id === "governments") {
+      const rows = [...history15.governments].sort((a, b) => b.start.localeCompare(a.start));
+      return (
+        <>
+          <p className="wiki-lead">
+            Government terms are derived from the sitting president&apos;s party and any active
+            coalition recorded in the save.
+          </p>
+          <h2 id="timeline">Governments timeline</h2>
+          {rows.length === 0 ? (
+            <EmptyState>No government terms are recorded.</EmptyState>
+          ) : (
+            <ol className="wiki-timeline">
+              {rows.map((gov) => (
+                <li key={gov.id}>
+                  <time>
+                    {gov.start}
+                    {gov.end ? ` – ${gov.end}` : " – present"}
+                  </time>
+                  <span>
+                    <strong>
+                      {gov.governingPartyIds
+                        .map((pid) => partyDisplayName(props.world, pid, props.snap))
+                        .join(" · ") || "Caretaker / vacant"}
+                    </strong>
+                    <small>
+                      {gov.leaderId
+                        ? politicianDisplayName(props.catalog, gov.leaderId)
+                        : "No recorded leader"}
+                      {gov.endReason ? ` · ended: ${gov.endReason.replaceAll("_", " ")}` : ""}
+                      {gov.majorLawIds.length > 0
+                        ? ` · ${gov.majorLawIds.length} major Act${gov.majorLawIds.length === 1 ? "" : "s"}`
+                        : ""}
+                    </small>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      );
+    }
+
+    if (id === "eras") {
+      const rows = [...history15.eras].sort((a, b) => b.startDate.localeCompare(a.startDate));
+      return (
+        <>
+          <p className="wiki-lead">
+            Party eras open and close when national chair identity changes in the public record.
+          </p>
+          <h2 id="eras">Party eras</h2>
+          {rows.length === 0 ? (
+            <EmptyState>No party eras are recorded.</EmptyState>
+          ) : (
+            <ol className="wiki-timeline">
+              {rows.map((era, index) => (
+                <li key={`${era.partyId}:${era.startDate}:${index}`}>
+                  <time>
+                    {era.startDate}
+                    {era.endDate ? ` – ${era.endDate}` : " – present"}
+                  </time>
+                  <span>
+                    <strong>{partyDisplayName(props.world, era.partyId, props.snap)}</strong>
+                    <small>
+                      {era.chairId
+                        ? politicianDisplayName(props.catalog, era.chairId)
+                        : "Chair vacant"}{" "}
+                      · {era.trigger.replaceAll("_", " ")}
+                    </small>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      );
+    }
+
+    const books = [...history15.yearbooks].sort((a, b) => b.year - a.year);
+    return (
+      <>
+        <p className="wiki-lead">
+          Yearbook entries list high-importance public events already present in the save — nothing
+          is invented for empty years.
+        </p>
+        <h2 id="yearbooks">Years in Terena</h2>
+        {books.length === 0 ? (
+          <EmptyState>No yearbook entries are recorded yet.</EmptyState>
+        ) : (
+          books.map((book) => (
+            <div key={book.year} className="wiki-result-banner">
+              <button
+                type="button"
+                className="wiki-related-link"
+                onClick={() => {
+                  const target = articles.find((row) => row.id === `year:${book.year}`);
+                  if (target) openArticle(target);
+                }}
+              >
+                <strong>{book.year} in Terena</strong>
+                <span>{book.headlines[0] ?? `${book.eventIds.length} recorded events`}</span>
+              </button>
+            </div>
+          ))
+        )}
+      </>
+    );
+  }
+
   function renderLaw(id: string) {
     const law = props.snap.legislatureRuntime.enactedLaws[id];
     if (!law) return <EmptyState>The Act could not be found.</EmptyState>;
@@ -1379,6 +1537,7 @@ export function HistoryPage(props: {
   function articleBody(article: ArticleRef) {
     const [kind, id] = article.id.split(":", 2) as [string, string];
     if (kind === "year") return renderYear(id);
+    if (kind === "longform") return renderLongform(id);
     if (kind === "election") return renderElection(id);
     if (kind === "governor-election") return renderGovernorElection(id);
     if (kind === "provincial-election") return renderProvincialElection(id);
@@ -1396,6 +1555,7 @@ export function HistoryPage(props: {
     const kind = article.id.split(":", 1)[0];
     if (kind === "year")
       return [
+        { id: "yearbook", label: "Yearbook" },
         { id: "officeholders", label: "Government" },
         { id: "events", label: "Major events" },
         { id: "elections", label: "Elections" },
@@ -1404,6 +1564,12 @@ export function HistoryPage(props: {
         { id: "economy", label: "Economy" },
         { id: "foreign", label: "Foreign affairs" },
       ];
+    if (kind === "longform") {
+      const id = article.id.slice("longform:".length);
+      if (id === "governments") return [{ id: "timeline", label: "Governments timeline" }];
+      if (id === "eras") return [{ id: "eras", label: "Party eras" }];
+      return [{ id: "yearbooks", label: "Years in Terena" }];
+    }
     if (kind === "election") {
       const electionId = article.id.slice("election:".length);
       return props.snap.elections[electionId]?.type === "presidential"
