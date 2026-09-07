@@ -97,8 +97,8 @@ export function appointMinister(
         ),
       };
     }
-    if (aligned) {
-      order.cabinetHasAssemblyConfidence = true;
+    if (aligned && !order.cabinetNeedsConfidence) {
+      // Plurality alignment alone does not invent confidence when an investiture is pending.
       order.cabinetNeedsConfidence = false;
     }
   }

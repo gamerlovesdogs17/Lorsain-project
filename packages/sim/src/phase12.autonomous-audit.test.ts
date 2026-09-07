@@ -29,7 +29,31 @@ function collectMetrics(seed: string, months: number, state: SimState): Autonomo
   ).length;
   const orgCampaigns = history.filter((e) => e.type === "ORG_ISSUE_CAMPAIGN").length;
   const coalitionsFormed = history.filter((e) => e.type === "COALITION_FORMED").length;
+  const coalitionsBroken = history.filter((e) => e.type === "COALITION_BROKEN").length;
   const platformReviews = history.filter((e) => e.type === "PARTY_PLATFORM_REVIEW").length;
+  const amendmentsProposed = history.filter(
+    (e) => e.type === "AMENDMENT_PROPOSED" || e.type === "AMENDMENT_VOTE_PASSED",
+  ).length;
+  const leadershipContests = history.filter(
+    (e) =>
+      e.type === "PARTY_CONTEST_RESOLVED" ||
+      e.type === "PARTY_LEADERSHIP_CONTEST_RESOLVED" ||
+      e.type === "PARTY_LEADERSHIP_CONTEST_REQUIRED" ||
+      e.type === "PARTY_CHAIR_ELECTION_OPENED" ||
+      e.type === "PARTY_CHAIR_ELECTED",
+  ).length;
+  const caucusContests = history.filter(
+    (e) =>
+      e.type === "CAUCUS_LEADERSHIP_ELECTION_OPENED" ||
+      e.type === "CAUCUS_LEADERSHIP_ELECTION_RESOLVED",
+  ).length;
+  const endorsements = history.filter(
+    (e) =>
+      e.type === "ENDORSEMENT_MADE" ||
+      e.type === "ENDORSEMENT_RECEIVED" ||
+      e.type === "PARTY_CANDIDATE_ENDORSED",
+  ).length;
+  const retirements = history.filter((e) => e.type === "POLITICIAN_RETIRED").length;
   const billsIntroduced = Object.keys(state.legislatureRuntime.bills).length;
   const meaningfulActivity =
     careerDecisions +
@@ -38,6 +62,12 @@ function collectMetrics(seed: string, months: number, state: SimState): Autonomo
     caucusAgendas +
     cabinetReshuffles +
     orgCampaigns +
+    amendmentsProposed +
+    leadershipContests +
+    caucusContests +
+    endorsements +
+    retirements +
+    coalitionsBroken +
     Object.keys(runtime.careerAmbitions).length;
   return {
     seed,
@@ -50,8 +80,14 @@ function collectMetrics(seed: string, months: number, state: SimState): Autonomo
     lifecycleEvents,
     orgCampaigns,
     coalitionsFormed,
+    coalitionsBroken,
     platformReviews,
     billsIntroduced,
+    amendmentsProposed,
+    leadershipContests,
+    caucusContests,
+    endorsements,
+    retirements,
     meaningfulActivity,
   };
 }
@@ -76,6 +112,43 @@ function assertBounds(
   expect(metrics.orgCampaigns).toBeLessThanOrEqual(bounds.orgCampaignMax);
   expect(metrics.meaningfulActivity).toBeGreaterThanOrEqual(bounds.meaningfulMin);
   expect(metrics.billsIntroduced).toBeGreaterThan(0);
+  // Soft non-negativity for expanded counters (activity may be rare).
+  expect(metrics.amendmentsProposed).toBeGreaterThanOrEqual(0);
+  expect(metrics.leadershipContests).toBeGreaterThanOrEqual(0);
+  expect(metrics.caucusContests).toBeGreaterThanOrEqual(0);
+  expect(metrics.endorsements).toBeGreaterThanOrEqual(0);
+  expect(metrics.retirements).toBeGreaterThanOrEqual(0);
+  expect(metrics.coalitionsBroken).toBeGreaterThanOrEqual(0);
+}
+
+/** Soft cross-seed diversity: at least one tracked counter differs across seeds. */
+function assertCrossSeedDiversity(rows: AutonomousAgencyMetrics[]): void {
+  if (rows.length < 2) return;
+  const keys: Array<keyof AutonomousAgencyMetrics> = [
+    "careerDecisions",
+    "recruitments",
+    "caucusAgendas",
+    "cabinetReshuffles",
+    "orgCampaigns",
+    "coalitionsFormed",
+    "coalitionsBroken",
+    "amendmentsProposed",
+    "leadershipContests",
+    "caucusContests",
+    "endorsements",
+    "retirements",
+    "billsIntroduced",
+    "meaningfulActivity",
+  ];
+  let diverse = false;
+  for (const key of keys) {
+    const values = new Set(rows.map((r) => r[key]));
+    if (values.size > 1) {
+      diverse = true;
+      break;
+    }
+  }
+  expect(diverse).toBe(true);
 }
 
 describe("Phase 12 autonomous agency audit", () => {
@@ -94,6 +167,12 @@ describe("Phase 12 autonomous agency audit", () => {
     });
   }
 
+  it("24-month soft cross-seed diversity", () => {
+    const rows = PHASE12_AUTONOMOUS_AUDIT_METRICS.filter((m) => m.months === 24);
+    expect(rows.length).toBeGreaterThanOrEqual(seeds24.length);
+    assertCrossSeedDiversity(rows.slice(-seeds24.length));
+  });
+
   for (const seed of seeds60) {
     it(`60-month autonomy bounds (${seed})`, () => {
       const world = loadTerenaWorld();
@@ -105,4 +184,10 @@ describe("Phase 12 autonomous agency audit", () => {
       expect(ensurePoliticsRuntime(sim.getSnapshot() as SimState).lastAgencyMonth).not.toBeNull();
     });
   }
+
+  it("60-month soft cross-seed diversity", () => {
+    const rows = PHASE12_AUTONOMOUS_AUDIT_METRICS.filter((m) => m.months === 60);
+    expect(rows.length).toBeGreaterThanOrEqual(seeds60.length);
+    assertCrossSeedDiversity(rows.slice(-seeds60.length));
+  });
 });

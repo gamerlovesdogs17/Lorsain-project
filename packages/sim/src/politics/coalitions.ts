@@ -9,6 +9,9 @@ import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { ensurePoliticsRuntime } from "./state.js";
 import type { CoalitionAgreement } from "./types.js";
 
+/** Bounded government-formation attempts under assembly confidence. */
+export const MAX_FORMATION_ATTEMPTS = 3;
+
 function partySeatCounts(world: KernelWorld, state: SimState): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const id of currentAssemblyMemberIds(world, state)) {
@@ -174,16 +177,134 @@ function leadershipChangedThisMonth(state: SimState, partyIds: string[]): boolea
   );
 }
 
+/** Platform issue → canonical policy issue id (mirror of governing/promises mapping). */
+const COALITION_PRIORITY_ISSUE: Record<PartyPlatformIssue, string> = {
+  economy: "ISS_OWNERSHIP",
+  taxes: "ISS_WELFARE",
+  labor: "ISS_LABOR",
+  housing: "ISS_HOUSING",
+  social_policy: "ISS_WELFARE",
+  environment: "ISS_CLIMATE",
+  institutional_reform: "ISS_REFORM",
+  foreign_policy: "ISS_DEFENSE",
+};
+
+/**
+ * A coalition partner betrays an agreed priority when a large share (≈35%) of that
+ * party's MPs vote "no" on a floor/repassage vote for a bill aligned with the
+ * coalition's policy priorities, even though the caucus/floor position was
+ * support or a free vote. Enacting a priority (or supporting it) is never a
+ * violation — only an above-tolerance revolt against an agreed priority is.
+ *
+ * Sources: legislatureRuntime.legislativeVotes for the current date, plus any
+ * history rows (BILL_FLOOR_PASSED/FAILED, BILL_REPASSED/REPASSAGE_FAILED,
+ * LEGISLATIVE_VOTE) that reference a voteId also present in legislativeVotes.
+ */
+function partnerVotedDownPriorityThisMonth(
+  state: SimState,
+  agreement: CoalitionAgreement,
+): boolean {
+  const priorityIssueIds = new Set(
+    agreement.policyPriorities.map((p) => COALITION_PRIORITY_ISSUE[p]).filter(Boolean),
+  );
+  if (priorityIssueIds.size === 0) return false;
+
+  const voteIds = new Set<string>();
+  for (const [id, vote] of Object.entries(state.legislatureRuntime.legislativeVotes)) {
+    if (vote.date === state.currentDate) voteIds.add(id);
+  }
+  for (const e of state.history) {
+    if (e.date !== state.currentDate) continue;
+    if (
+      e.type === "LEGISLATIVE_VOTE" ||
+      e.type === "BILL_FLOOR_PASSED" ||
+      e.type === "BILL_FLOOR_FAILED" ||
+      e.type === "BILL_REPASSED" ||
+      e.type === "BILL_REPASSAGE_FAILED"
+    ) {
+      const voteId = String(e.payload.voteId ?? "");
+      if (voteId && state.legislatureRuntime.legislativeVotes[voteId]) voteIds.add(voteId);
+    }
+  }
+
+  for (const voteId of voteIds) {
+    const vote = state.legislatureRuntime.legislativeVotes[voteId];
+    if (!vote) continue;
+    if (vote.stage !== "floor" && vote.stage !== "repassage") continue;
+    const bill = state.legislatureRuntime.bills[vote.billId];
+    if (!bill) continue;
+    const alignsWithPriority = bill.policyItems.some((i) => priorityIssueIds.has(i.issueId));
+    if (!alignsWithPriority) continue;
+
+    for (const partyId of agreement.partyIds) {
+      const stance =
+        state.legislatureRuntime.partyRecommendations[`${partyId}:${vote.billId}`]?.stance ?? null;
+      // Only a betrayal when the caucus/floor position was support or a free vote.
+      if (stance !== "support" && stance !== "free_vote") continue;
+      let partyNo = 0;
+      let partyTotal = 0;
+      for (const [mpId, choice] of Object.entries(vote.votes)) {
+        const votedParty = vote.partyIdsAtVote?.[mpId] ?? state.politicians[mpId]?.partyId ?? null;
+        if (votedParty !== partyId) continue;
+        partyTotal += 1;
+        if (choice === "no") partyNo += 1;
+      }
+      // Require a non-trivial sample so a couple of dissenters don't break the coalition.
+      if (partyTotal >= 3 && partyNo / partyTotal >= 0.35) return true;
+    }
+  }
+  return false;
+}
+
 function policyViolationThisMonth(state: SimState, agreement: CoalitionAgreement): boolean {
   const priority = new Set(agreement.policyPriorities);
-  return state.history.some((e) => {
-    if (e.date !== state.currentDate) return false;
-    if (e.type !== "BILL_ENACTED" && e.type !== "LAW_ENACTED") return false;
-    const issue = String(e.payload.platformIssue ?? e.payload.issueId ?? "");
-    if (!issue) return false;
-    // Partner party voting against a priority enactment is a soft violation signal.
-    return priority.has(issue as PartyPlatformIssue);
-  });
+  const excluded = new Set(
+    (Array.isArray(agreement.metadata.excludedPolicies)
+      ? (agreement.metadata.excludedPolicies as string[])
+      : []
+    ).map(String),
+  );
+
+  for (const e of state.history) {
+    if (e.date !== state.currentDate) continue;
+
+    // Partner leadership officially opposing an agreed priority.
+    if (e.type === "PARTY_OFFICIAL_POSITION" || e.type === "PARTY_FLOOR_POSITION") {
+      const issue = String(e.payload.platformIssue ?? e.payload.issueId ?? "");
+      const stance = String(e.payload.stance ?? e.payload.position ?? "");
+      const partyId = String(e.payload.partyId ?? e.entityIds[0] ?? "");
+      if (
+        partyId &&
+        agreement.partyIds.includes(partyId) &&
+        priority.has(issue as PartyPlatformIssue) &&
+        (stance === "oppose" || stance === "against")
+      ) {
+        return true;
+      }
+    }
+
+    // Government introduces an explicitly excluded policy.
+    if (e.type === "BILL_INTRODUCED" || e.type === "BILL_ENACTED" || e.type === "LAW_ENACTED") {
+      const issue = String(e.payload.platformIssue ?? e.payload.issueId ?? "");
+      if (issue && excluded.has(issue)) return true;
+    }
+
+    // Confidence commitment refused / broken by a partner.
+    if (
+      (e.type === "MOTION_FAILED" || e.type === "CABINET_NO_CONFIDENCE") &&
+      String(e.payload.kind ?? "").includes("confidence") &&
+      agreement.partyIds.some((id) => e.entityIds.includes(id) || e.actorIds.includes(id))
+    ) {
+      return true;
+    }
+  }
+
+  // Partner MPs revolting against an agreed priority bill beyond tolerance
+  // (legislativeVotes + any history rows that reference those vote ids).
+  if (partnerVotedDownPriorityThisMonth(state, agreement)) return true;
+
+  // Explicitly: enacting / supporting an agreed priority is never a violation.
+  return false;
 }
 
 /**
@@ -316,53 +437,182 @@ export function processCoalitionMonth(
     return events;
   }
 
-  const partners = best.partyIds;
-  const shares: Record<string, number> = {};
-  const shareTotal = partners.reduce((sum, id) => sum + (counts[id] ?? 0), 0) || 1;
-  for (const id of partners) shares[id] = (counts[id] ?? 0) / shareTotal;
-
+  const isConfidence =
+    need.trigger === "assembly_confidence" || cabinetFormationMode(state) === "assembly_confidence";
   const existingNegotiating = active?.status === "negotiating" ? active : null;
-  const id = existingNegotiating?.id ?? padId("COAL", state.counters.nextOrgActionId++);
-  const agreement: CoalitionAgreement = {
-    id,
-    formedDate: state.currentDate,
-    status: "active",
-    brokenDate: null,
-    partyIds: partners,
-    policyPriorities: pickPriorities(state, partners),
-    cabinetShares: shares,
-    trigger: need.trigger,
-    breakdownReason: null,
-    negotiationScore: best.score,
-    alternativeOptions: scored.slice(0, 4),
-    metadata: { negotiatedFrom: existingNegotiating?.id ?? null },
-  };
-  runtime.coalitionAgreements[id] = agreement;
-  applyCoalitionTerms(state, agreement);
 
-  events.push(
+  // Under assembly confidence, allow bounded retries with next-best scored options
+  // when an investiture vote fails. Non-confidence triggers form the single best option.
+  const optionsToTry = isConfidence ? scored : [best];
+  const runtimeMeta = runtime.metadata as Record<string, unknown>;
+  let attempts = 0;
+  let confidencePassed = false;
+
+  for (const option of optionsToTry) {
+    if (attempts >= MAX_FORMATION_ATTEMPTS) break;
+    attempts += 1;
+
+    const partners = option.partyIds;
+    const shares: Record<string, number> = {};
+    const shareTotal = partners.reduce((sum, id) => sum + (counts[id] ?? 0), 0) || 1;
+    for (const id of partners) shares[id] = (counts[id] ?? 0) / shareTotal;
+
+    const id =
+      attempts === 1 && existingNegotiating
+        ? existingNegotiating.id
+        : padId("COAL", state.counters.nextOrgActionId++);
+    const agreement: CoalitionAgreement = {
+      id,
+      formedDate: state.currentDate,
+      status: "active",
+      brokenDate: null,
+      partyIds: partners,
+      policyPriorities: pickPriorities(state, partners),
+      cabinetShares: shares,
+      trigger: need.trigger,
+      breakdownReason: null,
+      negotiationScore: option.score,
+      alternativeOptions: scored.slice(0, 4),
+      metadata: {
+        negotiatedFrom: attempts === 1 ? (existingNegotiating?.id ?? null) : null,
+        formationAttempt: attempts,
+      },
+    };
+    runtime.coalitionAgreements[id] = agreement;
+    applyCoalitionTerms(state, agreement);
+
+    events.push(
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "COALITION_FORMED",
+        importance: 0.85,
+        visibility: "public",
+        actorIds: [],
+        entityIds: partners,
+        payload: {
+          coalitionId: id,
+          partyIds: partners,
+          trigger: need.trigger,
+          policyPriorities: agreement.policyPriorities,
+          cabinetShares: shares,
+          negotiationScore: option.score,
+          formationAttempt: attempts,
+          alternativeOptions: scored.slice(0, 3),
+        },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    );
+
+    if (!isConfidence) break;
+
+    const confEvents = conductAssemblyConfidenceVote(world, state, partners, commandId);
+    events.push(...confEvents);
+    if (confEvents.some((e) => e.type === "ASSEMBLY_CONFIDENCE_PASSED")) {
+      confidencePassed = true;
+      break;
+    }
+
+    // Investiture failed — dissolve this attempt and try the next-best partner set.
+    agreement.status = "broken";
+    agreement.brokenDate = state.currentDate;
+    agreement.breakdownReason = "confidence_failed";
+    events.push(
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "COALITION_BROKEN",
+        importance: 0.7,
+        visibility: "public",
+        actorIds: [],
+        entityIds: partners,
+        payload: { coalitionId: id, reason: "confidence_failed", formationAttempt: attempts },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    );
+  }
+
+  runtimeMeta.formationAttempts = attempts;
+
+  // Bound exhausted without confidence: fall back to constitutional default.
+  if (isConfidence && !confidencePassed) {
+    const order = state.provincialRuntime.constitutionalOrder;
+    order.cabinetHasAssemblyConfidence = false;
+    order.cabinetNeedsConfidence = true;
+    events.push(
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "GOVERNING_FORMATION_FALLBACK",
+        importance: 0.85,
+        visibility: "public",
+        actorIds: [],
+        entityIds: [],
+        payload: {
+          attempts,
+          formationAttempts: attempts,
+          maxAttempts: MAX_FORMATION_ATTEMPTS,
+          reason: "no_assembly_confidence",
+          fallback: "constitutional_default",
+          cabinetNeedsConfidence: true,
+        },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    );
+  }
+
+  return events;
+}
+
+/**
+ * Positive Assembly confidence/investiture vote using sitting MPs.
+ * Coalition/support parties vote yes; others tend to vote no (deterministic by id).
+ */
+export function conductAssemblyConfidenceVote(
+  world: KernelWorld,
+  state: SimState,
+  supportingPartyIds: string[],
+  commandId: string,
+  nomineeId?: string | null,
+): SimEvent[] {
+  const members = currentAssemblyMemberIds(world, state).sort((a, b) => a.localeCompare(b));
+  const support = new Set(supportingPartyIds);
+  let yes = 0;
+  let no = 0;
+  const votes: Record<string, "yes" | "no"> = {};
+  for (const mpId of members) {
+    const partyId = state.politicians[mpId]?.partyId;
+    const vote: "yes" | "no" = partyId && support.has(partyId) ? "yes" : "no";
+    votes[mpId] = vote;
+    if (vote === "yes") yes += 1;
+    else no += 1;
+  }
+  const passed = yes > no && yes > members.length / 2;
+  const order = state.provincialRuntime.constitutionalOrder;
+  order.cabinetHasAssemblyConfidence = passed;
+  order.cabinetNeedsConfidence = !passed;
+
+  return [
     pushHistory(state, {
       date: state.currentDate,
-      type: "COALITION_FORMED",
-      importance: 0.85,
+      type: passed ? "ASSEMBLY_CONFIDENCE_PASSED" : "ASSEMBLY_CONFIDENCE_FAILED",
+      importance: 0.92,
       visibility: "public",
-      actorIds: [],
-      entityIds: partners,
+      actorIds: nomineeId ? [nomineeId] : [],
+      entityIds: supportingPartyIds,
       payload: {
-        coalitionId: id,
-        partyIds: partners,
-        trigger: need.trigger,
-        policyPriorities: agreement.policyPriorities,
-        cabinetShares: shares,
-        negotiationScore: best.score,
-        alternativeOptions: scored.slice(0, 3),
+        yes,
+        no,
+        total: members.length,
+        passed,
+        supportingPartyIds,
+        nomineeId: nomineeId ?? null,
+        sampleVotes: Object.fromEntries(Object.entries(votes).slice(0, 12)),
       },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,
     }),
-  );
-
-  return events;
+  ];
 }
 
 export function activeCoalition(state: SimState): CoalitionAgreement | null {

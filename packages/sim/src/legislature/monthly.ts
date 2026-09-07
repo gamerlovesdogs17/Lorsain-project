@@ -25,8 +25,13 @@ import type {
   BillState,
   LegislativeVoteChoice,
   LegislativeVoteStage,
+  PolicyItem,
 } from "./types.js";
-import { concretePolicyItem } from "./provisions.js";
+import {
+  concretePolicyItem,
+  policyItemForProvision,
+  provisionForPolicyItem,
+} from "./provisions.js";
 import { processCaucusLeadershipMonth } from "./caucus.js";
 
 function activeBillCount(state: SimState): number {
@@ -157,7 +162,7 @@ function maybeNegotiate(
   if (bill.amendmentIds.length > 0) return [];
   if (rng.float01("legislature") > 0.35) return [];
   const item = bill.policyItems[0];
-  if (!item || item.magnitude < 0.25) return [];
+  if (!item) return [];
   const committee = bill.assignedCommitteeId
     ? state.legislatureRuntime.committees[bill.assignedCommitteeId]
     : null;
@@ -165,10 +170,10 @@ function maybeNegotiate(
     (id) => id !== bill.sponsorId && id !== state.playerPoliticianId,
   );
   if (!negotiator) return [];
-  const proposed = {
-    ...item,
-    magnitude: Math.max(0.15, item.magnitude * 0.7),
-  };
+
+  const proposed = concreteNpcCompromise(item, rng);
+  if (!proposed) return [];
+
   const out = proposeAmendment(
     world,
     state,
@@ -177,6 +182,43 @@ function maybeNegotiate(
   );
   if ("error" in out) return [];
   return out.events;
+}
+
+/** Prefer a real alternate provision option / softened categorical choice over magnitude *= 0.7. */
+function concreteNpcCompromise(item: PolicyItem, rng: RngService): PolicyItem | null {
+  const definition = provisionForPolicyItem(item);
+  if (definition && definition.options.length >= 2) {
+    const currentId = item.optionId ?? "";
+    const alternatives = definition.options
+      .filter((o) => o.id !== currentId)
+      .sort((a, b) => {
+        const da = Math.abs(a.direction - item.direction);
+        const db = Math.abs(b.direction - item.direction);
+        // Prefer nearby compromise options rather than radical flips.
+        return da - db || a.id.localeCompare(b.id);
+      });
+    const pick =
+      alternatives.find((o) => Math.abs(o.direction) <= Math.abs(item.direction) + 0.05) ??
+      alternatives[0];
+    if (pick) {
+      const built = policyItemForProvision(definition.id, pick.id);
+      if (built) {
+        return {
+          ...built,
+          // Preserve issue; record compromise provenance in magnitude only if needed.
+        };
+      }
+    }
+  }
+  // Fallback: drop the item (remove provision) when no option catalog exists.
+  if (rng.float01("legislature") < 0.25 && item.magnitude >= 0.25) {
+    return null;
+  }
+  return {
+    ...item,
+    magnitude: Math.max(0.15, item.magnitude * 0.85),
+    direction: item.direction * 0.9,
+  };
 }
 
 function committeeWork(

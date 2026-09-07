@@ -165,8 +165,14 @@ export type AutonomousAgencyMetrics = {
   lifecycleEvents: number;
   orgCampaigns: number;
   coalitionsFormed: number;
+  coalitionsBroken: number;
   platformReviews: number;
   billsIntroduced: number;
+  amendmentsProposed: number;
+  leadershipContests: number;
+  caucusContests: number;
+  endorsements: number;
+  retirements: number;
   meaningfulActivity: number;
 };
 

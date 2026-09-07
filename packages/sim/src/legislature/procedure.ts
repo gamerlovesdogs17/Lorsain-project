@@ -660,8 +660,13 @@ function popActFromProvisionStacks(state: SimState, lawId: string): void {
   const history = state.legislatureRuntime.provisionHistory;
   for (const provisionId of Object.keys(history)) {
     const stack = history[provisionId];
-    if (!stack?.length) continue;
-    history[provisionId] = stack.filter((entry) => entry.lawId !== lawId);
+    if (!stack?.length) {
+      delete history[provisionId];
+      continue;
+    }
+    const next = stack.filter((entry) => entry.lawId !== lawId);
+    if (next.length === 0) delete history[provisionId];
+    else history[provisionId] = next;
   }
 }
 

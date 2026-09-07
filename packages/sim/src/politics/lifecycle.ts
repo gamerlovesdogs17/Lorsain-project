@@ -10,11 +10,69 @@ import { pushHistory, padId } from "../scheduler.js";
 import { vacatePartyLeadership, vacateFactionChair } from "../parties/membership.js";
 import { reconcilePoliticianContestParticipation } from "../parties/lifecycle.js";
 import { reconcileUnresolvedElectionCandidacies } from "../elections/field.js";
+import { PARTY_PLATFORM_ISSUES } from "../parties/types.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import type { DynamicPartyDefinition } from "../parties/types.js";
 import { ensurePoliticsRuntime } from "./state.js";
 import { AS_MAX_LIFECYCLE_EVENTS_PER_YEAR, AS_PARTY_LIFECYCLE_COOLDOWN_MONTHS } from "./types.js";
+
+/** Compatibility score in [0,1]. Size is a weak willingness factor, not the principal rule. */
+export function scorePartyMergeCompatibility(
+  state: SimState,
+  absorbId: string,
+  intoId: string,
+): number {
+  if (absorbId === intoId) return 0;
+  const a = state.partyStates[absorbId];
+  const b = state.partyStates[intoId];
+  if (!a || !b || a.status === "defunct" || b.status === "defunct") return 0;
+
+  const pa = a.publicPlatform?.positions;
+  const pb = b.publicPlatform?.positions;
+  let ideo = 0.35;
+  if (pa && pb) {
+    let sum = 0;
+    for (const issue of PARTY_PLATFORM_ISSUES) {
+      sum += 1 - Math.min(1, Math.abs((pa[issue] ?? 0) - (pb[issue] ?? 0)));
+    }
+    ideo = sum / PARTY_PLATFORM_ISSUES.length;
+  }
+
+  const runtime = ensurePoliticsRuntime(state);
+  let coalHist = 0.45;
+  for (const past of Object.values(runtime.coalitionAgreements)) {
+    const hasA = past.partyIds.includes(absorbId);
+    const hasB = past.partyIds.includes(intoId);
+    if (hasA && hasB) coalHist += past.status === "broken" ? -0.12 : 0.18;
+  }
+  coalHist = Math.max(0, Math.min(1, coalHist));
+
+  const family = runtime.partyFamilyHistory.filter(
+    (link) =>
+      (link.partyId === absorbId && link.relatedPartyId === intoId) ||
+      (link.partyId === intoId && link.relatedPartyId === absorbId),
+  );
+  let familyScore = 0.5;
+  if (family.some((f) => f.event === "split_from")) familyScore -= 0.25;
+  if (family.some((f) => f.event === "merged_into" || f.event === "absorbed")) familyScore += 0.1;
+
+  const nA = partyMembers(state, absorbId).length;
+  const nB = partyMembers(state, intoId).length;
+  const weakness = Math.max(0, Math.min(1, (12 - Math.min(nA, nB)) / 12));
+  const sizeBalance = 1 - Math.min(1, Math.abs(nA - nB) / 20);
+
+  // Hard veto: strongly incompatible platforms do not organically merge.
+  if (ideo < 0.42) return ideo * 0.2;
+
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      ideo * 0.45 + coalHist * 0.2 + familyScore * 0.1 + weakness * 0.15 + sizeBalance * 0.1,
+    ),
+  );
+}
 
 function stableHash(text: string): number {
   let hash = 2166136261;
@@ -393,13 +451,25 @@ export function processPartyLifecycleMonth(
   }
 
   if (rng.float01("npc-decisions") < floor * 0.5) {
-    const small = Object.keys(state.partyStates)
+    const candidates = Object.keys(state.partyStates)
       .filter((id) => state.partyStates[id]?.status !== "defunct")
       .map((id) => ({ id, n: partyMembers(state, id).length }))
-      .filter((row) => row.n > 0 && row.n <= 6)
+      .filter((row) => row.n > 0 && row.n <= 10)
       .sort((a, b) => a.n - b.n || a.id.localeCompare(b.id));
-    if (small.length >= 2) {
-      const mergeEvents = mergeParties(world, state, small[0]!.id, small[1]!.id, commandId);
+    let best: { absorbId: string; intoId: string; score: number } | null = null;
+    for (let i = 0; i < candidates.length; i += 1) {
+      for (let j = i + 1; j < candidates.length; j += 1) {
+        const absorbId = candidates[i]!.id;
+        const intoId = candidates[j]!.id;
+        const score = scorePartyMergeCompatibility(state, absorbId, intoId);
+        if (score < 0.55) continue;
+        if (!best || score > best.score || (score === best.score && absorbId < best.absorbId)) {
+          best = { absorbId, intoId, score };
+        }
+      }
+    }
+    if (best) {
+      const mergeEvents = mergeParties(world, state, best.absorbId, best.intoId, commandId);
       if (mergeEvents.length > 0) {
         events.push(...mergeEvents);
         runtime.lifecycleEventsThisYear += 1;
@@ -479,8 +549,11 @@ function mergeParties(
       payload: {
         absorbedPartyId: absorbId,
         survivingPartyId: intoId,
-        politicianIds: movers,
+        predecessorPartyId: absorbId,
         successorPartyId: intoId,
+        mergeDate: state.currentDate,
+        politicianIds: movers,
+        compatibilityScore: scorePartyMergeCompatibility(state, absorbId, intoId),
       },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,

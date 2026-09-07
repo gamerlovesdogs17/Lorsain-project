@@ -134,6 +134,15 @@ export function headlineFor(
   const sympathetic = framing === "sympathetic";
   const province = resolveProvinceLabel(payload, context);
   const desk = outletDesk(context);
+  // Debate prep is not a held debate — never mint debate-night copy from it.
+  if (type === "DEBATE_PREPARED" || type.includes("PREPARE_DEBATE")) {
+    return pickVariant(
+      sensational
+        ? ["Campaign battle heats up", "Race intensifies on the trail"]
+        : ["Election campaign activity continues", "Campaign organizations keep working the field"],
+      variant,
+    );
+  }
   const fiscalYear =
     typeof payload?.fiscalYear === "number" || typeof payload?.fiscalYear === "string"
       ? String(payload.fiscalYear)
@@ -847,6 +856,74 @@ export function headlineFor(
     );
   }
 
+  // ── Service delivery / party priorities / governing record ────────────────
+  if (type === "SERVICE_DELIVERY_CRITICISM") {
+    return pickVariant(
+      sensational
+        ? ["Service delivery crisis sparks public anger", "Failing services dominate the headlines"]
+        : critical
+          ? ["Service delivery draws sharp criticism", "Public services fall short of expectations"]
+          : [
+              "Service delivery draws public criticism",
+              "Delivery shortfalls enter the public record",
+              desk
+                ? `${desk} criticizes service outcomes`
+                : "Administrative delivery under scrutiny",
+            ],
+      variant,
+    );
+  }
+  if (type === "SERVICE_DELIVERY_CREDIT") {
+    return pickVariant(
+      sensational
+        ? ["Service turnaround wins praise", "Delivery gains hailed as a win"]
+        : sympathetic
+          ? ["Service delivery earns warm credit", "Public services win supportive coverage"]
+          : [
+              "Service delivery earns public credit",
+              "Administrative outcomes draw positive notice",
+              desk ? `${desk} credits service gains` : "Service performance enters the record",
+            ],
+      variant,
+    );
+  }
+  if (type === "PARTY_PRIORITIES_SET") {
+    return pickVariant(
+      sensational
+        ? ["Party redraws its priority battle lines", "New party priorities spark a fight"]
+        : [
+            "Party sets new priorities",
+            "Party leadership announces priority agenda",
+            desk ? `${desk} covers a party priorities reset` : "Party priorities enter the record",
+          ],
+      variant,
+    );
+  }
+  if (type === "GOVERNMENT_RECORD_UPDATED") {
+    return pickVariant(
+      [
+        "Government record refreshed",
+        "Official governing performance snapshot published",
+        desk ? `${desk} updates the government record` : "Governing record enters the public file",
+      ],
+      variant,
+    );
+  }
+  if (type === "GOVERNING_FORMATION_FALLBACK") {
+    return pickVariant(
+      sensational
+        ? [
+            "Government formation collapses into fallback",
+            "Confidence failure forces a constitutional fallback",
+          ]
+        : [
+            "Government formation falls back after failed confidence",
+            "Assembly confidence deadlock triggers formation fallback",
+          ],
+      variant,
+    );
+  }
+
   // ── Catch-all — structured templates, never "type word reported" churn ────
   const narrativeTitle =
     typeof payload?.narrativeTitle === "string" ? payload.narrativeTitle.trim() : "";
@@ -1016,7 +1093,9 @@ export function processMediaMonth(
       e.visibility === "public" &&
       e.importance >= 0.32 &&
       e.type !== "TURN_COMPLETED" &&
-      e.type !== "ECONOMY_MONTH",
+      e.type !== "ECONOMY_MONTH" &&
+      // Prep is not a held debate — only DEBATE_HELD may generate debate news.
+      e.type !== "DEBATE_PREPARED",
   );
   // A4: pressFreedom — modifies outlet behavior based on constitutional press freedom mode
   const pressFreedom = ensureOrder(state).pressFreedom;

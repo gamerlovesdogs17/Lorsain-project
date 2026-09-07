@@ -272,7 +272,9 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
             typeof entry.previousOptionId === "string" ? entry.previousOptionId : null,
         });
       }
-      if (stack.length) runtime.provisionHistory[provisionId] = stack;
+      // Preserve empty stacks so save/restore hashes match live state that
+      // may retain empty provisionHistory entries after stackFor()/pops.
+      runtime.provisionHistory[provisionId] = stack;
     }
   }
   if (isRecord(raw.pendingPlayerVotes)) {

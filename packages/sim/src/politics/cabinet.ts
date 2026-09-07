@@ -47,6 +47,18 @@ function pickReshuffleReason(
 
   const reasons: Array<{ reason: CabinetReshuffleReason; weight: number }> = [];
   if (admin < 0.42) reasons.push({ reason: "poor_performance", weight: 0.45 });
+
+  const govPerf = state.governingRuntime?.ministerialPerformance;
+  if (govPerf) {
+    const officeForIncumbent = Object.keys(govPerf).find(
+      (officeId) => currentMinisterHolderId(world, state, officeId) === incumbent,
+    );
+    const score = officeForIncumbent ? govPerf[officeForIncumbent]?.score : null;
+    if (typeof score === "number" && score < 0.38) {
+      reasons.push({ reason: "poor_performance", weight: 0.7 });
+    }
+  }
+
   if (coalition) {
     const shares = coalition.cabinetShares;
     const party = state.politicians[incumbent]?.partyId;

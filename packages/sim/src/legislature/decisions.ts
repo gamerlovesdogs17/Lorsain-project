@@ -222,11 +222,17 @@ export function chooseIntroduce(
     ? state.legislatureRuntime.caucusLeadership[partyId]?.platformDemand
     : null;
   const coalitionPriorities = activeCoalition(state)?.policyPriorities ?? [];
+  const agendaIssues = new Set(
+    (state.governingRuntime?.agenda?.items ?? [])
+      .filter((i) => i.status === "active")
+      .map((i) => i.issueId),
+  );
   const weighted = definitions.map((definition) => {
     let weight = 0.2 + (profile.issueSalience[definition.issueId] ?? 0.25);
     const platform = partyPlatformIssueForBillItem(definition.issueId, definition.id);
     if (demand && platform === demand) weight += 0.35;
     if (coalitionPriorities.includes(platform)) weight += 0.25;
+    if (agendaIssues.has(definition.issueId)) weight += 0.4;
     return { definition, weight };
   });
   const total = weighted.reduce((sum, row) => sum + row.weight, 0);

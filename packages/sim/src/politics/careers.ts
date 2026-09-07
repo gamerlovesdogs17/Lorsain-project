@@ -4,6 +4,7 @@ import { recordPoliticalMemory } from "../agents/memories.js";
 import { reviewGoals } from "../agents/goals.js";
 import { applyPoliticianExit } from "../political-lifecycle.js";
 import { declareCandidacy } from "../parties/contests.js";
+import { ensureCampaignForDeclaredCandidacy } from "../campaigns/actions.js";
 import { fileAssemblyCandidacy } from "../elections/assembly-cycle.js";
 import { fileGubernatorialCandidacy } from "../provinces/elections.js";
 import { activeTermsForPolitician, officesOfKind, occupyingTerms } from "../offices.js";
@@ -343,6 +344,19 @@ function executeSeekHigherOffice(
     );
     if (!("error" in declared)) {
       events.push(...declared.events);
+      // Mirror player DECLARE_PARTY_CONTEST_CANDIDACY: filing must launch a
+      // nomination campaign so NPC qualification actions can run. Career agency
+      // runs before processCampaignMonth; without this, declared candidates are
+      // skipped by npcDeclarations and never seek endorsement/support milestones.
+      events.push(
+        ...ensureCampaignForDeclaredCandidacy(
+          state,
+          world,
+          decision.targetContestId,
+          politicianId,
+          commandId,
+        ),
+      );
       stage = "candidate";
       notes = "filed_presidential_nomination";
     }
