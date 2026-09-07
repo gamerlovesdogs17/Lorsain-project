@@ -20,7 +20,14 @@ import {
   provisionHistory,
   restoreOptionForRepealedAct,
   whipEstimate,
+  WHIP_STRENGTHS,
+  WHIP_PERSUADE_APPROACHES,
+  canShowExactInternals,
+  formatWhipLean,
+  explainVoteQualitative,
   type BillState,
+  type WhipStrength,
+  type WhipPersuadeApproach,
   type CommandResult,
   type KernelWorld,
   type NationalEconomyIndices,
@@ -29,6 +36,7 @@ import {
   type Simulation,
 } from "@lorsain/sim";
 import { isMp, isSpeaker } from "./format.js";
+import { useSettings } from "./settingsContext.js";
 import { ConstitutionBrowser } from "./constitutionBrowser.js";
 import { EntityLink } from "./ui/entityLink.js";
 import { WhyPanel } from "./ui/whyPanel.js";
@@ -48,6 +56,7 @@ import {
   BillProgressTrack,
   BriefStrip,
   DataTable,
+  EmptyState,
   EntityRow,
   PageHeader,
   PolicyChoiceGroup,
@@ -60,8 +69,9 @@ import {
 import { PoliticianProfile } from "./ui/politician.js";
 import { TerenaMap } from "./map/TerenaMap.js";
 
-type ChamberTab = "business" | "draft" | "committees" | "votes" | "lawbook";
-type BillDetailTab = "overview" | "provisions" | "politics" | "process";
+type AssemblyTab = "overview" | "legislation" | "committees" | "delegation";
+type LegislationSubTab = "bills" | "introduce" | "votes" | "statutes";
+type BillDetailTab = "overview" | "provisions" | "amendments" | "support" | "procedure" | "history";
 type LawbookBrowseMode = "provisions" | "acts";
 type MpBillLean = "likely_yes" | "likely_no" | "uncertain";
 
@@ -325,10 +335,21 @@ export function AssemblyPage(props: {
   setSelectedBill: (id: string | null) => void;
   onDone: () => void;
   report: (r: CommandResult) => boolean;
+  debug?: boolean;
+  setDebug?: (v: boolean) => void;
   onEntityNavigate?: (kind: import("./ui/entityLink.js").EntityLinkKind, id: string) => void;
 }) {
-  const [chamberTab, setChamberTab] = useState<ChamberTab>("business");
+  const { debugMode } = useSettings();
+  const exactInternals = canShowExactInternals(props.debug ?? debugMode);
+  const [assemblyTab, setAssemblyTab] = useState<AssemblyTab>("overview");
+  const [legislationSubTab, setLegislationSubTab] = useState<LegislationSubTab>("bills");
   const [billTab, setBillTab] = useState<BillDetailTab>("overview");
+  const [billFilter, setBillFilter] = useState<"all" | "active" | "passed" | "failed" | "mine">(
+    "all",
+  );
+  const [billSearch, setBillSearch] = useState("");
+  const [persuadeTargetId, setPersuadeTargetId] = useState("");
+  const [persuadeApproach, setPersuadeApproach] = useState<WhipPersuadeApproach>("pressure");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [draftProvisions, setDraftProvisions] = useState<
@@ -420,7 +441,8 @@ export function AssemblyPage(props: {
   const selectBill = (id: string) => {
     props.setSelectedBill(id);
     setBillTab("overview");
-    setChamberTab("business");
+    setAssemblyTab("legislation");
+    setLegislationSubTab("bills");
   };
 
   const preloadLawDraft = (
@@ -465,16 +487,52 @@ export function AssemblyPage(props: {
           ? `Replaces operative provisions in ${law.title} (${law.enactedDate}).`
           : `Builds on provisions enacted in ${law.title} (${law.enactedDate}).`,
     );
-    setChamberTab("draft");
+    setAssemblyTab("legislation");
+    setLegislationSubTab("introduce");
   };
 
-  const chamberTabs: Array<{ id: ChamberTab; label: string }> = [
-    { id: "business", label: "Business" },
-    ...(mp ? [{ id: "draft" as const, label: "Introduce" }] : []),
+  const assemblyTabs: Array<{ id: AssemblyTab; label: string }> = [
+    { id: "overview", label: "Overview" },
+    { id: "legislation", label: "Legislation" },
     { id: "committees", label: "Committees" },
-    { id: "votes", label: "Votes" },
-    { id: "lawbook", label: "Law & Constitution" },
+    { id: "delegation", label: "Delegation" },
   ];
+  const filteredBills = allBills.filter((b) => {
+    const q = billSearch.trim().toLowerCase();
+    if (q && !`${b.title} ${b.summary}`.toLowerCase().includes(q)) return false;
+    if (billFilter === "active") {
+      return [
+        "introduced",
+        "committee",
+        "committee_passed",
+        "floor_scheduled",
+        "sent_to_president",
+        "returned_by_president",
+        "repassage_scheduled",
+      ].includes(b.status);
+    }
+    if (billFilter === "passed")
+      return ["enacted", "signed", "repassed", "floor_passed"].includes(b.status);
+    if (billFilter === "failed") {
+      return ["committee_failed", "floor_failed", "repassage_failed", "withdrawn"].includes(
+        b.status,
+      );
+    }
+    if (billFilter === "mine") {
+      return (
+        b.sponsorId === props.snap.playerPoliticianId ||
+        b.cosponsorIds.includes(props.snap.playerPoliticianId)
+      );
+    }
+    return true;
+  });
+  const supportOutlook = (() => {
+    if (!whip) return "Outlook unclear";
+    const total = Math.max(1, whip.likelyYes + whip.likelyNo + whip.uncertain);
+    const lean = (whip.likelyYes - whip.likelyNo) / total;
+    return formatWhipLean(lean);
+  })();
+
   const speakerHolderId =
     Object.values(props.snap.officeTerms).find(
       (term) =>
@@ -625,97 +683,6 @@ export function AssemblyPage(props: {
   const rail =
     mp || speaker ? (
       <>
-        {playerIsWhip ? (
-          <div className="whip-rail-panel">
-            <SectionDivider title="Whip desk" hint="Delegation position and floor strength" />
-            {bill ? (
-              <>
-                <dl className="dossier-facts compact">
-                  <div>
-                    <dt>Bill</dt>
-                    <dd>{bill.title}</dd>
-                  </div>
-                  <div>
-                    <dt>Position</dt>
-                    <dd>
-                      {stanceLabel(
-                        partyStance(
-                          props.snap,
-                          playerParty === "none" ? null : playerParty,
-                          bill.id,
-                        ),
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Whip strength</dt>
-                    <dd>
-                      {(playerCaucusLeadership?.whipStrengths?.[bill.id] ?? "free").replaceAll(
-                        "_",
-                        " ",
-                      )}
-                    </dd>
-                  </div>
-                  {whip ? (
-                    <div>
-                      <dt>Estimate</dt>
-                      <dd>
-                        Yes {whip.likelyYes} · No {whip.likelyNo} · Unc {whip.uncertain}
-                      </dd>
-                    </div>
-                  ) : null}
-                </dl>
-                {playerMaySetWhip ? (
-                  <div className="whip-position-controls rail-whip-controls">
-                    <div className="row">
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        onClick={() =>
-                          run({
-                            type: "SET_CAUCUS_BILL_POSITION",
-                            billId: bill.id,
-                            stance: "support",
-                          })
-                        }
-                      >
-                        Support
-                      </button>
-                      <button
-                        type="button"
-                        className="btn danger btn-sm"
-                        onClick={() =>
-                          run({
-                            type: "SET_CAUCUS_BILL_POSITION",
-                            billId: bill.id,
-                            stance: "oppose",
-                          })
-                        }
-                      >
-                        Oppose
-                      </button>
-                      <button
-                        type="button"
-                        className="btn secondary btn-sm"
-                        onClick={() =>
-                          run({
-                            type: "SET_CAUCUS_BILL_POSITION",
-                            billId: bill.id,
-                            stance: "free_vote",
-                          })
-                        }
-                      >
-                        Free
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <p className="muted">Select a bill to set the caucus position.</p>
-            )}
-          </div>
-        ) : null}
         <SectionDivider
           title="Votes due"
           hint={votesDue.length ? "Cast before month close" : "None pending"}
@@ -857,13 +824,23 @@ export function AssemblyPage(props: {
         subtitle={`${mps.length} sitting of ${seatCount} authorized seats.`}
       />
       <WorkLayout
-        header={compositionHeader}
+        header={
+          <BriefStrip
+            items={[
+              { label: "Sitting", value: `${mps.length}/${seatCount}` },
+              { label: "Majority", value: majority },
+              { label: "On floor", value: floorQueue.length },
+              { label: "Votes due", value: votesDue.length },
+            ]}
+          />
+        }
         main={
           <>
-            <TabBar tabs={chamberTabs} value={chamberTab} onChange={setChamberTab} />
+            <TabBar tabs={assemblyTabs} value={assemblyTab} onChange={setAssemblyTab} />
 
-            {chamberTab === "business" ? (
-              <>
+            {assemblyTab === "overview" ? (
+              <div data-qa="assembly-overview">
+                {compositionHeader}
                 <SectionDivider
                   title="Current business"
                   hint="Floor-scheduled and pending chamber work"
@@ -1075,7 +1052,10 @@ export function AssemblyPage(props: {
                     <button
                       type="button"
                       className="link-button"
-                      onClick={() => setChamberTab("lawbook")}
+                      onClick={() => {
+                        setAssemblyTab("legislation");
+                        setLegislationSubTab("statutes");
+                      }}
                     >
                       Law &amp; Constitution
                     </button>
@@ -1084,1365 +1064,1723 @@ export function AssemblyPage(props: {
                   </p>
                 </div>
 
-                <SectionDivider title="Bills" hint="All introduced measures" />
-                <DataTable headers={["Title", "Status", "Sponsor"]} dense>
-                  {allBills.map((b) => (
-                    <tr
-                      key={b.id}
-                      className={props.selectedBill === b.id ? "selected" : undefined}
-                      onClick={() => selectBill(b.id)}
-                    >
-                      <td>{b.title}</td>
-                      <td>
-                        <StatusBadge tone={statusTone(b.status)}>
-                          {billStatusLabel(b.status)}
-                        </StatusBadge>
-                      </td>
-                      <td>{politicianDisplayName(props.catalog, b.sponsorId)}</td>
-                    </tr>
-                  ))}
-                </DataTable>
-
-                {bill ? (
-                  <div className="bill-inspector">
-                    <SectionDivider
-                      title={bill.title}
-                      hint={billStatusLabel(bill.status)}
-                      actions={
-                        <button
-                          type="button"
-                          className="btn ghost"
-                          onClick={() => props.setSelectedBill(null)}
-                        >
-                          Close
-                        </button>
-                      }
-                    />
-                    <BillProgressTrack status={bill.status} />
-                    <TabBar
-                      tabs={[
-                        { id: "overview", label: "Overview" },
-                        { id: "provisions", label: "Provisions" },
-                        { id: "politics", label: "Politics" },
-                        { id: "process", label: "Process" },
-                      ]}
-                      value={billTab}
-                      onChange={setBillTab}
-                    />
-
-                    {billTab === "overview" ? (
-                      <div className="bill-tab-body">
-                        <BriefStrip
-                          items={[
-                            { label: "Status", value: billStatusLabel(bill.status) },
-                            { label: "Version", value: `Version ${bill.version}` },
-                            {
-                              label: "Committee",
-                              value: committeeDisplayName(bill.assignedCommitteeId),
-                            },
-                            {
-                              label: "Sponsor",
-                              value: politicianDisplayName(props.catalog, bill.sponsorId),
-                            },
-                            { label: "Cosponsors", value: bill.cosponsorIds.length },
-                          ]}
-                        />
-                        {bill.summary ? <p>{oneLine(bill.summary)}</p> : null}
-                        {mp ? (
-                          <div className="row" style={{ marginTop: "0.6rem" }}>
-                            <button
-                              type="button"
-                              className="btn secondary"
-                              onClick={() => run({ type: "COSPONSOR_BILL", billId: bill.id })}
-                            >
-                              Cosponsor
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {billTab === "provisions" ? (
-                      <div className="bill-tab-body">
-                        {bill.policyItems.map((p: PolicyItem, i: number) => (
-                          <EntityRow
-                            key={`${p.issueId}-${i}`}
-                            title={policyItemDisplay(props.catalog, p)}
-                            meta={issueDisplayName(props.catalog, p.issueId)}
-                          />
-                        ))}
-                        {mp &&
-                        ["committee", "floor_scheduled", "repassage_scheduled"].includes(
-                          bill.status,
-                        ) ? (
-                          <div style={{ marginTop: "0.8rem" }}>
-                            <SectionDivider
-                              title="Propose amendment"
-                              hint="Replace one concrete provision"
-                            />
-                            {(() => {
-                              const amendable = bill.policyItems.filter((item) => item.provisionId);
-                              const targetId = amendProvision || amendable[0]?.provisionId || "";
-                              const target = targetId
-                                ? provisionChoices(props.snap, targetId)
-                                : null;
-                              const currentItem = amendable.find(
-                                (item) => item.provisionId === targetId,
-                              );
-                              const selectedOption =
-                                amendOption ||
-                                target?.options[0]?.id ||
-                                target?.definition.options.find((option) => !option.founding)?.id ||
-                                target?.definition.options[0]?.id ||
-                                "";
-                              return amendable.length === 0 || !target ? (
-                                <p className="muted">
-                                  This legacy bill has no concrete provision that can be amended.
-                                </p>
-                              ) : (
-                                <>
-                                  <label className="field-label">
-                                    Provision
-                                    <select
-                                      value={targetId}
-                                      onChange={(event) => {
-                                        setAmendProvision(event.target.value);
-                                        setAmendOption("");
-                                      }}
-                                    >
-                                      {amendable.map((item) => (
-                                        <option key={item.provisionId} value={item.provisionId}>
-                                          {legislativeProvision(item.provisionId!)?.category ??
-                                            issueDisplayName(props.catalog, item.issueId)}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
-                                  <PolicyChoiceGroup
-                                    title={target.definition.category}
-                                    currentLabel={target.currentLabel}
-                                    selectedId={selectedOption}
-                                    onSelect={setAmendOption}
-                                    options={target.options}
-                                    controlHint={target.controlHint ?? null}
-                                  />
-                                  <button
-                                    type="button"
-                                    className="btn"
-                                    disabled={selectedOption === currentItem?.optionId}
-                                    onClick={() => {
-                                      const replacement = policyItemForProvision(
-                                        targetId,
-                                        selectedOption,
-                                      );
-                                      if (!replacement) return;
-                                      run({
-                                        type: "PROPOSE_AMENDMENT",
-                                        billId: bill.id,
-                                        policyItems: [replacement],
-                                      });
-                                    }}
-                                  >
-                                    Submit provision amendment
-                                  </button>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {billTab === "politics" ? (
-                      <div className="bill-tab-body">
-                        <BriefStrip
-                          items={[
-                            {
-                              label: "Party",
-                              value: stanceLabel(
-                                partyStance(
-                                  props.snap,
-                                  props.snap.politicians[props.snap.playerPoliticianId]?.partyId ??
-                                    null,
-                                  bill.id,
-                                ),
-                              ),
-                            },
-                            {
-                              label: "Caucus",
-                              value: stanceLabel(
-                                factionStance(
-                                  props.snap,
-                                  props.snap.politicians[props.snap.playerPoliticianId]
-                                    ?.factionId ?? null,
-                                  bill.id,
-                                ),
-                              ),
-                            },
-                            ...(whip
-                              ? [
-                                  {
-                                    label: "Whip yes",
-                                    value: `${whip.likelyYes} (${whip.yesRange[0]}–${whip.yesRange[1]})`,
-                                  },
-                                  { label: "Uncertain", value: whip.uncertain },
-                                ]
-                              : []),
-                            {
-                              label: "Next stage",
-                              value:
-                                bill.status === "committee"
-                                  ? "Committee vote"
-                                  : bill.status === "floor_scheduled"
-                                    ? "Floor vote"
-                                    : bill.status === "repassage_scheduled"
-                                      ? "Repassage vote"
-                                      : billStatusLabel(bill.status),
-                            },
-                          ]}
-                        />
-                        {whip ? (
-                          <p className="muted">
-                            Likely no {whip.likelyNo} · estimate only, not a recorded whip.
-                          </p>
-                        ) : null}
-                        {bill ? (
-                          <>
-                            <SectionDivider
-                              title="Delegation lean"
-                              hint="Predicted from the same vote engine NPCs use on the floor"
-                            />
-                            {(() => {
-                              const focusParty =
-                                props.snap.politicians[props.snap.playerPoliticianId]?.partyId ??
-                                partyRanks[0]?.[0] ??
-                                null;
-                              const caucusIds = focusParty
-                                ? mps.filter(
-                                    (memberId) =>
-                                      props.snap.politicians[memberId]?.partyId === focusParty,
-                                  )
-                                : mps.slice(0, 18);
-                              const sample = caucusIds
-                                .slice()
-                                .sort((a, b) => a.localeCompare(b))
-                                .slice(0, 18)
-                                .map((memberId) => ({
-                                  memberId,
-                                  ...estimateMpBillLean(props.world, props.snap, bill, memberId),
-                                }));
-                              const playerLean = estimateMpBillLean(
-                                props.world,
-                                props.snap,
-                                bill,
-                                props.snap.playerPoliticianId,
-                              );
-                              return (
-                                <>
-                                  <WhyPanel
-                                    title="Why this bill for you?"
-                                    summary={
-                                      playerLean.lean === "likely_yes"
-                                        ? "Your recorded positions and party signals lean toward support."
-                                        : playerLean.lean === "likely_no"
-                                          ? "Your recorded positions and party signals lean against."
-                                          : "Signals are mixed; your vote remains yours to cast."
-                                    }
-                                    factors={playerLean.factors}
-                                  />
-                                  <DataTable dense headers={["Member", "Lean", "Why"]}>
-                                    {sample.map((row) => (
-                                      <tr key={row.memberId}>
-                                        <td>
-                                          {props.onEntityNavigate ? (
-                                            <EntityLink
-                                              kind="Politician"
-                                              id={row.memberId}
-                                              label={politicianDisplayName(
-                                                props.catalog,
-                                                row.memberId,
-                                              )}
-                                              onNavigate={props.onEntityNavigate}
-                                            />
-                                          ) : (
-                                            politicianDisplayName(props.catalog, row.memberId)
-                                          )}
-                                        </td>
-                                        <td>
-                                          <StatusBadge
-                                            tone={
-                                              row.lean === "likely_yes"
-                                                ? "ok"
-                                                : row.lean === "likely_no"
-                                                  ? "warn"
-                                                  : "idle"
-                                            }
-                                          >
-                                            {mpLeanLabel(row.lean)}
-                                          </StatusBadge>
-                                        </td>
-                                        <td>
-                                          <WhyPanel title="Why?" factors={row.factors} />
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </DataTable>
-                                </>
-                              );
-                            })()}
-                          </>
-                        ) : null}
-                        <SectionDivider
-                          title="Party positions"
-                          hint="Public recommendations; members retain their own vote"
-                        />
-                        <DataTable dense headers={["Party", "Seats", "Position"]}>
-                          {partyRanks.map(([partyId, seats]) => (
-                            <tr key={partyId}>
-                              <td>
-                                {partyDisplayName(
-                                  props.world,
-                                  partyId === "none" ? null : partyId,
-                                  props.snap,
-                                )}
-                              </td>
-                              <td>{seats}</td>
-                              <td>
-                                {stanceLabel(
-                                  partyStance(
-                                    props.snap,
-                                    partyId === "none" ? null : partyId,
-                                    bill.id,
-                                  ),
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </DataTable>
-                        <SectionDivider title="Caucus positions" />
-                        <div className="bill-caucus-positions">
-                          {Object.values(props.world.factionDefinitions)
-                            .filter((definition) => counts.has(definition.partyId))
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .map((definition) => (
-                              <EntityRow
-                                key={definition.factionId}
-                                title={definition.name}
-                                meta={partyDisplayName(props.world, definition.partyId, props.snap)}
-                                status={
-                                  <StatusBadge>
-                                    {stanceLabel(
-                                      factionStance(props.snap, definition.factionId, bill.id),
-                                    )}
-                                  </StatusBadge>
-                                }
-                              />
-                            ))}
-                        </div>
-                        <SectionDivider title="Organization positions" />
-                        {Object.entries(props.snap.organizationRuntime.actors).flatMap(
-                          ([organizationId, actor]) =>
-                            actor.billPressure
-                              .filter((pressure) => pressure.billId === bill.id)
-                              .map((pressure) => ({ organizationId, pressure })),
-                        ).length === 0 ? (
-                          <p className="muted">
-                            No organization has announced a position on this bill.
-                          </p>
-                        ) : (
-                          Object.entries(props.snap.organizationRuntime.actors)
-                            .flatMap(([organizationId, actor]) =>
-                              actor.billPressure
-                                .filter((pressure) => pressure.billId === bill.id)
-                                .map((pressure) => ({ organizationId, pressure })),
-                            )
-                            .map(({ organizationId, pressure }) => (
-                              <EntityRow
-                                key={`${organizationId}:${pressure.billId}`}
-                                title={
-                                  props.world.interestOrganizations[organizationId]?.name ??
-                                  "Public organization"
-                                }
-                                status={
-                                  <StatusBadge tone={pressure.stance === "support" ? "ok" : "warn"}>
-                                    {pressure.stance === "support" ? "Support" : "Oppose"}
-                                  </StatusBadge>
-                                }
-                              />
-                            ))
-                        )}
-                      </div>
-                    ) : null}
-
-                    {billTab === "process" ? (
-                      <div className="bill-tab-body">
-                        {bill.committeeVoteId || bill.floorVoteId || bill.repassageVoteId ? (
-                          <>
-                            <SectionDivider title="Recorded votes" />
-                            {[bill.committeeVoteId, bill.floorVoteId, bill.repassageVoteId]
-                              .filter((id): id is string => !!id)
-                              .map((id) => {
-                                const v = props.snap.legislatureRuntime.legislativeVotes[id];
-                                if (!v) return null;
-                                return (
-                                  <EntityRow
-                                    key={id}
-                                    title={v.stage}
-                                    meta={`Yes ${v.yes} / No ${v.no} / Abstain ${v.abstain}`}
-                                    status={
-                                      <StatusBadge tone={v.passed ? "ok" : "warn"}>
-                                        {v.passed ? "Passed" : "Failed"}
-                                      </StatusBadge>
-                                    }
-                                  />
-                                );
-                              })}
-                          </>
-                        ) : (
-                          <p className="muted">No recorded votes yet.</p>
-                        )}
-                        {bill.amendmentIds.length > 0 ? (
-                          <>
-                            <SectionDivider title="Amendments" />
-                            {bill.amendmentIds.map((id) => {
-                              const a = props.snap.legislatureRuntime.amendments[id];
-                              if (!a) return null;
-                              return (
-                                <EntityRow
-                                  key={id}
-                                  title={politicianDisplayName(props.catalog, a.sponsorId)}
-                                  meta={a.policyItems
-                                    .map((p) => policyItemDisplay(props.catalog, p))
-                                    .join("; ")}
-                                  status={<StatusBadge>{a.status}</StatusBadge>}
-                                />
-                              );
-                            })}
-                          </>
-                        ) : null}
-                        {playerMaySetWhip ? (
-                          <div className="whip-position-controls">
-                            <SectionDivider
-                              title="Set Assembly Delegation position"
-                              hint="Party members retain their own vote; ideological caucuses are separate"
-                            />
-                            <div className="row">
-                              <button
-                                type="button"
-                                className="btn"
-                                onClick={() =>
-                                  run({
-                                    type: "SET_CAUCUS_BILL_POSITION",
-                                    billId: bill.id,
-                                    stance: "support",
-                                  })
-                                }
-                              >
-                                Support
-                              </button>
-                              <button
-                                type="button"
-                                className="btn danger"
-                                onClick={() =>
-                                  run({
-                                    type: "SET_CAUCUS_BILL_POSITION",
-                                    billId: bill.id,
-                                    stance: "oppose",
-                                  })
-                                }
-                              >
-                                Oppose
-                              </button>
-                              <button
-                                type="button"
-                                className="btn secondary"
-                                onClick={() =>
-                                  run({
-                                    type: "SET_CAUCUS_BILL_POSITION",
-                                    billId: bill.id,
-                                    stance: "free_vote",
-                                  })
-                                }
-                              >
-                                Free vote
-                              </button>
-                            </div>
-                          </div>
-                        ) : null}
-                        <SectionDivider
-                          title="Version history"
-                          hint={`Current version ${bill.version}`}
-                        />
-                        <div className="bill-version-history">
-                          {bill.versionHistory
-                            .slice()
-                            .reverse()
-                            .map((version) => {
-                              const previous = bill.versionHistory.find(
-                                (candidate) => candidate.version === version.version - 1,
-                              );
-                              const beforeByProvision = new Map(
-                                (previous?.policyItems ?? []).map((item) => [
-                                  item.provisionId ?? item.issueId,
-                                  item,
-                                ]),
-                              );
-                              const afterByProvision = new Map(
-                                version.policyItems.map((item) => [
-                                  item.provisionId ?? item.issueId,
-                                  item,
-                                ]),
-                              );
-                              const changed = [
-                                ...new Set([
-                                  ...beforeByProvision.keys(),
-                                  ...afterByProvision.keys(),
-                                ]),
-                              ].flatMap((key) => {
-                                const before = beforeByProvision.get(key);
-                                const after = afterByProvision.get(key);
-                                const beforeLabel = before
-                                  ? policyItemDisplay(props.catalog, before)
-                                  : "Not included";
-                                const afterLabel = after
-                                  ? policyItemDisplay(props.catalog, after)
-                                  : "Removed";
-                                return beforeLabel === afterLabel
-                                  ? []
-                                  : [{ key, beforeLabel, afterLabel }];
-                              });
-                              return (
-                                <div
-                                  key={`${bill.id}:v${version.version}`}
-                                  className="bill-version-entry"
-                                >
-                                  <EntityRow
-                                    title={`Version ${version.version}`}
-                                    meta={`${version.date} · ${version.reason === "introduced" ? "Introduced" : "Adopted amendment"}`}
-                                  />
-                                  {changed.length ? (
-                                    <div
-                                      className="bill-version-diff"
-                                      aria-label={`Changes in version ${version.version}`}
-                                    >
-                                      {changed.map((change) => (
-                                        <div key={change.key} className="bill-version-diff-row">
-                                          <span>{change.beforeLabel}</span>
-                                          <strong aria-hidden="true">→</strong>
-                                          <span>{change.afterLabel}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : version.version > 1 ? (
-                                    <p className="muted">No operative provision changed.</p>
-                                  ) : null}
-                                </div>
-                              );
-                            })}
-                        </div>
-                        {bill.cosponsorIds.length > 0 ? (
-                          <p className="muted" style={{ marginTop: "0.6rem" }}>
-                            Cosponsors:{" "}
-                            {bill.cosponsorIds
-                              .map((id) => politicianDisplayName(props.catalog, id))
-                              .join(", ")}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-
-            {chamberTab === "draft" && mp ? (
-              <>
-                <SectionDivider
-                  title="Draft legislation"
-                  hint="Add concrete proposals that change current law"
-                  actions={<StatusBadge>{draftProvisions.length}/8 provisions</StatusBadge>}
-                />
-                {draftProvisions.map((draft, index) => {
-                  const { definition, options, currentLabel, controlHint } = provisionChoices(
-                    props.snap,
-                    draft.provisionId,
-                  );
-                  const selected =
-                    definition.options.find((o) => o.id === draft.optionId) ??
-                    definition.options.find((o) => !o.founding) ??
-                    definition.options[0]!;
-                  return (
-                    <div key={`${index}-${draft.provisionId}`}>
-                      <label className="draft-category">
-                        Policy category
-                        <select
-                          value={definition.id}
-                          onChange={(event) => {
-                            const nextId = event.target.value;
-                            setDraftProvisions((rows) =>
-                              rows.map((row, rowIndex) =>
-                                rowIndex === index
-                                  ? {
-                                      provisionId: nextId,
-                                      optionId: defaultProvisionOptionId(nextId),
-                                    }
-                                  : row,
-                              ),
-                            );
-                            setDraftLawAction(null);
-                            setDraftTargetLawId(null);
-                          }}
-                        >
-                          {LEGISLATIVE_PROVISIONS.map((candidate) => (
-                            <option
-                              key={candidate.id}
-                              value={candidate.id}
-                              disabled={draftProvisions.some(
-                                (row, rowIndex) =>
-                                  rowIndex !== index && row.provisionId === candidate.id,
-                              )}
-                            >
-                              {candidate.category}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <PolicyChoiceGroup
-                        title={definition.category}
-                        currentLabel={currentLabel}
-                        options={options}
-                        selectedId={draft.optionId}
-                        controlHint={controlHint ?? null}
-                        onSelect={(optionId) =>
-                          setDraftProvisions((rows) =>
-                            rows.map((row, rowIndex) =>
-                              rowIndex === index ? { ...row, optionId } : row,
-                            ),
-                          )
-                        }
-                        details={
-                          <>
-                            <p>{selected.change}</p>
-                            {draftProvisions.length > 1 ? (
-                              <button
-                                className="btn ghost"
-                                type="button"
-                                onClick={() =>
-                                  setDraftProvisions((rows) =>
-                                    rows.filter((_, rowIndex) => rowIndex !== index),
-                                  )
-                                }
-                              >
-                                Remove provision
-                              </button>
-                            ) : null}
-                          </>
-                        }
-                      />
-                    </div>
-                  );
-                })}
-                {draftProvisions.length < 8 ? (
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => {
-                      const next = LEGISLATIVE_PROVISIONS.find(
-                        (definition) =>
-                          !draftProvisions.some((row) => row.provisionId === definition.id),
-                      );
-                      if (next) {
-                        setDraftProvisions((rows) => [
-                          ...rows,
-                          { provisionId: next.id, optionId: defaultProvisionOptionId(next.id) },
-                        ]);
-                      }
-                    }}
-                  >
-                    Add provision
-                  </button>
-                ) : null}
-                <div className="bill-copy-fields">
-                  <input
-                    className="search"
-                    placeholder="Optional title — a formal title will be generated"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                  />
-                  <input
-                    className="search"
-                    placeholder="Optional sponsor statement"
-                    value={summary}
-                    onChange={(e) => setSummary(e.target.value)}
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="btn"
-                  style={{ marginTop: "0.5rem" }}
-                  disabled={
-                    draftItems.length < 1 ||
-                    new Set(draftProvisions.map((row) => row.provisionId)).size !==
-                      draftProvisions.length
-                  }
-                  onClick={() => {
-                    const r = props.sim.executeCommand({
-                      type: "INTRODUCE_BILL",
-                      title: title.trim(),
-                      summary: summary.trim(),
-                      policyItems: draftItems,
-                      ...(draftLawAction ? { lawAction: draftLawAction } : {}),
-                      ...(draftTargetLawId ? { targetLawId: draftTargetLawId } : {}),
-                    });
-                    if (props.report(r) && r.ok) {
-                      setTitle("");
-                      setSummary("");
-                      setDraftLawAction(null);
-                      setDraftTargetLawId(null);
-                    }
-                    props.onDone();
-                  }}
-                >
-                  Introduce
-                </button>
-              </>
-            ) : null}
-
-            {chamberTab === "committees" ? (
-              <>
-                <SectionDivider title="Committees" />
-                {Object.values(props.snap.legislatureRuntime.committees).map((c) => (
+                <SectionDivider title="Important bills" hint="Open in Legislation workspace" />
+                {allBills.slice(0, 8).map((b) => (
                   <EntityRow
-                    key={c.id}
-                    title={committeeDisplayName(c.id)}
-                    meta={`${c.memberIds.length} members · Chair ${c.chairId ? politicianDisplayName(props.catalog, c.chairId) : "vacant"}`}
-                    selected={c.id === activeCommitteeId}
-                    onClick={() => setSelectedCommitteeId(c.id)}
+                    key={b.id}
+                    title={b.title}
+                    meta={`${committeeDisplayName(b.assignedCommitteeId)} · ${politicianDisplayName(props.catalog, b.sponsorId)}`}
+                    status={
+                      <StatusBadge tone={statusTone(b.status)}>
+                        {billStatusLabel(b.status)}
+                      </StatusBadge>
+                    }
+                    onClick={() => selectBill(b.id)}
                   />
                 ))}
-                {selectedCommittee ? (
-                  <>
-                    <SectionDivider
-                      title={committeeDisplayName(selectedCommittee.id)}
-                      hint={`Chair · ${selectedCommittee.chairId ? politicianDisplayName(props.catalog, selectedCommittee.chairId) : "Vacant"}`}
-                    />
-                    <div className="committee-composition-strip">
-                      {[
-                        ...selectedCommittee.memberIds
-                          .reduce((map, memberId) => {
-                            const partyId = props.snap.politicians[memberId]?.partyId ?? "none";
-                            map.set(partyId, (map.get(partyId) ?? 0) + 1);
-                            return map;
-                          }, new Map<string, number>())
-                          .entries(),
-                      ]
-                        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-                        .map(([partyId, seats]) => (
-                          <span key={partyId}>
-                            <i
-                              className="party-dot"
-                              style={{
-                                background: partyColor(
-                                  props.world,
-                                  partyId === "none" ? null : partyId,
-                                ),
-                              }}
-                            />
-                            {partyDisplayName(
-                              props.world,
-                              partyId === "none" ? null : partyId,
-                              props.snap,
-                            )}{" "}
-                            {seats}
-                          </span>
-                        ))}
-                    </div>
-                    <div className="roll-call-scroll">
-                      <DataTable dense headers={["Member", "Party", "Caucus"]}>
-                        {selectedCommittee.memberIds.map((memberId) => (
-                          <tr key={memberId} onClick={() => setSelectedMember(memberId)}>
-                            <td>
-                              <button type="button" className="link-button">
-                                {politicianDisplayName(props.catalog, memberId)}
-                              </button>
-                              {memberId === selectedCommittee.chairId ? " · Chair" : ""}
-                            </td>
-                            <td>
-                              {partyDisplayName(
-                                props.world,
-                                props.snap.politicians[memberId]?.partyId ?? null,
-                                props.snap,
-                              )}
-                            </td>
-                            <td>
-                              {props.snap.politicians[memberId]?.factionId
-                                ? (props.world.factionDefinitions[
-                                    props.snap.politicians[memberId]!.factionId!
-                                  ]?.name ?? "—")
-                                : "—"}
-                            </td>
-                          </tr>
-                        ))}
-                      </DataTable>
-                    </div>
-                    <SectionDivider title="Pending bills" />
-                    {allBills.filter(
-                      (candidate) =>
-                        candidate.assignedCommitteeId === selectedCommittee.id &&
-                        ["introduced", "committee"].includes(candidate.status),
-                    ).length === 0 ? (
-                      <p className="muted">No bill is presently pending.</p>
-                    ) : (
-                      allBills
-                        .filter(
-                          (candidate) =>
-                            candidate.assignedCommitteeId === selectedCommittee.id &&
-                            ["introduced", "committee"].includes(candidate.status),
-                        )
-                        .map((candidate) => (
-                          <EntityRow
-                            key={candidate.id}
-                            title={candidate.title}
-                            meta={billStatusLabel(candidate.status)}
-                            onClick={() => selectBill(candidate.id)}
-                          />
-                        ))
-                    )}
-                    <SectionDivider title="Recent committee votes" />
-                    {votes.filter((vote) => vote.committeeId === selectedCommittee.id).length ===
-                    0 ? (
-                      <p className="muted">No committee roll call has been recorded.</p>
-                    ) : (
-                      <DataTable dense headers={["Date", "Measure", "Result"]}>
-                        {votes
-                          .filter((vote) => vote.committeeId === selectedCommittee.id)
-                          .slice(0, 12)
-                          .map((vote) => (
-                            <tr
-                              key={vote.id}
-                              onClick={() => {
-                                setSelectedVoteId(vote.id);
-                                setChamberTab("votes");
-                              }}
-                            >
-                              <td>{vote.date}</td>
-                              <td>
-                                {props.snap.legislatureRuntime.bills[vote.billId]?.title ??
-                                  "Assembly matter"}
-                              </td>
-                              <td>
-                                {vote.yes}–{vote.no} · {vote.abstain} abstain
-                              </td>
-                            </tr>
-                          ))}
-                      </DataTable>
-                    )}
-                  </>
-                ) : null}
-              </>
+              </div>
             ) : null}
 
-            {chamberTab === "votes" ? (
-              <>
-                <SectionDivider title="Completed votes" />
-                <DataTable headers={["Bill", "Stage", "Result"]} dense>
-                  {votes.slice(0, 30).map((v) => {
-                    const parent = props.snap.legislatureRuntime.bills[v.billId];
-                    const metaTitle =
-                      typeof v.metadata?.displayTitle === "string"
-                        ? v.metadata.displayTitle
-                        : typeof v.metadata?.title === "string" &&
-                            v.metadata?.kind === "treaty_ratification"
-                          ? `Treaty ratification: ${v.metadata.title}`
-                          : null;
-                    const stageLabel =
-                      v.metadata?.kind === "treaty_ratification" ? "Treaty ratification" : v.stage;
-                    return (
-                      <tr
-                        key={v.id}
-                        className={selectedVoteId === v.id ? "selected" : undefined}
-                        onClick={() => setSelectedVoteId(v.id)}
+            {assemblyTab === "legislation" ? (
+              <div
+                className={`legislation-workspace${bill ? " assembly-mobile-bill" : " assembly-mobile-list-only"}`}
+                data-qa="legislation-workspace"
+              >
+                <TabBar
+                  tabs={[
+                    { id: "bills", label: "Bills" },
+                    ...(mp ? [{ id: "introduce" as const, label: "Introduce" }] : []),
+                    { id: "votes", label: "Votes" },
+                    { id: "statutes", label: "Statutes" },
+                  ]}
+                  value={legislationSubTab}
+                  onChange={setLegislationSubTab}
+                />
+
+                {legislationSubTab === "bills" ? (
+                  <div
+                    className={`master-detail master-detail-wide${bill ? " has-selection" : ""}`}
+                  >
+                    <div className="master-detail-list">
+                      <div
+                        className="row"
+                        style={{ gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.55rem" }}
                       >
-                        <td>{parent?.title ?? metaTitle ?? v.billId}</td>
-                        <td>{stageLabel}</td>
-                        <td>
-                          {v.passed ? "Passed" : "Failed"} · Yes {v.yes} / No {v.no} / Abstain{" "}
-                          {v.abstain}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </DataTable>
-                {selectedVoteId && props.snap.legislatureRuntime.legislativeVotes[selectedVoteId]
-                  ? (() => {
-                      const selectedVote =
-                        props.snap.legislatureRuntime.legislativeVotes[selectedVoteId]!;
-                      const rows = Object.entries(selectedVote.votes)
-                        .filter(
-                          ([, choice]) => rollCallFilter === "all" || choice === rollCallFilter,
-                        )
-                        .sort((a, b) =>
-                          politicianDisplayName(props.catalog, a[0]).localeCompare(
-                            politicianDisplayName(props.catalog, b[0]),
-                          ),
-                        );
-                      const breakdown = new Map<
-                        string,
-                        { yes: number; no: number; abstain: number }
-                      >();
-                      for (const [memberId, choice] of Object.entries(selectedVote.votes)) {
-                        const partyId = selectedVote.partyIdsAtVote?.[memberId] ?? "unrecorded";
-                        const count = breakdown.get(partyId) ?? { yes: 0, no: 0, abstain: 0 };
-                        count[choice] += 1;
-                        breakdown.set(partyId, count);
-                      }
-                      return (
-                        <div className="roll-call-panel">
-                          <SectionDivider
-                            title="Roll Call"
-                            hint={`${selectedVote.yes} Aye · ${selectedVote.no} Nay · ${selectedVote.abstain} Abstain`}
+                        <select
+                          value={billFilter}
+                          onChange={(e) => setBillFilter(e.target.value as typeof billFilter)}
+                        >
+                          <option value="all">All stages</option>
+                          <option value="active">Active</option>
+                          <option value="passed">Passed / enacted</option>
+                          <option value="failed">Failed / withdrawn</option>
+                          <option value="mine">My bills</option>
+                        </select>
+                        <input
+                          type="search"
+                          placeholder="Search bills"
+                          value={billSearch}
+                          onChange={(e) => setBillSearch(e.target.value)}
+                          aria-label="Search bills"
+                        />
+                      </div>
+                      {filteredBills.length === 0 ? (
+                        <EmptyState>No bills match these filters.</EmptyState>
+                      ) : (
+                        filteredBills.map((b) => (
+                          <EntityRow
+                            key={b.id}
+                            title={b.title}
+                            meta={`${billStatusLabel(b.status)} · ${politicianDisplayName(props.catalog, b.sponsorId)}`}
+                            selected={props.selectedBill === b.id}
+                            onClick={() => selectBill(b.id)}
                           />
-                          <div className="roll-call-breakdown">
-                            {[...breakdown.entries()]
-                              .sort(
-                                (a, b) =>
-                                  b[1].yes +
-                                  b[1].no +
-                                  b[1].abstain -
-                                  (a[1].yes + a[1].no + a[1].abstain),
-                              )
-                              .map(([partyId, count]) => (
-                                <span key={partyId}>
-                                  <strong>
-                                    {partyId === "unrecorded"
-                                      ? "Affiliation not archived"
-                                      : partyDisplayName(
+                        ))
+                      )}
+                    </div>
+                    <div className="master-detail-inspector" data-qa="selected-bill">
+                      {bill ? (
+                        <>
+                          <div className="row" style={{ marginBottom: "0.5rem" }}>
+                            <button
+                              type="button"
+                              className="btn ghost"
+                              onClick={() => props.setSelectedBill(null)}
+                            >
+                              Back to list
+                            </button>
+                          </div>
+                          <div className="bill-inspector">
+                            <SectionDivider
+                              title={bill.title}
+                              hint={billStatusLabel(bill.status)}
+                              actions={
+                                <button
+                                  type="button"
+                                  className="btn ghost"
+                                  onClick={() => props.setSelectedBill(null)}
+                                >
+                                  Close
+                                </button>
+                              }
+                            />
+                            <BillProgressTrack status={bill.status} />
+                            <TabBar
+                              tabs={[
+                                { id: "overview", label: "Overview" },
+                                { id: "provisions", label: "Provisions" },
+                                { id: "amendments", label: "Amendments" },
+                                { id: "support", label: "Support" },
+                                { id: "procedure", label: "Procedure" },
+                                { id: "history", label: "History" },
+                              ]}
+                              value={billTab}
+                              onChange={setBillTab}
+                            />
+
+                            {billTab === "overview" ? (
+                              <div className="bill-tab-body">
+                                <BriefStrip
+                                  items={[
+                                    { label: "Status", value: billStatusLabel(bill.status) },
+                                    { label: "Version", value: `Version ${bill.version}` },
+                                    {
+                                      label: "Committee",
+                                      value: committeeDisplayName(bill.assignedCommitteeId),
+                                    },
+                                    {
+                                      label: "Sponsor",
+                                      value: politicianDisplayName(props.catalog, bill.sponsorId),
+                                    },
+                                    { label: "Cosponsors", value: bill.cosponsorIds.length },
+                                  ]}
+                                />
+                                {bill.summary ? <p>{oneLine(bill.summary)}</p> : null}
+                                {mp ? (
+                                  <div className="row" style={{ marginTop: "0.6rem" }}>
+                                    <button
+                                      type="button"
+                                      className="btn secondary"
+                                      onClick={() =>
+                                        run({ type: "COSPONSOR_BILL", billId: bill.id })
+                                      }
+                                    >
+                                      Cosponsor
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
+
+                            {billTab === "provisions" ? (
+                              <div className="bill-tab-body">
+                                {bill.policyItems.map((p: PolicyItem, i: number) => (
+                                  <EntityRow
+                                    key={`${p.issueId}-${i}`}
+                                    title={policyItemDisplay(props.catalog, p)}
+                                    meta={issueDisplayName(props.catalog, p.issueId)}
+                                  />
+                                ))}
+                                {mp &&
+                                ["committee", "floor_scheduled", "repassage_scheduled"].includes(
+                                  bill.status,
+                                ) ? (
+                                  <div style={{ marginTop: "0.8rem" }}>
+                                    <SectionDivider
+                                      title="Propose amendment"
+                                      hint="Replace one concrete provision"
+                                    />
+                                    {(() => {
+                                      const amendable = bill.policyItems.filter(
+                                        (item) => item.provisionId,
+                                      );
+                                      const targetId =
+                                        amendProvision || amendable[0]?.provisionId || "";
+                                      const target = targetId
+                                        ? provisionChoices(props.snap, targetId)
+                                        : null;
+                                      const currentItem = amendable.find(
+                                        (item) => item.provisionId === targetId,
+                                      );
+                                      const selectedOption =
+                                        amendOption ||
+                                        target?.options[0]?.id ||
+                                        target?.definition.options.find(
+                                          (option) => !option.founding,
+                                        )?.id ||
+                                        target?.definition.options[0]?.id ||
+                                        "";
+                                      return amendable.length === 0 || !target ? (
+                                        <p className="muted">
+                                          This legacy bill has no concrete provision that can be
+                                          amended.
+                                        </p>
+                                      ) : (
+                                        <>
+                                          <label className="field-label">
+                                            Provision
+                                            <select
+                                              value={targetId}
+                                              onChange={(event) => {
+                                                setAmendProvision(event.target.value);
+                                                setAmendOption("");
+                                              }}
+                                            >
+                                              {amendable.map((item) => (
+                                                <option
+                                                  key={item.provisionId}
+                                                  value={item.provisionId}
+                                                >
+                                                  {legislativeProvision(item.provisionId!)
+                                                    ?.category ??
+                                                    issueDisplayName(props.catalog, item.issueId)}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </label>
+                                          <PolicyChoiceGroup
+                                            title={target.definition.category}
+                                            currentLabel={target.currentLabel}
+                                            selectedId={selectedOption}
+                                            onSelect={setAmendOption}
+                                            options={target.options}
+                                            controlHint={target.controlHint ?? null}
+                                          />
+                                          <button
+                                            type="button"
+                                            className="btn"
+                                            disabled={selectedOption === currentItem?.optionId}
+                                            onClick={() => {
+                                              const replacement = policyItemForProvision(
+                                                targetId,
+                                                selectedOption,
+                                              );
+                                              if (!replacement) return;
+                                              run({
+                                                type: "PROPOSE_AMENDMENT",
+                                                billId: bill.id,
+                                                policyItems: [replacement],
+                                              });
+                                            }}
+                                          >
+                                            Submit provision amendment
+                                          </button>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
+
+                            {billTab === "support" ? (
+                              <div className="bill-tab-body">
+                                <BriefStrip
+                                  items={[
+                                    {
+                                      label: "Party",
+                                      value: stanceLabel(
+                                        partyStance(
+                                          props.snap,
+                                          props.snap.politicians[props.snap.playerPoliticianId]
+                                            ?.partyId ?? null,
+                                          bill.id,
+                                        ),
+                                      ),
+                                    },
+                                    {
+                                      label: "Caucus",
+                                      value: stanceLabel(
+                                        factionStance(
+                                          props.snap,
+                                          props.snap.politicians[props.snap.playerPoliticianId]
+                                            ?.factionId ?? null,
+                                          bill.id,
+                                        ),
+                                      ),
+                                    },
+                                    ...(whip
+                                      ? exactInternals
+                                        ? [
+                                            {
+                                              label: "Whip yes",
+                                              value: `${whip.likelyYes} (${whip.yesRange[0]}–${whip.yesRange[1]})`,
+                                            },
+                                            { label: "Uncertain", value: whip.uncertain },
+                                          ]
+                                        : [
+                                            { label: "Outlook", value: supportOutlook },
+                                            {
+                                              label: "Chamber lean",
+                                              value: formatWhipLean(
+                                                (whip.likelyYes - whip.likelyNo) /
+                                                  Math.max(
+                                                    1,
+                                                    whip.likelyYes + whip.likelyNo + whip.uncertain,
+                                                  ),
+                                              ),
+                                            },
+                                          ]
+                                      : []),
+                                    {
+                                      label: "Next stage",
+                                      value:
+                                        bill.status === "committee"
+                                          ? "Committee vote"
+                                          : bill.status === "floor_scheduled"
+                                            ? "Floor vote"
+                                            : bill.status === "repassage_scheduled"
+                                              ? "Repassage vote"
+                                              : billStatusLabel(bill.status),
+                                    },
+                                  ]}
+                                />
+                                {whip && exactInternals ? (
+                                  <p className="muted">
+                                    Likely no {whip.likelyNo} · estimate only, not a recorded whip.
+                                  </p>
+                                ) : whip ? (
+                                  <p className="muted">
+                                    Support outlook is a political assessment, not a probability.
+                                  </p>
+                                ) : null}
+                                {bill ? (
+                                  <>
+                                    <SectionDivider
+                                      title="Delegation lean"
+                                      hint="Predicted from the same vote engine NPCs use on the floor"
+                                    />
+                                    {(() => {
+                                      const focusParty =
+                                        props.snap.politicians[props.snap.playerPoliticianId]
+                                          ?.partyId ??
+                                        partyRanks[0]?.[0] ??
+                                        null;
+                                      const caucusIds = focusParty
+                                        ? mps.filter(
+                                            (memberId) =>
+                                              props.snap.politicians[memberId]?.partyId ===
+                                              focusParty,
+                                          )
+                                        : mps.slice(0, 18);
+                                      const sample = caucusIds
+                                        .slice()
+                                        .sort((a, b) => a.localeCompare(b))
+                                        .slice(0, 18)
+                                        .map((memberId) => ({
+                                          memberId,
+                                          ...estimateMpBillLean(
+                                            props.world,
+                                            props.snap,
+                                            bill,
+                                            memberId,
+                                          ),
+                                        }));
+                                      const playerLean = estimateMpBillLean(
+                                        props.world,
+                                        props.snap,
+                                        bill,
+                                        props.snap.playerPoliticianId,
+                                      );
+                                      return (
+                                        <>
+                                          <WhyPanel
+                                            title="Why this bill for you?"
+                                            summary={
+                                              playerLean.lean === "likely_yes"
+                                                ? "Your recorded positions and party signals lean toward support."
+                                                : playerLean.lean === "likely_no"
+                                                  ? "Your recorded positions and party signals lean against."
+                                                  : "Signals are mixed; your vote remains yours to cast."
+                                            }
+                                            factors={playerLean.factors}
+                                          />
+                                          <p className="muted">
+                                            {explainVoteQualitative({
+                                              labels: playerLean.factors.map((f) =>
+                                                typeof f === "string" ? f : (f.label ?? String(f)),
+                                              ),
+                                            })}
+                                          </p>
+                                          <DataTable dense headers={["Member", "Lean", "Why"]}>
+                                            {sample.map((row) => (
+                                              <tr key={row.memberId}>
+                                                <td>
+                                                  {props.onEntityNavigate ? (
+                                                    <EntityLink
+                                                      kind="Politician"
+                                                      id={row.memberId}
+                                                      label={politicianDisplayName(
+                                                        props.catalog,
+                                                        row.memberId,
+                                                      )}
+                                                      onNavigate={props.onEntityNavigate}
+                                                    />
+                                                  ) : (
+                                                    politicianDisplayName(
+                                                      props.catalog,
+                                                      row.memberId,
+                                                    )
+                                                  )}
+                                                </td>
+                                                <td>
+                                                  <StatusBadge
+                                                    tone={
+                                                      row.lean === "likely_yes"
+                                                        ? "ok"
+                                                        : row.lean === "likely_no"
+                                                          ? "warn"
+                                                          : "idle"
+                                                    }
+                                                  >
+                                                    {mpLeanLabel(row.lean)}
+                                                  </StatusBadge>
+                                                </td>
+                                                <td>
+                                                  <WhyPanel title="Why?" factors={row.factors} />
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </DataTable>
+                                        </>
+                                      );
+                                    })()}
+                                  </>
+                                ) : null}
+                                <SectionDivider
+                                  title="Party positions"
+                                  hint="Public recommendations; members retain their own vote"
+                                />
+                                <DataTable dense headers={["Party", "Seats", "Position"]}>
+                                  {partyRanks.map(([partyId, seats]) => (
+                                    <tr key={partyId}>
+                                      <td>
+                                        {partyDisplayName(
                                           props.world,
                                           partyId === "none" ? null : partyId,
                                           props.snap,
                                         )}
-                                  </strong>{" "}
-                                  {count.yes} Aye · {count.no} Nay · {count.abstain} Abstain
-                                </span>
-                              ))}
-                          </div>
-                          <div className="map-scale-switch" aria-label="Filter roll call">
-                            {(["all", "yes", "no", "abstain"] as const).map((choice) => (
-                              <button
-                                type="button"
-                                key={choice}
-                                className={rollCallFilter === choice ? "active" : ""}
-                                onClick={() => setRollCallFilter(choice)}
-                              >
-                                {choice === "yes"
-                                  ? "Aye"
-                                  : choice === "no"
-                                    ? "Nay"
-                                    : choice[0]!.toUpperCase() + choice.slice(1)}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="roll-call-scroll">
-                            <DataTable dense headers={["Member", "Party", "Caucus", "Vote"]}>
-                              {rows.map(([memberId, choice]) => {
-                                const historicalParty = selectedVote.partyIdsAtVote?.[memberId];
-                                const historicalFaction = selectedVote.factionIdsAtVote?.[memberId];
-                                return (
-                                  <tr key={memberId} onClick={() => setSelectedMember(memberId)}>
-                                    <td>
-                                      <button type="button" className="link-button">
-                                        {politicianDisplayName(props.catalog, memberId)}
-                                      </button>
-                                    </td>
-                                    <td>
-                                      {historicalParty === undefined
-                                        ? "Not archived"
-                                        : partyDisplayName(
-                                            props.world,
-                                            historicalParty,
+                                      </td>
+                                      <td>{seats}</td>
+                                      <td>
+                                        {stanceLabel(
+                                          partyStance(
                                             props.snap,
-                                          )}
-                                    </td>
-                                    <td>
-                                      {historicalFaction === undefined
-                                        ? "Not archived"
-                                        : historicalFaction
-                                          ? (props.world.factionDefinitions[historicalFaction]
-                                              ?.name ?? "Former caucus")
-                                          : "—"}
-                                    </td>
-                                    <td>
-                                      {choice === "yes"
-                                        ? "Aye"
-                                        : choice === "no"
-                                          ? "Nay"
-                                          : "Abstain"}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </DataTable>
-                          </div>
-                        </div>
-                      );
-                    })()
-                  : null}
-              </>
-            ) : null}
-
-            {chamberTab === "lawbook" ? (
-              <>
-                <ConstitutionBrowser
-                  world={props.world}
-                  snap={props.snap}
-                  sim={props.sim}
-                  mp={Boolean(mp)}
-                  report={props.report}
-                />
-
-                <SectionDivider
-                  title="Constitutional rule history"
-                  hint="Founding values and adopted operational amendments"
-                />
-                <div className="constitution-history-list">
-                  {Object.values(props.snap.provincialRuntime.constitutionalRules)
-                    .sort((a, b) => a.label.localeCompare(b.label))
-                    .map((rule) => {
-                      const original = ORIGINAL_CONSTITUTIONAL_VALUES[rule.id];
-                      const amendments = Object.values(
-                        props.snap.provincialRuntime.constitutionalAmendments,
-                      )
-                        .filter(
-                          (amendment) =>
-                            amendment.ruleId === rule.id && amendment.status === "ratified",
-                        )
-                        .sort(
-                          (a, b) =>
-                            a.proposedDate.localeCompare(b.proposedDate) ||
-                            a.id.localeCompare(b.id),
-                        );
-                      const formatValue = (value: number) =>
-                        rule.unit === "fraction"
-                          ? `${Math.round(value * 100)}%`
-                          : `${value} ${rule.unit}`;
-                      return (
-                        <article key={`${rule.id}:history`} className="constitution-history-row">
-                          <strong>{rule.label}</strong>
-                          <div className="constitution-history-chain">
-                            <span>Founding: {formatValue(original)}</span>
-                            {amendments.map((amendment) => (
-                              <span key={amendment.id}>
-                                → {amendment.title}:{" "}
-                                {amendment.proposedValue == null
-                                  ? "text amended"
-                                  : formatValue(amendment.proposedValue)}{" "}
-                                ({amendment.enactedDate ?? amendment.proposedDate})
-                              </span>
-                            ))}
-                            {amendments.length === 0 ? (
-                              <span>→ Current rule unchanged</span>
-                            ) : (
-                              <span>→ Current: {formatValue(rule.value)}</span>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-                </div>
-
-                <SectionDivider
-                  title="Current statutory position"
-                  hint="Browse by policy area or review enacted Acts"
-                />
-                <div className="lawbook-browse-toolbar">
-                  <div className="map-scale-switch" role="tablist" aria-label="Lawbook browse mode">
-                    <button
-                      type="button"
-                      className={lawbookMode === "provisions" ? "active" : ""}
-                      onClick={() => setLawbookMode("provisions")}
-                    >
-                      Policy areas
-                    </button>
-                    <button
-                      type="button"
-                      className={lawbookMode === "acts" ? "active" : ""}
-                      onClick={() => setLawbookMode("acts")}
-                    >
-                      Acts
-                    </button>
-                  </div>
-                  <input
-                    className="search lawbook-search"
-                    value={lawQuery}
-                    onChange={(event) => setLawQuery(event.target.value)}
-                    placeholder={
-                      lawbookMode === "provisions"
-                        ? "Search policy category or operative rule"
-                        : "Search enacted Act title or provisions"
-                    }
-                  />
-                </div>
-                {lawbookMode === "provisions" ? (
-                  <>
-                    <div
-                      className="lawbook-area-chips"
-                      role="group"
-                      aria-label="Policy area filters"
-                    >
-                      <button
-                        type="button"
-                        className={!lawbookArea ? "active" : ""}
-                        onClick={() => setLawbookArea("")}
-                      >
-                        All areas
-                      </button>
-                      {POLICY_AREAS.map((area) => (
-                        <button
-                          type="button"
-                          key={area}
-                          className={lawbookArea === area ? "active" : ""}
-                          onClick={() => setLawbookArea(area)}
-                        >
-                          {area}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="current-law-grid">
-                      {LEGISLATIVE_PROVISIONS.filter((definition) => {
-                        const option = currentProvisionOption(props.snap, definition.id);
-                        const query = lawQuery.trim().toLowerCase();
-                        if (lawbookArea && definition.category !== lawbookArea) return false;
-                        return (
-                          !query ||
-                          `${definition.category} ${option?.label ?? ""} ${option?.change ?? ""}`
-                            .toLowerCase()
-                            .includes(query)
-                        );
-                      })
-                        .slice(0, 50)
-                        .map((definition) => {
-                          const option = currentProvisionOption(props.snap, definition.id);
-                          const source = currentLawSource(props.snap, definition.id);
-                          const history = provisionHistory(props.snap, definition.id);
-                          const sourceLaw = source.lawId
-                            ? props.snap.legislatureRuntime.enactedLaws[source.lawId]
-                            : null;
-                          return (
-                            <article key={definition.id} className="current-law-row">
-                              <div className="kicker">{definition.category}</div>
-                              <strong>{option?.label ?? "No operative rule recorded"}</strong>
-                              {option?.change ? <p className="muted">{option.change}</p> : null}
-                              <div className="current-law-source">
-                                {source.founding || !sourceLaw ? (
-                                  <span>Source Act: Founding statutory position</span>
+                                            partyId === "none" ? null : partyId,
+                                            bill.id,
+                                          ),
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </DataTable>
+                                <SectionDivider title="Caucus positions" />
+                                <div className="bill-caucus-positions">
+                                  {Object.values(props.world.factionDefinitions)
+                                    .filter((definition) => counts.has(definition.partyId))
+                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .map((definition) => (
+                                      <EntityRow
+                                        key={definition.factionId}
+                                        title={definition.name}
+                                        meta={partyDisplayName(
+                                          props.world,
+                                          definition.partyId,
+                                          props.snap,
+                                        )}
+                                        status={
+                                          <StatusBadge>
+                                            {stanceLabel(
+                                              factionStance(
+                                                props.snap,
+                                                definition.factionId,
+                                                bill.id,
+                                              ),
+                                            )}
+                                          </StatusBadge>
+                                        }
+                                      />
+                                    ))}
+                                </div>
+                                <SectionDivider title="Organization positions" />
+                                {Object.entries(props.snap.organizationRuntime.actors).flatMap(
+                                  ([organizationId, actor]) =>
+                                    actor.billPressure
+                                      .filter((pressure) => pressure.billId === bill.id)
+                                      .map((pressure) => ({ organizationId, pressure })),
+                                ).length === 0 ? (
+                                  <p className="muted">
+                                    No organization has announced a position on this bill.
+                                  </p>
                                 ) : (
-                                  <span>
-                                    Source Act: {source.lawTitle} · {source.enactedDate}
-                                  </span>
+                                  Object.entries(props.snap.organizationRuntime.actors)
+                                    .flatMap(([organizationId, actor]) =>
+                                      actor.billPressure
+                                        .filter((pressure) => pressure.billId === bill.id)
+                                        .map((pressure) => ({ organizationId, pressure })),
+                                    )
+                                    .map(({ organizationId, pressure }) => (
+                                      <EntityRow
+                                        key={`${organizationId}:${pressure.billId}`}
+                                        title={
+                                          props.world.interestOrganizations[organizationId]?.name ??
+                                          "Public organization"
+                                        }
+                                        status={
+                                          <StatusBadge
+                                            tone={pressure.stance === "support" ? "ok" : "warn"}
+                                          >
+                                            {pressure.stance === "support" ? "Support" : "Oppose"}
+                                          </StatusBadge>
+                                        }
+                                      />
+                                    ))
                                 )}
-                                {source.previousOptionLabel ? (
-                                  <span className="muted">
-                                    Prior rule: {source.previousOptionLabel}
-                                  </span>
-                                ) : null}
-                                {history.length > 0 ? (
-                                  <span className="muted">
-                                    History:{" "}
-                                    {history
-                                      .map((entry) => {
-                                        const law =
-                                          props.snap.legislatureRuntime.enactedLaws[entry.lawId];
-                                        const opt = legislativeProvision(
-                                          definition.id,
-                                        )?.options.find((row) => row.id === entry.optionId);
-                                        return `${law?.title ?? entry.lawId} → ${opt?.label ?? entry.optionId}`;
-                                      })
-                                      .join(" · ")}
-                                  </span>
+                              </div>
+                            ) : null}
+
+                            {billTab === "procedure" ? (
+                              <div className="bill-tab-body">
+                                {bill.committeeVoteId ||
+                                bill.floorVoteId ||
+                                bill.repassageVoteId ? (
+                                  <>
+                                    <SectionDivider title="Recorded votes" />
+                                    {[bill.committeeVoteId, bill.floorVoteId, bill.repassageVoteId]
+                                      .filter((id): id is string => !!id)
+                                      .map((id) => {
+                                        const v =
+                                          props.snap.legislatureRuntime.legislativeVotes[id];
+                                        if (!v) return null;
+                                        return (
+                                          <EntityRow
+                                            key={id}
+                                            title={v.stage}
+                                            meta={`Yes ${v.yes} / No ${v.no} / Abstain ${v.abstain}`}
+                                            status={
+                                              <StatusBadge tone={v.passed ? "ok" : "warn"}>
+                                                {v.passed ? "Passed" : "Failed"}
+                                              </StatusBadge>
+                                            }
+                                          />
+                                        );
+                                      })}
+                                  </>
                                 ) : (
-                                  <span className="muted">History: founding baseline only</span>
+                                  <p className="muted">No recorded votes yet.</p>
                                 )}
-                                {sourceLaw ? (
-                                  <button
-                                    type="button"
-                                    className="link-button"
-                                    onClick={() => {
-                                      setChamberTab("business");
-                                      selectBill(sourceLaw.billId);
-                                      setBillTab("process");
-                                    }}
-                                  >
-                                    Open act history
-                                  </button>
+                                {playerMaySetWhip ? (
+                                  <div className="whip-position-controls">
+                                    <SectionDivider
+                                      title="Set Assembly Delegation position"
+                                      hint="Party members retain their own vote; ideological caucuses are separate"
+                                    />
+                                    <div className="row">
+                                      <button
+                                        type="button"
+                                        className="btn"
+                                        onClick={() =>
+                                          run({
+                                            type: "SET_CAUCUS_BILL_POSITION",
+                                            billId: bill.id,
+                                            stance: "support",
+                                          })
+                                        }
+                                      >
+                                        Support
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn danger"
+                                        onClick={() =>
+                                          run({
+                                            type: "SET_CAUCUS_BILL_POSITION",
+                                            billId: bill.id,
+                                            stance: "oppose",
+                                          })
+                                        }
+                                      >
+                                        Oppose
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn secondary"
+                                        onClick={() =>
+                                          run({
+                                            type: "SET_CAUCUS_BILL_POSITION",
+                                            billId: bill.id,
+                                            stance: "free_vote",
+                                          })
+                                        }
+                                      >
+                                        Free vote
+                                      </button>
+                                    </div>
+                                  </div>
                                 ) : null}
                               </div>
-                              {mp && sourceLaw?.operative ? (
+                            ) : null}
+
+                            {billTab === "history" ? (
+                              <div className="bill-tab-body">
+                                <SectionDivider
+                                  title="Version history"
+                                  hint={`Current version ${bill.version}`}
+                                />
+                                <div className="bill-version-history">
+                                  {bill.versionHistory
+                                    .slice()
+                                    .reverse()
+                                    .map((version) => {
+                                      const previous = bill.versionHistory.find(
+                                        (candidate) => candidate.version === version.version - 1,
+                                      );
+                                      const beforeByProvision = new Map(
+                                        (previous?.policyItems ?? []).map((item) => [
+                                          item.provisionId ?? item.issueId,
+                                          item,
+                                        ]),
+                                      );
+                                      const afterByProvision = new Map(
+                                        version.policyItems.map((item) => [
+                                          item.provisionId ?? item.issueId,
+                                          item,
+                                        ]),
+                                      );
+                                      const changed = [
+                                        ...new Set([
+                                          ...beforeByProvision.keys(),
+                                          ...afterByProvision.keys(),
+                                        ]),
+                                      ].flatMap((key) => {
+                                        const before = beforeByProvision.get(key);
+                                        const after = afterByProvision.get(key);
+                                        const beforeLabel = before
+                                          ? policyItemDisplay(props.catalog, before)
+                                          : "Not included";
+                                        const afterLabel = after
+                                          ? policyItemDisplay(props.catalog, after)
+                                          : "Removed";
+                                        return beforeLabel === afterLabel
+                                          ? []
+                                          : [{ key, beforeLabel, afterLabel }];
+                                      });
+                                      return (
+                                        <div
+                                          key={`${bill.id}:v${version.version}`}
+                                          className="bill-version-entry"
+                                        >
+                                          <EntityRow
+                                            title={`Version ${version.version}`}
+                                            meta={`${version.date} · ${version.reason === "introduced" ? "Introduced" : "Adopted amendment"}`}
+                                          />
+                                          {changed.length ? (
+                                            <div
+                                              className="bill-version-diff"
+                                              aria-label={`Changes in version ${version.version}`}
+                                            >
+                                              {changed.map((change) => (
+                                                <div
+                                                  key={change.key}
+                                                  className="bill-version-diff-row"
+                                                >
+                                                  <span>{change.beforeLabel}</span>
+                                                  <strong aria-hidden="true">→</strong>
+                                                  <span>{change.afterLabel}</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          ) : version.version > 1 ? (
+                                            <p className="muted">No operative provision changed.</p>
+                                          ) : null}
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                                {bill.cosponsorIds.length > 0 ? (
+                                  <p className="muted" style={{ marginTop: "0.6rem" }}>
+                                    Cosponsors:{" "}
+                                    {bill.cosponsorIds
+                                      .map((id) => politicianDisplayName(props.catalog, id))
+                                      .join(", ")}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : (
+                        <EmptyState>Select a bill to open the legislation workspace.</EmptyState>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                {legislationSubTab === "introduce" && mp && assemblyTab === "legislation" ? (
+                  <>
+                    <SectionDivider
+                      title="Draft legislation"
+                      hint="Add concrete proposals that change current law"
+                      actions={<StatusBadge>{draftProvisions.length}/8 provisions</StatusBadge>}
+                    />
+                    {draftProvisions.map((draft, index) => {
+                      const { definition, options, currentLabel, controlHint } = provisionChoices(
+                        props.snap,
+                        draft.provisionId,
+                      );
+                      const selected =
+                        definition.options.find((o) => o.id === draft.optionId) ??
+                        definition.options.find((o) => !o.founding) ??
+                        definition.options[0]!;
+                      return (
+                        <div key={`${index}-${draft.provisionId}`}>
+                          <label className="draft-category">
+                            Policy category
+                            <select
+                              value={definition.id}
+                              onChange={(event) => {
+                                const nextId = event.target.value;
+                                setDraftProvisions((rows) =>
+                                  rows.map((row, rowIndex) =>
+                                    rowIndex === index
+                                      ? {
+                                          provisionId: nextId,
+                                          optionId: defaultProvisionOptionId(nextId),
+                                        }
+                                      : row,
+                                  ),
+                                );
+                                setDraftLawAction(null);
+                                setDraftTargetLawId(null);
+                              }}
+                            >
+                              {LEGISLATIVE_PROVISIONS.map((candidate) => (
+                                <option
+                                  key={candidate.id}
+                                  value={candidate.id}
+                                  disabled={draftProvisions.some(
+                                    (row, rowIndex) =>
+                                      rowIndex !== index && row.provisionId === candidate.id,
+                                  )}
+                                >
+                                  {candidate.category}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <PolicyChoiceGroup
+                            title={definition.category}
+                            currentLabel={currentLabel}
+                            options={options}
+                            selectedId={draft.optionId}
+                            controlHint={controlHint ?? null}
+                            onSelect={(optionId) =>
+                              setDraftProvisions((rows) =>
+                                rows.map((row, rowIndex) =>
+                                  rowIndex === index ? { ...row, optionId } : row,
+                                ),
+                              )
+                            }
+                            details={
+                              <>
+                                <p>{selected.change}</p>
+                                {draftProvisions.length > 1 ? (
+                                  <button
+                                    className="btn ghost"
+                                    type="button"
+                                    onClick={() =>
+                                      setDraftProvisions((rows) =>
+                                        rows.filter((_, rowIndex) => rowIndex !== index),
+                                      )
+                                    }
+                                  >
+                                    Remove provision
+                                  </button>
+                                ) : null}
+                              </>
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+                    {draftProvisions.length < 8 ? (
+                      <button
+                        type="button"
+                        className="btn ghost"
+                        onClick={() => {
+                          const next = LEGISLATIVE_PROVISIONS.find(
+                            (definition) =>
+                              !draftProvisions.some((row) => row.provisionId === definition.id),
+                          );
+                          if (next) {
+                            setDraftProvisions((rows) => [
+                              ...rows,
+                              { provisionId: next.id, optionId: defaultProvisionOptionId(next.id) },
+                            ]);
+                          }
+                        }}
+                      >
+                        Add provision
+                      </button>
+                    ) : null}
+                    <div className="bill-copy-fields">
+                      <input
+                        className="search"
+                        placeholder="Optional title — a formal title will be generated"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                      />
+                      <input
+                        className="search"
+                        placeholder="Optional sponsor statement"
+                        value={summary}
+                        onChange={(e) => setSummary(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ marginTop: "0.5rem" }}
+                      disabled={
+                        draftItems.length < 1 ||
+                        new Set(draftProvisions.map((row) => row.provisionId)).size !==
+                          draftProvisions.length
+                      }
+                      onClick={() => {
+                        const r = props.sim.executeCommand({
+                          type: "INTRODUCE_BILL",
+                          title: title.trim(),
+                          summary: summary.trim(),
+                          policyItems: draftItems,
+                          ...(draftLawAction ? { lawAction: draftLawAction } : {}),
+                          ...(draftTargetLawId ? { targetLawId: draftTargetLawId } : {}),
+                        });
+                        if (props.report(r) && r.ok) {
+                          setTitle("");
+                          setSummary("");
+                          setDraftLawAction(null);
+                          setDraftTargetLawId(null);
+                        }
+                        props.onDone();
+                      }}
+                    >
+                      Introduce
+                    </button>
+                  </>
+                ) : null}
+
+                {legislationSubTab === "votes" && assemblyTab === "legislation" ? (
+                  <>
+                    <SectionDivider title="Completed votes" />
+                    <DataTable headers={["Bill", "Stage", "Result"]} dense>
+                      {votes.slice(0, 30).map((v) => {
+                        const parent = props.snap.legislatureRuntime.bills[v.billId];
+                        const metaTitle =
+                          typeof v.metadata?.displayTitle === "string"
+                            ? v.metadata.displayTitle
+                            : typeof v.metadata?.title === "string" &&
+                                v.metadata?.kind === "treaty_ratification"
+                              ? `Treaty ratification: ${v.metadata.title}`
+                              : null;
+                        const stageLabel =
+                          v.metadata?.kind === "treaty_ratification"
+                            ? "Treaty ratification"
+                            : v.stage;
+                        return (
+                          <tr
+                            key={v.id}
+                            className={selectedVoteId === v.id ? "selected" : undefined}
+                            onClick={() => setSelectedVoteId(v.id)}
+                          >
+                            <td>{parent?.title ?? metaTitle ?? v.billId}</td>
+                            <td>{stageLabel}</td>
+                            <td>
+                              {v.passed ? "Passed" : "Failed"} · Yes {v.yes} / No {v.no} / Abstain{" "}
+                              {v.abstain}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </DataTable>
+                    {selectedVoteId &&
+                    props.snap.legislatureRuntime.legislativeVotes[selectedVoteId]
+                      ? (() => {
+                          const selectedVote =
+                            props.snap.legislatureRuntime.legislativeVotes[selectedVoteId]!;
+                          const rows = Object.entries(selectedVote.votes)
+                            .filter(
+                              ([, choice]) => rollCallFilter === "all" || choice === rollCallFilter,
+                            )
+                            .sort((a, b) =>
+                              politicianDisplayName(props.catalog, a[0]).localeCompare(
+                                politicianDisplayName(props.catalog, b[0]),
+                              ),
+                            );
+                          const breakdown = new Map<
+                            string,
+                            { yes: number; no: number; abstain: number }
+                          >();
+                          for (const [memberId, choice] of Object.entries(selectedVote.votes)) {
+                            const partyId = selectedVote.partyIdsAtVote?.[memberId] ?? "unrecorded";
+                            const count = breakdown.get(partyId) ?? { yes: 0, no: 0, abstain: 0 };
+                            count[choice] += 1;
+                            breakdown.set(partyId, count);
+                          }
+                          return (
+                            <div className="roll-call-panel">
+                              <SectionDivider
+                                title="Roll Call"
+                                hint={`${selectedVote.yes} Aye · ${selectedVote.no} Nay · ${selectedVote.abstain} Abstain`}
+                              />
+                              <div className="roll-call-breakdown">
+                                {[...breakdown.entries()]
+                                  .sort(
+                                    (a, b) =>
+                                      b[1].yes +
+                                      b[1].no +
+                                      b[1].abstain -
+                                      (a[1].yes + a[1].no + a[1].abstain),
+                                  )
+                                  .map(([partyId, count]) => (
+                                    <span key={partyId}>
+                                      <strong>
+                                        {partyId === "unrecorded"
+                                          ? "Affiliation not archived"
+                                          : partyDisplayName(
+                                              props.world,
+                                              partyId === "none" ? null : partyId,
+                                              props.snap,
+                                            )}
+                                      </strong>{" "}
+                                      {count.yes} Aye · {count.no} Nay · {count.abstain} Abstain
+                                    </span>
+                                  ))}
+                              </div>
+                              <div className="map-scale-switch" aria-label="Filter roll call">
+                                {(["all", "yes", "no", "abstain"] as const).map((choice) => (
+                                  <button
+                                    type="button"
+                                    key={choice}
+                                    className={rollCallFilter === choice ? "active" : ""}
+                                    onClick={() => setRollCallFilter(choice)}
+                                  >
+                                    {choice === "yes"
+                                      ? "Aye"
+                                      : choice === "no"
+                                        ? "Nay"
+                                        : choice[0]!.toUpperCase() + choice.slice(1)}
+                                  </button>
+                                ))}
+                              </div>
+                              <div className="roll-call-scroll">
+                                <DataTable dense headers={["Member", "Party", "Caucus", "Vote"]}>
+                                  {rows.map(([memberId, choice]) => {
+                                    const historicalParty = selectedVote.partyIdsAtVote?.[memberId];
+                                    const historicalFaction =
+                                      selectedVote.factionIdsAtVote?.[memberId];
+                                    return (
+                                      <tr
+                                        key={memberId}
+                                        onClick={() => setSelectedMember(memberId)}
+                                      >
+                                        <td>
+                                          <button type="button" className="link-button">
+                                            {politicianDisplayName(props.catalog, memberId)}
+                                          </button>
+                                        </td>
+                                        <td>
+                                          {historicalParty === undefined
+                                            ? "Not archived"
+                                            : partyDisplayName(
+                                                props.world,
+                                                historicalParty,
+                                                props.snap,
+                                              )}
+                                        </td>
+                                        <td>
+                                          {historicalFaction === undefined
+                                            ? "Not archived"
+                                            : historicalFaction
+                                              ? (props.world.factionDefinitions[historicalFaction]
+                                                  ?.name ?? "Former caucus")
+                                              : "—"}
+                                        </td>
+                                        <td>
+                                          {choice === "yes"
+                                            ? "Aye"
+                                            : choice === "no"
+                                              ? "Nay"
+                                              : "Abstain"}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </DataTable>
+                              </div>
+                            </div>
+                          );
+                        })()
+                      : null}
+                  </>
+                ) : null}
+                {legislationSubTab === "statutes" && assemblyTab === "legislation" ? (
+                  <>
+                    <ConstitutionBrowser
+                      world={props.world}
+                      snap={props.snap}
+                      sim={props.sim}
+                      mp={Boolean(mp)}
+                      report={props.report}
+                    />
+
+                    <SectionDivider
+                      title="Constitutional rule history"
+                      hint="Founding values and adopted operational amendments"
+                    />
+                    <div className="constitution-history-list">
+                      {Object.values(props.snap.provincialRuntime.constitutionalRules)
+                        .sort((a, b) => a.label.localeCompare(b.label))
+                        .map((rule) => {
+                          const original = ORIGINAL_CONSTITUTIONAL_VALUES[rule.id];
+                          const amendments = Object.values(
+                            props.snap.provincialRuntime.constitutionalAmendments,
+                          )
+                            .filter(
+                              (amendment) =>
+                                amendment.ruleId === rule.id && amendment.status === "ratified",
+                            )
+                            .sort(
+                              (a, b) =>
+                                a.proposedDate.localeCompare(b.proposedDate) ||
+                                a.id.localeCompare(b.id),
+                            );
+                          const formatValue = (value: number) =>
+                            rule.unit === "fraction"
+                              ? `${Math.round(value * 100)}%`
+                              : `${value} ${rule.unit}`;
+                          return (
+                            <article
+                              key={`${rule.id}:history`}
+                              className="constitution-history-row"
+                            >
+                              <strong>{rule.label}</strong>
+                              <div className="constitution-history-chain">
+                                <span>Founding: {formatValue(original)}</span>
+                                {amendments.map((amendment) => (
+                                  <span key={amendment.id}>
+                                    → {amendment.title}:{" "}
+                                    {amendment.proposedValue == null
+                                      ? "text amended"
+                                      : formatValue(amendment.proposedValue)}{" "}
+                                    ({amendment.enactedDate ?? amendment.proposedDate})
+                                  </span>
+                                ))}
+                                {amendments.length === 0 ? (
+                                  <span>→ Current rule unchanged</span>
+                                ) : (
+                                  <span>→ Current: {formatValue(rule.value)}</span>
+                                )}
+                              </div>
+                            </article>
+                          );
+                        })}
+                    </div>
+
+                    <SectionDivider
+                      title="Current statutory position"
+                      hint="Browse by policy area or review enacted Acts"
+                    />
+                    <div className="lawbook-browse-toolbar">
+                      <div
+                        className="map-scale-switch"
+                        role="tablist"
+                        aria-label="Lawbook browse mode"
+                      >
+                        <button
+                          type="button"
+                          className={lawbookMode === "provisions" ? "active" : ""}
+                          onClick={() => setLawbookMode("provisions")}
+                        >
+                          Policy areas
+                        </button>
+                        <button
+                          type="button"
+                          className={lawbookMode === "acts" ? "active" : ""}
+                          onClick={() => setLawbookMode("acts")}
+                        >
+                          Acts
+                        </button>
+                      </div>
+                      <input
+                        className="search lawbook-search"
+                        value={lawQuery}
+                        onChange={(event) => setLawQuery(event.target.value)}
+                        placeholder={
+                          lawbookMode === "provisions"
+                            ? "Search policy category or operative rule"
+                            : "Search enacted Act title or provisions"
+                        }
+                      />
+                    </div>
+                    {lawbookMode === "provisions" ? (
+                      <>
+                        <div
+                          className="lawbook-area-chips"
+                          role="group"
+                          aria-label="Policy area filters"
+                        >
+                          <button
+                            type="button"
+                            className={!lawbookArea ? "active" : ""}
+                            onClick={() => setLawbookArea("")}
+                          >
+                            All areas
+                          </button>
+                          {POLICY_AREAS.map((area) => (
+                            <button
+                              type="button"
+                              key={area}
+                              className={lawbookArea === area ? "active" : ""}
+                              onClick={() => setLawbookArea(area)}
+                            >
+                              {area}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="current-law-grid">
+                          {LEGISLATIVE_PROVISIONS.filter((definition) => {
+                            const option = currentProvisionOption(props.snap, definition.id);
+                            const query = lawQuery.trim().toLowerCase();
+                            if (lawbookArea && definition.category !== lawbookArea) return false;
+                            return (
+                              !query ||
+                              `${definition.category} ${option?.label ?? ""} ${option?.change ?? ""}`
+                                .toLowerCase()
+                                .includes(query)
+                            );
+                          })
+                            .slice(0, 50)
+                            .map((definition) => {
+                              const option = currentProvisionOption(props.snap, definition.id);
+                              const source = currentLawSource(props.snap, definition.id);
+                              const history = provisionHistory(props.snap, definition.id);
+                              const sourceLaw = source.lawId
+                                ? props.snap.legislatureRuntime.enactedLaws[source.lawId]
+                                : null;
+                              return (
+                                <article key={definition.id} className="current-law-row">
+                                  <div className="kicker">{definition.category}</div>
+                                  <strong>{option?.label ?? "No operative rule recorded"}</strong>
+                                  {option?.change ? <p className="muted">{option.change}</p> : null}
+                                  <div className="current-law-source">
+                                    {source.founding || !sourceLaw ? (
+                                      <span>Source Act: Founding statutory position</span>
+                                    ) : (
+                                      <span>
+                                        Source Act: {source.lawTitle} · {source.enactedDate}
+                                      </span>
+                                    )}
+                                    {source.previousOptionLabel ? (
+                                      <span className="muted">
+                                        Prior rule: {source.previousOptionLabel}
+                                      </span>
+                                    ) : null}
+                                    {history.length > 0 ? (
+                                      <span className="muted">
+                                        History:{" "}
+                                        {history
+                                          .map((entry) => {
+                                            const law =
+                                              props.snap.legislatureRuntime.enactedLaws[
+                                                entry.lawId
+                                              ];
+                                            const opt = legislativeProvision(
+                                              definition.id,
+                                            )?.options.find((row) => row.id === entry.optionId);
+                                            return `${law?.title ?? entry.lawId} → ${opt?.label ?? entry.optionId}`;
+                                          })
+                                          .join(" · ")}
+                                      </span>
+                                    ) : (
+                                      <span className="muted">History: founding baseline only</span>
+                                    )}
+                                    {sourceLaw ? (
+                                      <button
+                                        type="button"
+                                        className="link-button"
+                                        onClick={() => {
+                                          setAssemblyTab("overview");
+                                          selectBill(sourceLaw.billId);
+                                          setBillTab("procedure");
+                                        }}
+                                      >
+                                        Open act history
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                  {mp && sourceLaw?.operative ? (
+                                    <div className="lawbook-row-actions row">
+                                      <button
+                                        type="button"
+                                        className="btn ghost"
+                                        onClick={() => preloadLawDraft(sourceLaw, "amend")}
+                                      >
+                                        Amend
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn ghost"
+                                        onClick={() => preloadLawDraft(sourceLaw, "replace")}
+                                      >
+                                        Replace
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn ghost"
+                                        onClick={() => preloadLawDraft(sourceLaw, "repeal")}
+                                      >
+                                        Repeal
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </article>
+                              );
+                            })}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="lawbook-act-list">
+                          {enactedLaws
+                            .filter((law) => !lawbookActId || law.id === lawbookActId)
+                            .slice(0, 40)
+                            .map((law) => (
+                              <button
+                                type="button"
+                                key={law.id}
+                                className={`lawbook-act-pick${lawbookActId === law.id ? " active" : ""}`}
+                                onClick={() =>
+                                  setLawbookActId((current) => (current === law.id ? "" : law.id))
+                                }
+                              >
+                                <strong>{law.title}</strong>
+                                <span>
+                                  {law.enactedDate} · {law.policyItems.length} provision
+                                  {law.policyItems.length === 1 ? "" : "s"}
+                                </span>
+                              </button>
+                            ))}
+                        </div>
+                        {(lawbookActId
+                          ? enactedLaws.filter((law) => law.id === lawbookActId)
+                          : enactedLaws.slice(0, 30)
+                        ).map((law) => (
+                          <article key={`act:${law.id}`} className="statute-row lawbook-act-detail">
+                            <div>
+                              <strong>{law.title}</strong>
+                              <div className="muted">
+                                Enacted {law.enactedDate} · Sponsor{" "}
+                                {politicianDisplayName(props.catalog, law.sponsorId)}
+                              </div>
+                              {(() => {
+                                const impl = props.snap.governingRuntime?.implementations?.[law.id];
+                                if (!impl) return null;
+                                const statusLabel = impl.status.replaceAll("_", " ");
+                                return (
+                                  <div className="muted">
+                                    Implementation: {statusLabel}
+                                    {` · ${impl.departmentId}`}
+                                    {" · "}
+                                    {Math.round(impl.progress * 100)}%
+                                    {impl.posture !== "standard" ? ` · ${impl.posture}` : ""}
+                                  </div>
+                                );
+                              })()}
+                              <div className="muted">
+                                {law.policyItems
+                                  .map((item) => policyItemDisplay(props.catalog, item))
+                                  .join("; ")}
+                              </div>
+                              {/* Cross-link: court cases challenging this act */}
+                              {Object.values(props.snap.constitutionalRuntime.courtCases).filter(
+                                (cc) => cc.challengedId === law.id && cc.challengedKind === "law",
+                              ).length > 0 ? (
+                                <div className="cross-link-row muted">
+                                  <span className="cross-link-icon">⚖</span>
+                                  {
+                                    Object.values(
+                                      props.snap.constitutionalRuntime.courtCases,
+                                    ).filter(
+                                      (cc) =>
+                                        cc.challengedId === law.id && cc.challengedKind === "law",
+                                    ).length
+                                  }{" "}
+                                  court case(s) reference this Act
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="lawbook-act-side">
+                              <StatusBadge tone={law.operative ? "ok" : "warn"}>
+                                {law.operative ? "Operative" : "Invalidated"}
+                              </StatusBadge>
+                              {mp && law.operative ? (
                                 <div className="lawbook-row-actions row">
                                   <button
                                     type="button"
                                     className="btn ghost"
-                                    onClick={() => preloadLawDraft(sourceLaw, "amend")}
+                                    onClick={() => preloadLawDraft(law, "amend")}
                                   >
                                     Amend
                                   </button>
                                   <button
                                     type="button"
                                     className="btn ghost"
-                                    onClick={() => preloadLawDraft(sourceLaw, "replace")}
+                                    onClick={() => preloadLawDraft(law, "replace")}
                                   >
                                     Replace
                                   </button>
                                   <button
                                     type="button"
                                     className="btn ghost"
-                                    onClick={() => preloadLawDraft(sourceLaw, "repeal")}
+                                    onClick={() => preloadLawDraft(law, "repeal")}
                                   >
                                     Repeal
                                   </button>
                                 </div>
                               ) : null}
-                            </article>
-                          );
-                        })}
-                    </div>
+                            </div>
+                          </article>
+                        ))}
+                      </>
+                    )}
+
+                    <SectionDivider
+                      title="Statute book archive"
+                      hint={`${Object.keys(props.snap.legislatureRuntime.enactedLaws).length} enacted laws`}
+                    />
+                    {enactedLaws.length === 0 ? (
+                      <p className="muted">No enacted law matches this search.</p>
+                    ) : null}
+                    {lawbookMode === "provisions"
+                      ? enactedLaws.slice(0, 15).map((law) => (
+                          <article key={law.id} className="statute-row">
+                            <div>
+                              <strong>{law.title}</strong>
+                              <div className="muted">
+                                Enacted {law.enactedDate} · Sponsor{" "}
+                                {politicianDisplayName(props.catalog, law.sponsorId)}
+                              </div>
+                              <div className="muted">
+                                {law.policyItems
+                                  .map((item) => policyItemDisplay(props.catalog, item))
+                                  .join("; ")}
+                              </div>
+                            </div>
+                            <StatusBadge tone={law.operative ? "ok" : "warn"}>
+                              {law.operative ? "Operative" : "Invalidated"}
+                            </StatusBadge>
+                          </article>
+                        ))
+                      : null}
+                    {lawbookMode === "provisions" && enactedLaws.length > 15 ? (
+                      <p className="muted">
+                        Switch to Acts browse for amend / replace / repeal shortcuts on full
+                        measures.
+                      </p>
+                    ) : null}
                   </>
+                ) : null}
+              </div>
+            ) : null}
+
+            {assemblyTab === "committees" ? (
+              <div data-qa="committees-panel">
+                <>
+                  <SectionDivider title="Committees" />
+                  {Object.values(props.snap.legislatureRuntime.committees).map((c) => (
+                    <EntityRow
+                      key={c.id}
+                      title={committeeDisplayName(c.id)}
+                      meta={`${c.memberIds.length} members · Chair ${c.chairId ? politicianDisplayName(props.catalog, c.chairId) : "vacant"}`}
+                      selected={c.id === activeCommitteeId}
+                      onClick={() => setSelectedCommitteeId(c.id)}
+                    />
+                  ))}
+                  {selectedCommittee ? (
+                    <>
+                      <SectionDivider
+                        title={committeeDisplayName(selectedCommittee.id)}
+                        hint={`Chair · ${selectedCommittee.chairId ? politicianDisplayName(props.catalog, selectedCommittee.chairId) : "Vacant"}`}
+                      />
+                      <div className="committee-composition-strip">
+                        {[
+                          ...selectedCommittee.memberIds
+                            .reduce((map, memberId) => {
+                              const partyId = props.snap.politicians[memberId]?.partyId ?? "none";
+                              map.set(partyId, (map.get(partyId) ?? 0) + 1);
+                              return map;
+                            }, new Map<string, number>())
+                            .entries(),
+                        ]
+                          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                          .map(([partyId, seats]) => (
+                            <span key={partyId}>
+                              <i
+                                className="party-dot"
+                                style={{
+                                  background: partyColor(
+                                    props.world,
+                                    partyId === "none" ? null : partyId,
+                                  ),
+                                }}
+                              />
+                              {partyDisplayName(
+                                props.world,
+                                partyId === "none" ? null : partyId,
+                                props.snap,
+                              )}{" "}
+                              {seats}
+                            </span>
+                          ))}
+                      </div>
+                      <div className="roll-call-scroll">
+                        <DataTable dense headers={["Member", "Party", "Caucus"]}>
+                          {selectedCommittee.memberIds.map((memberId) => (
+                            <tr key={memberId} onClick={() => setSelectedMember(memberId)}>
+                              <td>
+                                <button type="button" className="link-button">
+                                  {politicianDisplayName(props.catalog, memberId)}
+                                </button>
+                                {memberId === selectedCommittee.chairId ? " · Chair" : ""}
+                              </td>
+                              <td>
+                                {partyDisplayName(
+                                  props.world,
+                                  props.snap.politicians[memberId]?.partyId ?? null,
+                                  props.snap,
+                                )}
+                              </td>
+                              <td>
+                                {props.snap.politicians[memberId]?.factionId
+                                  ? (props.world.factionDefinitions[
+                                      props.snap.politicians[memberId]!.factionId!
+                                    ]?.name ?? "—")
+                                  : "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </DataTable>
+                      </div>
+                      <SectionDivider title="Pending bills" />
+                      {allBills.filter(
+                        (candidate) =>
+                          candidate.assignedCommitteeId === selectedCommittee.id &&
+                          ["introduced", "committee"].includes(candidate.status),
+                      ).length === 0 ? (
+                        <p className="muted">No bill is presently pending.</p>
+                      ) : (
+                        allBills
+                          .filter(
+                            (candidate) =>
+                              candidate.assignedCommitteeId === selectedCommittee.id &&
+                              ["introduced", "committee"].includes(candidate.status),
+                          )
+                          .map((candidate) => (
+                            <EntityRow
+                              key={candidate.id}
+                              title={candidate.title}
+                              meta={billStatusLabel(candidate.status)}
+                              onClick={() => selectBill(candidate.id)}
+                            />
+                          ))
+                      )}
+                      <SectionDivider title="Recent committee votes" />
+                      {votes.filter((vote) => vote.committeeId === selectedCommittee.id).length ===
+                      0 ? (
+                        <p className="muted">No committee roll call has been recorded.</p>
+                      ) : (
+                        <DataTable dense headers={["Date", "Measure", "Result"]}>
+                          {votes
+                            .filter((vote) => vote.committeeId === selectedCommittee.id)
+                            .slice(0, 12)
+                            .map((vote) => (
+                              <tr
+                                key={vote.id}
+                                onClick={() => {
+                                  setSelectedVoteId(vote.id);
+                                  setAssemblyTab("legislation");
+                                  setLegislationSubTab("votes");
+                                }}
+                              >
+                                <td>{vote.date}</td>
+                                <td>
+                                  {props.snap.legislatureRuntime.bills[vote.billId]?.title ??
+                                    "Assembly matter"}
+                                </td>
+                                <td>
+                                  {vote.yes}–{vote.no} · {vote.abstain} abstain
+                                </td>
+                              </tr>
+                            ))}
+                        </DataTable>
+                      )}
+                    </>
+                  ) : null}
+                </>
+              </div>
+            ) : null}
+
+            {assemblyTab === "delegation" ? (
+              <div data-qa="whip-desk">
+                <SectionDivider
+                  title="Assembly Leader / Whip desk"
+                  hint="Delegation position, whip strength, and persuasion"
+                />
+                {!playerMaySetWhip && !playerIsWhip ? (
+                  <EmptyState>
+                    Floor leader or whip authority is required for delegation controls.
+                  </EmptyState>
+                ) : null}
+                <BriefStrip
+                  items={[
+                    {
+                      label: "Floor leader",
+                      value: playerCaucusLeadership?.floorLeaderId
+                        ? politicianDisplayName(props.catalog, playerCaucusLeadership.floorLeaderId)
+                        : "—",
+                    },
+                    {
+                      label: "Whip",
+                      value: playerCaucusLeadership?.whipId
+                        ? politicianDisplayName(props.catalog, playerCaucusLeadership.whipId)
+                        : "—",
+                    },
+                    {
+                      label: "Selected bill",
+                      value: bill ? bill.title : "None selected",
+                    },
+                  ]}
+                />
+                {!bill ? (
+                  <p className="muted">
+                    Select a bill in Legislation to set whip strength and persuasion targets.
+                  </p>
                 ) : (
                   <>
-                    <div className="lawbook-act-list">
-                      {enactedLaws
-                        .filter((law) => !lawbookActId || law.id === lawbookActId)
-                        .slice(0, 40)
-                        .map((law) => (
+                    <dl className="dossier-facts compact">
+                      <div>
+                        <dt>Party position</dt>
+                        <dd>
+                          {stanceLabel(
+                            partyStance(
+                              props.snap,
+                              playerParty === "none" ? null : playerParty,
+                              bill.id,
+                            ),
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Whip strength</dt>
+                        <dd>
+                          {(playerCaucusLeadership?.whipStrengths?.[bill.id] ?? "free").replaceAll(
+                            "_",
+                            " ",
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Support outlook</dt>
+                        <dd>
+                          {exactInternals && whip
+                            ? `Yes ${whip.likelyYes} · No ${whip.likelyNo} · Unc ${whip.uncertain}`
+                            : supportOutlook}
+                        </dd>
+                      </div>
+                    </dl>
+                    {playerMaySetWhip ? (
+                      <>
+                        <SectionDivider title="Set delegation position" />
+                        <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
                           <button
                             type="button"
-                            key={law.id}
-                            className={`lawbook-act-pick${lawbookActId === law.id ? " active" : ""}`}
+                            className="btn"
                             onClick={() =>
-                              setLawbookActId((current) => (current === law.id ? "" : law.id))
+                              run({
+                                type: "SET_CAUCUS_BILL_POSITION",
+                                billId: bill.id,
+                                stance: "support",
+                              })
                             }
                           >
-                            <strong>{law.title}</strong>
-                            <span>
-                              {law.enactedDate} · {law.policyItems.length} provision
-                              {law.policyItems.length === 1 ? "" : "s"}
-                            </span>
+                            Support
                           </button>
-                        ))}
-                    </div>
-                    {(lawbookActId
-                      ? enactedLaws.filter((law) => law.id === lawbookActId)
-                      : enactedLaws.slice(0, 30)
-                    ).map((law) => (
-                      <article key={`act:${law.id}`} className="statute-row lawbook-act-detail">
-                        <div>
-                          <strong>{law.title}</strong>
-                          <div className="muted">
-                            Enacted {law.enactedDate} · Sponsor{" "}
-                            {politicianDisplayName(props.catalog, law.sponsorId)}
-                          </div>
-                          {(() => {
-                            const impl = props.snap.governingRuntime?.implementations?.[law.id];
-                            if (!impl) return null;
-                            const statusLabel = impl.status.replaceAll("_", " ");
-                            return (
-                              <div className="muted">
-                                Implementation: {statusLabel}
-                                {` · ${impl.departmentId}`}
-                                {" · "}
-                                {Math.round(impl.progress * 100)}%
-                                {impl.posture !== "standard" ? ` · ${impl.posture}` : ""}
-                              </div>
-                            );
-                          })()}
-                          <div className="muted">
-                            {law.policyItems
-                              .map((item) => policyItemDisplay(props.catalog, item))
-                              .join("; ")}
-                          </div>
-                          {/* Cross-link: court cases challenging this act */}
-                          {Object.values(props.snap.constitutionalRuntime.courtCases).filter(
-                            (cc) => cc.challengedId === law.id && cc.challengedKind === "law",
-                          ).length > 0 ? (
-                            <div className="cross-link-row muted">
-                              <span className="cross-link-icon">⚖</span>
-                              {
-                                Object.values(props.snap.constitutionalRuntime.courtCases).filter(
-                                  (cc) => cc.challengedId === law.id && cc.challengedKind === "law",
-                                ).length
-                              }{" "}
-                              court case(s) reference this Act
-                            </div>
-                          ) : null}
+                          <button
+                            type="button"
+                            className="btn danger"
+                            onClick={() =>
+                              run({
+                                type: "SET_CAUCUS_BILL_POSITION",
+                                billId: bill.id,
+                                stance: "oppose",
+                              })
+                            }
+                          >
+                            Oppose
+                          </button>
+                          <button
+                            type="button"
+                            className="btn secondary"
+                            onClick={() =>
+                              run({
+                                type: "SET_CAUCUS_BILL_POSITION",
+                                billId: bill.id,
+                                stance: "free_vote",
+                              })
+                            }
+                          >
+                            Free vote
+                          </button>
                         </div>
-                        <div className="lawbook-act-side">
-                          <StatusBadge tone={law.operative ? "ok" : "warn"}>
-                            {law.operative ? "Operative" : "Invalidated"}
-                          </StatusBadge>
-                          {mp && law.operative ? (
-                            <div className="lawbook-row-actions row">
-                              <button
-                                type="button"
-                                className="btn ghost"
-                                onClick={() => preloadLawDraft(law, "amend")}
-                              >
-                                Amend
-                              </button>
-                              <button
-                                type="button"
-                                className="btn ghost"
-                                onClick={() => preloadLawDraft(law, "replace")}
-                              >
-                                Replace
-                              </button>
-                              <button
-                                type="button"
-                                className="btn ghost"
-                                onClick={() => preloadLawDraft(law, "repeal")}
-                              >
-                                Repeal
-                              </button>
-                            </div>
-                          ) : null}
+                        <SectionDivider title="Whip strength" />
+                        <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                          {WHIP_STRENGTHS.map((strength: WhipStrength) => (
+                            <button
+                              key={strength}
+                              type="button"
+                              className="btn secondary"
+                              onClick={() =>
+                                run({
+                                  type: "SET_WHIP_STRENGTH",
+                                  partyId: playerParty,
+                                  billId: bill.id,
+                                  strength,
+                                })
+                              }
+                            >
+                              {strength.replaceAll("_", " ")}
+                            </button>
+                          ))}
                         </div>
-                      </article>
-                    ))}
+                        <SectionDivider title="Persuade member" />
+                        <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
+                          <select
+                            value={
+                              persuadeTargetId ||
+                              mps.find(
+                                (id) =>
+                                  props.snap.politicians[id]?.partyId === playerParty &&
+                                  id !== props.snap.playerPoliticianId,
+                              ) ||
+                              ""
+                            }
+                            onChange={(e) => setPersuadeTargetId(e.target.value)}
+                          >
+                            {mps
+                              .filter(
+                                (id) =>
+                                  props.snap.politicians[id]?.partyId === playerParty &&
+                                  id !== props.snap.playerPoliticianId,
+                              )
+                              .map((id) => (
+                                <option key={id} value={id}>
+                                  {politicianDisplayName(props.catalog, id)}
+                                </option>
+                              ))}
+                          </select>
+                          <select
+                            value={persuadeApproach}
+                            onChange={(e) =>
+                              setPersuadeApproach(e.target.value as WhipPersuadeApproach)
+                            }
+                          >
+                            {WHIP_PERSUADE_APPROACHES.map((approach: WhipPersuadeApproach) => (
+                              <option key={approach} value={approach}>
+                                {approach}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="btn"
+                            onClick={() => {
+                              const target =
+                                persuadeTargetId ||
+                                mps.find(
+                                  (id) =>
+                                    props.snap.politicians[id]?.partyId === playerParty &&
+                                    id !== props.snap.playerPoliticianId,
+                                );
+                              if (!target || playerParty === "none") return;
+                              run({
+                                type: "WHIP_PERSUADE_MEMBER",
+                                billId: bill.id,
+                                targetPoliticianId: target,
+                                approach: persuadeApproach,
+                              });
+                            }}
+                          >
+                            Persuade
+                          </button>
+                        </div>
+                      </>
+                    ) : null}
                   </>
                 )}
-
-                <SectionDivider
-                  title="Statute book archive"
-                  hint={`${Object.keys(props.snap.legislatureRuntime.enactedLaws).length} enacted laws`}
-                />
-                {enactedLaws.length === 0 ? (
-                  <p className="muted">No enacted law matches this search.</p>
-                ) : null}
-                {lawbookMode === "provisions"
-                  ? enactedLaws.slice(0, 15).map((law) => (
-                      <article key={law.id} className="statute-row">
-                        <div>
-                          <strong>{law.title}</strong>
-                          <div className="muted">
-                            Enacted {law.enactedDate} · Sponsor{" "}
-                            {politicianDisplayName(props.catalog, law.sponsorId)}
-                          </div>
-                          <div className="muted">
-                            {law.policyItems
-                              .map((item) => policyItemDisplay(props.catalog, item))
-                              .join("; ")}
-                          </div>
-                        </div>
-                        <StatusBadge tone={law.operative ? "ok" : "warn"}>
-                          {law.operative ? "Operative" : "Invalidated"}
-                        </StatusBadge>
-                      </article>
-                    ))
-                  : null}
-                {lawbookMode === "provisions" && enactedLaws.length > 15 ? (
-                  <p className="muted">
-                    Switch to Acts browse for amend / replace / repeal shortcuts on full measures.
-                  </p>
-                ) : null}
-              </>
+                <SectionDivider title="Delegation leaders" />
+                {delegationLeaders.map((row) => (
+                  <EntityRow
+                    key={row.partyId}
+                    title={partyDisplayName(props.world, row.partyId, props.snap)}
+                    meta={`Floor ${politicianDisplayName(props.catalog, row.leaderId)}${
+                      row.whipId
+                        ? ` · Whip ${politicianDisplayName(props.catalog, row.whipId)}`
+                        : ""
+                    }`}
+                    onClick={() => setSelectedMember(row.leaderId)}
+                  />
+                ))}
+              </div>
             ) : null}
           </>
         }

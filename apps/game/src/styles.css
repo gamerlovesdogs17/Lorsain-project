@@ -7377,3 +7377,58 @@ button.entity-row:hover,
   flex-wrap: wrap;
   gap: 0.35rem;
 }
+
+.settings-toggle {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin: 0.65rem 0;
+  cursor: pointer;
+}
+.settings-toggle input {
+  margin-top: 0.25rem;
+}
+.settings-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.settings-toggle small {
+  display: block;
+  line-height: 1.35;
+}
+.settings-title-host {
+  overflow: auto;
+}
+.settings-title-card {
+  max-width: 44rem;
+  width: min(44rem, 100%);
+  text-align: left;
+}
+body.high-contrast {
+  --line: #1a1a1a;
+  --ink: #050505;
+  --paper: #ffffff;
+}
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+.legislation-workspace {
+  min-width: 0;
+}
+.legislation-workspace .bill-inspector {
+  margin-top: 0;
+}
+@media (max-width: 1200px) {
+  .assembly-mobile-bill .master-detail-list {
+    display: none;
+  }
+  .assembly-mobile-list-only .master-detail-inspector {
+    display: none;
+  }
+}
