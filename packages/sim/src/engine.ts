@@ -750,8 +750,18 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   ensureGoverningRuntime(state);
   ensurePartyOrgRuntime(state);
   ensureCaucusRuntime(state);
-  ensureDefaultOfficers(frozen, state);
-  recomputeCaucusShares(frozen, state);
+  // Seed missing national officers/committees only when the save has no officer map.
+  // Do NOT recompute caucus shares on restore — that mutates floats and breaks
+  // serialize→restore hash round-trips (monthly processing recomputes shares).
+  const officers = state.partyOrgRuntime?.officers ?? {};
+  if (Object.keys(officers).length === 0) {
+    ensureDefaultOfficers(frozen, state);
+  } else {
+    const hasCommittee = Object.values(state.partyOrgRuntime?.nationalCommittee ?? {}).some(
+      (roster) => Array.isArray(roster) && roster.length > 0,
+    );
+    if (!hasCommittee) ensureDefaultOfficers(frozen, state);
+  }
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
