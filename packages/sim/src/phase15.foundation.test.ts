@@ -9,7 +9,7 @@ import { emptyHistory15Runtime } from "./history15/types.js";
 
 describe("Phase 15 history foundation smoke", () => {
   it("schema 24 seeds empty history15Runtime on migration", () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(25);
+    expect(SAVE_SCHEMA_VERSION).toBe(26);
     const legacy = {
       schemaVersion: 23,
       contentVersion: "x",
@@ -26,7 +26,7 @@ describe("Phase 15 history foundation smoke", () => {
       schemaVersion: number;
       simulation: { history15Runtime: unknown };
     };
-    expect(migrated.schemaVersion).toBe(25);
+    expect(migrated.schemaVersion).toBe(26);
     expect(migrated.simulation.history15Runtime).toEqual(emptyHistory15Runtime());
   });
 
@@ -52,7 +52,7 @@ describe("Phase 15 history foundation smoke", () => {
     const parsed = parseSaveFile(save, world.contentVersion);
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
-      expect(parsed.save.schemaVersion).toBe(25);
+      expect(parsed.save.schemaVersion).toBe(26);
       expect(parsed.save.simulation.history15Runtime?.eras.length).toBeGreaterThan(0);
     }
   });

@@ -291,7 +291,7 @@ describe("Phase 13 governing foundation", () => {
     expect(snap.governingRuntime.fiscal.lastUpdated).toBeTruthy();
 
     const save = sim.serializeSave();
-    expect(save.schemaVersion).toBe(25);
+    expect(save.schemaVersion).toBe(26);
     const parsed = parseSaveFile(save, world.contentVersion);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -495,6 +495,6 @@ describe("Phase 13 governing foundation", () => {
     expect(migrated.simulation.governingRuntime.lastGoverningMonth).toBeNull();
     expect(migrated.simulation.governingRuntime.record ?? null).toBeNull();
     expect(migrated.simulation.governingRuntime.capacity.provinces).toEqual({});
-    expect(SAVE_SCHEMA_VERSION).toBe(25);
+    expect(SAVE_SCHEMA_VERSION).toBe(26);
   });
 });
