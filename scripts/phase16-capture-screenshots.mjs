@@ -22,7 +22,7 @@ mkdirSync(OUT, { recursive: true });
 const ALLOW_DUPES = new Set([]);
 
 /** Copy that must NOT appear for a healthy primary-map / committee fixture shot. */
-const NEGATIVE_PRIMARY = [
+const _NEGATIVE_PRIMARY = [
   /No open nomination contest/i,
   /Committee not seeded/i,
   /limited in this build/i,
@@ -341,13 +341,19 @@ async function main() {
           assert: async () => {
             await assertNoneVisible(
               page,
-              [/No open nomination contest is available to join right now/i, /You are not running an active campaign/i],
+              [
+                /No open nomination contest is available to join right now/i,
+                /You are not running an active campaign/i,
+              ],
               "candidate-primary-map",
             );
             const positive = await assertAny(
               page,
               [
-                { description: "text Primary polling", check: textVisible(page, /Primary polling/i) },
+                {
+                  description: "text Primary polling",
+                  check: textVisible(page, /Primary polling/i),
+                },
                 { description: "text Nomination", check: textVisible(page, /Nomination/i) },
                 { description: "text Campaign HQ", check: textVisible(page, /Campaign HQ/i) },
                 {

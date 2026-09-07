@@ -1,0 +1,118 @@
+{
+  "phase": "16b-institutional",
+  "generatedAt": "2026-09-07T20:30:15.684Z",
+  "base": "http://localhost:5174/Lorsain-project/",
+  "warnings": [],
+  "shots": [
+    {
+      "file": "settings-page-1440.png",
+      "screen": "settings-page",
+      "assertions": [
+        "data-qa settings-page",
+        "Debug Mode proven on Advanced",
+        "Game section for capture"
+      ],
+      "ok": true,
+      "sha256": "b17557f8cd720eea37a32a1c7946e95dc15144138f8c91e4003cf43f30bc6473",
+      "bytes": 40351
+    },
+    {
+      "file": "settings-debug-off-1440.png",
+      "screen": "settings-debug-off",
+      "assertions": [
+        "text Advanced",
+        "Debug Mode",
+        "debug off"
+      ],
+      "ok": true,
+      "sha256": "de41ba626b6e2b6ebe136ebc6f6ceef23f055e4f35b54d389045d93187f63978",
+      "bytes": 43498
+    },
+    {
+      "file": "assembly-overview-1440.png",
+      "screen": "assembly-overview",
+      "assertions": [
+        "data-qa assembly-overview"
+      ],
+      "ok": true,
+      "sha256": "4717fd878d1f925183dd75591927f4f66cae4c2c0079ae10faaaaea562d178ed",
+      "bytes": 276457
+    },
+    {
+      "file": "legislation-list-1440.png",
+      "screen": "legislation-list",
+      "assertions": [
+        "data-qa legislation-workspace",
+        "bill rows=16"
+      ],
+      "ok": true,
+      "sha256": "75e136c2c0e23236f14d32b676990b88bc577d40a5e459f52c03a04198271472",
+      "bytes": 205993
+    },
+    {
+      "file": "selected-bill-1440.png",
+      "screen": "selected-bill",
+      "assertions": [
+        "data-qa selected-bill in viewport",
+        "title~Carbon Levy and Rebate Further Amendment Bill",
+        "bottom dock absent"
+      ],
+      "ok": true,
+      "sha256": "2878380b83f930441b6a332870d5c2dbff83489c40ed5780010cb5c34ed6e5b9",
+      "bytes": 244678
+    },
+    {
+      "file": "committees-panel-1440.png",
+      "screen": "committees-panel",
+      "assertions": [
+        "data-qa committees-panel"
+      ],
+      "ok": true,
+      "sha256": "ecfd4a76dd5a79c524e344cab91178b1af1525c4514b5ee63713c922b6917c02",
+      "bytes": 186959
+    },
+    {
+      "file": "whip-desk-1440.png",
+      "screen": "whip-desk",
+      "assertions": [
+        "data-qa whip-desk"
+      ],
+      "ok": true,
+      "sha256": "f2b431ee41ba3b31d293b76245e8b6de9bcb20cd68823d0fc9ed36b52a48d5b5",
+      "bytes": 201231
+    },
+    {
+      "file": "party-leadership-1440.png",
+      "screen": "party-leadership",
+      "assertions": [
+        "data-qa party-leadership",
+        "qualitative shares (caucuses)"
+      ],
+      "ok": true,
+      "sha256": "3bbb90bfdb6e0635a56ad3ee98bd739032f145e293110f21a668d53fc05dc83b",
+      "bytes": 220258
+    },
+    {
+      "file": "fa-overview-1440.png",
+      "screen": "fa-overview",
+      "assertions": [
+        "data-qa fa-overview",
+        "Overview|Relations|Treaties single nav",
+        "no nested duplicate"
+      ],
+      "ok": true,
+      "sha256": "3b6922a23ca5d92425ee69a09e50881c978ec2608564952ed585cb61c1248fe8",
+      "bytes": 233802
+    },
+    {
+      "file": "mobile-assembly-390.png",
+      "screen": "mobile-assembly",
+      "assertions": [
+        "legislation-workspace"
+      ],
+      "ok": true,
+      "sha256": "2d4f574bfce1dc934ae721bfcfbda7c45295e95cb8be04b34fc8d38a3b2f1de7",
+      "bytes": 76373
+    }
+  ]
+}
