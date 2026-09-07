@@ -3,29 +3,26 @@
  *
  * Reuses PartyContest + NominationRuleDefinition machinery (declare → qualify →
  * IRV/plurality resolve). Presidential nominations remain the full calendar path;
- * this module opens short officeNomination contests keyed by
- * (partyId, electionId, office) when a gubernatorial or assembly race is open
- * and the party has a non-"none" nomination rule.
+ * this module opens short officeNomination contests when a gubernatorial or
+ * assembly race is open and the party has a non-"none" nomination rule.
  *
- * Known gaps (documented for follow-up):
- * - Assembly constituency assignment still follows assembly-cycle allocation;
- *   nomination winners are synced as sole party candidates nationally but may
- *   share a constituency field with soft NPC fillers until allocation rebuild.
- * - No separate "committee ballot" engine beyond closed_member_rcv / convention methods.
- * - Player self-file during filing_open for nomination-required parties remains soft
- *   (allowed) until a nomination contest resolves and withdraws co-partisans.
+ * Assembly unit = (partyId, electionId, constituencyId) with multi-nominee
+ * slates via metadata.nominationSlots + metadata.winnerIds (winnerId = first).
+ * Gubernatorial remains province-keyed (one contest per party per election).
  */
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
 import { pushHistory } from "../scheduler.js";
 import { createCampaignRecord } from "../campaigns/state.js";
 import { attachNominationMethodMetadata } from "../campaigns/nominations.js";
+import { officesOfKind, occupyingTerms } from "../offices.js";
 import {
   createPartyContest,
   declareCandidacy,
   openPartyContest,
   resolvePartyContest,
 } from "./contests.js";
+import { resolveContestCount } from "./nominations.js";
 import { membershipPartyIds, partyMembers, resolvePartyDefinition } from "./queries.js";
 import { INDEPENDENT_AGGREGATE_ID } from "./policy.js";
 import type { PartyContest, PartyContestType } from "./types.js";
@@ -44,6 +41,7 @@ export type OfficeNominationCycleMetadata = {
   partyId: string;
   provinceId?: string;
   constituencyId?: string;
+  nominationSlots?: number;
   candidateSource: "scenario_start" | "runtime_politics";
 };
 
@@ -71,6 +69,11 @@ export function officeNominationCycleMetadata(
   ) {
     return null;
   }
+  const nominationSlots =
+    typeof contest.metadata.nominationSlots === "number" &&
+    Number.isFinite(contest.metadata.nominationSlots)
+      ? Math.max(1, Math.floor(contest.metadata.nominationSlots))
+      : undefined;
   return {
     officeKind,
     electionId,
@@ -82,8 +85,26 @@ export function officeNominationCycleMetadata(
     ...(typeof contest.metadata.constituencyId === "string"
       ? { constituencyId: contest.metadata.constituencyId }
       : {}),
+    ...(nominationSlots != null ? { nominationSlots } : {}),
     candidateSource,
   };
+}
+
+/** Resolved nominee slate; falls back to winnerId for legacy single-winner contests. */
+export function officeNominationWinnerIds(contest: PartyContest): string[] {
+  const raw = contest.metadata.winnerIds;
+  if (Array.isArray(raw) && raw.length > 0 && raw.every((id) => typeof id === "string")) {
+    return [...new Set(raw as string[])];
+  }
+  return contest.winnerId ? [contest.winnerId] : [];
+}
+
+export function officeNominationContestKey(
+  partyId: string,
+  electionId: string,
+  constituencyId: string | null | undefined,
+): string {
+  return `${partyId}::${electionId}::${constituencyId ?? ""}`;
 }
 
 export function officeNominationContestsForElection(
@@ -142,9 +163,233 @@ function seedDeclaredEntries(state: SimState, partyId: string, maxCandidates: nu
   return scored.slice(0, maxCandidates).map((row) => row.id);
 }
 
+function partyIncumbentConstituencyIds(
+  state: SimState,
+  world: KernelWorld,
+  partyId: string,
+): Set<string> {
+  const out = new Set<string>();
+  for (const office of officesOfKind(world, "assembly_member")) {
+    if (!office.constituencyId) continue;
+    for (const term of occupyingTerms(state, office.id)) {
+      if (state.politicians[term.holderId]?.partyId === partyId) {
+        out.add(office.constituencyId);
+      }
+    }
+  }
+  return out;
+}
+
+function partySeatShareForElection(
+  state: SimState,
+  world: KernelWorld,
+  electionId: string,
+  partyId: string,
+): number {
+  const election = state.elections[electionId];
+  const totals =
+    election?.assembly?.previousPartySeatTotals &&
+    Object.keys(election.assembly.previousPartySeatTotals).length > 0
+      ? election.assembly.previousPartySeatTotals
+      : (() => {
+          const live: Record<string, number> = {};
+          for (const office of officesOfKind(world, "assembly_member")) {
+            for (const term of occupyingTerms(state, office.id)) {
+              const pid = state.politicians[term.holderId]?.partyId ?? "independent";
+              live[pid] = (live[pid] ?? 0) + 1;
+            }
+          }
+          return live;
+        })();
+  const partySeats = totals[partyId] ?? 0;
+  const totalSeats = Object.values(totals).reduce((sum, n) => sum + n, 0);
+  const chamber = world.legislativeConstitution.assemblySeatCount || totalSeats;
+  return partySeats / Math.max(1, totalSeats || chamber);
+}
+
+/** Slots to nominate for a constituency: 1..magnitude from expected seats. */
+export function assemblyNominationSlots(
+  state: SimState,
+  world: KernelWorld,
+  args: { electionId: string; partyId: string; constituencyId: string },
+): number {
+  const magnitude = Math.max(1, world.constituencyElectorate[args.constituencyId]?.seats ?? 1);
+  const share = partySeatShareForElection(state, world, args.electionId, args.partyId);
+  const expected = share * magnitude;
+  const incumbents = partyIncumbentConstituencyIds(state, world, args.partyId).has(
+    args.constituencyId,
+  )
+    ? 1
+    : 0;
+  const rounded = Math.max(incumbents, Math.round(expected), expected >= 0.35 ? 1 : 0);
+  return Math.max(1, Math.min(magnitude, rounded || 1));
+}
+
 /**
- * Ensure one planned/open office nomination contest per membership party for an
- * open gubernatorial or assembly election.
+ * Constituencies a party should open nomination contests for: incumbents plus
+ * seats with meaningful expected strength, capped near expected seat haul.
+ */
+export function assemblyConstituenciesWorthContesting(
+  state: SimState,
+  world: KernelWorld,
+  electionId: string,
+  partyId: string,
+): string[] {
+  const constituencyIds = Object.keys(world.constituencyElectorate).sort();
+  if (constituencyIds.length === 0) return [];
+  const incumbents = partyIncumbentConstituencyIds(state, world, partyId);
+  const share = partySeatShareForElection(state, world, electionId, partyId);
+  const election = state.elections[electionId];
+  const partySeats =
+    election?.assembly?.previousPartySeatTotals?.[partyId] ??
+    Math.round(share * (world.legislativeConstitution.assemblySeatCount || constituencyIds.length));
+
+  const scored = constituencyIds.map((constituencyId) => {
+    const magnitude = world.constituencyElectorate[constituencyId]!.seats;
+    const expected = share * magnitude;
+    const incumbentBonus = incumbents.has(constituencyId) ? 2 : 0;
+    return {
+      constituencyId,
+      score: expected + incumbentBonus,
+      expected,
+      incumbent: incumbents.has(constituencyId),
+    };
+  });
+  scored.sort((a, b) => b.score - a.score || a.constituencyId.localeCompare(b.constituencyId));
+
+  const target = Math.max(
+    incumbents.size,
+    Math.min(
+      constituencyIds.length,
+      Math.max(
+        share >= 0.02 ? Math.ceil(Math.max(partySeats, 1) * 1.2) : incumbents.size,
+        scored.filter((row) => row.incumbent || row.expected >= 0.35).length,
+      ),
+    ),
+  );
+
+  const selected = new Set<string>();
+  for (const row of scored) {
+    if (row.incumbent || row.expected >= 0.35) selected.add(row.constituencyId);
+  }
+  for (const row of scored) {
+    if (selected.size >= target) break;
+    selected.add(row.constituencyId);
+  }
+  return [...selected].sort();
+}
+
+/** Active nomination winners for a party on one constituency field. */
+export function assemblyNomineesForConstituency(
+  state: SimState,
+  electionId: string,
+  partyId: string,
+  constituencyId: string,
+): string[] {
+  const winners: string[] = [];
+  for (const contest of officeNominationContestsForElection(state, electionId, "assembly")) {
+    if (contest.partyId !== partyId || contest.status !== "resolved") continue;
+    const meta = officeNominationCycleMetadata(contest);
+    if (!meta || meta.constituencyId !== constituencyId) continue;
+    for (const id of officeNominationWinnerIds(contest)) {
+      if (!winners.includes(id)) winners.push(id);
+    }
+  }
+  return winners;
+}
+
+function seedAssemblyEntries(
+  state: SimState,
+  world: KernelWorld,
+  partyId: string,
+  constituencyId: string,
+  maxCandidates: number,
+): string[] {
+  const preferred: string[] = [];
+  for (const office of officesOfKind(world, "assembly_member")) {
+    if (office.constituencyId !== constituencyId) continue;
+    for (const term of occupyingTerms(state, office.id)) {
+      if (state.politicians[term.holderId]?.partyId === partyId) {
+        preferred.push(term.holderId);
+      }
+    }
+  }
+  const rest = seedDeclaredEntries(state, partyId, maxCandidates * 2).filter(
+    (id) => !preferred.includes(id),
+  );
+  return [...preferred, ...rest].slice(0, maxCandidates);
+}
+
+function createSeededOfficeContest(
+  state: SimState,
+  world: KernelWorld,
+  args: {
+    officeKind: OfficeNominationKind;
+    electionId: string;
+    electionDate: string;
+    partyId: string;
+    provinceId?: string;
+    constituencyId?: string;
+    nominationSlots?: number;
+    maxCandidates: number;
+    commandId?: string | null;
+  },
+): { contest: PartyContest; events: SimEvent[] } | null {
+  const slots = args.nominationSlots ?? 1;
+  const created = createPartyContest(
+    state,
+    world,
+    {
+      type: contestTypeForKind(args.officeKind),
+      partyId: args.partyId,
+      metadata: {
+        officeKind: args.officeKind,
+        electionId: args.electionId,
+        electionDate: args.electionDate,
+        partyId: args.partyId,
+        provinceId: args.provinceId ?? null,
+        constituencyId: args.constituencyId ?? null,
+        nominationSlots: slots,
+        winnerIds: [],
+        candidateSource: "runtime_politics",
+      },
+    },
+    args.commandId ?? null,
+  );
+  if ("error" in created) return null;
+  const events: SimEvent[] = [...created.events];
+  const seedCount = Math.max(args.maxCandidates, slots + 1);
+  const seeds =
+    args.officeKind === "assembly" && args.constituencyId
+      ? seedAssemblyEntries(state, world, args.partyId, args.constituencyId, seedCount)
+      : seedDeclaredEntries(state, args.partyId, seedCount);
+  for (const politicianId of seeds) {
+    const declared = declareCandidacy(
+      state,
+      world,
+      created.contest.id,
+      politicianId,
+      args.commandId ?? null,
+    );
+    if ("error" in declared) {
+      created.contest.entries[politicianId] = {
+        politicianId,
+        status: "declared",
+        declaredDate: state.currentDate,
+        qualificationEvidence: emptyQualificationEvidence(),
+        seedPresidentialStatus: null,
+      };
+    } else {
+      events.push(...declared.events);
+    }
+  }
+  return { contest: created.contest, events };
+}
+
+/**
+ * Ensure office nomination contests for an open gubernatorial or assembly election.
+ * Assembly: one contest per (party, election, constituency) worth contesting.
+ * Gubernatorial: one contest per party (province-keyed); early-returns if any exist.
  */
 export function ensureOfficeNominationContests(
   state: SimState,
@@ -155,16 +400,18 @@ export function ensureOfficeNominationContests(
     electionDate: string;
     provinceId?: string;
     constituencyId?: string;
+    constituencyIds?: string[];
     partyIds?: string[];
     maxCandidatesPerParty?: number;
     commandId?: string | null;
   },
 ): { contests: PartyContest[]; events: SimEvent[] } {
   const existing = officeNominationContestsForElection(state, args.electionId, args.officeKind);
-  if (existing.length > 0) return { contests: existing, events: [] };
+  if (args.officeKind === "gubernatorial" && existing.length > 0) {
+    return { contests: existing, events: [] };
+  }
 
   const events: SimEvent[] = [];
-  const contests: PartyContest[] = [];
   const partyIds = (
     args.partyIds ?? [...membershipPartyIds(world), ...Object.keys(state.dynamicParties)]
   )
@@ -172,55 +419,73 @@ export function ensureOfficeNominationContests(
     .sort();
   const maxCandidates = args.maxCandidatesPerParty ?? 4;
 
+  if (args.officeKind === "gubernatorial") {
+    for (const partyId of partyIds) {
+      if (!partyAllowsNomination(world, state, partyId)) continue;
+      const created = createSeededOfficeContest(state, world, {
+        officeKind: "gubernatorial",
+        electionId: args.electionId,
+        electionDate: args.electionDate,
+        partyId,
+        ...(args.provinceId != null ? { provinceId: args.provinceId } : {}),
+        nominationSlots: 1,
+        maxCandidates,
+        ...(args.commandId !== undefined ? { commandId: args.commandId } : {}),
+      });
+      if (created) events.push(...created.events);
+    }
+    return {
+      contests: officeNominationContestsForElection(state, args.electionId, "gubernatorial"),
+      events,
+    };
+  }
+
+  const existingKeys = new Set(
+    existing.map((contest) => {
+      const meta = officeNominationCycleMetadata(contest);
+      return officeNominationContestKey(
+        contest.partyId,
+        args.electionId,
+        meta?.constituencyId ?? null,
+      );
+    }),
+  );
+
   for (const partyId of partyIds) {
     if (!partyAllowsNomination(world, state, partyId)) continue;
-    const created = createPartyContest(
-      state,
-      world,
-      {
-        type: contestTypeForKind(args.officeKind),
+    const targets =
+      args.constituencyIds?.slice().sort() ??
+      (args.constituencyId
+        ? [args.constituencyId]
+        : assemblyConstituenciesWorthContesting(state, world, args.electionId, partyId));
+    for (const constituencyId of targets) {
+      if (!world.constituencyElectorate[constituencyId]) continue;
+      const key = officeNominationContestKey(partyId, args.electionId, constituencyId);
+      if (existingKeys.has(key)) continue;
+      const slots = assemblyNominationSlots(state, world, {
+        electionId: args.electionId,
         partyId,
-        metadata: {
-          officeKind: args.officeKind,
-          electionId: args.electionId,
-          electionDate: args.electionDate,
-          partyId,
-          provinceId: args.provinceId ?? null,
-          constituencyId: args.constituencyId ?? null,
-          candidateSource: "runtime_politics",
-        },
-      },
-      args.commandId ?? null,
-    );
-    if ("error" in created) continue;
-    contests.push(created.contest);
-    events.push(...created.events);
-
-    for (const politicianId of seedDeclaredEntries(state, partyId, maxCandidates)) {
-      const declared = declareCandidacy(
-        state,
-        world,
-        created.contest.id,
-        politicianId,
-        args.commandId ?? null,
-      );
-      if ("error" in declared) {
-        // Soft-seed: mark exploring entry when declare fails eligibility edge cases.
-        created.contest.entries[politicianId] = {
-          politicianId,
-          status: "declared",
-          declaredDate: state.currentDate,
-          qualificationEvidence: emptyQualificationEvidence(),
-          seedPresidentialStatus: null,
-        };
-      } else {
-        events.push(...declared.events);
+        constituencyId,
+      });
+      const created = createSeededOfficeContest(state, world, {
+        officeKind: "assembly",
+        electionId: args.electionId,
+        electionDate: args.electionDate,
+        partyId,
+        constituencyId,
+        nominationSlots: slots,
+        maxCandidates,
+        ...(args.commandId !== undefined ? { commandId: args.commandId } : {}),
+      });
+      if (created) {
+        existingKeys.add(key);
+        events.push(...created.events);
       }
     }
   }
 
   return {
-    contests: officeNominationContestsForElection(state, args.electionId, args.officeKind),
+    contests: officeNominationContestsForElection(state, args.electionId, "assembly"),
     events,
   };
 }
@@ -239,6 +504,69 @@ export function openOfficeNominationContests(
     if (!("error" in opened)) events.push(...opened.events);
   }
   return events;
+}
+
+/**
+ * After the primary IRV resolve, fill remaining nomination slots by sequential IRV
+ * (remove winners and re-count). Stores metadata.winnerIds; keeps winnerId = first.
+ */
+function fillAdditionalNominationWinners(
+  state: SimState,
+  world: KernelWorld,
+  contestId: string,
+  rng: RngService,
+  slots: number,
+): string[] {
+  const contest = state.partyContests[contestId];
+  if (!contest || !contest.winnerId) return [];
+  const winners = [contest.winnerId];
+  if (slots <= 1) {
+    contest.metadata.winnerIds = winners;
+    contest.metadata.nominationSlots = slots;
+    return winners;
+  }
+
+  const originalStatuses = new Map(
+    Object.values(contest.entries).map((entry) => [entry.politicianId, entry.status] as const),
+  );
+  const originallyCounted = new Set(contest.countInput?.candidateIds ?? [contest.winnerId]);
+
+  while (winners.length < slots) {
+    for (const entry of Object.values(contest.entries)) {
+      if (winners.includes(entry.politicianId)) {
+        entry.status = "withdrawn";
+      } else if (originallyCounted.has(entry.politicianId)) {
+        entry.status = "qualified";
+      }
+    }
+    const remaining = Object.values(contest.entries).filter((e) => e.status === "qualified");
+    if (remaining.length === 0) break;
+    if (remaining.length === 1) {
+      winners.push(remaining[0]!.politicianId);
+      break;
+    }
+    const counted = resolveContestCount(world, state, contest, rng);
+    if ("error" in counted) break;
+    const next = counted.archive.elected;
+    if (!next || winners.includes(next)) break;
+    winners.push(next);
+  }
+
+  for (const entry of Object.values(contest.entries)) {
+    const prior = originalStatuses.get(entry.politicianId);
+    if (entry.politicianId === winners[0]) {
+      entry.status = "winner";
+    } else if (originallyCounted.has(entry.politicianId)) {
+      entry.status = "eliminated";
+    } else if (prior) {
+      entry.status = prior;
+    }
+  }
+  // Subsequent slate members stay "eliminated" on the contest record (compat with
+  // single-winner PartyContest validation) but are listed in metadata.winnerIds.
+  contest.metadata.winnerIds = winners;
+  contest.metadata.nominationSlots = slots;
+  return winners;
 }
 
 /**
@@ -269,7 +597,6 @@ export function resolveOfficeNominationContests(
     );
     if (declared.length === 0) continue;
 
-    // Single candidate → plurality by acclamation (mark qualified then resolve).
     if (declared.length === 1) {
       for (const entry of declared) entry.status = "qualified";
     }
@@ -277,6 +604,15 @@ export function resolveOfficeNominationContests(
     const resolved = resolvePartyContest(state, world, current.id, rng, commandId);
     if ("error" in resolved) continue;
     events.push(...resolved.events);
+
+    const meta = officeNominationCycleMetadata(current);
+    const slots =
+      meta?.nominationSlots ??
+      (typeof current.metadata.nominationSlots === "number"
+        ? Math.max(1, Math.floor(current.metadata.nominationSlots))
+        : 1);
+    fillAdditionalNominationWinners(state, world, current.id, rng, slots);
+
     const synced = syncOfficeNominationWinnerToElection(state, world, current.id, commandId);
     if (!("error" in synced)) events.push(...synced.events);
   }
@@ -298,7 +634,9 @@ export function syncOfficeNominationWinnerToElection(
   if (!meta) return { error: reject("INVALID_CONTEST", "missing office nomination metadata") };
 
   const events: SimEvent[] = [];
-  const winner = contest.winnerId;
+  const winners = officeNominationWinnerIds(contest);
+  const winnerSet = new Set(winners);
+  const primary = winners[0] ?? contest.winnerId;
 
   if (meta.officeKind === "gubernatorial") {
     const election = state.provincialRuntime.elections[meta.electionId];
@@ -308,26 +646,31 @@ export function syncOfficeNominationWinnerToElection(
       election.status !== "assumed" &&
       election.status !== "field_finalized"
     ) {
-      // Withdraw co-partisan filings so the nominee is the party's sole candidate.
       for (const cand of Object.values(election.candidates)) {
-        if (cand.partyId === contest.partyId && cand.politicianId !== winner && !cand.withdrawn) {
+        if (
+          cand.partyId === contest.partyId &&
+          !winnerSet.has(cand.politicianId) &&
+          !cand.withdrawn
+        ) {
           cand.withdrawn = true;
         }
       }
-      election.candidates[winner] = {
-        politicianId: winner,
-        partyId: contest.partyId,
-        filedDate: contest.resolvedDate ?? state.currentDate,
-        incumbent: election.incumbentId === winner,
-        source: winner === state.playerPoliticianId ? "player" : "npc",
-        withdrawn: false,
-        sourceContestId: contest.id,
-      };
+      for (const winner of winners) {
+        election.candidates[winner] = {
+          politicianId: winner,
+          partyId: contest.partyId,
+          filedDate: contest.resolvedDate ?? state.currentDate,
+          incumbent: election.incumbentId === winner,
+          source: winner === state.playerPoliticianId ? "player" : "npc",
+          withdrawn: false,
+          sourceContestId: contest.id,
+        };
+      }
       if (election.status === "planned") election.status = "filing_open";
 
       const existingCampaign = Object.values(state.campaignRuntime.campaigns).find(
         (c) =>
-          c.politicianId === winner &&
+          c.politicianId === primary &&
           c.type === "gubernatorial" &&
           (c.electionId === election.id || c.metadata.provinceId === election.provinceId) &&
           (c.status === "active" || c.status === "exploring"),
@@ -340,7 +683,7 @@ export function syncOfficeNominationWinnerToElection(
         attachNominationMethodMetadata(world, state, existingCampaign);
       } else {
         const camp = createCampaignRecord(state, world, {
-          politicianId: winner,
+          politicianId: primary,
           type: "gubernatorial",
           contestId: contest.id,
           electionId: election.id,
@@ -363,80 +706,111 @@ export function syncOfficeNominationWinnerToElection(
       election.status !== "resolved" &&
       election.status !== "cancelled"
     ) {
-      // Withdraw co-partisans so nomination winner is sole party candidate.
-      for (const cand of Object.values(election.candidates)) {
-        if (cand.partyId === contest.partyId && cand.politicianId !== winner && !cand.withdrawn) {
-          cand.withdrawn = true;
-        }
-      }
       const cycle = election.assembly;
-      if (cycle) {
+      const constituencyId = meta.constituencyId ?? null;
+
+      if (cycle && constituencyId) {
         for (const candidacy of Object.values(cycle.candidacies)) {
           if (
             candidacy.partyId === contest.partyId &&
-            candidacy.politicianId !== winner &&
+            candidacy.constituencyId === constituencyId &&
+            !winnerSet.has(candidacy.politicianId) &&
             candidacy.status !== "withdrawn"
           ) {
             candidacy.status = "withdrawn";
+            if (election.candidates[candidacy.politicianId]) {
+              election.candidates[candidacy.politicianId]!.withdrawn = true;
+            }
+            const field = cycle.constituencyFields[constituencyId];
+            if (field) {
+              field.candidateIds = field.candidateIds.filter((id) => id !== candidacy.politicianId);
+            }
+          }
+        }
+      } else {
+        for (const cand of Object.values(election.candidates)) {
+          if (
+            cand.partyId === contest.partyId &&
+            !winnerSet.has(cand.politicianId) &&
+            !cand.withdrawn
+          ) {
+            cand.withdrawn = true;
+          }
+        }
+        if (cycle) {
+          for (const candidacy of Object.values(cycle.candidacies)) {
+            if (
+              candidacy.partyId === contest.partyId &&
+              !winnerSet.has(candidacy.politicianId) &&
+              candidacy.status !== "withdrawn"
+            ) {
+              candidacy.status = "withdrawn";
+            }
           }
         }
       }
 
-      election.candidates[winner] = {
-        politicianId: winner,
-        partyId: contest.partyId,
-        sourceContestId: contest.id,
-        filedDate: contest.resolvedDate ?? state.currentDate,
-        publicIdeology: null,
-        withdrawn: false,
-        independentQualified: false,
-      };
-      if (election.status === "planned") election.status = "field_open";
-
-      if (cycle && meta.constituencyId) {
-        cycle.candidacies[winner] = {
+      for (const winner of winners) {
+        election.candidates[winner] = {
           politicianId: winner,
-          constituencyId: meta.constituencyId,
           partyId: contest.partyId,
+          sourceContestId: contest.id,
           filedDate: contest.resolvedDate ?? state.currentDate,
-          source: winner === state.playerPoliticianId ? "player" : "npc",
-          incumbent: false,
-          status: "filed",
+          publicIdeology: null,
+          withdrawn: false,
+          independentQualified: false,
         };
-        cycle.decisions[winner] = {
-          politicianId: winner,
-          decision: "filed",
-          decidedDate: contest.resolvedDate ?? state.currentDate,
-        };
-      }
+        if (cycle && constituencyId) {
+          cycle.candidacies[winner] = {
+            politicianId: winner,
+            constituencyId,
+            partyId: contest.partyId,
+            filedDate: contest.resolvedDate ?? state.currentDate,
+            source: winner === state.playerPoliticianId ? "player" : "npc",
+            incumbent: false,
+            status: "filed",
+          };
+          cycle.decisions[winner] = {
+            politicianId: winner,
+            decision: "filed",
+            decidedDate: contest.resolvedDate ?? state.currentDate,
+          };
+          const field = cycle.constituencyFields[constituencyId];
+          if (field && !field.candidateIds.includes(winner)) {
+            field.candidateIds = [...field.candidateIds, winner].sort();
+          }
+        }
 
-      const existingCampaign = Object.values(state.campaignRuntime.campaigns).find(
-        (c) =>
-          c.politicianId === winner &&
-          c.type === "assembly" &&
-          c.electionId === election.id &&
-          (c.status === "active" || c.status === "exploring"),
-      );
-      if (existingCampaign) {
-        existingCampaign.contestId = contest.id;
-        existingCampaign.metadata.nominationWinner = true;
-        existingCampaign.metadata.sourceContestId = contest.id;
-        attachNominationMethodMetadata(world, state, existingCampaign);
-      } else {
-        const camp = createCampaignRecord(state, world, {
-          politicianId: winner,
-          type: "assembly",
-          contestId: contest.id,
-          electionId: election.id,
-          constituencyId: meta.constituencyId ?? null,
-          status: "active",
-          metadata: {
-            nominationWinner: true,
-            sourceContestId: contest.id,
-          },
-        });
-        attachNominationMethodMetadata(world, state, camp);
+        const existingCampaign = Object.values(state.campaignRuntime.campaigns).find(
+          (c) =>
+            c.politicianId === winner &&
+            c.type === "assembly" &&
+            c.electionId === election.id &&
+            (c.status === "active" || c.status === "exploring"),
+        );
+        if (existingCampaign) {
+          existingCampaign.contestId = contest.id;
+          existingCampaign.constituencyId = constituencyId;
+          existingCampaign.metadata.nominationWinner = true;
+          existingCampaign.metadata.sourceContestId = contest.id;
+          attachNominationMethodMetadata(world, state, existingCampaign);
+        } else {
+          const camp = createCampaignRecord(state, world, {
+            politicianId: winner,
+            type: "assembly",
+            contestId: contest.id,
+            electionId: election.id,
+            constituencyId,
+            status: "active",
+            metadata: {
+              nominationWinner: true,
+              sourceContestId: contest.id,
+            },
+          });
+          attachNominationMethodMetadata(world, state, camp);
+        }
       }
+      if (election.status === "planned") election.status = "field_open";
     }
   }
 
@@ -446,14 +820,17 @@ export function syncOfficeNominationWinnerToElection(
       type: "OFFICE_NOMINATION_WINNER_SYNCED",
       importance: 0.55,
       visibility: "public",
-      actorIds: [winner],
+      actorIds: winners.slice(0, 8),
       entityIds: [contest.partyId, meta.electionId, contestId],
       payload: {
         contestId,
         electionId: meta.electionId,
         officeKind: meta.officeKind,
         partyId: contest.partyId,
-        winnerId: winner,
+        winnerId: primary,
+        winnerIds: winners,
+        constituencyId: meta.constituencyId ?? null,
+        nominationSlots: meta.nominationSlots ?? winners.length,
       },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,
@@ -466,7 +843,7 @@ export function syncOfficeNominationWinnerToElection(
 /**
  * Light monthly hook: when gubernatorial filing is open, ensure + open + resolve
  * short party nomination contests for parties that require nomination.
- * Assembly path: when assembly filing is open and no contests exist yet, create them.
+ * Assembly path: ensure missing constituency contests, then resolve.
  */
 export function processOfficeNominationsMonth(
   state: SimState,
@@ -494,7 +871,6 @@ export function processOfficeNominationsMonth(
       (c) => c.status !== "resolved" && c.status !== "cancelled",
     );
     if (unresolved.length === 0) continue;
-    // Resolve in the same month once filing is open (short contest window).
     events.push(
       ...resolveOfficeNominationContests(
         state,
@@ -518,16 +894,13 @@ export function processOfficeNominationsMonth(
     const filingOpen =
       election.assembly?.filingStatus === "open" || election.status === "field_open";
     if (!filingOpen) continue;
-    const existing = officeNominationContestsForElection(state, election.id, "assembly");
-    if (existing.length === 0) {
-      const ensured = ensureOfficeNominationContests(state, world, {
-        officeKind: "assembly",
-        electionId: election.id,
-        electionDate: election.date,
-        commandId,
-      });
-      events.push(...ensured.events);
-    }
+    const ensured = ensureOfficeNominationContests(state, world, {
+      officeKind: "assembly",
+      electionId: election.id,
+      electionDate: election.date,
+      commandId,
+    });
+    events.push(...ensured.events);
     const unresolved = officeNominationContestsForElection(state, election.id, "assembly").filter(
       (c) => c.status !== "resolved" && c.status !== "cancelled",
     );

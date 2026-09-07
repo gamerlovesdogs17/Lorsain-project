@@ -12,6 +12,10 @@ import { pushHistory } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import { emptyIdeology } from "../agents/profile.js";
 import { standingPublicScore } from "../campaigns/effects.js";
+import {
+  assemblyNomineesForConstituency,
+  partyRequiresOfficeNomination,
+} from "../parties/officeNominations.js";
 import { partyAllowedUnderConstitution } from "../parties/state.js";
 import { assemblyElectionMode } from "../provinces/constitutionGameplay.js";
 import type {
@@ -297,14 +301,36 @@ function availableAssemblyCandidateIds(
   return available;
 }
 
+type EmergencyNominationFiller = {
+  politicianId: string;
+  constituencyId: string;
+  partyId: string;
+  reason: string;
+};
+
 type Allocation = {
   candidacies: Record<string, AssemblyCandidacy>;
   fields: Record<string, AssemblyConstituencyField>;
+  emergencyNominationFillers: EmergencyNominationFiller[];
 };
+
+function partyHasAssemblyNominees(
+  state: SimState,
+  electionId: string,
+  partyId: string | null,
+  constituencyId: string,
+): boolean {
+  if (!partyId) return false;
+  return assemblyNomineesForConstituency(state, electionId, partyId, constituencyId).length > 0;
+}
 
 /**
  * Deterministic national allocation. The input constituency order is ignored;
  * stable election-scoped hashing breaks ties without favoring C001 first.
+ *
+ * Nomination-required parties with valid nominees for a constituency are not
+ * auto-filled there. Emergency fallback may still place them when the field
+ * cannot otherwise meet magnitude — callers should log those rows clearly.
  */
 export function allocateAssemblyCandidateFields(
   state: SimState,
@@ -404,11 +430,19 @@ export function allocateAssemblyCandidateFields(
   const stretchFor = (cid: string): number =>
     world.constituencyElectorate[cid]!.seats + ASSEMBLY_FIELD_RESERVE_TARGET;
 
+  const emergencyNominationFillers: EmergencyNominationFiller[] = [];
+
   const choosePair = (
     stretch: boolean,
-  ): { politicianId: string; constituencyId: string } | null => {
-    let best: { politicianId: string; constituencyId: string; score: number; tie: number } | null =
-      null;
+    allowEmergencyNominationFill: boolean,
+  ): { politicianId: string; constituencyId: string; emergency: boolean } | null => {
+    let best: {
+      politicianId: string;
+      constituencyId: string;
+      score: number;
+      tie: number;
+      emergency: boolean;
+    } | null = null;
     for (const constituencyId of constituencyIds) {
       const ids = byConstituency.get(constituencyId)!;
       const target = stretch ? stretchFor(constituencyId) : targetFor(constituencyId);
@@ -417,42 +451,83 @@ export function allocateAssemblyCandidateFields(
       const parties = new Set(ids.map((id) => candidacies[id]?.partyId ?? null));
       for (const politicianId of unassigned) {
         const metrics = candidateMetrics.get(politicianId)!;
+        const requiresNom = partyRequiresOfficeNomination(world, state, metrics.partyId);
+        const hasNominees = partyHasAssemblyNominees(
+          state,
+          election.id,
+          metrics.partyId,
+          constituencyId,
+        );
+        if (requiresNom && hasNominees) continue;
+        const emergency = requiresNom && !hasNominees;
+        if (emergency && !allowEmergencyNominationFill) continue;
         const score =
           deficit * 100 +
           (metrics.localFitByConstituency.get(constituencyId) ?? 0) * 12 +
           (parties.has(metrics.partyId) ? 0 : 1.2) +
-          metrics.quality * 2;
+          metrics.quality * 2 -
+          (emergency ? 40 : 0);
         const tie = stableHash(`${election.id}:${politicianId}:${constituencyId}`);
         if (!best || score > best.score || (score === best.score && tie < best.tie)) {
-          best = { politicianId, constituencyId, score, tie };
+          best = { politicianId, constituencyId, score, tie, emergency };
         }
       }
     }
-    return best ? { politicianId: best.politicianId, constituencyId: best.constituencyId } : null;
+    return best
+      ? {
+          politicianId: best.politicianId,
+          constituencyId: best.constituencyId,
+          emergency: best.emergency,
+        }
+      : null;
+  };
+
+  const assignPicked = (picked: {
+    politicianId: string;
+    constituencyId: string;
+    emergency: boolean;
+  }): void => {
+    unassigned.delete(picked.politicianId);
+    candidacies[picked.politicianId] = candidacyFor(
+      state,
+      world,
+      picked.politicianId,
+      picked.constituencyId,
+      cycle.filingOpenDate,
+      "npc",
+    );
+    byConstituency.get(picked.constituencyId)!.push(picked.politicianId);
+    if (picked.emergency) {
+      const partyId = candidacies[picked.politicianId]?.partyId ?? "unknown";
+      emergencyNominationFillers.push({
+        politicianId: picked.politicianId,
+        constituencyId: picked.constituencyId,
+        partyId: partyId ?? "unknown",
+        reason:
+          "ASSEMBLY_NOMINATION_EMERGENCY_FALLBACK: field short after skipping nomination-required parties",
+      });
+    }
   };
 
   for (const stretch of [false, true]) {
     while (unassigned.size > 0) {
-      const picked = choosePair(stretch);
+      const picked = choosePair(stretch, false);
       if (!picked) break;
-      unassigned.delete(picked.politicianId);
-      candidacies[picked.politicianId] = candidacyFor(
-        state,
-        world,
-        picked.politicianId,
-        picked.constituencyId,
-        cycle.filingOpenDate,
-        "npc",
-      );
-      byConstituency.get(picked.constituencyId)!.push(picked.politicianId);
+      assignPicked(picked);
     }
   }
 
+  // Ordinary fallback still prefers non-nomination-required parties.
   while (unassigned.size > 0) {
-    const politicianId = [...unassigned].sort(
-      (a, b) =>
-        stableHash(`${election.id}:fallback:${a}`) - stableHash(`${election.id}:fallback:${b}`),
-    )[0]!;
+    const politicianId = [...unassigned]
+      .filter(
+        (id) => !partyRequiresOfficeNomination(world, state, candidateMetrics.get(id)?.partyId),
+      )
+      .sort(
+        (a, b) =>
+          stableHash(`${election.id}:fallback:${a}`) - stableHash(`${election.id}:fallback:${b}`),
+      )[0];
+    if (!politicianId) break;
     const constituencyId = constituencyIds.slice().sort((a, b) => {
       const da = byConstituency.get(a)!.length / world.constituencyElectorate[a]!.seats;
       const db = byConstituency.get(b)!.length / world.constituencyElectorate[b]!.seats;
@@ -464,16 +539,85 @@ export function allocateAssemblyCandidateFields(
           stableHash(`${election.id}:${politicianId}:${b}`)
       );
     })[0]!;
-    unassigned.delete(politicianId);
-    candidacies[politicianId] = candidacyFor(
-      state,
-      world,
-      politicianId,
-      constituencyId,
-      cycle.filingOpenDate,
-      "npc",
+    assignPicked({ politicianId, constituencyId, emergency: false });
+  }
+
+  // Emergency: nomination-required members only when a constituency is still short of magnitude.
+  const shortConstituencies = () =>
+    constituencyIds.filter(
+      (cid) => byConstituency.get(cid)!.length < world.constituencyElectorate[cid]!.seats,
     );
-    byConstituency.get(constituencyId)!.push(politicianId);
+  while (unassigned.size > 0 && shortConstituencies().length > 0) {
+    const picked = choosePair(true, true);
+    if (!picked) break;
+    // Force emergency onto a short constituency when possible.
+    const short = shortConstituencies();
+    const constituencyId = short.includes(picked.constituencyId)
+      ? picked.constituencyId
+      : short.slice().sort((a, b) => {
+          const da = byConstituency.get(a)!.length / world.constituencyElectorate[a]!.seats;
+          const db = byConstituency.get(b)!.length / world.constituencyElectorate[b]!.seats;
+          return (
+            da - db ||
+            stableHash(`${election.id}:emerg:${picked.politicianId}:${a}`) -
+              stableHash(`${election.id}:emerg:${picked.politicianId}:${b}`)
+          );
+        })[0]!;
+    const requiresNom = partyRequiresOfficeNomination(
+      world,
+      state,
+      candidateMetrics.get(picked.politicianId)?.partyId,
+    );
+    const hasNominees = partyHasAssemblyNominees(
+      state,
+      election.id,
+      candidateMetrics.get(picked.politicianId)?.partyId ?? null,
+      constituencyId,
+    );
+    if (requiresNom && hasNominees) {
+      unassigned.delete(picked.politicianId);
+      continue;
+    }
+    assignPicked({
+      politicianId: picked.politicianId,
+      constituencyId,
+      emergency: requiresNom,
+    });
+  }
+
+  // Remaining pool fills reserves. Skip constituencies where this nomination-required
+  // party already has nominees (no filler-with-nominee). Not an emergency — that path
+  // is only for failing seat magnitude above.
+  while (unassigned.size > 0) {
+    const politicianId = [...unassigned].sort(
+      (a, b) =>
+        stableHash(`${election.id}:leftover:${a}`) - stableHash(`${election.id}:leftover:${b}`),
+    )[0]!;
+    const metrics = candidateMetrics.get(politicianId)!;
+    const constituencyId = constituencyIds
+      .filter(
+        (cid) =>
+          !(
+            partyRequiresOfficeNomination(world, state, metrics.partyId) &&
+            partyHasAssemblyNominees(state, election.id, metrics.partyId, cid)
+          ),
+      )
+      .sort((a, b) => {
+        const da = byConstituency.get(a)!.length / world.constituencyElectorate[a]!.seats;
+        const db = byConstituency.get(b)!.length / world.constituencyElectorate[b]!.seats;
+        return (
+          da - db ||
+          (metrics.localFitByConstituency.get(b) ?? 0) -
+            (metrics.localFitByConstituency.get(a) ?? 0) ||
+          stableHash(`${election.id}:${politicianId}:${a}`) -
+            stableHash(`${election.id}:${politicianId}:${b}`)
+        );
+      })[0];
+    if (!constituencyId) {
+      unassigned.delete(politicianId);
+      continue;
+    }
+    assignPicked({ politicianId, constituencyId, emergency: false });
   }
 
   const fields: Record<string, AssemblyConstituencyField> = {};
@@ -495,7 +639,7 @@ export function allocateAssemblyCandidateFields(
       finalizedDate: cycle.filingStatus === "closed" ? cycle.filingDeadlineDate : null,
     };
   }
-  return { candidacies, fields };
+  return { candidacies, fields, emergencyNominationFillers };
 }
 
 function syncElectionCandidates(
@@ -532,12 +676,33 @@ function rebuildAssemblyAllocation(
   state: SimState,
   world: KernelWorld,
   election: ElectionState,
+  commandId: string | null = null,
 ): CommandError | null {
   const allocated = allocateAssemblyCandidateFields(state, world, election);
   if ("error" in allocated) return allocated.error;
   election.assembly!.candidacies = allocated.candidacies;
   election.assembly!.constituencyFields = allocated.fields;
   syncElectionCandidates(state, world, election);
+  if (allocated.emergencyNominationFillers.length > 0) {
+    // Clear, intentional signal: nomination selection failed to cover the field.
+    pushHistory(state, {
+      date: state.currentDate,
+      type: "ASSEMBLY_NOMINATION_EMERGENCY_FALLBACK",
+      importance: 0.8,
+      visibility: "system",
+      actorIds: allocated.emergencyNominationFillers.map((row) => row.politicianId).slice(0, 12),
+      entityIds: [election.id],
+      payload: {
+        electionId: election.id,
+        count: allocated.emergencyNominationFillers.length,
+        fillers: allocated.emergencyNominationFillers.slice(0, 40),
+        message:
+          "Emergency assembly field fill used nomination-required party members because ordinary selection could not meet seat magnitude.",
+      },
+      sourceScheduledEventId: null,
+      sourceCommandId: commandId,
+    });
+  }
   return null;
 }
 
@@ -585,7 +750,7 @@ export function openAssemblyFilingIfDue(
     election.id,
     Math.max(0, fieldTarget - availableBeforeRecruitment),
   );
-  const err = rebuildAssemblyAllocation(state, world, election);
+  const err = rebuildAssemblyAllocation(state, world, election, commandId);
   if (err) throw new Error(`${err.code}: ${err.message}`);
   return [
     pushHistory(state, {
@@ -660,7 +825,7 @@ export function fileAssemblyCandidacy(
     decision: "filed",
     decidedDate: state.currentDate,
   };
-  const err = rebuildAssemblyAllocation(state, world, election);
+  const err = rebuildAssemblyAllocation(state, world, election, commandId);
   if (err) return { error: err };
   return {
     candidacy: election.assembly!.candidacies[args.politicianId]!,
@@ -768,7 +933,7 @@ export function finalizeAssemblyFieldsIfDue(
     );
     const available = availableAssemblyCandidateIds(state, world, election).size;
     recruitFederalAssemblyClass(world, state, election.id, Math.max(0, fieldTarget - available));
-    const err = rebuildAssemblyAllocation(state, world, election);
+    const err = rebuildAssemblyAllocation(state, world, election, commandId);
     if (err) throw new Error(`${err.code}: ${err.message}`);
   }
   if (!cycle.decisions[state.playerPoliticianId]) {

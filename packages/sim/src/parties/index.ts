@@ -1,4 +1,5 @@
 export * from "./officeNominations.js";
+export * from "./nominationIntegrity.js";
 export * from "./types.js";
 export * from "./policy.js";
 export * from "./queries.js";

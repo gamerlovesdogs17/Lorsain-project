@@ -6,6 +6,7 @@ import {
   ensureOfficeNominationContests,
   officeNominationContestsForElection,
   officeNominationCycleMetadata,
+  officeNominationWinnerIds,
   openOfficeNominationContests,
   resolveOfficeNominationContests,
 } from "./parties/officeNominations.js";
@@ -118,7 +119,7 @@ describe("Phase 14 office nominations", () => {
     expect(resolveEvents.some((e) => e.type === "OFFICE_NOMINATION_WINNER_SYNCED")).toBe(true);
   });
 
-  it("creates and resolves assembly nomination contests", () => {
+  it("creates constituency-level assembly nomination contests (not one national)", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({ world, seed: "p14-nom-c", playerPoliticianId: "NPC146" });
     const state = jsonClone(sim.getSnapshot() as SimState);
@@ -162,22 +163,196 @@ describe("Phase 14 office nominations", () => {
       if (election.assembly) election.assembly.filingStatus = "open";
     }
 
+    const constituencyIds = Object.keys(world.constituencyElectorate).sort().slice(0, 3);
+    expect(constituencyIds.length).toBeGreaterThanOrEqual(2);
+
     const { contests } = ensureOfficeNominationContests(state, world, {
       officeKind: "assembly",
       electionId: election.id,
       electionDate: election.date,
       partyIds: ["PARTY_LAB"],
+      constituencyIds,
       maxCandidatesPerParty: 3,
       commandId: "test",
     });
-    expect(contests.length).toBe(1);
-    expect(contests[0]!.type).toBe("assembly_nomination");
+    expect(contests.length).toBe(constituencyIds.length);
+    expect(contests.every((c) => c.type === "assembly_nomination")).toBe(true);
+    for (const contest of contests) {
+      const meta = officeNominationCycleMetadata(contest);
+      expect(meta?.constituencyId).toBeTruthy();
+      expect(constituencyIds).toContain(meta!.constituencyId!);
+      expect(typeof contest.metadata.nominationSlots).toBe("number");
+      expect(contest.metadata.nominationSlots).toBeGreaterThanOrEqual(1);
+    }
+    const keys = new Set(
+      contests.map((c) => `${c.partyId}::${officeNominationCycleMetadata(c)?.constituencyId}`),
+    );
+    expect(keys.size).toBe(contests.length);
+
+    const again = ensureOfficeNominationContests(state, world, {
+      officeKind: "assembly",
+      electionId: election.id,
+      electionDate: election.date,
+      partyIds: ["PARTY_LAB"],
+      constituencyIds,
+    });
+    expect(again.contests.length).toBe(contests.length);
+    expect(again.events.length).toBe(0);
 
     resolveOfficeNominationContests(state, world, rng, election.id, "assembly", "test");
-    const done = officeNominationContestsForElection(state, election.id, "assembly")[0]!;
-    expect(done.status).toBe("resolved");
-    expect(done.winnerId).toBeTruthy();
-    expect(election.candidates[done.winnerId!]?.sourceContestId).toBe(done.id);
+    const done = officeNominationContestsForElection(state, election.id, "assembly");
+    expect(done.every((c) => c.status === "resolved")).toBe(true);
+    expect(done.every((c) => c.winnerId)).toBeTruthy();
+    for (const contest of done) {
+      expect(election.candidates[contest.winnerId!]?.sourceContestId).toBe(contest.id);
+      expect(officeNominationWinnerIds(contest).length).toBeGreaterThanOrEqual(1);
+      expect(officeNominationWinnerIds(contest)[0]).toBe(contest.winnerId);
+    }
+  });
+
+  it("multi-slot assembly nomination syncs winnerIds onto constituency STV field", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, seed: "p14-nom-stv", playerPoliticianId: "NPC146" });
+    const state = jsonClone(sim.getSnapshot() as SimState);
+    const rng = createRngService("p14-nom-stv-resolve");
+
+    const multiSeat =
+      Object.keys(world.constituencyElectorate)
+        .filter((id) => (world.constituencyElectorate[id]?.seats ?? 0) >= 2)
+        .sort()[0] ?? Object.keys(world.constituencyElectorate).sort()[0]!;
+    // Force multi-seat magnitude for the nomination slot test when all seats are 1.
+    const priorSeats = world.constituencyElectorate[multiSeat]!.seats;
+    world.constituencyElectorate[multiSeat]!.seats = Math.max(2, priorSeats);
+
+    let election = Object.values(state.elections).find((e) => e.type === "assembly");
+    if (!election) {
+      const id = "ELEC_ASM_TEST_STV";
+      state.elections[id] = {
+        id,
+        type: "assembly",
+        date: "2030-05-01",
+        status: "field_open",
+        geographyKind: "national",
+        constituencyId: null,
+        seats: 120,
+        fieldFinalized: false,
+        candidates: {},
+        partiesWithoutNominee: [],
+        turnout: null,
+        countInput: null,
+        countArchive: null,
+        winnerIds: [],
+        resultEventId: null,
+        assembly: {
+          filingStatus: "open",
+          filingOpenDate: state.currentDate,
+          filingDeadlineDate: "2030-04-01",
+          decisions: {},
+          candidacies: {},
+          constituencyFields: {
+            [multiSeat]: {
+              constituencyId: multiSeat,
+              magnitude: world.constituencyElectorate[multiSeat]!.seats,
+              candidateIds: [],
+              finalizedDate: null,
+            },
+          },
+          constituencyResults: {},
+          partySeatTotals: {},
+        },
+        metadata: {},
+      };
+      election = state.elections[id]!;
+    } else {
+      election.status = "field_open";
+      election.fieldFinalized = false;
+      if (!election.assembly) {
+        election.assembly = {
+          filingStatus: "open",
+          filingOpenDate: state.currentDate,
+          filingDeadlineDate: "2030-04-01",
+          decisions: {},
+          candidacies: {},
+          constituencyFields: {},
+          constituencyResults: {},
+          partySeatTotals: {},
+          previousPartySeatTotals: {},
+        };
+      }
+      election.assembly.filingStatus = "open";
+      election.assembly.constituencyFields[multiSeat] = {
+        constituencyId: multiSeat,
+        magnitude: world.constituencyElectorate[multiSeat]!.seats,
+        candidateIds: election.assembly.constituencyFields[multiSeat]?.candidateIds ?? [],
+        finalizedDate: null,
+      };
+    }
+
+    const partyId = "PARTY_LAB";
+    const { contests } = ensureOfficeNominationContests(state, world, {
+      officeKind: "assembly",
+      electionId: election.id,
+      electionDate: election.date,
+      partyIds: [partyId],
+      constituencyIds: [multiSeat],
+      maxCandidatesPerParty: 5,
+      commandId: "test",
+    });
+    expect(contests.length).toBe(1);
+    const contest = contests[0]!;
+    contest.metadata.nominationSlots = 2;
+    expect(Object.keys(contest.entries).length).toBeGreaterThanOrEqual(2);
+
+    // Seed a co-partisan filler on this constituency that should be withdrawn.
+    const filler = Object.keys(state.politicians)
+      .filter(
+        (id) =>
+          state.politicians[id]?.partyId === partyId &&
+          !contest.entries[id] &&
+          state.politicians[id]?.alive &&
+          !state.politicians[id]?.retired,
+      )
+      .sort()[0];
+    if (filler) {
+      election.assembly!.candidacies[filler] = {
+        politicianId: filler,
+        constituencyId: multiSeat,
+        partyId,
+        filedDate: state.currentDate,
+        source: "npc",
+        incumbent: false,
+        status: "filed",
+      };
+      election.assembly!.constituencyFields[multiSeat]!.candidateIds.push(filler);
+      election.candidates[filler] = {
+        politicianId: filler,
+        partyId,
+        sourceContestId: null,
+        filedDate: state.currentDate,
+        publicIdeology: null,
+        withdrawn: false,
+        independentQualified: false,
+      };
+    }
+
+    resolveOfficeNominationContests(state, world, rng, election.id, "assembly", "test");
+    const resolved = officeNominationContestsForElection(state, election.id, "assembly")[0]!;
+    expect(resolved.status).toBe("resolved");
+    const winners = officeNominationWinnerIds(resolved);
+    expect(winners.length).toBeGreaterThanOrEqual(1);
+    expect(winners.length).toBeLessThanOrEqual(2);
+    expect(resolved.winnerId).toBe(winners[0]);
+    expect(Array.isArray(resolved.metadata.winnerIds)).toBe(true);
+
+    for (const winner of winners) {
+      expect(election.candidates[winner]?.sourceContestId).toBe(resolved.id);
+      expect(election.assembly!.candidacies[winner]?.constituencyId).toBe(multiSeat);
+      expect(election.assembly!.candidacies[winner]?.status).toBe("filed");
+      expect(election.assembly!.constituencyFields[multiSeat]!.candidateIds).toContain(winner);
+    }
+    if (filler && !winners.includes(filler)) {
+      expect(election.assembly!.candidacies[filler]?.status).toBe("withdrawn");
+    }
   });
 
   it("sync withdraws co-partisan auto-filings so nomination winner is sole candidate", () => {
