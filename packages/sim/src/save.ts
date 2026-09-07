@@ -2128,6 +2128,50 @@ export function migrateSaveV24ToV25(raw: unknown): unknown {
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 24, toSchema: 25, migrate: migrateSaveV24ToV25 });
 
-// TODO(schema26): migrateSaveV25ToV26 should seed party publicPlatform.salience
-// (Partial<Record<PartyPlatformIssue, number>>) with defaults ({} / foreign_policy: 0)
-// once SAVE_SCHEMA_VERSION bumps past 25. Parse/ensure paths already default missing salience.
+/**
+ * Schema 26: foreign-policy salience defaults + assembly nomination metadata hygiene.
+ * Does not fabricate Court precedent links or narrative history.
+ */
+export function migrateSaveV25ToV26(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 26 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 26 };
+
+  if (isRecord(sim.partyStates)) {
+    const parties: Record<string, unknown> = { ...sim.partyStates };
+    for (const [partyId, row] of Object.entries(parties)) {
+      if (!isRecord(row)) continue;
+      const platform = isRecord(row.publicPlatform) ? { ...row.publicPlatform } : null;
+      if (platform) {
+        if (!isRecord(platform.salience)) platform.salience = {};
+        parties[partyId] = { ...row, publicPlatform: platform };
+      }
+    }
+    sim.partyStates = parties;
+  }
+
+  if (isRecord(sim.partyContests)) {
+    const contests: Record<string, unknown> = { ...sim.partyContests };
+    for (const [id, contest] of Object.entries(contests)) {
+      if (!isRecord(contest)) continue;
+      const meta = isRecord(contest.metadata) ? { ...contest.metadata } : {};
+      if (contest.type === "assembly_nomination") {
+        if (!Array.isArray(meta.winnerIds)) {
+          meta.winnerIds =
+            typeof contest.winnerId === "string" && contest.winnerId ? [contest.winnerId] : [];
+        }
+        if (typeof meta.nominationSlots !== "number") {
+          meta.nominationSlots = Math.max(1, (meta.winnerIds as string[]).length || 1);
+        }
+      }
+      contests[id] = { ...contest, metadata: meta };
+    }
+    sim.partyContests = contests;
+  }
+
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 25, toSchema: 26, migrate: migrateSaveV25ToV26 });

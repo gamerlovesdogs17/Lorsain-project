@@ -138,7 +138,7 @@ describe("Phase 16 domestic foreign politics bridge", () => {
   it("schema remains v25 and save parse succeeds", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({ world, seed: "p16-dom-c", playerPoliticianId: "NPC146" });
-    expect(SAVE_SCHEMA_VERSION).toBe(25);
+    expect(SAVE_SCHEMA_VERSION).toBe(26);
     const save = sim.serializeSave();
     const parsed = parseSaveFile(JSON.parse(JSON.stringify(save)));
     expect("error" in parsed).toBe(false);

@@ -65,10 +65,16 @@ export {
   migrateSaveV20ToV21,
   migrateSaveV23ToV24,
   migrateSaveV24ToV25,
+  migrateSaveV25ToV26,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
 export { SAVE_SCHEMA_VERSION } from "./types.js";
+export {
+  auditSimulationIntegrity,
+  integrityErrorCount,
+  type IntegrityFinding,
+} from "./integrity/audit.js";
 export { buildTerenaKernelWorld, KernelContentError, type TerenaKernelInput } from "./world.js";
 export {
   terenaElectoralFromBundle,

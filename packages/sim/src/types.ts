@@ -71,7 +71,7 @@ export type {
   CanonicalWorldLeader,
 } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 25 as const;
+export const SAVE_SCHEMA_VERSION = 26 as const;
 
 export type PoliticianRuntime = {
   id: string;

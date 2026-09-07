@@ -171,7 +171,7 @@ export function SettingsPage(props: { onBack?: () => void; showBack?: boolean })
             <StatusBadge tone={settings.debugMode ? "warn" : "idle"}>
               {settings.debugMode ? "Diagnostics on" : "Player view"}
             </StatusBadge>
-            <span className="muted">Schema 25 · settings version {settings.version}</span>
+            <span className="muted">Schema 26 · settings version {settings.version}</span>
           </div>
         </SectionCard>
       ) : null}
