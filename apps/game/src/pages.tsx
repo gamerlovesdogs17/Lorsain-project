@@ -153,6 +153,7 @@ type PageProps = {
   globalFocus: { kind: string; id: string } | null;
   setGlobalFocus: (focus: { kind: string; id: string } | null) => void;
   onEntityNavigate?: (kind: import("./ui/entityLink.js").EntityLinkKind, id: string) => void;
+  onNavigate?: (screen: Screen) => void;
 };
 
 const PARTY_PLATFORM_LABELS: Record<PartyPlatformIssue, string> = {
@@ -212,11 +213,17 @@ function Home(props: PageProps) {
   );
   const playerIsPresident = isPresident(props.world, props.snap, props.snap.playerPoliticianId);
   const warTrigger = props.snap.executiveRuntime.warTrigger;
-  const feed = monthEvents.slice(-8).reverse();
-  const stories = storiesChronological(props.snap).slice(0, 4);
-  const polls = Object.values(props.snap.polls).slice(-2);
+  const feed = monthEvents
+    .filter((e) => e.importance >= 0.35 || e.visibility === "public")
+    .slice(-5)
+    .reverse();
+  const stories = storiesChronological(props.snap).slice(0, 2);
+  const polls = Object.values(props.snap.polls).slice(-1);
   const publicEconomy = nationalPublicEconomy(props.snap);
-  const upcoming = Object.values(props.snap.elections).filter((e) => e.status !== "resolved");
+  const upcoming = Object.values(props.snap.elections)
+    .filter((e) => e.status !== "resolved")
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 4);
   const figure = props.figures.get(playerId);
   const runtime = props.snap.politicians[playerId];
   const standingLabel = publicStandingLabel(props.world, props.snap, playerId);
@@ -227,7 +234,7 @@ function Home(props: PageProps) {
         event.actorIds.includes(playerId) &&
         event.type !== "TURN_COMPLETED",
     )
-    .slice(-3)
+    .slice(-2)
     .reverse();
   const governedProvince = governedProvinceId(props.world, props.snap, playerId);
   const governorState = governedProvince
@@ -280,22 +287,13 @@ function Home(props: PageProps) {
   const openLeadership = Object.values(props.snap.partyContests).filter(
     (c) => c.type === "party_leadership" && c.status !== "resolved" && c.status !== "cancelled",
   );
-  const seatCounts: Record<string, number> = {};
-  for (const id of currentAssemblyMemberIds(props.world, props.snap)) {
-    const partyId = props.snap.politicians[id]?.partyId;
-    if (!partyId) continue;
-    seatCounts[partyId] = (seatCounts[partyId] ?? 0) + 1;
-  }
-  const rankedParties = Object.entries(seatCounts).sort(
-    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
-  );
-  const governingPartyId = rankedParties[0]?.[0] ?? null;
-  const oppositionPartyId = rankedParties.find(([id]) => id !== governingPartyId)?.[0] ?? null;
-  const oppositionLeaderId = oppositionPartyId
-    ? (props.snap.legislatureRuntime.caucusLeadership[oppositionPartyId]?.floorLeaderId ??
-      props.snap.partyStates[oppositionPartyId]?.leaderId ??
-      null)
-    : null;
+  const governing = props.snap.governingRuntime;
+  const agendaActive = (governing?.agenda?.items ?? [])
+    .filter((i) => i.status === "active")
+    .slice(0, 3);
+  const partyLabel = partyDisplayName(props.world, runtime?.partyId ?? null, props.snap);
+  const go = (screen: Screen) => props.onNavigate?.(screen);
+
   const briefTitle = playerIsPresident
     ? "Presidential briefing"
     : governedProvince
@@ -366,14 +364,20 @@ function Home(props: PageProps) {
                 { label: "Office", value: props.offices[0] ?? "Private citizen" },
               ];
 
+  const hasActionRequired =
+    Boolean(interrupt) ||
+    decisions.length > 0 ||
+    Boolean(terenaPublicCrisis) ||
+    Boolean(playerIsPresident && warTrigger);
+
   return (
-    <div className="home-v5 home-desk">
+    <div className="home-v5 home-desk home-v2">
       <WorkLayout
         header={
           <>
             <div className="home-desk-hero">
               <div className="home-desk-hero-copy">
-                <div className="kicker">Political desk</div>
+                <div className="kicker">Political desk · Home 2.0</div>
                 <h2 className="home-desk-title">{briefTitle}</h2>
                 <p className="muted home-desk-lede">
                   {props.offices[0] ?? "Private citizen"} · {standingLabel} standing ·{" "}
@@ -386,321 +390,329 @@ function Home(props: PageProps) {
         }
         main={
           <>
-            {/* === 1. WHAT REQUIRES ATTENTION === */}
-            {interrupt ? (
-              <div className="briefing-urgent alert">
-                <strong>Urgent</strong>
-                <p>{interruptDisplay(interrupt)}</p>
-              </div>
-            ) : null}
-            {decisions.length > 0 ? (
-              <div>
-                <SectionDivider title="Required decisions" />
-                {decisions.map((d) => (
-                  <div key={d.key} className="decision-row">
-                    <span>{decisionDisplayLabel(d, interrupt)}</span>
-                    <StatusBadge tone="warn">Action</StatusBadge>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {terenaPublicCrisis ? (
-              <div className="briefing-urgent alert">
-                <strong>International crisis</strong>
-                <p>
-                  Terena is involved in an active international crisis (
-                  {crisisStageLabel(terenaPublicCrisis.stage)} ·{" "}
-                  {publicSeverityLabel(terenaPublicCrisis.intensity, terenaPublicCrisis.stage)}).
-                  See Foreign Affairs.
-                </p>
-              </div>
-            ) : null}
-            {terenaLatentTension && !terenaPublicCrisis ? (
-              <div className="briefing-note alert">
-                <strong>Strategic tension</strong>
-                <p>
-                  Background tension persists (
-                  {publicSeverityLabel(terenaLatentTension.intensity, terenaLatentTension.stage)}
-                  ). Monitor Foreign Affairs.
-                </p>
-              </div>
-            ) : null}
-            {playerIsPresident && warTrigger ? (
-              <div className="briefing-urgent alert">
-                <strong>War powers decision required</strong>
-                <p>
-                  Open Executive or Foreign Affairs to invoke war powers or seek Assembly
-                  authorization.
-                </p>
-              </div>
-            ) : null}
-            {!interrupt &&
-            decisions.length === 0 &&
-            !terenaPublicCrisis &&
-            !(playerIsPresident && warTrigger) ? (
-              <div className="home-calm-state">
-                <p className="muted">
-                  Nothing currently requires your immediate action. Review developments and plan
-                  ahead.
-                </p>
-              </div>
-            ) : null}
-
-            {/* === 2. CURRENT POLITICAL STATE === */}
-            <SectionDivider title="Current political state" />
-            {(oppositionLeaderId ||
-              coalition ||
-              openSeats.length > 0 ||
-              openLeadership.length > 0) && (
-              <SectionCard title="Political landscape">
-                <dl className="dossier-facts compact">
-                  {oppositionLeaderId ? (
-                    <div>
-                      <dt>Opposition leader</dt>
-                      <dd>
-                        {politicianDisplayName(props.catalog, oppositionLeaderId)}
-                        {oppositionPartyId
-                          ? ` · ${partyDisplayName(props.world, oppositionPartyId, props.snap)}`
-                          : ""}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {coalition ? (
-                    <div>
-                      <dt>Coalition</dt>
-                      <dd>
-                        {coalition.partyIds
-                          .map((id) => partyDisplayName(props.world, id, props.snap))
-                          .join(" · ")}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {openSeats.length > 0 ? (
-                    <div>
-                      <dt>Open seats</dt>
-                      <dd>{openSeats.length} contested or recruiting</dd>
-                    </div>
-                  ) : null}
-                  {openLeadership.length > 0 ? (
-                    <div>
-                      <dt>Leadership contests</dt>
-                      <dd>
-                        {openLeadership
-                          .slice(0, 2)
-                          .map((c) => partyDisplayName(props.world, c.partyId, props.snap))
-                          .join(", ")}
-                      </dd>
-                    </div>
-                  ) : null}
-                </dl>
-              </SectionCard>
-            )}
-            {(playerIsPresident || props.snap.governingRuntime?.fiscal?.lastUpdated) && (
-              <SectionCard title="Governing brief">
-                <dl className="dossier-facts compact">
-                  <div>
-                    <dt>Government agenda</dt>
-                    <dd>
-                      {(props.snap.governingRuntime?.agenda?.items ?? [])
-                        .filter((i) => i.status === "active")
-                        .slice(0, 4)
-                        .map((i) => i.title.replace(/^[^:]+:\s*/, ""))
-                        .join(" · ") || "No active agenda items"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Fiscal snapshot</dt>
-                    <dd>
-                      {(() => {
-                        const f = props.snap.governingRuntime?.fiscal;
-                        if (!f || !f.lastUpdated) return "Awaiting first governing month";
-                        const bal =
-                          f.balance > 0.5 ? "surplus" : f.balance < -0.5 ? "deficit" : "balanced";
-                        return `FY${f.fiscalYear} · revenue ${f.revenue.toFixed(0)} · spending ${f.expenditure.toFixed(0)} · ${bal} · debt ${f.debt.toFixed(0)}`;
-                      })()}
-                    </dd>
-                  </div>
-                  {props.snap.governingRuntime?.budgetCycle?.stage &&
-                  props.snap.governingRuntime.budgetCycle.stage !== "idle" ? (
-                    <div>
-                      <dt>Budget cycle</dt>
-                      <dd>
-                        {props.snap.governingRuntime.budgetCycle.stage.replaceAll("_", " ")}
-                        {props.snap.governingRuntime.budgetCycle.failureConsequence
-                          ? ` · ${props.snap.governingRuntime.budgetCycle.failureConsequence.replaceAll("_", " ")}`
-                          : ""}
-                      </dd>
-                    </div>
-                  ) : null}
-                </dl>
-              </SectionCard>
-            )}
-            <PoliticianProfile
-              catalog={props.catalog}
-              world={props.world}
-              state={props.snap}
-              politicianId={playerId}
-              office={props.offices[0] ?? "Private citizen"}
-              party={partyDisplayName(props.world, runtime?.partyId ?? null, props.snap)}
-              faction={factionDisplayName(props.world, runtime?.factionId ?? null)}
-              {...(figure?.home ? { home: figure.home } : {})}
-              standing={`Public standing: ${standingLabel}`}
-              {...((figure?.notes ?? figure?.display_summary)
-                ? { biography: figure?.notes ?? figure?.display_summary }
-                : {})}
-              onEntityNavigate={props.onEntityNavigate ?? undefined}
-            />
-
-            {/* === 3. RECENT MAJOR DEVELOPMENTS === */}
-            <div className="lead-block">
-              {lead ? (
-                <LeadStory
-                  kicker="Lead story"
-                  headline={eventDisplay(props.catalog, props.world, props.snap, lead)}
-                  date={lead.date}
-                />
-              ) : (
-                <EmptyState>No major developments this month.</EmptyState>
-              )}
-            </div>
-            <SectionDivider title="Recent activity" />
-            {feed.length === 0 ? <EmptyState>Quiet month in public records.</EmptyState> : null}
-            {feed.map((e) => (
-              <ActivityFeedItem
-                key={e.id}
-                date={e.date}
-                text={eventDisplay(props.catalog, props.world, props.snap, e)}
+            <section className="home-section">
+              <SectionDivider
+                title="Action required"
+                hint="Decisions that block or demand attention"
               />
-            ))}
-            {stories.length > 0 ? (
-              <>
-                <SectionDivider title="In the press" />
-                {stories.map((s) => (
-                  <NewsItem
-                    key={s.id}
-                    headline={
-                      s.headlineKey === "Political developments" ||
-                      s.headlineKey === "Political storm in Valen"
-                        ? mediaHeadlineForEvent(s.factEventType, s.framing)
-                        : s.headlineKey
-                    }
-                    outlet={props.world.mediaOutlets[s.outletId]?.name ?? "Press"}
-                    date={s.date}
-                    category={s.category}
+              {interrupt ? (
+                <div className="briefing-urgent alert">
+                  <strong>Urgent</strong>
+                  <p>{interruptDisplay(interrupt)}</p>
+                </div>
+              ) : null}
+              {decisions.length > 0 ? (
+                <div className="home-action-list">
+                  {decisions.slice(0, 8).map((d) => (
+                    <div key={d.key} className="decision-row">
+                      <span>{decisionDisplayLabel(d, interrupt)}</span>
+                      <StatusBadge tone="warn">Action</StatusBadge>
+                    </div>
+                  ))}
+                  {decisions.length > 8 ? (
+                    <p className="muted">{decisions.length - 8} more in Attention.</p>
+                  ) : null}
+                </div>
+              ) : null}
+              {terenaPublicCrisis ? (
+                <div className="briefing-urgent alert">
+                  <strong>International crisis</strong>
+                  <p>
+                    Terena is involved ({crisisStageLabel(terenaPublicCrisis.stage)} ·{" "}
+                    {publicSeverityLabel(terenaPublicCrisis.intensity, terenaPublicCrisis.stage)}
+                    ). See Foreign Affairs.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn secondary btn-sm"
+                    onClick={() => go("foreign")}
+                  >
+                    Open Foreign Affairs →
+                  </button>
+                </div>
+              ) : null}
+              {terenaLatentTension && !terenaPublicCrisis ? (
+                <div className="briefing-note alert">
+                  <strong>Strategic tension</strong>
+                  <p>
+                    Background tension persists (
+                    {publicSeverityLabel(terenaLatentTension.intensity, terenaLatentTension.stage)}
+                    ).
+                  </p>
+                </div>
+              ) : null}
+              {playerIsPresident && warTrigger ? (
+                <div className="briefing-urgent alert">
+                  <strong>War powers decision required</strong>
+                  <p>Invoke war powers or seek Assembly authorization.</p>
+                  <div className="row">
+                    <button
+                      type="button"
+                      className="btn secondary btn-sm"
+                      onClick={() => go("executive")}
+                    >
+                      Government →
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost btn-sm"
+                      onClick={() => go("foreign")}
+                    >
+                      Foreign Affairs →
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {!hasActionRequired ? (
+                <div className="home-calm-state">
+                  <p className="muted">
+                    Nothing currently requires your immediate action. Review what changed and what
+                    is next.
+                  </p>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="home-section">
+              <SectionDivider title="What changed" hint="This turn's public developments" />
+              <div className="lead-block">
+                {lead ? (
+                  <LeadStory
+                    kicker="Lead story"
+                    headline={eventDisplay(props.catalog, props.world, props.snap, lead)}
+                    date={lead.date}
                   />
-                ))}
-              </>
-            ) : null}
+                ) : (
+                  <EmptyState>No major developments this month.</EmptyState>
+                )}
+              </div>
+              {feed.length > 0 ? (
+                <div className="home-change-feed">
+                  {feed.map((e) => (
+                    <ActivityFeedItem
+                      key={e.id}
+                      date={e.date}
+                      text={eventDisplay(props.catalog, props.world, props.snap, e)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              {stories.length > 0 ? (
+                <div className="home-press-brief">
+                  {stories.map((s) => (
+                    <NewsItem
+                      key={s.id}
+                      headline={
+                        s.headlineKey === "Political developments" ||
+                        s.headlineKey === "Political storm in Valen"
+                          ? mediaHeadlineForEvent(s.factEventType, s.framing)
+                          : s.headlineKey
+                      }
+                      outlet={props.world.mediaOutlets[s.outletId]?.name ?? "Press"}
+                      date={s.date}
+                      category={s.category}
+                    />
+                  ))}
+                  <button type="button" className="btn ghost btn-sm" onClick={() => go("news")}>
+                    News desk →
+                  </button>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="home-section">
+              <SectionDivider title="What is next" hint="Calendar and near-term political work" />
+              {upcoming.length === 0 ? (
+                <EmptyState>No pending elections on the near calendar.</EmptyState>
+              ) : (
+                upcoming.map((el) => (
+                  <div key={el.id} className="decision-row">
+                    <div>
+                      <strong>{electionDisplayName(el.id)}</strong>
+                      <div className="muted">{el.date}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+              {upcoming.length > 0 ? (
+                <button
+                  type="button"
+                  className="btn secondary btn-sm"
+                  onClick={() => go("elections")}
+                >
+                  Elections calendar →
+                </button>
+              ) : null}
+              {playerIsMp && constituencyPressures.length ? (
+                <div className="home-constituency-brief">
+                  <p className="muted">Constituency pressures shaping local politics:</p>
+                  {constituencyPressures.slice(0, 3).map((pressure) => (
+                    <EntityRow
+                      key={pressure.kind}
+                      title={pressure.label}
+                      meta={pressure.detail}
+                      status={
+                        <StatusBadge tone={pressure.level === "urgent" ? "warn" : "idle"}>
+                          {pressure.level === "urgent"
+                            ? "Urgent"
+                            : pressure.level === "important"
+                              ? "Important"
+                              : "Watch"}
+                        </StatusBadge>
+                      }
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </section>
           </>
         }
         rail={
           <>
-            {/* === 4. UPCOMING EVENTS / CALENDAR === */}
-            <SectionDivider title="Upcoming elections & calendar" />
-            {upcoming.length === 0 ? (
-              <EmptyState>No pending elections on the calendar.</EmptyState>
-            ) : null}
-            {upcoming.map((el) => (
-              <div key={el.id} className="decision-row">
+            <section className="home-rail-block">
+              <SectionDivider title="Your position" />
+              <dl className="dossier-facts compact home-position-facts">
                 <div>
-                  <strong>{electionDisplayName(el.id)}</strong>
-                  <div className="muted">{el.date}</div>
+                  <dt>Office</dt>
+                  <dd>{props.offices[0] ?? "Private citizen"}</dd>
                 </div>
-              </div>
-            ))}
-            {upcoming.length > 0 ? (
-              <button
-                type="button"
-                className="btn secondary btn-sm"
-                onClick={() =>
-                  props.onEntityNavigate?.(
-                    "Election" as import("./ui/entityLink.js").EntityLinkKind,
-                    upcoming[0]!.id,
-                  )
-                }
-              >
-                Open elections calendar →
+                <div>
+                  <dt>Party</dt>
+                  <dd>{partyLabel}</dd>
+                </div>
+                <div>
+                  <dt>Standing</dt>
+                  <dd>{standingLabel}</dd>
+                </div>
+                {figure?.home || runtime?.homeProvinceId ? (
+                  <div>
+                    <dt>Home</dt>
+                    <dd>
+                      {figure?.home ??
+                        props.catalog.places.get(runtime?.homeProvinceId ?? "")?.name ??
+                        "—"}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+              {standingContext.length ? (
+                <div className="home-standing-context">
+                  <p className="muted">Recent public context for standing:</p>
+                  {standingContext.map((event) => (
+                    <ActivityFeedItem
+                      key={event.id}
+                      date={event.date}
+                      text={eventDisplay(props.catalog, props.world, props.snap, event)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              <button type="button" className="btn ghost btn-sm" onClick={() => go("career")}>
+                Career →
               </button>
-            ) : null}
-            <SectionDivider title="Campaign" />
-            {props.campaign ? (
-              <div>
-                <StatusBadge tone="ok">Active</StatusBadge>
-                <div className="muted">{campaignTypeLabel(props.campaign.type)}</div>
+            </section>
+
+            <section className="home-rail-block">
+              <SectionDivider title="Government · Party · Campaign" />
+              <dl className="dossier-facts compact">
+                {agendaActive.length ? (
+                  <div>
+                    <dt>Agenda</dt>
+                    <dd>
+                      {agendaActive.map((i) => i.title.replace(/^[^:]+:\s*/, "")).join(" · ")}
+                    </dd>
+                  </div>
+                ) : governing?.fiscal?.lastUpdated ? (
+                  <div>
+                    <dt>Fiscal</dt>
+                    <dd>
+                      FY{governing.fiscal.fiscalYear} · bal {governing.fiscal.balance.toFixed(0)} ·
+                      debt {governing.fiscal.debt.toFixed(0)}
+                    </dd>
+                  </div>
+                ) : null}
+                {coalition ? (
+                  <div>
+                    <dt>Coalition</dt>
+                    <dd>
+                      {coalition.partyIds
+                        .map((id) => partyDisplayName(props.world, id, props.snap))
+                        .join(" · ")}
+                    </dd>
+                  </div>
+                ) : null}
+                {openLeadership.length > 0 ? (
+                  <div>
+                    <dt>Leadership contests</dt>
+                    <dd>
+                      {openLeadership
+                        .slice(0, 2)
+                        .map((c) => partyDisplayName(props.world, c.partyId, props.snap))
+                        .join(", ")}
+                    </dd>
+                  </div>
+                ) : null}
+                {openSeats.length > 0 ? (
+                  <div>
+                    <dt>Open seats</dt>
+                    <dd>{openSeats.length} contested or recruiting</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>Campaign</dt>
+                  <dd>
+                    {props.campaign ? (
+                      <>
+                        <StatusBadge tone="ok">Active</StatusBadge>{" "}
+                        {campaignTypeLabel(props.campaign.type)}
+                      </>
+                    ) : (
+                      "Not campaigning"
+                    )}
+                  </dd>
+                </div>
+                {polls[0] ? (
+                  <div>
+                    <dt>Latest poll</dt>
+                    <dd>
+                      {polls[0].publicationDate}:{" "}
+                      {pollShareLine(
+                        props.catalog,
+                        props.world,
+                        props.snap,
+                        polls[0].firstPreference,
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+              <div className="home-context-links row">
+                <button
+                  type="button"
+                  className="btn secondary btn-sm"
+                  onClick={() => go("executive")}
+                >
+                  Government →
+                </button>
+                <button type="button" className="btn ghost btn-sm" onClick={() => go("party")}>
+                  Parties →
+                </button>
+                <button type="button" className="btn ghost btn-sm" onClick={() => go("campaign")}>
+                  Campaign HQ →
+                </button>
               </div>
-            ) : (
-              <EmptyState>Not campaigning</EmptyState>
-            )}
-            {polls.length > 0 ? (
-              <>
-                <SectionDivider title="Public poll" />
-                <p className="muted">
-                  {polls[polls.length - 1]!.publicationDate}:{" "}
-                  {pollShareLine(
-                    props.catalog,
-                    props.world,
-                    props.snap,
-                    polls[polls.length - 1]!.firstPreference,
-                  )}
-                </p>
-              </>
-            ) : null}
-            {playerIsMp && constituencyPressures.length ? (
-              <div className="home-constituency-brief">
-                <SectionDivider
-                  title="Constituency brief"
-                  hint="Public pressures shaping local politics"
-                />
-                {constituencyPressures.slice(0, 4).map((pressure) => (
-                  <EntityRow
-                    key={pressure.kind}
-                    title={pressure.label}
-                    meta={pressure.detail}
-                    status={
-                      <StatusBadge tone={pressure.level === "urgent" ? "warn" : "idle"}>
-                        {pressure.level === "urgent"
-                          ? "Urgent"
-                          : pressure.level === "important"
-                            ? "Important"
-                            : "Watch"}
-                      </StatusBadge>
-                    }
-                  />
-                ))}
-              </div>
-            ) : null}
-            <SectionDivider
-              title="Why this standing?"
-              hint="Public context, not a hidden formula"
-            />
-            <p className="muted">
-              Your {standingLabel} standing is presented alongside recent public conduct and the
-              conditions attached to your office.
-            </p>
-            {standingContext.length ? (
-              standingContext.map((event) => (
-                <ActivityFeedItem
-                  key={event.id}
-                  date={event.date}
-                  text={eventDisplay(props.catalog, props.world, props.snap, event)}
-                />
-              ))
-            ) : (
-              <EmptyState>No recent personal event dominates the public record.</EmptyState>
-            )}
-            <p className="muted">
-              Economic context:{" "}
-              {governorPublicEconomy?.summary ??
-                `${publicEconomy.growth.toFixed(1)}% annual output growth and ${publicEconomy.confidenceTrend.toLowerCase()} confidence`}
-              .
-            </p>
+              <p className="muted">
+                Economy:{" "}
+                {governorPublicEconomy?.summary ??
+                  `${publicEconomy.growth.toFixed(1)}% annual output growth · ${publicEconomy.confidenceTrend.toLowerCase()} confidence`}
+              </p>
+            </section>
           </>
         }
       />
     </div>
   );
 }
-
 function Career(props: PageProps) {
   const [tab, setTab] = useState<
     | "opportunities"
@@ -1969,6 +1981,17 @@ function Party(props: PageProps) {
   const [selectedFactionId, setSelectedFactionId] = useState<string | null>(
     props.globalFocus?.kind === "Caucus" ? props.globalFocus.id : null,
   );
+  const [priorityDraft, setPriorityDraft] = useState("");
+  const [positionIssue, setPositionIssue] = useState<PartyPlatformIssue>("economy");
+  const [campaignStrategyDraft, setCampaignStrategyDraft] = useState("persuasion");
+  const [supportTarget, setSupportTarget] = useState("national");
+  const [supportShare, setSupportShare] = useState("0.5");
+  const [coalitionPartnerId, setCoalitionPartnerId] = useState("");
+  const [endorseCandidateId, setEndorseCandidateId] = useState("");
+  const [disciplineTargetId, setDisciplineTargetId] = useState("");
+  const [disciplineKind, setDisciplineKind] = useState<"warning" | "censure" | "suspend_support">(
+    "warning",
+  );
   useEffect(() => {
     if (props.globalFocus?.kind === "Party" && props.world.partyDefinitions[props.globalFocus.id]) {
       setSelectedPartyId(props.globalFocus.id);
@@ -2362,6 +2385,34 @@ function Party(props: PageProps) {
     return props.world.interestOrganizations[id]?.name ?? "Political organization";
   };
 
+  const partyOrg = partyId ? props.snap.partyOrgRuntime : null;
+  const partyOfficers = partyId ? partyOrg?.officers?.[partyId] : undefined;
+  const playerId = props.snap.playerPoliticianId;
+  const isNationalChair = partyOfficers?.chair?.politicianId === playerId;
+  const isNationalViceChair = partyOfficers?.vice_chair?.politicianId === playerId;
+  const showNationalChairWorkspace = Boolean(partyId && (isNationalChair || isNationalViceChair));
+  const partnerPartyOptions = availablePartyIds.filter((id) => id !== partyId);
+  const partyMemberOptions = partyId
+    ? Object.values(props.snap.politicians)
+        .filter(
+          (politician) =>
+            politician.partyId === partyId &&
+            politician.alive &&
+            !politician.retired &&
+            politician.id !== playerId,
+        )
+        .sort((a, b) =>
+          politicianDisplayName(props.catalog, a.id).localeCompare(
+            politicianDisplayName(props.catalog, b.id),
+          ),
+        )
+        .slice(0, 40)
+    : [];
+  const currentPriorities = partyId ? (partyOrg?.priorities?.[partyId] ?? []) : [];
+  const currentStrategy = partyId ? (partyOrg?.campaignStrategies?.[partyId] ?? "") : "";
+  const currentPosition =
+    partyId && positionIssue ? (partyOrg?.positions?.[partyId]?.[positionIssue] ?? null) : null;
+
   return (
     <div>
       <PageHeader
@@ -2422,11 +2473,319 @@ function Party(props: PageProps) {
           world={props.world}
           state={props.snap}
           politicianId={runtime.leaderId}
-          office="Party leader"
+          office="National Chair (Party Leader)"
         />
       ) : (
-        <EmptyState>Leadership is vacant.</EmptyState>
+        <EmptyState>National Chair is vacant.</EmptyState>
       )}
+      {partyId && props.snap.partyOrgRuntime?.officers?.[partyId] ? (
+        <SectionCard title="Party organization (national)">
+          <dl className="dossier-facts compact">
+            <div>
+              <dt>National Chair</dt>
+              <dd>
+                {props.snap.partyOrgRuntime.officers[partyId]?.chair?.politicianId
+                  ? politicianDisplayName(
+                      props.catalog,
+                      props.snap.partyOrgRuntime.officers[partyId]!.chair!.politicianId,
+                    )
+                  : "Vacant"}
+              </dd>
+            </div>
+            <div>
+              <dt>Vice Chair</dt>
+              <dd>
+                {props.snap.partyOrgRuntime.officers[partyId]?.vice_chair?.politicianId
+                  ? politicianDisplayName(
+                      props.catalog,
+                      props.snap.partyOrgRuntime.officers[partyId]!.vice_chair!.politicianId,
+                    )
+                  : "Vacant"}
+              </dd>
+            </div>
+            <div>
+              <dt>Treasurer</dt>
+              <dd>
+                {props.snap.partyOrgRuntime.officers[partyId]?.treasurer?.politicianId
+                  ? politicianDisplayName(
+                      props.catalog,
+                      props.snap.partyOrgRuntime.officers[partyId]!.treasurer!.politicianId,
+                    )
+                  : "Vacant"}
+              </dd>
+            </div>
+            <div>
+              <dt>Priorities</dt>
+              <dd>
+                {(props.snap.partyOrgRuntime.priorities?.[partyId] ?? []).slice(0, 3).join(" · ") ||
+                  "None set"}
+              </dd>
+            </div>
+          </dl>
+          <p className="muted small">
+            National Chair leads the Party organization. Assembly Delegation leadership (floor
+            leader / whip) is a separate institution elected by sitting MPs.
+          </p>
+        </SectionCard>
+      ) : null}
+      {showNationalChairWorkspace && partyId ? (
+        <SectionCard title="National Chair workspace">
+          <p className="muted">
+            Extra-parliamentary party powers. These commands do not set Assembly Delegation whip
+            lines or floor strategy — those live under Assembly Delegation below.
+          </p>
+          <SectionDivider title="Priorities" hint="Ordered list (comma-separated)" />
+          <div className="row" style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}>
+            <input
+              type="text"
+              value={priorityDraft}
+              placeholder={
+                currentPriorities.length > 0
+                  ? currentPriorities.join(", ")
+                  : "housing, healthcare, jobs"
+              }
+              onChange={(event) => setPriorityDraft(event.target.value)}
+              style={{ minWidth: "16rem", flex: 1 }}
+            />
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                const priorities = priorityDraft
+                  .split(",")
+                  .map((part) => part.trim())
+                  .filter(Boolean);
+                if (priorities.length === 0) return;
+                run({ type: "SET_PARTY_PRIORITIES", partyId, priorities });
+                setPriorityDraft("");
+              }}
+            >
+              Set priorities
+            </button>
+          </div>
+          {currentPriorities.length > 0 ? (
+            <p className="muted small">Current: {currentPriorities.join(" · ")}</p>
+          ) : null}
+
+          <SectionDivider title="Official position" hint="Public stance on a platform issue" />
+          <div className="row" style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}>
+            <select
+              value={positionIssue}
+              onChange={(event) => setPositionIssue(event.target.value as PartyPlatformIssue)}
+            >
+              {PARTY_PLATFORM_ISSUES.map((issue) => (
+                <option key={issue} value={issue}>
+                  {PARTY_PLATFORM_LABELS[issue]}
+                </option>
+              ))}
+            </select>
+            {(["support", "oppose", "neutral"] as const).map((stance) => (
+              <button
+                key={stance}
+                type="button"
+                className={`btn btn-sm${currentPosition === stance ? "" : " secondary"}`}
+                onClick={() =>
+                  run({
+                    type: "SET_PARTY_OFFICIAL_POSITION",
+                    partyId,
+                    issueId: positionIssue,
+                    stance,
+                  })
+                }
+              >
+                {stance}
+              </button>
+            ))}
+          </div>
+
+          <SectionDivider title="Campaign strategy" hint="National organisation descriptor" />
+          <div className="row" style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}>
+            <select
+              value={campaignStrategyDraft}
+              onChange={(event) => setCampaignStrategyDraft(event.target.value)}
+            >
+              <option value="persuasion">Persuasion</option>
+              <option value="base_turnout">Base turnout</option>
+              <option value="attack">Attack</option>
+              <option value="coalition_focus">Coalition focus</option>
+              <option value="governance_record">Governance record</option>
+            </select>
+            <button
+              type="button"
+              className="btn"
+              onClick={() =>
+                run({
+                  type: "SET_PARTY_CAMPAIGN_STRATEGY",
+                  partyId,
+                  strategy: campaignStrategyDraft,
+                })
+              }
+            >
+              Set strategy
+            </button>
+          </div>
+          {currentStrategy ? (
+            <p className="muted small">Current: {currentStrategy.replaceAll("_", " ")}</p>
+          ) : null}
+
+          <SectionDivider title="Allocate support" hint="Share 0–1 toward a target key" />
+          <div className="row" style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}>
+            <input
+              type="text"
+              value={supportTarget}
+              onChange={(event) => setSupportTarget(event.target.value)}
+              placeholder="national"
+              style={{ width: "8rem" }}
+            />
+            <input
+              type="number"
+              min={0}
+              max={1}
+              step={0.05}
+              value={supportShare}
+              onChange={(event) => setSupportShare(event.target.value)}
+              style={{ width: "5rem" }}
+            />
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                const share = Number(supportShare);
+                if (!supportTarget.trim() || !Number.isFinite(share)) return;
+                run({
+                  type: "ALLOCATE_PARTY_SUPPORT",
+                  partyId,
+                  allocations: {
+                    ...(partyOrg?.supportAllocations?.[partyId] ?? {}),
+                    [supportTarget.trim()]: share,
+                  },
+                });
+              }}
+            >
+              Allocate
+            </button>
+          </div>
+
+          <SectionDivider title="Coalition talks" hint="Authorise talks with a partner party" />
+          <div className="row" style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}>
+            <select
+              value={coalitionPartnerId || partnerPartyOptions[0] || ""}
+              onChange={(event) => setCoalitionPartnerId(event.target.value)}
+            >
+              {partnerPartyOptions.map((id) => (
+                <option key={id} value={id}>
+                  {partyDisplayName(props.world, id, props.snap)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn"
+              disabled={partnerPartyOptions.length === 0}
+              onClick={() => {
+                const partnerPartyId = coalitionPartnerId || partnerPartyOptions[0];
+                if (!partnerPartyId) return;
+                run({
+                  type: "AUTHORIZE_COALITION_TALKS",
+                  partyId,
+                  partnerPartyId,
+                  authorize: true,
+                });
+              }}
+            >
+              Authorise talks
+            </button>
+            <button
+              type="button"
+              className="btn secondary"
+              disabled={partnerPartyOptions.length === 0}
+              onClick={() => {
+                const partnerPartyId = coalitionPartnerId || partnerPartyOptions[0];
+                if (!partnerPartyId) return;
+                run({
+                  type: "AUTHORIZE_COALITION_TALKS",
+                  partyId,
+                  partnerPartyId,
+                  authorize: false,
+                });
+              }}
+            >
+              Rescind
+            </button>
+          </div>
+
+          <SectionDivider title="Endorse candidate" hint="Chair-level endorsement" />
+          <div className="row" style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}>
+            <select
+              value={endorseCandidateId || partyMemberOptions[0]?.id || ""}
+              onChange={(event) => setEndorseCandidateId(event.target.value)}
+            >
+              {partyMemberOptions.map((politician) => (
+                <option key={politician.id} value={politician.id}>
+                  {politicianDisplayName(props.catalog, politician.id)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn"
+              disabled={partyMemberOptions.length === 0}
+              onClick={() => {
+                const candidateId = endorseCandidateId || partyMemberOptions[0]?.id;
+                if (!candidateId) return;
+                run({
+                  type: "ENDORSE_CANDIDATE_AS_CHAIR",
+                  partyId,
+                  candidateId,
+                });
+              }}
+            >
+              Endorse
+            </button>
+          </div>
+
+          <SectionDivider title="Recommend discipline" hint="Pending action against a member" />
+          <div className="row" style={{ marginTop: "0.35rem", flexWrap: "wrap", gap: "0.4rem" }}>
+            <select
+              value={disciplineTargetId || partyMemberOptions[0]?.id || ""}
+              onChange={(event) => setDisciplineTargetId(event.target.value)}
+            >
+              {partyMemberOptions.map((politician) => (
+                <option key={politician.id} value={politician.id}>
+                  {politicianDisplayName(props.catalog, politician.id)}
+                </option>
+              ))}
+            </select>
+            <select
+              value={disciplineKind}
+              onChange={(event) =>
+                setDisciplineKind(event.target.value as "warning" | "censure" | "suspend_support")
+              }
+            >
+              <option value="warning">Warning</option>
+              <option value="censure">Censure</option>
+              <option value="suspend_support">Suspend support</option>
+            </select>
+            <button
+              type="button"
+              className="btn danger"
+              disabled={partyMemberOptions.length === 0}
+              onClick={() => {
+                const targetPoliticianId = disciplineTargetId || partyMemberOptions[0]?.id;
+                if (!targetPoliticianId) return;
+                run({
+                  type: "RECOMMEND_PARTY_DISCIPLINE",
+                  partyId,
+                  targetPoliticianId,
+                  kind: disciplineKind,
+                });
+              }}
+            >
+              Recommend
+            </button>
+          </div>
+        </SectionCard>
+      ) : null}
       <div className="party-dossier-grid">
         <SectionCard title="Party identity">
           <dl className="dossier-facts compact">
@@ -2600,6 +2959,9 @@ function Party(props: PageProps) {
         </div>
       </SectionCard>
       <SectionCard title="Assembly Delegation">
+        <p className="muted">
+          Sitting MPs elect floor leader and whip. This is not the National Chair workspace above.
+        </p>
         {caucusLeadership ? (
           <div className="faction-cards">
             {caucusLeadership.floorLeaderId ? (

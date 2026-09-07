@@ -364,6 +364,8 @@ export function AssemblyPage(props: {
   const playerParty = props.snap.politicians[props.snap.playerPoliticianId]?.partyId ?? "none";
   const playerCaucusLeadership =
     playerParty !== "none" ? props.snap.legislatureRuntime.caucusLeadership[playerParty] : null;
+  const playerIsWhip =
+    !!playerCaucusLeadership && playerCaucusLeadership.whipId === props.snap.playerPoliticianId;
   const playerMaySetWhip =
     !!playerCaucusLeadership &&
     [playerCaucusLeadership.floorLeaderId, playerCaucusLeadership.whipId].includes(
@@ -623,6 +625,97 @@ export function AssemblyPage(props: {
   const rail =
     mp || speaker ? (
       <>
+        {playerIsWhip ? (
+          <div className="whip-rail-panel">
+            <SectionDivider title="Whip desk" hint="Delegation position and floor strength" />
+            {bill ? (
+              <>
+                <dl className="dossier-facts compact">
+                  <div>
+                    <dt>Bill</dt>
+                    <dd>{bill.title}</dd>
+                  </div>
+                  <div>
+                    <dt>Position</dt>
+                    <dd>
+                      {stanceLabel(
+                        partyStance(
+                          props.snap,
+                          playerParty === "none" ? null : playerParty,
+                          bill.id,
+                        ),
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Whip strength</dt>
+                    <dd>
+                      {(playerCaucusLeadership?.whipStrengths?.[bill.id] ?? "free").replaceAll(
+                        "_",
+                        " ",
+                      )}
+                    </dd>
+                  </div>
+                  {whip ? (
+                    <div>
+                      <dt>Estimate</dt>
+                      <dd>
+                        Yes {whip.likelyYes} · No {whip.likelyNo} · Unc {whip.uncertain}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+                {playerMaySetWhip ? (
+                  <div className="whip-position-controls rail-whip-controls">
+                    <div className="row">
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() =>
+                          run({
+                            type: "SET_CAUCUS_BILL_POSITION",
+                            billId: bill.id,
+                            stance: "support",
+                          })
+                        }
+                      >
+                        Support
+                      </button>
+                      <button
+                        type="button"
+                        className="btn danger btn-sm"
+                        onClick={() =>
+                          run({
+                            type: "SET_CAUCUS_BILL_POSITION",
+                            billId: bill.id,
+                            stance: "oppose",
+                          })
+                        }
+                      >
+                        Oppose
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary btn-sm"
+                        onClick={() =>
+                          run({
+                            type: "SET_CAUCUS_BILL_POSITION",
+                            billId: bill.id,
+                            stance: "free_vote",
+                          })
+                        }
+                      >
+                        Free
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <p className="muted">Select a bill to set the caucus position.</p>
+            )}
+          </div>
+        ) : null}
         <SectionDivider
           title="Votes due"
           hint={votesDue.length ? "Cast before month close" : "None pending"}

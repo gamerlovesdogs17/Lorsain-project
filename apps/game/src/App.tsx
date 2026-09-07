@@ -320,10 +320,10 @@ export default function App() {
       ["home", "Home", "Current political briefing"],
       ["career", "Political opportunities", "Career and politician directory"],
       ["party", "Parties and caucuses", "Leadership and internal politics"],
-      ["campaign", "Campaign", "Race command center and Ground Game"],
+      ["campaign", "Campaign HQ", "Race command center and Ground Game"],
       ["elections", "Elections and calendar", "Presidential, Assembly and provincial races"],
       ["assembly", "National Assembly", "Bills, committees and roll calls"],
-      ["executive", "Executive", "President, cabinet and administration"],
+      ["executive", "Government", "Cabinet, agenda, budget and administration"],
       ["courts", "Constitutional Court", "Bench, docket and decisions"],
       ["economy", "Economy", "Public national and regional indicators"],
       ["organizations", "Organizations", "Influence, priorities and scorecards"],
@@ -1455,6 +1455,7 @@ export default function App() {
         globalFocus={globalFocus}
         setGlobalFocus={setGlobalFocus}
         onEntityNavigate={handleEntityNavigate}
+        onNavigate={(s: Screen) => navigateTo(s, null)}
       />
       {import.meta.env.DEV ? (
         <output

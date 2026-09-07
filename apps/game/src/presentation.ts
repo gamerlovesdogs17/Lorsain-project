@@ -723,6 +723,26 @@ export function eventDisplay(
       return `An international conflict involving ${countryFromEvent(world, state, event) ?? "foreign belligerents"} ends`;
     case "FOREIGN_AFFAIRS_MONTH":
       return `Foreign affairs briefing: ${String(event.payload.activeCrises ?? 0)} active crises internationally`;
+    case "SERVICE_DELIVERY_CRITICISM":
+      return "Service delivery draws public criticism";
+    case "SERVICE_DELIVERY_CREDIT":
+      return "Service delivery earns public credit";
+    case "PARTY_PRIORITIES_SET": {
+      const party = partyDisplayName(
+        world,
+        String(event.payload.partyId ?? event.entityIds[0] ?? ""),
+        state,
+      );
+      return `${party} sets new party priorities`;
+    }
+    case "GOVERNMENT_RECORD_UPDATED":
+      return "Government record refreshed";
+    case "GOVERNING_FORMATION_FALLBACK":
+      return "Government formation falls back after failed confidence votes";
+    case "ASSEMBLY_CONFIDENCE_PASSED":
+      return "Assembly grants confidence to the government";
+    case "ASSEMBLY_CONFIDENCE_FAILED":
+      return "Assembly denies confidence to the government";
     default:
       if (event.type.startsWith("FOREIGN_CRISIS_ESCALATED")) {
         const theme =

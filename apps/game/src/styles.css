@@ -6173,6 +6173,79 @@ button.entity-row:hover,
   background: linear-gradient(90deg, #0f2f45, #1f6f8b);
   color: #fff;
 }
+.campaign-strategic-overview {
+  margin: 0.85rem 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #f4f7fa 0%, #eef3f7 100%);
+}
+.campaign-strategic-overview .kicker {
+  color: var(--navy);
+  margin-bottom: 0.55rem;
+}
+.campaign-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem 1.1rem;
+}
+.campaign-overview-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.campaign-overview-grid strong {
+  color: var(--navy);
+  font-size: 0.98rem;
+}
+.campaign-overview-grid small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+.campaign-calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.8rem;
+  border-left: 3px solid var(--navy);
+  background: rgba(15, 47, 69, 0.04);
+}
+.campaign-calendar-row {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: baseline;
+}
+.campaign-calendar-row strong {
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+.campaign-strategic-memo {
+  margin: 0 0 1rem;
+  max-width: 52rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.campaign-stats small {
+  display: block;
+  margin-top: 0.15rem;
+}
+@media (max-width: 960px) {
+  .campaign-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .campaign-overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .campaign-calendar-row {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+}
 
 /* History wiki encyclopedia framing */
 .history-wiki-v7 {
@@ -7180,4 +7253,127 @@ button.entity-row:hover,
   color: var(--muted);
   font-style: italic;
   padding: 0.5rem 0;
+}
+
+/* Layout 2.0 — nav clarity */
+.nav.v7 .nav-group {
+  padding: 0.15rem 0.45rem 0.55rem;
+  border-bottom: 1px solid rgba(214, 236, 242, 0.08);
+}
+.nav.v7 .nav-group:last-of-type {
+  border-bottom: 0;
+}
+.nav.v7 .nav-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0.4rem 0.55rem;
+}
+.nav.v7 .nav-group-label {
+  flex: 1;
+  min-width: 0;
+}
+.nav.v7 .nav-group-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(126, 200, 216, 0.18);
+  color: #9ed7e4;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+.nav.v7 .nav-group-toggle {
+  color: rgba(232, 238, 243, 0.55);
+  font-size: 0.85rem;
+}
+.nav.v7 .nav-group.collapsed.has-active {
+  background: rgba(31, 111, 139, 0.12);
+  border-radius: var(--radius);
+}
+.nav.v7 .nav-group.collapsed button.active {
+  margin-top: 0.15rem;
+}
+
+/* Home 2.0 briefing sections */
+.home-v2 .home-section {
+  margin-bottom: 1.15rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--line);
+}
+.home-v2 .home-section:last-child {
+  border-bottom: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.home-v2 .home-rail-block {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+.home-v2 .home-rail-block:last-child {
+  border-bottom: 0;
+}
+.home-v2 .home-context-links {
+  flex-wrap: wrap;
+  margin: 0.45rem 0 0.35rem;
+  gap: 0.35rem;
+}
+.home-v2 .home-press-brief {
+  margin-top: 0.5rem;
+}
+
+/* Government 2.0 institutional layout */
+.government-desk-v2 .gov-institution {
+  display: grid;
+  gap: 1rem;
+}
+.government-desk-v2 .gov-institution-block {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+.government-desk-v2 .gov-institution-block:last-child {
+  border-bottom: 0;
+}
+.government-desk-v2 .gov-cabinet-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.government-desk-v2 .gov-cabinet-row {
+  display: grid;
+  gap: 0.35rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--line);
+}
+.government-desk-v2 .gov-perf-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+}
+
+/* Assembly whip rail */
+.whip-rail-panel {
+  margin-bottom: 0.85rem;
+  padding: 0.55rem 0.65rem 0.7rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--navy);
+  background: linear-gradient(180deg, rgba(15, 47, 69, 0.04), transparent);
+}
+.rail-whip-controls {
+  margin-top: 0.45rem;
+  border-top: 0;
+  padding-top: 0;
+}
+.rail-whip-controls .row {
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }

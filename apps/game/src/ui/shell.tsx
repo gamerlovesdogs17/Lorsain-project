@@ -30,45 +30,46 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Player",
     items: [
       { id: "home", label: "Home", icon: "⌂" },
-      { id: "office", label: "Office", icon: "▰" },
       { id: "career", label: "Career", icon: "◉" },
-      { id: "campaign", label: "Campaign", icon: "⚑" },
+      { id: "campaign", label: "Campaign HQ", icon: "⚑" },
     ],
   },
   {
     title: "Politics",
     items: [
-      { id: "party", label: "Parties & Caucuses", icon: "◆" },
-      { id: "elections", label: "Elections", icon: "✓" },
       { id: "assembly", label: "Assembly", icon: "▣" },
-      { id: "courts", label: "Constitutional Court", icon: "⚖" },
+      { id: "elections", label: "Elections", icon: "✓" },
+      { id: "party", label: "Parties", icon: "◆" },
     ],
   },
   {
     title: "Government",
     items: [
-      { id: "executive", label: "President & Cabinet", icon: "★" },
+      { id: "executive", label: "Government", icon: "★" },
+      { id: "courts", label: "Law & Constitution", icon: "⚖" },
       { id: "economy", label: "Economy", icon: "↗" },
-      { id: "terena", label: "Provinces & Map", icon: "◎" },
-      { id: "situation", label: "Situation Room", icon: "🗺" },
-    ],
-  },
-  {
-    title: "Society",
-    items: [
-      { id: "organizations", label: "Organizations", icon: "◎" },
-      { id: "news", label: "News", icon: "▤" },
     ],
   },
   {
     title: "World",
-    items: [{ id: "foreign", label: "Foreign Affairs", icon: "🌐" }],
+    items: [
+      { id: "situation", label: "Situation Room", icon: "🗺" },
+      { id: "terena", label: "Provinces", icon: "◎" },
+      { id: "foreign", label: "Foreign Affairs", icon: "🌐" },
+    ],
   },
   {
-    title: "Record",
-    items: [{ id: "archive", label: "History & Archive", icon: "▤" }],
+    title: "Society & Record",
+    items: [
+      { id: "organizations", label: "Organizations", icon: "◎" },
+      { id: "news", label: "News", icon: "▤" },
+      { id: "archive", label: "History", icon: "▤" },
+      { id: "office", label: "Office", icon: "▰" },
+    ],
   },
 ];
+
+const DEFAULT_COLLAPSED_NAV = ["Society & Record"];
 
 export function GameShell(props: {
   screen: Screen;
@@ -113,7 +114,7 @@ export function GameShell(props: {
   const [attentionOpen, setAttentionOpen] = useState(false);
   const [briefingOpen, setBriefingOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>(DEFAULT_COLLAPSED_NAV);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
@@ -195,41 +196,70 @@ export function GameShell(props: {
             ×
           </button>
         </div>
-        {NAV_GROUPS.map((group) => (
-          <div key={group.title} className="nav-group">
-            <button
-              type="button"
-              className="nav-group-title"
-              aria-expanded={!collapsedGroups.includes(group.title)}
-              onClick={() =>
-                setCollapsedGroups((groups) =>
-                  groups.includes(group.title)
-                    ? groups.filter((title) => title !== group.title)
-                    : [...groups, group.title],
-                )
-              }
+        {NAV_GROUPS.map((group) => {
+          const collapsed = collapsedGroups.includes(group.title);
+          const activeInGroup = group.items.some((item) => props.screen === item.id);
+          return (
+            <div
+              key={group.title}
+              className={`nav-group${collapsed ? " collapsed" : ""}${activeInGroup ? " has-active" : ""}`}
             >
-              {group.title}
-              <span>{collapsedGroups.includes(group.title) ? "+" : "−"}</span>
-            </button>
-            {!collapsedGroups.includes(group.title)
-              ? group.items.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`${props.screen === item.id ? "active" : ""}${contextual(item.id) ? " contextual" : ""}`}
-                    onClick={() => {
-                      props.onNavigate(item.id);
-                      setNavOpen(false);
-                    }}
-                  >
-                    {item.icon ? <span className="nav-icon">{item.icon}</span> : null}
-                    {item.id === "office" ? officeLabel : item.label}
-                  </button>
-                ))
-              : null}
-          </div>
-        ))}
+              <button
+                type="button"
+                className="nav-group-title"
+                aria-expanded={!collapsed}
+                onClick={() =>
+                  setCollapsedGroups((groups) =>
+                    groups.includes(group.title)
+                      ? groups.filter((title) => title !== group.title)
+                      : [...groups, group.title],
+                  )
+                }
+              >
+                <span className="nav-group-label">{group.title}</span>
+                {collapsed ? (
+                  <span className="nav-group-count" aria-hidden>
+                    {group.items.length}
+                  </span>
+                ) : null}
+                <span className="nav-group-toggle">{collapsed ? "+" : "−"}</span>
+              </button>
+              {!collapsed
+                ? group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`${props.screen === item.id ? "active" : ""}${contextual(item.id) ? " contextual" : ""}`}
+                      onClick={() => {
+                        props.onNavigate(item.id);
+                        setNavOpen(false);
+                      }}
+                    >
+                      {item.icon ? <span className="nav-icon">{item.icon}</span> : null}
+                      {item.id === "office" ? officeLabel : item.label}
+                    </button>
+                  ))
+                : activeInGroup
+                  ? group.items
+                      .filter((item) => props.screen === item.id)
+                      .map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`active${contextual(item.id) ? " contextual" : ""}`}
+                          onClick={() => {
+                            props.onNavigate(item.id);
+                            setNavOpen(false);
+                          }}
+                        >
+                          {item.icon ? <span className="nav-icon">{item.icon}</span> : null}
+                          {item.id === "office" ? officeLabel : item.label}
+                        </button>
+                      ))
+                  : null}
+            </div>
+          );
+        })}
       </nav>
       <div className="main">
         <header className="topbar v3 v7">
@@ -641,7 +671,7 @@ export function GameShell(props: {
             onClick={() => props.onNavigate(props.campaignActive ? "campaign" : "office")}
           >
             <span>{props.campaignActive ? "⚑" : "▰"}</span>
-            {props.campaignActive ? "Campaign" : officeLabel}
+            {props.campaignActive ? "Campaign HQ" : officeLabel}
           </button>
           <button
             type="button"
