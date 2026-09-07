@@ -8,6 +8,7 @@ export function MapLegend(props: {
   world: KernelWorld;
   partyIds?: string[];
   campaignLayer?: CampaignMapLayer;
+  candidateLegend?: Array<{ id: string; name: string; color: string }>;
 }) {
   if (props.mode === "political" || props.mode === "election") {
     const parties = props.partyIds ?? Object.keys(props.world.partyDefinitions).slice(0, 8);
@@ -36,8 +37,14 @@ export function MapLegend(props: {
   }
   if (props.mode === "campaign") {
     if (props.campaignLayer && props.campaignLayer !== "ground_game") {
-      const explanation =
-        props.campaignLayer === "polling"
+      const nomination = (props.candidateLegend?.length ?? 0) > 0;
+      const explanation = nomination
+        ? props.campaignLayer === "polling"
+          ? "Color = leading candidate in the latest direct public primary poll for that exact area. Gray = no direct local poll; a margin inside the poll's error remains neutral."
+          : props.campaignLayer === "forecast"
+            ? "Color = candidate favored by a public model estimate for this nomination contest. Confidence is labeled; gray means no public evidence or a toss-up."
+            : "Color = winning candidate or largest bloc in the previous comparable certified election. Gray = no legitimate comparable geographic result."
+        : props.campaignLayer === "polling"
           ? "Color = leader in the latest direct public poll for that exact area. Gray = no direct local poll; a margin inside the poll's error remains neutral."
           : props.campaignLayer === "forecast"
             ? "Color = party favored by a public model estimate (polls, prior certified results, incumbency, economy, standing, endorsements, activity, and readable Ground Game). Confidence is labeled; gray means no public evidence or a toss-up."
@@ -46,20 +53,34 @@ export function MapLegend(props: {
         <div className="map-legend">
           <div className="kicker">
             {props.campaignLayer === "polling"
-              ? "Published polling"
+              ? nomination
+                ? "Primary polling"
+                : "Published polling"
               : props.campaignLayer === "forecast"
-                ? "Public forecast"
+                ? nomination
+                  ? "Primary forecast"
+                  : "Public forecast"
                 : "Previous certified result"}
           </div>
           <div className="legend-items">
-            {Object.keys(props.world.partyDefinitions)
-              .slice(0, 8)
-              .map((id) => (
-                <span key={id} className="legend-item">
-                  <span className="swatch" style={{ background: partyColor(props.world, id) }} />
-                  {partyDisplayName(props.world, id)}
-                </span>
-              ))}
+            {nomination
+              ? props.candidateLegend!.map((row) => (
+                  <span key={row.id} className="legend-item">
+                    <span className="swatch" style={{ background: row.color }} />
+                    {row.name}
+                  </span>
+                ))
+              : Object.keys(props.world.partyDefinitions)
+                  .slice(0, 8)
+                  .map((id) => (
+                    <span key={id} className="legend-item">
+                      <span
+                        className="swatch"
+                        style={{ background: partyColor(props.world, id) }}
+                      />
+                      {partyDisplayName(props.world, id)}
+                    </span>
+                  ))}
             <span className="legend-item">
               <span className="swatch no-data-swatch" />
               No data / too close

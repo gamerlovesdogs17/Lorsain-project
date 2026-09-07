@@ -145,6 +145,8 @@ describe("campaign map contest isolation", () => {
 
     const datum = publicPolling(state, emptyCampaign(), "province", "PROV_X");
     expect(datum.truth).toBe("poll");
+    expect(datum.leaderPoliticianId).toBe("NPC_A");
+    expect(datum.leaderPoliticianId).not.toBe("PARTY_LABOUR");
     expect(datum.leaderPartyId).toBe("PARTY_LABOUR");
     expect(datum.leaderPartyId).not.toBe("PARTY_NU");
   });
@@ -164,6 +166,7 @@ describe("campaign map contest isolation", () => {
     const datum = publicPolling(state, general, "province", "PROV_X");
     expect(datum.truth).toBe("poll");
     expect(datum.leaderPartyId).toBe("PARTY_NU");
+    expect(datum.leaderPoliticianId).toBeNull();
 
     const scoped = latestScopedPublicPoll(state, { electionId: "ELEC_PRES" });
     expect(scoped?.id).toBe("POLL_GEN_NAT");
@@ -185,6 +188,8 @@ describe("campaign map contest isolation", () => {
 
     const forecast = publicForecast(world, state, emptyCampaign(), "province", "PROV_X");
     expect(forecast.truth).toBe("forecast");
+    expect(forecast.leaderPoliticianId).toBe("NPC_A");
+    expect(forecast.leaderPoliticianId).not.toBe("PARTY_LABOUR");
     expect(forecast.leaderPartyId).toBe("PARTY_LABOUR");
     expect(forecast.leaderPartyId).not.toBe("PARTY_NU");
   });

@@ -32,7 +32,11 @@ import {
   policyItemForProvision,
   provisionForPolicyItem,
 } from "./provisions.js";
-import { processCaucusLeadershipMonth } from "./caucus.js";
+import {
+  processCaucusLeadershipMonth,
+  clearWhipPersuasionsForBill,
+  decayWhipPersuasions,
+} from "./caucus.js";
 
 function activeBillCount(state: SimState): number {
   return Object.values(state.legislatureRuntime.bills).filter((b) =>
@@ -272,7 +276,10 @@ function committeeWork(
       { billId: bill.id, stage: "committee", votes, committeeId: bill.assignedCommitteeId },
       commandId,
     );
-    if (!("error" in out)) events.push(...out.events);
+    if (!("error" in out)) {
+      events.push(...out.events);
+      clearWhipPersuasionsForBill(state, bill.id);
+    }
   }
   return events;
 }
@@ -369,7 +376,10 @@ function floorWork(
     votes[id] = chooseLegislativeVote(world, state, id, bill, rng);
   }
   const out = recordVote(world, state, { billId: bill.id, stage, votes }, commandId);
-  if (!("error" in out)) events.push(...out.events);
+  if (!("error" in out)) {
+    events.push(...out.events);
+    clearWhipPersuasionsForBill(state, bill.id);
+  }
   state.legislatureRuntime.floorQueue = state.legislatureRuntime.floorQueue.filter(
     (id) => id !== bill.id,
   );
@@ -418,6 +428,7 @@ export function processLegislatureMonth(
   if (state.legislatureRuntime.lastMonthProcessed === month) return [];
   seedCommitteesIfNeeded(world, state);
   const events: SimEvent[] = [];
+  decayWhipPersuasions(state);
   events.push(...processCaucusLeadershipMonth(world, state, commandId));
   events.push(...npcIntroductions(state, world, rng, commandId));
   events.push(...committeeWork(state, world, rng, commandId));

@@ -25,13 +25,12 @@ import {
   constituencyDisplayName,
   eventDisplay,
   issueDisplayName,
-  partyColor,
   partyDisplayName,
   politicianDisplayName,
   pollShareLine,
   type PresentationCatalog,
 } from "./presentation.js";
-import { latestPublicPoll } from "./map/fills.js";
+import { latestPublicPoll, mapFillFor, nominationOrPartyFill } from "./map/fills.js";
 import {
   ActivityFeedItem,
   EmptyState,
@@ -44,7 +43,6 @@ import {
 import { PoliticianCard, PoliticianProfile } from "./ui/politician.js";
 import { MapLegend } from "./ui/mapLegend.js";
 import { TerenaMap, type MapSelection } from "./map/TerenaMap.js";
-import { mapFillFor } from "./map/fills.js";
 import {
   campaignPollScope,
   latestScopedPublicPoll,
@@ -825,7 +823,11 @@ export function CampaignPage(props: {
                 );
               }
               const datum = publicMapDatum(kind, f.id);
-              return datum.leaderPartyId ? partyColor(props.world, datum.leaderPartyId) : "#d7d5cf";
+              return nominationOrPartyFill(
+                props.world,
+                datum.leaderPartyId,
+                datum.leaderPoliticianId,
+              );
             }}
             onSelect={setMapSel}
             onHover={setHoverSel}
@@ -867,7 +869,24 @@ export function CampaignPage(props: {
               </>
             )}
           />
-          <MapLegend mode="campaign" world={props.world} campaignLayer={mapLayer} />
+          {pollScope.contestId ? (
+            <MapLegend
+              mode="campaign"
+              world={props.world}
+              campaignLayer={mapLayer}
+              candidateLegend={[c.politicianId, ...rivals.map((r) => r.politicianId)].map((id) => ({
+                id,
+                name: politicianDisplayName(props.catalog, id),
+                color: nominationOrPartyFill(
+                  props.world,
+                  props.snap.politicians[id]?.partyId ?? null,
+                  id,
+                ),
+              }))}
+            />
+          ) : (
+            <MapLegend mode="campaign" world={props.world} campaignLayer={mapLayer} />
+          )}
           {focus ? (
             <p className="map-selection-note">
               {focus.name}

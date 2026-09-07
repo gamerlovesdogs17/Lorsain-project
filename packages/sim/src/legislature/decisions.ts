@@ -14,6 +14,8 @@ import { parliamentaryDiscipline } from "./discipline.js";
 import { constituencyPressureForBill } from "./constituency.js";
 import { partyPlatformIssueForBillItem } from "../parties/platforms.js";
 import { activeCoalition } from "../politics/coalitions.js";
+import { whipPersuasionBonusFor } from "./caucus.js";
+import { WHIP_STRENGTH_PRESSURE, type WhipStrength } from "./types.js";
 
 function constituencyFit(
   world: KernelWorld,
@@ -101,6 +103,20 @@ export function explainLegislativeVote(
   const partyPush = party === "support" ? 1 : party === "oppose" ? -1 : 0;
   const factionPush = faction === "support" ? 1 : faction === "oppose" ? -1 : 0;
   const discipline = pol?.partyId ? parliamentaryDiscipline(world, state, pol.partyId).score : 0;
+  const whipStrengthRaw = pol?.partyId
+    ? state.legislatureRuntime.caucusLeadership[pol.partyId]?.whipStrengths?.[bill.id]
+    : undefined;
+  const whipStrength: WhipStrength =
+    whipStrengthRaw === "recommended" ||
+    whipStrengthRaw === "party_line" ||
+    whipStrengthRaw === "critical" ||
+    whipStrengthRaw === "free"
+      ? whipStrengthRaw
+      : "free";
+  const whipPressure = WHIP_STRENGTH_PRESSURE[whipStrength];
+  // Floor recommendation: party whip desk first, then caucus/faction stance.
+  const floorPush = partyPush !== 0 ? partyPush : factionPush;
+  const persuasionBonus = whipPersuasionBonusFor(state, bill.id, politicianId);
   const dimensions = bill.policyItems.map(
     (item) => world.issueDimensions[item.issueId] ?? "institutional",
   );
@@ -128,6 +144,14 @@ export function explainLegislativeVote(
   const factionTerm = factionPush * factionLoyalty * (factionConflict ? 0.3 : 0.2);
   const districtTerm = district * 0.22;
   const orgTerm = orgPressure * 0.68;
+  const whipTerm =
+    floorPush === 0 || whipPressure <= 0
+      ? 0
+      : floorPush * whipPressure * (0.4 + partyLoyalty * 0.35);
+  const persuasionTerm =
+    floorPush === 0 || persuasionBonus <= 0
+      ? 0
+      : floorPush * persuasionBonus * (0.7 + partyLoyalty * 0.3);
   const score =
     policyTerm +
     partyTerm +
@@ -135,6 +159,8 @@ export function explainLegislativeVote(
     districtTerm +
     currentLocalPressure +
     orgTerm +
+    whipTerm +
+    persuasionTerm +
     (pragmatism - 0.5) * 0.06 +
     (institutionalism - 0.5) * 0.04 +
     personalVariance;
@@ -159,6 +185,20 @@ export function explainLegislativeVote(
       label: faction === "support" ? "Caucus supports bill" : "Caucus opposes bill",
       direction: factionTerm >= 0 ? "support" : "oppose",
       weight: factionTerm,
+    });
+  }
+  if (Math.abs(whipTerm) >= 0.01) {
+    factors.push({
+      label: "Whip instruction",
+      direction: whipTerm >= 0 ? "support" : "oppose",
+      weight: whipTerm,
+    });
+  }
+  if (Math.abs(persuasionTerm) >= 0.01) {
+    factors.push({
+      label: "Whip persuasion",
+      direction: persuasionTerm >= 0 ? "support" : "oppose",
+      weight: persuasionTerm,
     });
   }
   if (Math.abs(districtTerm) >= 0.02) {

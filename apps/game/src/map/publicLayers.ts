@@ -8,6 +8,8 @@ export type CampaignMapLayer = "forecast" | "polling" | "ground_game" | "previou
 export type PublicGeographicDatum = {
   truth: "poll" | "forecast" | "campaign" | "certified" | "historical" | "no_data";
   leaderPartyId: string | null;
+  /** Set for nomination/primary contest layers when shares are candidate-keyed. */
+  leaderPoliticianId: string | null;
   label: string;
   detail: string;
   asOf: string | null;
@@ -167,6 +169,15 @@ function pollShares(poll: PollRecord): PartyShare {
   return byParty;
 }
 
+/** Aggregate first-preference shares by candidate for nomination/primary contests. */
+function pollCandidateShares(poll: PollRecord): PartyShare {
+  const byCandidate: PartyShare = new Map();
+  for (const row of poll.firstPreference) {
+    byCandidate.set(row.politicianId, (byCandidate.get(row.politicianId) ?? 0) + row.share);
+  }
+  return byCandidate;
+}
+
 function rankedShares(byParty: PartyShare): Array<[string | null, number]> {
   return [...byParty.entries()].sort(
     (a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])),
@@ -204,13 +215,32 @@ function pollFreshnessWeight(publicationDate: string, asOf: string): number {
   return 0.22;
 }
 
-function pollDatum(poll: PollRecord): PublicGeographicDatum {
-  const ranked = rankedShares(pollShares(poll));
+function partyIdForCandidate(poll: PollRecord, politicianId: string | null): string | null {
+  if (!politicianId) return null;
+  return poll.firstPreference.find((row) => row.politicianId === politicianId)?.partyId ?? null;
+}
+
+function pollDatum(poll: PollRecord, byCandidate = false): PublicGeographicDatum {
+  const ranked = rankedShares(byCandidate ? pollCandidateShares(poll) : pollShares(poll));
   const margin = (ranked[0]?.[1] ?? 0) - (ranked[1]?.[1] ?? 0);
   const tooClose = ranked.length > 1 && margin <= poll.marginOfError * 1.15;
+  const leaderId = tooClose ? null : (ranked[0]?.[0] ?? null);
+  if (byCandidate) {
+    return {
+      truth: "poll",
+      leaderPartyId: partyIdForCandidate(poll, leaderId),
+      leaderPoliticianId: leaderId,
+      label: tooClose ? "No clear polling leader" : "Polling leader",
+      detail: `Direct ${poll.method.replaceAll("_", " ")} sample · n=${poll.sampleSize.toLocaleString()} · margin of error ±${Math.round(poll.marginOfError * 1000) / 10}%`,
+      asOf: poll.publicationDate,
+      confidence: "direct",
+      category: forecastCategory(margin),
+    };
+  }
   return {
     truth: "poll",
-    leaderPartyId: tooClose ? null : (ranked[0]?.[0] ?? null),
+    leaderPartyId: leaderId,
+    leaderPoliticianId: null,
     label: tooClose ? "No clear polling leader" : "Polling leader",
     detail: `Direct ${poll.method.replaceAll("_", " ")} sample · n=${poll.sampleSize.toLocaleString()} · margin of error ±${Math.round(poll.marginOfError * 1000) / 10}%`,
     asOf: poll.publicationDate,
@@ -290,6 +320,7 @@ export function previousPublicResult(
       return {
         truth: "historical",
         leaderPartyId: largestParty(rows),
+        leaderPoliticianId: null,
         label: "Previous certified result",
         detail: `${previous.electedIds.length} seats in the previous Assembly election`,
         asOf: previousElection?.date ?? null,
@@ -311,6 +342,7 @@ export function previousPublicResult(
       return {
         truth: "historical",
         leaderPartyId: previous.candidates[previous.winnerId]?.partyId ?? null,
+        leaderPoliticianId: previous.winnerId,
         label: "Previous certified governor result",
         detail: "Province-wide winner from the previous recorded contest",
         asOf: previous.date,
@@ -331,6 +363,7 @@ export function previousPublicResult(
       return {
         truth: "historical",
         leaderPartyId: largestParty(rows),
+        leaderPoliticianId: null,
         label: "Previous certified Assembly result",
         detail: `${previous.electedIds.length} provincial seats`,
         asOf: previous.date,
@@ -342,6 +375,7 @@ export function previousPublicResult(
   return {
     truth: "no_data",
     leaderPartyId: null,
+    leaderPoliticianId: null,
     label: "No comparable previous result",
     detail: "No legitimate geographic result is archived for this race type.",
     asOf: null,
@@ -527,17 +561,23 @@ export function publicForecast(
 ): PublicGeographicDatum {
   const asOf = state.currentDate;
   const { contestId, electionId } = campaignPollScope(campaign);
+  const byCandidate = Boolean(contestId);
   const blended: PartyShare = new Map();
   const signals: string[] = [];
   let evidence = 0;
   let asOfDate: string | null = null;
   let hasLocalPoll = false;
   let hasFreshLocalPoll = false;
+  const partyByCandidate = new Map<string, string | null>();
 
   const local = latestGeographicPoll(state, electionId, kind, geographyId, contestId);
   if (local) {
     const freshness = pollFreshnessWeight(local.publicationDate, asOf);
-    addWeightedShares(blended, pollShares(local), 1.15 * freshness);
+    const shares = byCandidate ? pollCandidateShares(local) : pollShares(local);
+    if (byCandidate) {
+      for (const row of local.firstPreference) partyByCandidate.set(row.politicianId, row.partyId);
+    }
+    addWeightedShares(blended, shares, 1.15 * freshness);
     evidence += 2.4 * freshness;
     hasLocalPoll = true;
     hasFreshLocalPoll = freshness >= 0.85;
@@ -555,57 +595,64 @@ export function publicForecast(
   if (national) {
     const freshness = pollFreshnessWeight(national.publicationDate, asOf);
     const weight = (hasLocalPoll ? 0.28 : 0.7) * freshness;
-    addWeightedShares(blended, pollShares(national), weight);
+    const shares = byCandidate ? pollCandidateShares(national) : pollShares(national);
+    if (byCandidate) {
+      for (const row of national.firstPreference)
+        partyByCandidate.set(row.politicianId, row.partyId);
+    }
+    addWeightedShares(blended, shares, weight);
     evidence += (hasLocalPoll ? 0.7 : 1.5) * freshness;
     asOfDate ??= national.publicationDate;
     signals.push("national polling environment");
   }
 
-  const previous = previousPublicResult(world, state, campaign, kind, geographyId);
-  if (previous.truth !== "no_data") {
-    const prevShares: PartyShare = previous.projectedSeats?.length
-      ? seatsToShares(previous.projectedSeats)
-      : previous.leaderPartyId
-        ? new Map([[previous.leaderPartyId, 1]])
-        : new Map();
-    if (prevShares.size) {
-      addWeightedShares(blended, prevShares, hasLocalPoll ? 0.22 : 0.55);
-      evidence += hasLocalPoll ? 0.55 : 1.25;
-      asOfDate ??= previous.asOf;
-      signals.push("previous certified result");
-    }
-  }
-
-  const sitting =
-    kind === "constituency"
-      ? constituencySittingSeatBreakdown(world, state, geographyId)
-      : provinceSittingDelegation(world, state, geographyId);
-  const incumbent = incumbentPartyId(world, state, kind, geographyId);
-  if (sitting.length) {
-    addWeightedShares(blended, seatsToShares(sitting), hasLocalPoll ? 0.12 : 0.32);
-    evidence += hasLocalPoll ? 0.35 : 0.75;
-    signals.push("incumbency / sitting representation");
-  }
-
-  const climate = publicEconomyClimate(state, kind, geographyId, world);
-  if (climate != null && incumbent) {
-    // Strong public conditions support incumbents; weak conditions lift the field against them.
-    const tilt = climate * 0.07;
-    addPartyWeight(blended, incumbent, tilt);
-    if (tilt < 0) {
-      for (const [partyId] of blended) {
-        if (partyId !== incumbent)
-          addPartyWeight(blended, partyId, -tilt / Math.max(1, blended.size - 1));
+  // Party-keyed historical / incumbency blends only apply to general (non-primary) forecasts.
+  if (!byCandidate) {
+    const previous = previousPublicResult(world, state, campaign, kind, geographyId);
+    if (previous.truth !== "no_data") {
+      const prevShares: PartyShare = previous.projectedSeats?.length
+        ? seatsToShares(previous.projectedSeats)
+        : previous.leaderPartyId
+          ? new Map([[previous.leaderPartyId, 1]])
+          : new Map();
+      if (prevShares.size) {
+        addWeightedShares(blended, prevShares, hasLocalPoll ? 0.22 : 0.55);
+        evidence += hasLocalPoll ? 0.55 : 1.25;
+        asOfDate ??= previous.asOf;
+        signals.push("previous certified result");
       }
     }
-    evidence += 0.35;
-    signals.push("public economic environment");
+
+    const sitting =
+      kind === "constituency"
+        ? constituencySittingSeatBreakdown(world, state, geographyId)
+        : provinceSittingDelegation(world, state, geographyId);
+    const incumbent = incumbentPartyId(world, state, kind, geographyId);
+    if (sitting.length) {
+      addWeightedShares(blended, seatsToShares(sitting), hasLocalPoll ? 0.12 : 0.32);
+      evidence += hasLocalPoll ? 0.35 : 0.75;
+      signals.push("incumbency / sitting representation");
+    }
+
+    const climate = publicEconomyClimate(state, kind, geographyId, world);
+    if (climate != null && incumbent) {
+      const tilt = climate * 0.07;
+      addPartyWeight(blended, incumbent, tilt);
+      if (tilt < 0) {
+        for (const [partyId] of blended) {
+          if (partyId !== incumbent)
+            addPartyWeight(blended, partyId, -tilt / Math.max(1, blended.size - 1));
+        }
+      }
+      evidence += 0.35;
+      signals.push("public economic environment");
+    }
   }
 
   const partyId = campaignPartyId(state, campaign);
+  const candidateKey = byCandidate ? campaign.politicianId : partyId;
   const hasGeographicBaseline = blended.size > 0;
-  if (partyId && hasGeographicBaseline) {
-    // Only materialized public standing — never invent latent defaults here.
+  if (candidateKey && hasGeographicBaseline) {
     const standing = state.candidateStanding[campaign.politicianId];
     if (standing) {
       const standingScore =
@@ -615,7 +662,7 @@ export function publicForecast(
         standing.momentum * 0.1;
       const standingTilt = (standingScore - 0.42) * 0.12;
       if (Math.abs(standingTilt) >= 0.008) {
-        addPartyWeight(blended, partyId, standingTilt);
+        addPartyWeight(blended, candidateKey, standingTilt);
         evidence += 0.35;
         signals.push("public candidate standing");
       }
@@ -623,21 +670,21 @@ export function publicForecast(
 
     const endorsementTilt = publicEndorsementBoost(state, campaign);
     if (endorsementTilt > 0) {
-      addPartyWeight(blended, partyId, endorsementTilt);
+      addPartyWeight(blended, candidateKey, endorsementTilt);
       evidence += 0.3;
       signals.push("public endorsements");
     }
 
     const activityTilt = geographyActivityBoost(campaign, geographyId, asOf);
     if (activityTilt > 0) {
-      addPartyWeight(blended, partyId, activityTilt);
+      addPartyWeight(blended, candidateKey, activityTilt);
       evidence += 0.25;
       signals.push("recent observable campaign activity");
     }
 
     const orgTilt = groundGameBoost(campaign, kind, geographyId);
     if (orgTilt > 0) {
-      addPartyWeight(blended, partyId, orgTilt);
+      addPartyWeight(blended, candidateKey, orgTilt);
       evidence += 0.3;
       signals.push("Ground Game organization");
     }
@@ -648,6 +695,7 @@ export function publicForecast(
     return {
       truth: "no_data",
       leaderPartyId: null,
+      leaderPoliticianId: null,
       label: "No public forecast",
       detail: "There is not enough public geographic evidence to produce a forecast.",
       asOf: null,
@@ -661,13 +709,31 @@ export function publicForecast(
   const confidence = forecastConfidence(evidence, hasFreshLocalPoll, hasLocalPoll);
   const seats =
     kind === "constituency" ? (world.constituencyElectorate[geographyId]?.seats ?? 0) : 0;
-  const projectedSeats = seats > 0 ? projectSeats(ranked, seats) : undefined;
-  const leaderPartyId = category === "Toss-up" && margin < 0.02 ? null : (ranked[0]?.[0] ?? null);
+  const projectedSeats = seats > 0 && !byCandidate ? projectSeats(ranked, seats) : undefined;
+  const leaderId = category === "Toss-up" && margin < 0.02 ? null : (ranked[0]?.[0] ?? null);
   const signalText = signals.slice(0, 5).join("; ");
+
+  if (byCandidate) {
+    const leaderPoliticianId = leaderId;
+    const leaderPartyId =
+      (leaderPoliticianId ? (partyByCandidate.get(leaderPoliticianId) ?? null) : null) ??
+      (leaderPoliticianId ? (state.politicians[leaderPoliticianId]?.partyId ?? null) : null);
+    return {
+      truth: "forecast",
+      leaderPartyId,
+      leaderPoliticianId,
+      label: `${category} public forecast`,
+      detail: `Model estimate (${confidence} confidence) blending ${signalText || "public inputs"}. ${uncertaintyPhrase(confidence, seats)}. Not an official result and not a published poll.`,
+      asOf: asOfDate ?? asOf,
+      confidence,
+      category,
+    };
+  }
 
   return {
     truth: "forecast",
-    leaderPartyId,
+    leaderPartyId: leaderId,
+    leaderPoliticianId: null,
     label: `${category} public forecast`,
     detail: `Model estimate (${confidence} confidence) blending ${signalText || "public inputs"}. ${uncertaintyPhrase(confidence, seats)}. Not an official result and not a published poll.`,
     asOf: asOfDate ?? asOf,
@@ -686,8 +752,8 @@ export function publicPolling(
   const { contestId, electionId } = campaignPollScope(campaign);
   const poll = latestGeographicPoll(state, electionId, kind, geographyId, contestId);
   if (poll) {
-    // During nomination, prefer candidate-labeled leaders over party-only general labels.
-    const datum = pollDatum(poll);
+    const byCandidate = Boolean(contestId);
+    const datum = pollDatum(poll, byCandidate);
     if (contestId && poll.metadata.purpose === "nomination") {
       return {
         ...datum,
@@ -699,6 +765,7 @@ export function publicPolling(
   return {
     truth: "no_data",
     leaderPartyId: null,
+    leaderPoliticianId: null,
     label: contestId ? "No primary poll in this area" : "No direct local poll",
     detail: contestId
       ? "This area remains neutral because no published nomination poll sampled it for the current contest."

@@ -205,6 +205,21 @@ export type CaucusLeadershipState = {
 export const WHIP_STRENGTHS = ["free", "recommended", "party_line", "critical"] as const;
 export type WhipStrength = (typeof WHIP_STRENGTHS)[number];
 
+/** Tunable additive pressure toward the floor recommendation for each whip strength. */
+export const WHIP_STRENGTH_PRESSURE: Record<WhipStrength, number> = {
+  free: 0,
+  recommended: 0.15,
+  party_line: 0.35,
+  critical: 0.55,
+};
+
+export const WHIP_PERSUADE_APPROACHES = ["pressure", "favor", "career"] as const;
+export type WhipPersuadeApproach = (typeof WHIP_PERSUADE_APPROACHES)[number];
+
+export function isWhipPersuadeApproach(v: string): v is WhipPersuadeApproach {
+  return (WHIP_PERSUADE_APPROACHES as readonly string[]).includes(v);
+}
+
 export type CaucusLeadershipContest = {
   id: string;
   partyId: string;
@@ -240,6 +255,8 @@ export type LegislatureRuntime = {
   pendingPlayerVotes: Record<string, PendingPlayerVote>;
   lastMonthProcessed: IsoDate | null;
   sessionLabel: string;
+  /** Save-safe bag for temporary whip persuasion bonuses and similar runtime notes. */
+  metadata: JsonObject;
 };
 
 export function emptyLegislatureRuntime(): LegislatureRuntime {
@@ -258,6 +275,7 @@ export function emptyLegislatureRuntime(): LegislatureRuntime {
     pendingPlayerVotes: {},
     lastMonthProcessed: null,
     sessionLabel: "assembly",
+    metadata: {},
   };
 }
 

@@ -224,8 +224,13 @@ export function reconcileUnresolvedElectionCandidacies(
       const elig = evaluatePresidentialEligibility(world, state, politicianId, election.date);
       if (!elig.eligible) withdraw = true;
     }
-    if (c.partyId != null && pol?.partyId !== c.partyId) withdraw = true;
-    if (c.partyId == null && pol?.partyId != null) withdraw = true;
+    // Once the general-election field is finalized, ballot labels are locked.
+    // Membership churn (party merges, defections, joins) must not empty a
+    // certified field down to fewer than two live candidates.
+    if (!election.fieldFinalized) {
+      if (c.partyId != null && pol?.partyId !== c.partyId) withdraw = true;
+      if (c.partyId == null && pol?.partyId != null) withdraw = true;
+    }
     if (withdraw) withdrawUnresolvedCandidacy(election, politicianId);
   }
 }

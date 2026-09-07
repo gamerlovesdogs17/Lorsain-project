@@ -11,6 +11,86 @@ export type ConstituencySeatShare = {
   seats: number;
 };
 
+function hashId(text: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const raw = hex.replace("#", "").trim();
+  if (raw.length === 3) {
+    const r = Number.parseInt(raw[0]! + raw[0]!, 16);
+    const g = Number.parseInt(raw[1]! + raw[1]!, 16);
+    const b = Number.parseInt(raw[2]! + raw[2]!, 16);
+    if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+    return { r, g, b };
+  }
+  if (raw.length !== 6) return null;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+  return { r, g, b };
+}
+
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === rn) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
+  else if (max === gn) h = ((bn - rn) / d + 2) / 6;
+  else h = ((rn - gn) / d + 4) / 6;
+  return { h: h * 360, s, l };
+}
+
+/**
+ * Distinct map shade for a nomination candidate, derived from the party color
+ * via a stable hash (hue shift + lighten/darken). Same party → readable variants.
+ */
+export function candidateMapColor(
+  world: KernelWorld,
+  partyId: string | null | undefined,
+  politicianId: string,
+): string {
+  const base = partyColor(world, partyId);
+  const rgb = hexToRgb(base);
+  if (!rgb) return base;
+  const { h, s, l } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const hash = hashId(politicianId);
+  const hueShift = ((hash % 17) - 8) * 4.5;
+  const lightShift = (((hash >>> 8) % 11) - 5) * 0.025;
+  const satShift = (((hash >>> 16) % 7) - 3) * 0.03;
+  const hue = (h + hueShift + 360) % 360;
+  const sat = Math.max(0.18, Math.min(0.78, s + satShift));
+  const light = Math.max(0.28, Math.min(0.72, l + lightShift));
+  return `hsl(${Math.round(hue)} ${Math.round(sat * 100)}% ${Math.round(light * 100)}%)`;
+}
+
+/**
+ * Fill for public campaign polling/forecast layers.
+ * Nomination contests color by candidate shade; generals by party.
+ */
+export function nominationOrPartyFill(
+  world: KernelWorld,
+  leaderPartyId: string | null,
+  leaderPoliticianId: string | null | undefined,
+): string {
+  if (leaderPoliticianId) return candidateMapColor(world, leaderPartyId, leaderPoliticianId);
+  if (leaderPartyId) return partyColor(world, leaderPartyId);
+  return "#d7d5cf";
+}
+
 function sittingAssemblyTermsForConstituency(
   world: KernelWorld,
   snap: SimState,
@@ -198,7 +278,13 @@ export function mapFillFor(
       if (leaders?.length) {
         if (leaders.length > 1 && Math.abs(leaders[0]!.share - leaders[1]!.share) < 0.000001)
           return CONSTITUENCY_TIE_FILL;
-        return partyColor(world, leaders[0]!.partyId);
+        const top = leaders[0]!;
+        const purpose =
+          typeof polls[0]?.metadata.purpose === "string" ? polls[0].metadata.purpose : null;
+        if (purpose === "nomination" && top.politicianId) {
+          return candidateMapColor(world, top.partyId, top.politicianId);
+        }
+        return partyColor(world, top.partyId);
       }
       return "#dedbd3";
     }

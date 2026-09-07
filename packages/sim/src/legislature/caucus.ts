@@ -7,8 +7,95 @@ import type {
   CaucusLeadershipContest,
   CaucusLeadershipState,
   RecommendationStance,
+  WhipPersuadeApproach,
   WhipStrength,
 } from "./types.js";
+import { isJsonObject, type JsonObject } from "../json.js";
+
+export type WhipPersuasionBonus = {
+  billId: string;
+  targetPoliticianId: string;
+  approach: WhipPersuadeApproach;
+  bonus: number;
+  expiresDate: string;
+};
+
+const WHIP_PERSUADE_BONUS: Record<WhipPersuadeApproach, number> = {
+  pressure: 0.12,
+  favor: 0.16,
+  career: 0.2,
+};
+
+function whipPersuasionKey(billId: string, targetPoliticianId: string): string {
+  return `${billId}:${targetPoliticianId}`;
+}
+
+function readWhipPersuasions(state: SimState): Record<string, WhipPersuasionBonus> {
+  if (!state.legislatureRuntime.metadata) state.legislatureRuntime.metadata = {};
+  const raw = state.legislatureRuntime.metadata.whipPersuasions;
+  if (!isJsonObject(raw)) return {};
+  const out: Record<string, WhipPersuasionBonus> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (!isJsonObject(value)) continue;
+    if (typeof value.billId !== "string" || typeof value.targetPoliticianId !== "string") continue;
+    if (typeof value.approach !== "string" || typeof value.bonus !== "number") continue;
+    if (typeof value.expiresDate !== "string") continue;
+    out[key] = {
+      billId: value.billId,
+      targetPoliticianId: value.targetPoliticianId,
+      approach: value.approach as WhipPersuadeApproach,
+      bonus: value.bonus,
+      expiresDate: value.expiresDate,
+    };
+  }
+  return out;
+}
+
+function writeWhipPersuasions(state: SimState, map: Record<string, WhipPersuasionBonus>): void {
+  if (!state.legislatureRuntime.metadata) state.legislatureRuntime.metadata = {};
+  state.legislatureRuntime.metadata = {
+    ...state.legislatureRuntime.metadata,
+    whipPersuasions: map as unknown as JsonObject,
+  };
+}
+
+/** Active temporary persuasion bonus for an MP on a bill, if any. */
+export function whipPersuasionBonusFor(
+  state: SimState,
+  billId: string,
+  politicianId: string,
+): number {
+  const entry = readWhipPersuasions(state)[whipPersuasionKey(billId, politicianId)];
+  if (!entry) return 0;
+  if (entry.expiresDate < state.currentDate) return 0;
+  return entry.bonus;
+}
+
+/** Drop expired persuasion bonuses (month tick). */
+export function decayWhipPersuasions(state: SimState): void {
+  const map = readWhipPersuasions(state);
+  let changed = false;
+  for (const [key, entry] of Object.entries(map)) {
+    if (entry.expiresDate < state.currentDate) {
+      delete map[key];
+      changed = true;
+    }
+  }
+  if (changed) writeWhipPersuasions(state, map);
+}
+
+/** Consume persuasion for a bill after it is voted (committee/floor). */
+export function clearWhipPersuasionsForBill(state: SimState, billId: string): void {
+  const map = readWhipPersuasions(state);
+  let changed = false;
+  for (const [key, entry] of Object.entries(map)) {
+    if (entry.billId === billId) {
+      delete map[key];
+      changed = true;
+    }
+  }
+  if (changed) writeWhipPersuasions(state, map);
+}
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -520,6 +607,56 @@ export function setWhipStrength(
         actorIds: [actorId],
         entityIds: [partyId, billId],
         payload: { partyId, billId, strength },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    ],
+  };
+}
+
+/**
+ * Targeted whip persuasion toward a caucus member on a bill.
+ * Temporary bonus is stored in legislatureRuntime.metadata and consumed in vote scoring.
+ */
+export function whipPersuadeMember(
+  world: KernelWorld,
+  state: SimState,
+  actorId: string,
+  billId: string,
+  targetPoliticianId: string,
+  approach: WhipPersuadeApproach,
+  commandId: string | null,
+): { events: SimEvent[] } | { error: CommandError } {
+  const partyId = state.politicians[actorId]?.partyId;
+  if (!partyId) return { error: reject("NOT_CAUCUS_MEMBER", actorId) };
+  const leadership = state.legislatureRuntime.caucusLeadership[partyId];
+  if (!leadership || (leadership.floorLeaderId !== actorId && leadership.whipId !== actorId)) {
+    return { error: reject("NOT_CAUCUS_LEADER", actorId) };
+  }
+  const bill = state.legislatureRuntime.bills[billId];
+  if (!bill) return { error: reject("UNKNOWN_BILL", billId) };
+  if (!assemblyCaucus(world, state, partyId).includes(targetPoliticianId)) {
+    return { error: reject("NOT_CAUCUS_MEMBER", targetPoliticianId) };
+  }
+  const map = readWhipPersuasions(state);
+  map[whipPersuasionKey(billId, targetPoliticianId)] = {
+    billId,
+    targetPoliticianId,
+    approach,
+    bonus: WHIP_PERSUADE_BONUS[approach],
+    expiresDate: addMonths(state.currentDate, 1),
+  };
+  writeWhipPersuasions(state, map);
+  return {
+    events: [
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "CAUCUS_WHIP_PERSUADE",
+        importance: 0.38,
+        visibility: "public",
+        actorIds: [actorId, targetPoliticianId],
+        entityIds: [partyId, billId],
+        payload: { partyId, billId, targetPoliticianId, approach },
         sourceScheduledEventId: null,
         sourceCommandId: commandId,
       }),

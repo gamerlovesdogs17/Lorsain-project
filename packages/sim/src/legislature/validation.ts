@@ -307,6 +307,9 @@ export function parseLegislatureRuntime(raw: unknown): LegislatureRuntime | stri
   if (isRecord(raw.caucusContests)) {
     runtime.caucusContests = raw.caucusContests as LegislatureRuntime["caucusContests"];
   }
+  if (isRecord(raw.metadata)) {
+    runtime.metadata = raw.metadata as LegislatureRuntime["metadata"];
+  }
   void BILL_STATUSES;
   void COMMITTEE_IDS;
   return runtime;
