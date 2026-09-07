@@ -1,6 +1,7 @@
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import { reviewGoals } from "../agents/goals.js";
 import { recordPoliticalMemory } from "../agents/memories.js";
+import { ensurePartyOrgRuntime } from "../partyOrg/state.js";
 import { pushHistory } from "../scheduler.js";
 import { partyMembers, factionMembers } from "./queries.js";
 import { recordPartyPlatform } from "./platforms.js";
@@ -28,6 +29,20 @@ export function setPartyLeader(
   const events: SimEvent[] = [];
   party.leaderId = leaderId;
   party.status = "active";
+
+  // National Chair is the authoritative party leader — keep officer seat in sync.
+  const runtime = ensurePartyOrgRuntime(state);
+  if (!runtime.officers[partyId]) runtime.officers[partyId] = {};
+  const existingChair = runtime.officers[partyId]!.chair;
+  if (!existingChair || existingChair.politicianId !== leaderId) {
+    runtime.officers[partyId]!.chair = {
+      role: "chair",
+      politicianId: leaderId,
+      partyId,
+      assumedDate: state.currentDate,
+    };
+  }
+
   if (previous !== leaderId) recordPartyPlatform(state, partyId, "leadership_change");
   if (previous && previous !== leaderId) {
     reviewGoals(state, world, previous, state.currentDate);

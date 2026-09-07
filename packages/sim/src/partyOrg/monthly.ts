@@ -10,14 +10,20 @@
  * Each month this does:
  *   1. Ensure default officers are seeded for all parties.
  *   2. For NPC-controlled parties: rare (≈10% chance per party) priority update.
- *   3. Open a chair election for any party whose chair seat is vacant and has no
- *      open election already.
+ *   3. Open a chair election for vacant seats or expired terms.
+ *   4. Auto-resolve open chair elections after ~2 months (NPC candidates if needed).
  */
 
+import { addMonths, compareIsoDate } from "../calendar.js";
 import { monthStart } from "../campaigns/effects.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
-import { openPartyChairElection } from "./elections.js";
+import {
+  declareChairCandidacy,
+  openPartyChairElection,
+  resolveChairElection,
+} from "./elections.js";
 import { ensureDefaultOfficers } from "./officers.js";
+import { getPartyRules } from "./rules.js";
 import { ensurePartyOrgRuntime } from "./state.js";
 import { setPartyPriorities } from "./commands.js";
 
@@ -39,6 +45,49 @@ const NPC_PRIORITY_TEMPLATES: string[][] = [
   ["education", "innovation", "environment"],
   ["regional_development", "infrastructure", "agriculture"],
 ];
+
+const CHAIR_ELECTION_AUTO_RESOLVE_MONTHS = 2;
+
+function hasOpenChairElection(
+  runtime: ReturnType<typeof ensurePartyOrgRuntime>,
+  partyId: string,
+): boolean {
+  return Object.values(runtime.chairElections).some(
+    (e) => e.partyId === partyId && e.status === "open",
+  );
+}
+
+function termExpired(
+  state: SimState,
+  world: KernelWorld,
+  partyId: string,
+  assumedDate: string,
+): boolean {
+  const rules = getPartyRules(state, world, partyId);
+  if (rules.termMonths <= 0) return false;
+  const termEnd = addMonths(assumedDate, rules.termMonths);
+  return compareIsoDate(monthStart(state.currentDate), monthStart(termEnd)) >= 0;
+}
+
+function seedNpcCandidates(
+  state: SimState,
+  world: KernelWorld,
+  electionId: string,
+  partyId: string,
+  commandId: string,
+): void {
+  const pool = Object.entries(state.politicians)
+    .filter(
+      ([id, p]) =>
+        p.partyId === partyId && p.alive && !p.retired && id !== state.playerPoliticianId,
+    )
+    .map(([id]) => id)
+    .sort((a, b) => a.localeCompare(b))
+    .slice(0, 4);
+  for (const politicianId of pool) {
+    declareChairCandidacy(state, world, { electionId, politicianId, commandId });
+  }
+}
 
 export function processPartyOrgMonth(
   world: KernelWorld,
@@ -80,23 +129,44 @@ export function processPartyOrgMonth(
     });
   }
 
-  // ── 3. Open elections for vacant chair seats ───────────────────────────────
+  // ── 3. Open elections for vacant or term-expired chair seats ───────────────
   for (const partyId of Object.keys(state.partyStates)) {
-    const officers = runtime.officers[partyId];
-    if (officers?.chair) continue; // chair present — nothing to do
+    if (hasOpenChairElection(runtime, partyId)) continue;
 
-    // Check no election already open
-    const openElection = Object.values(runtime.chairElections).find(
-      (e) => e.partyId === partyId && e.status === "open",
-    );
-    if (openElection) continue;
+    const chair = runtime.officers[partyId]?.chair;
+    const vacant = !chair;
+    const expired = chair ? termExpired(state, world, partyId, chair.assumedDate) : false;
+    if (!vacant && !expired) continue;
 
     const result = openPartyChairElection(state, world, { partyId, commandId });
     if (result.ok) {
-      // Push the opened event into our return array (pushHistory already recorded it)
-      // We capture it via the history delta — find the last pushed event
       const lastEvent = state.history[state.history.length - 1];
       if (lastEvent?.type === "PARTY_CHAIR_ELECTION_OPENED") {
+        events.push(lastEvent);
+      }
+    }
+  }
+
+  // ── 4. Auto-resolve open chair elections after ~2 months ───────────────────
+  for (const election of Object.values(runtime.chairElections).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  )) {
+    if (election.status !== "open") continue;
+    const resolveAfter = addMonths(election.openedDate, CHAIR_ELECTION_AUTO_RESOLVE_MONTHS);
+    if (compareIsoDate(monthStart(state.currentDate), monthStart(resolveAfter)) < 0) continue;
+
+    if (election.candidates.length === 0) {
+      seedNpcCandidates(state, world, election.id, election.partyId, commandId);
+    }
+    if (election.candidates.length === 0) continue;
+
+    const resolved = resolveChairElection(state, world, {
+      electionId: election.id,
+      commandId,
+    });
+    if (resolved.ok) {
+      const lastEvent = state.history[state.history.length - 1];
+      if (lastEvent?.type === "PARTY_CHAIR_ELECTED") {
         events.push(lastEvent);
       }
     }

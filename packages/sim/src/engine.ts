@@ -121,6 +121,7 @@ import {
   seedCaucusLeadership,
   setCaucusBillPosition,
   setWhipStrength,
+  whipPersuadeMember,
 } from "./legislature/caucus.js";
 import { emptyExecutiveRuntime, isMotionKind } from "./executive/types.js";
 import { processExecutiveMonth } from "./executive/monthly.js";
@@ -195,6 +196,20 @@ import { processPartyOrgMonth } from "./partyOrg/monthly.js";
 import { ensurePartyOrgRuntime } from "./partyOrg/state.js";
 import { emptyPartyOrgRuntime } from "./partyOrg/types.js";
 import { ensureDefaultOfficers } from "./partyOrg/officers.js";
+import { processCaucusMonth } from "./caucus/monthly.js";
+import { ensureCaucusRuntime } from "./caucus/state.js";
+import { recomputeCaucusShares } from "./caucus/shares.js";
+import { emptyCaucusRuntime } from "./caucus/types.js";
+import { processHistory15Month } from "./history15/monthly.js";
+import { emptyHistory15Runtime } from "./history15/types.js";
+import {
+  endorseChairCandidate,
+  endorsePrimaryCandidate,
+  formCaucusAlliance,
+  proposeCaucusMerger,
+  recruitToCaucus,
+  setCaucusPriorities,
+} from "./caucus/commands.js";
 import {
   allocatePartySupport,
   authorizeCoalitionTalks,
@@ -380,6 +395,8 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     politicsRuntime: emptyPoliticsRuntime(),
     governingRuntime: emptyGoverningRuntime(),
     partyOrgRuntime: emptyPartyOrgRuntime(),
+    caucusRuntime: emptyCaucusRuntime(),
+    history15Runtime: emptyHistory15Runtime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -394,6 +411,8 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
   }
   seedCanonicalElections(state, world);
   seedPartyInstitutions(state, world);
+  ensureCaucusRuntime(state);
+  recomputeCaucusShares(world, state);
   seedStartingPublicStanding(world, state);
   seedInitialGoals(state, world);
   seedCommitteesIfNeeded(world, state);
@@ -574,6 +593,8 @@ function runTowardTarget(
   );
   // Phase 14 party-org: after political agency (officers may change), before governing.
   events.push(...timed("party_org", () => processPartyOrgMonth(world, state, commandId)));
+  // Caucuses 2.0: after party-org (officers/chair known), before organizations.
+  events.push(...timed("caucus", () => processCaucusMonth(world, state, commandId)));
   events.push(
     ...timed("organizations", () => processOrganizationsMonth(state, world, rng, commandId)),
   );
@@ -616,6 +637,8 @@ function runTowardTarget(
     ),
   );
   events.push(...timed("media", () => processMediaMonth(state, world, rng, commandId)));
+  // Phase 15 long-term history: late observational pass after domestic/foreign/media.
+  events.push(...timed("history15", () => processHistory15Month(world, state, commandId)));
   state.currentDate = target;
   state.completedTurns += 1;
   state.activeTurnTarget = null;
@@ -712,6 +735,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   ensurePoliticsRuntime(state);
   ensureGoverningRuntime(state);
   ensurePartyOrgRuntime(state);
+  ensureCaucusRuntime(state);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
@@ -3528,6 +3552,88 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       );
     }
 
+    // ── Caucuses 2.0 (shared human/NPC command layer) ──
+    type CaucusOutcome = { ok: true } | { ok: false; error: { code: string; message: string } };
+    const runCaucusCommand = (
+      op: (target: SimState, commandId: string) => CaucusOutcome,
+    ): CommandResult => {
+      ensureCaucusRuntime(state);
+      const preview = op(jsonClone(state), "PREVIEW");
+      if (!preview.ok) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const before = state.history.length;
+      const out = op(state, commandId);
+      if (!out.ok) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: state.history.slice(before), interrupt: null };
+    };
+
+    if (command.type === "SET_CAUCUS_PRIORITIES") {
+      return runCaucusCommand((target, commandId) =>
+        setCaucusPriorities(target, world, {
+          actorId: target.playerPoliticianId,
+          factionId: command.factionId,
+          priorities: command.priorities,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "ENDORSE_CHAIR_AS_CAUCUS") {
+      return runCaucusCommand((target, commandId) =>
+        endorseChairCandidate(target, world, {
+          actorId: target.playerPoliticianId,
+          factionId: command.factionId,
+          candidateId: command.candidateId,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "ENDORSE_PRIMARY_AS_CAUCUS") {
+      return runCaucusCommand((target, commandId) =>
+        endorsePrimaryCandidate(target, world, {
+          actorId: target.playerPoliticianId,
+          factionId: command.factionId,
+          candidateId: command.candidateId,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "FORM_CAUCUS_ALLIANCE") {
+      return runCaucusCommand((target, commandId) =>
+        formCaucusAlliance(target, world, {
+          actorId: target.playerPoliticianId,
+          factionId: command.factionId,
+          otherFactionId: command.otherFactionId,
+          kind: command.kind,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "PROPOSE_CAUCUS_MERGER") {
+      return runCaucusCommand((target, commandId) =>
+        proposeCaucusMerger(target, world, {
+          actorId: target.playerPoliticianId,
+          absorbFactionId: command.absorbFactionId,
+          intoFactionId: command.intoFactionId,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "RECRUIT_TO_CAUCUS") {
+      return runCaucusCommand((target, commandId) =>
+        recruitToCaucus(target, world, {
+          actorId: target.playerPoliticianId,
+          factionId: command.factionId,
+          politicianId: command.politicianId,
+          commandId,
+        }),
+      );
+    }
+
     if (command.type === "SET_WHIP_STRENGTH") {
       const preview = setWhipStrength(
         jsonClone(state),
@@ -3543,6 +3649,31 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         state.playerPoliticianId,
         command.billId,
         command.strength,
+        commandId,
+      );
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "WHIP_PERSUADE_MEMBER") {
+      const preview = whipPersuadeMember(
+        world,
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.billId,
+        command.targetPoliticianId,
+        command.approach,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = whipPersuadeMember(
+        world,
+        state,
+        state.playerPoliticianId,
+        command.billId,
+        command.targetPoliticianId,
+        command.approach,
         commandId,
       );
       if ("error" in out) return fail(out.error.code, out.error.message);

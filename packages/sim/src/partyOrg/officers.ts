@@ -16,6 +16,7 @@
  */
 
 import type { KernelWorld, SimState } from "../types.js";
+import { ensureNationalCommittees } from "./committee.js";
 import type { NationalOfficeRole } from "./types.js";
 import { ensurePartyOrgRuntime } from "./state.js";
 
@@ -111,6 +112,9 @@ export function ensureDefaultOfficers(world: KernelWorld, state: SimState): void
       }
     }
   }
+
+  // ── National committees (12–24 members) ──────────────────────────────────
+  ensureNationalCommittees(world, state);
 }
 
 /**

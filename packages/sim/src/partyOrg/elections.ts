@@ -17,6 +17,7 @@
  * deterministically by candidate ID lexicographic order.
  */
 
+import { setPartyLeader } from "../parties/leadership.js";
 import { pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { getPartyRules } from "./rules.js";
@@ -49,9 +50,15 @@ function buildElectorIds(
   return activeInParty;
 }
 
-/** Simple affinity lookup (0 if relationship absent). */
+/** Simple affinity lookup, boosted when the elector's caucus endorsed the candidate. */
 function affinityFor(state: SimState, electorId: string, candidateId: string): number {
-  return state.relationships[electorId]?.[candidateId]?.affinity ?? 0;
+  let aff = state.relationships[electorId]?.[candidateId]?.affinity ?? 0;
+  const factionId = state.politicians[electorId]?.factionId;
+  if (factionId) {
+    const endorsed = state.caucusRuntime?.caucuses[factionId]?.endorsedChairCandidateId;
+    if (endorsed === candidateId) aff += 0.35;
+  }
+  return aff;
 }
 
 // ---------------------------------------------------------------------------
@@ -243,7 +250,7 @@ export function resolveChairElection(
   // Single candidate: uncontested win
   if (election.candidates.length === 1) {
     const winnerId = election.candidates[0]!;
-    applyWinner(state, runtime, election, winnerId, events, args.commandId);
+    applyWinner(state, world, runtime, election, winnerId, events, args.commandId);
     return { ok: true, winnerId };
   }
 
@@ -275,7 +282,7 @@ export function resolveChairElection(
     }
   }
 
-  applyWinner(state, runtime, election, winnerId, events, args.commandId);
+  applyWinner(state, world, runtime, election, winnerId, events, args.commandId);
   return { ok: true, winnerId };
 }
 
@@ -285,6 +292,7 @@ export function resolveChairElection(
 
 function applyWinner(
   state: SimState,
+  world: KernelWorld,
   runtime: ReturnType<typeof ensurePartyOrgRuntime>,
   election: ChairElection,
   winnerId: string,
@@ -295,7 +303,7 @@ function applyWinner(
   election.winnerId = winnerId;
   election.resolvedDate = state.currentDate;
 
-  // Update officers
+  // Seat the chair and sync leaderId through setPartyLeader (authoritative path).
   if (!runtime.officers[election.partyId]) runtime.officers[election.partyId] = {};
   runtime.officers[election.partyId]!.chair = {
     role: "chair",
@@ -303,10 +311,8 @@ function applyWinner(
     partyId: election.partyId,
     assumedDate: state.currentDate,
   };
-
-  // Keep partyStates.leaderId in sync
-  const partyState = state.partyStates[election.partyId];
-  if (partyState) partyState.leaderId = winnerId;
+  const lead = setPartyLeader(state, world, election.partyId, winnerId, commandId);
+  if ("events" in lead) events.push(...lead.events);
 
   events.push(
     pushHistory(state, {

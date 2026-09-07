@@ -21,21 +21,6 @@ function stableHash(text: string): number {
   return hash >>> 0;
 }
 
-function sufferedSevereAssemblyDefeat(state: SimState, partyId: string): boolean {
-  const latest = Object.values(state.elections)
-    .filter(
-      (election) =>
-        election.type === "assembly" && election.status === "resolved" && election.assembly,
-    )
-    .sort((a, b) => b.date.localeCompare(a.date))[0];
-  if (!latest?.assembly) return false;
-  return (
-    (latest.assembly.previousPartySeatTotals[partyId] ?? 0) -
-      (latest.assembly.partySeatTotals[partyId] ?? 0) >=
-    15
-  );
-}
-
 function updateInstitutionalCohesion(world: KernelWorld, state: SimState): void {
   const latestAssembly = Object.values(state.elections)
     .filter(
@@ -235,33 +220,12 @@ export function processPartyInstitutionsMonth(
   const month = state.currentDate.slice(5, 7);
   let candidateScores: Map<string, number> | null = null;
   const scores = () => (candidateScores ??= buildCandidateScores(world, state));
+  // National party leadership is owned by partyOrg (National Chair). Do not open
+  // legacy party_leadership contests — faction_chair contests remain here.
   for (const partyId of Object.keys(state.partyStates).sort()) {
     const party = state.partyStates[partyId]!;
     const leader = party.leaderId ? state.politicians[party.leaderId] : null;
     if (party.leaderId && (!leader?.alive || leader.retired)) party.leaderId = null;
-    const vacant = party.leaderId == null;
-    const reviewDue = month === "01" && year >= 2029 && (year - 2029) % 4 === 0;
-    const challenged =
-      reviewDue &&
-      (party.cohesion < 0.58 ||
-        sufferedSevereAssemblyDefeat(state, partyId) ||
-        stableHash(`${partyId}:${year}:leadership-review`) % 100 < 34);
-    const latest = latestCycleYear(state, "party_leadership", partyId, null);
-    if (
-      (vacant || challenged) &&
-      latest !== year &&
-      !unresolvedFor(state, "party_leadership", partyId, null)
-    ) {
-      events.push(
-        ...openRecurringContest(
-          world,
-          state,
-          { type: "party_leadership", partyId, factionId: null, cycleYear: year },
-          commandId,
-          scores(),
-        ),
-      );
-    }
   }
   for (const factionId of Object.keys(state.factionStates).sort()) {
     const faction = state.factionStates[factionId]!;

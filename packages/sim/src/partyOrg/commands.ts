@@ -2,8 +2,8 @@
  * partyOrg/commands.ts
  *
  * Shared command handlers for party-organisation actions.
- * Both NPC AI and the player invoke the SAME functions — the UI layer (not yet
- * built) will simply wrap the same call with a confirmation step.
+ * Both NPC AI and the player invoke the SAME functions — the UI layer
+ * wraps the same call with a confirmation step.
  *
  * Every handler returns  { ok: true }  or  { ok: false, error: { code, message } }.
  *
@@ -12,16 +12,14 @@
  * • The actor (`actorId`) must hold the Chair role for the party.
  * • If the Chair seat is vacant, the Vice Chair may substitute.
  * • For "major" actions (coalition talks, candidate endorsement, resource
- *   allocation, discipline) a national-committee stub check is also performed
- *   when `partyRules.nationalCommitteeApprovalRequired` is true.  This stub
- *   always approves — it records intent and emits an event.  Full quorum logic
- *   is a future enhancement.
+ *   allocation, discipline) a national-committee vote is required when
+ *   `partyRules.nationalCommitteeApprovalRequired` is true.
  */
 
 import { pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
+import { requireCommitteeApproval } from "./committee.js";
 import { ensurePartyOrgRuntime } from "./state.js";
-import { getPartyRules } from "./rules.js";
 
 // ---------------------------------------------------------------------------
 // Internal utilities
@@ -59,36 +57,6 @@ function requireChairAuth(state: SimState, partyId: string, actorId: string): Er
   return err(
     "NOT_PARTY_CHAIR",
     `Politician ${actorId} does not hold the Chair (or Vice Chair fallback) for party ${partyId}.`,
-  );
-}
-
-/**
- * Stub: national-committee approval for major actions.
- * When rules require committee approval, emits a PARTY_COMMITTEE_APPROVAL_STUB
- * history event (always passes — full quorum logic is a future phase).
- */
-function stubCommitteeApproval(
-  state: SimState,
-  partyId: string,
-  actorId: string,
-  actionKind: string,
-  commandId: string,
-  events: SimEvent[],
-): void {
-  const rules = getPartyRules(state, { partyDefinitions: {} } as KernelWorld, partyId);
-  if (!rules.nationalCommitteeApprovalRequired) return;
-  events.push(
-    pushHistory(state, {
-      date: state.currentDate,
-      type: "PARTY_COMMITTEE_APPROVAL_STUB",
-      importance: 0.3,
-      visibility: "system",
-      actorIds: [actorId],
-      entityIds: [partyId],
-      payload: { partyId, actionKind, approved: true },
-      sourceScheduledEventId: null,
-      sourceCommandId: commandId,
-    }),
   );
 }
 
@@ -207,7 +175,7 @@ export function setCampaignStrategy(
 
 /**
  * Endorse a candidate on behalf of the party in a general or provincial contest.
- * Major action — subject to committee approval stub when rules require it.
+ * Major action — subject to committee approval when rules require it.
  * Requires: actor is Chair (or Vice Chair substituting).
  */
 export function endorseCandidate(
@@ -224,17 +192,15 @@ export function endorseCandidate(
   const authErr = requireChairAuth(state, args.partyId, args.actorId);
   if (authErr) return authErr;
 
-  const runtime = ensurePartyOrgRuntime(state);
-  const events: SimEvent[] = [];
+  const committee = requireCommitteeApproval(state, world, {
+    partyId: args.partyId,
+    proposalKind: "endorse_candidate",
+    proposalPayload: { contestId: args.contestId, candidateId: args.candidateId },
+    commandId: args.commandId,
+  });
+  if (!committee.ok) return committee;
 
-  stubCommitteeApproval(
-    state,
-    args.partyId,
-    args.actorId,
-    "endorse_candidate",
-    args.commandId,
-    events,
-  );
+  const runtime = ensurePartyOrgRuntime(state);
 
   runtime.partyEndorsements[args.contestId] = {
     partyId: args.partyId,
@@ -243,23 +209,21 @@ export function endorseCandidate(
     date: state.currentDate,
   };
 
-  events.push(
-    pushHistory(state, {
-      date: state.currentDate,
-      type: "PARTY_CANDIDATE_ENDORSED",
-      importance: 0.6,
-      visibility: "public",
-      actorIds: [args.actorId, args.candidateId],
-      entityIds: [args.partyId, args.contestId],
-      payload: {
-        partyId: args.partyId,
-        contestId: args.contestId,
-        candidateId: args.candidateId,
-      },
-      sourceScheduledEventId: null,
-      sourceCommandId: args.commandId,
-    }),
-  );
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "PARTY_CANDIDATE_ENDORSED",
+    importance: 0.6,
+    visibility: "public",
+    actorIds: [args.actorId, args.candidateId],
+    entityIds: [args.partyId, args.contestId],
+    payload: {
+      partyId: args.partyId,
+      contestId: args.contestId,
+      candidateId: args.candidateId,
+    },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
 
   return ok();
 }
@@ -267,7 +231,7 @@ export function endorseCandidate(
 /**
  * Allocate party support resources across targets (contests, regions, etc.).
  * Values are 0–1 shares; they are clamped and stored as-is (caller decides meaning).
- * Major action — subject to committee approval stub when rules require it.
+ * Major action — subject to committee approval when rules require it.
  * Requires: actor is Chair (or Vice Chair substituting).
  */
 export function allocatePartySupport(
@@ -283,17 +247,15 @@ export function allocatePartySupport(
   const authErr = requireChairAuth(state, args.partyId, args.actorId);
   if (authErr) return authErr;
 
-  const runtime = ensurePartyOrgRuntime(state);
-  const events: SimEvent[] = [];
+  const committee = requireCommitteeApproval(state, world, {
+    partyId: args.partyId,
+    proposalKind: "allocate_support",
+    proposalPayload: { allocations: args.allocations },
+    commandId: args.commandId,
+  });
+  if (!committee.ok) return committee;
 
-  stubCommitteeApproval(
-    state,
-    args.partyId,
-    args.actorId,
-    "allocate_support",
-    args.commandId,
-    events,
-  );
+  const runtime = ensurePartyOrgRuntime(state);
 
   const clamped: Record<string, number> = {};
   for (const [key, val] of Object.entries(args.allocations)) {
@@ -301,19 +263,17 @@ export function allocatePartySupport(
   }
   runtime.supportAllocations[args.partyId] = clamped;
 
-  events.push(
-    pushHistory(state, {
-      date: state.currentDate,
-      type: "PARTY_SUPPORT_ALLOCATED",
-      importance: 0.4,
-      visibility: "system",
-      actorIds: [args.actorId],
-      entityIds: [args.partyId],
-      payload: { partyId: args.partyId, allocations: clamped },
-      sourceScheduledEventId: null,
-      sourceCommandId: args.commandId,
-    }),
-  );
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "PARTY_SUPPORT_ALLOCATED",
+    importance: 0.4,
+    visibility: "system",
+    actorIds: [args.actorId],
+    entityIds: [args.partyId],
+    payload: { partyId: args.partyId, allocations: clamped },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
 
   return ok();
 }
@@ -321,7 +281,7 @@ export function allocatePartySupport(
 /**
  * Authorise (or update) coalition talks with a partner party, optionally with
  * red-line conditions.
- * Major action — subject to committee approval stub when rules require it.
+ * Major action — subject to committee approval when rules require it.
  * Requires: actor is Chair (or Vice Chair substituting).
  */
 export function authorizeCoalitionTalks(
@@ -345,17 +305,20 @@ export function authorizeCoalitionTalks(
   }
 
   const authorize = args.authorize ?? true;
-  const runtime = ensurePartyOrgRuntime(state);
-  const events: SimEvent[] = [];
 
-  stubCommitteeApproval(
-    state,
-    args.partyId,
-    args.actorId,
-    "authorize_coalition_talks",
-    args.commandId,
-    events,
-  );
+  const committee = requireCommitteeApproval(state, world, {
+    partyId: args.partyId,
+    proposalKind: "authorize_coalition_talks",
+    proposalPayload: {
+      partnerPartyId: args.partnerPartyId,
+      authorize,
+      redLines: args.redLines ?? [],
+    },
+    commandId: args.commandId,
+  });
+  if (!committee.ok) return committee;
+
+  const runtime = ensurePartyOrgRuntime(state);
 
   if (!runtime.coalitionTalks[args.partyId]) runtime.coalitionTalks[args.partyId] = {};
   runtime.coalitionTalks[args.partyId]![args.partnerPartyId] = {
@@ -363,31 +326,29 @@ export function authorizeCoalitionTalks(
     redLines: args.redLines ?? [],
   };
 
-  events.push(
-    pushHistory(state, {
-      date: state.currentDate,
-      type: authorize ? "PARTY_COALITION_TALKS_AUTHORIZED" : "PARTY_COALITION_TALKS_RESCINDED",
-      importance: 0.65,
-      visibility: "public",
-      actorIds: [args.actorId],
-      entityIds: [args.partyId, args.partnerPartyId],
-      payload: {
-        partyId: args.partyId,
-        partnerPartyId: args.partnerPartyId,
-        authorized: authorize,
-        redLines: args.redLines ?? [],
-      },
-      sourceScheduledEventId: null,
-      sourceCommandId: args.commandId,
-    }),
-  );
+  pushHistory(state, {
+    date: state.currentDate,
+    type: authorize ? "PARTY_COALITION_TALKS_AUTHORIZED" : "PARTY_COALITION_TALKS_RESCINDED",
+    importance: 0.65,
+    visibility: "public",
+    actorIds: [args.actorId],
+    entityIds: [args.partyId, args.partnerPartyId],
+    payload: {
+      partyId: args.partyId,
+      partnerPartyId: args.partnerPartyId,
+      authorized: authorize,
+      redLines: args.redLines ?? [],
+    },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
 
   return ok();
 }
 
 /**
  * Recommend a disciplinary action against a party member.
- * Major action — subject to committee approval stub when rules require it.
+ * Major action — subject to committee approval when rules require it.
  * Requires: actor is Chair (or Vice Chair substituting).
  */
 export function recommendDiscipline(
@@ -408,17 +369,15 @@ export function recommendDiscipline(
     return err("SELF_DISCIPLINE", "The chair cannot recommend discipline against themselves.");
   }
 
-  const runtime = ensurePartyOrgRuntime(state);
-  const events: SimEvent[] = [];
+  const committee = requireCommitteeApproval(state, world, {
+    partyId: args.partyId,
+    proposalKind: `discipline_${args.kind}`,
+    proposalPayload: { targetId: args.targetId, kind: args.kind },
+    commandId: args.commandId,
+  });
+  if (!committee.ok) return committee;
 
-  stubCommitteeApproval(
-    state,
-    args.partyId,
-    args.actorId,
-    `discipline_${args.kind}`,
-    args.commandId,
-    events,
-  );
+  const runtime = ensurePartyOrgRuntime(state);
 
   const id = `PDISC${String(runtime.nextDisciplineId++).padStart(6, "0")}`;
   runtime.disciplineActions[id] = {
@@ -431,24 +390,22 @@ export function recommendDiscipline(
     status: "pending",
   };
 
-  events.push(
-    pushHistory(state, {
-      date: state.currentDate,
-      type: "PARTY_DISCIPLINE_RECOMMENDED",
-      importance: 0.55,
-      visibility: "public",
-      actorIds: [args.actorId, args.targetId],
-      entityIds: [args.partyId],
-      payload: {
-        id,
-        partyId: args.partyId,
-        targetId: args.targetId,
-        kind: args.kind,
-      },
-      sourceScheduledEventId: null,
-      sourceCommandId: args.commandId,
-    }),
-  );
+  pushHistory(state, {
+    date: state.currentDate,
+    type: "PARTY_DISCIPLINE_RECOMMENDED",
+    importance: 0.55,
+    visibility: "public",
+    actorIds: [args.actorId, args.targetId],
+    entityIds: [args.partyId],
+    payload: {
+      id,
+      partyId: args.partyId,
+      targetId: args.targetId,
+      kind: args.kind,
+    },
+    sourceScheduledEventId: null,
+    sourceCommandId: args.commandId,
+  });
 
   return ok();
 }

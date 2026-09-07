@@ -62,6 +62,8 @@ import type {
 import type { Phase12Runtime } from "./politics/types.js";
 import type { Phase13Runtime } from "./governing/types.js";
 import type { PartyOrgRuntime } from "./partyOrg/types.js";
+import type { CaucusRuntime } from "./caucus/types.js";
+import type { History15Runtime } from "./history15/types.js";
 
 export type {
   CanonicalWorldCountry,
@@ -69,7 +71,7 @@ export type {
   CanonicalWorldLeader,
 } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 22 as const;
+export const SAVE_SCHEMA_VERSION = 24 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -247,6 +249,10 @@ export type SimState = {
   governingRuntime: Phase13Runtime;
   /** Phase 14 party-organisation runtime (officers, priorities, positions, elections). */
   partyOrgRuntime?: PartyOrgRuntime;
+  /** Caucuses 2.0 — internal party organization shares & politics (keyed by faction). */
+  caucusRuntime?: CaucusRuntime;
+  /** Phase 15 long-term history / emergent politics (eras, governments, yearbooks). */
+  history15Runtime?: History15Runtime;
 };
 
 export type Command =
@@ -710,12 +716,34 @@ export type Command =
   | { type: "OPEN_PARTY_CHAIR_ELECTION"; partyId: string }
   | { type: "DECLARE_CHAIR_CANDIDACY"; electionId: string; politicianId?: string }
   | { type: "RESOLVE_PARTY_CHAIR_ELECTION"; electionId: string }
+  // ── Caucuses 2.0 (shared human/NPC command layer) ──
+  | { type: "SET_CAUCUS_PRIORITIES"; factionId: string; priorities: string[] }
+  | { type: "ENDORSE_CHAIR_AS_CAUCUS"; factionId: string; candidateId: string }
+  | { type: "ENDORSE_PRIMARY_AS_CAUCUS"; factionId: string; candidateId: string }
+  | {
+      type: "FORM_CAUCUS_ALLIANCE";
+      factionId: string;
+      otherFactionId: string;
+      kind: "alliance" | "rivalry";
+    }
+  | {
+      type: "PROPOSE_CAUCUS_MERGER";
+      absorbFactionId: string;
+      intoFactionId: string;
+    }
+  | { type: "RECRUIT_TO_CAUCUS"; factionId: string; politicianId: string }
   // ── Assembly delegation: whip discipline strength (shared command layer) ──
   | {
       type: "SET_WHIP_STRENGTH";
       partyId: string;
       billId: string;
       strength: "free" | "recommended" | "party_line" | "critical";
+    }
+  | {
+      type: "WHIP_PERSUADE_MEMBER";
+      billId: string;
+      targetPoliticianId: string;
+      approach: "pressure" | "favor" | "career";
     };
 
 export type CommandError = { code: string; message: string };

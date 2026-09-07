@@ -46,7 +46,7 @@ export type PartyRules = {
   /** How the national chair is elected: by membership ballot, committee vote, or convention. */
   chairElectionMethod: LeadershipElectionMethod;
   /** When true, major actions (coalition talks, discipline, large endorsements) require a
-   *  national-committee stub-approval before taking effect. */
+   *  national-committee vote before taking effect. */
   nationalCommitteeApprovalRequired: boolean;
   /** How candidates for chair put themselves forward. */
   nominationMethodForChair: NominationMethodForOffice;
@@ -137,6 +137,11 @@ export type PartyOrgRuntime = {
   /** Resource/support allocations: partyId → target-key → share (0–1). */
   supportAllocations: Record<string, Record<string, number>>;
   /**
+   * National committee member lists (partyId → politicianIds).
+   * Seeded to 12–24 members (officers, faction chairs, senior MPs).
+   */
+  nationalCommittee: Record<string, string[]>;
+  /**
    * Provincial party organisations — foundation for sub-national party apparatus.
    * Keyed by provincial-organisation id (mirrors world.provincialPartyOrganizations).
    * Seeded lightly when officers are ensured; leadership seats default to vacant.
@@ -167,6 +172,7 @@ export function emptyPartyOrgRuntime(): PartyOrgRuntime {
     chairElections: {},
     partyEndorsements: {},
     supportAllocations: {},
+    nationalCommittee: {},
     nextElectionId: 1,
     nextDisciplineId: 1,
     lastOrgMonth: null,

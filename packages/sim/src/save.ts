@@ -20,10 +20,16 @@ import { parsePoliticsRuntime } from "./politics/state.js";
 import { parseGoverningRuntime } from "./governing/state.js";
 import { parsePartyOrgRuntime } from "./partyOrg/state.js";
 import { emptyPartyOrgRuntime } from "./partyOrg/types.js";
+import { reconcileAllPartyLeaders } from "./partyOrg/sync.js";
+import { parseCaucusRuntime } from "./caucus/state.js";
+import { emptyCaucusRuntime } from "./caucus/types.js";
+import { parseHistory15Runtime } from "./history15/state.js";
+import { emptyHistory15Runtime } from "./history15/types.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
   type Counters,
+  type KernelWorld,
   type OfficeTerm,
   type PendingInterrupt,
   type PoliticianRuntime,
@@ -626,6 +632,10 @@ function parseSimulation(
   const partyOrgResult = parsePartyOrgRuntime(raw.partyOrgRuntime);
   // partyOrgRuntime is optional — degrade gracefully on parse error
   const partyOrg = typeof partyOrgResult === "string" ? emptyPartyOrgRuntime() : partyOrgResult;
+  const caucusResult = parseCaucusRuntime(raw.caucusRuntime);
+  const caucus = typeof caucusResult === "string" ? emptyCaucusRuntime() : caucusResult;
+  const history15Result = parseHistory15Runtime(raw.history15Runtime);
+  const history15 = typeof history15Result === "string" ? emptyHistory15Runtime() : history15Result;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -743,6 +753,8 @@ function parseSimulation(
     politicsRuntime: politics,
     governingRuntime: governing,
     partyOrgRuntime: partyOrg,
+    caucusRuntime: caucus,
+    history15Runtime: history15,
   };
 }
 
@@ -1460,6 +1472,7 @@ export function migrateSaveV12ToV13(raw: unknown): unknown {
       caucusContests: isRecord(sim.legislatureRuntime.caucusContests)
         ? sim.legislatureRuntime.caucusContests
         : {},
+      metadata: isRecord(sim.legislatureRuntime.metadata) ? sim.legislatureRuntime.metadata : {},
     };
   }
   next.simulation = sim;
@@ -1977,3 +1990,63 @@ export function migrateSaveV21ToV22(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 21, toSchema: 22, migrate: migrateSaveV21ToV22 });
+
+/**
+ * Schema 23: National Chair is the sole party leader. Reconcile leaderId ↔ chair,
+ * seed empty nationalCommittee maps on partyOrgRuntime, and add empty caucusRuntime.
+ */
+export function migrateSaveV22ToV23(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 23 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 23 };
+
+  if (!isRecord(sim.partyOrgRuntime)) {
+    sim.partyOrgRuntime = {
+      ...emptyPartyOrgRuntime(),
+    };
+  } else {
+    const runtime: Record<string, unknown> = { ...sim.partyOrgRuntime };
+    if (!isRecord(runtime.nationalCommittee)) {
+      runtime.nationalCommittee = {};
+    }
+    sim.partyOrgRuntime = runtime;
+  }
+
+  if (!isRecord(sim.caucusRuntime)) {
+    sim.caucusRuntime = emptyCaucusRuntime();
+  }
+
+  // Reconcile chair ↔ leaderId on the simulation blob when it looks like SimState.
+  if (isRecord(sim.partyStates) && isRecord(sim.politicians)) {
+    const stubWorld = { partyDefinitions: {} } as KernelWorld;
+    try {
+      reconcileAllPartyLeaders(sim as unknown as SimState, stubWorld, null);
+    } catch {
+      // Migration must not fail on incomplete blobs; chair/leader stay as-is.
+    }
+  }
+
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 22, toSchema: 23, migrate: migrateSaveV22ToV23 });
+
+/**
+ * Schema 24: Phase 15 long-term history runtime (eras, governments, yearbooks).
+ * Seeds empty history15Runtime — never fabricates historical records.
+ */
+export function migrateSaveV23ToV24(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 24 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 24 };
+  if (!isRecord(sim.history15Runtime)) {
+    sim.history15Runtime = emptyHistory15Runtime();
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 23, toSchema: 24, migrate: migrateSaveV23ToV24 });

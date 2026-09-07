@@ -63,6 +63,7 @@ export {
   migrateSaveV18ToV19,
   migrateSaveV19ToV20,
   migrateSaveV20ToV21,
+  migrateSaveV23ToV24,
   CONTENT_MIGRATIONS,
   SCHEMA_MIGRATIONS,
 } from "./save.js";
@@ -386,8 +387,15 @@ export {
   allocatePartySupport,
   authorizeCoalitionTalks,
   recommendDiscipline,
+  seedNationalCommittee,
+  ensureNationalCommittees,
+  conductCommitteeVote,
   defaultPartyRules,
   getPartyRules,
+  syncPartyLeaderFromChair,
+  syncChairFromLegacyLeader,
+  assertChairLeaderInvariant,
+  reconcileAllPartyLeaders,
 } from "./partyOrg/index.js";
 export type {
   PartyOrgRuntime,
@@ -400,6 +408,49 @@ export type {
   LeadershipElectionMethod,
   NominationMethodForOffice,
 } from "./partyOrg/types.js";
+export {
+  emptyCaucusRuntime,
+  ensureCaucusRuntime,
+  parseCaucusRuntime,
+  recomputeCaucusShares,
+  processCaucusMonth,
+  setCaucusPriorities,
+  endorseChairCandidate,
+  endorsePrimaryCandidate,
+  formCaucusAlliance,
+  proposeCaucusMerger,
+  recruitToCaucus,
+  scoreCaucusMergeCompatibility,
+} from "./caucus/index.js";
+export type {
+  CaucusRuntime,
+  CaucusFactionRuntime,
+  CaucusStanceTowardChair,
+  CaucusRelationKind,
+  CaucusAllianceEdge,
+  CaucusAncestry,
+} from "./caucus/types.js";
+export {
+  emptyHistory15Runtime,
+  ensureHistory15Runtime,
+  parseHistory15Runtime,
+  processHistory15Month,
+  partyFamilyLinksFor,
+  partyFamilyParents,
+  partyFamilyChildren,
+  partyFamilyTimeline,
+  courtPrecedentChain,
+  precedentsByCaseType,
+} from "./history15/index.js";
+export type {
+  History15Runtime,
+  PartyEra,
+  GovernmentTermRecord,
+  LeadershipTenure,
+  YearRetrospective,
+  RealignmentSignal,
+  GenerationalCohort,
+} from "./history15/types.js";
 export type {
   Command,
   CommandResult,

@@ -14,6 +14,8 @@ import {
 export function ensurePartyOrgRuntime(state: SimState): PartyOrgRuntime {
   if (!state.partyOrgRuntime) {
     state.partyOrgRuntime = emptyPartyOrgRuntime();
+  } else if (!state.partyOrgRuntime.nationalCommittee) {
+    state.partyOrgRuntime.nationalCommittee = {};
   }
   return state.partyOrgRuntime;
 }
@@ -172,6 +174,19 @@ export function parsePartyOrgRuntime(raw: unknown): PartyOrgRuntime | string {
     !Array.isArray(obj.supportAllocations)
   ) {
     base.supportAllocations = obj.supportAllocations as PartyOrgRuntime["supportAllocations"];
+  }
+
+  if (
+    obj.nationalCommittee &&
+    typeof obj.nationalCommittee === "object" &&
+    !Array.isArray(obj.nationalCommittee)
+  ) {
+    const raw_nc = obj.nationalCommittee as Record<string, unknown>;
+    for (const [partyId, arr] of Object.entries(raw_nc)) {
+      if (Array.isArray(arr)) {
+        base.nationalCommittee[partyId] = arr.filter((x): x is string => typeof x === "string");
+      }
+    }
   }
 
   if (

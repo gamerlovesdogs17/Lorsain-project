@@ -4,7 +4,7 @@ import { parseSaveFile } from "./save.js";
 import { jsonClone } from "./hash.js";
 import { SAVE_SCHEMA_VERSION, type Command, type KernelWorld } from "./types.js";
 import { addMonths } from "./calendar.js";
-import { restoreRngService } from "./rng.js";
+import { createRngService, restoreRngService } from "./rng.js";
 import { legislativeHarnessWorld } from "./legislature/harness.js";
 import { absoluteMajorityNeeded, legislativeConstitutionFromSeats } from "./legislature/policy.js";
 import { processLegislatureMonth } from "./legislature/monthly.js";
@@ -12,7 +12,7 @@ import { recordAmendmentVote } from "./legislature/procedure.js";
 import { whipEstimate } from "./legislature/whip.js";
 import { parliamentaryDiscipline } from "./legislature/discipline.js";
 import { currentAssemblyMemberIds, currentPresidentId } from "./legislature/state.js";
-import { evaluatePresidentDisposition } from "./legislature/decisions.js";
+import { evaluatePresidentDisposition, chooseLegislativeVote } from "./legislature/decisions.js";
 import { getAgentProfile } from "./agents/profile.js";
 import type { BillState } from "./legislature/types.js";
 
@@ -73,7 +73,7 @@ describe("Phase 6 legislature kernel", () => {
     const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "P6-SEED" });
     const snap = sim.getSnapshot();
     expect(snap.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
-    expect(SAVE_SCHEMA_VERSION).toBe(22);
+    expect(SAVE_SCHEMA_VERSION).toBe(24);
     expect(currentAssemblyMemberIds(world, snap)).toHaveLength(36);
     expect(Object.keys(snap.legislatureRuntime.committees).sort()).toEqual([
       "COMMITTEE_ECONOMIC",
@@ -579,5 +579,83 @@ describe("Phase 6 legislature kernel", () => {
         (v) => v.billId === "BILL000001" && v.metadata.kind !== "amendment",
       ),
     ).toBe(false);
+  });
+
+  it("critical whip strength shifts some votes vs free for the same seed", () => {
+    const world = legislativeHarnessWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "MP02", seed: "WHIP-STRENGTH" });
+    const base = jsonClone(sim.getSnapshot());
+    const partyId = "PARTY_A";
+    // Loosen party cohesion so free votes can dissent; whip pressure then pulls them back.
+    base.partyStates[partyId]!.cohesion = 0.28;
+    for (const faction of Object.values(base.factionStates)) {
+      if (faction.partyId === partyId) faction.cohesion = 0.28;
+    }
+    const bill: BillState = {
+      id: "BILL_WHIP_TEST",
+      sponsorId: "MP01",
+      cosponsorIds: [],
+      introducedDate: base.currentDate,
+      title: "Whip test bill",
+      summary: "Whip pressure test",
+      // Strong magnitude so policy fit and whip can pull in opposite directions for some MPs.
+      policyItems: [{ issueId: "ISS_TAX", direction: -1, magnitude: 0.9, fiscalImpact: null }],
+      assignedCommitteeId: null,
+      status: "floor_scheduled",
+      amendmentIds: [],
+      committeeVoteId: null,
+      floorVoteId: null,
+      presidentialDisposition: "pending",
+      repassageVoteId: null,
+      enactedDate: null,
+      enactedLawId: null,
+      stageReadyDate: base.currentDate,
+      metadata: {},
+      version: 1,
+      versionHistory: [],
+    };
+    base.legislatureRuntime.bills[bill.id] = bill;
+    base.legislatureRuntime.partyRecommendations[`${partyId}:${bill.id}`] = {
+      partyId,
+      billId: bill.id,
+      stance: "support",
+    };
+    if (!base.legislatureRuntime.caucusLeadership[partyId]) {
+      base.legislatureRuntime.caucusLeadership[partyId] = {
+        partyId,
+        floorLeaderId: "MP01",
+        whipId: "MP04",
+        selectedDate: base.currentDate,
+        nextElectionDate: addMonths(base.currentDate, 48),
+        priorityBillIds: [],
+        whipStrengths: {},
+      };
+    }
+    base.legislatureRuntime.caucusLeadership[partyId]!.whipStrengths = { [bill.id]: "free" };
+
+    const freeState = jsonClone(base);
+    const criticalState = jsonClone(base);
+    criticalState.legislatureRuntime.caucusLeadership[partyId]!.whipStrengths![bill.id] =
+      "critical";
+
+    const partyMps = currentAssemblyMemberIds(world, base).filter(
+      (id) => id !== base.playerPoliticianId && base.politicians[id]?.partyId === partyId,
+    );
+    expect(partyMps.length).toBeGreaterThan(4);
+
+    const freeVotes = partyMps.map((id) =>
+      chooseLegislativeVote(world, freeState, id, bill, createRngService(`whip-free-${id}`)),
+    );
+    const criticalVotes = partyMps.map((id) =>
+      chooseLegislativeVote(world, criticalState, id, bill, createRngService(`whip-free-${id}`)),
+    );
+
+    const freeYes = freeVotes.filter((v) => v === "yes").length;
+    const criticalYes = criticalVotes.filter((v) => v === "yes").length;
+    expect(freeVotes.some((v) => v !== "yes")).toBe(true);
+    expect(criticalVotes.some((v, i) => v !== freeVotes[i])).toBe(true);
+    expect(criticalYes).toBeGreaterThan(freeYes);
+    // Whip pressure must not hard-code a unanimous bloc for this conflicted bill.
+    expect(criticalYes).toBeLessThan(partyMps.length);
   });
 });
