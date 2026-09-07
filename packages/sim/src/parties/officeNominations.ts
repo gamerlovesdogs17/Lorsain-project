@@ -8,12 +8,12 @@
  * and the party has a non-"none" nomination rule.
  *
  * Known gaps (documented for follow-up):
- * - Does not replace NPC auto-filing in provinces/elections.ts; winners are
- *   synced onto the field when filing is still open, but existing multi-candidate
- *   NPC fields may already include co-partisans.
- * - Assembly sync writes election.candidates + assembly.candidacies when possible;
- *   constituency assignment still follows assembly-cycle allocation.
+ * - Assembly constituency assignment still follows assembly-cycle allocation;
+ *   nomination winners are synced as sole party candidates nationally but may
+ *   share a constituency field with soft NPC fillers until allocation rebuild.
  * - No separate "committee ballot" engine beyond closed_member_rcv / convention methods.
+ * - Player self-file during filing_open for nomination-required parties remains soft
+ *   (allowed) until a nomination contest resolves and withdraws co-partisans.
  */
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import type { RngService } from "../rng.js";
@@ -106,7 +106,13 @@ function contestTypeForKind(kind: OfficeNominationKind): PartyContestType {
   return kind === "gubernatorial" ? "gubernatorial_nomination" : "assembly_nomination";
 }
 
-function partyAllowsNomination(world: KernelWorld, state: SimState, partyId: string): boolean {
+/** True when party rules demand a nomination contest for gubernatorial/assembly offices. */
+export function partyRequiresOfficeNomination(
+  world: KernelWorld,
+  state: SimState,
+  partyId: string | null | undefined,
+): boolean {
+  if (!partyId) return false;
   if (partyId === INDEPENDENT_AGGREGATE_ID || partyId === world.independentAggregatePartyId) {
     return false;
   }
@@ -115,6 +121,10 @@ function partyAllowsNomination(world: KernelWorld, state: SimState, partyId: str
   const rule = world.nominationRules[def.nominationRuleId];
   if (!rule || rule.method === "none") return false;
   return true;
+}
+
+function partyAllowsNomination(world: KernelWorld, state: SimState, partyId: string): boolean {
+  return partyRequiresOfficeNomination(world, state, partyId);
 }
 
 function seedDeclaredEntries(state: SimState, partyId: string, maxCandidates: number): string[] {
@@ -298,7 +308,7 @@ export function syncOfficeNominationWinnerToElection(
       election.status !== "assumed" &&
       election.status !== "field_finalized"
     ) {
-      // Withdraw co-partisan NPC filings so the nominee is the party's candidate.
+      // Withdraw co-partisan filings so the nominee is the party's sole candidate.
       for (const cand of Object.values(election.candidates)) {
         if (cand.partyId === contest.partyId && cand.politicianId !== winner && !cand.withdrawn) {
           cand.withdrawn = true;
@@ -353,6 +363,25 @@ export function syncOfficeNominationWinnerToElection(
       election.status !== "resolved" &&
       election.status !== "cancelled"
     ) {
+      // Withdraw co-partisans so nomination winner is sole party candidate.
+      for (const cand of Object.values(election.candidates)) {
+        if (cand.partyId === contest.partyId && cand.politicianId !== winner && !cand.withdrawn) {
+          cand.withdrawn = true;
+        }
+      }
+      const cycle = election.assembly;
+      if (cycle) {
+        for (const candidacy of Object.values(cycle.candidacies)) {
+          if (
+            candidacy.partyId === contest.partyId &&
+            candidacy.politicianId !== winner &&
+            candidacy.status !== "withdrawn"
+          ) {
+            candidacy.status = "withdrawn";
+          }
+        }
+      }
+
       election.candidates[winner] = {
         politicianId: winner,
         partyId: contest.partyId,
@@ -364,7 +393,6 @@ export function syncOfficeNominationWinnerToElection(
       };
       if (election.status === "planned") election.status = "field_open";
 
-      const cycle = election.assembly;
       if (cycle && meta.constituencyId) {
         cycle.candidacies[winner] = {
           politicianId: winner,

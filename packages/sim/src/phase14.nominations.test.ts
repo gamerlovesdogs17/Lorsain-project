@@ -179,4 +179,60 @@ describe("Phase 14 office nominations", () => {
     expect(done.winnerId).toBeTruthy();
     expect(election.candidates[done.winnerId!]?.sourceContestId).toBe(done.id);
   });
+
+  it("sync withdraws co-partisan auto-filings so nomination winner is sole candidate", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, seed: "p14-nom-d", playerPoliticianId: "NPC146" });
+    const state = jsonClone(sim.getSnapshot() as SimState);
+    const rng = createRngService("p14-nom-d-resolve");
+    const election = Object.values(state.provincialRuntime.elections).sort((a, b) =>
+      a.id.localeCompare(b.id),
+    )[0]!;
+    election.status = "filing_open";
+    const partyId = labourPartyId(state);
+
+    // Seed a co-partisan NPC filing that should be withdrawn after nomination.
+    const coPartisan = Object.keys(state.politicians)
+      .filter(
+        (id) =>
+          state.politicians[id]?.partyId === partyId &&
+          id !== state.playerPoliticianId &&
+          state.politicians[id]?.alive &&
+          !state.politicians[id]?.retired,
+      )
+      .sort()[0]!;
+    election.candidates[coPartisan] = {
+      politicianId: coPartisan,
+      partyId,
+      filedDate: state.currentDate,
+      incumbent: false,
+      source: "npc",
+      withdrawn: false,
+    };
+
+    ensureOfficeNominationContests(state, world, {
+      officeKind: "gubernatorial",
+      electionId: election.id,
+      electionDate: election.date,
+      provinceId: election.provinceId,
+      partyIds: [partyId],
+      maxCandidatesPerParty: 4,
+      commandId: "test",
+    });
+    resolveOfficeNominationContests(state, world, rng, election.id, "gubernatorial", "test");
+    const contest = officeNominationContestsForElection(state, election.id, "gubernatorial")[0]!;
+    expect(contest.status).toBe("resolved");
+    expect(contest.winnerId).toBeTruthy();
+    const winner = contest.winnerId!;
+    expect(election.candidates[winner]?.withdrawn).toBe(false);
+    expect(election.candidates[winner]?.sourceContestId).toBe(contest.id);
+    if (coPartisan !== winner) {
+      expect(election.candidates[coPartisan]?.withdrawn).toBe(true);
+    }
+    const activeCoPartisans = Object.values(election.candidates).filter(
+      (c) => c.partyId === partyId && !c.withdrawn,
+    );
+    expect(activeCoPartisans.length).toBe(1);
+    expect(activeCoPartisans[0]!.politicianId).toBe(winner);
+  });
 });

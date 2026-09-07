@@ -505,6 +505,10 @@ function syncElectionCandidates(
 ): void {
   const cycle = election.assembly;
   if (!cycle) return;
+  const priorSource = new Map<string, string | null>();
+  for (const [pid, cand] of Object.entries(election.candidates)) {
+    priorSource.set(pid, cand.sourceContestId);
+  }
   election.candidates = {};
   for (const candidacy of Object.values(cycle.candidacies).sort((a, b) =>
     a.politicianId.localeCompare(b.politicianId),
@@ -512,7 +516,7 @@ function syncElectionCandidates(
     election.candidates[candidacy.politicianId] = {
       politicianId: candidacy.politicianId,
       partyId: candidacy.partyId,
-      sourceContestId: null,
+      sourceContestId: priorSource.get(candidacy.politicianId) ?? null,
       filedDate: candidacy.filedDate,
       publicIdeology:
         candidacy.partyId == null

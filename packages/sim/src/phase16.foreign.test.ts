@@ -15,7 +15,7 @@ function jsonClone<T>(value: T): T {
 }
 
 describe("Phase 16 domestic foreign politics bridge", () => {
-  it("reacts to sanctions with caucus priorities, platform nudge, and history event", () => {
+  it("reacts to sanctions with selective caucus priorities, platform nudge, and history event", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({ world, seed: "p16-dom-a", playerPoliticianId: "NPC146" });
     const state = jsonClone(sim.getSnapshot() as SimState);
@@ -42,16 +42,33 @@ describe("Phase 16 domestic foreign politics bridge", () => {
       Object.values(state.partyStates).find((p) => p.publicPlatform)?.publicPlatform?.positions
         .foreign_policy ?? 0;
 
+    const beforePriorities = Object.values(ensureCaucusRuntime(state).caucuses).map((c) => [
+      c.factionId,
+      [...c.priorities],
+    ]);
+
     const domestic = processDomesticForeignPolitics(state, world, "CMD_D", foreignEvents);
     expect(domestic.some((e) => e.type === "DOMESTIC_FOREIGN_POLITICS_REACTION")).toBe(true);
+    const reaction = domestic.find((e) => e.type === "DOMESTIC_FOREIGN_POLITICS_REACTION");
+    expect(reaction?.payload.theme).toBe("sanctions");
 
-    const caucus = Object.values(ensureCaucusRuntime(state).caucuses)[0];
-    expect(caucus?.priorities.includes("foreign_policy")).toBe(true);
+    // Not every caucus is forced onto foreign_policy identically.
+    const afterCaucuses = Object.values(ensureCaucusRuntime(state).caucuses);
+    const allForcedForeign = afterCaucuses.every((c) => c.priorities[0] === "foreign_policy");
+    expect(allForcedForeign).toBe(false);
 
     const afterFp =
       Object.values(state.partyStates).find((p) => p.publicPlatform)?.publicPlatform?.positions
         .foreign_policy ?? 0;
     expect(Math.abs(afterFp - beforeFp)).toBeGreaterThan(0);
+
+    // Priorities may change for some caucuses but must remain actor-specific.
+    const changed = afterCaucuses.filter((c) => {
+      const before = beforePriorities.find(([id]) => id === c.factionId)?.[1] as
+        string[] | undefined;
+      return before && JSON.stringify(before) !== JSON.stringify(c.priorities);
+    });
+    expect(changed.length).toBeLessThan(afterCaucuses.length);
 
     const again = processDomesticForeignPolitics(state, world, "CMD_D2", foreignEvents);
     expect(again.length).toBe(0);

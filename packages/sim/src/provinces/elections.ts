@@ -26,6 +26,7 @@ import type {
 } from "./types.js";
 import { resolveLegalLot } from "@lorsain/election-math";
 import { certifyShareResult } from "../elections/certification.js";
+import { partyRequiresOfficeNomination } from "../parties/officeNominations.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -337,12 +338,16 @@ function openField(
     election.incumbentDecision === "seek_reelection"
   ) {
     const incumbent = election.incumbentId;
-    const standing = candidateStandingOrDefault(world, state, incumbent);
-    if (
-      gubernatorialEligibilityError(state, world, incumbent, election.provinceId) == null &&
-      standing.favorability > -0.55
-    ) {
-      election.candidates[incumbent] = filedCandidate(state, world, election, incumbent, "npc");
+    const incumbentParty = state.politicians[incumbent]?.partyId ?? null;
+    // Nomination-required parties wait for office-nomination winners — do not auto-file.
+    if (!partyRequiresOfficeNomination(world, state, incumbentParty)) {
+      const standing = candidateStandingOrDefault(world, state, incumbent);
+      if (
+        gubernatorialEligibilityError(state, world, incumbent, election.provinceId) == null &&
+        standing.favorability > -0.55
+      ) {
+        election.candidates[incumbent] = filedCandidate(state, world, election, incumbent, "npc");
+      }
     }
   }
   const representedParties = new Set(
@@ -352,6 +357,7 @@ function openField(
     if (Object.keys(election.candidates).length >= 4) break;
     if (election.candidates[politicianId]) continue;
     const partyId = state.politicians[politicianId]?.partyId ?? null;
+    if (partyRequiresOfficeNomination(world, state, partyId)) continue;
     if (representedParties.has(partyId) && Object.keys(election.candidates).length >= 2) continue;
     election.candidates[politicianId] = filedCandidate(state, world, election, politicianId, "npc");
     representedParties.add(partyId);

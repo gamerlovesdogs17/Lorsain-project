@@ -9,7 +9,7 @@ import {
   type SimState,
   type Simulation,
 } from "@lorsain/sim";
-import { isPresident } from "./format.js";
+import { isPresident, qualitativeStanding } from "./format.js";
 import {
   countryDisplayName,
   countryRecentEvents,
@@ -30,6 +30,10 @@ import {
   type PresentationCatalog,
 } from "./presentation.js";
 import { formatPublicPercent } from "./presentation/display.js";
+
+function sanctionsScopeLabel(severity: string | number): string {
+  return String(severity).replace(/_/g, " ");
+}
 import {
   ActivityFeedItem,
   EmptyState,
@@ -78,11 +82,30 @@ function terenaSanctionsOn(state: SimState, targetId: string): boolean {
   );
 }
 
-function sanctionsScopeLabel(severity: number): string {
-  if (severity >= 0.75) return "comprehensive";
-  if (severity >= 0.55) return "broad";
-  if (severity >= 0.35) return "targeted";
-  return "limited";
+function tensionClimateLabel(count: number): string {
+  if (count <= 0) return "Calm";
+  if (count <= 2) return "Limited";
+  if (count <= 4) return "Elevated";
+  return "Strained";
+}
+
+function mapModeForDeskTab(tab: ForeignDeskTab): WorldMapMode {
+  switch (tab) {
+    case "security":
+      return "posture";
+    case "crises":
+      return "crisis";
+    case "treaties":
+      return "alliance";
+    case "trade":
+      return "relation";
+    case "history":
+      return "sanctions";
+    case "relations":
+    case "overview":
+    default:
+      return "relation";
+  }
 }
 
 export function ForeignAffairsPage(props: {
@@ -102,8 +125,8 @@ export function ForeignAffairsPage(props: {
 }) {
   const { world, snap, sim, bundle, catalog } = props;
   const president = isPresident(world, snap, snap.playerPoliticianId);
-  const [mode, setMode] = useState<WorldMapMode>("relation");
   const [deskTab, setDeskTab] = useState<ForeignDeskTab>("overview");
+  const mode = mapModeForDeskTab(deskTab);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<DrawerKind>(null);
   const [treatyKind, setTreatyKind] = useState<string>("trade");
@@ -221,7 +244,7 @@ export function ForeignAffairsPage(props: {
             />
             <StatCard
               label="Strategic tension"
-              value={String(latentTensions.length)}
+              value={tensionClimateLabel(latentTensions.length)}
               hint="Background tensions not yet public crises"
             />
             <StatCard
@@ -435,7 +458,7 @@ export function ForeignAffairsPage(props: {
               />
               <StatCard
                 label="Strategic tension"
-                value={String(latentTensions.length)}
+                value={tensionClimateLabel(latentTensions.length)}
                 hint="Background tensions not yet public crises"
               />
               <StatCard
@@ -450,18 +473,6 @@ export function ForeignAffairsPage(props: {
                 value={militaryPostureLabel(terenaRuntime?.posture ?? "normal")}
               />
             </MetricStrip>
-
-            <TabBar
-              tabs={[
-                { id: "relation", label: "Relations" },
-                { id: "alliance", label: "Alliances" },
-                { id: "crisis", label: "Crises" },
-                { id: "sanctions", label: "Sanctions" },
-                { id: "posture", label: "Posture" },
-              ]}
-              value={mode}
-              onChange={setMode}
-            />
 
             <div className="foreign-affairs-layout">
               <div className="foreign-detail-panel">
@@ -504,8 +515,8 @@ export function ForeignAffairsPage(props: {
                               <div>{terenaBilateralRelationLabel(world, snap, selectedId)}</div>
                               {bilateral ? (
                                 <div className="muted">
-                                  Trust {formatPublicPercent(bilateral.trust)} · economic ties{" "}
-                                  {formatPublicPercent(bilateral.economicTies)}
+                                  Trust {qualitativeStanding(bilateral.trust)} · economic ties{" "}
+                                  {qualitativeStanding(bilateral.economicTies)}
                                 </div>
                               ) : null}
                             </div>
