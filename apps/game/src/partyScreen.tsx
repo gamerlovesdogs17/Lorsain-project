@@ -84,6 +84,19 @@ function titleCaseWords(value: string): string {
   return value.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function chairElectionMethodLabel(method: string): string {
+  switch (method) {
+    case "convention_delegates":
+      return "Convention support";
+    case "membership":
+      return "Membership ballot";
+    case "committee":
+      return "National committee";
+    default:
+      return titleCaseWords(method);
+  }
+}
+
 function stabilityLabel(value: string): string {
   return titleCaseWords(value);
 }
@@ -1080,7 +1093,7 @@ export function PartyPage(props: PartyPageProps) {
                   },
                   {
                     label: "Method",
-                    value: partyRules ? titleCaseWords(partyRules.chairElectionMethod) : "—",
+                    value: partyRules ? chairElectionMethodLabel(partyRules.chairElectionMethod) : "—",
                   },
                 ]}
               />
@@ -1853,9 +1866,9 @@ export function PartyPage(props: PartyPageProps) {
                 <dt>Method</dt>
                 <dd>
                   {openChairElection
-                    ? titleCaseWords(openChairElection.method)
+                    ? chairElectionMethodLabel(openChairElection.method)
                     : partyRules
-                      ? titleCaseWords(partyRules.chairElectionMethod)
+                      ? chairElectionMethodLabel(partyRules.chairElectionMethod)
                       : "—"}
                 </dd>
               </div>

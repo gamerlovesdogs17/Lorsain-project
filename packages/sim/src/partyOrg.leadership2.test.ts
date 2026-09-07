@@ -21,6 +21,7 @@ import {
 import {
   buildElectorIds,
   declareChairCandidacy,
+  electorWeight,
   openPartyChairElection,
   resolveChairElection,
 } from "./partyOrg/elections.js";
@@ -301,5 +302,50 @@ describe("partyOrg leadership2: player committee vote pending", () => {
       commandId: "CMD_ALLOC_OK",
     });
     expect(alloc.ok).toBe(true);
+  });
+});
+
+describe("partyOrg leadership2: membership weights use partyMemberSupport", () => {
+  it("aggregate membership weight favors high partyMemberSupport over high membershipShare", () => {
+    const { world, state } = setup("membership-weight-pms");
+    const partyId = partyWithEnoughMembers(state);
+    const caucusRuntime = ensureCaucusRuntime(state);
+
+    const byFaction = new Map<string, string[]>();
+    for (const [id, pol] of Object.entries(state.politicians)) {
+      if (pol.partyId !== partyId || !pol.alive || pol.retired || !pol.factionId) continue;
+      const list = byFaction.get(pol.factionId) ?? [];
+      list.push(id);
+      byFaction.set(pol.factionId, list);
+    }
+    const factions = [...byFaction.entries()]
+      .filter(([fid, ids]) => ids.length >= 1 && caucusRuntime.caucuses[fid])
+      .sort((a, b) => a[0].localeCompare(b[0]));
+    expect(factions.length).toBeGreaterThanOrEqual(2);
+
+    const [factionA] = factions[0]!;
+    const [factionB] = factions[1]!;
+    const caucusA = caucusRuntime.caucuses[factionA]!;
+    const caucusB = caucusRuntime.caucuses[factionB]!;
+
+    // Elite share favors A; mass-member support favors B.
+    caucusA.membershipShare = 0.75;
+    caucusA.partyMemberSupport = 0.12;
+    caucusB.membershipShare = 0.08;
+    caucusB.partyMemberSupport = 0.68;
+
+    const electors = buildElectorIds(state, world, partyId, "membership");
+    let weightA = 0;
+    let weightB = 0;
+    for (const electorId of electors) {
+      const w = electorWeight(state, partyId, electorId, electors, "membership");
+      const fid = state.politicians[electorId]?.factionId;
+      if (fid === factionA) weightA += w;
+      if (fid === factionB) weightB += w;
+    }
+
+    expect(weightA).toBeCloseTo(0.12, 5);
+    expect(weightB).toBeCloseTo(0.68, 5);
+    expect(weightB).toBeGreaterThan(weightA);
   });
 });

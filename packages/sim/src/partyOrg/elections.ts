@@ -9,9 +9,10 @@
  * Electorate construction:
  *   committee           → seedNationalCommittee / runtime.nationalCommittee roster
  *   membership          → lightweight blocs: elector politician IDs, but each vote
- *                         is weighted by caucus membershipShare (party-member
- *                         support). Weight = membershipShare / (# electors in that
- *                         faction); unaligned electors share unalignedByParty.
+ *                         is weighted by caucus partyMemberSupport (mass/base support),
+ *                         NOT membershipShare (elite politician headcount share).
+ *                         Weight = partyMemberSupport / (# electors in that faction);
+ *                         unaligned electors share unalignedByParty.partyMemberSupport.
  *                         Falls back to equal weight 1 when caucus shares are absent.
  *   convention_delegates → bounded: MPs + national committee + faction chairs (unique)
  *
@@ -62,8 +63,8 @@ function activePartyPoliticianIds(state: SimState, partyId: string): string[] {
  * Build the electorate for a chair election method.
  *
  * Membership: still returns politician IDs (virtual ballots). Vote weights are
- * applied separately via `electorWeight` using caucus membershipShare as
- * party-member support.
+ * applied separately via `electorWeight` using caucus `partyMemberSupport`
+ * (mass/base support), not elite `membershipShare`.
  */
 export function buildElectorIds(
   state: SimState,
@@ -113,12 +114,13 @@ export function buildElectorIds(
 /**
  * Bloc weight for a membership ballot elector.
  *
- * Uses caucus `membershipShare` (party-member support) when available:
- * each elector in a faction receives `membershipShare / count(electors in faction)`.
- * Unaligned electors share `unalignedByParty[partyId].membershipShare`.
+ * Uses caucus `partyMemberSupport` (mass/base party-member support) when available:
+ * each elector in a faction receives `partyMemberSupport / count(electors in faction)`.
+ * Unaligned electors share `unalignedByParty[partyId].partyMemberSupport`.
+ * Elite `membershipShare` is intentionally ignored for membership chair contests.
  * Without caucus data, weight is 1 (equal one-person-one-vote).
  */
-function electorWeight(
+export function electorWeight(
   state: SimState,
   partyId: string,
   electorId: string,
@@ -132,13 +134,13 @@ function electorWeight(
 
   const factionId = state.politicians[electorId]?.factionId ?? null;
   if (factionId && caucusRuntime.caucuses[factionId]) {
-    const share = caucusRuntime.caucuses[factionId]!.membershipShare;
+    const share = caucusRuntime.caucuses[factionId]!.partyMemberSupport;
     const sameFaction = electors.filter((id) => state.politicians[id]?.factionId === factionId);
     const n = Math.max(1, sameFaction.length);
     return share / n;
   }
 
-  const unalignedShare = caucusRuntime.unalignedByParty[partyId]?.membershipShare ?? 0;
+  const unalignedShare = caucusRuntime.unalignedByParty[partyId]?.partyMemberSupport ?? 0;
   const unalignedElectors = electors.filter((id) => !state.politicians[id]?.factionId);
   const n = Math.max(1, unalignedElectors.length);
   return unalignedShare / n;
