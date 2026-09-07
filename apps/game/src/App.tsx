@@ -59,6 +59,8 @@ import {
   type CategorizedAttention,
 } from "./navigation.js";
 import { entityScreen, type EntityLinkKind } from "./ui/entityLink.js";
+import { useSettings } from "./settingsContext.js";
+import { SettingsPage } from "./settingsScreen.js";
 
 const QA_SCREENS = new Set<Screen>([
   "home",
@@ -77,6 +79,7 @@ const QA_SCREENS = new Set<Screen>([
   "terena",
   "archive",
   "situation",
+  "settings",
 ]);
 
 function monthsBetween(startDate: string, endDate: string): number {
@@ -159,7 +162,7 @@ export default function App() {
   const [bundle, setBundle] = useState<ContentBundle | null>(null);
   const [world, setWorld] = useState<KernelWorld | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<"title" | "select" | "load" | "play">("title");
+  const [mode, setMode] = useState<"title" | "select" | "load" | "play" | "settings">("title");
   const [sim, setSim] = useState<Simulation | null>(null);
   const [snap, setSnap] = useState<SimState | null>(null);
   const [screen, setScreen] = useState<Screen>(initialRoute.screen);
@@ -176,7 +179,9 @@ export default function App() {
   const [browsePage, setBrowsePage] = useState(0);
   const [selectedBill, setSelectedBill] = useState<string | null>(null);
   const [mapHover, setMapHover] = useState<string | null>(null);
-  const [debug, setDebug] = useState(false);
+  const { update: updateSettings, debugMode } = useSettings();
+  const debug = debugMode;
+  const setDebug = (v: boolean) => updateSettings({ debugMode: v });
   const [globalFocus, setGlobalFocus] = useState<{ kind: string; id: string } | null>(
     initialRoute.focus,
   );
@@ -802,6 +807,15 @@ export default function App() {
       </div>
     );
   }
+  if (mode === "settings") {
+    return (
+      <div className="app-title settings-title-host">
+        <div className="title-card settings-title-card">
+          <SettingsPage onBack={() => setMode("title")} />
+        </div>
+      </div>
+    );
+  }
   if (mode === "title") {
     const latest = saves[0] ?? null;
     const latestSummary = latest ? savedGamePoliticalSummary(world, latest) : null;
@@ -889,7 +903,7 @@ export default function App() {
                 {saves.length} saved career{saves.length === 1 ? "" : "s"}
               </small>
             </button>
-            <button type="button" disabled>
+            <button type="button" onClick={() => setMode("settings")}>
               <span>Settings</span>
               <small>Display and accessibility</small>
             </button>

@@ -32,6 +32,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "home", label: "Home", icon: "⌂" },
       { id: "career", label: "Career", icon: "◉" },
       { id: "campaign", label: "Campaign HQ", icon: "⚑" },
+      { id: "settings", label: "Settings", icon: "⚙" },
     ],
   },
   {

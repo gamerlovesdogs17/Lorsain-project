@@ -32,6 +32,7 @@ import { NewsPage } from "./newsScreen.js";
 import { HistoryPage } from "./historyScreen.js";
 import { OfficePage } from "./officeScreen.js";
 import { PartyPage } from "./partyScreen.js";
+import { SettingsPage } from "./settingsScreen.js";
 import {
   groundGameStrength,
   isMp,
@@ -99,7 +100,8 @@ export type Screen =
   | "foreign"
   | "terena"
   | "archive"
-  | "situation";
+  | "situation"
+  | "settings";
 
 export type Figure = {
   id: string;
@@ -167,6 +169,9 @@ export function GamePages(props: PageProps) {
   if (screen === "foreign") return <ForeignAffairsPage {...props} />;
   if (screen === "terena") return <Terena {...props} />;
   if (screen === "situation") return <SituationRoom {...props} />;
+  if (screen === "settings") {
+    return <SettingsPage showBack={false} />;
+  }
   return (
     <HistoryPage
       world={props.world}
@@ -2926,33 +2931,6 @@ function _Archive(props: PageProps) {
             total={rowsForTab.length}
             onChange={setPage}
           />
-
-          {import.meta.env.DEV ? (
-            <details className="dev-panel">
-              <summary>Development tools</summary>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={props.debug}
-                  onChange={(e) => props.setDebug(e.target.checked)}
-                />{" "}
-                Show hidden developer numbers
-              </label>
-              {props.debug ? (
-                <pre>
-                  {JSON.stringify(
-                    {
-                      standing: props.snap.candidateStanding[props.snap.playerPoliticianId],
-                      player: props.snap.politicians[props.snap.playerPoliticianId],
-                      mp: isMp(props.world, props.snap, props.snap.playerPoliticianId),
-                    },
-                    null,
-                    2,
-                  )}
-                </pre>
-              ) : null}
-            </details>
-          ) : null}
         </>
       }
     />

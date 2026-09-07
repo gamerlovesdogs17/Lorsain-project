@@ -17,6 +17,11 @@ export type WhyPanelProps = {
 function isDebugEnabled(): boolean {
   if (typeof window === "undefined") return false;
   try {
+    const raw = window.localStorage.getItem("lorsain-player-settings");
+    if (raw) {
+      const parsed = JSON.parse(raw) as { debugMode?: boolean };
+      if (typeof parsed.debugMode === "boolean") return parsed.debugMode;
+    }
     return window.localStorage.getItem("lorsain-debug-why") === "1";
   } catch {
     return false;
