@@ -184,8 +184,7 @@ export function hasActiveForeignPressure(state: SimState): boolean {
   const sanctions = Object.values(state.foreignAffairsRuntime.sanctions);
   if (
     sanctions.some(
-      (s) =>
-        s.active && (s.imposerId === TERENA_WORLD_ID || s.targetId === TERENA_WORLD_ID),
+      (s) => s.active && (s.imposerId === TERENA_WORLD_ID || s.targetId === TERENA_WORLD_ID),
     )
   ) {
     return true;

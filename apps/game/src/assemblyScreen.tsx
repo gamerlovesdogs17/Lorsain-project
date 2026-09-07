@@ -481,7 +481,7 @@ export function AssemblyPage(props: {
       setAssemblyTab("legislation");
       setLegislationSubTab("bills");
     }
-  }, [props.selectedBill]); // eslint-disable-line react-hooks/exhaustive-deps -- restore only when selection appears
+  }, [props.selectedBill, assemblyTab]);
 
   useEffect(() => {
     try {

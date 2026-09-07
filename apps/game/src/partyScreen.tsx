@@ -1093,7 +1093,9 @@ export function PartyPage(props: PartyPageProps) {
                   },
                   {
                     label: "Method",
-                    value: partyRules ? chairElectionMethodLabel(partyRules.chairElectionMethod) : "—",
+                    value: partyRules
+                      ? chairElectionMethodLabel(partyRules.chairElectionMethod)
+                      : "—",
                   },
                 ]}
               />

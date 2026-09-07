@@ -9,7 +9,7 @@ import { resolve } from "node:path";
 describe("assembly summary strip uniqueness", () => {
   it("renders BriefStrip with assembly-summary-strip once and no Overview duplicate", () => {
     const src = readFileSync(resolve(__dirname, "assemblyScreen.tsx"), "utf8");
-    const summaryMarkers = src.match(/data-qa=\"assembly-summary-strip\"/g) ?? [];
+    const summaryMarkers = src.match(/data-qa="assembly-summary-strip"/g) ?? [];
     expect(summaryMarkers.length).toBe(1);
     // Overview compositionHeader must not repeat Sitting/Majority BriefStrip items.
     const compositionStart = src.indexOf("const compositionHeader");
@@ -18,9 +18,9 @@ describe("assembly summary strip uniqueness", () => {
       compositionStart >= 0 && compositionEnd > compositionStart
         ? src.slice(compositionStart, compositionEnd)
         : src.slice(compositionStart, compositionStart + 2500);
-    expect(composition).not.toMatch(/label:\s*\"Sitting\"/);
-    expect(composition).not.toMatch(/label:\s*\"Majority\"/);
-    expect(composition).not.toMatch(/label:\s*\"On floor\"/);
-    expect(composition).not.toMatch(/label:\s*\"Votes due\"/);
+    expect(composition).not.toMatch(/label:\s*"Sitting"/);
+    expect(composition).not.toMatch(/label:\s*"Majority"/);
+    expect(composition).not.toMatch(/label:\s*"On floor"/);
+    expect(composition).not.toMatch(/label:\s*"Votes due"/);
   });
 });

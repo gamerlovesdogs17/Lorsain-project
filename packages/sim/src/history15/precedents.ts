@@ -56,7 +56,7 @@ export function overturnedPrecedentIds(state: SimState): Set<string> {
   const overturnEdges = allExplicitLinks(state).filter((l) => l.relation === "overturns");
   if (overturnEdges.length === 0) return new Set();
 
-  let overturned = new Set(overturnEdges.map((e) => e.toDecisionId));
+  const overturned = new Set(overturnEdges.map((e) => e.toDecisionId));
   let changed = true;
   while (changed) {
     changed = false;
