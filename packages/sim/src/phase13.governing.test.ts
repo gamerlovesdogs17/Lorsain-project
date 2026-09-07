@@ -17,6 +17,8 @@ import { updateMinisterialPerformance } from "./governing/performance.js";
 import { updatePromiseStatuses } from "./governing/promises.js";
 import { ensureGoverningRuntime } from "./governing/state.js";
 import { emptyGoverningRuntime } from "./governing/types.js";
+import { computeGovernmentRecord, refreshGovernmentRecord } from "./governing/record.js";
+import { processGoverningMonth } from "./governing/monthly.js";
 import {
   advanceImplementations,
   createImplementationRecord,
@@ -289,7 +291,7 @@ describe("Phase 13 governing foundation", () => {
     expect(snap.governingRuntime.fiscal.lastUpdated).toBeTruthy();
 
     const save = sim.serializeSave();
-    expect(save.schemaVersion).toBe(21);
+    expect(save.schemaVersion).toBe(22);
     const parsed = parseSaveFile(save, world.contentVersion);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -438,6 +440,40 @@ describe("Phase 13 governing foundation", () => {
     expect(labour?.score).toBeGreaterThan(0.5);
   });
 
+  it("12. government record refreshes quarterly with light mood feedback", () => {
+    const { world, state } = worldAndState("phase13-record");
+    state.currentDate = "2028-04-01";
+    ensureGoverningRuntime(state).services.administrativeDelivery = 0.8;
+    ensureGoverningRuntime(state).services.healthcareAccess = 0.75;
+    ensureGoverningRuntime(state).services.educationQuality = 0.74;
+    ensureGoverningRuntime(state).fiscal.balance = 5;
+
+    const events = refreshGovernmentRecord(world, state, "CMD_RECORD");
+    expect(events.some((e) => e.type === "GOVERNMENT_RECORD_UPDATED")).toBe(true);
+    const record = ensureGoverningRuntime(state).record;
+    expect(record).not.toBeNull();
+    expect(typeof record!.score).toBe("number");
+    expect(record!.score).toBeGreaterThanOrEqual(-1);
+    expect(record!.score).toBeLessThanOrEqual(1);
+    expect(record!.lawsPassed).toBeGreaterThanOrEqual(0);
+
+    const computed = computeGovernmentRecord(world, state);
+    expect(computed.updatedDate).toBe(state.currentDate);
+
+    // Off-quarter months skip.
+    state.currentDate = "2028-05-01";
+    expect(refreshGovernmentRecord(world, state, "CMD_RECORD2")).toEqual([]);
+  });
+
+  it("13. processGoverningMonth wires record refresh", () => {
+    const { world, state } = worldAndState("phase13-month-record");
+    state.currentDate = "2028-07-01";
+    ensureGoverningRuntime(state).lastGoverningMonth = null;
+    const events = processGoverningMonth(world, state, "CMD_GOV_MONTH");
+    expect(events.some((e) => e.type === "GOVERNMENT_RECORD_UPDATED")).toBe(true);
+    expect(ensureGoverningRuntime(state).record).not.toBeNull();
+  });
+
   it("migrateSaveV20ToV21 seeds empty governingRuntime without fabricated history", () => {
     const legacy = {
       schemaVersion: 20,
@@ -457,7 +493,8 @@ describe("Phase 13 governing foundation", () => {
     expect(migrated.simulation.governingRuntime.agenda.items).toEqual([]);
     expect(migrated.simulation.governingRuntime.historyNotes).toEqual([]);
     expect(migrated.simulation.governingRuntime.lastGoverningMonth).toBeNull();
+    expect(migrated.simulation.governingRuntime.record ?? null).toBeNull();
     expect(migrated.simulation.governingRuntime.capacity.provinces).toEqual({});
-    expect(SAVE_SCHEMA_VERSION).toBe(21);
+    expect(SAVE_SCHEMA_VERSION).toBe(22);
   });
 });

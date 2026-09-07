@@ -195,7 +195,15 @@ export type CaucusLeadershipState = {
   leadershipCandidateId?: string | null;
   platformDemand?: string | null;
   coalitionPreference?: string[] | null;
+  /**
+   * Whip discipline strength per bill (billId → strength). Set by the floor
+   * leader or whip; a shared human/NPC command layer writes here.
+   */
+  whipStrengths?: Record<string, WhipStrength>;
 };
+
+export const WHIP_STRENGTHS = ["free", "recommended", "party_line", "critical"] as const;
+export type WhipStrength = (typeof WHIP_STRENGTHS)[number];
 
 export type CaucusLeadershipContest = {
   id: string;

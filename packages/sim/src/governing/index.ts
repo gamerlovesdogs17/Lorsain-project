@@ -9,4 +9,5 @@ export * from "./agenda.js";
 export * from "./promises.js";
 export * from "./interactions.js";
 export * from "./performance.js";
+export * from "./record.js";
 export * from "./monthly.js";

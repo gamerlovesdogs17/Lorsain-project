@@ -62,6 +62,7 @@ export const PROMISE_STATUSES = [
   "implemented",
   "blocked",
   "abandoned",
+  "contradicted",
 ] as const;
 export type PromiseStatus = (typeof PROMISE_STATUSES)[number];
 
@@ -179,6 +180,23 @@ export type BudgetCycleState = {
 };
 
 /**
+ * Factual snapshot of the sitting government's record, refreshed quarterly.
+ * Feeds a small, bounded nudge into the electoral environment (national mood).
+ */
+export type GovernmentRecord = {
+  updatedDate: IsoDate | null;
+  governingPartyId: string | null;
+  lawsPassed: number;
+  promiseStatusCounts: Record<PromiseStatus, number>;
+  fiscalBalance: number;
+  serviceOutcomes: ServiceOutcomes;
+  coalitionStability: number;
+  courtDefeats: number;
+  /** Aggregate quality of the record, bounded −1..1. */
+  score: number;
+};
+
+/**
  * Phase 13 governing runtime. Empty on migration — never fabricates history.
  */
 export type Phase13Runtime = {
@@ -191,6 +209,8 @@ export type Phase13Runtime = {
   interactions: Record<string, PolicyInteractionRecord>;
   ministerialPerformance: Record<string, MinisterialPerformance>;
   budgetCycle: BudgetCycleState;
+  /** Factual government-record snapshot (Phase 13 → elections hook). */
+  record: GovernmentRecord | null;
   lastGoverningMonth: IsoDate | null;
   historyNotes: string[];
   metadata: JsonObject;
@@ -248,6 +268,12 @@ export function emptyFiscalState(fiscalYear = 2000): FiscalState {
   };
 }
 
+export function emptyPromiseStatusCounts(): Record<PromiseStatus, number> {
+  const counts = {} as Record<PromiseStatus, number>;
+  for (const status of PROMISE_STATUSES) counts[status] = 0;
+  return counts;
+}
+
 export function emptyGoverningRuntime(): Phase13Runtime {
   return {
     capacity: emptyCapacityState(),
@@ -265,6 +291,7 @@ export function emptyGoverningRuntime(): Phase13Runtime {
       failureConsequence: null,
       lastProcessedDate: null,
     },
+    record: null,
     lastGoverningMonth: null,
     historyNotes: [],
     metadata: {},

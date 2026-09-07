@@ -7,6 +7,7 @@ import type {
   CaucusLeadershipContest,
   CaucusLeadershipState,
   RecommendationStance,
+  WhipStrength,
 } from "./types.js";
 
 function reject(code: string, message: string): CommandError {
@@ -482,6 +483,43 @@ export function setCaucusBillPosition(
         actorIds: [actorId],
         entityIds: [partyId, billId],
         payload: { partyId, billId, stance },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    ],
+  };
+}
+
+/**
+ * Set the whip discipline strength for a bill. Floor leader or whip only.
+ * Minimal, save-safe: stores per-bill strength on the caucus leadership record.
+ */
+export function setWhipStrength(
+  state: SimState,
+  actorId: string,
+  billId: string,
+  strength: WhipStrength,
+  commandId: string | null,
+): { events: SimEvent[] } | { error: CommandError } {
+  const partyId = state.politicians[actorId]?.partyId;
+  if (!partyId) return { error: reject("NOT_CAUCUS_MEMBER", actorId) };
+  const leadership = state.legislatureRuntime.caucusLeadership[partyId];
+  if (!leadership || (leadership.floorLeaderId !== actorId && leadership.whipId !== actorId))
+    return { error: reject("NOT_CAUCUS_LEADER", actorId) };
+  const bill = state.legislatureRuntime.bills[billId];
+  if (!bill) return { error: reject("UNKNOWN_BILL", billId) };
+  if (!leadership.whipStrengths) leadership.whipStrengths = {};
+  leadership.whipStrengths[billId] = strength;
+  return {
+    events: [
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "CAUCUS_WHIP_STRENGTH_SET",
+        importance: 0.42,
+        visibility: "public",
+        actorIds: [actorId],
+        entityIds: [partyId, billId],
+        payload: { partyId, billId, strength },
         sourceScheduledEventId: null,
         sourceCommandId: commandId,
       }),

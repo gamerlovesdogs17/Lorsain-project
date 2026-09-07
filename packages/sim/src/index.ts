@@ -146,6 +146,10 @@ export {
   campaignTargetDate,
   campaignMonthsRemaining,
   gotvActivations,
+  nominationMethodForCampaign,
+  nominationMethodLabel,
+  partyNominationMethod,
+  attachNominationMethodMetadata,
 } from "./campaigns/index.js";
 export type { CampaignState, CampaignRuntime, DebateState } from "./campaigns/types.js";
 export type { ElectionCertification, PollRecord } from "./elections/types.js";
@@ -321,6 +325,8 @@ export {
   explainLeadershipSupport,
   recentPoliticalMemories,
   activeCoalition,
+  conductAssemblyConfidenceVote,
+  scorePartyMergeCompatibility,
   isWillingCabinet,
   AS_MAX_CAREER_ACTIONS_PER_MONTH,
   AS_MAX_RECRUITMENTS_PER_MONTH,
@@ -349,18 +355,51 @@ export {
   advanceImplementations,
   detectPolicyInteractions,
   refreshGovernmentAgenda,
+  computeGovernmentRecord,
+  refreshGovernmentRecord,
 } from "./governing/index.js";
 export type {
   Phase13Runtime,
   ImplementationRecord,
   FiscalState,
   GovernmentAgenda,
+  GovernmentRecord,
   PromiseRecord,
   CapacityState,
   ServiceOutcomes,
   ImplementationStatus,
   DepartmentId,
 } from "./governing/types.js";
+export {
+  processPartyOrgMonth,
+  ensurePartyOrgRuntime,
+  emptyPartyOrgRuntime,
+  ensureDefaultOfficers,
+  listOfficers,
+  openPartyChairElection,
+  declareChairCandidacy,
+  resolveChairElection,
+  setPartyPriorities,
+  setPartyOfficialPosition,
+  setCampaignStrategy,
+  endorseCandidate,
+  allocatePartySupport,
+  authorizeCoalitionTalks,
+  recommendDiscipline,
+  defaultPartyRules,
+  getPartyRules,
+} from "./partyOrg/index.js";
+export type {
+  PartyOrgRuntime,
+  PartyRules,
+  NationalOfficer,
+  NationalOfficeRole,
+  ChairElection,
+  PartyDisciplineAction,
+  PartyDisciplineKind,
+  LeadershipElectionMethod,
+  NominationMethodForOffice,
+} from "./partyOrg/types.js";
 export type {
   Command,
   CommandResult,

@@ -101,6 +101,13 @@ export function createImplementationRecord(
   const departmentId = departmentForLawItems(law.policyItems);
   const legalEffectiveDate =
     lagKind === "electoral" ? addMonths(law.enactedDate, 6) : law.enactedDate;
+  const provinceScoped = law.policyItems.some(
+    (i) =>
+      i.issueId === "ISS_HOUSING" ||
+      i.issueId === "ISS_EDUCATION" ||
+      (i.provisionId?.includes("PROVINCIAL") ?? false) ||
+      (i.provisionId?.includes("LOCAL") ?? false),
+  );
   return {
     lawId: law.id,
     status: "enacted",
@@ -117,7 +124,9 @@ export function createImplementationRecord(
     monthsElapsed: 0,
     major,
     blockedReason: null,
-    metadata: {},
+    metadata: provinceScoped
+      ? { provinceDelivery: true, deliveryMode: "provincial_execution" }
+      : { deliveryMode: "national_uniform" },
   };
 }
 
@@ -179,11 +188,13 @@ export function advanceImplementations(state: SimState, commandId: string): SimE
       rec.implementationStartDate = state.currentDate;
     }
 
-    const capacity = effectiveCapacity(
-      state,
-      rec.departmentId,
-      typeof rec.metadata.provinceId === "string" ? rec.metadata.provinceId : null,
-    );
+    const provinceId =
+      typeof rec.metadata.provinceId === "string"
+        ? rec.metadata.provinceId
+        : rec.metadata.provinceDelivery === true
+          ? (Object.keys(ensureGoverningRuntime(state).capacity.provinces ?? {}).sort()[0] ?? null)
+          : null;
+    const capacity = effectiveCapacity(state, rec.departmentId, provinceId);
     const prev = rec.progress;
     const delta = monthlyProgressDelta(rec, capacity);
     rec.monthsElapsed += 1;

@@ -79,6 +79,18 @@ export function syncPromisesFromHooks(world: KernelWorld, state: SimState): void
   }
 }
 
+function lawMatchesPromiseDirection(
+  law: { policyItems: Array<{ issueId: string; direction: number }> },
+  promise: PromiseRecord,
+): boolean {
+  const items = law.policyItems.filter((i) => i.issueId === promise.issueId);
+  if (items.length === 0) return false;
+  const avg = items.reduce((s, i) => s + i.direction, 0) / items.length;
+  // Same sign (or near-zero promise) counts as aligned; opposite sign is contradiction.
+  if (Math.abs(promise.direction) < 0.15) return true;
+  return avg * promise.direction > 0;
+}
+
 function statusFromLawHooks(
   state: SimState,
   promise: PromiseRecord,
@@ -103,7 +115,13 @@ function statusFromLawHooks(
   const laws = Object.values(state.legislatureRuntime.enactedLaws)
     .filter((l) => l.operative && l.policyItems.some((i) => i.issueId === promise.issueId))
     .sort((a, b) => b.enactedDate.localeCompare(a.enactedDate));
-  const law = laws[0] ?? null;
+
+  const contradicting = laws.find((l) => !lawMatchesPromiseDirection(l, promise));
+  if (contradicting) {
+    return { status: "contradicted", lawId: contradicting.id };
+  }
+
+  const law = laws.find((l) => lawMatchesPromiseDirection(l, promise)) ?? null;
   if (law) {
     const impl = ensureGoverningRuntime(state).implementations[law.id];
     if (impl?.status === "fully_implemented" || impl?.status === "substantially_implemented") {

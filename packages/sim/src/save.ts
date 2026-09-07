@@ -18,6 +18,8 @@ import { parseForeignAffairsRuntime, foreignCounterError } from "./foreign/valid
 import { parseProvincialRuntime } from "./provinces/validation.js";
 import { parsePoliticsRuntime } from "./politics/state.js";
 import { parseGoverningRuntime } from "./governing/state.js";
+import { parsePartyOrgRuntime } from "./partyOrg/state.js";
+import { emptyPartyOrgRuntime } from "./partyOrg/types.js";
 import {
   SAVE_SCHEMA_VERSION,
   type CommandError,
@@ -621,6 +623,9 @@ function parseSimulation(
   if (typeof politics === "string") return politics;
   const governing = parseGoverningRuntime(raw.governingRuntime);
   if (typeof governing === "string") return governing;
+  const partyOrgResult = parsePartyOrgRuntime(raw.partyOrgRuntime);
+  // partyOrgRuntime is optional — degrade gracefully on parse error
+  const partyOrg = typeof partyOrgResult === "string" ? emptyPartyOrgRuntime() : partyOrgResult;
 
   for (const ev of events) {
     if (ev.requiresResolution === true && ev.status === "processed") {
@@ -737,6 +742,7 @@ function parseSimulation(
     foreignAffairsRuntime: foreign,
     politicsRuntime: politics,
     governingRuntime: governing,
+    partyOrgRuntime: partyOrg,
   };
 }
 
@@ -1939,3 +1945,35 @@ export function migrateSaveV20ToV21(raw: unknown): unknown {
 }
 
 SCHEMA_MIGRATIONS.push({ fromSchema: 20, toSchema: 21, migrate: migrateSaveV20ToV21 });
+
+/**
+ * Schema 22 adds Phase 14 partyOrgRuntime (officers, priorities, positions,
+ * elections, discipline).  Older saves get an empty runtime — no fabricated history.
+ */
+export function migrateSaveV21ToV22(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: Record<string, unknown> = { ...raw, schemaVersion: 22 };
+  if (!isRecord(raw.simulation)) return next;
+  const sim: Record<string, unknown> = { ...raw.simulation, schemaVersion: 22 };
+  if (!isRecord(sim.partyOrgRuntime)) {
+    sim.partyOrgRuntime = {
+      officers: {},
+      priorities: {},
+      positions: {},
+      campaignStrategies: {},
+      coalitionTalks: {},
+      disciplineActions: {},
+      chairElections: {},
+      partyEndorsements: {},
+      supportAllocations: {},
+      nextElectionId: 1,
+      nextDisciplineId: 1,
+      lastOrgMonth: null,
+      metadata: {},
+    };
+  }
+  next.simulation = sim;
+  return next;
+}
+
+SCHEMA_MIGRATIONS.push({ fromSchema: 21, toSchema: 22, migrate: migrateSaveV21ToV22 });

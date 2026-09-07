@@ -3,6 +3,7 @@ import {
   emptyCapacityState,
   emptyFiscalState,
   emptyGoverningRuntime,
+  emptyPromiseStatusCounts,
   emptyServiceOutcomes,
   type Phase13Runtime,
   type DepartmentId,
@@ -250,6 +251,45 @@ export function parseGoverningRuntime(raw: unknown): Phase13Runtime | string {
         typeof b.lastProcessedDate === "string" || b.lastProcessedDate === null
           ? ((b.lastProcessedDate as string | null) ?? null)
           : null,
+    };
+  }
+
+  // Government record — parse loosely; ignore malformed snapshots.
+  if (obj.record === null) {
+    base.record = null;
+  } else if (obj.record && typeof obj.record === "object" && !Array.isArray(obj.record)) {
+    const r = obj.record as Record<string, unknown>;
+    const services = emptyServiceOutcomes();
+    if (r.serviceOutcomes && typeof r.serviceOutcomes === "object") {
+      const s = r.serviceOutcomes as Record<string, unknown>;
+      for (const key of Object.keys(services) as (keyof typeof services)[]) {
+        if (typeof s[key] === "number") services[key] = Math.max(0, Math.min(1, s[key] as number));
+      }
+    }
+    const promiseStatusCounts = emptyPromiseStatusCounts();
+    if (r.promiseStatusCounts && typeof r.promiseStatusCounts === "object") {
+      for (const status of PROMISE_STATUSES) {
+        const v = (r.promiseStatusCounts as Record<string, unknown>)[status];
+        if (typeof v === "number" && Number.isFinite(v))
+          promiseStatusCounts[status] = Math.max(0, v);
+      }
+    }
+    base.record = {
+      updatedDate:
+        typeof r.updatedDate === "string" || r.updatedDate === null
+          ? ((r.updatedDate as string | null) ?? null)
+          : null,
+      governingPartyId: typeof r.governingPartyId === "string" ? r.governingPartyId : null,
+      lawsPassed: typeof r.lawsPassed === "number" ? Math.max(0, r.lawsPassed) : 0,
+      promiseStatusCounts,
+      fiscalBalance: typeof r.fiscalBalance === "number" ? r.fiscalBalance : 0,
+      serviceOutcomes: services,
+      coalitionStability:
+        typeof r.coalitionStability === "number"
+          ? Math.max(0, Math.min(1, r.coalitionStability))
+          : 0.5,
+      courtDefeats: typeof r.courtDefeats === "number" ? Math.max(0, r.courtDefeats) : 0,
+      score: typeof r.score === "number" ? Math.max(-1, Math.min(1, r.score)) : 0,
     };
   }
 

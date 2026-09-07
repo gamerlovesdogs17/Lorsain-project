@@ -61,6 +61,7 @@ import type {
 } from "./provinces/types.js";
 import type { Phase12Runtime } from "./politics/types.js";
 import type { Phase13Runtime } from "./governing/types.js";
+import type { PartyOrgRuntime } from "./partyOrg/types.js";
 
 export type {
   CanonicalWorldCountry,
@@ -68,7 +69,7 @@ export type {
   CanonicalWorldLeader,
 } from "./foreign/types.js";
 
-export const SAVE_SCHEMA_VERSION = 21 as const;
+export const SAVE_SCHEMA_VERSION = 22 as const;
 
 export type PoliticianRuntime = {
   id: string;
@@ -244,6 +245,8 @@ export type SimState = {
   politicsRuntime: Phase12Runtime;
   /** Phase 13 governing / policy-depth runtime (implementation, fiscal, agenda). */
   governingRuntime: Phase13Runtime;
+  /** Phase 14 party-organisation runtime (officers, priorities, positions, elections). */
+  partyOrgRuntime?: PartyOrgRuntime;
 };
 
 export type Command =
@@ -670,7 +673,50 @@ export type Command =
       response: "accept" | "reject";
     }
   | { type: "ACCEPT_INCOMING_TREATY"; pendingId: string }
-  | { type: "REJECT_INCOMING_TREATY"; pendingId: string };
+  | { type: "REJECT_INCOMING_TREATY"; pendingId: string }
+  // ── Phase 14: national party-chair powers (shared human/NPC command layer) ──
+  | { type: "SET_PARTY_PRIORITIES"; partyId: string; priorities: string[] }
+  | {
+      type: "SET_PARTY_OFFICIAL_POSITION";
+      partyId: string;
+      issueId: string;
+      stance: "support" | "oppose" | "neutral";
+    }
+  | { type: "SET_PARTY_CAMPAIGN_STRATEGY"; partyId: string; strategy: string }
+  | {
+      type: "ALLOCATE_PARTY_SUPPORT";
+      partyId: string;
+      allocations: Record<string, number>;
+    }
+  | {
+      type: "AUTHORIZE_COALITION_TALKS";
+      partyId: string;
+      partnerPartyId: string;
+      authorize: boolean;
+      redLines?: string[];
+    }
+  | {
+      type: "ENDORSE_CANDIDATE_AS_CHAIR";
+      partyId: string;
+      candidateId: string;
+      contestId?: string;
+    }
+  | {
+      type: "RECOMMEND_PARTY_DISCIPLINE";
+      partyId: string;
+      targetPoliticianId: string;
+      kind: "warning" | "censure" | "suspend_support";
+    }
+  | { type: "OPEN_PARTY_CHAIR_ELECTION"; partyId: string }
+  | { type: "DECLARE_CHAIR_CANDIDACY"; electionId: string; politicianId?: string }
+  | { type: "RESOLVE_PARTY_CHAIR_ELECTION"; electionId: string }
+  // ── Assembly delegation: whip discipline strength (shared command layer) ──
+  | {
+      type: "SET_WHIP_STRENGTH";
+      partyId: string;
+      billId: string;
+      strength: "free" | "recommended" | "party_line" | "critical";
+    };
 
 export type CommandError = { code: string; message: string };
 

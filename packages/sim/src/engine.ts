@@ -120,6 +120,7 @@ import {
   declareCaucusLeadershipCandidacy,
   seedCaucusLeadership,
   setCaucusBillPosition,
+  setWhipStrength,
 } from "./legislature/caucus.js";
 import { emptyExecutiveRuntime, isMotionKind } from "./executive/types.js";
 import { processExecutiveMonth } from "./executive/monthly.js";
@@ -190,6 +191,24 @@ import { ensurePoliticsRuntime } from "./politics/state.js";
 import { emptyGoverningRuntime } from "./governing/types.js";
 import { processGoverningMonth } from "./governing/monthly.js";
 import { ensureGoverningRuntime } from "./governing/state.js";
+import { processPartyOrgMonth } from "./partyOrg/monthly.js";
+import { ensurePartyOrgRuntime } from "./partyOrg/state.js";
+import { emptyPartyOrgRuntime } from "./partyOrg/types.js";
+import { ensureDefaultOfficers } from "./partyOrg/officers.js";
+import {
+  allocatePartySupport,
+  authorizeCoalitionTalks,
+  endorseCandidate as endorseCandidateAsChair,
+  recommendDiscipline,
+  setCampaignStrategy,
+  setPartyOfficialPosition,
+  setPartyPriorities,
+} from "./partyOrg/commands.js";
+import {
+  declareChairCandidacy,
+  openPartyChairElection,
+  resolveChairElection,
+} from "./partyOrg/elections.js";
 import { processForeignAffairsMonth } from "./foreign/monthly.js";
 import { processOrganizationForeignReactions } from "./foreign/organization-foreign-bridge.js";
 import { advanceForeignCalibrationMonths as advanceForeignCalibrationMonthsHarness } from "./foreign/calibration-harness.js";
@@ -360,6 +379,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     foreignAffairsRuntime: emptyForeignAffairsRuntime(),
     politicsRuntime: emptyPoliticsRuntime(),
     governingRuntime: emptyGoverningRuntime(),
+    partyOrgRuntime: emptyPartyOrgRuntime(),
   };
   for (const t of world.startingTerms) {
     const id = padId("TERM", state.counters.nextTermId++);
@@ -378,6 +398,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
   seedInitialGoals(state, world);
   seedCommitteesIfNeeded(world, state);
   seedCaucusLeadership(world, state);
+  ensureDefaultOfficers(world, state);
   seedMinistriesIfNeeded(world, state);
   seedForeignAffairsRuntime(world, state);
   return state;
@@ -551,6 +572,8 @@ function runTowardTarget(
   events.push(
     ...timed("political_agency", () => processPoliticalAgencyMonth(world, state, rng, commandId)),
   );
+  // Phase 14 party-org: after political agency (officers may change), before governing.
+  events.push(...timed("party_org", () => processPartyOrgMonth(world, state, commandId)));
   events.push(
     ...timed("organizations", () => processOrganizationsMonth(state, world, rng, commandId)),
   );
@@ -688,6 +711,7 @@ export function restoreSimulation(save: SaveFile, world: KernelWorld): Simulatio
   if (needsForeignAffairsSeed(state)) seedForeignAffairsRuntime(frozen, state);
   ensurePoliticsRuntime(state);
   ensureGoverningRuntime(state);
+  ensurePartyOrgRuntime(state);
   const stateErr = validateStateAgainstWorld(state, frozen);
   if (stateErr) throw new Error(`${stateErr.code}: ${stateErr.message}`);
   return bind(state, frozen, rng);
@@ -3376,6 +3400,151 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       if ("error" in preview) return fail(preview.error.code, preview.error.message);
       const commandId = nextCommandId();
       const out = respondIncomingDiplomacy(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    // ── Phase 14: national party-chair powers (shared human/NPC command layer) ──
+    // The player invokes the SAME partyOrg/commands.ts functions the NPC monthly
+    // logic uses; the actor is always the player politician. Events are recorded
+    // in state.history by the shared handlers, so we capture them via a history
+    // delta. A jsonClone preview keeps failed commands side-effect free (and
+    // avoids consuming a command id on validation errors).
+    type PartyOrgOutcome = { ok: true } | { ok: false; error: { code: string; message: string } };
+    const runPartyOrgCommand = (
+      op: (target: SimState, commandId: string) => PartyOrgOutcome,
+    ): CommandResult => {
+      ensureDefaultOfficers(world, state);
+      const preview = op(jsonClone(state), "PREVIEW");
+      if (!preview.ok) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const before = state.history.length;
+      const out = op(state, commandId);
+      if (!out.ok) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: state.history.slice(before), interrupt: null };
+    };
+
+    if (command.type === "SET_PARTY_PRIORITIES") {
+      return runPartyOrgCommand((target, commandId) =>
+        setPartyPriorities(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          priorities: command.priorities,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "SET_PARTY_OFFICIAL_POSITION") {
+      return runPartyOrgCommand((target, commandId) =>
+        setPartyOfficialPosition(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          issueId: command.issueId,
+          stance: command.stance,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "SET_PARTY_CAMPAIGN_STRATEGY") {
+      return runPartyOrgCommand((target, commandId) =>
+        setCampaignStrategy(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          strategy: command.strategy,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "ALLOCATE_PARTY_SUPPORT") {
+      return runPartyOrgCommand((target, commandId) =>
+        allocatePartySupport(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          allocations: command.allocations,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "AUTHORIZE_COALITION_TALKS") {
+      return runPartyOrgCommand((target, commandId) =>
+        authorizeCoalitionTalks(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          partnerPartyId: command.partnerPartyId,
+          authorize: command.authorize,
+          ...(command.redLines ? { redLines: command.redLines } : {}),
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "ENDORSE_CANDIDATE_AS_CHAIR") {
+      return runPartyOrgCommand((target, commandId) =>
+        endorseCandidateAsChair(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          contestId: command.contestId ?? `endorse:${command.candidateId}`,
+          candidateId: command.candidateId,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "RECOMMEND_PARTY_DISCIPLINE") {
+      return runPartyOrgCommand((target, commandId) =>
+        recommendDiscipline(target, world, {
+          actorId: target.playerPoliticianId,
+          partyId: command.partyId,
+          targetId: command.targetPoliticianId,
+          kind: command.kind,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "OPEN_PARTY_CHAIR_ELECTION") {
+      return runPartyOrgCommand((target, commandId) =>
+        openPartyChairElection(target, world, { partyId: command.partyId, commandId }),
+      );
+    }
+
+    if (command.type === "DECLARE_CHAIR_CANDIDACY") {
+      return runPartyOrgCommand((target, commandId) =>
+        declareChairCandidacy(target, world, {
+          electionId: command.electionId,
+          politicianId: command.politicianId ?? target.playerPoliticianId,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "RESOLVE_PARTY_CHAIR_ELECTION") {
+      return runPartyOrgCommand((target, commandId) =>
+        resolveChairElection(target, world, { electionId: command.electionId, commandId }),
+      );
+    }
+
+    if (command.type === "SET_WHIP_STRENGTH") {
+      const preview = setWhipStrength(
+        jsonClone(state),
+        state.playerPoliticianId,
+        command.billId,
+        command.strength,
+        null,
+      );
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = setWhipStrength(
+        state,
+        state.playerPoliticianId,
+        command.billId,
+        command.strength,
+        commandId,
+      );
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
