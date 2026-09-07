@@ -26,7 +26,11 @@ import {
   type PartyPlatformIssue,
   type SimState,
   type Simulation,
+  formatInfluenceBand,
+  formatShareEstimate,
+  canShowExactInternals,
 } from "@lorsain/sim";
+import { useSettings } from "./settingsContext.js";
 import {
   contestDisplayName,
   electionDisplayName,
@@ -98,6 +102,8 @@ export type PartyPageProps = {
 };
 
 export function PartyPage(props: PartyPageProps) {
+  const { debugMode } = useSettings();
+  const exactShares = canShowExactInternals(debugMode);
   const playerPartyId = props.snap.politicians[props.snap.playerPoliticianId]?.partyId;
   const availablePartyIds = Object.keys(props.world.partyDefinitions)
     .filter((id) => id !== props.world.independentAggregatePartyId)
@@ -704,12 +710,18 @@ export function PartyPage(props: PartyPageProps) {
         .map((row) => {
           const fid = row.factionId;
           const chair = props.snap.factionStates[fid]?.chairId ?? row.leaderId ?? null;
+          const memberShare = row.partyMemberSupport ?? 0;
+          const mpShare = row.assemblyShare ?? 0;
+          const institutionalShare = row.institutionalInfluence ?? 0;
           return {
             fid,
             name: factionDisplayName(props.world, fid),
-            membershipPct: Math.round((row.partyMemberSupport ?? 0) * 100),
-            mpPct: Math.round((row.assemblyShare ?? 0) * 100),
-            institutionalPct: Math.round((row.institutionalInfluence ?? 0) * 100),
+            membershipPct: Math.round(memberShare * 100),
+            membershipLabel: formatShareEstimate(memberShare, { exact: exactShares }),
+            influenceLabel: formatInfluenceBand(memberShare),
+            mpPct: Math.round(mpShare * 100),
+            institutionalPct: Math.round(institutionalShare * 100),
+            institutionalLabel: formatInfluenceBand(institutionalShare),
             leaderId: chair,
             stance: row.stanceTowardChair ?? "cooperative",
             growthStrategy: row.growthStrategy ?? "recruit_members",
@@ -2159,9 +2171,9 @@ export function PartyPage(props: PartyPageProps) {
                 dense
                 headers={[
                   "Caucus",
-                  "Party members %",
+                  "Party-member support",
                   "MPs %",
-                  "Institutional %",
+                  "Institutional influence",
                   "Leader",
                   "Stance",
                   "Growth strategy",
@@ -2181,9 +2193,12 @@ export function PartyPage(props: PartyPageProps) {
                         {c.name}
                       </button>
                     </td>
-                    <td>{c.membershipPct}%</td>
+                    <td>
+                      {c.membershipLabel}
+                      <div className="muted small">{c.influenceLabel}</div>
+                    </td>
                     <td>{c.mpPct}%</td>
-                    <td>{c.institutionalPct}%</td>
+                    <td>{exactShares ? `${c.institutionalPct}%` : c.institutionalLabel}</td>
                     <td>
                       {c.leaderId ? politicianDisplayName(props.catalog, c.leaderId) : "vacant"}
                     </td>
@@ -2196,8 +2211,10 @@ export function PartyPage(props: PartyPageProps) {
             {unalignedShares ? (
               <p className="muted small" style={{ marginTop: "0.5rem" }}>
                 Unaligned party members:{" "}
-                {Math.round((unalignedShares.partyMemberSupport ?? 0) * 100)}% support ·{" "}
-                {Math.round((unalignedShares.assemblyShare ?? 0) * 100)}% of MPs
+                {formatShareEstimate(unalignedShares.partyMemberSupport ?? 0, {
+                  exact: exactShares,
+                })}{" "}
+                support · {Math.round((unalignedShares.assemblyShare ?? 0) * 100)}% of MPs
               </p>
             ) : null}
           </SectionCard>

@@ -526,18 +526,23 @@ export function BillProgressTrack(props: { status: string }) {
     draft: 0,
     introduced: 0,
     committee: 1,
+    committee_failed: 1,
+    committee_passed: 1,
     floor_scheduled: 2,
+    floor_failed: 2,
     floor_passed: 3,
     repassage_scheduled: 3,
+    repassed: 3,
+    repassage_failed: 3,
     sent_to_president: 4,
+    signed: 4,
+    returned_by_president: 4,
     enacted: 5,
-    failed: 2,
     withdrawn: 0,
-    returned: 4,
   };
   const idx = map[props.status] ?? 0;
   return (
-    <div className="bill-progress" aria-label="Bill progress">
+    <div className="bill-progress" aria-label="Bill progress" data-qa="bill-stage-track">
       {stages.map((_, i) => (
         <div
           key={labels[i]}

@@ -237,7 +237,10 @@ export type {
   LawProvenanceAction,
   CommitteeState,
   PolicyItem,
+  WhipStrength,
+  WhipPersuadeApproach,
 } from "./legislature/types.js";
+export { WHIP_STRENGTHS, WHIP_PERSUADE_APPROACHES } from "./legislature/types.js";
 export type {
   LegislativeProvisionDefinition,
   LegislativeProvisionOption,
@@ -407,6 +410,9 @@ export {
   conductCommitteeVote,
   castNationalCommitteeVote,
   requireCommitteeApproval,
+  createPendingPartyAction,
+  executePendingPartyAction,
+  findPendingActionByVoteId,
   selectOfficer,
   defaultPartyRules,
   getPartyRules,
@@ -487,6 +493,7 @@ export {
   courtPrecedentChain,
   precedentsByCaseType,
   syncPrecedentLinks,
+  recordExplicitPrecedentLinks,
   ensureFoundingConstitutionalEra,
   syncConstitutionalEras,
   syncPoliticianLegacies,
@@ -534,3 +541,13 @@ export {
 export { shouldHoldDebate } from "./campaigns/debates.js";
 export { isDeclaredContestCandidate } from "./parties/lifecycle.js";
 export { partyStance, factionStance, billPolicyFit } from "./legislature/recommendations.js";
+export {
+  canShowExactInternals,
+  explainVoteQualitative,
+  formatInfluenceBand,
+  formatLeadershipSecurity,
+  formatRelationBand,
+  formatShareEstimate,
+  formatTensionBand,
+  formatWhipLean,
+} from "./politicalInfo.js";
