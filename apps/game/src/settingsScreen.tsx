@@ -49,7 +49,11 @@ export function SettingsPage(props: { onBack?: () => void; showBack?: boolean })
             />
             <span>
               <strong>Autosave</strong>
-              <small className="muted">Write a local save before major irreversible steps.</small>
+              <small className="muted">
+                Ordinary automatic saves during play (for example before ending a turn). Critical
+                safety checkpoints before national counts and nomination resolution still run when
+                needed for integrity.
+              </small>
             </span>
           </label>
           <label className="settings-toggle">
@@ -97,7 +101,10 @@ export function SettingsPage(props: { onBack?: () => void; showBack?: boolean })
 
       {section === "notifications" ? (
         <SectionCard title="Notifications">
-          <p className="muted">Broad attention categories — not eighty individual toggles.</p>
+          <p className="muted">
+            Broad attention categories — not eighty individual toggles. Disabling a category hides
+            informational inbox items only; required decisions always appear.
+          </p>
           {NOTIFICATION_CATEGORIES.map((row) => (
             <label className="settings-toggle" key={row.id}>
               <input

@@ -54,6 +54,7 @@ import {
   canGoForward,
   categorizeAttention,
   sortCategorizedAttention,
+  filterAttentionByNotificationSettings,
   shouldShowMonthSummary,
   type NavHistory,
   type CategorizedAttention,
@@ -179,7 +180,7 @@ export default function App() {
   const [browsePage, setBrowsePage] = useState(0);
   const [selectedBill, setSelectedBill] = useState<string | null>(null);
   const [mapHover, setMapHover] = useState<string | null>(null);
-  const { update: updateSettings, debugMode } = useSettings();
+  const { settings, update: updateSettings, debugMode } = useSettings();
   const debug = debugMode;
   const setDebug = (v: boolean) => updateSettings({ debugMode: v });
   const [globalFocus, setGlobalFocus] = useState<{ kind: string; id: string } | null>(
@@ -615,12 +616,19 @@ export default function App() {
     setSaves(await listSaves());
   }
 
-  async function checkpointAutosave(reason: string): Promise<void> {
+  /**
+   * Ordinary autosaves respect settings.autosave.
+   * Critical safety checkpoints (national counts / nomination resolution) always run
+   * so integrity is preserved even when ordinary autosave is off.
+   */
+  async function checkpointAutosave(reason: string, opts?: { critical?: boolean }): Promise<void> {
+    const critical = opts?.critical === true;
+    if (!critical && !settings.autosave) return;
     if (!sim || !snap) return;
     const savedAt = new Date().toISOString();
     await putSave({
       id: `autosave-${snap.playerPoliticianId}`,
-      name: `Autosave · ${reason}`,
+      name: critical ? `Safety checkpoint · ${reason}` : `Autosave · ${reason}`,
       savedAt,
       playerName: politicianName(figures, snap.playerPoliticianId, snap),
       date: snap.currentDate,
@@ -655,7 +663,7 @@ export default function App() {
     if (!sim || !world || busy || countingElection) return;
     setCountingElection(true);
     try {
-      await checkpointAutosave("before Assembly count");
+      await checkpointAutosave("before Assembly count", { critical: true });
     } catch {
       feedback.setNotice("The pre-count autosave could not be written. The count has not started.");
       setCountingElection(false);
@@ -699,7 +707,7 @@ export default function App() {
     setBusy(true);
     const before = sim.getSnapshot().history.length;
     try {
-      await checkpointAutosave("before presidential count");
+      await checkpointAutosave("before presidential count", { critical: true });
     } catch {
       feedback.setNotice("The pre-count autosave could not be written. The count has not started.");
       busyRef.current = false;
@@ -736,7 +744,9 @@ export default function App() {
     setBusyLabel(nominationDue ? "Counting nominations…" : "Processing…");
     setBusy(true);
     try {
-      await checkpointAutosave(nominationDue ? "before nomination count" : "before turn");
+      await checkpointAutosave(nominationDue ? "before nomination count" : "before turn", {
+        critical: nominationDue,
+      });
     } catch {
       feedback.setNotice("Autosave failed, so the turn was not advanced.");
       busyRef.current = false;
@@ -1368,12 +1378,21 @@ export default function App() {
       ? [`${monthsRemaining} month${monthsRemaining === 1 ? "" : "s"} to election`]
       : []),
   ];
-  const categorizedItems: CategorizedAttention[] = sortCategorizedAttention(
-    attentionItems.map((item) => categorizeAttention(item, Boolean(interrupt?.requiresResolution))),
+  const categorizedItems: CategorizedAttention[] = filterAttentionByNotificationSettings(
+    sortCategorizedAttention(
+      attentionItems.map((item) =>
+        categorizeAttention(item, Boolean(interrupt?.requiresResolution)),
+      ),
+    ),
+    settings.notifications,
   );
+  const visibleAttentionIds = new Set(categorizedItems.map((item) => item.id));
+  const visibleAttentionItems = attentionItems.filter((item) => visibleAttentionIds.has(item.id));
   const lastSavedLabel = lastSavedAt
     ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-    : "Autosave runs before every turn and national count.";
+    : settings.autosave
+      ? "Autosave runs before every turn; safety checkpoints also run before national counts."
+      : "Ordinary autosave is off; safety checkpoints still run before national counts.";
 
   const inspectorFocus = globalFocus
     ? (searchEntries.find((e) => e.kind === globalFocus.kind && e.id === globalFocus.id) ?? null)
@@ -1385,7 +1404,7 @@ export default function App() {
       onNavigate={(s: Screen) => navigateTo(s, null)}
       date={snap.currentDate}
       playerLine={`${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`}
-      decisionCount={attentionItems.length}
+      decisionCount={visibleAttentionItems.length}
       roleKind={roleKind}
       campaignActive={Boolean(playerCampaign(snap))}
       busy={busy || countingElection}
@@ -1408,7 +1427,7 @@ export default function App() {
       onExport={() => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`)}
       searchEntries={searchEntries}
       onSearchSelect={selectSearchEntry}
-      attentionItems={attentionItems}
+      attentionItems={visibleAttentionItems}
       briefingItems={briefingItems}
       watchlist={watchlist}
       onToggleWatch={(entry) => {

@@ -1,4 +1,5 @@
 import type { Screen } from "./pages.js";
+import type { NotificationCategory } from "./settings.js";
 
 export type NavEntry = {
   screen: Screen;
@@ -56,6 +57,9 @@ export function canGoForward(history: NavHistory): boolean {
 
 export type NotificationLevel = "ACTION_REQUIRED" | "MAJOR" | "BACKGROUND" | "SYSTEM";
 
+/** Player-facing importance for inbox filtering and copy. */
+export type NotificationImportance = "informational" | "important" | "requires_decision";
+
 export type CategorizedAttention = {
   id: string;
   label: string;
@@ -63,7 +67,73 @@ export type CategorizedAttention = {
   screen: Screen;
   tone?: "urgent" | "soon" | "info";
   level: NotificationLevel;
+  category: NotificationCategory;
+  importance: NotificationImportance;
 };
+
+export function notificationImportanceFromLevel(level: NotificationLevel): NotificationImportance {
+  switch (level) {
+    case "ACTION_REQUIRED":
+      return "requires_decision";
+    case "MAJOR":
+      return "important";
+    case "BACKGROUND":
+    case "SYSTEM":
+      return "informational";
+  }
+}
+
+/** Map inbox / attention targets onto Settings notification categories. */
+export function attentionNotificationCategory(item: {
+  screen: Screen;
+  id?: string;
+  label?: string;
+}): NotificationCategory {
+  const haystack = `${item.id ?? ""} ${item.label ?? ""}`.toLowerCase();
+  if (haystack.includes("caucus")) return "caucuses";
+  switch (item.screen) {
+    case "elections":
+    case "campaign":
+      return "elections";
+    case "assembly":
+      return "legislation";
+    case "party":
+      return "party";
+    case "organizations":
+      return "caucuses";
+    case "foreign":
+      return "foreign";
+    case "career":
+    case "office":
+      return "career";
+    case "executive":
+    case "courts":
+    case "economy":
+    case "home":
+    case "news":
+    case "archive":
+    case "terena":
+    case "situation":
+    case "settings":
+      return "government";
+  }
+}
+
+/**
+ * Hide INFORMATIONAL inbox items whose category is disabled.
+ * ACTION_REQUIRED / requires_decision (and other non-informational items) are never suppressed.
+ */
+export function filterAttentionByNotificationSettings(
+  items: CategorizedAttention[],
+  notifications: Record<NotificationCategory, boolean>,
+): CategorizedAttention[] {
+  return items.filter((item) => {
+    if (item.importance !== "informational" || item.level === "ACTION_REQUIRED") {
+      return true;
+    }
+    return notifications[item.category] !== false;
+  });
+}
 
 export function categorizeAttention(
   item: {
@@ -75,17 +145,21 @@ export function categorizeAttention(
   },
   hasInterrupt: boolean,
 ): CategorizedAttention {
+  let level: NotificationLevel;
   if (item.tone === "urgent" || (hasInterrupt && item.id.startsWith("interrupt"))) {
-    return { ...item, level: "ACTION_REQUIRED" };
+    level = "ACTION_REQUIRED";
+  } else if (item.tone === "soon") {
+    level = "MAJOR";
+  } else {
+    const systemPrefixes = ["autosave", "system"];
+    level = systemPrefixes.some((p) => item.id.startsWith(p)) ? "SYSTEM" : "BACKGROUND";
   }
-  if (item.tone === "soon") {
-    return { ...item, level: "MAJOR" };
-  }
-  const systemPrefixes = ["autosave", "system"];
-  if (systemPrefixes.some((p) => item.id.startsWith(p))) {
-    return { ...item, level: "SYSTEM" };
-  }
-  return { ...item, level: "BACKGROUND" };
+  return {
+    ...item,
+    level,
+    category: attentionNotificationCategory(item),
+    importance: notificationImportanceFromLevel(level),
+  };
 }
 
 export function notificationLevelRank(level: NotificationLevel): number {

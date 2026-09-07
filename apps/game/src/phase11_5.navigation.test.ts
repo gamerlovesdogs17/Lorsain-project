@@ -132,9 +132,30 @@ describe("Notification category assignment", () => {
 
   it("sorts by level rank", () => {
     const items: CategorizedAttention[] = [
-      { id: "b", label: "B", screen: "home", level: "BACKGROUND" },
-      { id: "a", label: "A", screen: "home", level: "ACTION_REQUIRED" },
-      { id: "m", label: "M", screen: "home", level: "MAJOR" },
+      {
+        id: "b",
+        label: "B",
+        screen: "home",
+        level: "BACKGROUND",
+        category: "government",
+        importance: "informational",
+      },
+      {
+        id: "a",
+        label: "A",
+        screen: "home",
+        level: "ACTION_REQUIRED",
+        category: "government",
+        importance: "requires_decision",
+      },
+      {
+        id: "m",
+        label: "M",
+        screen: "home",
+        level: "MAJOR",
+        category: "government",
+        importance: "important",
+      },
     ];
     const sorted = sortCategorizedAttention(items);
     expect(sorted[0]!.level).toBe("ACTION_REQUIRED");

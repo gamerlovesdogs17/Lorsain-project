@@ -1,5 +1,21 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { CommandResult } from "@lorsain/sim";
+import { loadSettings } from "./settings.js";
+
+/**
+ * When confirmMajorActions is false, run the action immediately (no dialog).
+ * Returns true if a confirmation dialog should still be shown.
+ */
+export function applyConfirmMajorActionsGate(
+  confirmMajorActions: boolean,
+  action: () => void,
+): boolean {
+  if (!confirmMajorActions) {
+    action();
+    return false;
+  }
+  return true;
+}
 
 export function friendlyCommandError(error: { code: string; message: string }): string {
   const map: Record<string, string> = {
@@ -96,6 +112,9 @@ export function useCommandFeedback() {
     confirmLabel?: string;
     action: () => void;
   }) {
+    if (!applyConfirmMajorActionsGate(loadSettings().confirmMajorActions, opts.action)) {
+      return;
+    }
     setConfirm(opts);
   }
 
