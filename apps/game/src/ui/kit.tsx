@@ -75,9 +75,14 @@ export function TabBar<T extends string>(props: {
   tabs: Array<{ id: T; label: string }>;
   value: T;
   onChange: (id: T) => void;
+  scrollHint?: boolean;
 }) {
   return (
-    <div className="tabbar" role="tablist">
+    <div
+      className={`tabbar${props.scrollHint === false ? "" : " tabbar-scrollable"}`}
+      role="tablist"
+      data-qa={props.scrollHint === false ? undefined : "tabbar-scrollable"}
+    >
       {props.tabs.map((t) => (
         <button
           key={t.id}
@@ -499,9 +504,12 @@ export function PolicyChoiceGroup(props: {
   );
 }
 
-export function BriefStrip(props: { items: Array<{ label: string; value: ReactNode }> }) {
+export function BriefStrip(props: {
+  items: Array<{ label: string; value: ReactNode }>;
+  "data-qa"?: string;
+}) {
   return (
-    <div className="brief-strip" aria-label="This month">
+    <div className="brief-strip" aria-label="This month" data-qa={props["data-qa"]}>
       {props.items.map((item) => (
         <div key={item.label} className="brief-strip-item">
           <span className="kicker">{item.label}</span>

@@ -1754,6 +1754,32 @@ select:focus-visible,
   border-bottom: 1px solid var(--line-strong);
   overflow-x: auto;
   flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 1.5rem), transparent 100%);
+}
+.tabbar-scrollable::after {
+  content: "";
+  flex: 0 0 1.25rem;
+  pointer-events: none;
+}
+.assembly-page {
+  padding-bottom: 0.5rem;
+}
+@media (max-width: 900px) {
+  .assembly-page {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  .assembly-page .tabbar {
+    margin-inline: -0.15rem;
+    padding-bottom: 0.15rem;
+  }
+  .legislation-workspace .master-detail-inspector {
+    padding-bottom: 1rem;
+  }
+  .bill-tab-body {
+    min-height: 4rem;
+  }
 }
 
 .tabbar button {
@@ -4124,7 +4150,7 @@ button.entity-row:hover,
     right: calc(50% - 1.2rem);
   }
   .shell.v5 .page {
-    padding-bottom: 5rem;
+    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
   }
   .political-drawer {
     top: auto;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import {
   billPolicyFit,
@@ -341,9 +341,30 @@ export function AssemblyPage(props: {
 }) {
   const { debugMode } = useSettings();
   const exactInternals = canShowExactInternals(props.debug ?? debugMode);
-  const [assemblyTab, setAssemblyTab] = useState<AssemblyTab>("overview");
-  const [legislationSubTab, setLegislationSubTab] = useState<LegislationSubTab>("bills");
-  const [billTab, setBillTab] = useState<BillDetailTab>("overview");
+  const workspaceKey = "lorsain-assembly-workspace";
+  const readWorkspace = (): {
+    assemblyTab?: AssemblyTab;
+    billTab?: BillDetailTab;
+    legislationSubTab?: LegislationSubTab;
+    committeeId?: string | null;
+  } => {
+    try {
+      const raw = window.sessionStorage.getItem(workspaceKey);
+      return raw ? (JSON.parse(raw) as ReturnType<typeof readWorkspace>) : {};
+    } catch {
+      return {};
+    }
+  };
+  const initialWorkspace = readWorkspace();
+  const [assemblyTab, setAssemblyTab] = useState<AssemblyTab>(() =>
+    props.selectedBill ? "legislation" : (initialWorkspace.assemblyTab ?? "overview"),
+  );
+  const [legislationSubTab, setLegislationSubTab] = useState<LegislationSubTab>(
+    () => initialWorkspace.legislationSubTab ?? "bills",
+  );
+  const [billTab, setBillTab] = useState<BillDetailTab>(
+    () => initialWorkspace.billTab ?? "overview",
+  );
   const [billFilter, setBillFilter] = useState<"all" | "active" | "passed" | "failed" | "mine">(
     "all",
   );
@@ -364,7 +385,9 @@ export function AssemblyPage(props: {
   const [amendOption, setAmendOption] = useState("");
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [selectedVoteId, setSelectedVoteId] = useState<string | null>(null);
-  const [selectedCommitteeId, setSelectedCommitteeId] = useState<string | null>(null);
+  const [selectedCommitteeId, setSelectedCommitteeId] = useState<string | null>(
+    () => initialWorkspace.committeeId ?? null,
+  );
   const [rollCallFilter, setRollCallFilter] = useState<"all" | "yes" | "no" | "abstain">("all");
   const [lawQuery, setLawQuery] = useState("");
   const [lawbookMode, setLawbookMode] = useState<LawbookBrowseMode>("provisions");
@@ -444,6 +467,35 @@ export function AssemblyPage(props: {
     setAssemblyTab("legislation");
     setLegislationSubTab("bills");
   };
+
+  useEffect(() => {
+    if (props.selectedBill && !props.snap.legislatureRuntime.bills[props.selectedBill]) {
+      props.setSelectedBill(null);
+    }
+  }, [props.selectedBill, props.snap.legislatureRuntime.bills, props.setSelectedBill]);
+
+  useEffect(() => {
+    if (props.selectedBill && assemblyTab !== "legislation") {
+      setAssemblyTab("legislation");
+      setLegislationSubTab("bills");
+    }
+  }, [props.selectedBill]); // eslint-disable-line react-hooks/exhaustive-deps -- restore only when selection appears
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(
+        workspaceKey,
+        JSON.stringify({
+          assemblyTab,
+          billTab,
+          legislationSubTab,
+          committeeId: selectedCommitteeId,
+        }),
+      );
+    } catch {
+      /* ignore quota */
+    }
+  }, [assemblyTab, billTab, legislationSubTab, selectedCommitteeId]);
 
   const preloadLawDraft = (
     law: (typeof enactedLaws)[number],
@@ -549,14 +601,6 @@ export function AssemblyPage(props: {
 
   const compositionHeader = (
     <>
-      <BriefStrip
-        items={[
-          { label: "Sitting", value: `${mps.length}/${seatCount}` },
-          { label: "Majority", value: majority },
-          { label: "On floor", value: floorQueue.length },
-          { label: "Votes due", value: votesDue.length },
-        ]}
-      />
       <section className="assembly-chamber-stage" aria-label="Chamber and leadership">
         <div className="assembly-chamber-main">
           <div className="assembly-chamber-caption">
@@ -826,6 +870,7 @@ export function AssemblyPage(props: {
       <WorkLayout
         header={
           <BriefStrip
+            data-qa="assembly-summary-strip"
             items={[
               { label: "Sitting", value: `${mps.length}/${seatCount}` },
               { label: "Majority", value: majority },
@@ -1065,19 +1110,25 @@ export function AssemblyPage(props: {
                 </div>
 
                 <SectionDivider title="Important bills" hint="Open in Legislation workspace" />
-                {allBills.slice(0, 8).map((b) => (
-                  <EntityRow
-                    key={b.id}
-                    title={b.title}
-                    meta={`${committeeDisplayName(b.assignedCommitteeId)} · ${politicianDisplayName(props.catalog, b.sponsorId)}`}
-                    status={
-                      <StatusBadge tone={statusTone(b.status)}>
-                        {billStatusLabel(b.status)}
-                      </StatusBadge>
-                    }
-                    onClick={() => selectBill(b.id)}
-                  />
-                ))}
+                {allBills.length === 0 ? (
+                  <EmptyState>No bills are on the Assembly record yet.</EmptyState>
+                ) : (
+                  allBills
+                    .slice(0, 8)
+                    .map((b) => (
+                      <EntityRow
+                        key={b.id}
+                        title={b.title}
+                        meta={`${committeeDisplayName(b.assignedCommitteeId)} · ${politicianDisplayName(props.catalog, b.sponsorId)}`}
+                        status={
+                          <StatusBadge tone={statusTone(b.status)}>
+                            {billStatusLabel(b.status)}
+                          </StatusBadge>
+                        }
+                        onClick={() => selectBill(b.id)}
+                      />
+                    ))
+                )}
               </div>
             ) : null}
 
@@ -1147,7 +1198,7 @@ export function AssemblyPage(props: {
                               className="btn ghost"
                               onClick={() => props.setSelectedBill(null)}
                             >
-                              Back to list
+                              Back to legislation
                             </button>
                           </div>
                           <div className="bill-inspector">
@@ -1310,6 +1361,33 @@ export function AssemblyPage(props: {
                                     })()}
                                   </div>
                                 ) : null}
+                              </div>
+                            ) : null}
+
+                            {billTab === "amendments" ? (
+                              <div className="bill-tab-body" data-qa="bill-amendments">
+                                {bill.amendmentIds.length === 0 ? (
+                                  <EmptyState>
+                                    No amendments have been proposed on this bill.
+                                  </EmptyState>
+                                ) : (
+                                  bill.amendmentIds.map((amendmentId) => {
+                                    const amendment =
+                                      props.snap.legislatureRuntime.amendments[amendmentId];
+                                    if (!amendment) return null;
+                                    return (
+                                      <EntityRow
+                                        key={amendmentId}
+                                        title={`Amendment · ${amendment.status.replace(/_/g, " ")}`}
+                                        meta={`${politicianDisplayName(props.catalog, amendment.sponsorId)} · ${amendment.date}${
+                                          amendment.targetProvisionIds.length
+                                            ? ` · ${amendment.targetProvisionIds.join(", ")}`
+                                            : ""
+                                        }`}
+                                      />
+                                    );
+                                  })
+                                )}
                               </div>
                             ) : null}
 
@@ -2437,15 +2515,19 @@ export function AssemblyPage(props: {
               <div data-qa="committees-panel">
                 <>
                   <SectionDivider title="Committees" />
-                  {Object.values(props.snap.legislatureRuntime.committees).map((c) => (
-                    <EntityRow
-                      key={c.id}
-                      title={committeeDisplayName(c.id)}
-                      meta={`${c.memberIds.length} members · Chair ${c.chairId ? politicianDisplayName(props.catalog, c.chairId) : "vacant"}`}
-                      selected={c.id === activeCommitteeId}
-                      onClick={() => setSelectedCommitteeId(c.id)}
-                    />
-                  ))}
+                  {Object.values(props.snap.legislatureRuntime.committees).length === 0 ? (
+                    <EmptyState>No Assembly committees are constituted in this save.</EmptyState>
+                  ) : (
+                    Object.values(props.snap.legislatureRuntime.committees).map((c) => (
+                      <EntityRow
+                        key={c.id}
+                        title={committeeDisplayName(c.id)}
+                        meta={`${c.memberIds.length} members · Chair ${c.chairId ? politicianDisplayName(props.catalog, c.chairId) : "vacant"}`}
+                        selected={c.id === activeCommitteeId}
+                        onClick={() => setSelectedCommitteeId(c.id)}
+                      />
+                    ))
+                  )}
                   {selectedCommittee ? (
                     <>
                       <SectionDivider
