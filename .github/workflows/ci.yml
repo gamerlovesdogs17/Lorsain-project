@@ -38,8 +38,7 @@ jobs:
   integration:
     name: Integration
     runs-on: ubuntu-latest
-    # Phase 15 certification matrix (3×25 + 2×50 + 1×100) plus legacy long-run cases.
-    timeout-minutes: 180
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -55,3 +54,31 @@ jobs:
         run: pnpm build
       - name: Integration tests
         run: pnpm test:integration
+
+  certification:
+    name: Certification
+    runs-on: ubuntu-latest
+    # Phase 15 matrix: 3×25 + 2×50 + 1×100 years.
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Phase 15 long-run certification
+        run: pnpm test:certification
+      - name: Upload long-run audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase15-longrun-audit
+          path: docs/qa/phase15/longrun-audit.json
+          if-no-files-found: warn

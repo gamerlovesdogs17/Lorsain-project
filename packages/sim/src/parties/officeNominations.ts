@@ -257,20 +257,20 @@ export function assemblyConstituenciesWorthContesting(
   });
   scored.sort((a, b) => b.score - a.score || a.constituencyId.localeCompare(b.constituencyId));
 
+  // Cap nomination contests near expected seat haul (plus a modest reserve), not every
+  // district where fractional expected seats exceed a tiny threshold — that exploded
+  // long-run cost (party × ~all constituencies × IRV each cycle).
   const target = Math.max(
     incumbents.size,
     Math.min(
       constituencyIds.length,
-      Math.max(
-        share >= 0.02 ? Math.ceil(Math.max(partySeats, 1) * 1.2) : incumbents.size,
-        scored.filter((row) => row.incumbent || row.expected >= 0.35).length,
-      ),
+      share >= 0.02 ? Math.ceil(Math.max(partySeats, 1) * 1.25) : incumbents.size,
     ),
   );
 
   const selected = new Set<string>();
   for (const row of scored) {
-    if (row.incumbent || row.expected >= 0.35) selected.add(row.constituencyId);
+    if (row.incumbent) selected.add(row.constituencyId);
   }
   for (const row of scored) {
     if (selected.size >= target) break;

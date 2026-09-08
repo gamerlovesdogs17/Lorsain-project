@@ -12,10 +12,7 @@ import { pushHistory } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import { emptyIdeology } from "../agents/profile.js";
 import { standingPublicScore } from "../campaigns/effects.js";
-import {
-  assemblyNomineesForConstituency,
-  partyRequiresOfficeNomination,
-} from "../parties/officeNominations.js";
+import { partyRequiresOfficeNomination } from "../parties/officeNominations.js";
 import { partyAllowedUnderConstitution } from "../parties/state.js";
 import { assemblyElectionMode } from "../provinces/constitutionGameplay.js";
 import type {
@@ -314,14 +311,44 @@ type Allocation = {
   emergencyNominationFillers: EmergencyNominationFiller[];
 };
 
-function partyHasAssemblyNominees(
-  state: SimState,
-  electionId: string,
-  partyId: string | null,
-  constituencyId: string,
-): boolean {
-  if (!partyId) return false;
-  return assemblyNomineesForConstituency(state, electionId, partyId, constituencyId).length > 0;
+function buildAssemblyNomineeIndex(state: SimState, electionId: string): Map<string, string[]> {
+  const index = new Map<string, string[]>();
+  for (const contest of Object.values(state.partyContests)) {
+    if (contest.status !== "resolved") continue;
+    const meta = contest.metadata as {
+      officeKind?: string;
+      electionId?: string;
+      constituencyId?: string;
+      winnerIds?: unknown;
+      winnerId?: unknown;
+    };
+    if (meta.officeKind !== "assembly" || meta.electionId !== electionId) continue;
+    const constituencyId = meta.constituencyId;
+    if (!constituencyId) continue;
+    const key = `${contest.partyId}::${constituencyId}`;
+    const winners: string[] = [];
+    if (Array.isArray(meta.winnerIds)) {
+      for (const id of meta.winnerIds) {
+        if (typeof id === "string" && id && !winners.includes(id)) winners.push(id);
+      }
+    }
+    if (winners.length === 0 && typeof meta.winnerId === "string" && meta.winnerId) {
+      winners.push(meta.winnerId);
+    } else if (
+      typeof contest.winnerId === "string" &&
+      contest.winnerId &&
+      !winners.includes(contest.winnerId)
+    ) {
+      winners.push(contest.winnerId);
+    }
+    if (winners.length === 0) continue;
+    const existing = index.get(key) ?? [];
+    for (const id of winners) {
+      if (!existing.includes(id)) existing.push(id);
+    }
+    index.set(key, existing);
+  }
+  return index;
 }
 
 /**
@@ -349,6 +376,14 @@ export function allocateAssemblyCandidateFields(
   if (constituencyIds.length !== Object.keys(world.constituencyElectorate).length) {
     return { error: reject("INVALID_GEOGRAPHY", "allocation must include every constituency") };
   }
+
+  const nomineeIndex = buildAssemblyNomineeIndex(state, election.id);
+  const nomineesFor = (partyId: string | null | undefined, constituencyId: string): string[] => {
+    if (!partyId) return [];
+    return nomineeIndex.get(`${partyId}::${constituencyId}`) ?? [];
+  };
+  const hasNomineesFor = (partyId: string | null | undefined, constituencyId: string): boolean =>
+    nomineesFor(partyId, constituencyId).length > 0;
 
   const incumbentById = new Map<string, string>();
   const officeByConstituency = assemblyOfficeByConstituency(world);
@@ -398,24 +433,9 @@ export function allocateAssemblyCandidateFields(
   }
 
   // Ensure resolved constituency nomination slates are on the field before auto-fill.
-  for (const contest of Object.values(state.partyContests).sort((a, b) =>
-    a.id.localeCompare(b.id),
-  )) {
-    if (contest.status !== "resolved") continue;
-    const meta = contest.metadata as {
-      officeKind?: string;
-      electionId?: string;
-      constituencyId?: string;
-    };
-    if (meta.officeKind !== "assembly" || meta.electionId !== election.id) continue;
-    const constituencyId = meta.constituencyId;
-    if (!constituencyId || !world.constituencyElectorate[constituencyId]) continue;
-    const winners = assemblyNomineesForConstituency(
-      state,
-      election.id,
-      contest.partyId,
-      constituencyId,
-    );
+  for (const [key, winners] of [...nomineeIndex.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const constituencyId = key.split("::")[1]!;
+    if (!world.constituencyElectorate[constituencyId]) continue;
     for (const winner of winners) {
       if (candidacies[winner]) continue;
       if (assemblyCandidateEligibilityError(state, world, winner, constituencyId)) continue;
@@ -485,12 +505,7 @@ export function allocateAssemblyCandidateFields(
       for (const politicianId of unassigned) {
         const metrics = candidateMetrics.get(politicianId)!;
         const requiresNom = partyRequiresOfficeNomination(world, state, metrics.partyId);
-        const hasNominees = partyHasAssemblyNominees(
-          state,
-          election.id,
-          metrics.partyId,
-          constituencyId,
-        );
+        const hasNominees = hasNomineesFor(metrics.partyId, constituencyId);
         // Ordinary auto-field skips nomination-required parties that already have a slate.
         // Emergency magnitude fills may still place co-partisans when seats would otherwise
         // go unmet (multi-seat districts with thin nominee slates).
@@ -605,9 +620,7 @@ export function allocateAssemblyCandidateFields(
       state,
       candidateMetrics.get(picked.politicianId)?.partyId,
     );
-    const hasNominees = partyHasAssemblyNominees(
-      state,
-      election.id,
+    const hasNominees = hasNomineesFor(
       candidateMetrics.get(picked.politicianId)?.partyId ?? null,
       constituencyId,
     );
@@ -640,7 +653,7 @@ export function allocateAssemblyCandidateFields(
         (cid) =>
           !(
             partyRequiresOfficeNomination(world, state, metrics.partyId) &&
-            partyHasAssemblyNominees(state, election.id, metrics.partyId, cid)
+            hasNomineesFor(metrics.partyId, cid)
           ),
       )
       .sort((a, b) => {

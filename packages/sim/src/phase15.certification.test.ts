@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,17 @@ import type { SimState } from "./types.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 const outDir = resolve(repoRoot, "docs/qa/phase15");
+const progressLog = resolve(repoRoot, ".calibration/phase15-cert-progress.log");
+
+function logProgress(message: string): void {
+  const line = `${new Date().toISOString()} ${message}\n`;
+  try {
+    mkdirSync(resolve(repoRoot, ".calibration"), { recursive: true });
+    appendFileSync(progressLog, line, "utf8");
+  } catch {
+    // progress logging is best-effort
+  }
+}
 
 type HorizonAudit = {
   seed: string;
@@ -32,8 +43,17 @@ function runHorizon(seed: string, years: number): HorizonAudit {
   const world = loadTerenaWorld();
   const sim = createSimulation({ world, seed, playerPoliticianId: "NPC146" });
   const started = performance.now();
+  logProgress(`[cert] start ${seed} ${years}y`);
   for (let i = 0; i < months; i += 12) {
     advanceIntegrated(sim, Math.min(12, months - i));
+    if ((i + 12) % 60 === 0 || i + 12 >= months) {
+      logProgress(
+        `[cert] ${seed} ${Math.min(i + 12, months)}/${months} months (${(
+          (performance.now() - started) /
+          1000
+        ).toFixed(1)}s)`,
+      );
+    }
   }
   const elapsedMs = performance.now() - started;
   const state = sim.getSnapshot() as SimState;
@@ -98,52 +118,40 @@ function assertHealthy(audit: HorizonAudit, years: number) {
 describe("Phase 15 long-run certification matrix", () => {
   const audits: HorizonAudit[] = [];
 
-  it(
-    "3×25 year seeds stay active without chaos",
-    { timeout: 2_700_000 },
-    () => {
-      for (const seed of ["phase15-cert-25a", "phase15-cert-25b", "phase15-cert-25c"] as const) {
-        const audit = runHorizon(seed, 25);
-        assertHealthy(audit, 25);
-        audits.push(audit);
-      }
-    },
-  );
-
-  it(
-    "2×50 year seeds stay coherent",
-    { timeout: 3_600_000 },
-    () => {
-      for (const seed of ["phase15-cert-50a", "phase15-cert-50b"] as const) {
-        const audit = runHorizon(seed, 50);
-        assertHealthy(audit, 50);
-        audits.push(audit);
-      }
-    },
-  );
-
-  it(
-    "1×100 year seed completes with bounded churn",
-    { timeout: 5_400_000 },
-    () => {
-      const audit = runHorizon("phase15-cert-100a", 100);
-      assertHealthy(audit, 100);
+  it("3×25 year seeds stay active without chaos", { timeout: 2_700_000 }, () => {
+    for (const seed of ["phase15-cert-25a", "phase15-cert-25b", "phase15-cert-25c"] as const) {
+      const audit = runHorizon(seed, 25);
+      assertHealthy(audit, 25);
       audits.push(audit);
-      mkdirSync(outDir, { recursive: true });
-      const path = resolve(outDir, "longrun-audit.json");
-      writeFileSync(
-        path,
-        `${JSON.stringify(
-          {
-            generatedAt: new Date().toISOString(),
-            matrix: "3x25 + 2x50 + 1x100",
-            audits,
-          },
-          null,
-          2,
-        )}\n`,
-        "utf8",
-      );
-    },
-  );
+    }
+  });
+
+  it("2×50 year seeds stay coherent", { timeout: 3_600_000 }, () => {
+    for (const seed of ["phase15-cert-50a", "phase15-cert-50b"] as const) {
+      const audit = runHorizon(seed, 50);
+      assertHealthy(audit, 50);
+      audits.push(audit);
+    }
+  });
+
+  it("1×100 year seed completes with bounded churn", { timeout: 5_400_000 }, () => {
+    const audit = runHorizon("phase15-cert-100a", 100);
+    assertHealthy(audit, 100);
+    audits.push(audit);
+    mkdirSync(outDir, { recursive: true });
+    const path = resolve(outDir, "longrun-audit.json");
+    writeFileSync(
+      path,
+      `${JSON.stringify(
+        {
+          generatedAt: new Date().toISOString(),
+          matrix: "3x25 + 2x50 + 1x100",
+          audits,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+  });
 });
