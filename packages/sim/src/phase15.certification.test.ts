@@ -100,6 +100,7 @@ describe("Phase 15 long-run certification matrix", () => {
 
   it(
     "3×25 year seeds stay active without chaos",
+    { timeout: 2_700_000 },
     () => {
       for (const seed of ["phase15-cert-25a", "phase15-cert-25b", "phase15-cert-25c"] as const) {
         const audit = runHorizon(seed, 25);
@@ -107,11 +108,11 @@ describe("Phase 15 long-run certification matrix", () => {
         audits.push(audit);
       }
     },
-    { timeout: 2_700_000 },
   );
 
   it(
     "2×50 year seeds stay coherent",
+    { timeout: 3_600_000 },
     () => {
       for (const seed of ["phase15-cert-50a", "phase15-cert-50b"] as const) {
         const audit = runHorizon(seed, 50);
@@ -119,11 +120,11 @@ describe("Phase 15 long-run certification matrix", () => {
         audits.push(audit);
       }
     },
-    { timeout: 3_600_000 },
   );
 
   it(
     "1×100 year seed completes with bounded churn",
+    { timeout: 5_400_000 },
     () => {
       const audit = runHorizon("phase15-cert-100a", 100);
       assertHealthy(audit, 100);
@@ -144,6 +145,5 @@ describe("Phase 15 long-run certification matrix", () => {
         "utf8",
       );
     },
-    { timeout: 5_400_000 },
   );
 });

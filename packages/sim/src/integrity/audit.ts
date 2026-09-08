@@ -48,7 +48,7 @@ export function auditSimulationIntegrity(_world: KernelWorld, state: SimState): 
   const caucus = state.caucusRuntime;
   if (caucus) {
     for (const [fid, row] of Object.entries(caucus.caucuses ?? {})) {
-      if (row.dissolved) continue;
+      if (row.ancestry.dissolved) continue;
       if (!row.partyId) {
         findings.push({
           code: "ORPHAN_CAUCUS",

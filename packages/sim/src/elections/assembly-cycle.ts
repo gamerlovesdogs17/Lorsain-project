@@ -397,6 +397,39 @@ export function allocateAssemblyCandidateFields(
     );
   }
 
+  // Ensure resolved constituency nomination slates are on the field before auto-fill.
+  for (const contest of Object.values(state.partyContests).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  )) {
+    if (contest.status !== "resolved") continue;
+    const meta = contest.metadata as {
+      officeKind?: string;
+      electionId?: string;
+      constituencyId?: string;
+    };
+    if (meta.officeKind !== "assembly" || meta.electionId !== election.id) continue;
+    const constituencyId = meta.constituencyId;
+    if (!constituencyId || !world.constituencyElectorate[constituencyId]) continue;
+    const winners = assemblyNomineesForConstituency(
+      state,
+      election.id,
+      contest.partyId,
+      constituencyId,
+    );
+    for (const winner of winners) {
+      if (candidacies[winner]) continue;
+      if (assemblyCandidateEligibilityError(state, world, winner, constituencyId)) continue;
+      candidacies[winner] = candidacyFor(
+        state,
+        world,
+        winner,
+        constituencyId,
+        cycle.filingOpenDate,
+        winner === state.playerPoliticianId ? "player" : "npc",
+      );
+    }
+  }
+
   const byConstituency = new Map<string, string[]>();
   for (const id of constituencyIds) byConstituency.set(id, []);
   for (const candidacy of Object.values(candidacies)) {
@@ -458,15 +491,19 @@ export function allocateAssemblyCandidateFields(
           metrics.partyId,
           constituencyId,
         );
-        if (requiresNom && hasNominees) continue;
-        const emergency = requiresNom && !hasNominees;
+        // Ordinary auto-field skips nomination-required parties that already have a slate.
+        // Emergency magnitude fills may still place co-partisans when seats would otherwise
+        // go unmet (multi-seat districts with thin nominee slates).
+        if (requiresNom && hasNominees && !allowEmergencyNominationFill) continue;
+        const emergency =
+          requiresNom && (!hasNominees || (allowEmergencyNominationFill && hasNominees));
         if (emergency && !allowEmergencyNominationFill) continue;
         const score =
           deficit * 100 +
           (metrics.localFitByConstituency.get(constituencyId) ?? 0) * 12 +
           (parties.has(metrics.partyId) ? 0 : 1.2) +
           metrics.quality * 2 -
-          (emergency ? 40 : 0);
+          (emergency ? (hasNominees ? 55 : 40) : 0);
         const tie = stableHash(`${election.id}:${politicianId}:${constituencyId}`);
         if (!best || score > best.score || (score === best.score && tie < best.tie)) {
           best = { politicianId, constituencyId, score, tie, emergency };
@@ -574,15 +611,19 @@ export function allocateAssemblyCandidateFields(
       candidateMetrics.get(picked.politicianId)?.partyId ?? null,
       constituencyId,
     );
-    if (requiresNom && hasNominees) {
-      unassigned.delete(picked.politicianId);
-      continue;
-    }
     assignPicked({
       politicianId: picked.politicianId,
       constituencyId,
-      emergency: requiresNom,
+      emergency: Boolean(requiresNom),
     });
+    if (requiresNom && hasNominees) {
+      // Magnitude emergency after a live slate — still record as emergency filler.
+      const last = emergencyNominationFillers[emergencyNominationFillers.length - 1];
+      if (last && last.politicianId === picked.politicianId) {
+        last.reason =
+          "ASSEMBLY_NOMINATION_EMERGENCY_FALLBACK: seat magnitude unmet after nominee slate";
+      }
+    }
   }
 
   // Remaining pool fills reserves. Skip constituencies where this nomination-required

@@ -3,7 +3,7 @@ import { createSimulation } from "./engine.js";
 import { loadTerenaWorld, advanceIntegrated } from "./integration/harness.js";
 import { ensureHistory15Runtime } from "./history15/state.js";
 import { partyFamilyTimeline } from "./history15/family.js";
-import { migrateSaveV23ToV24, migrateSaveV24ToV25, parseSaveFile } from "./save.js";
+import { migrateSaveV23ToV24, migrateSaveV24ToV25, migrateSaveV25ToV26, parseSaveFile } from "./save.js";
 import { SAVE_SCHEMA_VERSION, type SimState } from "./types.js";
 import { emptyHistory15Runtime } from "./history15/types.js";
 
@@ -22,7 +22,12 @@ describe("Phase 15 history foundation smoke", () => {
     };
     expect(to24.schemaVersion).toBe(24);
     expect(to24.simulation.history15Runtime).toEqual(emptyHistory15Runtime());
-    const migrated = migrateSaveV24ToV25(to24) as {
+    const to25 = migrateSaveV24ToV25(to24) as {
+      schemaVersion: number;
+      simulation: { history15Runtime: unknown };
+    };
+    expect(to25.schemaVersion).toBe(25);
+    const migrated = migrateSaveV25ToV26(to25) as {
       schemaVersion: number;
       simulation: { history15Runtime: unknown };
     };

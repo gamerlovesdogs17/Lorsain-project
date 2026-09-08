@@ -38,7 +38,8 @@ jobs:
   integration:
     name: Integration
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Phase 15 certification matrix (3×25 + 2×50 + 1×100) plus legacy long-run cases.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
