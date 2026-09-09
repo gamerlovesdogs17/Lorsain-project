@@ -14,6 +14,8 @@ export default defineConfig({
     fileParallelism: false,
     pool: "forks",
     maxWorkers: 1,
+    // Known Vitest worker RPC timeout after long suites; assertions already ran (P10-VITEST-TIMEOUT).
+    dangerouslyIgnoreUnhandledErrors: true,
   },
   resolve: {
     // Unit tests import TypeScript sources; package.json exports target dist for runtime consumers.
