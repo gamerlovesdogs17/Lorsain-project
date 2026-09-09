@@ -217,21 +217,33 @@ export function reconcileUnresolvedElectionCandidacies(
   for (const election of Object.values(state.elections)) {
     if (election.status === "resolved" || election.status === "cancelled") continue;
     const c = election.candidates[politicianId];
-    if (!c || c.withdrawn) continue;
+    const assemblyCandidacy = election.assembly?.candidacies[politicianId];
+    if ((!c || c.withdrawn) && (!assemblyCandidacy || assemblyCandidacy.status === "withdrawn")) {
+      continue;
+    }
     let withdraw = false;
     if (!pol || !pol.alive || pol.retired) withdraw = true;
-    else if (election.type === "presidential") {
+    else if (election.type === "presidential" && c && !c.withdrawn) {
       const elig = evaluatePresidentialEligibility(world, state, politicianId, election.date);
       if (!elig.eligible) withdraw = true;
     }
     // Once the general-election field is finalized, ballot labels are locked.
     // Membership churn (party merges, defections, joins) must not empty a
     // certified field down to fewer than two live candidates.
-    if (!election.fieldFinalized) {
+    if (!election.fieldFinalized && c && !c.withdrawn) {
       if (c.partyId != null && pol?.partyId !== c.partyId) withdraw = true;
       if (c.partyId == null && pol?.partyId != null) withdraw = true;
     }
-    if (withdraw) withdrawUnresolvedCandidacy(election, politicianId);
+    if (!withdraw) continue;
+    if (c && !c.withdrawn) withdrawUnresolvedCandidacy(election, politicianId);
+    // Assembly multi-seat fields keep a parallel candidacy/field list — keep them in sync.
+    if (assemblyCandidacy && assemblyCandidacy.status !== "withdrawn") {
+      assemblyCandidacy.status = "withdrawn";
+      const field = election.assembly!.constituencyFields[assemblyCandidacy.constituencyId];
+      if (field) {
+        field.candidateIds = field.candidateIds.filter((id) => id !== politicianId);
+      }
+    }
   }
 }
 

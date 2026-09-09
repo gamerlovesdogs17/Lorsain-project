@@ -101,14 +101,19 @@ function runHorizon(seed: string, years: number): HorizonAudit {
 }
 
 function assertHealthy(audit: HorizonAudit, years: number) {
-  expect(audit.electionsResolved).toBeGreaterThan(0);
-  expect(audit.eras).toBeGreaterThan(0);
-  expect(audit.governments).toBeGreaterThan(0);
-  expect(audit.yearbooks).toBeGreaterThan(0);
-  expect(audit.leadershipTransitions).toBeGreaterThan(0);
-  // Frozen world rejected: some leadership/activity over decades
-  expect(audit.lifecycleEvents).toBeLessThanOrEqual(years <= 25 ? 40 : years <= 50 ? 80 : 160);
-  expect(audit.integrityErrors).toBe(0);
+  try {
+    expect(audit.electionsResolved).toBeGreaterThan(0);
+    expect(audit.eras).toBeGreaterThan(0);
+    expect(audit.governments).toBeGreaterThan(0);
+    expect(audit.yearbooks).toBeGreaterThan(0);
+    expect(audit.leadershipTransitions).toBeGreaterThan(0);
+    // Frozen world rejected: some leadership/activity over decades
+    expect(audit.lifecycleEvents).toBeLessThanOrEqual(years <= 25 ? 40 : years <= 50 ? 80 : 160);
+    expect(audit.integrityErrors).toBe(0);
+  } catch (err) {
+    logProgress(`[cert] ASSERT_FAIL ${audit.seed} ${years}y ${JSON.stringify(audit)}`);
+    throw err;
+  }
 }
 
 /**

@@ -402,6 +402,8 @@ export function allocateAssemblyCandidateFields(
     a.politicianId.localeCompare(b.politicianId),
   )) {
     if (existing.status !== "filed") continue;
+    const holder = state.politicians[existing.politicianId];
+    if (!holder?.alive || holder.retired) continue;
     if (
       assemblyCandidateEligibilityError(
         state,

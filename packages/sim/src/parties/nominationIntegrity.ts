@@ -48,6 +48,7 @@ export function auditAssemblyNominationIntegrity(
   for (const election of elections) {
     const cycle = election.assembly;
     if (!cycle) continue;
+    const historical = election.status === "resolved" || election.status === "cancelled";
 
     const seenPolitician = new Map<string, string>();
     for (const field of Object.values(cycle.constituencyFields)) {
@@ -65,6 +66,8 @@ export function auditAssemblyNominationIntegrity(
           seenPolitician.set(politicianId, field.constituencyId);
         }
 
+        // Historical ballots may list people who later died; only live fields are errors.
+        if (historical) continue;
         const pol = state.politicians[politicianId];
         if (!pol || !pol.alive || pol.retired) {
           issues.push({
@@ -77,6 +80,8 @@ export function auditAssemblyNominationIntegrity(
         }
       }
     }
+
+    if (historical) continue;
 
     const contests = officeNominationContestsForElection(state, election.id, "assembly");
     const nomineeKeys = new Set<string>();
