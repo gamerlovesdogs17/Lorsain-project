@@ -3,7 +3,12 @@ import { createSimulation } from "./engine.js";
 import { loadTerenaWorld, advanceIntegrated } from "./integration/harness.js";
 import { ensureHistory15Runtime } from "./history15/state.js";
 import { partyFamilyTimeline } from "./history15/family.js";
-import { migrateSaveV23ToV24, migrateSaveV24ToV25, migrateSaveV25ToV26, parseSaveFile } from "./save.js";
+import {
+  migrateSaveV23ToV24,
+  migrateSaveV24ToV25,
+  migrateSaveV25ToV26,
+  parseSaveFile,
+} from "./save.js";
 import { SAVE_SCHEMA_VERSION, type SimState } from "./types.js";
 import { emptyHistory15Runtime } from "./history15/types.js";
 
