@@ -85,17 +85,6 @@ export function SettingsPage(props: { onBack?: () => void; showBack?: boolean })
               <small className="muted">Tighten spacing on dossiers and tables.</small>
             </span>
           </label>
-          <label className="settings-toggle">
-            <input
-              type="checkbox"
-              checked={settings.reducedMotion}
-              onChange={(e) => update({ reducedMotion: e.target.checked })}
-            />
-            <span>
-              <strong>Reduced motion</strong>
-              <small className="muted">Prefer calmer transitions where the UI supports it.</small>
-            </span>
-          </label>
         </SectionCard>
       ) : null}
 

@@ -56,10 +56,20 @@ jobs:
         run: pnpm test:integration
 
   certification:
-    name: Certification
+    name: Certification ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    # Phase 15 matrix: 3×25 + 2×50 + 1×100 years.
-    timeout-minutes: 360
+    # Per-shard horizon (25/50/100y). Do not raise to multi-hour monoliths.
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - CERT-25-A
+          - CERT-25-B
+          - CERT-25-C
+          - CERT-50-A
+          - CERT-50-B
+          - CERT-100
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -73,12 +83,49 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm build
-      - name: Phase 15 long-run certification
-        run: pnpm test:certification
+      - name: Run certification shard
+        run: pnpm test:certification:shard -- --shard=${{ matrix.shard }}
+      - name: Upload shard audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase15-shard-${{ matrix.shard }}
+          path: docs/qa/phase15/shards/${{ matrix.shard }}.json
+          if-no-files-found: error
+
+  certification-aggregate:
+    name: Certification Aggregate
+    runs-on: ubuntu-latest
+    needs: certification
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Download shard audits
+        uses: actions/download-artifact@v4
+        with:
+          pattern: phase15-shard-*
+          path: artifact-shards
+          merge-multiple: true
+      - name: Flatten shard audits
+        run: |
+          mkdir -p docs/qa/phase15/shards
+          find artifact-shards -type f -name '*.json' -exec cp -f {} docs/qa/phase15/shards/ \;
+          ls -la docs/qa/phase15/shards
+      - name: Aggregate certification audits
+        run: pnpm test:certification:aggregate
       - name: Upload long-run audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: phase15-longrun-audit
           path: docs/qa/phase15/longrun-audit.json
-          if-no-files-found: warn
+          if-no-files-found: error

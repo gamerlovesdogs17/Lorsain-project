@@ -57,7 +57,28 @@ describe("notification category filter", () => {
     expect(attentionNotificationCategory({ screen: "campaign" })).toBe("elections");
     expect(attentionNotificationCategory({ screen: "assembly" })).toBe("legislation");
     expect(attentionNotificationCategory({ screen: "party" })).toBe("party");
-    expect(attentionNotificationCategory({ screen: "organizations" })).toBe("caucuses");
+    expect(attentionNotificationCategory({ screen: "organizations" })).toBe("government");
+    expect(
+      attentionNotificationCategory({
+        screen: "organizations",
+        id: "org-trade",
+        label: "Chamber reacts to trade dispute",
+      }),
+    ).toBe("foreign");
+    expect(
+      attentionNotificationCategory({
+        screen: "organizations",
+        id: "org-lobby",
+        label: "Union lobbying on housing bill",
+      }),
+    ).toBe("legislation");
+    expect(
+      attentionNotificationCategory({
+        screen: "organizations",
+        id: "org-endorsement",
+        label: "Civic league endorses nominee",
+      }),
+    ).toBe("elections");
     expect(attentionNotificationCategory({ screen: "foreign" })).toBe("foreign");
     expect(attentionNotificationCategory({ screen: "career" })).toBe("career");
     expect(attentionNotificationCategory({ screen: "executive" })).toBe("government");

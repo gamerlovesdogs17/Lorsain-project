@@ -128,6 +128,30 @@ export function officeNominationContestsForElection(
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
+/** One-pass index for monthly nomination processing (avoids repeated full contest scans). */
+function indexOfficeNominationContestsByElection(
+  state: SimState,
+): Map<string, { gubernatorial: PartyContest[]; assembly: PartyContest[] }> {
+  const index = new Map<string, { gubernatorial: PartyContest[]; assembly: PartyContest[] }>();
+  for (const contest of Object.values(state.partyContests)) {
+    if (!isOfficeNominationContestType(contest.type)) continue;
+    const meta = officeNominationCycleMetadata(contest);
+    if (!meta?.electionId) continue;
+    let bucket = index.get(meta.electionId);
+    if (!bucket) {
+      bucket = { gubernatorial: [], assembly: [] };
+      index.set(meta.electionId, bucket);
+    }
+    if (meta.officeKind === "gubernatorial") bucket.gubernatorial.push(contest);
+    else if (meta.officeKind === "assembly") bucket.assembly.push(contest);
+  }
+  for (const bucket of index.values()) {
+    bucket.gubernatorial.sort((a, b) => a.id.localeCompare(b.id));
+    bucket.assembly.sort((a, b) => a.id.localeCompare(b.id));
+  }
+  return index;
+}
+
 function contestTypeForKind(kind: OfficeNominationKind): PartyContestType {
   return kind === "gubernatorial" ? "gubernatorial_nomination" : "assembly_nomination";
 }
@@ -164,11 +188,11 @@ export function partyAllowsEmergencyAssemblyNomination(
   const def = resolvePartyDefinition(world, state, partyId!);
   if (!def?.nominationRuleId) return false;
   const rule = world.nominationRules[def.nominationRuleId] as
-    | (typeof world.nominationRules)[string] & {
+    | ((typeof world.nominationRules)[string] & {
         allowsEmergencyNomination?: boolean;
         forbidEmergencyNomination?: boolean;
         metadata?: { allowsEmergencyNomination?: boolean; forbidEmergencyNomination?: boolean };
-      }
+      })
     | undefined;
   if (!rule) return false;
   if (rule.forbidEmergencyNomination === true) return false;
@@ -939,10 +963,11 @@ export function processOfficeNominationsMonth(
   commandId: string,
 ): SimEvent[] {
   const events: SimEvent[] = [];
+  const contestIndex = indexOfficeNominationContestsByElection(state);
 
   for (const election of Object.values(state.provincialRuntime.elections)) {
     if (election.status !== "filing_open") continue;
-    const existing = officeNominationContestsForElection(state, election.id, "gubernatorial");
+    const existing = contestIndex.get(election.id)?.gubernatorial ?? [];
     if (existing.length === 0) {
       const ensured = ensureOfficeNominationContests(state, world, {
         officeKind: "gubernatorial",
@@ -953,7 +978,9 @@ export function processOfficeNominationsMonth(
       });
       events.push(...ensured.events);
     }
-    const openOrPlanned = officeNominationContestsForElection(state, election.id, "gubernatorial");
+    const openOrPlanned =
+      contestIndex.get(election.id)?.gubernatorial ??
+      officeNominationContestsForElection(state, election.id, "gubernatorial");
     const unresolved = openOrPlanned.filter(
       (c) => c.status !== "resolved" && c.status !== "cancelled",
     );
@@ -981,13 +1008,16 @@ export function processOfficeNominationsMonth(
     const filingOpen =
       election.assembly?.filingStatus === "open" || election.status === "field_open";
     if (!filingOpen) continue;
-    const ensured = ensureOfficeNominationContests(state, world, {
-      officeKind: "assembly",
-      electionId: election.id,
-      electionDate: election.date,
-      commandId,
-    });
-    events.push(...ensured.events);
+    const existing = contestIndex.get(election.id)?.assembly ?? [];
+    if (existing.length === 0) {
+      const ensured = ensureOfficeNominationContests(state, world, {
+        officeKind: "assembly",
+        electionId: election.id,
+        electionDate: election.date,
+        commandId,
+      });
+      events.push(...ensured.events);
+    }
     const unresolved = officeNominationContestsForElection(state, election.id, "assembly").filter(
       (c) => c.status !== "resolved" && c.status !== "cancelled",
     );

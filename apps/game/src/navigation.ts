@@ -91,6 +91,22 @@ export function attentionNotificationCategory(item: {
 }): NotificationCategory {
   const haystack = `${item.id ?? ""} ${item.label ?? ""}`.toLowerCase();
   if (haystack.includes("caucus")) return "caucuses";
+  // Organization events are contextual — not a blanket "Caucuses" bucket.
+  if (item.screen === "organizations") {
+    if (/treaty|sanction|trade|diplomat|foreign|embassy|war|crisis/.test(haystack)) {
+      return "foreign";
+    }
+    if (/bill|legislat|lobby|amendment|committee|floor/.test(haystack)) {
+      return "legislation";
+    }
+    if (/elect|endors|primary|nominee|campaign|ballot/.test(haystack)) {
+      return "elections";
+    }
+    if (/party|chair|whip|faction/.test(haystack)) {
+      return "party";
+    }
+    return "government";
+  }
   switch (item.screen) {
     case "elections":
     case "campaign":
@@ -99,8 +115,6 @@ export function attentionNotificationCategory(item: {
       return "legislation";
     case "party":
       return "party";
-    case "organizations":
-      return "caucuses";
     case "foreign":
       return "foreign";
     case "career":

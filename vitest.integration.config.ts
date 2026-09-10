@@ -8,8 +8,8 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Long Phase 11 integration cases can starve Vitest's worker RPC heartbeat
  * (`Timeout calling "onTaskUpdate"`) even when every assertion passed.
- * Run them in a single fork with extended limits, and do not fail the job on
- * that known post-run harness noise when the suite itself is green.
+ * Run them in a single fork with extended limits. Do NOT globally ignore
+ * unhandled errors — use scripts/run-vitest-honest.mjs for CI wrappers.
  */
 export default mergeConfig(
   base,
@@ -32,7 +32,6 @@ export default mergeConfig(
         "packages/sim/src/phase12.autonomous-audit.test.ts",
         "packages/sim/src/phase15.longrun.test.ts",
         "packages/sim/src/phase15.multiseed.test.ts",
-        "packages/sim/src/phase15.certification.test.ts",
         "scripts/dist-exports.smoke.test.ts",
       ],
       testTimeout: 900_000,
@@ -45,8 +44,6 @@ export default mergeConfig(
           singleFork: true,
         },
       },
-      // Known Vitest worker RPC timeout after multi-minute cases; assertions already ran.
-      dangerouslyIgnoreUnhandledErrors: true,
       root,
     },
   }),
