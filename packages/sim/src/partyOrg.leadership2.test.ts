@@ -24,6 +24,7 @@ import {
   electorWeight,
   openPartyChairElection,
   resolveChairElection,
+  unalignedBlocElectorId,
 } from "./partyOrg/elections.js";
 import { ensureDefaultOfficers } from "./partyOrg/officers.js";
 import { defaultPartyRules } from "./partyOrg/rules.js";
@@ -347,5 +348,175 @@ describe("partyOrg leadership2: membership weights use partyMemberSupport", () =
     expect(weightA).toBeCloseTo(0.12, 5);
     expect(weightB).toBeCloseTo(0.68, 5);
     expect(weightB).toBeGreaterThan(weightA);
+  });
+
+  it("unaligned mass bloc participates with zero unaligned politicians", () => {
+    const { world, state } = setup("membership-unaligned-bloc");
+    const partyId = partyWithEnoughMembers(state);
+    const caucusRuntime = ensureCaucusRuntime(state);
+    const runtime = ensurePartyOrgRuntime(state);
+
+    const byFaction = new Map<string, string[]>();
+    for (const [id, pol] of Object.entries(state.politicians)) {
+      if (pol.partyId !== partyId || !pol.alive || pol.retired) continue;
+      // Force every party politician into a caucus — zero unaligned elites.
+      if (!pol.factionId) {
+        const anyFaction = Object.keys(caucusRuntime.caucuses).find(
+          (fid) => caucusRuntime.caucuses[fid]?.partyId === partyId,
+        );
+        if (anyFaction) pol.factionId = anyFaction;
+      }
+      if (!pol.factionId) continue;
+      const list = byFaction.get(pol.factionId) ?? [];
+      list.push(id);
+      byFaction.set(pol.factionId, list);
+    }
+
+    const factions = [...byFaction.entries()]
+      .filter(([fid]) => caucusRuntime.caucuses[fid]?.partyId === partyId)
+      .sort((a, b) => a[0].localeCompare(b[0]));
+    expect(factions.length).toBeGreaterThanOrEqual(3);
+
+    const [factionA, membersA] = factions[0]!;
+    const [factionB, membersB] = factions[1]!;
+    const [factionC, membersC] = factions[2]!;
+
+    // Zero out other caucuses' mass support so totals are exactly the three blocs + unaligned.
+    for (const [fid, row] of Object.entries(caucusRuntime.caucuses)) {
+      if (row.partyId !== partyId) continue;
+      if (fid === factionA || fid === factionB || fid === factionC) continue;
+      row.partyMemberSupport = 0;
+      row.membershipShare = 0;
+    }
+
+    caucusRuntime.caucuses[factionA]!.partyMemberSupport = 0.35;
+    caucusRuntime.caucuses[factionB]!.partyMemberSupport = 0.27;
+    caucusRuntime.caucuses[factionC]!.partyMemberSupport = 0.2;
+    caucusRuntime.unalignedByParty[partyId] = {
+      membershipShare: 0,
+      partyMemberSupport: 0.18,
+      assemblyShare: 0,
+      institutionalInfluence: 0,
+    };
+
+    // Confirm no unaligned politician proxies remain.
+    const realUnaligned = Object.values(state.politicians).filter(
+      (p) => p.partyId === partyId && p.alive && !p.retired && !p.factionId,
+    );
+    expect(realUnaligned.length).toBe(0);
+
+    const electors = buildElectorIds(state, world, partyId, "membership");
+    const blocId = unalignedBlocElectorId(partyId);
+    expect(electors).toContain(blocId);
+
+    let totalWeight = 0;
+    let unalignedWeight = 0;
+    for (const electorId of electors) {
+      const w = electorWeight(state, partyId, electorId, electors, "membership");
+      totalWeight += w;
+      if (electorId === blocId) unalignedWeight += w;
+    }
+    expect(unalignedWeight).toBeCloseTo(0.18, 5);
+    expect(Math.abs(totalWeight - 1)).toBeLessThanOrEqual(0.02);
+
+    runtime.metadata[`rules_${partyId}`] = {
+      ...defaultPartyRules(partyId),
+      chairElectionMethod: "membership",
+      votingSystem: "plurality",
+      nationalCommitteeApprovalRequired: false,
+    };
+
+    const candPool = [...membersA, ...membersB, ...membersC]
+      .slice()
+      .sort((a, b) => a.localeCompare(b));
+    const cand1 = candPool[0]!;
+    const cand2 = candPool[1]!;
+    expect(cand1).not.toBe(cand2);
+
+    const setFactionAffinities = (st: SimState) => {
+      const prefer = (electorIds: string[], preferred: string, other: string) => {
+        for (const electorId of electorIds) {
+          if (!st.relationships[electorId]) st.relationships[electorId] = {};
+          st.relationships[electorId]![preferred] = {
+            sourceId: electorId,
+            targetId: preferred,
+            affinity: 0.95,
+            trust: 0,
+            respect: 0,
+            lastUpdatedDate: st.currentDate,
+            interactionCount: 1,
+          };
+          st.relationships[electorId]![other] = {
+            sourceId: electorId,
+            targetId: other,
+            affinity: -0.4,
+            trust: 0,
+            respect: 0,
+            lastUpdatedDate: st.currentDate,
+            interactionCount: 1,
+          };
+        }
+      };
+      // A (0.35) → cand1; B+C (0.47) → cand2; unaligned 0.18 is pivotal.
+      prefer(membersA, cand1, cand2);
+      prefer([...membersB, ...membersC], cand2, cand1);
+    };
+
+    const runWithUnalignedPreference = (preferred: string, other: string) => {
+      const st = jsonClone(state) as SimState;
+      ensurePartyOrgRuntime(st);
+      ensureCaucusRuntime(st);
+      setFactionAffinities(st);
+      if (!st.relationships[blocId]) st.relationships[blocId] = {};
+      st.relationships[blocId]![preferred] = {
+        sourceId: blocId,
+        targetId: preferred,
+        affinity: 1,
+        trust: 0,
+        respect: 0,
+        lastUpdatedDate: st.currentDate,
+        interactionCount: 1,
+      };
+      st.relationships[blocId]![other] = {
+        sourceId: blocId,
+        targetId: other,
+        affinity: -1,
+        trust: 0,
+        respect: 0,
+        lastUpdatedDate: st.currentDate,
+        interactionCount: 1,
+      };
+
+      const opened = openPartyChairElection(st, world, {
+        partyId,
+        commandId: `CMD_OPEN_UNALIGNED_${preferred}`,
+        triggerReason: "challenge",
+      });
+      expect(opened.ok).toBe(true);
+      if (!opened.ok) return null;
+      declareChairCandidacy(st, world, {
+        electionId: opened.electionId,
+        politicianId: cand1,
+        commandId: "CMD_CAND1",
+      });
+      declareChairCandidacy(st, world, {
+        electionId: opened.electionId,
+        politicianId: cand2,
+        commandId: "CMD_CAND2",
+      });
+      const resolved = resolveChairElection(st, world, {
+        electionId: opened.electionId,
+        commandId: `CMD_RESOLVE_UNALIGNED_${preferred}`,
+      });
+      expect(resolved.ok).toBe(true);
+      if (!resolved.ok) return null;
+      return resolved.winnerId;
+    };
+
+    const winnerPrefer1 = runWithUnalignedPreference(cand1, cand2);
+    const winnerPrefer2 = runWithUnalignedPreference(cand2, cand1);
+    expect(winnerPrefer1).toBe(cand1);
+    expect(winnerPrefer2).toBe(cand2);
+    expect(winnerPrefer1).not.toBe(winnerPrefer2);
   });
 });

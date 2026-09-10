@@ -8,11 +8,12 @@
  *
  * Electorate construction:
  *   committee           → seedNationalCommittee / runtime.nationalCommittee roster
- *   membership          → lightweight blocs: elector politician IDs, but each vote
- *                         is weighted by caucus partyMemberSupport (mass/base support),
- *                         NOT membershipShare (elite politician headcount share).
+ *   membership          → weighted aggregate blocs: each caucus partyMemberSupport
+ *                         + unalignedByParty (mass/base support), NOT membershipShare.
  *                         Weight = partyMemberSupport / (# electors in that faction);
  *                         unaligned electors share unalignedByParty.partyMemberSupport.
+ *                         If unaligned share > 0 but no unaligned politician proxies,
+ *                         injects synthetic `__unaligned_bloc__:${partyId}` elector.
  *                         Falls back to equal weight 1 when caucus shares are absent.
  *   convention_delegates → bounded: MPs + national committee + faction chairs (unique)
  *
@@ -23,7 +24,9 @@
  */
 
 import { getAgentProfile } from "../agents/profile.js";
+import { IDEOLOGY_AXES } from "../agents/types.js";
 import { currentAssemblyMemberIds } from "../legislature/state.js";
+import { publicPartyCulture } from "../parties/culture.js";
 import { setPartyLeader } from "../parties/leadership.js";
 import { pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
@@ -41,6 +44,22 @@ import type {
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+/** Deterministic virtual elector for the mass unaligned membership bloc. */
+export function unalignedBlocElectorId(partyId: string): string {
+  return `__unaligned_bloc__:${partyId}`;
+}
+
+export function isUnalignedBlocElector(electorId: string): boolean {
+  return electorId.startsWith("__unaligned_bloc__:");
+}
+
+/** True for real politicians with no faction, or the synthetic unaligned bloc elector. */
+function isMembershipUnalignedElector(state: SimState, electorId: string): boolean {
+  if (isUnalignedBlocElector(electorId)) return true;
+  const pol = state.politicians[electorId];
+  return Boolean(pol && !pol.factionId);
+}
 
 function uniqueIds(ids: string[]): string[] {
   const out: string[] = [];
@@ -62,9 +81,11 @@ function activePartyPoliticianIds(state: SimState, partyId: string): string[] {
 /**
  * Build the electorate for a chair election method.
  *
- * Membership: still returns politician IDs (virtual ballots). Vote weights are
- * applied separately via `electorWeight` using caucus `partyMemberSupport`
- * (mass/base support), not elite `membershipShare`.
+ * Membership: politician IDs as virtual ballots, weighted by caucus
+ * `partyMemberSupport` (mass/base support), not elite `membershipShare`.
+ * When unaligned mass support exists but no unaligned politician proxies,
+ * injects a synthetic `__unaligned_bloc__:${partyId}` elector so the bloc
+ * still participates.
  */
 export function buildElectorIds(
   state: SimState,
@@ -107,8 +128,16 @@ export function buildElectorIds(
     return bounded.length > 0 ? bounded : activeInParty.slice(0, 20);
   }
 
-  // membership: all active party politicians as elector proxies
-  return activeInParty;
+  // membership: all active party politicians as elector proxies + synthetic unaligned bloc if needed
+  const electors = activeInParty.slice();
+  const unalignedShare = state.caucusRuntime?.unalignedByParty[partyId]?.partyMemberSupport ?? 0;
+  if (unalignedShare > 0) {
+    const hasUnalignedPolitician = electors.some((id) => isMembershipUnalignedElector(state, id));
+    if (!hasUnalignedPolitician) {
+      electors.push(unalignedBlocElectorId(partyId));
+    }
+  }
+  return electors;
 }
 
 /**
@@ -116,7 +145,8 @@ export function buildElectorIds(
  *
  * Uses caucus `partyMemberSupport` (mass/base party-member support) when available:
  * each elector in a faction receives `partyMemberSupport / count(electors in faction)`.
- * Unaligned electors share `unalignedByParty[partyId].partyMemberSupport`.
+ * Unaligned electors (including the synthetic bloc elector) share
+ * `unalignedByParty[partyId].partyMemberSupport`.
  * Elite `membershipShare` is intentionally ignored for membership chair contests.
  * Without caucus data, weight is 1 (equal one-person-one-vote).
  */
@@ -132,6 +162,13 @@ export function electorWeight(
   const caucusRuntime = state.caucusRuntime;
   if (!caucusRuntime) return 1;
 
+  if (isMembershipUnalignedElector(state, electorId)) {
+    const unalignedShare = caucusRuntime.unalignedByParty[partyId]?.partyMemberSupport ?? 0;
+    const unalignedElectors = electors.filter((id) => isMembershipUnalignedElector(state, id));
+    const n = Math.max(1, unalignedElectors.length);
+    return unalignedShare / n;
+  }
+
   const factionId = state.politicians[electorId]?.factionId ?? null;
   if (factionId && caucusRuntime.caucuses[factionId]) {
     const share = caucusRuntime.caucuses[factionId]!.partyMemberSupport;
@@ -140,14 +177,75 @@ export function electorWeight(
     return share / n;
   }
 
-  const unalignedShare = caucusRuntime.unalignedByParty[partyId]?.partyMemberSupport ?? 0;
-  const unalignedElectors = electors.filter((id) => !state.politicians[id]?.factionId);
-  const n = Math.max(1, unalignedElectors.length);
-  return unalignedShare / n;
+  // Orphan faction tags (no caucus row): treat as zero weight so totals stay ~ partyMemberSupport sum.
+  return 0;
 }
 
-/** Simple affinity lookup, boosted when the elector's caucus endorsed the candidate. */
-function affinityFor(state: SimState, electorId: string, candidateId: string): number {
+type AffinityCtx = {
+  world: KernelWorld;
+  partyId: string;
+  programs?: Record<string, ChairCandidateProgram>;
+};
+
+/**
+ * Unaligned mass-bloc preference: ideology fit to party culture, program
+ * alignment, incumbent familiarity, and campaign strategy match. Soft
+ * relationship overrides are included when present (tests / scripted preference).
+ * No caucus endorsement unanimity — the bloc has no faction endorsement.
+ */
+function unalignedBlocAffinity(
+  state: SimState,
+  ctx: AffinityCtx,
+  electorId: string,
+  candidateId: string,
+): number {
+  let aff = state.relationships[electorId]?.[candidateId]?.affinity ?? 0;
+  const { world, partyId, programs } = ctx;
+  const runtime = ensurePartyOrgRuntime(state);
+
+  const culture = publicPartyCulture(world, state, partyId);
+  const profile = getAgentProfile(world, state, candidateId);
+  if (profile && culture.memberCount > 0) {
+    let ideoSum = 0;
+    for (const axis of IDEOLOGY_AXES) {
+      ideoSum += 1 - Math.min(1, Math.abs(profile.ideology[axis] - (culture.meanIdeology[axis] ?? 0)) / 2);
+    }
+    aff += (ideoSum / IDEOLOGY_AXES.length - 0.5) * 0.9;
+  }
+
+  const program = programs?.[candidateId];
+  if (program) {
+    const priorities = runtime.priorities[partyId] ?? [];
+    if (priorities.includes(program.priorityIssue)) aff += 0.22;
+    if (
+      program.platformDirection === "pragmatic_center" ||
+      program.coalitionStrategy === "broad_tent"
+    ) {
+      aff += 0.12;
+    }
+    const partyCampaign = runtime.campaignStrategies[partyId];
+    if (partyCampaign && program.campaignStrategy === partyCampaign) aff += 0.15;
+  }
+
+  const chairId = runtime.officers[partyId]?.chair?.politicianId;
+  if (chairId === candidateId) aff += 0.18;
+
+  return aff;
+}
+
+/**
+ * Affinity for ranking. Caucus endorsement adds soft bias (~0.35), never a
+ * hard 100% bloc lock. Synthetic unaligned electors use unaligned preference.
+ */
+function affinityFor(
+  state: SimState,
+  electorId: string,
+  candidateId: string,
+  ctx?: AffinityCtx,
+): number {
+  if (ctx && isUnalignedBlocElector(electorId)) {
+    return unalignedBlocAffinity(state, ctx, electorId, candidateId);
+  }
   let aff = state.relationships[electorId]?.[candidateId]?.affinity ?? 0;
   const factionId = state.politicians[electorId]?.factionId;
   if (factionId) {
@@ -158,22 +256,32 @@ function affinityFor(state: SimState, electorId: string, candidateId: string): n
 }
 
 /** Rank candidates for an elector by descending affinity (ties: lexicographic id). */
-function rankCandidates(state: SimState, electorId: string, candidates: string[]): string[] {
+function rankCandidates(
+  state: SimState,
+  electorId: string,
+  candidates: string[],
+  ctx?: AffinityCtx,
+): string[] {
   return candidates.slice().sort((a, b) => {
-    const affA = affinityFor(state, electorId, a);
-    const affB = affinityFor(state, electorId, b);
+    const affA = affinityFor(state, electorId, a, ctx);
+    const affB = affinityFor(state, electorId, b, ctx);
     if (affA !== affB) return affB - affA;
     return a.localeCompare(b);
   });
 }
 
-function pickTopAffinity(state: SimState, electorId: string, candidates: string[]): string | null {
+function pickTopAffinity(
+  state: SimState,
+  electorId: string,
+  candidates: string[],
+  ctx?: AffinityCtx,
+): string | null {
   if (candidates.length === 0) return null;
   let best: string = candidates[0]!;
-  let bestAffinity = affinityFor(state, electorId, best);
+  let bestAffinity = affinityFor(state, electorId, best, ctx);
   for (let i = 1; i < candidates.length; i++) {
     const cid = candidates[i]!;
-    const aff = affinityFor(state, electorId, cid);
+    const aff = affinityFor(state, electorId, cid, ctx);
     if (aff > bestAffinity || (aff === bestAffinity && cid < best)) {
       bestAffinity = aff;
       best = cid;
@@ -187,11 +295,12 @@ function tallyFirstPreferences(
   electors: string[],
   weights: Record<string, number>,
   candidates: string[],
+  ctx?: AffinityCtx,
 ): Record<string, number> {
   const tally: Record<string, number> = {};
   for (const cid of candidates) tally[cid] = 0;
   for (const electorId of electors) {
-    const best = pickTopAffinity(state, electorId, candidates);
+    const best = pickTopAffinity(state, electorId, candidates, ctx);
     if (!best) continue;
     tally[best] = (tally[best] ?? 0) + (weights[electorId] ?? 1);
   }
@@ -226,8 +335,9 @@ function resolveRunoff(
   electors: string[],
   weights: Record<string, number>,
   candidates: string[],
+  ctx?: AffinityCtx,
 ): { winnerId: string; tally: Record<string, number> } {
-  const first = tallyFirstPreferences(state, electors, weights, candidates);
+  const first = tallyFirstPreferences(state, electors, weights, candidates, ctx);
   const firstWinner = pluralityWinner(candidates, first);
   if (candidates.length <= 2 || hasMajority(first, firstWinner)) {
     return { winnerId: firstWinner, tally: first };
@@ -241,7 +351,7 @@ function resolveRunoff(
     return a.localeCompare(b);
   });
   const top2 = ordered.slice(0, 2);
-  const second = tallyFirstPreferences(state, electors, weights, top2);
+  const second = tallyFirstPreferences(state, electors, weights, top2, ctx);
   return { winnerId: pluralityWinner(top2, second), tally: second };
 }
 
@@ -254,6 +364,7 @@ function resolveRankedChoice(
   electors: string[],
   weights: Record<string, number>,
   candidates: string[],
+  ctx?: AffinityCtx,
 ): { winnerId: string; tally: Record<string, number> } {
   let remaining = candidates.slice();
   let lastTally: Record<string, number> = {};
@@ -263,7 +374,7 @@ function resolveRankedChoice(
     for (const cid of remaining) tally[cid] = 0;
 
     for (const electorId of electors) {
-      const ranking = rankCandidates(state, electorId, remaining);
+      const ranking = rankCandidates(state, electorId, remaining, ctx);
       const top = ranking[0];
       if (!top) continue;
       tally[top] = (tally[top] ?? 0) + (weights[electorId] ?? 1);
@@ -297,14 +408,15 @@ function resolveByVotingSystem(
   weights: Record<string, number>,
   candidates: string[],
   votingSystem: VotingSystem,
+  ctx?: AffinityCtx,
 ): { winnerId: string; tally: Record<string, number> } {
   if (votingSystem === "ranked_choice") {
-    return resolveRankedChoice(state, electors, weights, candidates);
+    return resolveRankedChoice(state, electors, weights, candidates, ctx);
   }
   if (votingSystem === "runoff" || votingSystem === "multiple_ballot") {
-    return resolveRunoff(state, electors, weights, candidates);
+    return resolveRunoff(state, electors, weights, candidates, ctx);
   }
-  const tally = tallyFirstPreferences(state, electors, weights, candidates);
+  const tally = tallyFirstPreferences(state, electors, weights, candidates, ctx);
   return { winnerId: pluralityWinner(candidates, tally), tally };
 }
 
@@ -641,12 +753,18 @@ export function resolveChairElection(
     );
   }
 
+  const affinityCtx: AffinityCtx = {
+    world,
+    partyId: election.partyId,
+    programs: election.programs,
+  };
   const { winnerId, tally } = resolveByVotingSystem(
     state,
     electors,
     weights,
     election.candidates,
     votingSystem,
+    affinityCtx,
   );
   election.tally = tally;
   applyWinner(state, world, runtime, election, winnerId, events, args.commandId);
