@@ -58,8 +58,8 @@ jobs:
   certification:
     name: Certification ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    # Per-shard horizon (25/50/100y). Do not raise to multi-hour monoliths.
-    timeout-minutes: 90
+    # Per-shard horizon (25/50/100y). 100y needs more headroom than 25y.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
