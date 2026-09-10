@@ -22,6 +22,7 @@ import {
   isElectionStatus,
   isElectionType,
   type AssemblyElectionCycle,
+  type AssemblyEmergencySelection,
   type BallotGroupArchive,
   type CandidateStanding,
   type DomainResolutionRecord,
@@ -32,6 +33,47 @@ import {
   type PollRecord,
   type TurnoutRecord,
 } from "./types.js";
+
+const EMERGENCY_AUTHORITIES = new Set([
+  "party_committee",
+  "local_organization",
+  "automatic_incumbent",
+]);
+const EMERGENCY_METHODS = new Set([
+  "committee_emergency",
+  "local_emergency",
+  "incumbent_renomination",
+]);
+
+function parseAssemblyEmergencySelection(
+  raw: unknown,
+  politicianId: string,
+): AssemblyEmergencySelection | null | string {
+  if (raw == null) return null;
+  if (!isRecord(raw)) return "emergencySelection";
+  if (
+    raw.politicianId !== politicianId ||
+    typeof raw.partyId !== "string" ||
+    typeof raw.constituencyId !== "string" ||
+    !isIsoDate(raw.date) ||
+    typeof raw.authority !== "string" ||
+    !EMERGENCY_AUTHORITIES.has(raw.authority) ||
+    typeof raw.reason !== "string" ||
+    typeof raw.selectionMethod !== "string" ||
+    !EMERGENCY_METHODS.has(raw.selectionMethod)
+  ) {
+    return "emergencySelection";
+  }
+  return {
+    politicianId,
+    partyId: raw.partyId,
+    constituencyId: raw.constituencyId,
+    date: raw.date,
+    authority: raw.authority as AssemblyEmergencySelection["authority"],
+    reason: raw.reason,
+    selectionMethod: raw.selectionMethod as AssemblyEmergencySelection["selectionMethod"],
+  };
+}
 
 function isAssemblyElectionMode(v: unknown): v is AssemblyElectionMode {
   return typeof v === "string" && (ASSEMBLY_ELECTION_MODES as readonly string[]).includes(v);
@@ -104,6 +146,7 @@ function parseCandidate(pid: string, raw: unknown): ElectionCandidate | string {
     publicIdeology: ideology,
     withdrawn: raw.withdrawn,
     independentQualified,
+    ...(raw.emergencySelection === true ? { emergencySelection: true } : {}),
   };
 }
 
@@ -198,6 +241,8 @@ function parseAssemblyCycle(raw: unknown): AssemblyElectionCycle | null | string
     ) {
       return `assembly.candidacies.${pid}`;
     }
+    const parsedEmergency = parseAssemblyEmergencySelection(value.emergencySelection, pid);
+    if (typeof parsedEmergency === "string") return `assembly.candidacies.${pid}`;
     candidacies[pid] = {
       politicianId: pid,
       constituencyId: value.constituencyId,
@@ -206,6 +251,7 @@ function parseAssemblyCycle(raw: unknown): AssemblyElectionCycle | null | string
       source: value.source,
       incumbent: value.incumbent,
       status: value.status,
+      ...(parsedEmergency ? { emergencySelection: parsedEmergency } : {}),
     };
   }
   if (!isRecord(raw.constituencyFields) || !isRecord(raw.constituencyResults)) {

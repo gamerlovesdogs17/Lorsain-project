@@ -2,11 +2,12 @@
  * Assembly office-nomination integrity checks (constituency multi-nominee model).
  *
  * Detects: duplicate candidates, dead on ballot, orphan nomination winners,
- * co-partisan fillers alongside nominees, and stale nomination contests.
+ * co-partisan fillers alongside nominees, unnominated party candidates, and
+ * stale nomination contests.
  */
 import type { KernelWorld, SimState } from "../types.js";
 import {
-  isOfficeNominationContestType,
+  hasAuthoritativeAssemblySelection,
   officeNominationContestsForElection,
   officeNominationCycleMetadata,
   officeNominationWinnerIds,
@@ -18,6 +19,7 @@ export type NominationIntegrityCode =
   | "dead_on_ballot"
   | "orphan_nomination"
   | "filler_with_nominee"
+  | "unnominated_party_candidate"
   | "stale_contest";
 
 export type NominationIntegrityIssue = {
@@ -117,17 +119,16 @@ export function auditAssemblyNominationIntegrity(
     for (const candidacy of Object.values(cycle.candidacies)) {
       if (candidacy.status !== "filed" || !candidacy.partyId) continue;
       if (!partyRequiresOfficeNomination(world, state, candidacy.partyId)) continue;
-      const sourceContestId = election.candidates[candidacy.politicianId]?.sourceContestId ?? null;
-      const isNominee = sourceContestId
-        ? (() => {
-            const contest = state.partyContests[sourceContestId];
-            if (!contest || !isOfficeNominationContestType(contest.type)) return false;
-            return officeNominationWinnerIds(contest).includes(candidacy.politicianId);
-          })()
-        : nomineeKeys.has(
-            `${candidacy.partyId}::${candidacy.constituencyId}::${candidacy.politicianId}`,
-          );
-      if (isNominee) continue;
+      if (hasAuthoritativeAssemblySelection(state, election, candidacy)) continue;
+
+      issues.push({
+        code: "unnominated_party_candidate",
+        electionId: election.id,
+        politicianId: candidacy.politicianId,
+        partyId: candidacy.partyId,
+        constituencyId: candidacy.constituencyId,
+        message: `party candidate ${candidacy.politicianId} on ${candidacy.constituencyId} lacks nomination or emergency selection`,
+      });
 
       const partyHasNominee = [...nomineeKeys].some((key) =>
         key.startsWith(`${candidacy.partyId}::${candidacy.constituencyId}::`),

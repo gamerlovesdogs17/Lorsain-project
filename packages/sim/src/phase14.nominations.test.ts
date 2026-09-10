@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSimulation } from "./engine.js";
 import { loadTerenaWorld } from "./integration/harness.js";
 import { createRngService } from "./rng.js";
+import { allocateAssemblyCandidateFields, assemblyCandidateEligibilityError } from "./elections/assembly-cycle.js";
 import {
   ensureOfficeNominationContests,
   officeNominationContestsForElection,
@@ -10,6 +11,7 @@ import {
   openOfficeNominationContests,
   resolveOfficeNominationContests,
 } from "./parties/officeNominations.js";
+import { auditAssemblyNominationIntegrity } from "./parties/nominationIntegrity.js";
 import { partyNominationMethod } from "./campaigns/nominations.js";
 import type { SimState } from "./types.js";
 
@@ -353,6 +355,260 @@ describe("Phase 14 office nominations", () => {
     if (filler && !winners.includes(filler)) {
       expect(election.assembly!.candidacies[filler]?.status).toBe("withdrawn");
     }
+  });
+
+  it("assembly allocation records emergency selection instead of silent fillers", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, seed: "p14-nom-emerg", playerPoliticianId: "NPC146" });
+    const state = jsonClone(sim.getSnapshot() as SimState);
+    const rng = createRngService("p14-nom-emerg-resolve");
+
+    const multiSeat =
+      Object.keys(world.constituencyElectorate)
+        .filter((id) => (world.constituencyElectorate[id]?.seats ?? 0) >= 2)
+        .sort()[0] ?? Object.keys(world.constituencyElectorate).sort()[0]!;
+    world.constituencyElectorate[multiSeat]!.seats = Math.max(3, world.constituencyElectorate[multiSeat]!.seats);
+
+    let election = Object.values(state.elections).find((e) => e.type === "assembly");
+    if (!election) {
+      const id = "ELEC_ASM_TEST_EMERG";
+      state.elections[id] = {
+        id,
+        type: "assembly",
+        date: "2030-05-01",
+        status: "field_open",
+        geographyKind: "national",
+        constituencyId: null,
+        seats: 120,
+        fieldFinalized: false,
+        candidates: {},
+        partiesWithoutNominee: [],
+        turnout: null,
+        countInput: null,
+        countArchive: null,
+        winnerIds: [],
+        resultEventId: null,
+        assembly: {
+          filingStatus: "open",
+          filingOpenDate: state.currentDate,
+          filingDeadlineDate: "2030-04-01",
+          decisions: {},
+          candidacies: {},
+          constituencyFields: {
+            [multiSeat]: {
+              constituencyId: multiSeat,
+              magnitude: world.constituencyElectorate[multiSeat]!.seats,
+              candidateIds: [],
+              finalizedDate: null,
+            },
+          },
+          constituencyResults: {},
+          partySeatTotals: {},
+        },
+        metadata: {},
+      };
+      election = state.elections[id]!;
+    } else {
+      election.status = "field_open";
+      election.fieldFinalized = false;
+      if (!election.assembly) {
+        election.assembly = {
+          filingStatus: "open",
+          filingOpenDate: state.currentDate,
+          filingDeadlineDate: "2030-04-01",
+          decisions: {},
+          candidacies: {},
+          constituencyFields: {},
+          constituencyResults: {},
+          partySeatTotals: {},
+          previousPartySeatTotals: {},
+        };
+      }
+      election.assembly.filingStatus = "open";
+      election.assembly.constituencyFields[multiSeat] = {
+        constituencyId: multiSeat,
+        magnitude: world.constituencyElectorate[multiSeat]!.seats,
+        candidateIds: election.assembly.constituencyFields[multiSeat]?.candidateIds ?? [],
+        finalizedDate: null,
+      };
+    }
+
+    const partyId = "PARTY_LAB";
+    ensureOfficeNominationContests(state, world, {
+      officeKind: "assembly",
+      electionId: election.id,
+      electionDate: election.date,
+      partyIds: [partyId],
+      constituencyIds: [multiSeat],
+      maxCandidatesPerParty: 5,
+      commandId: "test",
+    });
+    const contest = officeNominationContestsForElection(state, election.id, "assembly")[0]!;
+    contest.metadata.nominationSlots = 1;
+    resolveOfficeNominationContests(state, world, rng, election.id, "assembly", "test");
+    const winners = officeNominationWinnerIds(
+      officeNominationContestsForElection(state, election.id, "assembly")[0]!,
+    );
+    expect(winners.length).toBeGreaterThanOrEqual(1);
+    for (const winner of winners) {
+      expect(election.assembly!.candidacies[winner]?.status).toBe("filed");
+      expect(election.assembly!.candidacies[winner]?.constituencyId).toBe(multiSeat);
+      expect(election.candidates[winner]?.sourceContestId).toBeTruthy();
+      expect(election.assembly!.constituencyFields[multiSeat]!.candidateIds).toContain(winner);
+    }
+
+    const allocated = allocateAssemblyCandidateFields(state, world, election);
+    expect("error" in allocated).toBe(false);
+    if ("error" in allocated) return;
+
+    const field = allocated.fields[multiSeat]!;
+    expect(field.candidateIds.length).toBeGreaterThanOrEqual(field.magnitude);
+
+    // Nominees that remain eligible stay on the STV field; ineligible incumbents of
+    // other seats are dropped rather than silently relocated.
+    for (const winner of winners) {
+      if (assemblyCandidateEligibilityError(state, world, winner, multiSeat)) continue;
+      expect(field.candidateIds).toContain(winner);
+    }
+
+    // Every nomination-required filed candidacy on the field must have contest or emergency record.
+    for (const pid of field.candidateIds) {
+      const candidacy = allocated.candidacies[pid]!;
+      if (candidacy.partyId !== partyId) continue;
+      const isNominee = winners.includes(pid);
+      if (isNominee) continue;
+      expect(candidacy.emergencySelection).toBeTruthy();
+      expect(candidacy.emergencySelection!.partyId).toBe(partyId);
+      expect(candidacy.emergencySelection!.constituencyId).toBe(multiSeat);
+      expect(candidacy.emergencySelection!.authority).toBeTruthy();
+      expect(candidacy.emergencySelection!.reason.length).toBeGreaterThan(0);
+      expect(candidacy.emergencySelection!.selectionMethod).toMatch(/emergency|incumbent/);
+    }
+
+    // Allocate never returns anonymous fillers: emergency rows are fully recorded.
+    expect(allocated.emergencySelections.length).toBeGreaterThanOrEqual(0);
+    for (const row of allocated.emergencySelections) {
+      expect(row.politicianId).toBeTruthy();
+      expect(row.partyId).toBeTruthy();
+      expect(row.constituencyId).toBeTruthy();
+      expect(row.date).toBeTruthy();
+      expect(row.authority).toBeTruthy();
+      expect(row.reason).toBeTruthy();
+      expect(row.selectionMethod).toBeTruthy();
+      expect(allocated.candidacies[row.politicianId]?.emergencySelection).toEqual(row);
+    }
+
+    election.assembly!.candidacies = allocated.candidacies;
+    election.assembly!.constituencyFields = allocated.fields;
+    for (const candidacy of Object.values(allocated.candidacies)) {
+      const prior = election.candidates[candidacy.politicianId];
+      election.candidates[candidacy.politicianId] = {
+        politicianId: candidacy.politicianId,
+        partyId: candidacy.partyId,
+        sourceContestId: prior?.sourceContestId ?? null,
+        filedDate: candidacy.filedDate,
+        publicIdeology: null,
+        withdrawn: candidacy.status === "withdrawn",
+        independentQualified: false,
+        ...(candidacy.emergencySelection ? { emergencySelection: true } : {}),
+      };
+    }
+    const issues = auditAssemblyNominationIntegrity(state, world, election.id);
+    expect(issues.filter((i) => i.code === "unnominated_party_candidate")).toEqual([]);
+  });
+
+  it("unnominated_party_candidate fires without nomination or emergency record", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({ world, seed: "p14-nom-integrity", playerPoliticianId: "NPC146" });
+    const state = jsonClone(sim.getSnapshot() as SimState);
+    const constituencyId = Object.keys(world.constituencyElectorate).sort()[0]!;
+    const partyId = "PARTY_LAB";
+    const filler = Object.keys(state.politicians)
+      .filter(
+        (id) =>
+          state.politicians[id]?.partyId === partyId &&
+          state.politicians[id]?.alive &&
+          !state.politicians[id]?.retired,
+      )
+      .sort()[0]!;
+
+    const id = "ELEC_ASM_TEST_UNNOM";
+    state.elections[id] = {
+      id,
+      type: "assembly",
+      date: "2030-05-01",
+      status: "field_open",
+      geographyKind: "national",
+      constituencyId: null,
+      seats: 120,
+      fieldFinalized: false,
+      candidates: {
+        [filler]: {
+          politicianId: filler,
+          partyId,
+          sourceContestId: null,
+          filedDate: state.currentDate,
+          publicIdeology: null,
+          withdrawn: false,
+          independentQualified: false,
+        },
+      },
+      partiesWithoutNominee: [],
+      turnout: null,
+      countInput: null,
+      countArchive: null,
+      winnerIds: [],
+      resultEventId: null,
+      assembly: {
+        filingStatus: "open",
+        filingOpenDate: state.currentDate,
+        filingDeadlineDate: "2030-04-01",
+        decisions: {},
+        candidacies: {
+          [filler]: {
+            politicianId: filler,
+            constituencyId,
+            partyId,
+            filedDate: state.currentDate,
+            source: "npc",
+            incumbent: false,
+            status: "filed",
+          },
+        },
+        constituencyFields: {
+          [constituencyId]: {
+            constituencyId,
+            magnitude: world.constituencyElectorate[constituencyId]!.seats,
+            candidateIds: [filler],
+            finalizedDate: null,
+          },
+        },
+        constituencyResults: {},
+        partySeatTotals: {},
+      },
+      metadata: {},
+    };
+
+    const issues = auditAssemblyNominationIntegrity(state, world, id);
+    expect(issues.some((i) => i.code === "unnominated_party_candidate" && i.politicianId === filler)).toBe(
+      true,
+    );
+
+    // Explicit emergency selection clears the integrity finding.
+    state.elections[id]!.assembly!.candidacies[filler]!.emergencySelection = {
+      politicianId: filler,
+      partyId,
+      constituencyId,
+      date: state.currentDate,
+      authority: "party_committee",
+      reason: "test emergency",
+      selectionMethod: "committee_emergency",
+    };
+    state.elections[id]!.candidates[filler]!.emergencySelection = true;
+    const cleared = auditAssemblyNominationIntegrity(state, world, id);
+    expect(
+      cleared.some((i) => i.code === "unnominated_party_candidate" && i.politicianId === filler),
+    ).toBe(false);
   });
 
   it("sync withdraws co-partisan auto-filings so nomination winner is sole candidate", () => {

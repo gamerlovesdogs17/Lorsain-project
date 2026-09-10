@@ -16,6 +16,11 @@ import { pushHistory } from "../scheduler.js";
 import { createCampaignRecord } from "../campaigns/state.js";
 import { attachNominationMethodMetadata } from "../campaigns/nominations.js";
 import { officesOfKind, occupyingTerms } from "../offices.js";
+import type {
+  AssemblyCandidacy,
+  AssemblyEmergencySelection,
+  ElectionState,
+} from "../elections/types.js";
 import {
   createPartyContest,
   declareCandidacy,
@@ -142,6 +147,88 @@ export function partyRequiresOfficeNomination(
   const rule = world.nominationRules[def.nominationRuleId];
   if (!rule || rule.method === "none") return false;
   return true;
+}
+
+/**
+ * Whether a nomination-required party may fill short magnitude via explicit
+ * committee/local emergency selection. Default: allowed. Skip only when a rule
+ * explicitly forbids emergency (`allowsEmergencyNomination === false` or
+ * `forbidEmergencyNomination === true` on the rule object / metadata).
+ */
+export function partyAllowsEmergencyAssemblyNomination(
+  world: KernelWorld,
+  state: SimState,
+  partyId: string | null | undefined,
+): boolean {
+  if (!partyRequiresOfficeNomination(world, state, partyId)) return false;
+  const def = resolvePartyDefinition(world, state, partyId!);
+  if (!def?.nominationRuleId) return false;
+  const rule = world.nominationRules[def.nominationRuleId] as
+    | (typeof world.nominationRules)[string] & {
+        allowsEmergencyNomination?: boolean;
+        forbidEmergencyNomination?: boolean;
+        metadata?: { allowsEmergencyNomination?: boolean; forbidEmergencyNomination?: boolean };
+      }
+    | undefined;
+  if (!rule) return false;
+  if (rule.forbidEmergencyNomination === true) return false;
+  if (rule.allowsEmergencyNomination === false) return false;
+  if (rule.metadata?.forbidEmergencyNomination === true) return false;
+  if (rule.metadata?.allowsEmergencyNomination === false) return false;
+  return true;
+}
+
+/** True when candidacy/election records show a resolved nomination or emergency selection. */
+export function hasAuthoritativeAssemblySelection(
+  state: SimState,
+  election: ElectionState,
+  candidacy: Pick<
+    AssemblyCandidacy,
+    "politicianId" | "partyId" | "constituencyId" | "emergencySelection"
+  >,
+): boolean {
+  if (candidacy.emergencySelection) return true;
+  const filed = election.candidates[candidacy.politicianId];
+  if (filed?.emergencySelection) return true;
+  const sourceContestId = filed?.sourceContestId ?? null;
+  if (sourceContestId) {
+    const contest = state.partyContests[sourceContestId];
+    if (
+      contest &&
+      isOfficeNominationContestType(contest.type) &&
+      contest.status === "resolved" &&
+      officeNominationWinnerIds(contest).includes(candidacy.politicianId)
+    ) {
+      return true;
+    }
+  }
+  for (const contest of officeNominationContestsForElection(state, election.id, "assembly")) {
+    if (contest.status !== "resolved" || contest.partyId !== candidacy.partyId) continue;
+    const meta = officeNominationCycleMetadata(contest);
+    if (!meta || meta.constituencyId !== candidacy.constituencyId) continue;
+    if (officeNominationWinnerIds(contest).includes(candidacy.politicianId)) return true;
+  }
+  return false;
+}
+
+export function buildAssemblyEmergencySelection(args: {
+  politicianId: string;
+  partyId: string;
+  constituencyId: string;
+  date: string;
+  authority?: AssemblyEmergencySelection["authority"];
+  reason: string;
+  selectionMethod?: AssemblyEmergencySelection["selectionMethod"];
+}): AssemblyEmergencySelection {
+  return {
+    politicianId: args.politicianId,
+    partyId: args.partyId,
+    constituencyId: args.constituencyId,
+    date: args.date,
+    authority: args.authority ?? "party_committee",
+    reason: args.reason,
+    selectionMethod: args.selectionMethod ?? "committee_emergency",
+  };
 }
 
 function partyAllowsNomination(world: KernelWorld, state: SimState, partyId: string): boolean {

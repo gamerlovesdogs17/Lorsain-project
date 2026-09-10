@@ -149,6 +149,10 @@ export {
   officeNominationWinnerIds,
   assemblyNomineesForConstituency,
   auditAssemblyNominationIntegrity,
+  partyAllowsEmergencyAssemblyNomination,
+  hasAuthoritativeAssemblySelection,
+  buildAssemblyEmergencySelection,
+  partyRequiresOfficeNomination,
 } from "./parties/index.js";
 export type {
   PartyPlatformIssue,
@@ -158,6 +162,7 @@ export type {
   NominationIntegrityIssue,
   NominationIntegrityCode,
 } from "./parties/index.js";
+export type { AssemblyEmergencySelection } from "./elections/types.js";
 export {
   processCampaignMonth,
   nominationCalendarDates,

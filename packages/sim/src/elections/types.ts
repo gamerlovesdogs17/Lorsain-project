@@ -98,6 +98,21 @@ export type ElectoralEnvironment = {
   issueClimateShift: Record<string, number>;
 };
 
+/**
+ * Explicit non-contest Assembly selection (emergency committee/local fill,
+ * or automatic incumbent renomination). Integrity treats this as authoritative
+ * alongside resolved nomination contest winnerIds / sourceContestId.
+ */
+export type AssemblyEmergencySelection = {
+  politicianId: string;
+  partyId: string;
+  constituencyId: string;
+  date: IsoDate;
+  authority: "party_committee" | "local_organization" | "automatic_incumbent";
+  reason: string;
+  selectionMethod: "committee_emergency" | "local_emergency" | "incumbent_renomination";
+};
+
 export type ElectionCandidate = {
   politicianId: string;
   partyId: string | null;
@@ -111,6 +126,8 @@ export type ElectionCandidate = {
    * Signature/petition mechanics remain deferred. Party nominees are always false.
    */
   independentQualified: boolean;
+  /** True when an explicit emergency / incumbent selection record authorizes the candidacy. */
+  emergencySelection?: boolean;
 };
 
 export type BallotGroupArchive = {
@@ -153,6 +170,8 @@ export type AssemblyCandidacy = {
   source: "player" | "npc" | "generated";
   incumbent: boolean;
   status: AssemblyCandidacyStatus;
+  /** Authoritative non-contest selection (emergency or incumbent renomination). */
+  emergencySelection?: AssemblyEmergencySelection;
 };
 
 export type AssemblyConstituencyField = {
