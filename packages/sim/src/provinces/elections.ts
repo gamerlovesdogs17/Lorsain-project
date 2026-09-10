@@ -8,6 +8,7 @@ import {
   activeTermsForPolitician,
   assumeOffice,
   endTerm,
+  isOccupyingStatus,
   officesAreIncompatible,
   occupyingTerms,
 } from "../offices.js";
@@ -51,39 +52,99 @@ export function gubernatorialEligibilityError(
   politicianId: string,
   provinceId: string,
 ): CommandError | null {
-  const politician = state.politicians[politicianId];
-  if (!politician) return reject("UNKNOWN_POLITICIAN", politicianId);
-  if (!politician.alive || politician.retired) return reject("INELIGIBLE", politicianId);
-  if (!world.provinceIds.includes(provinceId)) return reject("UNKNOWN_PROVINCE", provinceId);
-  if ((politician.homeProvinceId ?? world.politicianHomeProvince[politicianId]) !== provinceId) {
-    return reject("PROVINCIAL_RESIDENCY", `${politicianId} is not resident in ${provinceId}`);
-  }
-  const presidentElect = Object.values(state.elections).some(
-    (election) =>
-      election.type === "presidential" &&
-      election.status === "resolved" &&
-      election.winnerIds.includes(politicianId) &&
-      ((typeof election.metadata.assumptionDate === "string" &&
-        compareIsoDate(state.currentDate, election.metadata.assumptionDate) < 0) ||
+  return gubernatorialEligibilityErrorWithIndex(
+    state,
+    world,
+    politicianId,
+    provinceId,
+    buildGubernatorialScanIndex(state, world),
+  );
+}
+
+type GubernatorialScanIndex = {
+  provinceIds: Set<string>;
+  presidentElectIds: Set<string>;
+  nationalCandidateIds: Set<string>;
+  officeKindsByHolder: Map<string, Array<{ kind: string; provinceId: string | null | undefined }>>;
+  partyLeaderIds: Set<string>;
+};
+
+function buildGubernatorialScanIndex(state: SimState, world: KernelWorld): GubernatorialScanIndex {
+  const provinceIds = new Set(world.provinceIds);
+  const presidentElectIds = new Set<string>();
+  const nationalCandidateIds = new Set<string>();
+  for (const election of Object.values(state.elections)) {
+    if (election.type === "presidential" && election.status === "resolved") {
+      const pendingAssumption =
+        (typeof election.metadata.assumptionDate === "string" &&
+          compareIsoDate(state.currentDate, election.metadata.assumptionDate) < 0) ||
         state.scheduler.events.some(
           (event) =>
             event.eventType === "PRESIDENTIAL_ASSUMPTION_DUE" &&
             event.payload.electionId === election.id &&
             compareIsoDate(state.currentDate, event.dueDate) < 0,
-        )),
-  );
-  if (presidentElect) return reject("INCOMPATIBLE_CANDIDACY", `${politicianId} is President-elect`);
-  const nationalCandidacy = Object.values(state.elections).some((election) => {
-    if (election.status === "resolved" || election.status === "cancelled") return false;
-    if (election.candidates[politicianId] && !election.candidates[politicianId]!.withdrawn)
-      return true;
-    return election.assembly?.candidacies[politicianId]?.status === "filed";
-  });
-  if (nationalCandidacy)
-    return reject("INCOMPATIBLE_CANDIDACY", `${politicianId} is already seeking national office`);
-  for (const term of activeTermsForPolitician(state, politicianId)) {
+        );
+      if (pendingAssumption) {
+        for (const id of election.winnerIds) presidentElectIds.add(id);
+      }
+    }
+    if (election.status === "resolved" || election.status === "cancelled") continue;
+    for (const [id, candidate] of Object.entries(election.candidates)) {
+      if (!candidate.withdrawn) nationalCandidateIds.add(id);
+    }
+    if (election.assembly) {
+      for (const [id, candidacy] of Object.entries(election.assembly.candidacies)) {
+        if (candidacy.status === "filed") nationalCandidateIds.add(id);
+      }
+    }
+  }
+  const officeKindsByHolder = new Map<
+    string,
+    Array<{ kind: string; provinceId: string | null | undefined }>
+  >();
+  for (const term of Object.values(state.officeTerms)) {
+    if (!isOccupyingStatus(term.status)) continue;
     const office = world.offices[term.officeId];
     if (!office) continue;
+    const list = officeKindsByHolder.get(term.holderId);
+    const row = { kind: office.kind, provinceId: office.provinceId };
+    if (list) list.push(row);
+    else officeKindsByHolder.set(term.holderId, [row]);
+  }
+  const partyLeaderIds = new Set<string>();
+  for (const party of Object.values(state.partyStates)) {
+    if (party.leaderId) partyLeaderIds.add(party.leaderId);
+  }
+  return {
+    provinceIds,
+    presidentElectIds,
+    nationalCandidateIds,
+    officeKindsByHolder,
+    partyLeaderIds,
+  };
+}
+
+function gubernatorialEligibilityErrorWithIndex(
+  state: SimState,
+  world: KernelWorld,
+  politicianId: string,
+  provinceId: string,
+  index: GubernatorialScanIndex,
+): CommandError | null {
+  const politician = state.politicians[politicianId];
+  if (!politician) return reject("UNKNOWN_POLITICIAN", politicianId);
+  if (!politician.alive || politician.retired) return reject("INELIGIBLE", politicianId);
+  if (!index.provinceIds.has(provinceId)) return reject("UNKNOWN_PROVINCE", provinceId);
+  if ((politician.homeProvinceId ?? world.politicianHomeProvince[politicianId]) !== provinceId) {
+    return reject("PROVINCIAL_RESIDENCY", `${politicianId} is not resident in ${provinceId}`);
+  }
+  if (index.presidentElectIds.has(politicianId)) {
+    return reject("INCOMPATIBLE_CANDIDACY", `${politicianId} is President-elect`);
+  }
+  if (index.nationalCandidateIds.has(politicianId)) {
+    return reject("INCOMPATIBLE_CANDIDACY", `${politicianId} is already seeking national office`);
+  }
+  for (const office of index.officeKindsByHolder.get(politicianId) ?? []) {
     if (office.kind === "constitutional_court_justice" || office.kind === "president") {
       return reject("INCOMPATIBLE_OFFICE", office.kind);
     }
@@ -226,16 +287,19 @@ function npcCandidateScore(
   world: KernelWorld,
   politicianId: string,
   election: GubernatorialElection,
+  index?: GubernatorialScanIndex,
 ): number {
   const standing = candidateStandingOrDefault(world, state, politicianId);
-  const kinds = activeTermsForPolitician(state, politicianId).map(
-    (term) => world.offices[term.officeId]?.kind,
-  );
+  const kinds = index
+    ? (index.officeKindsByHolder.get(politicianId) ?? []).map((row) => row.kind)
+    : activeTermsForPolitician(state, politicianId).map(
+        (term) => world.offices[term.officeId]?.kind,
+      );
   let score = standing.nameRecognition * 0.8 + (standing.favorability + 1) * 0.35;
   if (kinds.includes("governor")) score += 0.55;
   if (kinds.includes("mayor")) score += 0.24;
   if (kinds.includes("minister")) score += 0.18;
-  if (Object.values(state.partyStates).some((party) => party.leaderId === politicianId))
+  if (index ? index.partyLeaderIds.has(politicianId) : Object.values(state.partyStates).some((party) => party.leaderId === politicianId))
     score += 0.2;
   score += (stableHash(`${election.id}:${politicianId}`) % 1000) / 100000;
   return score;
@@ -293,9 +357,19 @@ function openField(
     );
   }
 
+  const scanIndex = buildGubernatorialScanIndex(state, world);
   const eligibleIds = Object.keys(state.politicians)
     .filter((id) => id !== state.playerPoliticianId)
-    .filter((id) => gubernatorialEligibilityError(state, world, id, election.provinceId) == null)
+    .filter(
+      (id) =>
+        gubernatorialEligibilityErrorWithIndex(
+          state,
+          world,
+          id,
+          election.provinceId,
+          scanIndex,
+        ) == null,
+    )
     .filter(
       (id) => id !== election.incumbentId || election.incumbentDecision === "seek_reelection",
     );
@@ -321,15 +395,31 @@ function openField(
       );
       if (
         promoted &&
-        gubernatorialEligibilityError(state, world, promoted, election.provinceId) == null
+        gubernatorialEligibilityErrorWithIndex(
+          state,
+          world,
+          promoted,
+          election.provinceId,
+          scanIndex,
+        ) == null
       ) {
         eligibleIds.push(promoted);
+        // Newly promoted politicians may hold no offices yet; keep index coherent.
+        if (!scanIndex.officeKindsByHolder.has(promoted)) {
+          scanIndex.officeKindsByHolder.set(promoted, []);
+        }
       }
+    }
+  }
+  const scoreById = new Map<string, number>();
+  for (const id of eligibleIds) {
+    if (!scoreById.has(id)) {
+      scoreById.set(id, npcCandidateScore(state, world, id, election, scanIndex));
     }
   }
   const pool = [...new Set(eligibleIds)].sort(
     (a, b) =>
-      npcCandidateScore(state, world, b, election) - npcCandidateScore(state, world, a, election) ||
+      (scoreById.get(b) ?? 0) - (scoreById.get(a) ?? 0) ||
       stableHash(`${election.id}:${a}`) - stableHash(`${election.id}:${b}`),
   );
   if (
@@ -343,7 +433,13 @@ function openField(
     if (!partyRequiresOfficeNomination(world, state, incumbentParty)) {
       const standing = candidateStandingOrDefault(world, state, incumbent);
       if (
-        gubernatorialEligibilityError(state, world, incumbent, election.provinceId) == null &&
+        gubernatorialEligibilityErrorWithIndex(
+          state,
+          world,
+          incumbent,
+          election.provinceId,
+          scanIndex,
+        ) == null &&
         standing.favorability > -0.55
       ) {
         election.candidates[incumbent] = filedCandidate(state, world, election, incumbent, "npc");
@@ -485,6 +581,9 @@ function resolveElection(
     .sort();
   if (candidateIds.length === 0) return [];
   const votes = Object.fromEntries(candidateIds.map((id) => [id, 0])) as Record<string, number>;
+  const campaignByCandidate = new Map(
+    candidateIds.map((id) => [id, campaignForElection(state, id, election.id)] as const),
+  );
   let electorateWeight = 0;
   let turnoutWeight = 0;
   for (const [constituencyId, electorate] of Object.entries(world.constituencyElectorate)) {
@@ -499,7 +598,7 @@ function resolveElection(
       const weight = registered * bloc.weight * (0.82 + bloc.turnoutPropensity * 0.18);
       const shares = blocSupportShares(world, state, bloc, candidateIds);
       for (const politicianId of candidateIds) {
-        const campaign = campaignForElection(state, politicianId, election.id);
+        const campaign = campaignByCandidate.get(politicianId);
         const organization = campaign
           ? 1 +
             campaign.fieldOrganization * 0.05 +
@@ -543,7 +642,7 @@ function resolveElection(
   });
   election.status = "resolved";
   for (const candidateId of candidateIds) {
-    const campaign = campaignForElection(state, candidateId, election.id);
+    const campaign = campaignByCandidate.get(candidateId);
     if (!campaign) continue;
     campaign.status = candidateId === election.winnerId ? "won" : "lost";
     campaign.endedDate = state.currentDate;
@@ -685,6 +784,12 @@ function reconcileGovernorAuthority(
   commandId: string,
 ): SimEvent[] {
   const events: SimEvent[] = [];
+  const electionsByProvince = new Map<string, typeof state.provincialRuntime.elections[string][]>();
+  for (const row of Object.values(state.provincialRuntime.elections)) {
+    const list = electionsByProvince.get(row.provinceId);
+    if (list) list.push(row);
+    else electionsByProvince.set(row.provinceId, [row]);
+  }
   for (const provinceId of world.provinceIds) {
     const office = governorOfficeForProvince(world, provinceId);
     if (!office) continue;
@@ -721,18 +826,14 @@ function reconcileGovernorAuthority(
           : "holder_ineligible";
       endTerm(state, term.id, state.currentDate, reason);
     }
+    const provinceElections = electionsByProvince.get(provinceId) ?? [];
     const futureRegular =
-      Object.values(state.provincialRuntime.elections)
-        .filter((row) => row.provinceId === provinceId && row.status !== "assumed")
+      provinceElections
+        .filter((row) => row.status !== "assumed")
         .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0] ?? null;
     let future =
-      Object.values(state.provincialRuntime.elections)
-        .filter(
-          (row) =>
-            row.provinceId === provinceId &&
-            row.cycleKind === "special" &&
-            row.status !== "assumed",
-        )
+      provinceElections
+        .filter((row) => row.cycleKind === "special" && row.status !== "assumed")
         .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))[0] ?? null;
     if (
       !future &&
@@ -740,6 +841,9 @@ function reconcileGovernorAuthority(
     ) {
       future = createGubernatorialSpecialElection(provinceId, state.currentDate);
       state.provincialRuntime.elections[future.id] = future;
+      const list = electionsByProvince.get(provinceId) ?? [];
+      list.push(future);
+      electionsByProvince.set(provinceId, list);
     }
     if (!future) future = futureRegular;
     if (!future) {
@@ -749,6 +853,9 @@ function reconcileGovernorAuthority(
         null,
       );
       state.provincialRuntime.elections[future.id] = future;
+      const list = electionsByProvince.get(provinceId) ?? [];
+      list.push(future);
+      electionsByProvince.set(provinceId, list);
     }
     if (!state.provincialRuntime.governorVacancies[provinceId]) {
       state.provincialRuntime.governorVacancies[provinceId] = {

@@ -15,7 +15,7 @@ import type { RngService } from "../rng.js";
 import { pushHistory } from "../scheduler.js";
 import { createCampaignRecord } from "../campaigns/state.js";
 import { attachNominationMethodMetadata } from "../campaigns/nominations.js";
-import { officesOfKind, occupyingTerms } from "../offices.js";
+import { isOccupyingStatus, officesOfKind, occupyingTerms } from "../offices.js";
 import type {
   AssemblyCandidacy,
   AssemblyEmergencySelection,
@@ -32,6 +32,7 @@ import { membershipPartyIds, partyMembers, resolvePartyDefinition } from "./quer
 import { INDEPENDENT_AGGREGATE_ID } from "./policy.js";
 import type { PartyContest, PartyContestType } from "./types.js";
 import { emptyQualificationEvidence } from "./types.js";
+import type { CampaignState } from "../campaigns/types.js";
 
 function reject(code: string, message: string): CommandError {
   return { code, message };
@@ -128,11 +129,14 @@ export function officeNominationContestsForElection(
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
+type OfficeNominationContestIndex = Map<
+  string,
+  { gubernatorial: PartyContest[]; assembly: PartyContest[] }
+>;
+
 /** One-pass index for monthly nomination processing (avoids repeated full contest scans). */
-function indexOfficeNominationContestsByElection(
-  state: SimState,
-): Map<string, { gubernatorial: PartyContest[]; assembly: PartyContest[] }> {
-  const index = new Map<string, { gubernatorial: PartyContest[]; assembly: PartyContest[] }>();
+function indexOfficeNominationContestsByElection(state: SimState): OfficeNominationContestIndex {
+  const index: OfficeNominationContestIndex = new Map();
   for (const contest of Object.values(state.partyContests)) {
     if (!isOfficeNominationContestType(contest.type)) continue;
     const meta = officeNominationCycleMetadata(contest);
@@ -150,6 +154,133 @@ function indexOfficeNominationContestsByElection(
     bucket.assembly.sort((a, b) => a.id.localeCompare(b.id));
   }
   return index;
+}
+
+function contestsFromIndex(
+  index: OfficeNominationContestIndex | undefined,
+  state: SimState,
+  electionId: string,
+  officeKind: OfficeNominationKind,
+): PartyContest[] {
+  if (index) {
+    const bucket = index.get(electionId);
+    return officeKind === "gubernatorial"
+      ? (bucket?.gubernatorial ?? [])
+      : (bucket?.assembly ?? []);
+  }
+  return officeNominationContestsForElection(state, electionId, officeKind);
+}
+
+/** Alive politicians grouped by party (sorted ids — matches partyMembers). */
+function indexPartyMembers(state: SimState): Map<string, string[]> {
+  const byParty = new Map<string, string[]>();
+  for (const p of Object.values(state.politicians)) {
+    if (!p.alive || p.retired || !p.partyId) continue;
+    const list = byParty.get(p.partyId);
+    if (list) list.push(p.id);
+    else byParty.set(p.partyId, [p.id]);
+  }
+  for (const list of byParty.values()) list.sort();
+  return byParty;
+}
+
+/**
+ * One-pass assembly occupancy: incumbents by party, preferred holders by
+ * constituency+party, and live seat totals — avoids nested occupyingTerms scans.
+ */
+type AssemblyOccupancyIndex = {
+  incumbentsByParty: Map<string, Set<string>>;
+  preferredByConstituencyParty: Map<string, string[]>;
+  liveSeatTotals: Record<string, number>;
+};
+
+function indexAssemblyOccupancy(state: SimState, world: KernelWorld): AssemblyOccupancyIndex {
+  const assemblyOfficeIds = new Set<string>();
+  for (const office of Object.values(world.offices)) {
+    if (office.kind === "assembly_member") assemblyOfficeIds.add(office.id);
+  }
+  const holdersByOffice = new Map<string, string[]>();
+  const liveSeatTotals: Record<string, number> = {};
+  for (const term of Object.values(state.officeTerms)) {
+    if (!isOccupyingStatus(term.status) || !assemblyOfficeIds.has(term.officeId)) continue;
+    const partyId = state.politicians[term.holderId]?.partyId ?? "independent";
+    liveSeatTotals[partyId] = (liveSeatTotals[partyId] ?? 0) + 1;
+    const holders = holdersByOffice.get(term.officeId);
+    if (holders) holders.push(term.holderId);
+    else holdersByOffice.set(term.officeId, [term.holderId]);
+  }
+  // Walk offices in officesOfKind order so preferred seeds match the prior nested scans.
+  const incumbentsByParty = new Map<string, Set<string>>();
+  const preferredByConstituencyParty = new Map<string, string[]>();
+  for (const office of Object.values(world.offices)) {
+    if (office.kind !== "assembly_member") continue;
+    const holders = holdersByOffice.get(office.id) ?? [];
+    for (const holderId of holders) {
+      const partyId = state.politicians[holderId]?.partyId;
+      if (!partyId || !office.constituencyId) continue;
+      let seats = incumbentsByParty.get(partyId);
+      if (!seats) {
+        seats = new Set();
+        incumbentsByParty.set(partyId, seats);
+      }
+      seats.add(office.constituencyId);
+      const key = `${office.constituencyId}::${partyId}`;
+      const preferred = preferredByConstituencyParty.get(key);
+      if (preferred) preferred.push(holderId);
+      else preferredByConstituencyParty.set(key, [holderId]);
+    }
+  }
+  return { incumbentsByParty, preferredByConstituencyParty, liveSeatTotals };
+}
+
+type AssemblyNominationScratch = {
+  occupancy: AssemblyOccupancyIndex;
+  membersByParty: Map<string, string[]>;
+  previousSeatTotals: Record<string, number> | null;
+  chamber: number;
+  constituencyIds: string[];
+};
+
+function assemblyNominationScratch(
+  state: SimState,
+  world: KernelWorld,
+  electionId: string,
+): AssemblyNominationScratch {
+  const election = state.elections[electionId];
+  const previous =
+    election?.assembly?.previousPartySeatTotals &&
+    Object.keys(election.assembly.previousPartySeatTotals).length > 0
+      ? election.assembly.previousPartySeatTotals
+      : null;
+  return {
+    occupancy: indexAssemblyOccupancy(state, world),
+    membersByParty: indexPartyMembers(state),
+    previousSeatTotals: previous,
+    chamber: world.legislativeConstitution.assemblySeatCount,
+    constituencyIds: Object.keys(world.constituencyElectorate).sort(),
+  };
+}
+
+function partySeatShareFromScratch(
+  scratch: AssemblyNominationScratch,
+  partyId: string,
+): number {
+  const totals = scratch.previousSeatTotals ?? scratch.occupancy.liveSeatTotals;
+  const partySeats = totals[partyId] ?? 0;
+  const totalSeats = Object.values(totals).reduce((sum, n) => sum + n, 0);
+  const chamber = scratch.chamber || totalSeats;
+  return partySeats / Math.max(1, totalSeats || chamber);
+}
+
+function indexActiveCampaignsByPolitician(state: SimState): Map<string, CampaignState[]> {
+  const byPolitician = new Map<string, CampaignState[]>();
+  for (const campaign of Object.values(state.campaignRuntime.campaigns)) {
+    if (campaign.status !== "active" && campaign.status !== "exploring") continue;
+    const list = byPolitician.get(campaign.politicianId);
+    if (list) list.push(campaign);
+    else byPolitician.set(campaign.politicianId, [campaign]);
+  }
+  return byPolitician;
 }
 
 function contestTypeForKind(kind: OfficeNominationKind): PartyContestType {
@@ -259,8 +390,13 @@ function partyAllowsNomination(world: KernelWorld, state: SimState, partyId: str
   return partyRequiresOfficeNomination(world, state, partyId);
 }
 
-function seedDeclaredEntries(state: SimState, partyId: string, maxCandidates: number): string[] {
-  const members = partyMembers(state, partyId);
+function seedDeclaredEntries(
+  state: SimState,
+  partyId: string,
+  maxCandidates: number,
+  memberIds?: readonly string[],
+): string[] {
+  const members = memberIds ?? partyMembers(state, partyId);
   const scored = members
     .map((id) => {
       const standing = state.candidateStanding[id];
@@ -278,7 +414,9 @@ function partyIncumbentConstituencyIds(
   state: SimState,
   world: KernelWorld,
   partyId: string,
+  occupancy?: AssemblyOccupancyIndex,
 ): Set<string> {
+  if (occupancy) return occupancy.incumbentsByParty.get(partyId) ?? new Set();
   const out = new Set<string>();
   for (const office of officesOfKind(world, "assembly_member")) {
     if (!office.constituencyId) continue;
@@ -296,7 +434,9 @@ function partySeatShareForElection(
   world: KernelWorld,
   electionId: string,
   partyId: string,
+  scratch?: AssemblyNominationScratch,
 ): number {
+  if (scratch) return partySeatShareFromScratch(scratch, partyId);
   const election = state.elections[electionId];
   const totals =
     election?.assembly?.previousPartySeatTotals &&
@@ -323,13 +463,17 @@ export function assemblyNominationSlots(
   state: SimState,
   world: KernelWorld,
   args: { electionId: string; partyId: string; constituencyId: string },
+  scratch?: AssemblyNominationScratch,
 ): number {
   const magnitude = Math.max(1, world.constituencyElectorate[args.constituencyId]?.seats ?? 1);
-  const share = partySeatShareForElection(state, world, args.electionId, args.partyId);
+  const share = partySeatShareForElection(state, world, args.electionId, args.partyId, scratch);
   const expected = share * magnitude;
-  const incumbents = partyIncumbentConstituencyIds(state, world, args.partyId).has(
-    args.constituencyId,
-  )
+  const incumbents = partyIncumbentConstituencyIds(
+    state,
+    world,
+    args.partyId,
+    scratch?.occupancy,
+  ).has(args.constituencyId)
     ? 1
     : 0;
   const rounded = Math.max(incumbents, Math.round(expected), expected >= 0.35 ? 1 : 0);
@@ -345,11 +489,13 @@ export function assemblyConstituenciesWorthContesting(
   world: KernelWorld,
   electionId: string,
   partyId: string,
+  scratch?: AssemblyNominationScratch,
 ): string[] {
-  const constituencyIds = Object.keys(world.constituencyElectorate).sort();
+  const constituencyIds =
+    scratch?.constituencyIds ?? Object.keys(world.constituencyElectorate).sort();
   if (constituencyIds.length === 0) return [];
-  const incumbents = partyIncumbentConstituencyIds(state, world, partyId);
-  const share = partySeatShareForElection(state, world, electionId, partyId);
+  const incumbents = partyIncumbentConstituencyIds(state, world, partyId, scratch?.occupancy);
+  const share = partySeatShareForElection(state, world, electionId, partyId, scratch);
   const election = state.elections[electionId];
   const partySeats =
     election?.assembly?.previousPartySeatTotals?.[partyId] ??
@@ -415,17 +561,27 @@ function seedAssemblyEntries(
   partyId: string,
   constituencyId: string,
   maxCandidates: number,
+  scratch?: AssemblyNominationScratch,
 ): string[] {
-  const preferred: string[] = [];
-  for (const office of officesOfKind(world, "assembly_member")) {
-    if (office.constituencyId !== constituencyId) continue;
-    for (const term of occupyingTerms(state, office.id)) {
-      if (state.politicians[term.holderId]?.partyId === partyId) {
-        preferred.push(term.holderId);
+  let preferred: string[];
+  if (scratch) {
+    preferred = [
+      ...(scratch.occupancy.preferredByConstituencyParty.get(`${constituencyId}::${partyId}`) ??
+        []),
+    ];
+  } else {
+    preferred = [];
+    for (const office of officesOfKind(world, "assembly_member")) {
+      if (office.constituencyId !== constituencyId) continue;
+      for (const term of occupyingTerms(state, office.id)) {
+        if (state.politicians[term.holderId]?.partyId === partyId) {
+          preferred.push(term.holderId);
+        }
       }
     }
   }
-  const rest = seedDeclaredEntries(state, partyId, maxCandidates * 2).filter(
+  const members = scratch?.membersByParty.get(partyId);
+  const rest = seedDeclaredEntries(state, partyId, maxCandidates * 2, members).filter(
     (id) => !preferred.includes(id),
   );
   return [...preferred, ...rest].slice(0, maxCandidates);
@@ -444,6 +600,7 @@ function createSeededOfficeContest(
     nominationSlots?: number;
     maxCandidates: number;
     commandId?: string | null;
+    scratch?: AssemblyNominationScratch;
   },
 ): { contest: PartyContest; events: SimEvent[] } | null {
   const slots = args.nominationSlots ?? 1;
@@ -472,8 +629,20 @@ function createSeededOfficeContest(
   const seedCount = Math.max(args.maxCandidates, slots + 1);
   const seeds =
     args.officeKind === "assembly" && args.constituencyId
-      ? seedAssemblyEntries(state, world, args.partyId, args.constituencyId, seedCount)
-      : seedDeclaredEntries(state, args.partyId, seedCount);
+      ? seedAssemblyEntries(
+          state,
+          world,
+          args.partyId,
+          args.constituencyId,
+          seedCount,
+          args.scratch,
+        )
+      : seedDeclaredEntries(
+          state,
+          args.partyId,
+          seedCount,
+          args.scratch?.membersByParty.get(args.partyId),
+        );
   for (const politicianId of seeds) {
     const declared = declareCandidacy(
       state,
@@ -515,9 +684,12 @@ export function ensureOfficeNominationContests(
     partyIds?: string[];
     maxCandidatesPerParty?: number;
     commandId?: string | null;
+    existingContests?: PartyContest[];
   },
 ): { contests: PartyContest[]; events: SimEvent[] } {
-  const existing = officeNominationContestsForElection(state, args.electionId, args.officeKind);
+  const existing =
+    args.existingContests ??
+    officeNominationContestsForElection(state, args.electionId, args.officeKind);
   if (args.officeKind === "gubernatorial" && existing.length > 0) {
     return { contests: existing, events: [] };
   }
@@ -531,6 +703,7 @@ export function ensureOfficeNominationContests(
   const maxCandidates = args.maxCandidatesPerParty ?? 4;
 
   if (args.officeKind === "gubernatorial") {
+    const membersByParty = indexPartyMembers(state);
     for (const partyId of partyIds) {
       if (!partyAllowsNomination(world, state, partyId)) continue;
       const created = createSeededOfficeContest(state, world, {
@@ -541,6 +714,17 @@ export function ensureOfficeNominationContests(
         ...(args.provinceId != null ? { provinceId: args.provinceId } : {}),
         nominationSlots: 1,
         maxCandidates,
+        scratch: {
+          occupancy: {
+            incumbentsByParty: new Map(),
+            preferredByConstituencyParty: new Map(),
+            liveSeatTotals: {},
+          },
+          membersByParty,
+          previousSeatTotals: null,
+          chamber: world.legislativeConstitution.assemblySeatCount,
+          constituencyIds: [],
+        },
         ...(args.commandId !== undefined ? { commandId: args.commandId } : {}),
       });
       if (created) events.push(...created.events);
@@ -561,6 +745,8 @@ export function ensureOfficeNominationContests(
       );
     }),
   );
+  const scratch = assemblyNominationScratch(state, world, args.electionId);
+  const createdContests: PartyContest[] = [...existing];
 
   for (const partyId of partyIds) {
     if (!partyAllowsNomination(world, state, partyId)) continue;
@@ -568,16 +754,27 @@ export function ensureOfficeNominationContests(
       args.constituencyIds?.slice().sort() ??
       (args.constituencyId
         ? [args.constituencyId]
-        : assemblyConstituenciesWorthContesting(state, world, args.electionId, partyId));
+        : assemblyConstituenciesWorthContesting(
+            state,
+            world,
+            args.electionId,
+            partyId,
+            scratch,
+          ));
     for (const constituencyId of targets) {
       if (!world.constituencyElectorate[constituencyId]) continue;
       const key = officeNominationContestKey(partyId, args.electionId, constituencyId);
       if (existingKeys.has(key)) continue;
-      const slots = assemblyNominationSlots(state, world, {
-        electionId: args.electionId,
-        partyId,
-        constituencyId,
-      });
+      const slots = assemblyNominationSlots(
+        state,
+        world,
+        {
+          electionId: args.electionId,
+          partyId,
+          constituencyId,
+        },
+        scratch,
+      );
       const created = createSeededOfficeContest(state, world, {
         officeKind: "assembly",
         electionId: args.electionId,
@@ -586,17 +783,20 @@ export function ensureOfficeNominationContests(
         constituencyId,
         nominationSlots: slots,
         maxCandidates,
+        scratch,
         ...(args.commandId !== undefined ? { commandId: args.commandId } : {}),
       });
       if (created) {
         existingKeys.add(key);
+        createdContests.push(created.contest);
         events.push(...created.events);
       }
     }
   }
 
+  createdContests.sort((a, b) => a.id.localeCompare(b.id));
   return {
-    contests: officeNominationContestsForElection(state, args.electionId, "assembly"),
+    contests: createdContests,
     events,
   };
 }
@@ -631,6 +831,7 @@ function fillAdditionalNominationWinners(
   const contest = state.partyContests[contestId];
   if (!contest || !contest.winnerId) return [];
   const winners = [contest.winnerId];
+  const winnerSet = new Set(winners);
   if (slots <= 1) {
     contest.metadata.winnerIds = winners;
     contest.metadata.nominationSlots = slots;
@@ -644,7 +845,7 @@ function fillAdditionalNominationWinners(
 
   while (winners.length < slots) {
     for (const entry of Object.values(contest.entries)) {
-      if (winners.includes(entry.politicianId)) {
+      if (winnerSet.has(entry.politicianId)) {
         entry.status = "withdrawn";
       } else if (originallyCounted.has(entry.politicianId)) {
         entry.status = "qualified";
@@ -653,14 +854,17 @@ function fillAdditionalNominationWinners(
     const remaining = Object.values(contest.entries).filter((e) => e.status === "qualified");
     if (remaining.length === 0) break;
     if (remaining.length === 1) {
-      winners.push(remaining[0]!.politicianId);
+      const only = remaining[0]!.politicianId;
+      winners.push(only);
+      winnerSet.add(only);
       break;
     }
     const counted = resolveContestCount(world, state, contest, rng);
     if ("error" in counted) break;
     const next = counted.archive.elected;
-    if (!next || winners.includes(next)) break;
+    if (!next || winnerSet.has(next)) break;
     winners.push(next);
+    winnerSet.add(next);
   }
 
   for (const entry of Object.values(contest.entries)) {
@@ -691,9 +895,13 @@ export function resolveOfficeNominationContests(
   electionId: string,
   officeKind: OfficeNominationKind,
   commandId: string | null,
+  contests?: PartyContest[],
 ): SimEvent[] {
   const events: SimEvent[] = [];
-  for (const contest of officeNominationContestsForElection(state, electionId, officeKind)) {
+  const campaignIndex = indexActiveCampaignsByPolitician(state);
+  const list =
+    contests ?? officeNominationContestsForElection(state, electionId, officeKind);
+  for (const contest of list) {
     const live = state.partyContests[contest.id];
     if (!live || live.status === "resolved" || live.status === "cancelled") continue;
     if (live.status === "planned") {
@@ -724,7 +932,13 @@ export function resolveOfficeNominationContests(
         : 1);
     fillAdditionalNominationWinners(state, world, current.id, rng, slots);
 
-    const synced = syncOfficeNominationWinnerToElection(state, world, current.id, commandId);
+    const synced = syncOfficeNominationWinnerToElection(
+      state,
+      world,
+      current.id,
+      commandId,
+      campaignIndex,
+    );
     if (!("error" in synced)) events.push(...synced.events);
   }
   return events;
@@ -735,6 +949,7 @@ export function syncOfficeNominationWinnerToElection(
   world: KernelWorld,
   contestId: string,
   commandId: string | null = null,
+  campaignIndex?: Map<string, CampaignState[]>,
 ): { events: SimEvent[] } | { error: CommandError } {
   const contest = state.partyContests[contestId];
   if (!contest || !isOfficeNominationContestType(contest.type) || contest.status !== "resolved") {
@@ -748,6 +963,13 @@ export function syncOfficeNominationWinnerToElection(
   const winners = officeNominationWinnerIds(contest);
   const winnerSet = new Set(winners);
   const primary = winners[0] ?? contest.winnerId;
+  const campaignsByPolitician = campaignIndex ?? indexActiveCampaignsByPolitician(state);
+
+  const findActiveCampaign = (
+    politicianId: string,
+    predicate: (c: CampaignState) => boolean,
+  ): CampaignState | undefined =>
+    campaignsByPolitician.get(politicianId)?.find(predicate);
 
   if (meta.officeKind === "gubernatorial") {
     const election = state.provincialRuntime.elections[meta.electionId];
@@ -779,12 +1001,11 @@ export function syncOfficeNominationWinnerToElection(
       }
       if (election.status === "planned") election.status = "filing_open";
 
-      const existingCampaign = Object.values(state.campaignRuntime.campaigns).find(
+      const existingCampaign = findActiveCampaign(
+        primary,
         (c) =>
-          c.politicianId === primary &&
           c.type === "gubernatorial" &&
-          (c.electionId === election.id || c.metadata.provinceId === election.provinceId) &&
-          (c.status === "active" || c.status === "exploring"),
+          (c.electionId === election.id || c.metadata.provinceId === election.provinceId),
       );
       if (existingCampaign) {
         existingCampaign.contestId = contest.id;
@@ -806,6 +1027,9 @@ export function syncOfficeNominationWinnerToElection(
           },
         });
         attachNominationMethodMetadata(world, state, camp);
+        const list = campaignsByPolitician.get(primary) ?? [];
+        list.push(camp);
+        campaignsByPolitician.set(primary, list);
       }
     }
   } else {
@@ -892,12 +1116,9 @@ export function syncOfficeNominationWinnerToElection(
           }
         }
 
-        const existingCampaign = Object.values(state.campaignRuntime.campaigns).find(
-          (c) =>
-            c.politicianId === winner &&
-            c.type === "assembly" &&
-            c.electionId === election.id &&
-            (c.status === "active" || c.status === "exploring"),
+        const existingCampaign = findActiveCampaign(
+          winner,
+          (c) => c.type === "assembly" && c.electionId === election.id,
         );
         if (existingCampaign) {
           existingCampaign.contestId = contest.id;
@@ -919,6 +1140,9 @@ export function syncOfficeNominationWinnerToElection(
             },
           });
           attachNominationMethodMetadata(world, state, camp);
+          const list = campaignsByPolitician.get(winner) ?? [];
+          list.push(camp);
+          campaignsByPolitician.set(winner, list);
         }
       }
       if (election.status === "planned") election.status = "field_open";
@@ -967,21 +1191,24 @@ export function processOfficeNominationsMonth(
 
   for (const election of Object.values(state.provincialRuntime.elections)) {
     if (election.status !== "filing_open") continue;
-    const existing = contestIndex.get(election.id)?.gubernatorial ?? [];
-    if (existing.length === 0) {
+    let gubernatorial = contestsFromIndex(contestIndex, state, election.id, "gubernatorial");
+    if (gubernatorial.length === 0) {
       const ensured = ensureOfficeNominationContests(state, world, {
         officeKind: "gubernatorial",
         electionId: election.id,
         electionDate: election.date,
         provinceId: election.provinceId,
         commandId,
+        existingContests: gubernatorial,
       });
       events.push(...ensured.events);
+      gubernatorial = ensured.contests;
+      contestIndex.set(election.id, {
+        gubernatorial,
+        assembly: contestIndex.get(election.id)?.assembly ?? [],
+      });
     }
-    const openOrPlanned =
-      contestIndex.get(election.id)?.gubernatorial ??
-      officeNominationContestsForElection(state, election.id, "gubernatorial");
-    const unresolved = openOrPlanned.filter(
+    const unresolved = gubernatorial.filter(
       (c) => c.status !== "resolved" && c.status !== "cancelled",
     );
     if (unresolved.length === 0) continue;
@@ -993,6 +1220,7 @@ export function processOfficeNominationsMonth(
         election.id,
         "gubernatorial",
         commandId,
+        unresolved,
       ),
     );
   }
@@ -1008,22 +1236,36 @@ export function processOfficeNominationsMonth(
     const filingOpen =
       election.assembly?.filingStatus === "open" || election.status === "field_open";
     if (!filingOpen) continue;
-    const existing = contestIndex.get(election.id)?.assembly ?? [];
-    if (existing.length === 0) {
+    let assembly = contestsFromIndex(contestIndex, state, election.id, "assembly");
+    if (assembly.length === 0) {
       const ensured = ensureOfficeNominationContests(state, world, {
         officeKind: "assembly",
         electionId: election.id,
         electionDate: election.date,
         commandId,
+        existingContests: assembly,
       });
       events.push(...ensured.events);
+      assembly = ensured.contests;
+      contestIndex.set(election.id, {
+        gubernatorial: contestIndex.get(election.id)?.gubernatorial ?? [],
+        assembly,
+      });
     }
-    const unresolved = officeNominationContestsForElection(state, election.id, "assembly").filter(
+    const unresolved = assembly.filter(
       (c) => c.status !== "resolved" && c.status !== "cancelled",
     );
     if (unresolved.length === 0) continue;
     events.push(
-      ...resolveOfficeNominationContests(state, world, rng, election.id, "assembly", commandId),
+      ...resolveOfficeNominationContests(
+        state,
+        world,
+        rng,
+        election.id,
+        "assembly",
+        commandId,
+        unresolved,
+      ),
     );
   }
 

@@ -61,6 +61,59 @@ export function stableProvincialHash(text: string): number {
   return hash >>> 0;
 }
 
+type LegislatorProvinceIndex = {
+  byProvince: Map<string, ProvincialLegislator[]>;
+  activeByProvince: Map<string, ProvincialLegislator[]>;
+  maxOrdinalByProvince: Map<string, number>;
+};
+
+function indexLegislatorsByProvince(state: SimState): LegislatorProvinceIndex {
+  const byProvince = new Map<string, ProvincialLegislator[]>();
+  const activeByProvince = new Map<string, ProvincialLegislator[]>();
+  const maxOrdinalByProvince = new Map<string, number>();
+  for (const row of Object.values(state.provincialRuntime.legislators)) {
+    const list = byProvince.get(row.provinceId);
+    if (list) list.push(row);
+    else byProvince.set(row.provinceId, [row]);
+    if (row.active) {
+      const active = activeByProvince.get(row.provinceId);
+      if (active) active.push(row);
+      else activeByProvince.set(row.provinceId, [row]);
+    }
+    const match = new RegExp(`^PLEG_${row.provinceId}_(\\d+)$`).exec(row.id);
+    if (match) {
+      const ordinal = Number(match[1]);
+      const prior = maxOrdinalByProvince.get(row.provinceId) ?? 0;
+      if (ordinal > prior) maxOrdinalByProvince.set(row.provinceId, ordinal);
+    }
+  }
+  return { byProvince, activeByProvince, maxOrdinalByProvince };
+}
+
+function nextLegislatorOrdinalFromIndex(
+  index: LegislatorProvinceIndex,
+  provinceId: string,
+): number {
+  return (index.maxOrdinalByProvince.get(provinceId) ?? 0) + 1;
+}
+
+function trackCreatedLegislator(
+  index: LegislatorProvinceIndex,
+  row: ProvincialLegislator,
+  ordinal: number,
+): void {
+  const list = index.byProvince.get(row.provinceId);
+  if (list) list.push(row);
+  else index.byProvince.set(row.provinceId, [row]);
+  if (row.active) {
+    const active = index.activeByProvince.get(row.provinceId);
+    if (active) active.push(row);
+    else index.activeByProvince.set(row.provinceId, [row]);
+  }
+  const prior = index.maxOrdinalByProvince.get(row.provinceId) ?? 0;
+  if (ordinal > prior) index.maxOrdinalByProvince.set(row.provinceId, ordinal);
+}
+
 function provincePopulation(world: KernelWorld, provinceId: string): number {
   let population = 0;
   for (const electorate of Object.values(world.constituencyElectorate)) {
@@ -231,7 +284,12 @@ function newLegislator(
   };
 }
 
-function nextLegislatorOrdinal(state: SimState, provinceId: string): number {
+function nextLegislatorOrdinal(
+  state: SimState,
+  provinceId: string,
+  index?: LegislatorProvinceIndex,
+): number {
+  if (index) return nextLegislatorOrdinalFromIndex(index, provinceId);
   let max = 0;
   for (const id of Object.keys(state.provincialRuntime.legislators)) {
     const match = new RegExp(`^PLEG_${provinceId}_(\\d+)$`).exec(id);
@@ -269,10 +327,16 @@ function applyProvincialFilingRetirements(
   state: SimState,
   provinceId: string,
   electionDate: string,
+  provinceLegislators?: readonly ProvincialLegislator[],
 ): void {
   const electionYear = Number(electionDate.slice(0, 4));
-  for (const row of Object.values(state.provincialRuntime.legislators)) {
-    if (row.provinceId !== provinceId || !row.active) continue;
+  const rows =
+    provinceLegislators ??
+    Object.values(state.provincialRuntime.legislators).filter(
+      (row) => row.provinceId === provinceId,
+    );
+  for (const row of rows) {
+    if (!row.active) continue;
     if (row.id === state.playerPoliticianId || row.fullPoliticianId === state.playerPoliticianId) {
       continue;
     }
@@ -485,22 +549,40 @@ function assignProvincialLeadership(
 }
 
 export function seedProvincialAssemblies(world: KernelWorld, state: SimState): void {
+  const legislatorIndex = indexLegislatorsByProvince(state);
+  const seatCountByProvince = new Map<string, number>();
+  {
+    const populations = world.provinceIds.map((id) => provincePopulation(world, id));
+    const min = Math.min(...populations);
+    const max = Math.max(...populations);
+    for (let i = 0; i < world.provinceIds.length; i++) {
+      const provinceId = world.provinceIds[i]!;
+      const value = populations[i]!;
+      if (!Number.isFinite(value) || max <= min) {
+        seatCountByProvince.set(provinceId, 35);
+        continue;
+      }
+      const scaled = Math.sqrt(Math.max(0, (value - min) / (max - min)));
+      seatCountByProvince.set(
+        provinceId,
+        Math.max(25, Math.min(65, Math.round(25 + scaled * 40))),
+      );
+    }
+  }
   for (const provinceId of world.provinceIds) {
-    const seatCount = provincialAssemblySeatCount(world, provinceId);
+    const seatCount =
+      seatCountByProvince.get(provinceId) ?? provincialAssemblySeatCount(world, provinceId);
     const reserveTarget = seatCount + Math.max(10, Math.ceil(seatCount * 0.45));
-    let ordinal = nextLegislatorOrdinal(state, provinceId);
-    while (
-      Object.values(state.provincialRuntime.legislators).filter(
-        (row) => row.provinceId === provinceId && row.active,
-      ).length < reserveTarget
-    ) {
+    let ordinal = nextLegislatorOrdinal(state, provinceId, legislatorIndex);
+    while ((legislatorIndex.activeByProvince.get(provinceId)?.length ?? 0) < reserveTarget) {
       const row = newLegislator(world, state, provinceId, ordinal, "scenario");
       state.provincialRuntime.legislators[row.id] = row;
+      trackCreatedLegislator(legislatorIndex, row, ordinal);
       ordinal += 1;
     }
     if (!state.provincialRuntime.assemblies[provinceId]) {
-      const pool = Object.values(state.provincialRuntime.legislators)
-        .filter((row) => row.provinceId === provinceId && row.active)
+      const pool = (legislatorIndex.activeByProvince.get(provinceId) ?? [])
+        .slice()
         .sort(
           (a, b) =>
             b.standing + b.legislativeSkill * 0.35 - (a.standing + a.legislativeSkill * 0.35) ||
@@ -512,22 +594,25 @@ export function seedProvincialAssemblies(world: KernelWorld, state: SimState): v
         `${provinceId}:2028`,
       ).seats;
       const selected: string[] = [];
+      const selectedSet = new Set<string>();
       for (const [partyId, count] of Object.entries(partySeats).sort(([a], [b]) =>
         a.localeCompare(b),
       )) {
-        selected.push(
-          ...pool
-            .filter((row) => row.partyId === partyId && !selected.includes(row.id))
-            .slice(0, count)
-            .map((row) => row.id),
-        );
+        let taken = 0;
+        for (const row of pool) {
+          if (taken >= count) break;
+          if (row.partyId !== partyId || selectedSet.has(row.id)) continue;
+          selected.push(row.id);
+          selectedSet.add(row.id);
+          taken += 1;
+        }
       }
-      selected.push(
-        ...pool
-          .filter((row) => !selected.includes(row.id))
-          .slice(0, seatCount - selected.length)
-          .map((row) => row.id),
-      );
+      for (const row of pool) {
+        if (selected.length >= seatCount) break;
+        if (selectedSet.has(row.id)) continue;
+        selected.push(row.id);
+        selectedSet.add(row.id);
+      }
       for (const id of selected) {
         const row = state.provincialRuntime.legislators[id]!;
         row.serviceStartDate = state.currentDate;
@@ -605,18 +690,23 @@ function seedRuntimeConstitution(state: SimState): void {
   };
 }
 
-function ensureProvincialReserve(world: KernelWorld, state: SimState, provinceId: string): number {
+function ensureProvincialReserve(
+  world: KernelWorld,
+  state: SimState,
+  provinceId: string,
+  legislatorIndex?: LegislatorProvinceIndex,
+): number {
   const assembly = state.provincialRuntime.assemblies[provinceId];
   if (!assembly) return 0;
+  const index = legislatorIndex ?? indexLegislatorsByProvince(state);
   const target = assembly.seatCount + Math.max(10, Math.ceil(assembly.seatCount * 0.45));
-  let living = Object.values(state.provincialRuntime.legislators).filter(
-    (row) => row.provinceId === provinceId && row.active,
-  ).length;
+  let living = index.activeByProvince.get(provinceId)?.length ?? 0;
   let created = 0;
-  let ordinal = nextLegislatorOrdinal(state, provinceId);
+  let ordinal = nextLegislatorOrdinal(state, provinceId, index);
   while (living < target) {
     const row = newLegislator(world, state, provinceId, ordinal, "recruited");
     state.provincialRuntime.legislators[row.id] = row;
+    trackCreatedLegislator(index, row, ordinal);
     living += 1;
     created += 1;
     ordinal += 1;
@@ -628,35 +718,49 @@ function openProvincialAssemblyElection(
   world: KernelWorld,
   state: SimState,
   election: ProvincialAssemblyElection,
+  legislatorIndex?: LegislatorProvinceIndex,
 ): void {
   election.status = "filing_open";
-  applyProvincialFilingRetirements(state, election.provinceId, election.date);
+  const index = legislatorIndex ?? indexLegislatorsByProvince(state);
+  applyProvincialFilingRetirements(
+    state,
+    election.provinceId,
+    election.date,
+    index.byProvince.get(election.provinceId),
+  );
+  // Retirement may deactivate rows; refresh active list for this province.
+  const refreshedActive = (index.byProvince.get(election.provinceId) ?? []).filter(
+    (row) => row.active,
+  );
+  index.activeByProvince.set(election.provinceId, refreshedActive);
   const assembly = state.provincialRuntime.assemblies[election.provinceId];
   if (assembly) {
-    let ordinal = nextLegislatorOrdinal(state, election.provinceId);
+    let ordinal = nextLegislatorOrdinal(state, election.provinceId, index);
     for (const [partyId, seats] of Object.entries(assembly.partySeats).sort(([a], [b]) =>
       a.localeCompare(b),
     )) {
-      let available = Object.values(state.provincialRuntime.legislators).filter(
-        (row) =>
-          row.provinceId === election.provinceId &&
-          row.active &&
-          row.fullPoliticianId == null &&
-          row.partyId === partyId,
+      let available = (index.activeByProvince.get(election.provinceId) ?? []).filter(
+        (row) => row.fullPoliticianId == null && row.partyId === partyId,
       ).length;
       const target = seats + Math.max(2, Math.ceil(seats * 0.25));
       while (available < target) {
-        const row = newLegislator(world, state, election.provinceId, ordinal, "recruited", partyId);
+        const row = newLegislator(
+          world,
+          state,
+          election.provinceId,
+          ordinal,
+          "recruited",
+          partyId,
+        );
         state.provincialRuntime.legislators[row.id] = row;
+        trackCreatedLegislator(index, row, ordinal);
         ordinal += 1;
         available += 1;
       }
     }
   }
-  election.candidateIds = Object.values(state.provincialRuntime.legislators)
-    .filter(
-      (row) => row.provinceId === election.provinceId && row.active && row.fullPoliticianId == null,
-    )
+  election.candidateIds = (index.activeByProvince.get(election.provinceId) ?? [])
+    .filter((row) => row.fullPoliticianId == null)
     .map((row) => row.id)
     .sort();
 }
@@ -681,28 +785,31 @@ function resolveProvincialAssemblyElection(
   const allocation = allocateSeats(assembly.seatCount, weights, election.id, rng);
   election.partySeats = allocation.seats;
   const oldMembers = new Set(assembly.memberIds);
-  const campaignFor = (id: string) =>
-    Object.values(state.campaignRuntime.campaigns).find(
-      (campaign) => campaign.electionId === election.id && campaign.politicianId === id,
-    );
+  const campaignByPolitician = new Map<string, (typeof state.campaignRuntime.campaigns)[string]>();
+  for (const campaign of Object.values(state.campaignRuntime.campaigns)) {
+    if (campaign.electionId !== election.id) continue;
+    if (!campaignByPolitician.has(campaign.politicianId)) {
+      campaignByPolitician.set(campaign.politicianId, campaign);
+    }
+  }
   const leadershipIds = new Set(
     [
       assembly.presidingOfficerId,
       ...Object.values(assembly.partyLeadership).flatMap((row) => [row.floorLeaderId, row.whipId]),
     ].filter((id): id is string => Boolean(id)),
   );
-  const endorsementCount = (id: string): number =>
-    Object.values(state.organizationRuntime.actors).reduce(
-      (count, actor) =>
-        count +
-        actor.endorsements.filter(
-          (endorsement) =>
-            endorsement.politicianId === id && (endorsement.status ?? "active") === "active",
-        ).length,
-      0,
-    );
+  const endorsementCountById = new Map<string, number>();
+  for (const actor of Object.values(state.organizationRuntime.actors)) {
+    for (const endorsement of actor.endorsements) {
+      if ((endorsement.status ?? "active") !== "active") continue;
+      endorsementCountById.set(
+        endorsement.politicianId,
+        (endorsementCountById.get(endorsement.politicianId) ?? 0) + 1,
+      );
+    }
+  }
   const personalScore = (row: ProvincialLegislator): number => {
-    const campaign = campaignFor(row.id);
+    const campaign = campaignByPolitician.get(row.id);
     const incumbent = oldMembers.has(row.id) ? 0.13 : 0;
     const leadership = leadershipIds.has(row.id) ? 0.08 : 0;
     const campaignWork = campaign
@@ -711,7 +818,10 @@ function resolveProvincialAssemblyElection(
         provinceGotvBoost(campaign, election.provinceId, state.currentDate) * 0.12 +
         Math.min(0.06, campaign.totalSpent / 500_000)
       : 0;
-    const endorsements = Math.min(0.08, endorsementCount(row.fullPoliticianId ?? row.id) * 0.025);
+    const endorsements = Math.min(
+      0.08,
+      (endorsementCountById.get(row.fullPoliticianId ?? row.id) ?? 0) * 0.025,
+    );
     const variance = (stableProvincialHash(`${election.id}:${row.id}:personal`) % 1001) / 10000;
     return (
       row.standing * 0.39 +
@@ -724,28 +834,43 @@ function resolveProvincialAssemblyElection(
       variance
     );
   };
+  const scoreById = new Map<string, number>();
   const pool = election.candidateIds
     .map((id) => state.provincialRuntime.legislators[id])
-    .filter((row): row is ProvincialLegislator => Boolean(row?.active))
-    .sort((a, b) => personalScore(b) - personalScore(a) || a.id.localeCompare(b.id));
+    .filter((row): row is ProvincialLegislator => Boolean(row?.active));
+  for (const row of pool) scoreById.set(row.id, personalScore(row));
+  pool.sort(
+    (a, b) =>
+      (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0) || a.id.localeCompare(b.id),
+  );
+  const poolByParty = new Map<string | null, string[]>();
+  for (const row of pool) {
+    const list = poolByParty.get(row.partyId);
+    if (list) list.push(row.id);
+    else poolByParty.set(row.partyId, [row.id]);
+  }
   const elected: string[] = [];
+  const electedSet = new Set<string>();
   election.personalRankingsByParty = {};
   for (const [partyId, count] of Object.entries(election.partySeats).sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
-    const ranking = pool.filter((row) => row.partyId === partyId).map((row) => row.id);
+    const ranking = poolByParty.get(partyId) ?? [];
     election.personalRankingsByParty[partyId] = ranking;
-    elected.push(...ranking.slice(0, count));
+    for (const id of ranking.slice(0, count)) {
+      elected.push(id);
+      electedSet.add(id);
+    }
   }
-  elected.push(
-    ...pool
-      .filter((row) => !elected.includes(row.id))
-      .slice(0, assembly.seatCount - elected.length)
-      .map((row) => row.id),
-  );
+  for (const row of pool) {
+    if (elected.length >= assembly.seatCount) break;
+    if (electedSet.has(row.id)) continue;
+    elected.push(row.id);
+    electedSet.add(row.id);
+  }
   for (const id of assembly.memberIds) {
     const row = state.provincialRuntime.legislators[id];
-    if (row && !elected.includes(id)) {
+    if (row && !electedSet.has(id)) {
       row.serviceEndDate = state.currentDate;
       const openTerm = row.serviceTerms
         .slice()
@@ -787,7 +912,7 @@ function resolveProvincialAssemblyElection(
   election.status = "resolved";
   for (const campaign of Object.values(state.campaignRuntime.campaigns)) {
     if (campaign.type !== "provincial_assembly" || campaign.electionId !== election.id) continue;
-    campaign.status = elected.includes(campaign.politicianId) ? "won" : "lost";
+    campaign.status = electedSet.has(campaign.politicianId) ? "won" : "lost";
     campaign.endedDate = state.currentDate;
   }
   const next = plannedAssemblyElection(election.provinceId, assembly.nextElectionDate);
@@ -1391,11 +1516,12 @@ export function processProvincialAssembliesMonth(
 ): SimEvent[] {
   seedProvincialAssemblies(world, state);
   const events: SimEvent[] = [];
+  const legislatorIndex = indexLegislatorsByProvince(state);
   const month = state.currentDate.slice(5, 7);
   if (month === "01") {
     let created = 0;
     for (const provinceId of world.provinceIds)
-      created += ensureProvincialReserve(world, state, provinceId);
+      created += ensureProvincialReserve(world, state, provinceId, legislatorIndex);
     if (created > 0)
       events.push(
         pushHistory(state, {
@@ -1418,7 +1544,7 @@ export function processProvincialAssembliesMonth(
       election.status === "planned" &&
       compareIsoDate(state.currentDate, addMonths(election.date, -5)) >= 0
     )
-      openProvincialAssemblyElection(world, state, election);
+      openProvincialAssemblyElection(world, state, election, legislatorIndex);
     if (election.status === "filing_open" && compareIsoDate(state.currentDate, election.date) >= 0)
       events.push(...resolveProvincialAssemblyElection(world, state, rng, election, commandId));
   }
