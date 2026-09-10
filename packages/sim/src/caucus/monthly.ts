@@ -10,7 +10,6 @@
 
 import { monthStart } from "../campaigns/effects.js";
 import { changeFaction } from "../parties/membership.js";
-import { factionAssemblyCaucus, factionMembers, partyMembers } from "../parties/queries.js";
 import { pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import {
@@ -23,9 +22,12 @@ import {
 } from "./commands.js";
 import { ensureCaucusRuntime } from "./state.js";
 import {
-  activeCaucusesForParty,
+  activeCaucusesByParty,
+  indexAlivePoliticians,
+  indexAssemblyMembers,
   rebalancePartyMemberSupport,
   recomputeCaucusShares,
+  type PoliticianMemberIndex,
 } from "./shares.js";
 import type { CaucusFactionRuntime } from "./types.js";
 
@@ -58,8 +60,29 @@ function lowSupportStreakKey(factionId: string): string {
   return `lowSupportStreak:${factionId}`;
 }
 
+function sortedPartyIds(state: SimState): string[] {
+  return Object.keys(state.partyStates).sort();
+}
+
+/** Parties with a recent presidential/assembly win in the last 40 history events. */
+function recentElectionBoostByParty(state: SimState): Set<string> {
+  const boosted = new Set<string>();
+  const recent = state.history.slice(-40);
+  for (let i = recent.length - 1; i >= 0; i--) {
+    const ev = recent[i]!;
+    if (ev.type !== "PRESIDENTIAL_ELECTION_RESULT" && ev.type !== "ASSEMBLY_ELECTION_RESULT") {
+      continue;
+    }
+    for (const partyId of ev.entityIds) boosted.add(partyId);
+  }
+  return boosted;
+}
+
 /** Sync factionStates.chairId → caucus leaderId; pick a light deputy from members. */
-function syncLeadersFromFactionChairs(state: SimState): void {
+function syncLeadersFromFactionChairs(
+  state: SimState,
+  members: PoliticianMemberIndex,
+): void {
   const runtime = ensureCaucusRuntime(state);
   for (const [factionId, row] of Object.entries(runtime.caucuses)) {
     if (!isActive(row)) continue;
@@ -79,8 +102,15 @@ function syncLeadersFromFactionChairs(state: SimState): void {
       }
     }
     if (!row.deputyId && row.leaderId) {
-      const members = factionMembers(state, factionId).filter((id) => id !== row.leaderId);
-      row.deputyId = members[0] ?? null;
+      const factionMembers = members.byFaction.get(factionId) ?? [];
+      let deputy: string | null = null;
+      for (const id of factionMembers) {
+        if (id !== row.leaderId) {
+          deputy = id;
+          break;
+        }
+      }
+      row.deputyId = deputy;
     }
   }
 }
@@ -126,8 +156,11 @@ function strategyDrift(c: CaucusFactionRuntime): number {
 /** Soft membership drift + gradual partyMemberSupport drift by strategy. */
 function applyShareDrift(world: KernelWorld, state: SimState, month: string): void {
   const runtime = ensureCaucusRuntime(state);
-  for (const partyId of Object.keys(state.partyStates).sort()) {
-    const caucuses = activeCaucusesForParty(state, partyId);
+  const activeByParty = activeCaucusesByParty(state);
+  const electionBoosted = recentElectionBoostByParty(state);
+
+  for (const partyId of sortedPartyIds(state)) {
+    const caucuses = activeByParty.get(partyId) ?? [];
     if (caucuses.length === 0) continue;
 
     const weights: Record<string, number> = {};
@@ -141,18 +174,7 @@ function applyShareDrift(world: KernelWorld, state: SimState, month: string): vo
     if (sumW <= 0) continue;
 
     const alignedShare = Math.max(0, 1 - (runtime.unalignedByParty[partyId]?.membershipShare ?? 0));
-    let recentElectionBoost = 0;
-    const recent = state.history.slice(-40);
-    for (let i = recent.length - 1; i >= 0; i--) {
-      const ev = recent[i]!;
-      if (
-        (ev.type === "PRESIDENTIAL_ELECTION_RESULT" || ev.type === "ASSEMBLY_ELECTION_RESULT") &&
-        ev.entityIds.includes(partyId)
-      ) {
-        recentElectionBoost = 0.006;
-        break;
-      }
-    }
+    const recentElectionBoost = electionBoosted.has(partyId) ? 0.006 : 0;
 
     for (const c of caucuses) {
       const target = alignedShare * ((weights[c.factionId] ?? 0) / sumW);
@@ -180,7 +202,7 @@ function applyShareDrift(world: KernelWorld, state: SimState, month: string): vo
       void world;
     }
 
-    rebalancePartyMemberSupport(state, partyId);
+    rebalancePartyMemberSupport(state, partyId, caucuses);
   }
 }
 
@@ -191,8 +213,9 @@ function maybeFormAlliance(
   commandId: string,
   events: SimEvent[],
 ): void {
-  for (const partyId of Object.keys(state.partyStates).sort()) {
-    const caucuses = activeCaucusesForParty(state, partyId);
+  const activeByParty = activeCaucusesByParty(state);
+  for (const partyId of sortedPartyIds(state)) {
+    const caucuses = activeByParty.get(partyId) ?? [];
     if (caucuses.length < 2) continue;
     if (deterministicRoll(`${partyId}:ally:${month}`, month) > 0.04) continue;
 
@@ -230,8 +253,9 @@ function maybeMerge(
   commandId: string,
   events: SimEvent[],
 ): void {
-  for (const partyId of Object.keys(state.partyStates).sort()) {
-    const caucuses = activeCaucusesForParty(state, partyId);
+  const activeByParty = activeCaucusesByParty(state);
+  for (const partyId of sortedPartyIds(state)) {
+    const caucuses = activeByParty.get(partyId) ?? [];
     if (caucuses.length < MIN_ACTIVE_CAUCUSES_BEFORE_MERGE) continue;
     const overcrowded = caucuses.length > MAX_ACTIVE_CAUCUSES_SOFT;
     const chance = overcrowded ? 0.08 : 0.025;
@@ -284,8 +308,10 @@ function maybeSplit(
   commandId: string,
   events: SimEvent[],
 ): void {
-  for (const partyId of Object.keys(state.partyStates).sort()) {
-    const caucuses = activeCaucusesForParty(state, partyId);
+  const activeByParty = activeCaucusesByParty(state);
+  const members = indexAlivePoliticians(state);
+  for (const partyId of sortedPartyIds(state)) {
+    const caucuses = activeByParty.get(partyId) ?? [];
     if (caucuses.length >= MAX_ACTIVE_CAUCUSES_SOFT) continue;
     if (deterministicRoll(`${partyId}:split:${month}`, month) > 0.02) continue;
 
@@ -294,11 +320,11 @@ function maybeSplit(
       .sort((a, b) => b.membershipShare - a.membershipShare)[0];
     if (!oversized) continue;
 
-    const members = factionMembers(state, oversized.factionId);
-    const moveCount = Math.max(1, Math.floor(members.length * SPLIT_MOVE_FRACTION));
-    if (moveCount < 2 || members.length - moveCount < 3) continue;
+    const factionMembers = members.byFaction.get(oversized.factionId) ?? [];
+    const moveCount = Math.max(1, Math.floor(factionMembers.length * SPLIT_MOVE_FRACTION));
+    if (moveCount < 2 || factionMembers.length - moveCount < 3) continue;
 
-    const movers = members.slice(-moveCount);
+    const movers = factionMembers.slice(-moveCount);
     const actorId = oversized.leaderId ?? movers[0];
     if (!actorId) continue;
 
@@ -347,9 +373,12 @@ function maybeDissolve(
   events: SimEvent[],
 ): void {
   const runtime = ensureCaucusRuntime(state);
-  for (const partyId of Object.keys(state.partyStates).sort()) {
-    for (const c of activeCaucusesForParty(state, partyId)) {
-      const mps = factionAssemblyCaucus(world, state, c.factionId).length;
+  const activeByParty = activeCaucusesByParty(state);
+  const members = indexAlivePoliticians(state);
+  const assembly = indexAssemblyMembers(world, state);
+  for (const partyId of sortedPartyIds(state)) {
+    for (const c of activeByParty.get(partyId) ?? []) {
+      const mps = assembly.byFaction.get(c.factionId)?.length ?? 0;
       const key = lowSupportStreakKey(c.factionId);
       const prev =
         typeof runtime.metadata[key] === "number" ? (runtime.metadata[key] as number) : 0;
@@ -362,7 +391,7 @@ function maybeDissolve(
       if ((runtime.metadata[key] as number) < DISSOLVE_STREAK_MONTHS) continue;
       if (deterministicRoll(`${c.factionId}:dissolve:${month}`, month) > 0.55) continue;
 
-      const actorId = c.leaderId ?? factionMembers(state, c.factionId)[0];
+      const actorId = c.leaderId ?? (members.byFaction.get(c.factionId) ?? [])[0];
       if (!actorId) {
         c.ancestry.dissolved = state.currentDate;
         c.partyMemberSupport = 0;
@@ -392,15 +421,18 @@ function maybeFormFromUnaligned(
   events: SimEvent[],
 ): void {
   const runtime = ensureCaucusRuntime(state);
-  for (const partyId of Object.keys(state.partyStates).sort()) {
+  const activeByParty = activeCaucusesByParty(state);
+  const members = indexAlivePoliticians(state);
+  for (const partyId of sortedPartyIds(state)) {
     if (deterministicRoll(`${partyId}:form:${month}`, month) > FORM_CHANCE) continue;
-    const caucuses = activeCaucusesForParty(state, partyId);
+    const caucuses = activeByParty.get(partyId) ?? [];
     if (caucuses.length >= MAX_ACTIVE_CAUCUSES_SOFT) continue;
 
     const unalignedSupport = runtime.unalignedByParty[partyId]?.partyMemberSupport ?? 0;
     if (unalignedSupport < 0.12) continue;
 
-    const unaligned = partyMembers(state, partyId).filter((id) => {
+    const partyMemberIds = members.byParty.get(partyId) ?? [];
+    const unaligned = partyMemberIds.filter((id) => {
       const p = state.politicians[id]!;
       return (
         !p.factionId ||
@@ -438,7 +470,7 @@ export function processCaucusMonth(
 
   const events: SimEvent[] = [];
 
-  syncLeadersFromFactionChairs(state);
+  syncLeadersFromFactionChairs(state, indexAlivePoliticians(state));
   recomputeCaucusShares(world, state);
   applyShareDrift(world, state, month);
   maybeFormAlliance(state, world, month, commandId, events);

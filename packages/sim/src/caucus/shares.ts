@@ -8,13 +8,8 @@
  * (plus Assembly floor leader/whip) far above legislature committee seats.
  */
 
+import { isOccupyingStatus, officesOfKind } from "../offices.js";
 import type { KernelWorld, SimState } from "../types.js";
-import {
-  factionAssemblyCaucus,
-  factionMembers,
-  partyMembers,
-  assemblyCaucus,
-} from "../parties/queries.js";
 import { ensureCaucusRuntime } from "./state.js";
 import type { CaucusFactionRuntime, CaucusRuntime } from "./types.js";
 
@@ -45,8 +40,113 @@ export function activeCaucusesForParty(state: SimState, partyId: string): Caucus
     .sort((a, b) => a.factionId.localeCompare(b.factionId));
 }
 
+/**
+ * Build active caucuses grouped by party (each list sorted by factionId).
+ * Prefer this when touching many parties in one pass.
+ */
+export function activeCaucusesByParty(state: SimState): Map<string, CaucusFactionRuntime[]> {
+  const runtime = ensureCaucusRuntime(state);
+  const byParty = new Map<string, CaucusFactionRuntime[]>();
+  for (const c of Object.values(runtime.caucuses)) {
+    if (!isActiveCaucus(c)) continue;
+    const list = byParty.get(c.partyId);
+    if (list) list.push(c);
+    else byParty.set(c.partyId, [c]);
+  }
+  for (const list of byParty.values()) {
+    list.sort((a, b) => a.factionId.localeCompare(b.factionId));
+  }
+  return byParty;
+}
+
 export function countActiveCaucuses(state: SimState, partyId: string): number {
-  return activeCaucusesForParty(state, partyId).length;
+  const runtime = ensureCaucusRuntime(state);
+  let n = 0;
+  for (const c of Object.values(runtime.caucuses)) {
+    if (c.partyId === partyId && isActiveCaucus(c)) n++;
+  }
+  return n;
+}
+
+/** Alive, non-retired politician ids by party / faction (sorted, matches queries.ts). */
+export type PoliticianMemberIndex = {
+  byParty: Map<string, string[]>;
+  byFaction: Map<string, string[]>;
+};
+
+export function indexAlivePoliticians(state: SimState): PoliticianMemberIndex {
+  const byParty = new Map<string, string[]>();
+  const byFaction = new Map<string, string[]>();
+  for (const p of Object.values(state.politicians)) {
+    if (!p.alive || p.retired) continue;
+    if (p.partyId) {
+      const list = byParty.get(p.partyId);
+      if (list) list.push(p.id);
+      else byParty.set(p.partyId, [p.id]);
+    }
+    if (p.factionId) {
+      const list = byFaction.get(p.factionId);
+      if (list) list.push(p.id);
+      else byFaction.set(p.factionId, [p.id]);
+    }
+  }
+  for (const list of byParty.values()) list.sort();
+  for (const list of byFaction.values()) list.sort();
+  return { byParty, byFaction };
+}
+
+/** Assembly MP ids by party / faction (sorted, matches assemblyCaucus / factionAssemblyCaucus). */
+export type AssemblyMemberIndex = {
+  byParty: Map<string, string[]>;
+  byFaction: Map<string, string[]>;
+};
+
+export function indexAssemblyMembers(world: KernelWorld, state: SimState): AssemblyMemberIndex {
+  const asm = new Set(officesOfKind(world, "assembly_member").map((o) => o.id));
+  const byParty = new Map<string, string[]>();
+  const byFaction = new Map<string, string[]>();
+  const seenParty = new Set<string>();
+  const seenFaction = new Set<string>();
+
+  for (const term of Object.values(state.officeTerms)) {
+    if (!asm.has(term.officeId) || !isOccupyingStatus(term.status)) continue;
+    const pol = state.politicians[term.holderId];
+    if (!pol || !pol.alive || pol.retired) continue;
+
+    if (pol.partyId) {
+      const key = `${pol.partyId}\0${pol.id}`;
+      if (!seenParty.has(key)) {
+        seenParty.add(key);
+        const list = byParty.get(pol.partyId);
+        if (list) list.push(pol.id);
+        else byParty.set(pol.partyId, [pol.id]);
+      }
+    }
+    if (pol.factionId) {
+      const key = `${pol.factionId}\0${pol.id}`;
+      if (!seenFaction.has(key)) {
+        seenFaction.add(key);
+        const list = byFaction.get(pol.factionId);
+        if (list) list.push(pol.id);
+        else byFaction.set(pol.factionId, [pol.id]);
+      }
+    }
+  }
+
+  for (const list of byParty.values()) list.sort();
+  for (const list of byFaction.values()) list.sort();
+  return { byParty, byFaction };
+}
+
+function isUnalignedPolitician(
+  runtime: CaucusRuntime,
+  pol: { factionId: string | null },
+): boolean {
+  return (
+    !pol.factionId ||
+    !runtime.caucuses[pol.factionId] ||
+    !isActiveCaucus(runtime.caucuses[pol.factionId]!)
+  );
 }
 
 /**
@@ -106,61 +206,113 @@ export function institutionalWeightForFaction(
   return weight;
 }
 
-function unalignedInstitutionalWeight(
+/**
+ * One-pass institutional weights for all active caucus factions + unaligned residual
+ * per party. Matches institutionalWeightForFaction + unalignedInstitutionalWeight.
+ */
+function computeAllInstitutionalWeights(
   state: SimState,
   runtime: CaucusRuntime,
-  partyId: string,
-): number {
-  let weight = 0;
-  const isUnaligned = (pol: { factionId: string | null }) =>
-    !pol.factionId ||
-    !runtime.caucuses[pol.factionId] ||
-    !isActiveCaucus(runtime.caucuses[pol.factionId]!);
+): { byFaction: Map<string, number>; unalignedByParty: Map<string, number> } {
+  const byFaction = new Map<string, number>();
+  const unalignedByParty = new Map<string, number>();
 
-  const nc = state.partyOrgRuntime?.nationalCommittee[partyId] ?? [];
-  for (const memberId of nc) {
+  const addFaction = (factionId: string, w: number) => {
+    byFaction.set(factionId, (byFaction.get(factionId) ?? 0) + w);
+  };
+  const addUnaligned = (partyId: string, w: number) => {
+    unalignedByParty.set(partyId, (unalignedByParty.get(partyId) ?? 0) + w);
+  };
+
+  /**
+   * NC / officers / floor leadership: match institutionalWeightForFaction (no pol.partyId
+   * check) but only attribute to factions of this party — same as calling it per active
+   * faction of `partyId` while scanning that party's org seats.
+   */
+  const creditOrgSeat = (partyId: string, memberId: string, w: number) => {
     const pol = state.politicians[memberId];
-    if (!pol?.alive || pol.retired || pol.partyId !== partyId) continue;
-    if (isUnaligned(pol)) weight += NC_SEAT_WEIGHT;
-  }
-
-  const officers = state.partyOrgRuntime?.officers[partyId];
-  if (officers) {
-    for (const off of Object.values(officers)) {
-      if (!off) continue;
-      const pol = state.politicians[off.politicianId];
-      if (!pol?.alive || pol.retired || pol.partyId !== partyId) continue;
-      if (isUnaligned(pol)) weight += OFFICER_WEIGHT;
+    if (!pol?.alive || pol.retired) return;
+    if (pol.factionId) {
+      const row = runtime.caucuses[pol.factionId];
+      if (row && isActiveCaucus(row) && row.partyId === partyId) {
+        addFaction(pol.factionId, w);
+        return;
+      }
     }
+    if (pol.partyId === partyId && isUnalignedPolitician(runtime, pol)) {
+      addUnaligned(partyId, w);
+    }
+  };
+
+  /** Committee seats: faction path requires partyId match. */
+  const creditCommitteeSeat = (memberId: string, w: number) => {
+    const pol = state.politicians[memberId];
+    if (!pol?.alive || pol.retired || !pol.partyId) return;
+    if (pol.factionId) {
+      const row = runtime.caucuses[pol.factionId];
+      if (row && isActiveCaucus(row) && pol.partyId === row.partyId) {
+        addFaction(pol.factionId, w);
+        return;
+      }
+    }
+    if (isUnalignedPolitician(runtime, pol)) {
+      addUnaligned(pol.partyId, w);
+    }
+  };
+
+  const partyIds = new Set<string>();
+  for (const row of Object.values(runtime.caucuses)) partyIds.add(row.partyId);
+  for (const partyId of Object.keys(state.partyOrgRuntime?.nationalCommittee ?? {})) {
+    partyIds.add(partyId);
+  }
+  for (const partyId of Object.keys(state.partyOrgRuntime?.officers ?? {})) {
+    partyIds.add(partyId);
+  }
+  for (const partyId of Object.keys(state.legislatureRuntime?.caucusLeadership ?? {})) {
+    partyIds.add(partyId);
   }
 
-  const leadership = state.legislatureRuntime?.caucusLeadership?.[partyId];
-  if (leadership) {
-    for (const id of [leadership.floorLeaderId, leadership.whipId]) {
-      if (!id) continue;
-      const pol = state.politicians[id];
-      if (!pol?.alive || pol.retired || pol.partyId !== partyId) continue;
-      if (isUnaligned(pol)) weight += FLOOR_LEADERSHIP_WEIGHT;
+  for (const partyId of partyIds) {
+    const nc = state.partyOrgRuntime?.nationalCommittee[partyId] ?? [];
+    for (const memberId of nc) creditOrgSeat(partyId, memberId, NC_SEAT_WEIGHT);
+
+    const officers = state.partyOrgRuntime?.officers[partyId];
+    if (officers) {
+      for (const off of Object.values(officers)) {
+        if (!off) continue;
+        creditOrgSeat(partyId, off.politicianId, OFFICER_WEIGHT);
+      }
+    }
+
+    const leadership = state.legislatureRuntime?.caucusLeadership?.[partyId];
+    if (leadership) {
+      for (const id of [leadership.floorLeaderId, leadership.whipId]) {
+        if (!id) continue;
+        creditOrgSeat(partyId, id, FLOOR_LEADERSHIP_WEIGHT);
+      }
     }
   }
 
   const committees = state.legislatureRuntime?.committees ?? {};
   for (const committee of Object.values(committees)) {
     for (const memberId of committee.memberIds ?? []) {
-      const pol = state.politicians[memberId];
-      if (!pol?.alive || pol.retired || pol.partyId !== partyId) continue;
-      if (isUnaligned(pol)) weight += COMMITTEE_SEAT_WEIGHT;
+      creditCommitteeSeat(memberId, COMMITTEE_SEAT_WEIGHT);
     }
   }
-  return weight;
+
+  return { byFaction, unalignedByParty };
 }
 
 /**
  * Ensure active caucuses + unaligned partyMemberSupport sum to 1 for a party.
  */
-export function rebalancePartyMemberSupport(state: SimState, partyId: string): void {
+export function rebalancePartyMemberSupport(
+  state: SimState,
+  partyId: string,
+  precomputedActive?: CaucusFactionRuntime[],
+): void {
   const runtime = ensureCaucusRuntime(state);
-  const caucuses = activeCaucusesForParty(state, partyId);
+  const caucuses = precomputedActive ?? activeCaucusesForParty(state, partyId);
   const unaligned = runtime.unalignedByParty[partyId] ?? {
     membershipShare: 0,
     partyMemberSupport: 0,
@@ -194,6 +346,7 @@ function seedPartyMemberSupportIfZero(
   state: SimState,
   partyId: string,
   factionIds: string[],
+  activeRows: CaucusFactionRuntime[],
 ): void {
   const runtime = ensureCaucusRuntime(state);
   const needsSeed = factionIds.some((fid) => {
@@ -233,7 +386,7 @@ function seedPartyMemberSupportIfZero(
     );
   }
 
-  rebalancePartyMemberSupport(state, partyId);
+  rebalancePartyMemberSupport(state, partyId, activeRows);
 }
 
 /**
@@ -252,17 +405,19 @@ export function recomputeCaucusShares(world: KernelWorld, state: SimState): void
     partyIds.add(fac.partyId);
   }
 
+  const pols = indexAlivePoliticians(state);
+  const assembly = indexAssemblyMembers(world, state);
+  const inst = computeAllInstitutionalWeights(state, runtime);
+  const activeByParty = activeCaucusesByParty(state);
+
   for (const partyId of [...partyIds].sort()) {
-    const partyMemberCount = partyMembers(state, partyId).length;
-    const partyAssembly = assemblyCaucus(world, state, partyId);
+    const partyMembersList = pols.byParty.get(partyId) ?? [];
+    const partyMemberCount = partyMembersList.length;
+    const partyAssembly = assembly.byParty.get(partyId) ?? [];
     const partyAssemblyCount = partyAssembly.length;
 
-    const factionIds = Object.keys(runtime.caucuses)
-      .filter((fid) => {
-        const row = runtime.caucuses[fid]!;
-        return row.partyId === partyId && isActiveCaucus(row);
-      })
-      .sort();
+    const activeRows = activeByParty.get(partyId) ?? [];
+    const factionIds = activeRows.map((c) => c.factionId);
 
     let memberAssigned = 0;
     let assemblyAssigned = 0;
@@ -274,14 +429,14 @@ export function recomputeCaucusShares(world: KernelWorld, state: SimState): void
       const facState = state.factionStates[factionId];
       if (facState?.chairId) row.leaderId = facState.chairId;
 
-      const members = factionMembers(state, factionId).length;
-      const mps = factionAssemblyCaucus(world, state, factionId).length;
+      const members = pols.byFaction.get(factionId)?.length ?? 0;
+      const mps = assembly.byFaction.get(factionId)?.length ?? 0;
       memberAssigned += members;
       assemblyAssigned += mps;
 
-      const inst = institutionalWeightForFaction(world, state, factionId, partyId);
-      instByFaction[factionId] = inst;
-      instTotal += inst;
+      const factionInst = inst.byFaction.get(factionId) ?? 0;
+      instByFaction[factionId] = factionInst;
+      instTotal += factionInst;
 
       row.membershipShare =
         partyMemberCount > 0 ? members / partyMemberCount : factionIds.length > 0 ? 0 : 0;
@@ -291,7 +446,7 @@ export function recomputeCaucusShares(world: KernelWorld, state: SimState): void
 
     const unalignedMembers = Math.max(0, partyMemberCount - memberAssigned);
     const unalignedAssembly = Math.max(0, partyAssemblyCount - assemblyAssigned);
-    const unalignedInst = unalignedInstitutionalWeight(state, runtime, partyId);
+    const unalignedInst = inst.unalignedByParty.get(partyId) ?? 0;
     const instDenom = instTotal + unalignedInst;
 
     for (const factionId of factionIds) {
@@ -307,6 +462,6 @@ export function recomputeCaucusShares(world: KernelWorld, state: SimState): void
       institutionalInfluence: instDenom > 0 ? unalignedInst / instDenom : 0,
     };
 
-    seedPartyMemberSupportIfZero(state, partyId, factionIds);
+    seedPartyMemberSupportIfZero(state, partyId, factionIds, activeRows);
   }
 }
