@@ -261,10 +261,7 @@ function assemblyNominationScratch(
   };
 }
 
-function partySeatShareFromScratch(
-  scratch: AssemblyNominationScratch,
-  partyId: string,
-): number {
+function partySeatShareFromScratch(scratch: AssemblyNominationScratch, partyId: string): number {
   const totals = scratch.previousSeatTotals ?? scratch.occupancy.liveSeatTotals;
   const partySeats = totals[partyId] ?? 0;
   const totalSeats = Object.values(totals).reduce((sum, n) => sum + n, 0);
@@ -754,13 +751,7 @@ export function ensureOfficeNominationContests(
       args.constituencyIds?.slice().sort() ??
       (args.constituencyId
         ? [args.constituencyId]
-        : assemblyConstituenciesWorthContesting(
-            state,
-            world,
-            args.electionId,
-            partyId,
-            scratch,
-          ));
+        : assemblyConstituenciesWorthContesting(state, world, args.electionId, partyId, scratch));
     for (const constituencyId of targets) {
       if (!world.constituencyElectorate[constituencyId]) continue;
       const key = officeNominationContestKey(partyId, args.electionId, constituencyId);
@@ -899,8 +890,7 @@ export function resolveOfficeNominationContests(
 ): SimEvent[] {
   const events: SimEvent[] = [];
   const campaignIndex = indexActiveCampaignsByPolitician(state);
-  const list =
-    contests ?? officeNominationContestsForElection(state, electionId, officeKind);
+  const list = contests ?? officeNominationContestsForElection(state, electionId, officeKind);
   for (const contest of list) {
     const live = state.partyContests[contest.id];
     if (!live || live.status === "resolved" || live.status === "cancelled") continue;
@@ -968,8 +958,7 @@ export function syncOfficeNominationWinnerToElection(
   const findActiveCampaign = (
     politicianId: string,
     predicate: (c: CampaignState) => boolean,
-  ): CampaignState | undefined =>
-    campaignsByPolitician.get(politicianId)?.find(predicate);
+  ): CampaignState | undefined => campaignsByPolitician.get(politicianId)?.find(predicate);
 
   if (meta.officeKind === "gubernatorial") {
     const election = state.provincialRuntime.elections[meta.electionId];
@@ -1252,9 +1241,7 @@ export function processOfficeNominationsMonth(
         assembly,
       });
     }
-    const unresolved = assembly.filter(
-      (c) => c.status !== "resolved" && c.status !== "cancelled",
-    );
+    const unresolved = assembly.filter((c) => c.status !== "resolved" && c.status !== "cancelled");
     if (unresolved.length === 0) continue;
     events.push(
       ...resolveOfficeNominationContests(

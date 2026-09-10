@@ -563,10 +563,7 @@ export function seedProvincialAssemblies(world: KernelWorld, state: SimState): v
         continue;
       }
       const scaled = Math.sqrt(Math.max(0, (value - min) / (max - min)));
-      seatCountByProvince.set(
-        provinceId,
-        Math.max(25, Math.min(65, Math.round(25 + scaled * 40))),
-      );
+      seatCountByProvince.set(provinceId, Math.max(25, Math.min(65, Math.round(25 + scaled * 40))));
     }
   }
   for (const provinceId of world.provinceIds) {
@@ -744,14 +741,7 @@ function openProvincialAssemblyElection(
       ).length;
       const target = seats + Math.max(2, Math.ceil(seats * 0.25));
       while (available < target) {
-        const row = newLegislator(
-          world,
-          state,
-          election.provinceId,
-          ordinal,
-          "recruited",
-          partyId,
-        );
+        const row = newLegislator(world, state, election.provinceId, ordinal, "recruited", partyId);
         state.provincialRuntime.legislators[row.id] = row;
         trackCreatedLegislator(index, row, ordinal);
         ordinal += 1;
@@ -840,8 +830,7 @@ function resolveProvincialAssemblyElection(
     .filter((row): row is ProvincialLegislator => Boolean(row?.active));
   for (const row of pool) scoreById.set(row.id, personalScore(row));
   pool.sort(
-    (a, b) =>
-      (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0) || a.id.localeCompare(b.id),
+    (a, b) => (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0) || a.id.localeCompare(b.id),
   );
   const poolByParty = new Map<string | null, string[]>();
   for (const row of pool) {

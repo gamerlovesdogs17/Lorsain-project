@@ -208,7 +208,8 @@ function unalignedBlocAffinity(
   if (profile && culture.memberCount > 0) {
     let ideoSum = 0;
     for (const axis of IDEOLOGY_AXES) {
-      ideoSum += 1 - Math.min(1, Math.abs(profile.ideology[axis] - (culture.meanIdeology[axis] ?? 0)) / 2);
+      ideoSum +=
+        1 - Math.min(1, Math.abs(profile.ideology[axis] - (culture.meanIdeology[axis] ?? 0)) / 2);
     }
     aff += (ideoSum / IDEOLOGY_AXES.length - 0.5) * 0.9;
   }

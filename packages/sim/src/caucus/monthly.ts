@@ -79,10 +79,7 @@ function recentElectionBoostByParty(state: SimState): Set<string> {
 }
 
 /** Sync factionStates.chairId → caucus leaderId; pick a light deputy from members. */
-function syncLeadersFromFactionChairs(
-  state: SimState,
-  members: PoliticianMemberIndex,
-): void {
+function syncLeadersFromFactionChairs(state: SimState, members: PoliticianMemberIndex): void {
   const runtime = ensureCaucusRuntime(state);
   for (const [factionId, row] of Object.entries(runtime.caucuses)) {
     if (!isActive(row)) continue;

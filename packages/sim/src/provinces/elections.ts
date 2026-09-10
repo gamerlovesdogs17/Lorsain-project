@@ -299,7 +299,11 @@ function npcCandidateScore(
   if (kinds.includes("governor")) score += 0.55;
   if (kinds.includes("mayor")) score += 0.24;
   if (kinds.includes("minister")) score += 0.18;
-  if (index ? index.partyLeaderIds.has(politicianId) : Object.values(state.partyStates).some((party) => party.leaderId === politicianId))
+  if (
+    index
+      ? index.partyLeaderIds.has(politicianId)
+      : Object.values(state.partyStates).some((party) => party.leaderId === politicianId)
+  )
     score += 0.2;
   score += (stableHash(`${election.id}:${politicianId}`) % 1000) / 100000;
   return score;
@@ -362,13 +366,8 @@ function openField(
     .filter((id) => id !== state.playerPoliticianId)
     .filter(
       (id) =>
-        gubernatorialEligibilityErrorWithIndex(
-          state,
-          world,
-          id,
-          election.provinceId,
-          scanIndex,
-        ) == null,
+        gubernatorialEligibilityErrorWithIndex(state, world, id, election.provinceId, scanIndex) ==
+        null,
     )
     .filter(
       (id) => id !== election.incumbentId || election.incumbentDecision === "seek_reelection",
@@ -784,7 +783,10 @@ function reconcileGovernorAuthority(
   commandId: string,
 ): SimEvent[] {
   const events: SimEvent[] = [];
-  const electionsByProvince = new Map<string, typeof state.provincialRuntime.elections[string][]>();
+  const electionsByProvince = new Map<
+    string,
+    (typeof state.provincialRuntime.elections)[string][]
+  >();
   for (const row of Object.values(state.provincialRuntime.elections)) {
     const list = electionsByProvince.get(row.provinceId);
     if (list) list.push(row);

@@ -138,10 +138,7 @@ export function indexAssemblyMembers(world: KernelWorld, state: SimState): Assem
   return { byParty, byFaction };
 }
 
-function isUnalignedPolitician(
-  runtime: CaucusRuntime,
-  pol: { factionId: string | null },
-): boolean {
+function isUnalignedPolitician(runtime: CaucusRuntime, pol: { factionId: string | null }): boolean {
   return (
     !pol.factionId ||
     !runtime.caucuses[pol.factionId] ||

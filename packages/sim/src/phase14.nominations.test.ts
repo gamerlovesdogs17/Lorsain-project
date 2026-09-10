@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { createSimulation } from "./engine.js";
 import { loadTerenaWorld } from "./integration/harness.js";
 import { createRngService } from "./rng.js";
-import { allocateAssemblyCandidateFields, assemblyCandidateEligibilityError } from "./elections/assembly-cycle.js";
+import {
+  allocateAssemblyCandidateFields,
+  assemblyCandidateEligibilityError,
+} from "./elections/assembly-cycle.js";
 import {
   ensureOfficeNominationContests,
   officeNominationContestsForElection,
@@ -367,7 +370,10 @@ describe("Phase 14 office nominations", () => {
       Object.keys(world.constituencyElectorate)
         .filter((id) => (world.constituencyElectorate[id]?.seats ?? 0) >= 2)
         .sort()[0] ?? Object.keys(world.constituencyElectorate).sort()[0]!;
-    world.constituencyElectorate[multiSeat]!.seats = Math.max(3, world.constituencyElectorate[multiSeat]!.seats);
+    world.constituencyElectorate[multiSeat]!.seats = Math.max(
+      3,
+      world.constituencyElectorate[multiSeat]!.seats,
+    );
 
     let election = Object.values(state.elections).find((e) => e.type === "assembly");
     if (!election) {
@@ -519,7 +525,11 @@ describe("Phase 14 office nominations", () => {
 
   it("unnominated_party_candidate fires without nomination or emergency record", () => {
     const world = loadTerenaWorld();
-    const sim = createSimulation({ world, seed: "p14-nom-integrity", playerPoliticianId: "NPC146" });
+    const sim = createSimulation({
+      world,
+      seed: "p14-nom-integrity",
+      playerPoliticianId: "NPC146",
+    });
     const state = jsonClone(sim.getSnapshot() as SimState);
     const constituencyId = Object.keys(world.constituencyElectorate).sort()[0]!;
     const partyId = "PARTY_LAB";
@@ -590,9 +600,9 @@ describe("Phase 14 office nominations", () => {
     };
 
     const issues = auditAssemblyNominationIntegrity(state, world, id);
-    expect(issues.some((i) => i.code === "unnominated_party_candidate" && i.politicianId === filler)).toBe(
-      true,
-    );
+    expect(
+      issues.some((i) => i.code === "unnominated_party_candidate" && i.politicianId === filler),
+    ).toBe(true);
 
     // Explicit emergency selection clears the integrity finding.
     state.elections[id]!.assembly!.candidacies[filler]!.emergencySelection = {
