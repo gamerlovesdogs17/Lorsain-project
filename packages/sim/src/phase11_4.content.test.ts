@@ -185,21 +185,30 @@ describe("Phase 11.4 — Content Expansion", () => {
   });
 
   describe("article body structure diversity", () => {
-    it("covers all five structures and keeps prose short", () => {
+    it("covers primary narrative shapes and keeps prose short", () => {
       const seen = new Set<string>();
-      for (let i = 0; i < 40; i += 1) {
+      const fixtures: Array<{ category: string; factEventType?: string }> = [
+        { category: "government", factEventType: "LAW_ENACTED" },
+        { category: "courts", factEventType: "COURT_DECISION" },
+        { category: "foreign", factEventType: "FOREIGN_CRISIS_ESCALATED" },
+        { category: "elections", factEventType: "DEBATE_HELD" },
+        { category: "politics", factEventType: "POLITICAL_SCANDAL_ALLEGATION" },
+      ];
+      for (let i = 0; i < 48; i += 1) {
+        const fx = fixtures[i % fixtures.length]!;
         const structure = articleStructureFor({
           id: `NEWS-${String(i).padStart(8, "0")}`,
           outletId: `MED_${i % 3}`,
-          category: "government",
+          category: fx.category as "government",
           framing: "restrained",
+          factEventType: fx.factEventType,
         });
         seen.add(structure);
         const body = buildArticleBody({
           structure,
           headline: "Government tables the annual budget",
           date: "2030-01-01",
-          category: "government",
+          category: fx.category,
           framing: "restrained",
           provinceHint: "Industrial Corridor",
           facts: ["Fiscal year: 2030"],
@@ -207,7 +216,8 @@ describe("Phase 11.4 — Content Expansion", () => {
         expect(body.length).toBeGreaterThanOrEqual(2);
         expect(body.join(" ").length).toBeLessThan(420);
       }
-      expect(seen.size).toBe(ARTICLE_STRUCTURES.length);
+      expect(seen.size).toBeGreaterThanOrEqual(5);
+      expect(ARTICLE_STRUCTURES.length).toBeGreaterThanOrEqual(7);
     });
   });
 

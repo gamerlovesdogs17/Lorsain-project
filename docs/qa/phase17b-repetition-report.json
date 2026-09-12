@@ -1,0 +1,1465 @@
+{
+  "schema": "phase17b-repetition-report/v1",
+  "generatedAt": "2026-09-12",
+  "repo": "lorsain",
+  "phase": "17B.2",
+  "summaryCounts": {
+    "party priorities": 24,
+    "campaign situations": 16,
+    "executive situations": 23,
+    "scandal types": 6,
+    "org lobby templates": 10,
+    "caucus pressure templates": 6,
+    "provision families": 58,
+    "provision options": 258,
+    "constitution subjects": 21,
+    "policy interaction rules": 14,
+    "crisis escalation packages": 14,
+    "doctrine rule keys": 7,
+    "media headline branches": 46,
+    "platform policy options": 40,
+    "campaign strategies": 7
+  },
+  "categories": {
+    "party_priorities": {
+      "totalEntries": 24,
+      "distinctMechanicalPatterns": 9,
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "issueBucket=none|weight=?",
+          "count": 11,
+          "memberIds": [
+            "base_mobilization",
+            "candidate_recruitment",
+            "caucus_cohesion",
+            "donor_network",
+            "ethics_and_compliance",
+            "faction_management",
+            "field_infrastructure",
+            "governing_readiness",
+            "membership_growth",
+            "message_discipline",
+            "swing_persuasion"
+          ]
+        },
+        {
+          "patternKey": "issueBucket=institutional_reform|weight=?",
+          "count": 3,
+          "memberIds": [
+            "digital_rights",
+            "institutional_renewal",
+            "provincial_fairness"
+          ]
+        },
+        {
+          "patternKey": "issueBucket=economy|weight=?",
+          "count": 2,
+          "memberIds": [
+            "growth_and_jobs",
+            "rural_connectivity"
+          ]
+        },
+        {
+          "patternKey": "issueBucket=foreign_policy|weight=?",
+          "count": 2,
+          "memberIds": [
+            "defense_modernization",
+            "foreign_credibility"
+          ]
+        },
+        {
+          "patternKey": "issueBucket=social_policy|weight=?",
+          "count": 2,
+          "memberIds": [
+            "healthcare_access",
+            "immigration_integration"
+          ]
+        },
+        {
+          "patternKey": "issueBucket=environment|weight=?",
+          "count": 1,
+          "memberIds": [
+            "green_transition"
+          ]
+        },
+        {
+          "patternKey": "issueBucket=housing|weight=?",
+          "count": 1,
+          "memberIds": [
+            "housing_affordability"
+          ]
+        },
+        {
+          "patternKey": "issueBucket=labor|weight=?",
+          "count": 1,
+          "memberIds": [
+            "labor_standards"
+          ]
+        },
+        {
+          "patternKey": "issueBucket=taxes|weight=?",
+          "count": 1,
+          "memberIds": [
+            "tax_fairness"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [
+        {
+          "patternKey": "issueBucket=none|weight=?",
+          "count": 11,
+          "memberIds": [
+            "base_mobilization",
+            "candidate_recruitment",
+            "caucus_cohesion",
+            "donor_network",
+            "ethics_and_compliance",
+            "faction_management",
+            "field_infrastructure",
+            "governing_readiness",
+            "membership_growth",
+            "message_discipline",
+            "swing_persuasion"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issueBucket=institutional_reform|weight=?",
+          "count": 3,
+          "memberIds": [
+            "digital_rights",
+            "institutional_renewal",
+            "provincial_fairness"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issueBucket=economy|weight=?",
+          "count": 2,
+          "memberIds": [
+            "growth_and_jobs",
+            "rural_connectivity"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issueBucket=foreign_policy|weight=?",
+          "count": 2,
+          "memberIds": [
+            "defense_modernization",
+            "foreign_credibility"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issueBucket=social_policy|weight=?",
+          "count": 2,
+          "memberIds": [
+            "healthcare_access",
+            "immigration_integration"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        }
+      ],
+      "dominanceNotes": [
+        {
+          "patternKey": "issueBucket=none|weight=?",
+          "share": 0.458,
+          "count": 11,
+          "total": 24,
+          "note": "OVERREPRESENTED: one mechanical pattern covers a large share of this category"
+        }
+      ],
+      "categoryNotes": [
+        "LIKELY_RESKIN_CLUSTER: entry count materially exceeds distinct pattern count"
+      ]
+    },
+    "campaign_situations": {
+      "totalEntries": 16,
+      "distinctMechanicalPatterns": 16,
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "event=CAMPAIGN_ATTACK|imp=0.51|delta={\"momentum\":-0.025}",
+          "count": 1,
+          "memberIds": [
+            "integrity_attack_line"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_ATTACK|imp=0.52|delta={\"momentum\":-0.02}",
+          "count": 1,
+          "memberIds": [
+            "opposition_attack"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_ATTACK|imp=0.53|delta={\"momentum\":-0.018,\"favorability\":-0.008}",
+          "count": 1,
+          "memberIds": [
+            "debate_stage_pressure"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.4|delta={\"momentum\":0.02}",
+          "count": 1,
+          "memberIds": [
+            "volunteer_surge"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.43|delta={}",
+          "count": 1,
+          "memberIds": [
+            "constitutional_reform_debate"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.44|delta={}",
+          "count": 1,
+          "memberIds": [
+            "foreign_policy_spotlight"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.45|delta={}",
+          "count": 1,
+          "memberIds": [
+            "endorsement_fight"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.46|delta={}",
+          "count": 1,
+          "memberIds": [
+            "economic_message_war"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.47|delta={\"momentum\":0.015}",
+          "count": 1,
+          "memberIds": [
+            "regional_outreach_tour"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.48|delta={\"momentum\":0.02}",
+          "count": 1,
+          "memberIds": [
+            "gotv_push"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.49|delta={\"favorability\":0.012}",
+          "count": 1,
+          "memberIds": [
+            "policy_rollout_week"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.5|delta={\"favorability\":0.01}",
+          "count": 1,
+          "memberIds": [
+            "momentum_lift"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.5|delta={\"momentum\":-0.02}",
+          "count": 1,
+          "memberIds": [
+            "fundraising_shortfall"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.5|delta={\"momentum\":0.025}",
+          "count": 1,
+          "memberIds": [
+            "organizational_endorsement_wave"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.55|delta={\"momentum\":-0.03}",
+          "count": 1,
+          "memberIds": [
+            "controversy"
+          ]
+        },
+        {
+          "patternKey": "event=CAMPAIGN_MESSAGE|imp=0.6|delta={\"momentum\":0.03}",
+          "count": 1,
+          "memberIds": [
+            "final_stretch"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [],
+      "dominanceNotes": [],
+      "categoryNotes": []
+    },
+    "executive_situations": {
+      "totalEntries": 23,
+      "distinctMechanicalPatterns": 23,
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "dept=agriculture|cooldown=10|imp=0.46|when=(_world, state) => { const farm = currentProvisionOption(state, \"PROV_FARM_STABILIZATION\"); return farm != null && !farm.founding && farm.id.includes(\"income\");",
+          "count": 1,
+          "memberIds": [
+            "sit_farm_stabilization_payouts"
+          ]
+        },
+        {
+          "patternKey": "dept=defense|cooldown=16|imp=0.55|when=(_world, state) => { const readiness = currentProvisionOption(state, \"PROV_READINESS_FUND\"); const runtime = ensureGoverningRuntime(state); return readiness?.id",
+          "count": 1,
+          "memberIds": [
+            "sit_readiness_fund_overspend"
+          ]
+        },
+        {
+          "patternKey": "dept=economy|cooldown=12|imp=0.45|when=(_world, state) => implDelayedOnIssue(state, \"ISS_TRADE\")",
+          "count": 1,
+          "memberIds": [
+            "sit_competition_enforcement_capacity"
+          ]
+        },
+        {
+          "patternKey": "dept=economy|cooldown=12|imp=0.48|when=(_world, state) => { const finance = currentProvisionOption(state, \"PROV_CONSUMER_FINANCE\"); return (finance != null && !finance.founding && finance.id.includes",
+          "count": 1,
+          "memberIds": [
+            "sit_consumer_credit_complaints"
+          ]
+        },
+        {
+          "patternKey": "dept=economy|cooldown=13|imp=0.46|when=(_world, state) => { const algo = currentProvisionOption(state, \"PROV_ALGORITHM_AUDIT\"); return algo?.id.includes(\"provincial\") === true; }",
+          "count": 1,
+          "memberIds": [
+            "sit_provincial_algorithm_sandbox"
+          ]
+        },
+        {
+          "patternKey": "dept=education|cooldown=11|imp=0.49|when=(_world, state) => { const tuition = currentProvisionOption(state, \"PROV_TUITION_SUPPORT\"); return (tuition?.id.includes(\"cap\") === true && ensureGoverningRunti",
+          "count": 1,
+          "memberIds": [
+            "sit_tuition_cap_campus_strain"
+          ]
+        },
+        {
+          "patternKey": "dept=energy|cooldown=11|imp=0.54|when=(_world, state) => { const gas = currentProvisionOption(state, \"PROV_GAS_BRIDGE\"); const carbon = currentProvisionOption(state, \"PROV_CARBON_PRICE\"); return gas",
+          "count": 1,
+          "memberIds": [
+            "sit_gas_bridge_climate_tension"
+          ]
+        },
+        {
+          "patternKey": "dept=energy|cooldown=8|imp=0.52|when=(_world, state) => { const carbon = currentProvisionOption(state, \"PROV_CARBON_PRICE\"); const market = currentProvisionOption(state, \"PROV_ELECTRICITY_MARKET\");",
+          "count": 1,
+          "memberIds": [
+            "sit_energy_grid_congestion"
+          ]
+        },
+        {
+          "patternKey": "dept=finance|cooldown=14|imp=0.57|when=(_world, state) => { const tariffs = currentProvisionOption(state, \"PROV_STRATEGIC_TARIFFS\"); const runtime = ensureGoverningRuntime(state); return (tariffs != ",
+          "count": 1,
+          "memberIds": [
+            "sit_tariff_revenue_shortfall"
+          ]
+        },
+        {
+          "patternKey": "dept=finance|cooldown=15|imp=0.47|when=(_world, state) => { const tax = currentProvisionOption(state, \"PROV_INCOME_TAX\"); return tax?.id.includes(\"progressive\") === true || tax?.id.includes(\"bracket\"",
+          "count": 1,
+          "memberIds": [
+            "sit_income_tax_compliance_blitz"
+          ]
+        },
+        {
+          "patternKey": "dept=finance|cooldown=18|imp=0.6|when=(_world, state) => { const dep = currentProvisionOption(state, \"PROV_DEPOSIT_INSURANCE\"); const runtime = ensureGoverningRuntime(state); return ((dep?.id.includ",
+          "count": 1,
+          "memberIds": [
+            "sit_deposit_insurance_stress"
+          ]
+        },
+        {
+          "patternKey": "dept=health|cooldown=7|imp=0.44|when=(_world, state) => implDelayedOnIssue(state, \"ISS_WELFARE\") && ensureGoverningRuntime(state).services.healthcareAccess < 0.4",
+          "count": 1,
+          "memberIds": [
+            "sit_health_impl_capacity"
+          ]
+        },
+        {
+          "patternKey": "dept=health|cooldown=8|imp=0.51|when=(_world, state) => { const care = currentProvisionOption(state, \"PROV_PRIMARY_CARE\"); return (care?.id.includes(\"universal\") === true && ensureGoverningRuntime(",
+          "count": 1,
+          "memberIds": [
+            "sit_primary_care_waitlists"
+          ]
+        },
+        {
+          "patternKey": "dept=interior|cooldown=10|imp=0.5|when=(_world, state) => { const asylum = currentProvisionOption(state, \"PROV_ASYLUM_PROCESS\"); return Boolean(asylum?.id.includes(\"safe_country\") && (implDelayedOnIs",
+          "count": 1,
+          "memberIds": [
+            "sit_asylum_case_backlog"
+          ]
+        },
+        {
+          "patternKey": "dept=interior|cooldown=10|imp=0.5|when=(_world, state) => { const policing = currentProvisionOption(state, \"PROV_COMMUNITY_POLICING\"); return (policing?.id.includes(\"neighborhood\") === true || polici",
+          "count": 1,
+          "memberIds": [
+            "sit_community_policing_rollout"
+          ]
+        },
+        {
+          "patternKey": "dept=interior|cooldown=14|imp=0.58|when=(_world, state) => { const data = currentProvisionOption(state, \"PROV_CROSS_BORDER_DATA\"); const algo = currentProvisionOption(state, \"PROV_ALGORITHM_AUDIT\"); r",
+          "count": 1,
+          "memberIds": [
+            "sit_data_privacy_breach_response"
+          ]
+        },
+        {
+          "patternKey": "dept=interior|cooldown=18|imp=0.59|when=(_world, state) => { const admin = currentProvisionOption(state, \"PROV_ELECTION_ADMIN\"); return admin != null && !admin.founding && admin.id.includes(\"modernize",
+          "count": 1,
+          "memberIds": [
+            "sit_election_admin_capacity"
+          ]
+        },
+        {
+          "patternKey": "dept=justice|cooldown=11|imp=0.56|when=(_world, state) => { const warrant = currentProvisionOption(state, \"PROV_SURVEILLANCE_WARRANT\"); const data = currentProvisionOption(state, \"PROV_CROSS_BORDER_D",
+          "count": 1,
+          "memberIds": [
+            "sit_surveillance_warrant_backlog"
+          ]
+        },
+        {
+          "patternKey": "dept=justice|cooldown=12|imp=0.54|when=(_world, state) => { const sentencing = currentProvisionOption(state, \"PROV_SENTENCING\"); return (sentencing?.id.includes(\"mandatory_minimum\") === true && ensur",
+          "count": 1,
+          "memberIds": [
+            "sit_sentencing_overcrowding"
+          ]
+        },
+        {
+          "patternKey": "dept=justice|cooldown=9|imp=0.55|when=(_world, state) => { const complaints = currentProvisionOption(state, \"PROV_POLICE_COMPLAINTS\"); const cameras = currentProvisionOption(state, \"PROV_BODY_CAMERA",
+          "count": 1,
+          "memberIds": [
+            "sit_police_oversight_hearing"
+          ]
+        },
+        {
+          "patternKey": "dept=labour|cooldown=10|imp=0.47|when=(_world, state) => { const temp = currentProvisionOption(state, \"PROV_TEMP_WORKER\"); return (temp?.id.includes(\"annual_cap\") === true || temp?.id.includes(\"open",
+          "count": 1,
+          "memberIds": [
+            "sit_temp_worker_enforcement"
+          ]
+        },
+        {
+          "patternKey": "dept=labour|cooldown=9|imp=0.53|when=(_world, state) => { const union = currentProvisionOption(state, \"PROV_UNION_RECOGNITION\"); const strike = currentProvisionOption(state, \"PROV_STRIKE_NOTICE\"); ",
+          "count": 1,
+          "memberIds": [
+            "sit_union_recognition_strike_risk"
+          ]
+        },
+        {
+          "patternKey": "dept=transport|cooldown=13|imp=0.48|when=(_world, state) => { const rail = currentProvisionOption(state, \"PROV_RAIL_OWNERSHIP\"); return rail?.id.includes(\"mixed\") === true || rail?.id.includes(\"public\"",
+          "count": 1,
+          "memberIds": [
+            "sit_rail_ownership_dispute"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [],
+      "dominanceNotes": [],
+      "categoryNotes": []
+    },
+    "scandal_types": {
+      "totalEntries": 6,
+      "distinctMechanicalPatterns": 6,
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "path=administrative|grounds=grave_unlawful_exercise_of_office|dept=none|wt=0.2",
+          "count": 1,
+          "memberIds": [
+            "scandal_campaign_overlap"
+          ]
+        },
+        {
+          "patternKey": "path=administrative|grounds=grave_unlawful_exercise_of_office|dept=none|wt=0.35",
+          "count": 1,
+          "memberIds": [
+            "scandal_petty_expense"
+          ]
+        },
+        {
+          "patternKey": "path=investigation|grounds=grave_unlawful_exercise_of_office|dept=interior|wt=0.18",
+          "count": 1,
+          "memberIds": [
+            "scandal_data_misuse"
+          ]
+        },
+        {
+          "patternKey": "path=investigation|grounds=serious_public_corruption|dept=defense|wt=0.22",
+          "count": 1,
+          "memberIds": [
+            "scandal_procurement_favor"
+          ]
+        },
+        {
+          "patternKey": "path=investigation|grounds=serious_public_corruption|dept=economy|wt=0.25",
+          "count": 1,
+          "memberIds": [
+            "scandal_undisclosed_interest"
+          ]
+        },
+        {
+          "patternKey": "path=prosecutorial|grounds=serious_constitutional_abuse|dept=justice|wt=0.12",
+          "count": 1,
+          "memberIds": [
+            "scandal_witness_interference"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [],
+      "dominanceNotes": [],
+      "categoryNotes": []
+    },
+    "org_lobby_templates": {
+      "totalEntries": 10,
+      "distinctMechanicalPatterns": 10,
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "stance=oppose|issues=ISS_CLIMATE,ISS_TRADE|amend=weaken_enforcement|bonus=0.1",
+          "count": 1,
+          "memberIds": [
+            "business_regulatory_blitz"
+          ]
+        },
+        {
+          "patternKey": "stance=oppose|issues=ISS_DECENT,ISS_WELFARE|amend=none|bonus=0",
+          "count": 1,
+          "memberIds": [
+            "health_professional_alert"
+          ]
+        },
+        {
+          "patternKey": "stance=oppose|issues=ISS_LABOR|amend=weaken_enforcement|bonus=0.16",
+          "count": 1,
+          "memberIds": [
+            "business_labor_compliance_push"
+          ]
+        },
+        {
+          "patternKey": "stance=oppose|issues=ISS_LIBERTY,ISS_POLICING,ISS_REFORM|amend=sunset_clause|bonus=0.13",
+          "count": 1,
+          "memberIds": [
+            "civil_liberty_watch"
+          ]
+        },
+        {
+          "patternKey": "stance=oppose|issues=ISS_LIBERTY,ISS_REFORM|amend=weaken_enforcement|bonus=0.15",
+          "count": 1,
+          "memberIds": [
+            "tech_platform_audit_lobby"
+          ]
+        },
+        {
+          "patternKey": "stance=support|issues=ISS_CLIMATE,ISS_LIBERTY|amend=expand_scope|bonus=0.11",
+          "count": 1,
+          "memberIds": [
+            "environment_coalition_drive"
+          ]
+        },
+        {
+          "patternKey": "stance=support|issues=ISS_DEFENSE,ISS_WELFARE|amend=none|bonus=0",
+          "count": 1,
+          "memberIds": [
+            "veterans_benefits_push"
+          ]
+        },
+        {
+          "patternKey": "stance=support|issues=ISS_HOUSING,ISS_REFORM|amend=none|bonus=0",
+          "count": 1,
+          "memberIds": [
+            "municipal_league_lobby"
+          ]
+        },
+        {
+          "patternKey": "stance=support|issues=ISS_LABOR,ISS_WELFARE|amend=expand_scope|bonus=0.14",
+          "count": 1,
+          "memberIds": [
+            "union_floor_whip"
+          ]
+        },
+        {
+          "patternKey": "stance=support|issues=ISS_OWNERSHIP,ISS_TRADE|amend=delay_implementation|bonus=0.12",
+          "count": 1,
+          "memberIds": [
+            "farm_coop_price_floor"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [],
+      "dominanceNotes": [],
+      "categoryNotes": []
+    },
+    "caucus_pressure_templates": {
+      "totalEntries": 6,
+      "distinctMechanicalPatterns": 2,
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "requiresBill=true",
+          "count": 4,
+          "memberIds": [
+            "leadership_unity_push",
+            "platform_red_line",
+            "regional_holdout",
+            "whip_count_leak"
+          ]
+        },
+        {
+          "patternKey": "requiresBill=false",
+          "count": 2,
+          "memberIds": [
+            "backbench_petition",
+            "coalition_partner_ultimatum"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [
+        {
+          "patternKey": "requiresBill=true",
+          "count": 4,
+          "memberIds": [
+            "leadership_unity_push",
+            "platform_red_line",
+            "regional_holdout",
+            "whip_count_leak"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "requiresBill=false",
+          "count": 2,
+          "memberIds": [
+            "backbench_petition",
+            "coalition_partner_ultimatum"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        }
+      ],
+      "dominanceNotes": [
+        {
+          "patternKey": "requiresBill=true",
+          "share": 0.667,
+          "count": 4,
+          "total": 6,
+          "note": "OVERREPRESENTED: one mechanical pattern covers a large share of this category"
+        }
+      ],
+      "categoryNotes": [
+        "LIKELY_RESKIN_CLUSTER: entry count materially exceeds distinct pattern count"
+      ]
+    },
+    "legislative_provisions": {
+      "totalEntries": 58,
+      "distinctMechanicalPatterns": 39,
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "issues=|opts=4|shape=categorical:0|none:0|none:0|none:0",
+          "count": 6,
+          "memberIds": [
+            "PROV_FARM_STABILIZATION",
+            "PROV_INFRASTRUCTURE_BANK",
+            "PROV_PLATFORM_WORK",
+            "PROV_PUBLIC_HOUSING",
+            "PROV_SENTENCING",
+            "PROV_VOCATIONAL_TRAINING"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=3|shape=binary:0|binary:0|none:0",
+          "count": 4,
+          "memberIds": [
+            "PROV_CONCORD_PROCUREMENT",
+            "PROV_RENT_POLICY",
+            "PROV_SCHOOL_MEALS",
+            "PROV_SURVEILLANCE_WARRANT"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=binary:undefined|binary:undefined|categorical:undefined|none:0",
+          "count": 3,
+          "memberIds": [
+            "PROV_ALGORITHM_AUDIT",
+            "PROV_COMMUNITY_POLICING",
+            "PROV_CROSS_BORDER_DATA"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=5|shape=none:undefined|none:undefined|none:undefined|none:undefined|none:undefined",
+          "count": 3,
+          "memberIds": [
+            "PROV_CLEAN_POWER",
+            "PROV_HOUSING_APPROVALS",
+            "PROV_STRATEGIC_TARIFFS"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=5|shape=numeric:0|numeric:0|numeric:0|numeric:0|numeric:0",
+          "count": 3,
+          "memberIds": [
+            "PROV_CARBON_PRICE",
+            "PROV_INCOME_TAX",
+            "PROV_UNEMPLOYMENT_INSURANCE"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=binary:0|none:0|none:undefined|none:undefined",
+          "count": 2,
+          "memberIds": [
+            "PROV_HOSPITAL_GOVERNANCE",
+            "PROV_WATER_ENFORCEMENT"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=none:0|none:undefined|none:undefined|numeric:0",
+          "count": 2,
+          "memberIds": [
+            "PROV_FIREARMS_LICENSING",
+            "PROV_LAND_VALUE_TAX"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=5|shape=categorical:0|categorical:0|none:0|none:0|none:0",
+          "count": 2,
+          "memberIds": [
+            "PROV_READINESS_FUND",
+            "PROV_REPRODUCTIVE_LAW"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=5|shape=categorical:0|none:0|none:0|none:0|numeric:0",
+          "count": 2,
+          "memberIds": [
+            "PROV_RESIDENCY_PATH",
+            "PROV_REVENUE_DISCRETION"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=7|shape=none:undefined|none:undefined|none:undefined|none:undefined|none:undefined|none:undefined|none:undefined",
+          "count": 2,
+          "memberIds": [
+            "PROV_BARGAINING_SCOPE",
+            "PROV_RAIL_OWNERSHIP"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=binary:0|binary:undefined|categorical:0|none:0",
+          "count": 1,
+          "memberIds": [
+            "PROV_BODY_CAMERA"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=binary:0|none:0|none:0|none:0",
+          "count": 1,
+          "memberIds": [
+            "PROV_TRANSIT_ZONING"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=binary:undefined|categorical:undefined|duration:undefined|none:0",
+          "count": 1,
+          "memberIds": [
+            "PROV_GAS_BRIDGE"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=binary:undefined|categorical:undefined|none:0|threshold:undefined",
+          "count": 1,
+          "memberIds": [
+            "PROV_CONSUMER_FINANCE"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=categorical:0|none:0|none:0|none:undefined",
+          "count": 1,
+          "memberIds": [
+            "PROV_BROADBAND"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=categorical:0|none:0|none:undefined|none:undefined",
+          "count": 1,
+          "memberIds": [
+            "PROV_NUCLEAR_POLICY"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=categorical:undefined|duration:0|none:0|threshold:0",
+          "count": 1,
+          "memberIds": [
+            "PROV_TEMP_WORKER"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=categorical:undefined|none:0|threshold:0|threshold:undefined",
+          "count": 1,
+          "memberIds": [
+            "PROV_DEPOSIT_INSURANCE"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=none:0|none:0|none:0|none:0",
+          "count": 1,
+          "memberIds": [
+            "PROV_INHERITANCE_TAX"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=none:0|none:0|none:0|none:undefined",
+          "count": 1,
+          "memberIds": [
+            "PROV_CHILDCARE_MODEL"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=none:0|none:0|none:0|numeric:0",
+          "count": 1,
+          "memberIds": [
+            "PROV_STRIKE_NOTICE"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=none:0|none:0|none:0|threshold:0",
+          "count": 1,
+          "memberIds": [
+            "PROV_UNION_RECOGNITION"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=none:0|none:0|none:undefined|none:undefined",
+          "count": 1,
+          "memberIds": [
+            "PROV_MEDICINE_PRICING"
+          ]
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=none:0|none:undefined|none:undefined|none:undefined",
+          "count": 1,
+          "memberIds": [
+            "PROV_ASYLUM_PROCESS"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [
+        {
+          "patternKey": "issues=|opts=4|shape=categorical:0|none:0|none:0|none:0",
+          "count": 6,
+          "memberIds": [
+            "PROV_FARM_STABILIZATION",
+            "PROV_INFRASTRUCTURE_BANK",
+            "PROV_PLATFORM_WORK",
+            "PROV_PUBLIC_HOUSING",
+            "PROV_SENTENCING",
+            "PROV_VOCATIONAL_TRAINING"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issues=|opts=3|shape=binary:0|binary:0|none:0",
+          "count": 4,
+          "memberIds": [
+            "PROV_CONCORD_PROCUREMENT",
+            "PROV_RENT_POLICY",
+            "PROV_SCHOOL_MEALS",
+            "PROV_SURVEILLANCE_WARRANT"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=binary:undefined|binary:undefined|categorical:undefined|none:0",
+          "count": 3,
+          "memberIds": [
+            "PROV_ALGORITHM_AUDIT",
+            "PROV_COMMUNITY_POLICING",
+            "PROV_CROSS_BORDER_DATA"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issues=|opts=5|shape=none:undefined|none:undefined|none:undefined|none:undefined|none:undefined",
+          "count": 3,
+          "memberIds": [
+            "PROV_CLEAN_POWER",
+            "PROV_HOUSING_APPROVALS",
+            "PROV_STRATEGIC_TARIFFS"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issues=|opts=5|shape=numeric:0|numeric:0|numeric:0|numeric:0|numeric:0",
+          "count": 3,
+          "memberIds": [
+            "PROV_CARBON_PRICE",
+            "PROV_INCOME_TAX",
+            "PROV_UNEMPLOYMENT_INSURANCE"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=binary:0|none:0|none:undefined|none:undefined",
+          "count": 2,
+          "memberIds": [
+            "PROV_HOSPITAL_GOVERNANCE",
+            "PROV_WATER_ENFORCEMENT"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issues=|opts=4|shape=none:0|none:undefined|none:undefined|numeric:0",
+          "count": 2,
+          "memberIds": [
+            "PROV_FIREARMS_LICENSING",
+            "PROV_LAND_VALUE_TAX"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issues=|opts=5|shape=categorical:0|categorical:0|none:0|none:0|none:0",
+          "count": 2,
+          "memberIds": [
+            "PROV_READINESS_FUND",
+            "PROV_REPRODUCTIVE_LAW"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issues=|opts=5|shape=categorical:0|none:0|none:0|none:0|numeric:0",
+          "count": 2,
+          "memberIds": [
+            "PROV_RESIDENCY_PATH",
+            "PROV_REVENUE_DISCRETION"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "issues=|opts=7|shape=none:undefined|none:undefined|none:undefined|none:undefined|none:undefined|none:undefined|none:undefined",
+          "count": 2,
+          "memberIds": [
+            "PROV_BARGAINING_SCOPE",
+            "PROV_RAIL_OWNERSHIP"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        }
+      ],
+      "dominanceNotes": [],
+      "categoryNotes": [],
+      "optionCount": 258
+    },
+    "constitution_subjects": {
+      "totalEntries": 21,
+      "distinctMechanicalPatterns": 16,
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "article=ARTICLE_III|alts=4",
+          "count": 3,
+          "memberIds": [
+            "art3_executive_authority",
+            "art3_presidential_election_mode",
+            "art3_presidential_term_limit"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_IV|alts=4",
+          "count": 2,
+          "memberIds": [
+            "art4_assembly_election_mode",
+            "art4_assembly_term"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_IX|alts=4",
+          "count": 2,
+          "memberIds": [
+            "art9_local_government",
+            "art9_provincial_competence"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_VIII|alts=4",
+          "count": 2,
+          "memberIds": [
+            "art8_court_term",
+            "art8_judicial_review"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_I|alts=3",
+          "count": 1,
+          "memberIds": [
+            "art1_republic_form"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_II|alts=2",
+          "count": 1,
+          "memberIds": [
+            "art2_citizenship_guard"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_II|alts=3",
+          "count": 1,
+          "memberIds": [
+            "art2_press_freedom"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_II|alts=4",
+          "count": 1,
+          "memberIds": [
+            "art2_civil_liberties"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_V|alts=4",
+          "count": 1,
+          "memberIds": [
+            "art5_veto_override"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_VI|alts=3",
+          "count": 1,
+          "memberIds": [
+            "art6_cabinet_formation"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_VII|alts=4",
+          "count": 1,
+          "memberIds": [
+            "art7_party_system"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_X|alts=3",
+          "count": 1,
+          "memberIds": [
+            "art10_defense_control"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_X|alts=4",
+          "count": 1,
+          "memberIds": [
+            "art10_emergency_powers"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_XI|alts=4",
+          "count": 1,
+          "memberIds": [
+            "art11_treaty_approval"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_XII|alts=4",
+          "count": 1,
+          "memberIds": [
+            "art12_amendment_process"
+          ]
+        },
+        {
+          "patternKey": "article=ARTICLE_XII|alts=5",
+          "count": 1,
+          "memberIds": [
+            "art12_unamendable_core"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [
+        {
+          "patternKey": "article=ARTICLE_III|alts=4",
+          "count": 3,
+          "memberIds": [
+            "art3_executive_authority",
+            "art3_presidential_election_mode",
+            "art3_presidential_term_limit"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "article=ARTICLE_IV|alts=4",
+          "count": 2,
+          "memberIds": [
+            "art4_assembly_election_mode",
+            "art4_assembly_term"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "article=ARTICLE_IX|alts=4",
+          "count": 2,
+          "memberIds": [
+            "art9_local_government",
+            "art9_provincial_competence"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        },
+        {
+          "patternKey": "article=ARTICLE_VIII|alts=4",
+          "count": 2,
+          "memberIds": [
+            "art8_court_term",
+            "art8_judicial_review"
+          ],
+          "reason": "multiple catalog ids share the same mechanical pattern heuristic"
+        }
+      ],
+      "dominanceNotes": [],
+      "categoryNotes": []
+    },
+    "policy_interaction_rules": {
+      "totalEntries": 14,
+      "distinctMechanicalPatterns": 14,
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "kind=contradiction|A=PROV_ALGORITHM_AUDIT|B=PROV_ALGORITHM_AUDIT",
+          "count": 1,
+          "memberIds": [
+            "INT_PROVINCIAL_AI_FEDERAL_CONTRADICTION"
+          ]
+        },
+        {
+          "patternKey": "kind=contradiction|A=PROV_GAS_BRIDGE|B=PROV_CARBON_PRICE",
+          "count": 1,
+          "memberIds": [
+            "INT_GAS_CARBON_CONTRADICTION"
+          ]
+        },
+        {
+          "patternKey": "kind=contradiction|A=PROV_PRIMARY_CARE|B=PROV_PRIMARY_CARE",
+          "count": 1,
+          "memberIds": [
+            "INT_HEALTH_FINANCING_CONTRADICTION"
+          ]
+        },
+        {
+          "patternKey": "kind=contradiction|A=PROV_RAIL_OWNERSHIP|B=PROV_RAIL_OWNERSHIP",
+          "count": 1,
+          "memberIds": [
+            "INT_RAIL_OWNERSHIP_CONTRADICTION"
+          ]
+        },
+        {
+          "patternKey": "kind=strain|A=PROV_ASYLUM_PROCESS|B=PROV_TEMP_WORKER",
+          "count": 1,
+          "memberIds": [
+            "INT_ASYLUM_TEMP_STRAIN"
+          ]
+        },
+        {
+          "patternKey": "kind=strain|A=PROV_CARBON_PRICE|B=PROV_ELECTRICITY_MARKET",
+          "count": 1,
+          "memberIds": [
+            "INT_ENERGY_GRID"
+          ]
+        },
+        {
+          "patternKey": "kind=strain|A=PROV_CONSUMER_FINANCE|B=PROV_DEPOSIT_INSURANCE",
+          "count": 1,
+          "memberIds": [
+            "INT_CONSUMER_CREDIT_DEPOSIT_STRAIN"
+          ]
+        },
+        {
+          "patternKey": "kind=strain|A=PROV_CROSS_BORDER_DATA|B=PROV_SURVEILLANCE_WARRANT",
+          "count": 1,
+          "memberIds": [
+            "INT_DATA_SURVEILLANCE_STRAIN"
+          ]
+        },
+        {
+          "patternKey": "kind=strain|A=PROV_GAS_BRIDGE|B=PROV_CLEAN_POWER",
+          "count": 1,
+          "memberIds": [
+            "INT_ENERGY_GRID_CLIMATE"
+          ]
+        },
+        {
+          "patternKey": "kind=strain|A=PROV_STRATEGIC_TARIFFS|B=PROV_CORPORATE_TAX",
+          "count": 1,
+          "memberIds": [
+            "INT_TARIFF_EXPORT"
+          ]
+        },
+        {
+          "patternKey": "kind=strain|A=PROV_UNEMPLOYMENT_INSURANCE|B=PROV_CHILD_BENEFIT",
+          "count": 1,
+          "memberIds": [
+            "INT_BENEFITS_UNEMPLOYMENT"
+          ]
+        },
+        {
+          "patternKey": "kind=synergy|A=PROV_ALGORITHM_AUDIT|B=PROV_CROSS_BORDER_DATA",
+          "count": 1,
+          "memberIds": [
+            "INT_ALGORITHM_AUDIT_SYNERGY"
+          ]
+        },
+        {
+          "patternKey": "kind=synergy|A=PROV_BARGAINING_SCOPE|B=PROV_MINIMUM_WAGE",
+          "count": 1,
+          "memberIds": [
+            "INT_LABOR_WAGE_BARGAIN"
+          ]
+        },
+        {
+          "patternKey": "kind=synergy|A=PROV_BODY_CAMERA|B=PROV_POLICE_COMPLAINTS",
+          "count": 1,
+          "memberIds": [
+            "INT_BODY_CAMERA_OVERSIGHT_SYNERGY"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [],
+      "dominanceNotes": [],
+      "categoryNotes": []
+    },
+    "foreign_crisis_packages": {
+      "totalEntries": 14,
+      "distinctMechanicalPatterns": 14,
+      "packageIds": [
+        "alliance_strain",
+        "border_flashpoint",
+        "cyber_escalation",
+        "diplomatic_fracture",
+        "energy_shock",
+        "export_controls",
+        "force_posturing",
+        "generic_diplomatic",
+        "humanitarian_corridor",
+        "maritime_access",
+        "migration_pressure",
+        "sanctions_spiral",
+        "security_standoff",
+        "trade_retaliation"
+      ],
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "alliance_strain",
+          "count": 1,
+          "memberIds": [
+            "alliance_strain"
+          ]
+        },
+        {
+          "patternKey": "border_flashpoint",
+          "count": 1,
+          "memberIds": [
+            "border_flashpoint"
+          ]
+        },
+        {
+          "patternKey": "cyber_escalation",
+          "count": 1,
+          "memberIds": [
+            "cyber_escalation"
+          ]
+        },
+        {
+          "patternKey": "diplomatic_fracture",
+          "count": 1,
+          "memberIds": [
+            "diplomatic_fracture"
+          ]
+        },
+        {
+          "patternKey": "energy_shock",
+          "count": 1,
+          "memberIds": [
+            "energy_shock"
+          ]
+        },
+        {
+          "patternKey": "export_controls",
+          "count": 1,
+          "memberIds": [
+            "export_controls"
+          ]
+        },
+        {
+          "patternKey": "force_posturing",
+          "count": 1,
+          "memberIds": [
+            "force_posturing"
+          ]
+        },
+        {
+          "patternKey": "generic_diplomatic",
+          "count": 1,
+          "memberIds": [
+            "generic_diplomatic"
+          ]
+        },
+        {
+          "patternKey": "humanitarian_corridor",
+          "count": 1,
+          "memberIds": [
+            "humanitarian_corridor"
+          ]
+        },
+        {
+          "patternKey": "maritime_access",
+          "count": 1,
+          "memberIds": [
+            "maritime_access"
+          ]
+        },
+        {
+          "patternKey": "migration_pressure",
+          "count": 1,
+          "memberIds": [
+            "migration_pressure"
+          ]
+        },
+        {
+          "patternKey": "sanctions_spiral",
+          "count": 1,
+          "memberIds": [
+            "sanctions_spiral"
+          ]
+        },
+        {
+          "patternKey": "security_standoff",
+          "count": 1,
+          "memberIds": [
+            "security_standoff"
+          ]
+        },
+        {
+          "patternKey": "trade_retaliation",
+          "count": 1,
+          "memberIds": [
+            "trade_retaliation"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [],
+      "dominanceNotes": [],
+      "categoryNotes": []
+    },
+    "judicial_doctrine_labels": {
+      "totalEntries": 7,
+      "distinctMechanicalPatterns": 7,
+      "ruleKeys": [
+        "election_administration",
+        "emergency_review",
+        "federal_provincial_competence",
+        "impeachment_judgment",
+        "law_review",
+        "regulation_review",
+        "rights_limitation_review"
+      ],
+      "mechanicalPatternClusters": [
+        {
+          "patternKey": "election_administration",
+          "count": 1,
+          "memberIds": [
+            "election_administration"
+          ]
+        },
+        {
+          "patternKey": "emergency_review",
+          "count": 1,
+          "memberIds": [
+            "emergency_review"
+          ]
+        },
+        {
+          "patternKey": "federal_provincial_competence",
+          "count": 1,
+          "memberIds": [
+            "federal_provincial_competence"
+          ]
+        },
+        {
+          "patternKey": "impeachment_judgment",
+          "count": 1,
+          "memberIds": [
+            "impeachment_judgment"
+          ]
+        },
+        {
+          "patternKey": "law_review",
+          "count": 1,
+          "memberIds": [
+            "law_review"
+          ]
+        },
+        {
+          "patternKey": "regulation_review",
+          "count": 1,
+          "memberIds": [
+            "regulation_review"
+          ]
+        },
+        {
+          "patternKey": "rights_limitation_review",
+          "count": 1,
+          "memberIds": [
+            "rights_limitation_review"
+          ]
+        }
+      ],
+      "likelyReskinClusterFlags": [],
+      "dominanceNotes": [],
+      "categoryNotes": []
+    },
+    "media_headline_branches": {
+      "totalEntries": 46,
+      "distinctMechanicalPatterns": 46,
+      "categoryNotes": [
+        "Static count of explicit event-type branches in headlineFor (not runtime frequency).",
+        "Historical probe: law_enacted headlines dominate 36-month samples — see phase17b-content-audit.md."
+      ],
+      "likelyReskinClusterFlags": [],
+      "dominanceNotes": [
+        {
+          "patternKey": "BILL/LAW pipeline",
+          "share": null,
+          "note": "OVERREPRESENTED in play: routine bill events vs executive/scandal/foreign beats (audit)."
+        }
+      ],
+      "mechanicalPatternClusters": []
+    },
+    "platform_policy_options": {
+      "totalEntries": 40,
+      "distinctMechanicalPatterns": 10,
+      "byIssue": {
+        "defense": 4,
+        "economy": 4,
+        "environment": 4,
+        "foreign_policy": 4,
+        "housing": 4,
+        "immigration": 4,
+        "institutional_reform": 4,
+        "labor": 4,
+        "social_policy": 4,
+        "taxes": 4
+      }
+    },
+    "campaign_strategies": {
+      "totalEntries": 7,
+      "distinctMechanicalPatterns": 7,
+      "ids": [
+        "attack",
+        "base_turnout",
+        "coalition_focus",
+        "governance_record",
+        "issue_ownership",
+        "persuasion",
+        "regional_ticket"
+      ]
+    }
+  },
+  "exportsChecked": {
+    "validatePhase17bContentCatalogs": true
+  },
+  "ciPolicy": "informational_only — no threshold failures"
+}

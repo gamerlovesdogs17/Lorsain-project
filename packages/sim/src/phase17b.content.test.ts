@@ -19,6 +19,7 @@ import {
 import { CAMPAIGN_SITUATIONS } from "./campaigns/situations.js";
 import { JUDICIAL_DOCTRINE_LABELS, pickLawReviewQuestion } from "./courts/legalContent.js";
 import { CONSTITUTION_CHANGE_SUBJECTS } from "./provinces/constitutionChanges.js";
+import { validatePhase17bContentCatalogs } from "./content/validate17b.js";
 
 const NEW_PROVISION_IDS = [
   "PROV_CROSS_BORDER_DATA",
@@ -53,7 +54,8 @@ describe("Phase 17B — wave 1 content", () => {
 
   it("includes scandal and executive situation catalogs", () => {
     expect(SCANDAL_TYPES.length).toBeGreaterThanOrEqual(6);
-    expect(EXECUTIVE_SITUATIONS.length).toBeGreaterThanOrEqual(8);
+    expect(EXECUTIVE_SITUATIONS.length).toBeGreaterThanOrEqual(20);
+    expect(validatePhase17bContentCatalogs()).toEqual([]);
   });
 
   it("defines distinct foreign crisis and trade packages", () => {
