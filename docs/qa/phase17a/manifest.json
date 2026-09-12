@@ -1,8 +1,8 @@
 {
   "phase": "phase17a-government",
-  "commitSha": "b7f421a3d6b347c4da7c3df4507f0c021a3b9f50",
-  "buildTimestamp": "2026-09-12T21:19:11.928Z",
-  "generatedAt": "2026-09-12T21:19:30.050Z",
+  "commitSha": "c5f0b7e808a0030f2c24a8a9480ca3699a893eb2",
+  "buildTimestamp": "2026-09-12T21:57:55.344Z",
+  "generatedAt": "2026-09-12T21:58:14.632Z",
   "base": "http://127.0.0.1:5177/Lorsain-project/",
   "fixture": {
     "qaFixture": "phase17a-government",
@@ -47,8 +47,8 @@
       ],
       "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; Executive power strip",
       "ok": true,
-      "sha256": "879ea4b51b2247443e5e938418a761e9c35f00217d8d54abd1507710fe95cd99",
-      "bytes": 155742
+      "sha256": "e4bc922cbf4150dbc01392e18cca4f51b7f4df654162f1981ba6ebc23d6328ab",
+      "bytes": 155856
     },
     {
       "file": "government-cabinet-minister-1280.png",
@@ -68,8 +68,8 @@
       ],
       "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; cabinet rows=12; minister=Minister of Agriculture",
       "ok": true,
-      "sha256": "fed601f7c25a22cac47d46acd5f31fc81cbdbd743242a26a3cf5ea129a4ed0e2",
-      "bytes": 141860
+      "sha256": "fdd0e272375c7458a2295d9a70b8e4d654d5aafb85fbe66251c48a4c7e638125",
+      "bytes": 141059
     },
     {
       "file": "government-agenda-1280.png",
@@ -108,8 +108,8 @@
       ],
       "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; response actions on delayed record",
       "ok": true,
-      "sha256": "1d4f11ea618370bf9995ab6aa989cfd2e34bfe1280bac17581ae2d48be08bd55",
-      "bytes": 149679
+      "sha256": "bd968471195dbb8efd3757ba4f81fbb4c1efddb337e8609ab65098a1a6609122",
+      "bytes": 149688
     },
     {
       "file": "government-budget-1280.png",
@@ -130,8 +130,8 @@
       ],
       "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; preferred vs total envelope; full request hint; projected label",
       "ok": true,
-      "sha256": "e240f77cc7767f4b43c8e46f4cc2e8d41c1f98acd27950459086129fe3df8be4",
-      "bytes": 135419
+      "sha256": "08dde11eaa96a620daf6ec871f560db1df806ed9ed99b8790b900656200c19ab",
+      "bytes": 135281
     },
     {
       "file": "government-overview-390.png",
@@ -168,8 +168,8 @@
       ],
       "assertionSummary": "Government page visible; no horizontal overflow (390px); tabs: Overview, Executive, Cabinet, Implementation, Budget",
       "ok": true,
-      "sha256": "fdd7950c64106c7159da4d7ef874b662c55811d23f99a9e60791828277ebec53",
-      "bytes": 71166
+      "sha256": "62933844b4e402bb821af83e0b9df662b0e58b487948983dfbb77df3582675c5",
+      "bytes": 71214
     },
     {
       "file": "government-cabinet-390.png",
@@ -187,8 +187,8 @@
       ],
       "assertionSummary": "Government page visible; no horizontal overflow (390px); tabs: Overview, Executive, Cabinet, Implementation, Budget",
       "ok": true,
-      "sha256": "6cd6d15e9208a583c053c8c70de802ca245111859e7ce8ac14527eb1b6f39640",
-      "bytes": 68654
+      "sha256": "d4bb79a09c3379b02645e8a726c6fc421952d23bbb869cd31930a85b163d8d68",
+      "bytes": 69503
     },
     {
       "file": "government-implementation-390.png",
@@ -225,14 +225,12 @@
       ],
       "assertionSummary": "Government page visible; no horizontal overflow (390px); tabs: Overview, Executive, Cabinet, Implementation, Budget",
       "ok": true,
-      "sha256": "482f6991e9c032f502b64a42972041060eea395d1fda7222926c4ec34d081454",
-      "bytes": 65490
+      "sha256": "70d22438bd5603d269b9ca8c09003fdcee36766178193472c718c120271157bb",
+      "bytes": 65613
     }
   ],
   "failures": [],
   "overflowAssertionsPassed": true,
   "desktopOverflowPassed": true,
-  "mobileOverflowPassed": true,
-  "note": "PNG content from this tip lineage; re-capture if UI drifts.",
-  "screenshotContentCommit": "cc10f995163d01b038b6be316c0564ce37732b58"
+  "mobileOverflowPassed": true
 }

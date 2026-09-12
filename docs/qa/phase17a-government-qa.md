@@ -41,25 +41,25 @@ node scripts/phase17a-government-qa-capture.mjs
 
 Manifest: `docs/qa/phase17a/manifest.json` (PNG sha256, assertions, failures).
 
-### Captured at `1dda6351f2ef3988ece1ac88f18b03a1ee15c51f`
+### Captured at `c5f0b7e808a0030f2c24a8a9480ca3699a893eb2`
 
-**Note:** `git rev-parse HEAD` at capture time; working tree was **dirty** (uncommitted CSS, capture script, PNGs, and sim/game changes). Screenshots reflect dev-server assets on disk, not necessarily a clean commit.
+**Note:** `git rev-parse HEAD` at capture time; working tree was **dirty** (uncommitted sim, game, capture script, fixture, PNGs, and docs). Screenshots reflect dev-server assets on disk, not necessarily a clean commit.
 
 | Viewport | File | sha256 | Overflow | Key checks |
 |----------|------|--------|----------|------------|
 | 1280×720 | `government-overview-1280.png` | `2b6b9baf653f03d60839b1f158b230afcfab22d8c4b093f55a71852454c72c13` | pass | Government, tabs, Head of government |
-| 1280×720 | `government-executive-1280.png` | `879ea4b51b2247443e5e938418a761e9c35f00217d8d54abd1507710fe95cd99` | pass | Executive power strip |
-| 1280×720 | `government-cabinet-minister-1280.png` | `fed601f7c25a22cac47d46acd5f31fc81cbdbd743242a26a3cf5ea129a4ed0e2` | pass | Cabinet rows, minister detail |
+| 1280×720 | `government-executive-1280.png` | `e4bc922cbf4150dbc01392e18cca4f51b7f4df654162f1981ba6ebc23d6328ab` | pass | Executive power strip |
+| 1280×720 | `government-cabinet-minister-1280.png` | `fdd0e272375c7458a2295d9a70b8e4d654d5aafb85fbe66251c48a4c7e638125` | pass | Cabinet rows, minister detail (Minister of Agriculture) |
 | 1280×720 | `government-agenda-1280.png` | `92a0828d6b7598206c972c137c508675ee659ef1d71d86efd099f3c618e5be62` | pass | Open in Assembly |
-| 1280×720 | `government-implementation-1280.png` | `1d4f11ea618370bf9995ab6aa989cfd2e34bfe1280bac17581ae2d48be08bd55` | pass | Delayed record response actions |
-| 1280×720 | `government-budget-1280.png` | `e240f77cc7767f4b43c8e46f4cc2e8d41c1f98acd27950459086129fe3df8be4` | pass | Preferred envelope, full request, projected |
+| 1280×720 | `government-implementation-1280.png` | `bd968471195dbb8efd3757ba4f81fbb4c1efddb337e8609ab65098a1a6609122` | pass | Delayed record response actions |
+| 1280×720 | `government-budget-1280.png` | `08dde11eaa96a620daf6ec871f560db1df806ed9ed99b8790b900656200c19ab` | pass | Preferred envelope, full request, projected |
 | 390×844 | `government-overview-390.png` | `cdf34dda8177588a44afea7cb8e7283088de994d75ba49b097a92bebafda1ee6` | pass | Tabs, no horizontal overflow |
-| 390×844 | `government-executive-390.png` | `fdd7950c64106c7159da4d7ef874b662c55811d23f99a9e60791828277ebec53` | pass | Tabs, no horizontal overflow |
-| 390×844 | `government-cabinet-390.png` | `6cd6d15e9208a583c053c8c70de802ca245111859e7ce8ac14527eb1b6f39640` | pass | Tabs, no horizontal overflow |
+| 390×844 | `government-executive-390.png` | `62933844b4e402bb821af83e0b9df662b0e58b487948983dfbb77df3582675c5` | pass | Tabs, no horizontal overflow |
+| 390×844 | `government-cabinet-390.png` | `d4bb79a09c3379b02645e8a726c6fc421952d23bbb869cd31930a85b163d8d68` | pass | Tabs, no horizontal overflow |
 | 390×844 | `government-implementation-390.png` | `5f5b8475d43f2c68c56abb818e94bbd383274203546550593d1fd108bf50d941` | pass | Tabs, no horizontal overflow |
-| 390×844 | `government-budget-390.png` | `482f6991e9c032f502b64a42972041060eea395d1fda7222926c4ec34d081454` | pass | Tabs, no horizontal overflow |
+| 390×844 | `government-budget-390.png` | `70d22438bd5603d269b9ca8c09003fdcee36766178193472c718c120271157bb` | pass | Tabs, no horizontal overflow |
 
-Manifest: `overflowAssertionsPassed`: **true** (`desktopOverflowPassed`, `mobileOverflowPassed`). Generated `2026-09-12T21:19:30.050Z` against `http://127.0.0.1:5177/Lorsain-project/`.
+Manifest: `overflowAssertionsPassed`: **true** (`desktopOverflowPassed`, `mobileOverflowPassed`). Generated `2026-09-12T21:58:14.632Z` against `http://127.0.0.1:5177/Lorsain-project/`.
 
 ## Mechanical-only sign-off
 
