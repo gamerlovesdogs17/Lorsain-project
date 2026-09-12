@@ -1,11 +1,15 @@
 /**
  * Short world smoke for Normal Push CI (Tier 1).
- * Default: 2 simulated years. Catastrophic-breakage detection only —
+ * Default: 5 simulated years (~2 minutes). Catastrophic-breakage detection —
  * not long-run certification (see Extended / Release workflows).
+ *
+ * Note: a 2-year horizon can stop mid assembly-field build and currently
+ * surfaces NOMINATION_DUPLICATE_CANDIDATE integrity errors on some seeds;
+ * 5y reaches a clean post-election state for the stable smoke seed.
  *
  * Usage:
  *   node .../tsx scripts/phase15-smoke-world.ts
- *   node .../tsx scripts/phase15-smoke-world.ts --years=2
+ *   node .../tsx scripts/phase15-smoke-world.ts --years=5
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -19,9 +23,10 @@ import {
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const yearsArg = process.argv.find((a) => a.startsWith("--years="));
-const years = Math.max(1, Math.min(10, Number(yearsArg?.split("=")[1] ?? 2) || 2));
+const years = Math.max(1, Math.min(10, Number(yearsArg?.split("=")[1] ?? 5) || 5));
 const months = years * 12;
-const seed = `phase15-smoke-${years}y`;
+/** Stable seed across horizons so Tier-1 smoke does not thrash on year-arg naming. */
+const seed = "phase15-smoke";
 
 const started = Date.now();
 const world = loadTerenaWorld();

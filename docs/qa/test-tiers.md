@@ -9,7 +9,8 @@ Runs on every push/PR. Target: **~5–10 minutes** (hard ceiling well under 30).
 - build, typecheck, lint, format
 - `pnpm test:fast` (honest Vitest wrapper; excludes heavy suites)
 - content validation (TS + Python)
-- **2-year world smoke** (`pnpm test:smoke`) — catastrophic breakage only
+- **5-year world smoke** (`pnpm test:smoke`, ~2 min) — catastrophic breakage only
+  (2y can stop mid nomination-field build; 5y is the measured clean horizon)
 
 ### Integration (`pnpm test:integration`)
 

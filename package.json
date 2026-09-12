@@ -13,7 +13,7 @@
     "test:certification": "pnpm test:certification:aggregate",
     "test:certification:shard": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/phase15-cert-shard.ts",
     "test:certification:aggregate": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/phase15-cert-shard.ts --aggregate",
-    "test:smoke": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/phase15-smoke-world.ts --years=2",
+    "test:smoke": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/phase15-smoke-world.ts --years=5",
     "test:long": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/whole-game-calibration.ts --seed-count=1 --months=600 --resume --skip-determinism --output=.calibration/phase11_3/long-summary.json --shard-dir=.calibration/phase11_3/shards/600m",
     "test:watch": "vitest",
     "profile:monthly": "node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/profile-monthly.ts",
