@@ -39,11 +39,12 @@ function deterministicRoll(partyId: string, dateStr: string): number {
 }
 
 const NPC_PRIORITY_TEMPLATES: string[][] = [
-  ["economic_growth", "fiscal_balance", "trade"],
-  ["social_services", "housing", "healthcare"],
-  ["law_and_order", "national_security", "border_control"],
-  ["education", "innovation", "environment"],
-  ["regional_development", "infrastructure", "agriculture"],
+  ["growth_and_jobs", "tax_fairness", "field_infrastructure"],
+  ["healthcare_access", "housing_affordability", "membership_growth"],
+  ["institutional_renewal", "foreign_credibility", "defense_modernization"],
+  ["green_transition", "digital_rights", "labor_standards"],
+  ["provincial_fairness", "rural_connectivity", "candidate_recruitment"],
+  ["caucus_cohesion", "message_discipline", "immigration_integration"],
 ];
 
 const CHAIR_ELECTION_AUTO_RESOLVE_MONTHS = 2;

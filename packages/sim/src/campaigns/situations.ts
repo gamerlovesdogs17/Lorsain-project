@@ -118,6 +118,89 @@ export const CAMPAIGN_SITUATIONS: CampaignSituationTemplate[] = [
     standingDelta: { momentum: 0.02 },
   },
   {
+    id: "economic_message_war",
+    titles: [
+      "Campaign argument centres on cost-of-living pressure",
+      "Rivals trade competing economic plans in media coverage",
+      "Fiscal credibility becomes the dominant campaign frame",
+      "Household budgets shape the week's campaign messaging",
+    ],
+    whenApplicable: ({ monthsToElection, momentum }) =>
+      monthsToElection != null && monthsToElection >= 2 && monthsToElection <= 8 && momentum > -0.02,
+    eventType: "CAMPAIGN_MESSAGE",
+    importance: 0.46,
+  },
+  {
+    id: "foreign_policy_spotlight",
+    titles: [
+      "Foreign-policy credentials draw campaign scrutiny",
+      "International posture enters the domestic campaign debate",
+      "Candidates field questions on alliance commitments",
+      "Campaign coverage turns toward diplomatic credibility",
+    ],
+    whenApplicable: ({ monthsToElection }) =>
+      monthsToElection != null && monthsToElection >= 4 && monthsToElection <= 11,
+    eventType: "CAMPAIGN_MESSAGE",
+    importance: 0.44,
+  },
+  {
+    id: "constitutional_reform_debate",
+    titles: [
+      "Constitutional reform proposals shadow the campaign trail",
+      "Institutional change arguments surface among candidates",
+      "Campaign rhetoric touches assembly powers and court review",
+      "Reform-minded voters press candidates on institutional rules",
+    ],
+    whenApplicable: ({ monthsToElection }) =>
+      monthsToElection != null && monthsToElection >= 5 && monthsToElection <= 10,
+    eventType: "CAMPAIGN_MESSAGE",
+    importance: 0.43,
+  },
+  {
+    id: "regional_outreach_tour",
+    titles: [
+      "Campaign schedule emphasises provinces outside the capital corridor",
+      "Regional audiences receive tailored campaign appearances",
+      "Provincial media cycles amplify the campaign footprint",
+      "Campaign travel highlights gubernatorial battlegrounds",
+    ],
+    whenApplicable: ({ fieldOrganization, monthsToElection }) =>
+      fieldOrganization >= 0.28 &&
+      monthsToElection != null &&
+      monthsToElection >= 3 &&
+      monthsToElection <= 9,
+    eventType: "CAMPAIGN_MESSAGE",
+    importance: 0.47,
+    standingDelta: { momentum: 0.015 },
+  },
+  {
+    id: "policy_rollout_week",
+    titles: [
+      "Campaign releases a detailed policy rollout package",
+      "Issue specialists anchor the campaign's public schedule",
+      "Platform documents circulate among organized supporters",
+      "Campaign contrasts platform chapters with rival records",
+    ],
+    whenApplicable: ({ cashOnHand, monthsToElection }) =>
+      cashOnHand > 25_000 && monthsToElection != null && monthsToElection >= 2,
+    eventType: "CAMPAIGN_MESSAGE",
+    importance: 0.49,
+    standingDelta: { favorability: 0.012 },
+  },
+  {
+    id: "integrity_attack_line",
+    titles: [
+      "Opponents press ethics and transparency contrasts",
+      "Campaign faces questions on fundraising and disclosure",
+      "Integrity framing dominates rival attack messaging",
+      "Public ethics standards become a campaign flashpoint",
+    ],
+    whenApplicable: ({ momentum }) => momentum < 0.01,
+    eventType: "CAMPAIGN_ATTACK",
+    importance: 0.51,
+    standingDelta: { momentum: -0.025 },
+  },
+  {
     id: "final_stretch",
     titles: [
       "Campaign enters the closing stretch of the cycle",

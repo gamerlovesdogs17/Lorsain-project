@@ -155,6 +155,53 @@ export const PARTY_PRIORITY_CATALOG: Record<string, PartyPriorityDef> = {
     description: "Prepare shadow portfolios, transition plans, and policy pipelines.",
     effectsHint: "Competence signal when near power.",
   },
+  provincial_fairness: {
+    id: "provincial_fairness",
+    kind: "institutional",
+    label: "Provincial fairness",
+    description: "Rebalance transfers, veto overrides, and joint programs with provinces.",
+    effectsHint: "Regional caucuses watch federal–provincial bargains closely.",
+    issueId: "institutional_reform",
+  },
+  defense_modernization: {
+    id: "defense_modernization",
+    kind: "policy",
+    label: "Defense modernization",
+    description: "Prioritize readiness, procurement discipline, and alliance burden-sharing.",
+    effectsHint: "Security hawks engage; fiscal hawks watch the envelope.",
+    issueId: "foreign_policy",
+  },
+  immigration_integration: {
+    id: "immigration_integration",
+    kind: "policy",
+    label: "Immigration integration",
+    description: "Pair border management with settlement services and labour-market pathways.",
+    effectsHint: "Border provinces and urban cores react differently.",
+    issueId: "social_policy",
+  },
+  digital_rights: {
+    id: "digital_rights",
+    kind: "policy",
+    label: "Digital rights",
+    description: "Set privacy, platform accountability, and public-sector data standards.",
+    effectsHint: "Tech sector and civil-liberty blocs both mobilize.",
+    issueId: "institutional_reform",
+  },
+  rural_connectivity: {
+    id: "rural_connectivity",
+    kind: "policy",
+    label: "Rural connectivity",
+    description: "Close broadband, transport, and service gaps outside metro corridors.",
+    effectsHint: "Resource and agrarian provinces expect visible delivery.",
+    issueId: "economy",
+  },
+  caucus_cohesion: {
+    id: "caucus_cohesion",
+    kind: "organizational",
+    label: "Caucus cohesion",
+    description: "Keep assembly blocs aligned on votes, leadership contests, and messaging.",
+    effectsHint: "Reduces floor defections; can frustrate regional rebels.",
+  },
 };
 
 export function listPartyPriorities(): PartyPriorityDef[] {
@@ -225,6 +272,20 @@ export const CAMPAIGN_STRATEGY_CATALOG: Record<string, CampaignStrategyDef> = {
     explanation: "Campaign on delivery, competence, and administrative results.",
     strengths: "Rewards incumbency and steady stewardship.",
     tradeoffs: "Vulnerable if delivery lags or scandals dominate.",
+  },
+  issue_ownership: {
+    id: "issue_ownership",
+    label: "Issue ownership",
+    explanation: "Own one salient policy file and repeat it until voters associate you with results.",
+    strengths: "Clear contrast when the issue dominates the cycle.",
+    tradeoffs: "Vulnerable if the issue fades or delivery underwhelms.",
+  },
+  regional_ticket: {
+    id: "regional_ticket",
+    label: "Regional ticket",
+    explanation: "Elevate provincial champions and tailor messaging by region.",
+    strengths: "Improves gubernatorial and list coordination.",
+    tradeoffs: "National brand can fragment across provinces.",
   },
 };
 
@@ -300,7 +361,168 @@ export const PLATFORM_POLICY_OPTIONS: Record<string, PlatformPolicyOption[]> = {
     },
     { id: "arms_export_scrutiny", label: "Tighten human-rights scrutiny on arms exports" },
   ],
+  immigration: [
+    { id: "skills_linked_visas", label: "Expand skills-linked visas with employer accountability" },
+    { id: "humanitarian_quota", label: "Raise humanitarian intake with settlement guarantees" },
+    { id: "border_digital_system", label: "Modernize border processing with privacy safeguards" },
+    { id: "provincial_settlement_pacts", label: "Let provinces opt into settlement compacts" },
+  ],
+  defense: [
+    { id: "readiness_rotation", label: "Fund readiness rotations and maintenance backlogs" },
+    { id: "domestic_supply_chain", label: "Require domestic content in critical defense procurement" },
+    { id: "cyber_reservists", label: "Stand up cyber reservist units under civilian oversight" },
+    { id: "alliance_hosting_limits", label: "Cap foreign basing without assembly consultation" },
+  ],
 };
+
+// ---------------------------------------------------------------------------
+// Organization lobbying / issue campaign frames (sim summaries + media hooks)
+// ---------------------------------------------------------------------------
+
+export type OrgLobbyCampaignTemplate = {
+  id: string;
+  /** Match when org.type includes any token (case-insensitive substring). */
+  orgTypeTokens: string[];
+  issueIds: string[];
+  stance: "support" | "oppose";
+  summary: string;
+};
+
+export const ORG_LOBBY_CAMPAIGN_TEMPLATES: OrgLobbyCampaignTemplate[] = [
+  {
+    id: "union_floor_whip",
+    orgTypeTokens: ["union", "labour", "labor"],
+    issueIds: ["ISS_LABOR", "ISS_WELFARE"],
+    stance: "support",
+    summary: "{org} launches a shop-floor pressure campaign backing {target} on {issue}",
+  },
+  {
+    id: "business_regulatory_blitz",
+    orgTypeTokens: ["business", "chamber", "industry"],
+    issueIds: ["ISS_TRADE", "ISS_CLIMATE"],
+    stance: "oppose",
+    summary: "{org} funds a regulatory impact blitz targeting {target} over {issue}",
+  },
+  {
+    id: "environment_coalition_drive",
+    orgTypeTokens: ["environment", "green", "conservation"],
+    issueIds: ["ISS_CLIMATE", "ISS_LIBERTY"],
+    stance: "support",
+    summary: "{org} coordinates member groups to elevate {target} on {issue}",
+  },
+  {
+    id: "veterans_benefits_push",
+    orgTypeTokens: ["veteran", "defence", "defense"],
+    issueIds: ["ISS_DEFENSE", "ISS_WELFARE"],
+    stance: "support",
+    summary: "{org} presses {target} to honour defence-benefit commitments on {issue}",
+  },
+  {
+    id: "civil_liberty_watch",
+    orgTypeTokens: ["civil", "liberty", "rights"],
+    issueIds: ["ISS_LIBERTY", "ISS_POLICING", "ISS_REFORM"],
+    stance: "oppose",
+    summary: "{org} opens a civil-liberties watch on {target}'s {issue} record",
+  },
+  {
+    id: "municipal_league_lobby",
+    orgTypeTokens: ["municipal", "local", "city"],
+    issueIds: ["ISS_HOUSING", "ISS_REFORM"],
+    stance: "support",
+    summary: "{org} lobbies {target} for municipal fiscal room on {issue}",
+  },
+  {
+    id: "farm_coop_price_floor",
+    orgTypeTokens: ["farm", "agricult", "rural"],
+    issueIds: ["ISS_TRADE", "ISS_OWNERSHIP"],
+    stance: "support",
+    summary: "{org} mobilizes producers to back {target}'s {issue} stance in the assembly",
+  },
+  {
+    id: "health_professional_alert",
+    orgTypeTokens: ["health", "medical", "nurse"],
+    issueIds: ["ISS_WELFARE", "ISS_DECENT"],
+    stance: "oppose",
+    summary: "{org} issues a professional alert opposing {target} on {issue}",
+  },
+];
+
+export function matchOrgLobbyCampaignTemplate(
+  orgType: string,
+  issueId: string,
+  stance: "support" | "oppose",
+): OrgLobbyCampaignTemplate | undefined {
+  const typeLower = orgType.toLowerCase();
+  return ORG_LOBBY_CAMPAIGN_TEMPLATES.find(
+    (t) =>
+      t.stance === stance &&
+      t.issueIds.includes(issueId) &&
+      t.orgTypeTokens.some((token) => typeLower.includes(token)),
+  );
+}
+
+export function formatOrgLobbyCampaignSummary(
+  template: OrgLobbyCampaignTemplate,
+  orgName: string,
+  targetPoliticianId: string,
+  issueId: string,
+): string {
+  return template.summary
+    .replace(/\{org\}/g, orgName)
+    .replace(/\{target\}/g, targetPoliticianId)
+    .replace(/\{issue\}/g, issueId);
+}
+
+// ---------------------------------------------------------------------------
+// Caucus pressure scenes (public whip / agenda friction — narrative only)
+// ---------------------------------------------------------------------------
+
+export type CaucusPressureTemplate = {
+  id: string;
+  title: string;
+  description: string;
+  /** Requires at least one priority bill on leadership agenda. */
+  requiresPriorityBill: boolean;
+};
+
+export const CAUCUS_PRESSURE_TEMPLATES: CaucusPressureTemplate[] = [
+  {
+    id: "whip_count_leak",
+    title: "Whip count leaks to the press",
+    description: "A partial caucus headcount circulates before a scheduled vote.",
+    requiresPriorityBill: true,
+  },
+  {
+    id: "regional_holdout",
+    title: "Regional bloc threatens to withhold votes",
+    description: "Provincial members demand concessions on a priority bill.",
+    requiresPriorityBill: true,
+  },
+  {
+    id: "leadership_unity_push",
+    title: "Leadership demands unity on a flagship bill",
+    description: "Floor leader schedules a closed-door alignment session.",
+    requiresPriorityBill: true,
+  },
+  {
+    id: "platform_red_line",
+    title: "Platform committee draws a red line",
+    description: "Policy staff warn that amendments would breach the party platform.",
+    requiresPriorityBill: true,
+  },
+  {
+    id: "coalition_partner_ultimatum",
+    title: "Coalition partner issues an ultimatum",
+    description: "A partner party ties support to caucus discipline on one file.",
+    requiresPriorityBill: false,
+  },
+  {
+    id: "backbench_petition",
+    title: "Backbench petition circulates",
+    description: "Dissident members collect signatures to force a caucus debate.",
+    requiresPriorityBill: false,
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Support allocation buckets

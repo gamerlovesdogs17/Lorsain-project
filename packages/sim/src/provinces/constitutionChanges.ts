@@ -1225,6 +1225,23 @@ const CONSTITUTION_CHANGE_SUBJECTS_DATA: ConstitutionChangeSubject[] = [
         },
         orderPatch: { localGovernment: "nationally_directed" },
       },
+      {
+        id: "metro_charter_cities",
+        label: "Charter cities with provincial consent",
+        proposedClauseText:
+          "Provinces may grant charter status to designated metropolitan municipalities. Charter cities exercise enumerated powers in housing, transit integration, and local revenue, subject to provincial enabling law and national minimum standards on civil rights and fiscal transparency.",
+        mechanicalEffects: [
+          "Capital and metro provinces can unlock charter-city bills without automatic federal competence challenges.",
+          "Provincial housing and transit subjects gain an additional local-delivery pathway.",
+          "National framework still sets rights and transparency floors; provinces retain charter approval authority.",
+        ],
+        metricEffects: {
+          provincialAutonomy: 1,
+          institutionalStability: 1,
+          executiveCapacity: -1,
+        },
+        orderPatch: { localGovernment: "shared" },
+      },
     ],
   },
 

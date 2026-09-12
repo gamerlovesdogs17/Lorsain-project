@@ -21,6 +21,7 @@ import {
   adjustMeritsLeanForJudicialReview,
   judicialReviewAllowsInvalidation,
 } from "../provinces/constitutionGameplay.js";
+import { pickJudicialDoctrineLabel } from "./legalContent.js";
 import {
   allocateCaseId,
   allocateConstitutionalGroundsId,
@@ -1034,10 +1035,13 @@ export function recordJudicialDecision(
     tallied.disposition === "UPHOLD"
       ? "The challenged act remains in force."
       : "The challenged act is constitutionally invalid.";
+  const doctrine =
+    pickJudicialDoctrineLabel(courtCase.constitutionalRule, courtCase.id) ??
+    courtCase.constitutionalRule.replace(/_/g, " ");
   const majorityRationale =
     tallied.disposition === "UPHOLD"
-      ? `The challenged authority is consistent with ${courtCase.constitutionalRule.replace(/_/g, " ")}.`
-      : `The challenged authority exceeds the limits imposed by ${courtCase.constitutionalRule.replace(/_/g, " ")}.`;
+      ? `The challenged authority is consistent with the ${doctrine}.`
+      : `The challenged authority fails the ${doctrine}.`;
   const majorityOpinion = `${holding} ${majorityRationale}`;
   const dissentingOpinion = dissentAuthorId
     ? tallied.disposition === "UPHOLD"

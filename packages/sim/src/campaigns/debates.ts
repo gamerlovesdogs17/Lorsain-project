@@ -26,6 +26,12 @@ const DEBATE_NOTABLE_MOMENTS: string[] = [
   "Moderator clash overshadowed the substantive exchange",
   "Memorable one-liner spread rapidly through social channels",
   "Detailed infrastructure plan earned rare cross-aisle praise",
+  "Provincial fairness argument landed with regional viewers",
+  "Constitutional reform exchange exposed a clear institutional divide",
+  "Immigration integration answer reset the night's tone",
+  "Defence readiness exchange highlighted alliance trade-offs",
+  "Climate transition timeline clash dominated post-debate panels",
+  "Housing supply numbers dispute carried into the next news cycle",
 ];
 
 /**
@@ -42,6 +48,16 @@ const DEBATE_ISSUE_EMPHASES: Record<string, string> = {
   ISS_SECURITY: "national security",
   ISS_EDUCATION: "education funding",
   ISS_WELFARE: "social welfare",
+  ISS_LIBERTY: "civil liberties and privacy",
+  ISS_REFORM: "institutional and constitutional reform",
+  ISS_DEFENSE: "defence readiness and alliances",
+  ISS_IMMIGRATION: "immigration and border management",
+  ISS_POLICING: "policing and public safety",
+  ISS_DECENT: "standards of public office",
+  ISS_CONCORD: "Concordia relations",
+  ISS_VASKARA: "Vaskara regional posture",
+  ISS_OWNERSHIP: "property and ownership rules",
+  ISS_EXEC: "executive power and accountability",
 };
 
 /**

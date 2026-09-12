@@ -9,10 +9,54 @@ import { currentGovernorId, resetProvinceActionPoints } from "./state.js";
 import type { ProvincialPressure } from "./types.js";
 import { processProvincialAssembliesMonth } from "./assemblies.js";
 import { processConstitutionalAmendmentsMonth } from "./constitutional.js";
+import { provinceThemeId, type ProvinceThemeId } from "./themes.js";
 
 function clampIndex(value: number): number {
   return Math.max(80, Math.min(120, value));
 }
+
+const THEME_PRESSURE_FLAVOR: Record<
+  ProvinceThemeId,
+  { kind: ProvincialPressure["kind"]; title: string }[]
+> = {
+  coastal_trade_hub: [
+    {
+      kind: "port_throughput_crisis",
+      title: "Port backlog forces provincial logistics triage",
+    },
+  ],
+  agrarian_heartland: [
+    {
+      kind: "harvest_logistics_breakdown",
+      title: "Harvest season strains provincial transport links",
+    },
+  ],
+  university_belt: [
+    {
+      kind: "campus_capacity_clash",
+      title: "Campus housing crunch spills into provincial services",
+    },
+  ],
+  border_province: [
+    {
+      kind: "border_inspection_backlog",
+      title: "Border inspection queues ripple into provincial budgets",
+    },
+  ],
+  resource_hinterland: [
+    {
+      kind: "pit_shutdown_spillover",
+      title: "Resource shutdown ripples through provincial employment",
+    },
+  ],
+  industrial_corridor: [
+    {
+      kind: "shift_reduction_wave",
+      title: "Factory shift reductions hit provincial tax receipts",
+    },
+  ],
+  capital_metro: [],
+};
 
 function pressureForProvince(
   state: SimState,
@@ -40,6 +84,14 @@ function pressureForProvince(
     kind = "transport_disruption";
     title = "Transport disruption tests provincial coordination";
     severity = 0.25 + rng.float01("flavor") * 0.25;
+  } else if (rng.float01("flavor") < 0.011) {
+    const themeFlavors = THEME_PRESSURE_FLAVOR[provinceThemeId(provinceId)] ?? [];
+    const pick = themeFlavors[Math.floor(rng.float01("flavor") * themeFlavors.length)];
+    if (pick) {
+      kind = pick.kind;
+      title = pick.title;
+      severity = 0.28 + rng.float01("flavor") * 0.32;
+    }
   }
   if (!kind) return null;
   const id = `PROVP_${provinceId}_${state.currentDate.slice(0, 7).replace("-", "")}`;

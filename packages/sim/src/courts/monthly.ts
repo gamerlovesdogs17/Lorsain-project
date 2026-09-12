@@ -28,6 +28,7 @@ import { currentCourtJudgeIds } from "./state.js";
 import type { JudicialVoteChoice } from "./types.js";
 import { MAX_ACTIVE_COURT_CASES } from "./types.js";
 import { currentGovernorId } from "../provinces/state.js";
+import { pickLawReviewQuestion, pickRegulationReviewQuestion } from "./legalContent.js";
 
 function tallyAssembly(
   mps: string[],
@@ -297,7 +298,11 @@ function generateCases(
           challengedKind: "law",
           challengedId: law.id,
           respondentId: law.sponsorId,
-          constitutionalQuestion: `Whether ${law.title} is constitutionally valid`,
+          constitutionalQuestion: pickLawReviewQuestion(
+            law.title,
+            law.policyItems[0]?.issueId,
+            law.id,
+          ),
           constitutionalRule: "law_review",
           meritsLean: (law.policyItems[0]?.magnitude ?? 0.3) - 0.55,
         },
@@ -326,7 +331,7 @@ function generateCases(
           challengedKind: "regulation",
           challengedId: reg.id,
           respondentId: reg.issuerId,
-          constitutionalQuestion: "Whether the regulation exceeds lawful executive authority",
+          constitutionalQuestion: pickRegulationReviewQuestion(reg.id, reg.id),
           constitutionalRule: "regulation_review",
           meritsLean: reg.major ? 0.12 : -0.25,
         },

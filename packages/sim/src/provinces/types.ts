@@ -48,7 +48,17 @@ export type ProvincialActionRecord = {
 export type ProvincialPressure = {
   id: string;
   provinceId: string;
-  kind: "housing_strain" | "employment_loss" | "service_disruption" | "transport_disruption";
+  kind:
+    | "housing_strain"
+    | "employment_loss"
+    | "service_disruption"
+    | "transport_disruption"
+    | "port_throughput_crisis"
+    | "harvest_logistics_breakdown"
+    | "campus_capacity_clash"
+    | "border_inspection_backlog"
+    | "pit_shutdown_spillover"
+    | "shift_reduction_wave";
   title: string;
   openedDate: IsoDate;
   severity: number;

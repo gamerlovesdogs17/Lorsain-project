@@ -5,6 +5,10 @@ import { partyPlatformIssueForBillItem } from "../parties/platforms.js";
 import { applyRelationshipChange } from "../agents/relationships.js";
 import { ensurePoliticsRuntime } from "./state.js";
 import { AS_MAX_ORG_CAMPAIGNS_PER_MONTH } from "./types.js";
+import {
+  formatOrgLobbyCampaignSummary,
+  matchOrgLobbyCampaignTemplate,
+} from "../partyOrg/catalog.js";
 
 function scoreKey(orgId: string, politicianId: string, issueId: string): string {
   return `${orgId}|${politicianId}|${issueId}`;
@@ -107,6 +111,15 @@ export function processOrganizationPoliticsMonth(
 
     const campaignId = padId("ORGCAMP", state.counters.nextOrgActionId++);
     const stance = endorseAlly ? "support" : "oppose";
+    const lobbyTemplate = matchOrgLobbyCampaignTemplate(org.type, issueId, stance);
+    const summary = lobbyTemplate
+      ? formatOrgLobbyCampaignSummary(
+          lobbyTemplate,
+          org.name,
+          target.politicianId,
+          issueId,
+        )
+      : `${org.name} ${stance}s ${target.politicianId} on ${issueId}`;
     runtime.orgCampaigns[campaignId] = {
       id: campaignId,
       orgId: org.id,
@@ -116,7 +129,7 @@ export function processOrganizationPoliticsMonth(
       targetBillId: relatedBill?.id ?? null,
       startedDate: state.currentDate,
       status: "active",
-      summary: `${org.name} ${stance}s ${target.politicianId} on ${issueId}`,
+      summary,
     };
     runtime.activityThisMonth.orgCampaigns += 1;
 
@@ -209,6 +222,8 @@ export function processOrganizationPoliticsMonth(
           billId: relatedBill?.id ?? null,
           billPressure: relatedBill != null,
           scorecardScore: target.score,
+          lobbyTemplateId: lobbyTemplate?.id ?? null,
+          summary,
         },
         sourceScheduledEventId: null,
         sourceCommandId: commandId,
