@@ -364,8 +364,7 @@ describe("Phase 11.4 executable constitutional gameplay", () => {
       {
         actorId: "P1",
         ministryOfficeId: ministryId,
-        policyItems: [{ issueId: "ISS_LABOR", direction: 1, magnitude: 0.5, fiscalImpact: null }],
-        major: true,
+        policyItems: [{ issueId: "ISS_LABOR", direction: 1, magnitude: 0.8, fiscalImpact: null }],
       },
       null,
     );
@@ -377,7 +376,7 @@ describe("Phase 11.4 executable constitutional gameplay", () => {
       {
         actorId: "P1",
         ministryOfficeId: ministryId,
-        policyItems: [{ issueId: "ISS_LABOR", direction: 1, magnitude: 0.5, fiscalImpact: null }],
+        policyItems: [{ issueId: "ISS_LABOR", direction: 1, magnitude: 0.2, fiscalImpact: null }],
       },
       null,
     );
