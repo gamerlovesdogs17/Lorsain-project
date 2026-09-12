@@ -5,10 +5,14 @@ import { jsonClone } from "./hash.js";
 import { updateMinisterialPerformance } from "./governing/performance.js";
 import { ensureGoverningRuntime } from "./governing/state.js";
 import { respondToImplementation, setImplementationPosture } from "./governing/implementation.js";
-import { syncAgendaBillReferences } from "./governing/agenda.js";
+import { setAgendaItemBill, syncAgendaBillReferences } from "./governing/agenda.js";
+import { processBudgetCycle } from "./governing/budget.js";
 import { deriveCabinet } from "./executive/state.js";
-import { currentPresidentialAuthorityId } from "./legislature/state.js";
+import { issueRegulation } from "./executive/procedure.js";
+import { currentPresidentialAuthorityId, currentAssemblyMemberIds } from "./legislature/state.js";
 import { canAssumeOffice } from "./offices.js";
+import { reshuffleCabinetSeat } from "./politics/cabinet.js";
+import { ensurePoliticsRuntime } from "./politics/state.js";
 import type { ImplementationRecord } from "./governing/types.js";
 import type { BillState } from "./legislature/types.js";
 
@@ -96,7 +100,7 @@ describe("Phase 17A government fixtures", () => {
     );
   });
 
-  it("budget stances produce different totals, allocations, and fiscal paths", () => {
+  it("budget stances produce different totals and projected metadata without changing books", () => {
     const world = loadTerenaWorld();
     const presidentId =
       world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
@@ -104,6 +108,7 @@ describe("Phase 17A government fixtures", () => {
 
     const runStance = (seed: string, stance: "hold" | "expansionary" | "consolidation") => {
       const sim = createSimulation({ world, seed, playerPoliticianId: presidentId });
+      const beforeExp = sim.getSnapshot().governingRuntime!.fiscal.expenditure;
       const result = sim.executeCommand({ type: "PROPOSE_BUDGET", fiscalStance: stance });
       expect(result.ok).toBe(true);
       const snap = sim.getSnapshot();
@@ -114,11 +119,14 @@ describe("Phase 17A government fixtures", () => {
       expect(budget!.totalEnvelope).toBeGreaterThan(0);
       expect(Object.keys(budget!.ministryRequests).length).toBeGreaterThan(0);
       expect(Object.keys(budget!.ministryAmounts).length).toBeGreaterThan(0);
+      expect(snap.governingRuntime!.fiscal.expenditure).toBe(beforeExp);
+      expect(budget!.metadata.fiscalEffect).toBe("projected");
+      expect(typeof budget!.metadata.projectedExpenditure).toBe("number");
       return {
         total: budget!.totalEnvelope,
+        preferred: budget!.preferredEnvelope,
         amounts: { ...budget!.ministryAmounts },
-        expenditure: snap.governingRuntime!.fiscal.expenditure,
-        balance: snap.governingRuntime!.fiscal.balance,
+        projectedExp: budget!.metadata.projectedExpenditure as number,
       };
     };
 
@@ -128,12 +136,81 @@ describe("Phase 17A government fixtures", () => {
 
     expect(full.total).toBeGreaterThan(hold.total);
     expect(cut.total).toBeLessThan(hold.total);
-    expect(full.expenditure).toBeGreaterThan(hold.expenditure);
-    expect(cut.expenditure).toBeLessThan(hold.expenditure);
-    expect(full.balance).toBeLessThan(hold.balance);
-    expect(cut.balance).toBeGreaterThan(hold.balance);
+    expect(full.projectedExp).toBeGreaterThan(hold.projectedExp);
+    expect(cut.projectedExp).toBeLessThan(hold.projectedExp);
     const office = Object.keys(hold.amounts)[0]!;
     expect(full.amounts[office]).not.toBe(cut.amounts[office]);
+    expect(full.preferred).not.toBe(cut.preferred);
+  });
+
+  it("approved budget applies fiscal expenditure once via processBudgetCycle", () => {
+    const world = loadTerenaWorld();
+    const presidentId =
+      world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
+      "NPC146";
+    const sim = createSimulation({
+      world,
+      seed: "p17a-budget-effect",
+      playerPoliticianId: presidentId,
+    });
+    const state = jsonClone(sim.getSnapshot());
+    const runtime = ensureGoverningRuntime(state);
+    const before = runtime.fiscal.expenditure;
+    const proposed = sim.executeCommand({ type: "PROPOSE_BUDGET", fiscalStance: "expansionary" });
+    expect(proposed.ok).toBe(true);
+    expect(ensureGoverningRuntime(sim.getSnapshot()).fiscal.expenditure).toBe(before);
+
+    const proposedBudget = Object.values(sim.getSnapshot().executiveRuntime.budgets).find(
+      (b) => b.status === "proposed",
+    );
+    expect(proposedBudget).toBeTruthy();
+    if (!proposedBudget) return;
+    const budget = jsonClone(proposedBudget);
+    budget.status = "approved";
+    budget.assemblyDecision = "approved";
+    state.executiveRuntime.budgets[budget.id] = budget;
+    runtime.budgetCycle.stage = "assembly";
+    runtime.budgetCycle.fiscalYear = budget.fiscalYear;
+
+    processBudgetCycle(state, "P17A_BUD_APPLY");
+    const afterFirst = runtime.fiscal.expenditure;
+    expect(afterFirst).not.toBe(before);
+    expect(budget.metadata.fiscalEffect).toBe("effective");
+
+    processBudgetCycle(state, "P17A_BUD_APPLY_AGAIN");
+    expect(runtime.fiscal.expenditure).toBe(afterFirst);
+  });
+
+  it("full_request uses literal ministry requests and may exceed preferred envelope", () => {
+    const world = loadTerenaWorld();
+    const presidentId =
+      world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
+      "NPC146";
+    const sim = createSimulation({
+      world,
+      seed: "p17a-budget-literal",
+      playerPoliticianId: presidentId,
+    });
+    const cab = deriveCabinet(world, sim.getSnapshot()).filter((m) => m.holderId);
+    const ministryChoices: Record<string, "full_request"> = {};
+    for (const seat of cab) ministryChoices[seat.officeId] = "full_request";
+    const result = sim.executeCommand({
+      type: "PROPOSE_BUDGET",
+      fiscalStance: "consolidation",
+      ministryChoices,
+    });
+    expect(result.ok).toBe(true);
+    const budget = Object.values(sim.getSnapshot().executiveRuntime.budgets).find(
+      (b) => b.status === "proposed",
+    );
+    expect(budget).toBeTruthy();
+    if (!budget) return;
+    for (const [officeId, request] of Object.entries(budget.ministryRequests)) {
+      expect(budget.ministryAmounts[officeId]).toBe(request);
+    }
+    expect(budget.preferredEnvelope).toBeLessThan(budget.totalEnvelope);
+    expect(budget.totalEnvelope).toBeGreaterThan(budget.preferredEnvelope + 0.05);
+    expect(budget.metadata.envelopeConflict).toBe(true);
   });
 
   it("implementation response command changes state and records history", () => {
@@ -165,6 +242,7 @@ describe("Phase 17A government fixtures", () => {
       blockedReason: "capacity",
       metadata: {},
     };
+    const expBefore = ensureGoverningRuntime(state).fiscal.expenditure;
     const ok = respondToImplementation(
       world,
       state,
@@ -176,6 +254,7 @@ describe("Phase 17A government fixtures", () => {
       expect(ok.record.posture).toBe("accelerated");
       expect(ok.record.blockedReason).toBeNull();
       expect(ok.events.some((e) => e.type === "IMPLEMENTATION_RESPONSE")).toBe(true);
+      expect(ensureGoverningRuntime(state).fiscal.expenditure).toBeGreaterThan(expBefore);
     }
     const denied = respondToImplementation(
       world,
@@ -234,6 +313,133 @@ describe("Phase 17A government fixtures", () => {
     expect(sim.getSnapshot().history.some((e) => e.type === "CABINET_RESHUFFLE")).toBe(true);
   });
 
+  it("coalition cabinet-share shortfall is a political consequence, not a hard legal block", () => {
+    const world = loadTerenaWorld();
+    const presidentId =
+      world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
+      "NPC146";
+    const sim = createSimulation({
+      world,
+      seed: "p17a-coalition-share",
+      playerPoliticianId: presidentId,
+    });
+    const state = jsonClone(sim.getSnapshot());
+    const finance = deriveCabinet(world, state).find(
+      (m) => m.officeId === "OFFICE_MINISTER_FINANCE" && m.holderId,
+    );
+    expect(finance?.holderId).toBeTruthy();
+    const oldId = finance!.holderId!;
+    const presidentParty = state.politicians[presidentId]?.partyId;
+    expect(presidentParty).toBeTruthy();
+    const partnerParty =
+      Object.keys(world.partyPublicIdeology ?? {}).find((p) => p !== presidentParty) ??
+      Object.values(state.politicians)
+        .map((p) => p.partyId)
+        .find((p) => p && p !== presidentParty);
+    expect(partnerParty).toBeTruthy();
+    if (!partnerParty || !presidentParty) return;
+
+    const politics = ensurePoliticsRuntime(state);
+    politics.coalitionAgreements.COAL_P17A = {
+      id: "COAL_P17A",
+      formedDate: state.currentDate,
+      status: "active",
+      brokenDate: null,
+      partyIds: [presidentParty, partnerParty].sort(),
+      policyPriorities: ["economy", "housing"],
+      // Partner is promised nearly the whole cabinet — any non-partner-heavy board breaches share.
+      cabinetShares: { [partnerParty]: 0.85, [presidentParty]: 0.15 },
+      trigger: "no_plurality",
+      breakdownReason: null,
+      negotiationScore: 0.7,
+      alternativeOptions: [],
+      metadata: {},
+    };
+    const scoreBefore = politics.coalitionAgreements.COAL_P17A.negotiationScore;
+
+    const replacement = Object.keys(state.politicians).find((id) => {
+      if (id === oldId || id === presidentId) return false;
+      if (state.politicians[id]?.partyId === partnerParty) return false;
+      return (
+        canAssumeOffice(state, world, "OFFICE_MINISTER_FINANCE", id, "substantive", {
+          ignoreOfficeCapacity: true,
+        }) == null
+      );
+    });
+    expect(replacement).toBeTruthy();
+
+    const out = reshuffleCabinetSeat(
+      world,
+      state,
+      {
+        actorId: presidentId,
+        officeId: "OFFICE_MINISTER_FINANCE",
+        politicianId: replacement!,
+        reason: "player_directive",
+      },
+      "CMD_COAL_RESHUFFLE",
+    );
+    expect("error" in out).toBe(false);
+    if ("error" in out) return;
+    const after = deriveCabinet(world, state).find((m) => m.officeId === "OFFICE_MINISTER_FINANCE");
+    expect(after?.holderId).toBe(replacement);
+    const reshuffle = out.events.find((e) => e.type === "CABINET_RESHUFFLE");
+    expect(reshuffle).toBeTruthy();
+    expect(reshuffle?.payload.coalitionConsequence).toBe("cabinet_share_shortfall");
+    expect(politics.coalitionAgreements.COAL_P17A!.negotiationScore).toBeLessThan(scoreBefore);
+    expect(politics.coalitionAgreements.COAL_P17A!.status).toBe("active");
+  });
+
+  it("agenda does not auto-link sole opposition housing bill; setAgendaItemBill attaches it", () => {
+    const world = loadTerenaWorld();
+    const sim = createSimulation({
+      world,
+      seed: "p17a-agenda-opposition",
+      playerPoliticianId: "NPC146",
+    });
+    const state = jsonClone(sim.getSnapshot());
+    const presidentId = currentPresidentialAuthorityId(world, state);
+    const presidentParty = presidentId ? state.politicians[presidentId]?.partyId : null;
+    const oppositionMp = currentAssemblyMemberIds(world, state).find(
+      (id) => state.politicians[id]?.partyId && state.politicians[id]?.partyId !== presidentParty,
+    );
+    expect(oppositionMp).toBeTruthy();
+    if (!oppositionMp) return;
+    state.legislatureRuntime.bills.BILL_HOUSING_OPP = {
+      id: "BILL_HOUSING_OPP",
+      title: "Opposition housing bill",
+      summary: "Opposition housing reform",
+      status: "in_committee",
+      sponsorId: oppositionMp,
+      cosponsorIds: [],
+      introducedDate: state.currentDate,
+      metadata: {},
+      policyItems: [{ issueId: "ISS_HOUSING", direction: 1, magnitude: 0.45, fiscalImpact: null }],
+    } as BillState;
+    const runtime = ensureGoverningRuntime(state);
+    runtime.agenda = {
+      updatedDate: state.currentDate,
+      items: [
+        {
+          id: "AGENDA_H_OPP",
+          title: "Platform: housing",
+          issueId: "ISS_HOUSING",
+          priority: 0.7,
+          source: "platform",
+          departmentId: "interior",
+          status: "active",
+          billId: null,
+          billStatus: null,
+        },
+      ],
+    };
+    syncAgendaBillReferences(state, runtime.agenda.items);
+    expect(runtime.agenda.items[0]!.billId).toBeNull();
+    setAgendaItemBill(state, "AGENDA_H_OPP", "BILL_HOUSING_OPP");
+    expect(runtime.agenda.items[0]!.billId).toBe("BILL_HOUSING_OPP");
+    expect(runtime.agenda.items[0]!.billStatus).toBe("in_committee");
+  });
+
   it("agenda Open-in-Assembly uses exact billId, never a sibling housing bill", () => {
     const world = loadTerenaWorld();
     const sim = createSimulation({
@@ -284,6 +490,85 @@ describe("Phase 17A government fixtures", () => {
     state.legislatureRuntime.bills.BILL_HOUSING_B!.status = "enacted";
     syncAgendaBillReferences(state, runtime.agenda.items);
     expect(runtime.agenda.items[0]!.billStatus).toBe("enacted");
+  });
+
+  it("derived major regulation blocked under constrained_dual_mandate without major flag", () => {
+    const world = loadTerenaWorld();
+    const presidentId =
+      world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
+      "NPC146";
+    const state = jsonClone(
+      createSimulation({ world, seed: "p17a-major-reg", playerPoliticianId: presidentId }).getSnapshot(),
+    );
+    expect(state.provincialRuntime.constitutionalOrder?.executiveAuthority).toBe(
+      "constrained_dual_mandate",
+    );
+    const blocked = issueRegulation(
+      world,
+      state,
+      {
+        actorId: presidentId,
+        ministryOfficeId: "OFFICE_MINISTER_INTERIOR",
+        policyItems: [{ issueId: "ISS_HOUSING", direction: 1, magnitude: 0.8, fiscalImpact: null }],
+      },
+      null,
+    );
+    expect("error" in blocked).toBe(true);
+    if ("error" in blocked) expect(blocked.error.code).toBe("EXECUTIVE_AUTHORITY_BLOCKED");
+    const allowed = issueRegulation(
+      world,
+      state,
+      {
+        actorId: presidentId,
+        ministryOfficeId: "OFFICE_MINISTER_INTERIOR",
+        policyItems: [{ issueId: "ISS_HOUSING", direction: 1, magnitude: 0.2, fiscalImpact: null }],
+      },
+      null,
+    );
+    expect("error" in allowed).toBe(false);
+  });
+
+  it("request_amending_legislation creates a bill id on the implementation record", () => {
+    const world = loadTerenaWorld();
+    const presidentId =
+      world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
+      "NPC146";
+    const state = jsonClone(
+      createSimulation({ world, seed: "p17a-amend-bill", playerPoliticianId: presidentId }).getSnapshot(),
+    );
+    ensureGoverningRuntime(state).implementations.LAW_P17A_AMEND = {
+      lawId: "LAW_P17A_AMEND",
+      status: "blocked",
+      posture: "standard",
+      progress: 0.12,
+      departmentId: "economy",
+      ministryOfficeId: "OFFICE_MINISTER_ECONOMY",
+      enactedDate: state.currentDate,
+      legalEffectiveDate: state.currentDate,
+      implementationStartDate: state.currentDate,
+      expectedCompletionDate: null,
+      lagKind: "medium",
+      monthsRequired: 12,
+      monthsElapsed: 4,
+      major: true,
+      blockedReason: "legal",
+      metadata: {},
+    };
+    const out = respondToImplementation(
+      world,
+      state,
+      {
+        actorId: presidentId,
+        lawId: "LAW_P17A_AMEND",
+        action: "request_amending_legislation",
+      },
+      "CMD_AMEND",
+    );
+    expect("error" in out).toBe(false);
+    if ("error" in out) return;
+    const billId = out.record.metadata.amendmentBillId;
+    expect(typeof billId).toBe("string");
+    expect(state.legislatureRuntime.bills[billId as string]).toBeTruthy();
   });
 
   it("regulation jurisdiction accepts housing/interior and rejects defense", () => {
