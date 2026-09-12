@@ -152,7 +152,8 @@ export type CabinetReshuffleReason =
   | "coalition_balance"
   | "faction_pressure"
   | "upcoming_election"
-  | "forced_fixture";
+  | "forced_fixture"
+  | "player_directive";
 
 export type AutonomousAgencyMetrics = {
   seed: string;

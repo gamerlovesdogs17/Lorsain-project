@@ -5,7 +5,8 @@ import { refreshGovernmentAgenda } from "./agenda.js";
 import { processBudgetCycle } from "./budget.js";
 import { decayCapacityStrain, syncCapacityFromExecutive } from "./capacity.js";
 import { recomputeFiscalFromCurrentLaw } from "./fiscal.js";
-import { advanceImplementations } from "./implementation.js";
+import { advanceImplementations, respondToImplementation } from "./implementation.js";
+import { currentPresidentialAuthorityId } from "../legislature/state.js";
 import { detectPolicyInteractions } from "./interactions.js";
 import { updateMinisterialPerformance } from "./performance.js";
 import { updatePromiseStatuses } from "./promises.js";
@@ -30,6 +31,29 @@ export function processGoverningMonth(
 
   syncCapacityFromExecutive(world, state);
   events.push(...advanceImplementations(state, commandId));
+  // NPC governments use the same implementation-response actions.
+  const presidentId = currentPresidentialAuthorityId(world, state);
+  if (presidentId && presidentId !== state.playerPoliticianId) {
+    const delayed = Object.values(runtime.implementations)
+      .filter((r) => r.status === "delayed" || r.status === "blocked")
+      .sort((a, b) => a.lawId.localeCompare(b.lawId))
+      .slice(0, 1);
+    for (const rec of delayed) {
+      const action =
+        rec.blockedReason === "rollout_paused"
+          ? ("increase_resources" as const)
+          : rec.metadata.provinceDelivery === true
+            ? ("negotiate_provinces" as const)
+            : ("revise_timetable" as const);
+      const out = respondToImplementation(
+        world,
+        state,
+        { actorId: presidentId, lawId: rec.lawId, action },
+        commandId,
+      );
+      if (!("error" in out)) events.push(...out.events);
+    }
+  }
   decayCapacityStrain(state);
 
   recomputeFiscalFromCurrentLaw(state);

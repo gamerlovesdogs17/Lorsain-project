@@ -8,6 +8,7 @@ import { isWillingCabinet } from "../politics/careers.js";
 import { activeCoalition } from "../politics/coalitions.js";
 import { partyPlatformIssueForBillItem } from "../parties/platforms.js";
 import { PARTY_PLATFORM_ISSUES, type PartyPlatformIssue } from "../parties/types.js";
+import { issuesForMinistryOffice } from "../governing/jurisdiction.js";
 
 export function chooseMinisterAppointment(
   world: KernelWorld,
@@ -89,7 +90,7 @@ export function chooseRegulationIssue(
   );
   if (ministries.length === 0) return null;
   const officeId = ministries[Math.floor(rng.float01("legislature") * ministries.length)]!;
-  const issues = world.issueIds.slice().sort();
+  const issues = issuesForMinistryOffice(officeId).slice().sort();
   if (issues.length === 0) return null;
 
   const presidentPol = state.politicians[presidentId];

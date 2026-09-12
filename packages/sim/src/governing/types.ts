@@ -144,6 +144,10 @@ export type GovernmentAgendaItem = {
   source: AgendaItemSource;
   departmentId: DepartmentId | null;
   status: "active" | "completed" | "deferred";
+  /** Exact legislature bill id when this priority is tied to legislation. */
+  billId: string | null;
+  /** Truthful status of the referenced bill when known. */
+  billStatus: string | null;
 };
 
 export type GovernmentAgenda = {

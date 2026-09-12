@@ -22,6 +22,7 @@ const ISSUE_DEPARTMENT: Record<string, DepartmentId> = {
   ISS_WELFARE: "health",
   ISS_OWNERSHIP: "economy",
   ISS_TRADE: "economy",
+  ISS_TAX: "finance",
   ISS_HOUSING: "interior",
   ISS_CLIMATE: "energy",
   ISS_LIBERTY: "justice",

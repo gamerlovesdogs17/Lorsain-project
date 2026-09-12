@@ -331,9 +331,9 @@ describe("Phase 11.4 executable constitutional gameplay", () => {
     ratifyPackage(world, state, "MP02", [
       { subjectId: "art3_executive_authority", alternativeId: "assembly_dominant" },
     ]);
-    const ministryId = Object.keys(world.offices).find(
-      (id) => world.offices[id]!.kind === "minister",
-    );
+    const ministryId =
+      Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister" && id.includes("LABOUR")) ??
+      Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister");
     if (!ministryId) return;
     const result = issueRegulation(
       world,
@@ -352,9 +352,9 @@ describe("Phase 11.4 executable constitutional gameplay", () => {
   it("blocks major regulation under constrained_dual_mandate", () => {
     const { world, state } = boot("EXEC-AUTH-MAJOR");
     expect(ensureOrder(state).executiveAuthority).toBe("constrained_dual_mandate");
-    const ministryId = Object.keys(world.offices).find(
-      (id) => world.offices[id]!.kind === "minister",
-    );
+    const ministryId =
+      Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister" && id.includes("LABOUR")) ??
+      Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister");
     if (!ministryId) return;
     const majorResult = issueRegulation(
       world,
@@ -613,9 +613,10 @@ describe("Phase 11.4 mechanical-truth fixes", () => {
       { subjectId: "art3_executive_authority", alternativeId: "strengthened_executive" },
     ]);
     expect(ensureOrder(state).executiveAuthority).toBe("strengthened_executive");
-    const ministryId = Object.keys(world.offices).find(
-      (id) => world.offices[id]!.kind === "minister",
-    );
+    const ministryId =
+      Object.keys(world.offices).find(
+        (id) => world.offices[id]!.kind === "minister" && id.includes("LABOUR"),
+      ) ?? Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister");
     if (!ministryId) return;
     // Issue a major regulation (allowed under strengthened_executive)
     const reg = issueRegulation(
@@ -657,9 +658,10 @@ describe("Phase 11.4 mechanical-truth fixes", () => {
   it("regulation annulment under non-strengthened uses simple majority", () => {
     const { world, state } = boot("NORMAL-ANNUL");
     expect(ensureOrder(state).executiveAuthority).toBe("constrained_dual_mandate");
-    const ministryId = Object.keys(world.offices).find(
-      (id) => world.offices[id]!.kind === "minister",
-    );
+    const ministryId =
+      Object.keys(world.offices).find(
+        (id) => world.offices[id]!.kind === "minister" && id.includes("LABOUR"),
+      ) ?? Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister");
     if (!ministryId) return;
     // Need standard_presidential or strengthened to issue major regulation
     ratifyPackage(world, state, "MP02", [

@@ -205,6 +205,8 @@ export function parseGoverningRuntime(raw: unknown): Phase13Runtime | string {
                   : null,
               status:
                 item.status === "completed" || item.status === "deferred" ? item.status : "active",
+              billId: typeof item.billId === "string" ? item.billId : null,
+              billStatus: typeof item.billStatus === "string" ? item.billStatus : null,
             }))
         : [],
     };

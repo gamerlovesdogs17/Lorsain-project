@@ -362,6 +362,7 @@ export {
   conductAssemblyConfidenceVote,
   scorePartyMergeCompatibility,
   isWillingCabinet,
+  reshuffleCabinetSeat,
   AS_MAX_CAREER_ACTIONS_PER_MONTH,
   AS_MAX_RECRUITMENTS_PER_MONTH,
   AS_AUDIT_BOUNDS_24M,
@@ -391,6 +392,13 @@ export {
   refreshGovernmentAgenda,
   computeGovernmentRecord,
   refreshGovernmentRecord,
+  departmentFromOfficeId,
+  ministryMayRegulate,
+  issuesForMinistryOffice,
+  setAgendaItemBill,
+  setImplementationPosture,
+  respondToImplementation,
+  computeMinistryBudgetRequests,
 } from "./governing/index.js";
 export type {
   Phase13Runtime,

@@ -189,3 +189,120 @@ export function processCabinetReshuffleMonth(
 
   return events;
 }
+/**
+ * Player/NPC authoritative cabinet seat replacement.
+ * Uses the same appoint/dismiss primitives; records CABINET_RESHUFFLE.
+ * Coalition share shortfalls apply a political consequence rather than a hard legal block
+ * unless constitutional appointment rules already rejected the appointment.
+ */
+export function reshuffleCabinetSeat(
+  world: KernelWorld,
+  state: SimState,
+  args: {
+    actorId: string;
+    officeId: string;
+    politicianId: string;
+    reason?: CabinetReshuffleReason | "player_directive";
+  },
+  commandId: string | null,
+): { events: SimEvent[] } | { error: { code: string; message: string } } {
+  const president = currentPresidentialAuthorityId(world, state);
+  if (!president || president !== args.actorId) {
+    return { error: { code: "NOT_PRESIDENT", message: args.actorId } };
+  }
+  const incumbent = currentMinisterHolderId(world, state, args.officeId);
+  if (!incumbent) {
+    return { error: { code: "NO_MINISTER", message: args.officeId } };
+  }
+  if (args.politicianId === incumbent) {
+    return { error: { code: "SAME_MINISTER", message: args.politicianId } };
+  }
+
+  const coalition = activeCoalition(state);
+  const events: SimEvent[] = [];
+  const dismissed = dismissMinister(
+    world,
+    state,
+    { actorId: args.actorId, officeId: args.officeId },
+    commandId,
+  );
+  if ("error" in dismissed) return dismissed;
+  events.push(...dismissed.events);
+
+  const appointed = appointMinister(
+    world,
+    state,
+    { actorId: args.actorId, officeId: args.officeId, politicianId: args.politicianId },
+    commandId,
+  );
+  if ("error" in appointed) {
+    const restore = appointMinister(
+      world,
+      state,
+      { actorId: args.actorId, officeId: args.officeId, politicianId: incumbent },
+      commandId,
+    );
+    if (!("error" in restore)) events.push(...restore.events);
+    return appointed;
+  }
+  events.push(...appointed.events);
+
+  const runtime = ensurePoliticsRuntime(state);
+  const year = Number(state.currentDate.slice(0, 4));
+  if (runtime.cabinetReshuffleYear !== year) {
+    runtime.cabinetReshuffleYear = year;
+    runtime.cabinetReshufflesThisYear = 0;
+  }
+  runtime.cabinetReshufflesThisYear += 1;
+  runtime.lastCabinetReshuffleDate = state.currentDate;
+
+  let coalitionConsequence: string | null = null;
+  if (coalition) {
+    const shares = coalition.cabinetShares;
+    const counts: Record<string, number> = {};
+    let filled = 0;
+    for (const officeId of ministerOfficeIds(world)) {
+      const holder = currentMinisterHolderId(world, state, officeId);
+      if (!holder) continue;
+      filled += 1;
+      const party = state.politicians[holder]?.partyId;
+      if (party) counts[party] = (counts[party] ?? 0) + 1;
+    }
+    for (const [partyId, share] of Object.entries(shares)) {
+      if (!coalition.partyIds.includes(partyId)) continue;
+      const actual = filled > 0 ? (counts[partyId] ?? 0) / filled : 0;
+      if (actual + 1e-9 < share - 0.08) {
+        coalitionConsequence = "cabinet_share_shortfall";
+        coalition.negotiationScore = Math.max(0, coalition.negotiationScore - 0.12);
+        const breaches = Array.isArray(coalition.metadata.shareBreaches)
+          ? [...(coalition.metadata.shareBreaches as string[])]
+          : [];
+        breaches.push(`${state.currentDate}:${args.officeId}:${partyId}`);
+        coalition.metadata.shareBreaches = breaches;
+        break;
+      }
+    }
+  }
+
+  events.push(
+    pushHistory(state, {
+      date: state.currentDate,
+      type: "CABINET_RESHUFFLE",
+      importance: 0.8,
+      visibility: "public",
+      actorIds: [args.actorId, incumbent, args.politicianId],
+      entityIds: [args.officeId],
+      payload: {
+        officeId: args.officeId,
+        previousHolderId: incumbent,
+        newHolderId: args.politicianId,
+        reason: args.reason ?? "player_directive",
+        coalitionConsequence,
+      },
+      sourceScheduledEventId: null,
+      sourceCommandId: commandId,
+    }),
+  );
+
+  return { events };
+}
