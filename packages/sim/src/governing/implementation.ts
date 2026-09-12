@@ -173,6 +173,40 @@ function monthlyProgressDelta(rec: ImplementationRecord, capacity: number): numb
   return pace;
 }
 
+/** Temporary rollout reinforcements stop when the law is done, blocked, or repealed. */
+export function deactivateTemporaryResourcesForLaw(state: SimState, lawId: string): void {
+  const runtime = ensureGoverningRuntime(state);
+  for (const alloc of Object.values(runtime.resourceAllocations)) {
+    if (!alloc.active || alloc.lawId !== lawId) continue;
+    if (alloc.kind === "ongoing_administration") continue;
+    alloc.active = false;
+    alloc.endDate = state.currentDate;
+  }
+}
+
+/** Expire dated allocations and drop temporary ones whose implementation finished. */
+export function syncResourceAllocationLifecycle(state: SimState): void {
+  const runtime = ensureGoverningRuntime(state);
+  for (const alloc of Object.values(runtime.resourceAllocations)) {
+    if (!alloc.active) continue;
+    if (alloc.endDate && state.currentDate >= alloc.endDate) {
+      alloc.active = false;
+      continue;
+    }
+    if (alloc.kind === "ongoing_administration") continue;
+    const impl = Object.values(runtime.implementations).find((r) => r.lawId === alloc.lawId);
+    if (
+      impl &&
+      (impl.status === "fully_implemented" ||
+        impl.status === "blocked" ||
+        impl.blockedReason === "law_not_operative")
+    ) {
+      alloc.active = false;
+      alloc.endDate = alloc.endDate ?? state.currentDate;
+    }
+  }
+}
+
 export function advanceImplementations(state: SimState, commandId: string): SimEvent[] {
   const runtime = ensureGoverningRuntime(state);
   const events: SimEvent[] = [];
@@ -184,6 +218,7 @@ export function advanceImplementations(state: SimState, commandId: string): SimE
     if (!law?.operative) {
       rec.status = "blocked";
       rec.blockedReason = "law_not_operative";
+      deactivateTemporaryResourcesForLaw(state, rec.lawId);
       continue;
     }
 
@@ -214,6 +249,7 @@ export function advanceImplementations(state: SimState, commandId: string): SimE
     if (prev < 1 && rec.progress >= 1) {
       rec.status = "fully_implemented";
       rec.progress = 1;
+      deactivateTemporaryResourcesForLaw(state, rec.lawId);
       events.push(
         pushHistory(state, {
           date: state.currentDate,
@@ -342,10 +378,27 @@ export function respondToImplementation(
   switch (args.action) {
     case "increase_resources": {
       // Durable allocation — fiscal/capacity derivation reads it each month.
-      const cost = Math.max(
+      // Anti-stack: at most one active temporary reinforcement per law/department.
+      const existing = Object.values(runtime.resourceAllocations).find(
+        (a) =>
+          a.active &&
+          a.lawId === args.lawId &&
+          a.departmentId === rec.departmentId &&
+          a.kind !== "ongoing_administration",
+      );
+      const priorAmount = existing?.amount ?? 0;
+      const priorBoost = existing?.capacityBoost ?? 0;
+      // Escalation replaces prior allocation rather than stacking infinitely.
+      const baseCost = Math.max(
         1.5,
         Math.round(Math.max(runtime.fiscal.expenditure, 40) * 0.012 * 10) / 10,
       );
+      const cost = existing
+        ? Math.round(Math.min(baseCost * 2.5, priorAmount + baseCost * 0.55) * 10) / 10
+        : baseCost;
+      const capacityBoost = existing
+        ? Math.min(0.18, Math.round((priorBoost + 0.04) * 100) / 100)
+        : 0.08;
       const strained = runtime.capacity.strain >= 0.9 && runtime.fiscal.balance < -cost * 2;
       const insolvent = runtime.fiscal.revenue + 1e-9 < cost && runtime.fiscal.balance < -cost * 4;
       if (strained || insolvent) {
@@ -356,16 +409,21 @@ export function respondToImplementation(
           ),
         };
       }
+      if (existing) {
+        existing.active = false;
+        existing.endDate = state.currentDate;
+      }
       const allocId = `IRA_${args.lawId}_${state.currentDate}_${Object.keys(runtime.resourceAllocations).length + 1}`;
       runtime.resourceAllocations[allocId] = {
         id: allocId,
         lawId: args.lawId,
         departmentId: rec.departmentId,
         amount: cost,
-        capacityBoost: 0.08,
+        capacityBoost,
         startDate: state.currentDate,
         endDate: null,
         fundingSource: "contingency",
+        kind: "temporary_implementation",
         actorId: args.actorId,
         active: true,
       };
@@ -382,7 +440,9 @@ export function respondToImplementation(
       }
       rec.metadata.resourceCost = cost;
       rec.metadata.resourceAllocationId = allocId;
-      resultSummary = `additional resources assigned (fiscal cost ${cost})`;
+      resultSummary = existing
+        ? `implementation reinforcement expanded (fiscal cost ${cost})`
+        : `additional resources assigned (fiscal cost ${cost})`;
       break;
     }
     case "revise_timetable": {

@@ -300,8 +300,8 @@ export function recomputeFiscalFromCurrentLaw(state: SimState): FiscalState {
   revenue = clampNonNeg(revenue);
   expenditure = clampNonNeg(expenditure);
   const balance = revenue - expenditure;
-  const prevDebt = runtime.fiscal.debt;
-  const debt = clampNonNeg(prevDebt - balance * 0.05);
+  // Debt is a stock — preserve across derivation; evolve only in monthly fiscal process.
+  const debt = clampNonNeg(runtime.fiscal.debt);
 
   const year = Number(state.currentDate.slice(0, 4));
   const fiscal: FiscalState = {
@@ -329,17 +329,28 @@ export function recomputeFiscalFromCurrentLaw(state: SimState): FiscalState {
   return runtime.fiscal;
 }
 
+/**
+ * Scheduled debt evolution from the current balance. Call once per governing month
+ * after fiscal derivation — never from recompute itself.
+ */
+export function evolveFiscalDebtMonthly(state: SimState): void {
+  const runtime = ensureGoverningRuntime(state);
+  const balance = runtime.fiscal.balance;
+  runtime.fiscal.debt = clampNonNeg(
+    Math.round((runtime.fiscal.debt - balance * 0.05) * 10) / 10,
+  );
+  runtime.fiscal.lastUpdated = state.currentDate;
+}
+
 export function applyBudgetPassageFiscalBoost(state: SimState, approved: boolean): void {
   const runtime = ensureGoverningRuntime(state);
+  // One-time political/fiscal shock at passage or failure — not on every recompute.
   if (approved) {
     runtime.fiscal.debt = clampNonNeg(runtime.fiscal.debt - 0.5);
-    runtime.fiscal.balance =
-      Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
   } else {
     runtime.fiscal.debt = clampNonNeg(runtime.fiscal.debt + 1.5);
-    runtime.fiscal.expenditure = Math.round((runtime.fiscal.expenditure + 0.8) * 10) / 10;
-    runtime.fiscal.balance =
-      Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
   }
+  runtime.fiscal.balance =
+    Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
   runtime.fiscal.lastUpdated = state.currentDate;
 }

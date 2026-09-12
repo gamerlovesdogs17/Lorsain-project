@@ -363,6 +363,9 @@ export {
   scorePartyMergeCompatibility,
   isWillingCabinet,
   reshuffleCabinetSeat,
+  SCANDAL_TYPES,
+  processScandalsMonth,
+  openScandalFixture,
   AS_MAX_CAREER_ACTIONS_PER_MONTH,
   AS_MAX_RECRUITMENTS_PER_MONTH,
   AS_AUDIT_BOUNDS_24M,
@@ -380,6 +383,11 @@ export type {
   AutonomousAgencyMetrics,
   CabinetReshuffleReason,
 } from "./politics/types.js";
+export type {
+  ScandalRecord,
+  ScandalStage,
+  ScandalOutcome,
+} from "./politics/scandals.js";
 export {
   processGoverningMonth,
   ensureGoverningRuntime,
@@ -387,6 +395,7 @@ export {
   departmentForLawItems,
   departmentForProvision,
   recomputeFiscalFromCurrentLaw,
+  evolveFiscalDebtMonthly,
   advanceImplementations,
   detectPolicyInteractions,
   refreshGovernmentAgenda,
@@ -399,10 +408,13 @@ export {
   setImplementationPosture,
   respondToImplementation,
   computeMinistryBudgetRequests,
+  EXECUTIVE_SITUATIONS,
+  syncResourceAllocationLifecycle,
 } from "./governing/index.js";
 export type {
   Phase13Runtime,
   ImplementationRecord,
+  ImplementationResourceAllocation,
   FiscalState,
   GovernmentAgenda,
   GovernmentRecord,
@@ -412,6 +424,12 @@ export type {
   ImplementationStatus,
   DepartmentId,
 } from "./governing/types.js";
+export { validatePhase17bContentCatalogs } from "./content/validate17b.js";
+export type { ContentValidationIssue } from "./content/validate17b.js";
+export {
+  provinceTradeShockDelta,
+  isExportHeavyProvince,
+} from "./provinces/tradeShock.js";
 export {
   processPartyOrgMonth,
   ensurePartyOrgRuntime,

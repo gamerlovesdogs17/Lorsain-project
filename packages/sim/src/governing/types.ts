@@ -209,13 +209,15 @@ export type ImplementationResourceAllocation = {
   /** Temporary administrative reinforcement (0–1), not a permanent baseline rewrite. */
   capacityBoost: number;
   startDate: IsoDate;
-  /** Null = lasts until implementation complete / explicitly closed. */
+  /** Null = lasts until implementation complete / explicitly closed (temporary) or indefinite (ongoing). */
   endDate: IsoDate | null;
   fundingSource:
     | "contingency"
     | "ministry_reallocation"
     | "supplemental"
     | "implementation_reserve";
+  /** Temporary rollout reinforcement vs permanent ongoing administration. */
+  kind: "temporary_implementation" | "ongoing_administration";
   actorId: string;
   active: boolean;
 };

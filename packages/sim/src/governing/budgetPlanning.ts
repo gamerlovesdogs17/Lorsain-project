@@ -195,7 +195,7 @@ function defaultChoiceForStance(stance: FiscalStance): MinistryBudgetChoice {
   return "hold_baseline";
 }
 
-/** Apply absolute envelope + ministry distribution to governing fiscal books. */
+/** Apply absolute envelope + ministry distribution to governing fiscal books (pure overlay). */
 export function applyBudgetEnvelopeToFiscal(state: SimState, budget: BudgetState): void {
   const runtime = ensureGoverningRuntime(state);
   const amounts = budget.ministryAmounts ?? {};
@@ -220,28 +220,13 @@ export function applyBudgetEnvelopeToFiscal(state: SimState, budget: BudgetState
     spending.other = (spending.other ?? 0) + (total - assigned);
   }
 
-  const prevExpenditure = runtime.fiscal.expenditure;
+  // Pure derivation: set spending/expenditure/balance only.
+  // Debt and capacity evolve in scheduled monthly processes — not on every recompute.
   runtime.fiscal.spendingByCategory = spending;
   runtime.fiscal.expenditure = Math.round(total * 10) / 10;
   runtime.fiscal.balance =
     Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
-  // Debt path: larger spending relative to prior books increases debt pressure.
-  const delta = runtime.fiscal.expenditure - (prevExpenditure > 0 ? prevExpenditure : total);
-  runtime.fiscal.debt = Math.max(
-    0,
-    Math.round((runtime.fiscal.debt + delta * 0.08 - runtime.fiscal.balance * 0.02) * 10) / 10,
-  );
   runtime.fiscal.lastUpdated = state.currentDate;
-
-  // Implementation capacity: cuts strain delivery; expansions ease slightly.
-  const scale = prevExpenditure > 0 ? runtime.fiscal.expenditure / prevExpenditure : 1;
-  if (scale < 0.97) {
-    runtime.capacity.strain = Math.min(1, runtime.capacity.strain + (1 - scale) * 0.4);
-    runtime.capacity.national = Math.max(0.15, runtime.capacity.national - (1 - scale) * 0.15);
-  } else if (scale > 1.03) {
-    runtime.capacity.strain = Math.max(0, runtime.capacity.strain - (scale - 1) * 0.2);
-    runtime.capacity.national = Math.min(0.95, runtime.capacity.national + (scale - 1) * 0.08);
-  }
 }
 
 export function emptyBudgetFiscalFields(): Pick<

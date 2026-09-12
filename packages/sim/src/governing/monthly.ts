@@ -4,7 +4,8 @@ import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { refreshGovernmentAgenda } from "./agenda.js";
 import { processBudgetCycle } from "./budget.js";
 import { decayCapacityStrain, syncCapacityFromExecutive } from "./capacity.js";
-import { recomputeFiscalFromCurrentLaw } from "./fiscal.js";
+import { evolveFiscalDebtMonthly, recomputeFiscalFromCurrentLaw } from "./fiscal.js";
+import { syncResourceAllocationLifecycle } from "./implementation.js";
 import { advanceImplementations, respondToImplementation } from "./implementation.js";
 import { currentPresidentialAuthorityId } from "../legislature/state.js";
 import { detectPolicyInteractions } from "./interactions.js";
@@ -57,7 +58,9 @@ export function processGoverningMonth(
   }
   decayCapacityStrain(state);
 
+  syncResourceAllocationLifecycle(state);
   recomputeFiscalFromCurrentLaw(state);
+  evolveFiscalDebtMonthly(state);
   events.push(...processBudgetCycle(state, commandId));
 
   refreshGovernmentAgenda(world, state);

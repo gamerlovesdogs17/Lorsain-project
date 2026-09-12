@@ -175,6 +175,8 @@ export function parseGoverningRuntime(raw: unknown): Phase13Runtime | string {
         r.fundingSource === "implementation_reserve"
           ? r.fundingSource
           : "contingency";
+      const kind =
+        r.kind === "ongoing_administration" ? "ongoing_administration" : "temporary_implementation";
       base.resourceAllocations[id] = {
         id,
         lawId: typeof r.lawId === "string" ? r.lawId : "",
@@ -185,6 +187,7 @@ export function parseGoverningRuntime(raw: unknown): Phase13Runtime | string {
         startDate: typeof r.startDate === "string" ? r.startDate : "2000-01-01",
         endDate: typeof r.endDate === "string" ? r.endDate : null,
         fundingSource,
+        kind,
         actorId: typeof r.actorId === "string" ? r.actorId : "",
         active: r.active !== false,
       };
