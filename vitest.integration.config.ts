@@ -22,12 +22,13 @@ export default defineConfig({
     include: [
       "packages/sim/src/foreign.commands.test.ts",
       "packages/sim/src/terena.integration.test.ts",
-      "packages/sim/src/phase11_2.governor.test.ts",
       "packages/sim/src/phase11_2.systems.test.ts",
-      "packages/sim/src/phase11_3.institutions.test.ts",
       "packages/sim/src/campaigns.vertical.test.ts",
       "packages/sim/src/legislature.vertical.test.ts",
       "scripts/dist-exports.smoke.test.ts",
+      "packages/sim/src/phase11_3.institutions.test.ts",
+      // Heaviest file last — reduces mid-suite Vitest worker RPC stalls on some hosts.
+      "packages/sim/src/phase11_2.governor.test.ts",
     ],
     exclude: [
       ...(baseConfig.test?.exclude ?? []),

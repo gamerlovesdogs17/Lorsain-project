@@ -38,7 +38,7 @@ jobs:
         run: pnpm validate:content
       - name: Validate content (Python)
         run: python3 scripts/validate_content.py
-      - name: Short world smoke (5y)
+      - name: Short world smoke (2y)
         run: pnpm test:smoke
 
   integration:

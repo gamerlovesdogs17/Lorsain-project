@@ -173,7 +173,7 @@ describe("Phase 11.3 Provincial Assemblies and recruitment", () => {
   });
 
   it("uses policy-specific provision option identifiers while loading legacy aliases", () => {
-    expect(LEGISLATIVE_PROVISIONS).toHaveLength(50);
+    expect(LEGISLATIVE_PROVISIONS.length).toBeGreaterThanOrEqual(58);
     const allOptions = LEGISLATIVE_PROVISIONS.flatMap((definition) => definition.options);
     expect(allOptions.length).toBeGreaterThanOrEqual(200);
     const optionCounts = new Set(

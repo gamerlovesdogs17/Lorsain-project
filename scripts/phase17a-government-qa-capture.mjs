@@ -129,13 +129,11 @@ async function assertNoHorizontalOverflow(page, shotId, viewportWidth) {
     const doc = document.documentElement;
     const body = document.body;
     const pageEl = document.querySelector(".page") ?? body;
-    const sw = Math.max(
-      pageEl?.scrollWidth ?? 0,
-      doc.clientWidth,
-      Math.min(doc.scrollWidth, (pageEl?.scrollWidth ?? doc.scrollWidth) + 0),
-    );
     // Prefer main page content width — off-canvas nav can inflate document scrollWidth.
-    const contentWidth = Math.max(pageEl?.scrollWidth ?? 0, body?.querySelector?.(".work-layout")?.scrollWidth ?? 0);
+    const contentWidth = Math.max(
+      pageEl?.scrollWidth ?? 0,
+      body?.querySelector?.(".work-layout")?.scrollWidth ?? 0,
+    );
     const cw = doc.clientWidth;
     const offenders = [...document.querySelectorAll("body *")]
       .filter((el) => {
@@ -147,7 +145,8 @@ async function assertNoHorizontalOverflow(page, shotId, viewportWidth) {
         const rect = el.getBoundingClientRect();
         return `${el.className?.toString?.().slice(0, 60) || el.tagName}:${Math.round(rect.width)}`;
       });
-    const measured = contentWidth > 0 ? contentWidth : Math.max(doc.scrollWidth, body?.scrollWidth ?? 0);
+    const measured =
+      contentWidth > 0 ? contentWidth : Math.max(doc.scrollWidth, body?.scrollWidth ?? 0);
     return {
       ok: measured <= cw + 2,
       scrollWidth: measured,
