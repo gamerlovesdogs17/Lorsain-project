@@ -9,7 +9,6 @@ import { chooseLegislativeVote } from "../legislature/decisions.js";
 import type { BillState, LegislativeVoteChoice } from "../legislature/types.js";
 import {
   appointMinister,
-  equalMinistryAllocations,
   introduceMotion,
   issueRegulation,
   motionIsRipe,
@@ -224,7 +223,7 @@ function npcPresidentWork(
     const out = proposeBudget(
       world,
       state,
-      { actorId: president, allocations: equalMinistryAllocations(world) },
+      { actorId: president, fiscalStance: "hold" },
       commandId,
     );
     if (!("error" in out)) events.push(...out.events);

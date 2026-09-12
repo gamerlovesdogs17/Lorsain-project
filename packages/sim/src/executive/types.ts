@@ -30,6 +30,24 @@ export type RegulationStatus = (typeof REGULATION_STATUSES)[number];
 export const BUDGET_STATUSES = ["proposed", "approved", "continuing"] as const;
 export type BudgetStatus = (typeof BUDGET_STATUSES)[number];
 
+export const FISCAL_STANCES = [
+  "expansionary",
+  "modest_increase",
+  "hold",
+  "consolidation",
+  "custom",
+] as const;
+export type FiscalStance = (typeof FISCAL_STANCES)[number];
+
+export const MINISTRY_BUDGET_CHOICES = [
+  "full_request",
+  "partial_request",
+  "hold_baseline",
+  "cut",
+  "custom",
+] as const;
+export type MinistryBudgetChoice = (typeof MINISTRY_BUDGET_CHOICES)[number];
+
 export const EMERGENCY_STATUSES = ["active", "expired", "terminated"] as const;
 export type EmergencyStatus = (typeof EMERGENCY_STATUSES)[number];
 
@@ -58,7 +76,18 @@ export type BudgetState = {
   id: string;
   fiscalYear: number;
   proposalDate: IsoDate | null;
+  /** Ministry share of the total envelope (sums to ~1). Kept for compatibility. */
   allocations: Record<string, number>;
+  /** Absolute total spending envelope in fiscal units. */
+  totalEnvelope: number;
+  /** Baseline total when the proposal was built. */
+  baselineTotal: number;
+  fiscalStance: FiscalStance;
+  /** Authoritative ministry requests at proposal time. */
+  ministryRequests: Record<string, number>;
+  /** Chosen absolute ministry amounts (sum ≈ totalEnvelope). */
+  ministryAmounts: Record<string, number>;
+  ministryChoices: Record<string, MinistryBudgetChoice>;
   status: BudgetStatus;
   assemblyDecision: "pending" | "approved" | "rejected" | "none";
   continuingSource: string | null;

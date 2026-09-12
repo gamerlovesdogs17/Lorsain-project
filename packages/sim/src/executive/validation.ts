@@ -97,6 +97,45 @@ export function parseExecutiveRuntime(raw: unknown): ExecutiveRuntime | string {
           if (typeof v === "number") allocations[k] = v;
         }
       }
+      const ministryAmounts: Record<string, number> = {};
+      if (isRecord(rec.ministryAmounts)) {
+        for (const [k, v] of Object.entries(rec.ministryAmounts)) {
+          if (typeof v === "number") ministryAmounts[k] = v;
+        }
+      }
+      const ministryRequests: Record<string, number> = {};
+      if (isRecord(rec.ministryRequests)) {
+        for (const [k, v] of Object.entries(rec.ministryRequests)) {
+          if (typeof v === "number") ministryRequests[k] = v;
+        }
+      }
+      const ministryChoices: BudgetState["ministryChoices"] = {};
+      if (isRecord(rec.ministryChoices)) {
+        for (const [k, v] of Object.entries(rec.ministryChoices)) {
+          if (
+            v === "full_request" ||
+            v === "partial_request" ||
+            v === "hold_baseline" ||
+            v === "cut" ||
+            v === "custom"
+          ) {
+            ministryChoices[k] = v;
+          }
+        }
+      }
+      const fiscalStance =
+        rec.fiscalStance === "expansionary" ||
+        rec.fiscalStance === "modest_increase" ||
+        rec.fiscalStance === "hold" ||
+        rec.fiscalStance === "consolidation" ||
+        rec.fiscalStance === "custom"
+          ? rec.fiscalStance
+          : "custom";
+      const totalEnvelope =
+        typeof rec.totalEnvelope === "number"
+          ? rec.totalEnvelope
+          : Object.values(ministryAmounts).reduce((s, v) => s + v, 0);
+      const baselineTotal = typeof rec.baselineTotal === "number" ? rec.baselineTotal : totalEnvelope;
       const budget: BudgetState = {
         id,
         fiscalYear: isInt(rec.fiscalYear) ? rec.fiscalYear : 2000,
@@ -105,6 +144,20 @@ export function parseExecutiveRuntime(raw: unknown): ExecutiveRuntime | string {
             ? rec.proposalDate
             : null,
         allocations,
+        totalEnvelope,
+        baselineTotal,
+        fiscalStance,
+        ministryRequests,
+        ministryAmounts:
+          Object.keys(ministryAmounts).length > 0
+            ? ministryAmounts
+            : Object.fromEntries(
+                Object.entries(allocations).map(([k, share]) => [
+                  k,
+                  Math.round(share * (totalEnvelope || 100) * 10) / 10,
+                ]),
+              ),
+        ministryChoices,
         status: rec.status === "proposed" || rec.status === "approved" ? rec.status : "continuing",
         assemblyDecision:
           rec.assemblyDecision === "pending" ||

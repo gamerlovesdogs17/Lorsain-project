@@ -1,6 +1,7 @@
 import { pushHistory } from "../scheduler.js";
 import type { SimEvent, SimState } from "../types.js";
 import { applyBudgetPassageFiscalBoost, recomputeFiscalFromCurrentLaw } from "./fiscal.js";
+import { applyBudgetEnvelopeToFiscal } from "./budgetPlanning.js";
 import { ensureGoverningRuntime } from "./state.js";
 
 /**
@@ -43,6 +44,7 @@ export function processBudgetCycle(state: SimState, commandId: string): SimEvent
     cycle.budgetId = approved.id;
     cycle.failureConsequence = null;
     recomputeFiscalFromCurrentLaw(state);
+    applyBudgetEnvelopeToFiscal(state, approved);
     applyBudgetPassageFiscalBoost(state, true);
     events.push(
       pushHistory(state, {

@@ -137,6 +137,8 @@ import {
   scheduleWarAuthorizationReferral,
 } from "./executive/procedure.js";
 import { seedMinistriesIfNeeded } from "./executive/state.js";
+import { reshuffleCabinetSeat } from "./politics/cabinet.js";
+import { respondToImplementation } from "./governing/implementation.js";
 import {
   emptyConstitutionalRuntime,
   isCourtCaseType,
@@ -2797,6 +2799,38 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
       return { ok: true, commandId, events: out.events, interrupt: null };
     }
 
+    if (command.type === "RESHUFFLE_CABINET") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        officeId: command.officeId,
+        politicianId: command.politicianId,
+        reason: "player_directive" as const,
+      };
+      const preview = reshuffleCabinetSeat(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = reshuffleCabinetSeat(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
+    if (command.type === "RESPOND_TO_IMPLEMENTATION") {
+      const args = {
+        actorId: state.playerPoliticianId,
+        lawId: command.lawId,
+        action: command.action,
+        ...(command.replacementPoliticianId
+          ? { replacementPoliticianId: command.replacementPoliticianId }
+          : {}),
+      };
+      const preview = respondToImplementation(world, jsonClone(state), args, null);
+      if ("error" in preview) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = respondToImplementation(world, state, args, commandId);
+      if ("error" in out) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    }
+
     if (command.type === "ISSUE_REGULATION") {
       const preview = issueRegulation(
         world,
@@ -2867,20 +2901,16 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
     }
 
     if (command.type === "PROPOSE_BUDGET") {
-      const preview = proposeBudget(
-        world,
-        jsonClone(state),
-        { actorId: state.playerPoliticianId, allocations: command.allocations },
-        null,
-      );
+      const budgetArgs = {
+        actorId: state.playerPoliticianId,
+        ...(command.allocations ? { allocations: command.allocations } : {}),
+        ...(command.fiscalStance ? { fiscalStance: command.fiscalStance } : {}),
+        ...(command.ministryChoices ? { ministryChoices: command.ministryChoices } : {}),
+      };
+      const preview = proposeBudget(world, jsonClone(state), budgetArgs, null);
       if ("error" in preview) return fail(preview.error.code, preview.error.message);
       const commandId = nextCommandId();
-      const out = proposeBudget(
-        world,
-        state,
-        { actorId: state.playerPoliticianId, allocations: command.allocations },
-        commandId,
-      );
+      const out = proposeBudget(world, state, budgetArgs, commandId);
       if ("error" in out) return fail(out.error.code, out.error.message);
       return { ok: true, commandId, events: out.events, interrupt: null };
     }

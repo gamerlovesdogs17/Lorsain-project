@@ -4,6 +4,8 @@ import {
   canAssumeOffice,
   currentPresidentialAuthorityId,
   estimatedProvisionEffects,
+  issuesForMinistryOffice,
+  departmentFromOfficeId,
   type CommandResult,
   type KernelWorld,
   type SimState,
@@ -108,6 +110,14 @@ function qualitativeCoalition(negotiationScore: number | null | undefined): stri
   return "Critical";
 }
 
+function qualitativeService(score: number | null | undefined): string {
+  if (score == null) return "Unassessed";
+  if (score >= 0.7) return "Strong";
+  if (score >= 0.55) return "Adequate";
+  if (score >= 0.4) return "Under pressure";
+  return "Weak";
+}
+
 export function ExecutivePage(props: {
   world: KernelWorld;
   snap: SimState;
@@ -150,14 +160,19 @@ export function ExecutivePage(props: {
   const selectedOfficeId = vacantMinistries.some((m) => m.officeId === appointOfficeId)
     ? appointOfficeId
     : (vacantMinistries[0]?.officeId ?? "");
+  const eligibilityOfficeId =
+    selectedMinisterOfficeId &&
+    cab.some((m) => m.officeId === selectedMinisterOfficeId && m.holderId)
+      ? selectedMinisterOfficeId
+      : selectedOfficeId;
   const eligible = useMemo(() => {
-    if (!selectedOfficeId) return [];
+    if (!eligibilityOfficeId) return [];
     const q = appointQuery.trim().toLowerCase();
     return Object.keys(props.snap.politicians)
       .filter((id) => {
         if (id === props.snap.playerPoliticianId) return false;
         if (
-          canAssumeOffice(props.snap, props.world, selectedOfficeId, id, "substantive", {
+          canAssumeOffice(props.snap, props.world, eligibilityOfficeId, id, "substantive", {
             ignoreOfficeCapacity: true,
           }) != null
         ) {
@@ -180,7 +195,7 @@ export function ExecutivePage(props: {
         ),
       )
       .slice(0, 60);
-  }, [appointQuery, props.catalog, props.snap, props.world, selectedOfficeId]);
+  }, [appointQuery, eligibilityOfficeId, props.catalog, props.snap, props.world]);
 
   const pendingBills = Object.values(props.snap.legislatureRuntime.bills).filter(
     (b) => b.status === "sent_to_president" && !deferredBills.has(b.id),
@@ -447,6 +462,10 @@ export function ExecutivePage(props: {
                       </dd>
                     </div>
                     <div>
+                      <dt>Climate</dt>
+                      <dd>{qualitativeCoalition(coalition.negotiationScore)}</dd>
+                    </div>
+                    <div>
                       <dt>Formed</dt>
                       <dd>{coalition.formedDate}</dd>
                     </div>
@@ -535,11 +554,14 @@ export function ExecutivePage(props: {
                     const m = cab.find((row) => row.officeId === selectedMinisterOfficeId);
                     if (!m) return null;
                     const perf = governing?.ministerialPerformance?.[m.officeId];
-                    const relatedImpl = implementations.filter(
-                      (rec) =>
-                        rec.departmentId === m.officeId ||
-                        rec.departmentId === props.world.offices[m.officeId]?.portfolio,
-                    );
+                    const relatedImpl = implementations.filter((rec) => {
+                      const dept = departmentFromOfficeId(m.officeId);
+                      return (
+                        rec.departmentId === dept ||
+                        rec.ministryOfficeId === m.officeId ||
+                        rec.departmentId === m.officeId
+                      );
+                    });
                     return (
                       <div className="gov-minister-detail card">
                         <SectionDivider
@@ -591,7 +613,7 @@ export function ExecutivePage(props: {
                           </div>
                         </dl>
                         {president && m.holderId ? (
-                          <div className="row">
+                          <div className="row wrap">
                             <button
                               type="button"
                               className="btn secondary"
@@ -614,6 +636,36 @@ export function ExecutivePage(props: {
                             >
                               Dismiss
                             </button>
+                            {appointPoliticianId ? (
+                              <button
+                                type="button"
+                                className="btn"
+                                onClick={() =>
+                                  props.askConfirm({
+                                    title: "Reshuffle cabinet seat",
+                                    body: `Replace ${politicianDisplayName(props.catalog, m.holderId!)} with ${politicianDisplayName(props.catalog, appointPoliticianId)} as ${m.title}? Coalition share breaches cause political strain.`,
+                                    confirmLabel: "Reshuffle",
+                                    action: () => {
+                                      props.report(
+                                        props.sim.executeCommand({
+                                          type: "RESHUFFLE_CABINET",
+                                          officeId: m.officeId,
+                                          politicianId: appointPoliticianId,
+                                        }),
+                                      );
+                                      setAppointPoliticianId(null);
+                                      props.onDone();
+                                    },
+                                  })
+                                }
+                              >
+                                Reshuffle to selected
+                              </button>
+                            ) : (
+                              <span className="muted">
+                                Select a politician below to reshuffle this seat.
+                              </span>
+                            )}
                           </div>
                         ) : null}
                       </div>
@@ -621,33 +673,47 @@ export function ExecutivePage(props: {
                   })()
                 : null}
 
-              {president && vacantMinistries.length > 0 ? (
+              {president && (vacantMinistries.length > 0 || selectedMinisterOfficeId) ? (
                 <div className="appoint-panel">
                   <SectionDivider
-                    title="Appoint a minister"
-                    hint="Choose the vacant portfolio and politician"
+                    title={
+                      selectedMinisterOfficeId &&
+                      cab.find((m) => m.officeId === selectedMinisterOfficeId)?.holderId
+                        ? "Reshuffle candidate"
+                        : "Appoint a minister"
+                    }
+                    hint="Choose a politician for appointment or cabinet reshuffle"
                   />
-                  <div className="row">
-                    <select
-                      value={selectedOfficeId}
-                      onChange={(e) => {
-                        setAppointOfficeId(e.target.value);
-                        setAppointPoliticianId(null);
-                      }}
-                    >
-                      {vacantMinistries.map((m) => (
-                        <option key={m.officeId} value={m.officeId}>
-                          {m.title}
-                        </option>
-                      ))}
-                    </select>
+                  {vacantMinistries.length > 0 ? (
+                    <div className="row">
+                      <select
+                        value={appointOfficeId || vacantMinistries[0]?.officeId || ""}
+                        onChange={(e) => {
+                          setAppointOfficeId(e.target.value);
+                          setAppointPoliticianId(null);
+                        }}
+                      >
+                        {vacantMinistries.map((m) => (
+                          <option key={m.officeId} value={m.officeId}>
+                            {m.title}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className="search"
+                        placeholder="Search politicians"
+                        value={appointQuery}
+                        onChange={(e) => setAppointQuery(e.target.value)}
+                      />
+                    </div>
+                  ) : (
                     <input
                       className="search"
-                      placeholder="Search politicians"
+                      placeholder="Search politicians for reshuffle"
                       value={appointQuery}
                       onChange={(e) => setAppointQuery(e.target.value)}
                     />
-                  </div>
+                  )}
                   <div
                     className="list"
                     style={{ marginTop: "0.6rem", maxHeight: "16rem", overflow: "auto" }}
@@ -676,26 +742,28 @@ export function ExecutivePage(props: {
                       );
                     })}
                   </div>
-                  <button
-                    type="button"
-                    className="btn"
-                    style={{ marginTop: "0.6rem" }}
-                    disabled={!selectedOfficeId || !appointPoliticianId}
-                    onClick={() => {
-                      if (!selectedOfficeId || !appointPoliticianId) return;
-                      props.report(
-                        props.sim.executeCommand({
-                          type: "APPOINT_MINISTER",
-                          officeId: selectedOfficeId,
-                          politicianId: appointPoliticianId,
-                        }),
-                      );
-                      setAppointPoliticianId(null);
-                      props.onDone();
-                    }}
-                  >
-                    Appoint selected politician
-                  </button>
+                  {vacantMinistries.length > 0 ? (
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ marginTop: "0.6rem" }}
+                      disabled={!selectedOfficeId || !appointPoliticianId}
+                      onClick={() => {
+                        if (!selectedOfficeId || !appointPoliticianId) return;
+                        props.report(
+                          props.sim.executeCommand({
+                            type: "APPOINT_MINISTER",
+                            officeId: selectedOfficeId,
+                            politicianId: appointPoliticianId,
+                          }),
+                        );
+                        setAppointPoliticianId(null);
+                        props.onDone();
+                      }}
+                    >
+                      Appoint
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -757,22 +825,31 @@ export function ExecutivePage(props: {
               ) : (
                 <div className="gov-agenda-list">
                   {agendaItems.slice(0, 16).map((item) => {
-                    const linkedBill = Object.values(props.snap.legislatureRuntime.bills).find(
-                      (b) =>
-                        b.status !== "withdrawn" &&
-                        b.status !== "enacted" &&
-                        (b.title?.toLowerCase().includes(item.issueId.replaceAll("_", " ")) ||
-                          b.summary?.toLowerCase().includes(item.issueId.replaceAll("_", " ")) ||
-                          b.policyItems?.some((p) => p.issueId === item.issueId)),
-                    );
+                    const linkedBill = item.billId
+                      ? (props.snap.legislatureRuntime.bills[item.billId] ?? null)
+                      : null;
+                    const billStale =
+                      linkedBill &&
+                      ["withdrawn", "defeated", "enacted", "archived", "lapsed"].includes(
+                        linkedBill.status,
+                      );
                     return (
                       <EntityRow
                         key={item.id}
                         title={item.title.replace(/^[^:]+:\s*/, "")}
-                        meta={`${issueDisplayName(props.catalog, item.issueId)} · ${item.source.replaceAll("_", " ")}`}
+                        meta={`${issueDisplayName(props.catalog, item.issueId)} · ${item.source.replaceAll("_", " ")}${
+                          linkedBill
+                            ? ` · bill ${linkedBill.status.replaceAll("_", " ")}`
+                            : item.billStatus === "ambiguous"
+                              ? " · multiple bills — set exact reference"
+                              : ""
+                        }`}
                         status={<StatusBadge>{item.status.replaceAll("_", " ")}</StatusBadge>}
                         trailing={
-                          linkedBill && props.setSelectedBill && props.onNavigate ? (
+                          linkedBill &&
+                          !billStale &&
+                          props.setSelectedBill &&
+                          props.onNavigate ? (
                             <button
                               type="button"
                               className="btn secondary btn-sm"
@@ -783,6 +860,8 @@ export function ExecutivePage(props: {
                             >
                               Open in Assembly
                             </button>
+                          ) : linkedBill && billStale ? (
+                            <StatusBadge>{linkedBill.status.replaceAll("_", " ")}</StatusBadge>
                           ) : (
                             `P${item.priority}`
                           )
@@ -897,23 +976,35 @@ export function ExecutivePage(props: {
                 <EmptyState>No budget has been proposed this cycle.</EmptyState>
               ) : null}
               {budgets.map((b) => {
-                const total = Object.values(b.allocations).reduce((s, n) => s + n, 0);
+                const amounts =
+                  Object.keys(b.ministryAmounts ?? {}).length > 0
+                    ? b.ministryAmounts
+                    : b.allocations;
+                const total =
+                  b.totalEnvelope > 0
+                    ? b.totalEnvelope
+                    : Object.values(amounts).reduce((s, n) => s + n, 0);
                 return (
                   <div key={b.id} className="budget-row">
                     <EntityRow
                       title={`FY ${b.fiscalYear}`}
-                      meta={b.status}
-                      trailing={total.toLocaleString()}
+                      meta={`${b.status}${b.fiscalStance ? ` · ${b.fiscalStance.replaceAll("_", " ")}` : ""}`}
+                      trailing={total.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                     />
-                    <DataTable dense headers={["Ministry", "Envelope"]}>
-                      {Object.entries(b.allocations).map(([officeId, n]) => (
+                    <DataTable dense headers={["Ministry", "Amount", "Share"]}>
+                      {Object.entries(amounts).map(([officeId, n]) => (
                         <tr key={officeId}>
                           <td>
                             {cab.find((m) => m.officeId === officeId)?.title ??
                               props.world.offices[officeId]?.title ??
                               "Ministry"}
                           </td>
-                          <td>{n.toLocaleString()}</td>
+                          <td>{n.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                          <td>
+                            {total > 0
+                              ? `${((n / total) * 100).toFixed(0)}%`
+                              : ((b.allocations[officeId] ?? 0) * 100).toFixed(0) + "%"}
+                          </td>
                         </tr>
                       ))}
                     </DataTable>
@@ -954,18 +1045,65 @@ export function ExecutivePage(props: {
                   {implementations.slice(0, 40).map((rec) => {
                     const law = props.snap.legislatureRuntime.enactedLaws[rec.lawId];
                     const ministry =
-                      cab.find((m) => m.officeId === rec.departmentId)?.title ??
-                      rec.departmentId.replaceAll("_", " ");
+                      cab.find((m) => departmentFromOfficeId(m.officeId) === rec.departmentId)
+                        ?.title ?? rec.departmentId.replaceAll("_", " ");
+                    const canRespond =
+                      president ||
+                      (rec.ministryOfficeId != null &&
+                        cab.some(
+                          (m) =>
+                            m.officeId === rec.ministryOfficeId &&
+                            m.holderId === props.snap.playerPoliticianId,
+                        ));
                     return (
-                      <EntityRow
-                        key={rec.lawId}
-                        title={law?.title ?? rec.lawId}
-                        meta={`${ministry} · ${rec.posture.replaceAll("_", " ")}`}
-                        status={
-                          <StatusBadge>{qualitativeDelivery(rec.status, rec.progress)}</StatusBadge>
-                        }
-                        trailing={props.debug ? `${(rec.progress * 100).toFixed(0)}%` : undefined}
-                      />
+                      <div key={rec.lawId} className="gov-impl-card">
+                        <EntityRow
+                          title={law?.title ?? rec.lawId}
+                          meta={`${ministry} · ${rec.posture.replaceAll("_", " ")}`}
+                          status={
+                            <StatusBadge>
+                              {qualitativeDelivery(rec.status, rec.progress)}
+                            </StatusBadge>
+                          }
+                          trailing={
+                            props.debug ? `${(rec.progress * 100).toFixed(0)}%` : undefined
+                          }
+                        />
+                        {canRespond &&
+                        rec.status !== "fully_implemented" &&
+                        rec.status !== "blocked" ? (
+                          <div className="row wrap" style={{ marginTop: "0.35rem" }}>
+                            {(
+                              [
+                                ["increase_resources", "Add resources"],
+                                ["revise_timetable", "Revise timetable"],
+                                ["issue_guidance", "Issue guidance"],
+                                ["negotiate_provinces", "Negotiate provinces"],
+                                ["reduce_scope", "Reduce scope"],
+                                ["pause_rollout", "Pause rollout"],
+                              ] as const
+                            ).map(([action, label]) => (
+                              <button
+                                type="button"
+                                key={action}
+                                className="btn secondary btn-sm"
+                                onClick={() => {
+                                  props.report(
+                                    props.sim.executeCommand({
+                                      type: "RESPOND_TO_IMPLEMENTATION",
+                                      lawId: rec.lawId,
+                                      action,
+                                    }),
+                                  );
+                                  props.onDone();
+                                }}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
                     );
                   })}
                 </div>
@@ -976,23 +1114,48 @@ export function ExecutivePage(props: {
                 <dl className="dossier-facts compact">
                   <div>
                     <dt>Healthcare</dt>
-                    <dd>{(governing.services.healthcareAccess * 100).toFixed(0)}</dd>
+                    <dd>
+                      {qualitativeService(governing.services.healthcareAccess)}
+                      {props.debug
+                        ? ` (${(governing.services.healthcareAccess * 100).toFixed(0)})`
+                        : ""}
+                    </dd>
                   </div>
                   <div>
                     <dt>Education</dt>
-                    <dd>{(governing.services.educationQuality * 100).toFixed(0)}</dd>
+                    <dd>
+                      {qualitativeService(governing.services.educationQuality)}
+                      {props.debug
+                        ? ` (${(governing.services.educationQuality * 100).toFixed(0)})`
+                        : ""}
+                    </dd>
                   </div>
                   <div>
                     <dt>Infrastructure</dt>
-                    <dd>{(governing.services.infrastructureQuality * 100).toFixed(0)}</dd>
+                    <dd>
+                      {qualitativeService(governing.services.infrastructureQuality)}
+                      {props.debug
+                        ? ` (${(governing.services.infrastructureQuality * 100).toFixed(0)})`
+                        : ""}
+                    </dd>
                   </div>
                   <div>
                     <dt>Public safety</dt>
-                    <dd>{(governing.services.publicSafety * 100).toFixed(0)}</dd>
+                    <dd>
+                      {qualitativeService(governing.services.publicSafety)}
+                      {props.debug
+                        ? ` (${(governing.services.publicSafety * 100).toFixed(0)})`
+                        : ""}
+                    </dd>
                   </div>
                   <div>
                     <dt>Administration</dt>
-                    <dd>{(governing.services.administrativeDelivery * 100).toFixed(0)}</dd>
+                    <dd>
+                      {qualitativeService(governing.services.administrativeDelivery)}
+                      {props.debug
+                        ? ` (${(governing.services.administrativeDelivery * 100).toFixed(0)})`
+                        : ""}
+                    </dd>
                   </div>
                 </dl>
               ) : (
@@ -1015,7 +1178,13 @@ export function ExecutivePage(props: {
                     Choose a ministry and policy domain, then a regulatory stance. Exact magnitudes
                     stay in Debug Mode.
                   </p>
-                  <select value={regOffice} onChange={(e) => setRegOffice(e.target.value)}>
+                  <select
+                    value={regOffice}
+                    onChange={(e) => {
+                      setRegOffice(e.target.value);
+                      setRegIssue("");
+                    }}
+                  >
                     <option value="">Choose ministry</option>
                     {cab.map((m) => (
                       <option key={m.officeId} value={m.officeId}>
@@ -1024,8 +1193,11 @@ export function ExecutivePage(props: {
                     ))}
                   </select>
                   <select value={regIssue} onChange={(e) => setRegIssue(e.target.value)}>
-                    <option value="">Choose issue</option>
-                    {props.world.issueIds.map((id) => (
+                    <option value="">Choose issue in ministry jurisdiction</option>
+                    {(regOffice
+                      ? issuesForMinistryOffice(regOffice)
+                      : props.world.issueIds
+                    ).map((id) => (
                       <option key={id} value={id}>
                         {issueDisplayName(props.catalog, id)}
                       </option>
@@ -1072,8 +1244,12 @@ export function ExecutivePage(props: {
                       checked={regMajor}
                       onChange={(e) => setRegMajor(e.target.checked)}
                     />{" "}
-                    Treat as major regulation (Assembly may move to annul)
+                    Subject regulation to Assembly annulment review (major instrument)
                   </label>
+                  <p className="muted">
+                    Sweeping/broad stances and multi-item rules are treated as major even without
+                    this checkbox.
+                  </p>
                   {props.debug ? (
                     <label>
                       Debug magnitude {regMag.toFixed(2)}
@@ -1128,29 +1304,71 @@ export function ExecutivePage(props: {
                   </button>
                 </div>
                 <p className="muted">
-                  Choose a fiscal stance to seed envelopes, then adjust ministries if needed.
-                  Official totals remain exact; the stance is the political choice.
+                  Choose a fiscal stance. That sets the total spending envelope from ministry
+                  requests; ministry amounts remain distinct from shares.
                 </p>
                 <div className="row wrap" style={{ marginBottom: "0.65rem" }}>
                   {(
                     [
-                      ["Hold funding", 1],
-                      ["Partial increase", 1.08],
-                      ["Full request", 1.16],
-                      ["Cut envelope", 0.9],
+                      ["Hold real spending", "hold"],
+                      ["Modest increase", "modest_increase"],
+                      ["Expansionary", "expansionary"],
+                      ["Consolidation", "consolidation"],
                     ] as const
-                  ).map(([label, factor]) => (
+                  ).map(([label, stance]) => (
                     <button
                       type="button"
-                      key={label}
+                      key={stance}
                       className="btn secondary"
                       onClick={() => {
-                        const base = 100;
-                        const next: Record<string, string> = {};
-                        for (const m of cab) {
-                          next[m.officeId] = String(Math.round(base * factor));
-                        }
-                        setAllocations(next);
+                        props.report(
+                          props.sim.executeCommand({
+                            type: "PROPOSE_BUDGET",
+                            fiscalStance: stance,
+                          }),
+                        );
+                        setPanel(null);
+                        props.onDone();
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="muted">Or seed custom ministry amounts, then propose:</p>
+                <div className="row wrap" style={{ marginBottom: "0.65rem" }}>
+                  {(
+                    [
+                      ["Hold baseline", "hold_baseline"],
+                      ["Partial requests", "partial_request"],
+                      ["Full requests", "full_request"],
+                      ["Cut package", "cut"],
+                    ] as const
+                  ).map(([label, choice]) => (
+                    <button
+                      type="button"
+                      key={choice}
+                      className="btn secondary"
+                      onClick={() => {
+                        const stance =
+                          choice === "full_request"
+                            ? "expansionary"
+                            : choice === "partial_request"
+                              ? "modest_increase"
+                              : choice === "cut"
+                                ? "consolidation"
+                                : "hold";
+                        const choices: Record<string, typeof choice> = {};
+                        for (const m of cab) choices[m.officeId] = choice;
+                        props.report(
+                          props.sim.executeCommand({
+                            type: "PROPOSE_BUDGET",
+                            fiscalStance: stance,
+                            ministryChoices: choices,
+                          }),
+                        );
+                        setPanel(null);
+                        props.onDone();
                       }}
                     >
                       {label}
@@ -1161,7 +1379,7 @@ export function ExecutivePage(props: {
                   <thead>
                     <tr>
                       <th>Ministry</th>
-                      <th>Envelope</th>
+                      <th>Custom amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1173,7 +1391,7 @@ export function ExecutivePage(props: {
                             className="search"
                             type="number"
                             min={0}
-                            step={1}
+                            step={0.1}
                             value={allocations[m.officeId] ?? ""}
                             placeholder="0"
                             onChange={(e) =>
@@ -1186,7 +1404,7 @@ export function ExecutivePage(props: {
                   </tbody>
                 </table>
                 <p>
-                  Total{" "}
+                  Custom total{" "}
                   {cab
                     .reduce((s, m) => s + (Number(allocations[m.officeId] ?? 0) || 0), 0)
                     .toLocaleString()}
@@ -1219,19 +1437,23 @@ export function ExecutivePage(props: {
                         error: {
                           code: "INVALID_BUDGET",
                           message:
-                            "Set at least one ministry allocation before proposing a budget.",
+                            "Set at least one ministry allocation before proposing a custom budget.",
                         },
                       });
                       return;
                     }
                     props.report(
-                      props.sim.executeCommand({ type: "PROPOSE_BUDGET", allocations: next }),
+                      props.sim.executeCommand({
+                        type: "PROPOSE_BUDGET",
+                        allocations: next,
+                        fiscalStance: "custom",
+                      }),
                     );
                     setPanel(null);
                     props.onDone();
                   }}
                 >
-                  Propose budget
+                  Propose custom budget
                 </button>
               </div>
             </div>

@@ -5,6 +5,8 @@ export * from "./capacity.js";
 export * from "./implementation.js";
 export * from "./fiscal.js";
 export * from "./budget.js";
+export * from "./budgetPlanning.js";
+export * from "./jurisdiction.js";
 export * from "./agenda.js";
 export * from "./promises.js";
 export * from "./interactions.js";

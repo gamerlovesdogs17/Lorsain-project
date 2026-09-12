@@ -18,7 +18,13 @@ import {
   ministerOfficeIds,
   seedMinistriesIfNeeded,
 } from "./state.js";
-import type { AssemblyMotion, MotionKind, RegulationState } from "./types.js";
+import type { AssemblyMotion, FiscalStance, MotionKind, MinistryBudgetChoice, RegulationState, BudgetState } from "./types.js";
+import { departmentForPolicyItem, departmentFromOfficeId } from "../governing/departments.js";
+import { ministryMayRegulate } from "../governing/jurisdiction.js";
+import {
+  applyBudgetEnvelopeToFiscal,
+  buildBudgetProposalAmounts,
+} from "../governing/budgetPlanning.js";
 import {
   emergencyDeclarationAllowed,
   warUnilateralDaysForDefenseControl,
@@ -252,13 +258,30 @@ export function issueRegulation(
   if (args.policyItems.length < 1) {
     return { error: reject("INVALID_REGULATION", "needs a policy item") };
   }
-  const items: PolicyItem[] = args.policyItems.map((p) => ({
-    issueId: p.issueId,
-    direction: p.direction < 0 ? -1 : p.direction > 0 ? 1 : 0,
-    magnitude: Math.max(0, Math.min(1, p.magnitude)),
-    fiscalImpact: p.fiscalImpact ?? null,
-  }));
-  const major = args.major === true;
+  const jurisdiction = ministryMayRegulate(args.ministryOfficeId, args.policyItems);
+  if (!jurisdiction.allowed) {
+    return {
+      error: reject("REGULATION_OUTSIDE_JURISDICTION", jurisdiction.reason ?? "outside jurisdiction"),
+    };
+  }
+  const items: PolicyItem[] = args.policyItems.map((p) => {
+    const item: PolicyItem = {
+      issueId: p.issueId,
+      direction: p.direction < 0 ? -1 : p.direction > 0 ? 1 : 0,
+      magnitude: Math.max(0, Math.min(1, p.magnitude)),
+      fiscalImpact: p.fiscalImpact ?? null,
+    };
+    if (typeof p.provisionId === "string") item.provisionId = p.provisionId;
+    if (typeof p.optionId === "string") item.optionId = p.optionId;
+    return item;
+  });
+  // Major status derives from scope/magnitude, not a free-weight toggle alone.
+  const derivedMajor =
+    args.major === true ||
+    items.some((i) => i.magnitude >= 0.55) ||
+    items.length >= 2 ||
+    items.some((i) => Math.abs(i.fiscalImpact ?? 0) >= 0.25);
+  const major = derivedMajor;
   const regulation: RegulationState = {
     id: allocateRegulationId(state),
     issuerId: args.actorId,
@@ -268,7 +291,12 @@ export function issueRegulation(
     major,
     reviewDeadline: addDays(state.currentDate, world.executiveConstitution.regulationReviewDays),
     status: "active",
-    metadata: {},
+    metadata: {
+      jurisdictionDepartment: departmentFromOfficeId(args.ministryOfficeId),
+      policyDepartments: items.map((i) => departmentForPolicyItem(i)),
+      majorDerived: major,
+      majorRequested: args.major === true,
+    },
   };
   state.executiveRuntime.regulations[regulation.id] = regulation;
   return {
@@ -767,45 +795,60 @@ function applyMotionEffect(
 export function proposeBudget(
   world: KernelWorld,
   state: SimState,
-  args: { actorId: string; allocations: Record<string, number> },
+  args: {
+    actorId: string;
+    allocations?: Record<string, number>;
+    fiscalStance?: FiscalStance;
+    ministryChoices?: Record<string, MinistryBudgetChoice>;
+  },
   commandId: string | null,
-): { events: SimEvent[] } | { error: CommandError } {
+): { events: SimEvent[]; budget: BudgetState } | { error: CommandError } {
   const err = requirePresident(world, state, args.actorId);
   if (err) return { error: err };
   const year = Number(state.currentDate.slice(0, 4));
-  const ministries = ministerOfficeIds(world);
-  const allocations: Record<string, number> = {};
-  let sum = 0;
-  for (const id of ministries) {
-    const v = Math.max(0, args.allocations[id] ?? 0);
-    allocations[id] = v;
-    sum += v;
+  const planned = buildBudgetProposalAmounts({
+    world,
+    state,
+    ...(args.fiscalStance ? { fiscalStance: args.fiscalStance } : {}),
+    ...(args.allocations ? { ministryAmounts: args.allocations } : {}),
+    ...(args.ministryChoices ? { ministryChoices: args.ministryChoices } : {}),
+  });
+  if (!(planned.totalEnvelope > 0)) {
+    return { error: reject("INVALID_BUDGET", "budget envelope must be positive") };
   }
-  if (sum <= 0) {
-    const even = 1 / Math.max(1, ministries.length);
-    for (const id of ministries) allocations[id] = even;
-  } else {
-    for (const id of ministries) allocations[id] = allocations[id]! / sum;
-  }
-  const budget = {
+  const budget: BudgetState = {
     id: allocateBudgetId(state),
     fiscalYear: year,
     proposalDate: state.currentDate,
-    allocations,
-    status: "proposed" as const,
-    assemblyDecision: "pending" as const,
+    allocations: planned.allocations,
+    totalEnvelope: planned.totalEnvelope,
+    baselineTotal: planned.baselineTotal,
+    fiscalStance: planned.fiscalStance,
+    ministryRequests: planned.ministryRequests,
+    ministryAmounts: planned.ministryAmounts,
+    ministryChoices: planned.ministryChoices,
+    status: "proposed",
+    assemblyDecision: "pending",
     continuingSource: null,
     metadata: {},
   };
   state.executiveRuntime.budgets[budget.id] = budget;
+  applyBudgetEnvelopeToFiscal(state, budget);
   return {
+    budget,
     events: [
       event(
         state,
         "BUDGET_PROPOSED",
         [args.actorId],
         [budget.id],
-        { budgetId: budget.id, fiscalYear: year },
+        {
+          budgetId: budget.id,
+          fiscalYear: year,
+          totalEnvelope: budget.totalEnvelope,
+          baselineTotal: budget.baselineTotal,
+          fiscalStance: budget.fiscalStance,
+        },
         commandId,
         0.75,
       ),
@@ -934,11 +977,22 @@ export function seedContinuingBudget(world: KernelWorld, state: SimState): void 
   if (ministerOfficeIds(world).length === 0) return;
   const year = Number(state.currentDate.slice(0, 4));
   const id = allocateBudgetId(state);
+  const planned = buildBudgetProposalAmounts({
+    world,
+    state,
+    fiscalStance: "hold",
+  });
   state.executiveRuntime.budgets[id] = {
     id,
     fiscalYear: year,
     proposalDate: null,
-    allocations: equalMinistryAllocations(world),
+    allocations: planned.allocations,
+    totalEnvelope: planned.totalEnvelope,
+    baselineTotal: planned.baselineTotal,
+    fiscalStance: "hold",
+    ministryRequests: planned.ministryRequests,
+    ministryAmounts: planned.ministryAmounts,
+    ministryChoices: planned.ministryChoices,
     status: "continuing",
     assemblyDecision: "none",
     continuingSource: "prior_lawful_budget",

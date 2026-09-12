@@ -602,6 +602,11 @@ export type Command =
   | { type: "APPOINT_MINISTER"; officeId: string; politicianId: string }
   | { type: "DISMISS_MINISTER"; officeId: string }
   | {
+      type: "RESHUFFLE_CABINET";
+      officeId: string;
+      politicianId: string;
+    }
+  | {
       type: "ISSUE_REGULATION";
       ministryOfficeId: string;
       policyItems: PolicyItem[];
@@ -609,7 +614,34 @@ export type Command =
     }
   | { type: "INTRODUCE_MOTION"; kind: MotionKind; targetId: string }
   | { type: "CAST_MOTION_VOTE"; motionId: string; choice: LegislativeVoteChoice }
-  | { type: "PROPOSE_BUDGET"; allocations: Record<string, number> }
+  | {
+      type: "PROPOSE_BUDGET";
+      allocations?: Record<string, number>;
+      fiscalStance?:
+        | "expansionary"
+        | "modest_increase"
+        | "hold"
+        | "consolidation"
+        | "custom";
+      ministryChoices?: Record<
+        string,
+        "full_request" | "partial_request" | "hold_baseline" | "cut" | "custom"
+      >;
+    }
+  | {
+      type: "RESPOND_TO_IMPLEMENTATION";
+      lawId: string;
+      action:
+        | "increase_resources"
+        | "revise_timetable"
+        | "issue_guidance"
+        | "negotiate_provinces"
+        | "request_amending_legislation"
+        | "reduce_scope"
+        | "replace_responsible_minister"
+        | "pause_rollout";
+      replacementPoliticianId?: string;
+    }
   | { type: "DECLARE_EMERGENCY" }
   | { type: "BEGIN_WAR_POWERS" }
   | { type: "NOMINATE_CONSTITUTIONAL_JUDGE"; nomineeId: string; seatOfficeId: string }
