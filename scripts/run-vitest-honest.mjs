@@ -14,6 +14,7 @@ import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { classifyHonestVitestResult } from "./vitest-honest-classify.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(path.join(root, "package.json"));
@@ -34,24 +35,13 @@ process.stdout.write(stdout);
 process.stderr.write(stderr);
 
 const exitCode = result.status ?? 1;
-if (exitCode === 0) {
-  process.exit(0);
-}
-
-const failedTests = /Tests\s+(\d+)\s+failed/.exec(combined);
-const failedFiles = /Test Files\s+(\d+)\s+failed/.exec(combined);
-const failedTestCount = failedTests ? Number(failedTests[1]) : null;
-const failedFileCount = failedFiles ? Number(failedFiles[1]) : null;
-const onlyWorkerRpcTimeout =
-  /\[vitest-worker\]:\s*Timeout calling "onTaskUpdate"/.test(combined) &&
-  !/AssertionError/.test(combined) &&
-  (failedTestCount === 0 || (failedTestCount == null && /Tests\s+\d+\s+passed/.test(combined))) &&
-  (failedFileCount === 0 || failedFileCount == null);
-
-if (onlyWorkerRpcTimeout) {
-  console.error(
-    "[run-vitest-honest] Ignoring known Vitest worker RPC timeout after a green assertion suite (P10-VITEST-TIMEOUT).",
-  );
+const verdict = classifyHonestVitestResult(combined, exitCode);
+if (verdict.allow) {
+  if (verdict.reason === "known_vitest_worker_rpc_timeout") {
+    console.error(
+      "[run-vitest-honest] Ignoring known Vitest worker RPC timeout after a green assertion suite (P10-VITEST-TIMEOUT).",
+    );
+  }
   process.exit(0);
 }
 
