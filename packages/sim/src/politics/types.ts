@@ -207,6 +207,8 @@ export type Phase12Runtime = {
     recruitments: number;
     orgCampaigns: number;
   };
+  /** Stateful scandal / investigation arcs (Phase 17B.2). */
+  scandals: Record<string, import("./scandals.js").ScandalRecord>;
   metadata: JsonObject;
 };
 
@@ -232,6 +234,7 @@ export function emptyPoliticsRuntime(): Phase12Runtime {
       recruitments: 0,
       orgCampaigns: 0,
     },
+    scandals: {},
     metadata: {},
   };
 }

@@ -5,6 +5,9 @@ export function ensurePoliticsRuntime(state: SimState): Phase12Runtime {
   if (!state.politicsRuntime) {
     state.politicsRuntime = emptyPoliticsRuntime();
   }
+  if (!state.politicsRuntime.scandals || typeof state.politicsRuntime.scandals !== "object") {
+    state.politicsRuntime.scandals = {};
+  }
   return state.politicsRuntime;
 }
 
@@ -104,6 +107,9 @@ export function parsePoliticsRuntime(raw: unknown): Phase12Runtime | string {
       recruitments: typeof a.recruitments === "number" ? a.recruitments : 0,
       orgCampaigns: typeof a.orgCampaigns === "number" ? a.orgCampaigns : 0,
     };
+  }
+  if (obj.scandals && typeof obj.scandals === "object" && !Array.isArray(obj.scandals)) {
+    base.scandals = obj.scandals as Phase12Runtime["scandals"];
   }
   if (obj.metadata && typeof obj.metadata === "object" && !Array.isArray(obj.metadata)) {
     base.metadata = obj.metadata as Phase12Runtime["metadata"];

@@ -13,7 +13,7 @@ import { processCabinetReshuffleMonth } from "./cabinet.js";
 import { processOrganizationPoliticsMonth } from "./organizations.js";
 import { processCoalitionMonth } from "./coalitions.js";
 import { ensurePoliticsRuntime, resetPoliticsMonthCounters } from "./state.js";
-import { processScandalAllegationsMonth } from "./scandals.js";
+import { processScandalsMonth } from "./scandals.js";
 
 /**
  * Orchestrates Phase 12 political agency for one month.
@@ -46,7 +46,7 @@ export function processPoliticalAgencyMonth(
   events.push(...processPartyLifecycleMonth(world, state, rng, commandId));
   events.push(...processPoliticalMemoryMonth(world, state));
   events.push(...processOrganizationPoliticsMonth(world, state, rng, commandId));
-  events.push(...processScandalAllegationsMonth(world, state, rng, commandId));
+  events.push(...processScandalsMonth(world, state, rng, commandId));
 
   runtime.lastAgencyMonth = month;
   return events;

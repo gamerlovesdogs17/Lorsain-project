@@ -12,3 +12,6 @@ export * from "./organizations.js";
 export * from "./coalitions.js";
 export * from "./agency.js";
 export * from "./explain.js";
+export * from "./scandals.js";
+export * from "./biography.js";
+export * from "./caucusPressure.js";
