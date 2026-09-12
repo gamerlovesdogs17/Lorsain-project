@@ -5,10 +5,14 @@ on:
     branches: [main, master]
   pull_request:
 
+# Normal Push CI (Tier 1): minutes, not hours.
+# Full 25/50/100 certification lives in certification.yml (manual / scheduled).
+
 jobs:
   quality:
     name: Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -34,6 +38,8 @@ jobs:
         run: pnpm validate:content
       - name: Validate content (Python)
         run: python3 scripts/validate_content.py
+      - name: Short world smoke (5y)
+        run: pnpm test:smoke
 
   integration:
     name: Integration
@@ -54,78 +60,3 @@ jobs:
         run: pnpm build
       - name: Integration tests
         run: pnpm test:integration
-
-  certification:
-    name: Certification ${{ matrix.shard }}
-    runs-on: ubuntu-latest
-    # Per-shard horizon (25/50/100y). 100y needs more headroom than 25y.
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        shard:
-          - CERT-25-A
-          - CERT-25-B
-          - CERT-25-C
-          - CERT-50-A
-          - CERT-50-B
-          - CERT-100
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: pnpm
-      - name: Install
-        run: pnpm install --frozen-lockfile
-      - name: Build
-        run: pnpm build
-      - name: Run certification shard
-        run: pnpm test:certification:shard -- --shard=${{ matrix.shard }}
-      - name: Upload shard audit
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase15-shard-${{ matrix.shard }}
-          path: docs/qa/phase15/shards/${{ matrix.shard }}.json
-          if-no-files-found: error
-
-  certification-aggregate:
-    name: Certification Aggregate
-    runs-on: ubuntu-latest
-    needs: certification
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: pnpm
-      - name: Install
-        run: pnpm install --frozen-lockfile
-      - name: Download shard audits
-        uses: actions/download-artifact@v4
-        with:
-          pattern: phase15-shard-*
-          path: artifact-shards
-          merge-multiple: true
-      - name: Flatten shard audits
-        run: |
-          mkdir -p docs/qa/phase15/shards
-          find artifact-shards -type f -name '*.json' -exec cp -f {} docs/qa/phase15/shards/ \;
-          ls -la docs/qa/phase15/shards
-      - name: Aggregate certification audits
-        run: pnpm test:certification:aggregate
-      - name: Upload long-run audit
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase15-longrun-audit
-          path: docs/qa/phase15/longrun-audit.json
-          if-no-files-found: error

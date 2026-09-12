@@ -82,8 +82,20 @@ export function runCertShard(shardId: string): CertShardAudit {
   });
   const startingDate = sim.getSnapshot().currentDate;
   const started = performance.now();
+  let earlyFailure: string | undefined;
   for (let i = 0; i < months; i += 12) {
     advanceIntegrated(sim, Math.min(12, months - i));
+    const mid = sim.getSnapshot() as SimState;
+    const midFindings = auditSimulationIntegrity(world, mid);
+    const midErrors = integrityErrorCount(midFindings);
+    if (midErrors > 0) {
+      earlyFailure = `integrity errors at year ${Math.floor((i + 12) / 12)}: ${midErrors} (${midFindings
+        .filter((f) => f.severity === "error")
+        .slice(0, 3)
+        .map((f) => f.code)
+        .join(", ")})`;
+      break;
+    }
   }
   const elapsedMs = performance.now() - started;
   const state = sim.getSnapshot() as SimState;
@@ -124,15 +136,17 @@ export function runCertShard(shardId: string): CertShardAudit {
   ).length;
   const leadershipTransitions = Math.max(closedTenures, chairEvents);
 
-  let failureReason: string | undefined;
-  if (electionsResolved <= 0) failureReason = "no elections resolved (frozen)";
-  else if (history15.eras.length <= 0) failureReason = "no eras";
-  else if (history15.governments.length <= 0) failureReason = "no governments";
-  else if (history15.yearbooks.length <= 0) failureReason = "no yearbooks";
-  else if (leadershipTransitions <= 0) failureReason = "no leadership transitions (frozen)";
-  else if (lifecycleEvents > lifecycleBound(spec.years))
+  let failureReason: string | undefined = earlyFailure;
+  if (!failureReason && electionsResolved <= 0) failureReason = "no elections resolved (frozen)";
+  else if (!failureReason && history15.eras.length <= 0) failureReason = "no eras";
+  else if (!failureReason && history15.governments.length <= 0) failureReason = "no governments";
+  else if (!failureReason && history15.yearbooks.length <= 0) failureReason = "no yearbooks";
+  else if (!failureReason && leadershipTransitions <= 0)
+    failureReason = "no leadership transitions (frozen)";
+  else if (!failureReason && lifecycleEvents > lifecycleBound(spec.years))
     failureReason = `lifecycle chaos: ${lifecycleEvents} > ${lifecycleBound(spec.years)}`;
-  else if (integrityErrors > 0) failureReason = `integrity errors: ${integrityErrors}`;
+  else if (!failureReason && integrityErrors > 0)
+    failureReason = `integrity errors: ${integrityErrors}`;
 
   return {
     shardId: spec.id,

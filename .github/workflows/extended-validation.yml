@@ -1,0 +1,79 @@
+name: Extended Validation
+
+# Tier 2 — deeper 25-year stability. Not on every push.
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly Sunday 06:00 UTC
+    - cron: "0 6 * * 0"
+
+jobs:
+  extended:
+    name: Extended ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - CERT-25-A
+          - CERT-25-B
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Run extended shard
+        run: pnpm test:certification:shard -- --shard=${{ matrix.shard }}
+      - name: Upload shard audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-shard-${{ matrix.shard }}
+          path: docs/qa/phase15/shards/${{ matrix.shard }}.json
+          if-no-files-found: error
+
+  extended-aggregate:
+    name: Extended Aggregate
+    runs-on: ubuntu-latest
+    needs: extended
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Download shard audits
+        uses: actions/download-artifact@v4
+        with:
+          pattern: extended-shard-*
+          path: artifact-shards
+          merge-multiple: true
+      - name: Flatten shard audits
+        run: |
+          mkdir -p docs/qa/phase15/shards
+          find artifact-shards -type f -name '*.json' -exec cp -f {} docs/qa/phase15/shards/ \;
+          ls -la docs/qa/phase15/shards
+      - name: Aggregate
+        run: pnpm test:certification:aggregate
+      - name: Upload aggregate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-longrun-audit
+          path: docs/qa/phase15/longrun-audit.json
+          if-no-files-found: error
