@@ -74,7 +74,11 @@ export type HeadlineContext = {
 };
 
 /** Down-rank routine legislative churn so enactment headlines do not dominate outlets. */
-function legislativeMediaScoreAdjust(type: string, importance: number, payload?: Record<string, unknown>): number {
+function legislativeMediaScoreAdjust(
+  type: string,
+  importance: number,
+  payload?: Record<string, unknown>,
+): number {
   let delta = 0;
   const hasTitle = typeof payload?.title === "string" && payload.title.trim().length > 0;
   if (type === "BILL_INTRODUCED") delta -= 0.1;
@@ -582,10 +586,7 @@ export function headlineFor(
                 desk ? `${desk} spotlights ${emphasis} clash` : `${emphasis} frames debate night`,
               ]
             : critical
-              ? [
-                  `Debate scrutiny centres on ${emphasis}`,
-                  `Moderators press ${emphasis} contrasts`,
-                ]
+              ? [`Debate scrutiny centres on ${emphasis}`, `Moderators press ${emphasis} contrasts`]
               : [
                   `Campaign debate focuses on ${emphasis}`,
                   `Candidates outline ${emphasis} positions on stage`,
@@ -999,7 +1000,9 @@ export function headlineFor(
           : [
               summary || "Organization opens an issue campaign",
               `Advocacy groups mobilize on ${issueId}`,
-              desk ? `${desk} tracks an organizational campaign` : "Lobbying activity enters the record",
+              desk
+                ? `${desk} tracks an organizational campaign`
+                : "Lobbying activity enters the record",
             ],
       variant,
     );
@@ -1022,7 +1025,9 @@ export function headlineFor(
             type === "CAUCUS_AGENDA_SET"
               ? "Party caucus publishes a priority bill list"
               : "Caucus leaders manage internal pressure on upcoming votes",
-            province ? `${province} MPs watch caucus signals` : "Assembly bloc coordination stays in focus",
+            province
+              ? `${province} MPs watch caucus signals`
+              : "Assembly bloc coordination stays in focus",
           ],
       variant,
     );
@@ -1032,11 +1037,15 @@ export function headlineFor(
     const kindHeadlines: Record<string, string[]> = {
       port_throughput_crisis: [
         "Port congestion becomes a provincial political test",
-        province ? `${province} port backlog forces executive response` : "Provincial port crisis opens",
+        province
+          ? `${province} port backlog forces executive response`
+          : "Provincial port crisis opens",
       ],
       harvest_logistics_breakdown: [
         "Harvest logistics strain provincial transport plans",
-        province ? `${province} faces a harvest-season crunch` : "Agrarian provinces warn of delivery delays",
+        province
+          ? `${province} faces a harvest-season crunch`
+          : "Agrarian provinces warn of delivery delays",
       ],
       campus_capacity_clash: [
         "Campus housing pressure reaches provincial desks",
@@ -1044,7 +1053,9 @@ export function headlineFor(
       ],
       border_inspection_backlog: [
         "Border queues spill into provincial budgets",
-        province ? `${province} border delays strain local services` : "Frontier province flags inspection backlog",
+        province
+          ? `${province} border delays strain local services`
+          : "Frontier province flags inspection backlog",
       ],
       pit_shutdown_spillover: [
         "Mine shutdown ripples through provincial finances",
@@ -1058,20 +1069,22 @@ export function headlineFor(
     const themed = kindHeadlines[kind];
     if (themed) {
       return pickVariant(
-        sensational
-          ? [themed[0]!, `${themed[0]!} — governors under scrutiny`]
-          : themed,
+        sensational ? [themed[0]!, `${themed[0]!} — governors under scrutiny`] : themed,
         variant,
       );
     }
     return pickVariant(
       sensational
         ? [
-            province ? `${province} faces a provincial pressure crisis` : "Provincial pressure event opens",
+            province
+              ? `${province} faces a provincial pressure crisis`
+              : "Provincial pressure event opens",
             "Regional executive faces a public test",
           ]
         : [
-            province ? `${province} opens a provincial pressure file` : "Provincial pressure registered",
+            province
+              ? `${province} opens a provincial pressure file`
+              : "Provincial pressure registered",
             "Governor's office responds to mounting regional strain",
           ],
       variant,

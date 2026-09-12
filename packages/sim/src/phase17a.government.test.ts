@@ -199,7 +199,9 @@ describe("Phase 17A government fixtures", () => {
     );
     const state = jsonClone(sim.getSnapshot());
     const runtime = ensureGoverningRuntime(state);
-    const proposed = Object.values(state.executiveRuntime.budgets).find((b) => b.status === "proposed");
+    const proposed = Object.values(state.executiveRuntime.budgets).find(
+      (b) => b.status === "proposed",
+    );
     expect(proposed).toBeTruthy();
     if (!proposed) return;
     proposed.status = "approved";
@@ -597,7 +599,11 @@ describe("Phase 17A government fixtures", () => {
       world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
       "NPC146";
     const state = jsonClone(
-      createSimulation({ world, seed: "p17a-major-reg", playerPoliticianId: presidentId }).getSnapshot(),
+      createSimulation({
+        world,
+        seed: "p17a-major-reg",
+        playerPoliticianId: presidentId,
+      }).getSnapshot(),
     );
     expect(state.provincialRuntime.constitutionalOrder?.executiveAuthority).toBe(
       "constrained_dual_mandate",
@@ -633,7 +639,11 @@ describe("Phase 17A government fixtures", () => {
       world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
       "NPC146";
     const state = jsonClone(
-      createSimulation({ world, seed: "p17a-amend-bill", playerPoliticianId: presidentId }).getSnapshot(),
+      createSimulation({
+        world,
+        seed: "p17a-amend-bill",
+        playerPoliticianId: presidentId,
+      }).getSnapshot(),
     );
     ensureGoverningRuntime(state).implementations.LAW_P17A_AMEND = {
       lawId: "LAW_P17A_AMEND",

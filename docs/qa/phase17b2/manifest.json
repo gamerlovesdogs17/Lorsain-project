@@ -1,0 +1,101 @@
+{
+  "phase": "phase17b2-representative",
+  "commitSha": "47b0955b8f8e0cae9803f43110b14236fa5e2b33",
+  "buildTimestamp": "2026-09-12T23:10:42.063Z",
+  "generatedAt": "2026-09-12T23:11:01.982Z",
+  "base": "http://127.0.0.1:5175/Lorsain-project/",
+  "shots": [
+    {
+      "file": "17b2-government-executive-1280.png",
+      "screen": "government-executive",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government visible",
+        "Executive power strip",
+        "qa-ready"
+      ],
+      "assertionSummary": "Government visible; Executive power strip; qa-ready",
+      "ok": true,
+      "sha256": "e4bc922cbf4150dbc01392e18cca4f51b7f4df654162f1981ba6ebc23d6328ab",
+      "bytes": 155856
+    },
+    {
+      "file": "17b2-foreign-overview-1280.png",
+      "screen": "foreign-overview",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "institutions",
+      "player": "NPC003",
+      "assertions": [
+        "data-qa=foreign-affairs",
+        "fa-summary-strip×1"
+      ],
+      "assertionSummary": "data-qa=foreign-affairs; fa-summary-strip×1",
+      "ok": true,
+      "sha256": "1cd9efc6ab9b7fab808cd59a114e8b02b2155da1ad0f8743cfeed92752bbcec3",
+      "bytes": 152806
+    },
+    {
+      "file": "17b2-courts-bench-1280.png",
+      "screen": "courts-bench",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "institutions",
+      "player": "NPC003",
+      "assertions": [
+        "Constitutional Court",
+        "nine-seat bench chart"
+      ],
+      "assertionSummary": "Constitutional Court; nine-seat bench chart",
+      "ok": true,
+      "sha256": "483ffe25b4be95e3ef0cf29122f726ae1e6616b679f2eb71faa2eeead8cd53f4",
+      "bytes": 154917
+    },
+    {
+      "file": "17b2-news-front-1280.png",
+      "screen": "news-front",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "institutions",
+      "player": "NPC003",
+      "assertions": [
+        "news-paper",
+        "outlet switcher"
+      ],
+      "assertionSummary": "news-paper; outlet switcher",
+      "ok": true,
+      "sha256": "d896285529457627f14bc26b1bcc1709bf7b12012ebe29759aae2bed36a896a1",
+      "bytes": 140771
+    },
+    {
+      "file": "17b2-campaign-hq-1280.png",
+      "screen": "campaign-hq",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "active-campaign",
+      "player": "NPC009",
+      "assertions": [
+        "active campaign (not idle)",
+        "campaign sections visible"
+      ],
+      "assertionSummary": "active campaign (not idle); campaign sections visible",
+      "ok": true,
+      "sha256": "4b3f7506315421f62629c0c1428ba37356766ee57119c47b3a522f585608313e",
+      "bytes": 217771
+    }
+  ],
+  "failures": []
+}

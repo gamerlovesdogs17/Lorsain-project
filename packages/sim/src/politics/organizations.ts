@@ -115,19 +115,9 @@ export function processOrganizationPoliticsMonth(
       relatedBill?.policyItems
         .map((i) => i.provisionId)
         .filter((id): id is string => typeof id === "string" && id.length > 0) ?? [];
-    const lobbyTemplate = matchOrgLobbyCampaignTemplate(
-      org.type,
-      issueId,
-      stance,
-      provisionIds,
-    );
+    const lobbyTemplate = matchOrgLobbyCampaignTemplate(org.type, issueId, stance, provisionIds);
     const summary = lobbyTemplate
-      ? formatOrgLobbyCampaignSummary(
-          lobbyTemplate,
-          org.name,
-          target.politicianId,
-          issueId,
-        )
+      ? formatOrgLobbyCampaignSummary(lobbyTemplate, org.name, target.politicianId, issueId)
       : `${org.name} ${stance}s ${target.politicianId} on ${issueId}`;
     runtime.orgCampaigns[campaignId] = {
       id: campaignId,

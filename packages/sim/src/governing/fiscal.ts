@@ -170,10 +170,7 @@ export function currentlyEffectiveBudget(state: SimState): BudgetState | null {
   const year = Number(state.currentDate.slice(0, 4));
   const budgets = Object.values(state.executiveRuntime.budgets);
   const approved = budgets.find(
-    (b) =>
-      b.fiscalYear === year &&
-      b.status === "approved" &&
-      b.assemblyDecision !== "rejected",
+    (b) => b.fiscalYear === year && b.status === "approved" && b.assemblyDecision !== "rejected",
   );
   if (approved) return approved;
   const continuing = budgets.find(
@@ -212,8 +209,7 @@ function applyActiveResourceAllocationsToFiscal(state: SimState): void {
       (runtime.fiscal.spendingByCategory[cat] ?? 0) + alloc.amount;
   }
   if (added > 0) {
-    runtime.fiscal.expenditure =
-      Math.round((runtime.fiscal.expenditure + added) * 10) / 10;
+    runtime.fiscal.expenditure = Math.round((runtime.fiscal.expenditure + added) * 10) / 10;
     runtime.fiscal.balance =
       Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
   }
@@ -336,9 +332,7 @@ export function recomputeFiscalFromCurrentLaw(state: SimState): FiscalState {
 export function evolveFiscalDebtMonthly(state: SimState): void {
   const runtime = ensureGoverningRuntime(state);
   const balance = runtime.fiscal.balance;
-  runtime.fiscal.debt = clampNonNeg(
-    Math.round((runtime.fiscal.debt - balance * 0.05) * 10) / 10,
-  );
+  runtime.fiscal.debt = clampNonNeg(Math.round((runtime.fiscal.debt - balance * 0.05) * 10) / 10);
   runtime.fiscal.lastUpdated = state.currentDate;
 }
 

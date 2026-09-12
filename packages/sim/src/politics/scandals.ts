@@ -16,12 +16,7 @@ import { ensurePoliticsRuntime } from "./state.js";
 export type ScandalSeverityPath = "administrative" | "investigation" | "prosecutorial";
 
 export type ScandalStage =
-  | "allegation"
-  | "scrutiny"
-  | "investigation"
-  | "finding"
-  | "referral"
-  | "resolution";
+  "allegation" | "scrutiny" | "investigation" | "finding" | "referral" | "resolution";
 
 export type ScandalEvidenceLabel = "weak" | "mixed" | "significant" | "strong";
 
@@ -34,13 +29,7 @@ export type ScandalOutcome =
   | "procedurally_closed";
 
 export type ScandalTargetResponse =
-  | "deny"
-  | "cooperate"
-  | "recuse"
-  | "apologize"
-  | "resign"
-  | "blame_staff"
-  | "fight";
+  "deny" | "cooperate" | "recuse" | "apologize" | "resign" | "blame_staff" | "fight";
 
 export type ScandalPartyResponse =
   | "defend"
@@ -380,11 +369,7 @@ function resolveOutcome(
   return rng.float01("scandals") < 0.4 ? "unresolved" : "procedurally_closed";
 }
 
-function evolveEvidence(
-  record: ScandalRecord,
-  type: ScandalTypeDefinition,
-  rng: RngService,
-): void {
+function evolveEvidence(record: ScandalRecord, type: ScandalTypeDefinition, rng: RngService): void {
   const r = rng.float01("scandals");
   let delta = 0;
   if (record.stage === "scrutiny") delta = r < 0.55 ? 0.06 : r < 0.8 ? -0.04 : 0.02;
@@ -402,7 +387,9 @@ function evolveEvidence(
   record.evidenceStrength = clamp01(record.evidenceStrength + delta);
   record.evidenceLabel = evidenceLabelFromStrength(record.evidenceStrength);
   record.severity = clamp01(
-    record.severity + (delta > 0 ? delta * 0.5 : delta * 0.35) + (type.severityPath === "prosecutorial" ? 0.01 : 0),
+    record.severity +
+      (delta > 0 ? delta * 0.5 : delta * 0.35) +
+      (type.severityPath === "prosecutorial" ? 0.01 : 0),
   );
 }
 
@@ -496,7 +483,10 @@ function maybeCreateLegalReferral(
   type: ScandalTypeDefinition,
 ): void {
   if (record.legalReferralId) return;
-  if (record.stage !== "referral" && !(record.stage === "finding" && type.severityPath === "prosecutorial")) {
+  if (
+    record.stage !== "referral" &&
+    !(record.stage === "finding" && type.severityPath === "prosecutorial")
+  ) {
     return;
   }
   if (record.evidenceStrength < 0.55) return;
@@ -558,10 +548,7 @@ export function processScandalAllegationsMonth(
 
   // Avoid stacking identical open type on same target.
   const alreadyOpen = Object.values(runtime.scandals).some(
-    (s) =>
-      s.outcome == null &&
-      s.targetPoliticianId === targetId &&
-      s.typeId === scandalType.id,
+    (s) => s.outcome == null && s.targetPoliticianId === targetId && s.typeId === scandalType.id,
   );
   if (alreadyOpen) return [];
 
@@ -678,9 +665,15 @@ export function processScandalLifecycleMonth(
       );
     }
 
-    if (record.stage === "resolution" || (record.monthsInStage >= 3 && prevStage === record.stage && record.stage !== "allegation")) {
+    if (
+      record.stage === "resolution" ||
+      (record.monthsInStage >= 3 && prevStage === record.stage && record.stage !== "allegation")
+    ) {
       // Force resolution if stalled too long after finding/referral.
-      if (record.stage !== "resolution" && (record.stage === "finding" || record.stage === "referral")) {
+      if (
+        record.stage !== "resolution" &&
+        (record.stage === "finding" || record.stage === "referral")
+      ) {
         record.stage = "resolution";
       }
     }

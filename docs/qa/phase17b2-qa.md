@@ -21,26 +21,28 @@
 
 ## Screenshots (secondary)
 
-Reuse existing game routes — do **not** invent fake UI:
+Representative **1280×720** captures live under [`docs/qa/phase17b2/`](./phase17b2/) with assert-before-capture and [`manifest.json`](./phase17b2/manifest.json) (SHA-256 per PNG).
 
-| Shot | Route / panel | What to show |
-|------|---------------|--------------|
-| Executive situation | Government → Executive / ministry | Domain situation title + department |
-| Scandal | History / News | Allegation stage label + qualitative evidence (Weak/Mixed/…) |
-| Lobby conflict | History / org campaign event | Union vs business different asks |
-| Court doctrine | Court case detail | Rule/doctrine matching fact pattern |
-| Province event | Province / History | Trade/regional pressure |
-| Foreign crisis | Foreign Affairs | Crisis package-specific recommended actions |
-| Campaign/debate | Campaign | Debate or endorsement situation |
-
-Capture command (when Vite QA fixture available):
+| File | Fixture | Route | Pre-capture assertions |
+|------|---------|-------|------------------------|
+| `17b2-government-executive-1280.png` | `phase17a-government` | Government → Executive | Government title; Regulation power strip; `#lorsain-browser-qa-state[data-ready=true]` |
+| `17b2-foreign-overview-1280.png` | `institutions` | Foreign Affairs → Overview | `[data-qa=foreign-affairs]`; `[data-qa=fa-summary-strip]` exactly once |
+| `17b2-courts-bench-1280.png` | `institutions` | Courts | Constitutional Court header; `.bench-chart` |
+| `17b2-news-front-1280.png` | `institutions` | News | `.news-paper`; `.news-outlet-switcher` |
+| `17b2-campaign-hq-1280.png` | `active-campaign` | Campaign HQ | Active race (not idle HQ); calendar/actions sections |
 
 ```bash
-# Prefer existing government capture for Executive surface:
-node scripts/phase17a-government-qa-capture.mjs
+node scripts/phase17b2-qa-capture.mjs
+# Full Government tab sweep (17A): node scripts/phase17a-government-qa-capture.mjs
 ```
 
-Content-specific PNGs may be added under `docs/qa/phase17b2/` after a fixture save exists; until then, CI proof is the behavior/persistence test suite above.
+**Not yet captured** (need 17B-specific save or deep navigation — placeholders only, no fabricated PNGs):
+
+- Scandal arc on News (allegation stage + Weak/Mixed evidence labels)
+- Org lobby conflict headline (union vs business mechanical difference visible in copy)
+- Court case detail with doctrine/rule line tied to fact pattern
+- Foreign crisis panel with package-specific recommended actions
+- Province trade/regional pressure event on History or province screen
 
 ## Verdict gate checklist
 
@@ -58,4 +60,4 @@ Content-specific PNGs may be added under `docs/qa/phase17b2/` after a fixture sa
 - [x] Behavior tests (not only counts)
 - [x] Repetition report (informational)
 - [ ] Full Quality + Integration + 2y smoke (run at tip)
-- [ ] Representative PNGs (optional if surfaces already covered by 17A Government QA)
+- [x] Representative PNGs (5 surfaces under `docs/qa/phase17b2/`; 17A remains full Government sweep)

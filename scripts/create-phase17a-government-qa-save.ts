@@ -11,7 +11,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createSimulation, restoreSimulation } from "../packages/sim/src/engine.js";
 import { deriveCabinet } from "../packages/sim/src/executive/state.js";
-import { setAgendaItemBill, syncAgendaBillReferences } from "../packages/sim/src/governing/agenda.js";
+import {
+  setAgendaItemBill,
+  syncAgendaBillReferences,
+} from "../packages/sim/src/governing/agenda.js";
 import { updateMinisterialPerformance } from "../packages/sim/src/governing/performance.js";
 import { ensureGoverningRuntime } from "../packages/sim/src/governing/state.js";
 import { currentPresidentialAuthorityId } from "../packages/sim/src/legislature/state.js";
@@ -155,7 +158,9 @@ const budgetResult = restored.executeCommand({
   ministryChoices,
 });
 if (!budgetResult.ok) {
-  throw new Error(`PROPOSE_BUDGET failed: ${budgetResult.error.code}: ${budgetResult.error.message}`);
+  throw new Error(
+    `PROPOSE_BUDGET failed: ${budgetResult.error.code}: ${budgetResult.error.message}`,
+  );
 }
 
 const finalSave = restored.serializeSave();
@@ -163,7 +168,10 @@ finalSave.simulation.playerPoliticianId = presidentId;
 finalSave.simulation.legislatureRuntime.bills[linkedAgendaBillId] =
   state.legislatureRuntime.bills[linkedAgendaBillId]!;
 setAgendaItemBill(finalSave.simulation, "AGENDA_H_QA", linkedAgendaBillId);
-syncAgendaBillReferences(finalSave.simulation, ensureGoverningRuntime(finalSave.simulation).agenda.items);
+syncAgendaBillReferences(
+  finalSave.simulation,
+  ensureGoverningRuntime(finalSave.simulation).agenda.items,
+);
 
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, `${JSON.stringify(finalSave, null, 2)}\n`, "utf8");

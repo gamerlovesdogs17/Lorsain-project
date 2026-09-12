@@ -348,7 +348,11 @@ const main = async () => {
   ];
 
   for (const [cat, data] of Object.entries(categories)) {
-    if (!data?.dominanceNotes?.length && !data?.likelyReskinClusterFlags?.length && !data?.categoryNotes?.length) {
+    if (
+      !data?.dominanceNotes?.length &&
+      !data?.likelyReskinClusterFlags?.length &&
+      !data?.categoryNotes?.length
+    ) {
       continue;
     }
     mdLines.push(`### ${cat}`, "");
@@ -356,15 +360,24 @@ const main = async () => {
       for (const n of data.categoryNotes) mdLines.push(`- ${n}`);
     }
     for (const d of data.dominanceNotes ?? []) {
-      mdLines.push(`- **OVERREPRESENTED:** \`${d.patternKey}\`${d.share != null ? ` (${Math.round(d.share * 100)}%)` : ""} — ${d.note ?? ""}`);
+      mdLines.push(
+        `- **OVERREPRESENTED:** \`${d.patternKey}\`${d.share != null ? ` (${Math.round(d.share * 100)}%)` : ""} — ${d.note ?? ""}`,
+      );
     }
     for (const f of (data.likelyReskinClusterFlags ?? []).slice(0, 5)) {
-      mdLines.push(`- **LIKELY_RESKIN_CLUSTER:** \`${f.patternKey}\` ×${f.count} (${f.memberIds.join(", ")})`);
+      mdLines.push(
+        `- **LIKELY_RESKIN_CLUSTER:** \`${f.patternKey}\` ×${f.count} (${f.memberIds.join(", ")})`,
+      );
     }
     mdLines.push("");
   }
 
-  mdLines.push("## CI", "", "This report is informational; it does not fail on balance thresholds.", "");
+  mdLines.push(
+    "## CI",
+    "",
+    "This report is informational; it does not fail on balance thresholds.",
+    "",
+  );
   writeFileSync(outMd, mdLines.join("\n"));
 
   console.log("Phase 17B repetition / variety report\n");

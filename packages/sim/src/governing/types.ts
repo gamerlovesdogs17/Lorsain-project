@@ -212,10 +212,7 @@ export type ImplementationResourceAllocation = {
   /** Null = lasts until implementation complete / explicitly closed (temporary) or indefinite (ongoing). */
   endDate: IsoDate | null;
   fundingSource:
-    | "contingency"
-    | "ministry_reallocation"
-    | "supplemental"
-    | "implementation_reserve";
+    "contingency" | "ministry_reallocation" | "supplemental" | "implementation_reserve";
   /** Temporary rollout reinforcement vs permanent ongoing administration. */
   kind: "temporary_implementation" | "ongoing_administration";
   actorId: string;

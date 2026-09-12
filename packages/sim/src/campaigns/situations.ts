@@ -126,7 +126,10 @@ export const CAMPAIGN_SITUATIONS: CampaignSituationTemplate[] = [
       "Household budgets shape the week's campaign messaging",
     ],
     whenApplicable: ({ monthsToElection, momentum }) =>
-      monthsToElection != null && monthsToElection >= 2 && monthsToElection <= 8 && momentum > -0.02,
+      monthsToElection != null &&
+      monthsToElection >= 2 &&
+      monthsToElection <= 8 &&
+      momentum > -0.02,
     eventType: "CAMPAIGN_MESSAGE",
     importance: 0.46,
   },

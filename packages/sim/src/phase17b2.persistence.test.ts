@@ -19,11 +19,13 @@ import {
   processScandalLifecycleMonth,
 } from "./politics/scandals.js";
 
-function fiscalSnapshot(state: ReturnType<typeof ensureGoverningRuntime> extends infer R
-  ? R extends { fiscal: infer F; capacity: infer C }
-    ? { fiscal: F; capacity: C }
-    : never
-  : never) {
+function fiscalSnapshot(
+  state: ReturnType<typeof ensureGoverningRuntime> extends infer R
+    ? R extends { fiscal: infer F; capacity: infer C }
+      ? { fiscal: F; capacity: C }
+      : never
+    : never,
+) {
   return {
     expenditure: state.fiscal.expenditure,
     revenue: state.fiscal.revenue,
@@ -50,7 +52,9 @@ describe("Phase 17B.2 — fiscal idempotence & resource lifecycle", () => {
     expect(propose.ok).toBe(true);
     const state = jsonClone(sim.getSnapshot());
     const runtime = ensureGoverningRuntime(state);
-    const proposed = Object.values(state.executiveRuntime.budgets).find((b) => b.status === "proposed");
+    const proposed = Object.values(state.executiveRuntime.budgets).find(
+      (b) => b.status === "proposed",
+    );
     expect(proposed).toBeTruthy();
     if (!proposed) return;
     proposed.status = "approved";
@@ -191,7 +195,11 @@ describe("Phase 17B.2 — fiscal idempotence & resource lifecycle", () => {
 describe("Phase 17B.2 — scandal lifecycle differences", () => {
   it("weak expense allegation can resolve without guilt", () => {
     const world = loadTerenaWorld();
-    const sim = createSimulation({ world, seed: "p17b2-scandal-weak", playerPoliticianId: "NPC146" });
+    const sim = createSimulation({
+      world,
+      seed: "p17b2-scandal-weak",
+      playerPoliticianId: "NPC146",
+    });
     const state = jsonClone(sim.getSnapshot());
     ensurePoliticsRuntime(state);
     const record = openScandalFixture(state, "scandal_petty_expense", "NPC146", {
@@ -231,7 +239,14 @@ describe("Phase 17B.2 — scandal lifecycle differences", () => {
     for (let i = 0; i < 8; i++) {
       processScandalLifecycleMonth(world, state, rng, `CMD_PROC_${i}`);
     }
-    const expenseStages = new Set(["allegation", "scrutiny", "investigation", "finding", "referral", "resolution"]);
+    const expenseStages = new Set([
+      "allegation",
+      "scrutiny",
+      "investigation",
+      "finding",
+      "referral",
+      "resolution",
+    ]);
     expect(expenseStages.has(expense.stage) || expense.outcome != null).toBe(true);
     // Procurement path should reach deeper scrutiny / investigation / finding, or higher pressure.
     const deep =

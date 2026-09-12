@@ -28,10 +28,7 @@ export const JUDICIAL_DOCTRINE_LABELS: Record<string, readonly string[]> = {
     "interjurisdictional immunity",
     "cooperative federalism presumption",
   ],
-  impeachment_judgment: [
-    "high office accountability standard",
-    "evidentiary sufficiency test",
-  ],
+  impeachment_judgment: ["high office accountability standard", "evidentiary sufficiency test"],
   rights_limitation_review: [
     "privacy proportionality test",
     "minimal impairment standard",

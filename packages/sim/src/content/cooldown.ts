@@ -5,7 +5,9 @@ export type ContentCooldownRegistry = Record<string, IsoDate>;
 
 const REGISTRY_KEY = "contentCooldowns";
 
-export function readContentCooldownRegistry(metadata: Record<string, unknown>): ContentCooldownRegistry {
+export function readContentCooldownRegistry(
+  metadata: Record<string, unknown>,
+): ContentCooldownRegistry {
   const raw = metadata[REGISTRY_KEY];
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const out: ContentCooldownRegistry = {};

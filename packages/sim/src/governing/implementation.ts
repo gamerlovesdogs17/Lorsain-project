@@ -9,7 +9,11 @@ import { currentMinisterHolderId } from "../executive/state.js";
 import { reshuffleCabinetSeat } from "../politics/cabinet.js";
 import { provincialGovernmentRelation } from "../provinces/politics.js";
 import { currentGovernorId } from "../provinces/state.js";
-import { applyImplementationStrain, effectiveCapacity, syncCapacityFromExecutive } from "./capacity.js";
+import {
+  applyImplementationStrain,
+  effectiveCapacity,
+  syncCapacityFromExecutive,
+} from "./capacity.js";
 import { departmentForLawItems, ministryOfficeForDepartment } from "./departments.js";
 import { recomputeFiscalFromCurrentLaw } from "./fiscal.js";
 import { ensureGoverningRuntime } from "./state.js";
@@ -469,9 +473,7 @@ export function respondToImplementation(
     }
     case "negotiate_provinces": {
       const presidentId = currentPresidentialAuthorityId(world, state);
-      const presidentParty = presidentId
-        ? (state.politicians[presidentId]?.partyId ?? null)
-        : null;
+      const presidentParty = presidentId ? (state.politicians[presidentId]?.partyId ?? null) : null;
       const provinceIds = Object.keys(runtime.capacity.provinces);
       let successful = 0;
       let partial = 0;
@@ -479,11 +481,10 @@ export function respondToImplementation(
       let incentiveCost = 0;
       for (const pid of provinceIds) {
         const governorId = currentGovernorId(world, state, pid);
-        const governorParty = governorId
-          ? (state.politicians[governorId]?.partyId ?? null)
-          : null;
-        const aligned =
-          Boolean(presidentParty && governorParty && presidentParty === governorParty);
+        const governorParty = governorId ? (state.politicians[governorId]?.partyId ?? null) : null;
+        const aligned = Boolean(
+          presidentParty && governorParty && presidentParty === governorParty,
+        );
         const local = provincialGovernmentRelation(world, state, pid);
         let outcome: "successful" | "partial" | "unsuccessful";
         if (aligned && local !== "hostile") outcome = "successful";
@@ -539,9 +540,7 @@ export function respondToImplementation(
     }
     case "request_amending_legislation": {
       const mps = new Set(currentAssemblyMemberIds(world, state));
-      const presidentParty = presidentId
-        ? (state.politicians[presidentId]?.partyId ?? null)
-        : null;
+      const presidentParty = presidentId ? (state.politicians[presidentId]?.partyId ?? null) : null;
       let sponsorId: string | null = null;
       if (mps.has(args.actorId)) sponsorId = args.actorId;
       else if (ministerId && mps.has(ministerId)) sponsorId = ministerId;

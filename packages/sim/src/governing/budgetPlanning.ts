@@ -282,8 +282,7 @@ export function projectBudgetFiscal(
     spending.other = (spending.other ?? 0) + (total - assigned);
   }
   const projectedExpenditure = Math.round(total * 10) / 10;
-  const projectedBalance =
-    Math.round((runtime.fiscal.revenue - projectedExpenditure) * 10) / 10;
+  const projectedBalance = Math.round((runtime.fiscal.revenue - projectedExpenditure) * 10) / 10;
   const delta = projectedExpenditure - runtime.fiscal.expenditure;
   const projectedDebt = Math.max(
     0,

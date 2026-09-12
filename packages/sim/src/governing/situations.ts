@@ -1,7 +1,11 @@
 import { currentProvisionOption } from "../legislature/provisions.js";
 import { pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
-import { contentCooldownEligible, recordContentCooldown, readContentCooldownRegistry } from "../content/cooldown.js";
+import {
+  contentCooldownEligible,
+  recordContentCooldown,
+  readContentCooldownRegistry,
+} from "../content/cooldown.js";
 import { ensureGoverningRuntime } from "./state.js";
 import type { DepartmentId } from "./types.js";
 import { clampUnit } from "./capacity.js";
@@ -42,8 +46,8 @@ export const EXECUTIVE_SITUATIONS: readonly ExecutiveSituationTemplate[] = [
       const runtime = ensureGoverningRuntime(state);
       return Boolean(
         (carbon?.id.includes("levy_65") || carbon?.id.includes("levy_95")) &&
-          (market?.id.includes("competitive") || market?.id.includes("market")) &&
-          runtime.services.infrastructureQuality < 0.5,
+        (market?.id.includes("competitive") || market?.id.includes("market")) &&
+        runtime.services.infrastructureQuality < 0.5,
       );
     },
     apply: (state) => {
@@ -65,8 +69,8 @@ export const EXECUTIVE_SITUATIONS: readonly ExecutiveSituationTemplate[] = [
       const asylum = currentProvisionOption(state, "PROV_ASYLUM_PROCESS");
       return Boolean(
         asylum?.id.includes("safe_country") &&
-          (implDelayedOnIssue(state, "ISS_IMMIGRATION") ||
-            ensureGoverningRuntime(state).services.administrativeDelivery < 0.42),
+        (implDelayedOnIssue(state, "ISS_IMMIGRATION") ||
+          ensureGoverningRuntime(state).services.administrativeDelivery < 0.42),
       );
     },
     apply: (state) => {
@@ -117,8 +121,7 @@ export const EXECUTIVE_SITUATIONS: readonly ExecutiveSituationTemplate[] = [
       const complaints = currentProvisionOption(state, "PROV_POLICE_COMPLAINTS");
       const cameras = currentProvisionOption(state, "PROV_BODY_CAMERA");
       return (
-        (complaints?.id.includes("civilian") || complaints?.id.includes("independent")) ===
-          true &&
+        (complaints?.id.includes("civilian") || complaints?.id.includes("independent")) === true &&
         cameras?.id.includes("mandatory") === true &&
         ensureGoverningRuntime(state).services.publicSafety < 0.48
       );
@@ -139,8 +142,8 @@ export const EXECUTIVE_SITUATIONS: readonly ExecutiveSituationTemplate[] = [
       const algo = currentProvisionOption(state, "PROV_ALGORITHM_AUDIT");
       return Boolean(
         (data?.id.includes("consent") || data?.id.includes("federal")) === true &&
-          (algo?.id.includes("registry") || algo?.id.includes("audit")) &&
-          ensureGoverningRuntime(state).capacity.departments.interior < 0.5,
+        (algo?.id.includes("registry") || algo?.id.includes("audit")) &&
+        ensureGoverningRuntime(state).capacity.departments.interior < 0.5,
       );
     },
   },
@@ -356,7 +359,9 @@ export const EXECUTIVE_SITUATIONS: readonly ExecutiveSituationTemplate[] = [
     apply: (state) => {
       const runtime = ensureGoverningRuntime(state);
       runtime.services.publicSafety = clampUnit(runtime.services.publicSafety + 0.02);
-      runtime.capacity.departments.interior = clampUnit(runtime.capacity.departments.interior - 0.03);
+      runtime.capacity.departments.interior = clampUnit(
+        runtime.capacity.departments.interior - 0.03,
+      );
     },
   },
   {
@@ -486,7 +491,7 @@ export const EXECUTIVE_SITUATIONS: readonly ExecutiveSituationTemplate[] = [
       const data = currentProvisionOption(state, "PROV_CROSS_BORDER_DATA");
       return Boolean(
         warrant?.id.includes("judicial") === true &&
-          (data?.id.includes("consent") === true || data?.id.includes("federal") === true),
+        (data?.id.includes("consent") === true || data?.id.includes("federal") === true),
       );
     },
     apply: (state) => {
@@ -511,7 +516,9 @@ export const EXECUTIVE_SITUATIONS: readonly ExecutiveSituationTemplate[] = [
     },
     apply: (state) => {
       const runtime = ensureGoverningRuntime(state);
-      runtime.capacity.departments.interior = clampUnit(runtime.capacity.departments.interior - 0.05);
+      runtime.capacity.departments.interior = clampUnit(
+        runtime.capacity.departments.interior - 0.05,
+      );
       runtime.services.administrativeDelivery = clampUnit(
         runtime.services.administrativeDelivery - 0.035,
       );

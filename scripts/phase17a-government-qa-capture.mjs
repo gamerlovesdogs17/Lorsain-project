@@ -176,7 +176,11 @@ async function assertGovTabsVisible(page, shotId, labels) {
 }
 
 async function assertGovernmentChrome(page, shotId) {
-  const titleOk = await page.getByText(/^Government$/).first().isVisible().catch(() => false);
+  const titleOk = await page
+    .getByText(/^Government$/)
+    .first()
+    .isVisible()
+    .catch(() => false);
   if (!titleOk) throw new Error(`[${shotId}] Government page title not visible`);
   return "Government page visible";
 }
@@ -304,7 +308,10 @@ async function captureDesktop(page, shots, failures) {
         const chrome = await assertGovernmentChrome(page, "government-overview-1280");
         const overflow = await assertNoHorizontalOverflow(page, "government-overview-1280");
         const tabs = await assertGovTabsVisible(page, "government-overview-1280", govTabs);
-        const head = await page.getByText(/Head of government/i).isVisible().catch(() => false);
+        const head = await page
+          .getByText(/Head of government/i)
+          .isVisible()
+          .catch(() => false);
         if (!head) throw new Error("[government-overview-1280] Head of government section missing");
         return [chrome, overflow, tabs, "Head of government"];
       },
@@ -321,7 +328,11 @@ async function captureDesktop(page, shots, failures) {
         const chrome = await assertGovernmentChrome(page, "government-executive-1280");
         const overflow = await assertNoHorizontalOverflow(page, "government-executive-1280");
         const tabs = await assertGovTabsVisible(page, "government-executive-1280", govTabs);
-        const strip = await page.getByText(/Regulation/i).first().isVisible().catch(() => false);
+        const strip = await page
+          .getByText(/Regulation/i)
+          .first()
+          .isVisible()
+          .catch(() => false);
         if (!strip) throw new Error("[government-executive-1280] power status strip missing");
         return [chrome, overflow, tabs, "Executive power strip"];
       },
@@ -364,7 +375,10 @@ async function captureDesktop(page, shots, failures) {
         const chrome = await assertGovernmentChrome(page, "government-agenda-1280");
         const overflow = await assertNoHorizontalOverflow(page, "government-agenda-1280");
         const tabs = await assertGovTabsVisible(page, "government-agenda-1280", govTabs);
-        const agenda = await page.getByText(/Government agenda/i).isVisible().catch(() => false);
+        const agenda = await page
+          .getByText(/Government agenda/i)
+          .isVisible()
+          .catch(() => false);
         if (!agenda) throw new Error("[government-agenda-1280] agenda section missing");
         const openAsm = await page.getByRole("button", { name: /Open in Assembly/i }).count();
         if (openAsm < 1) {
@@ -387,7 +401,9 @@ async function captureDesktop(page, shots, failures) {
         const tabs = await assertGovTabsVisible(page, "government-implementation-1280", govTabs);
         const addRes = await page.getByRole("button", { name: /Add resources/i }).count();
         if (addRes < 1) {
-          throw new Error("[government-implementation-1280] delayed record response actions missing");
+          throw new Error(
+            "[government-implementation-1280] delayed record response actions missing",
+          );
         }
         return [chrome, overflow, tabs, "response actions on delayed record"];
       },
@@ -416,7 +432,14 @@ async function captureDesktop(page, shots, failures) {
         if (projected < 1) {
           throw new Error("[government-budget-1280] projected fiscal label missing");
         }
-        return [chrome, overflow, tabs, "preferred vs total envelope", "full request hint", "projected label"];
+        return [
+          chrome,
+          overflow,
+          tabs,
+          "preferred vs total envelope",
+          "full request hint",
+          "projected label",
+        ];
       },
     });
   });
@@ -443,7 +466,11 @@ async function captureMobile(page, shots, failures) {
     { tab: "Overview", file: "government-overview-390.png", screen: "government-overview-390" },
     { tab: "Executive", file: "government-executive-390.png", screen: "government-executive-390" },
     { tab: "Cabinet", file: "government-cabinet-390.png", screen: "government-cabinet-390" },
-    { tab: "Implementation", file: "government-implementation-390.png", screen: "government-implementation-390" },
+    {
+      tab: "Implementation",
+      file: "government-implementation-390.png",
+      screen: "government-implementation-390",
+    },
     { tab: "Budget", file: "government-budget-390.png", screen: "government-budget-390" },
   ];
 

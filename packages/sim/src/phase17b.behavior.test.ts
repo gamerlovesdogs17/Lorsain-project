@@ -18,7 +18,14 @@ import { validatePhase17bContentCatalogs } from "./content/validate17b.js";
 const exportHeavyProfile: ProvinceEconomicProfile = {
   provinceId: "P_EXPORT",
   starting: { conditionsIndex: 100, employmentIndex: 100, housingIndex: 100 },
-  sectorExposure: { trade: 0.55, manufacturing: 0.25, services: 0.05, labor: 0, agriculture: 0.1, housing: 0.05 },
+  sectorExposure: {
+    trade: 0.55,
+    manufacturing: 0.25,
+    services: 0.05,
+    labor: 0,
+    agriculture: 0.1,
+    housing: 0.05,
+  },
   sensitivity: { growth: 1, inflation: 0.8, housing: 0.7, trade: 1.2 },
   annualStructuralTrend: { conditions: 0, employment: 0, housing: 0 },
   character: "export hub",
@@ -27,7 +34,14 @@ const exportHeavyProfile: ProvinceEconomicProfile = {
 const serviceHeavyProfile: ProvinceEconomicProfile = {
   provinceId: "P_SERVICE",
   starting: { conditionsIndex: 100, employmentIndex: 100, housingIndex: 100 },
-  sectorExposure: { trade: 0.05, manufacturing: 0.05, services: 0.65, labor: 0.1, agriculture: 0, housing: 0.15 },
+  sectorExposure: {
+    trade: 0.05,
+    manufacturing: 0.05,
+    services: 0.65,
+    labor: 0.1,
+    agriculture: 0,
+    housing: 0.15,
+  },
   sensitivity: { growth: 0.9, inflation: 0.9, housing: 1, trade: 0.75 },
   annualStructuralTrend: { conditions: 0, employment: 0, housing: 0 },
   character: "metro services",
@@ -56,8 +70,18 @@ describe("Phase 17B.2 — mechanical content behavior", () => {
 
   it("gives union vs business different labor-bill lobby mechanics", () => {
     const provisions = ["PROV_UNION_RECOGNITION"];
-    const union = matchOrgLobbyCampaignTemplate("national trade union federation", "ISS_LABOR", "support", provisions);
-    const business = matchOrgLobbyCampaignTemplate("business chamber federation", "ISS_LABOR", "oppose", provisions);
+    const union = matchOrgLobbyCampaignTemplate(
+      "national trade union federation",
+      "ISS_LABOR",
+      "support",
+      provisions,
+    );
+    const business = matchOrgLobbyCampaignTemplate(
+      "business chamber federation",
+      "ISS_LABOR",
+      "oppose",
+      provisions,
+    );
     expect(union?.id).toBe("union_floor_whip");
     expect(business?.id).toBe("business_labor_compliance_push");
     expect(union?.preferAmendment).not.toBe(business?.preferAmendment);
@@ -70,7 +94,9 @@ describe("Phase 17B.2 — mechanical content behavior", () => {
     const shock = -2;
     const exportHit = provinceTradeShockDelta(exportHeavyProfile, shock);
     const serviceHit = provinceTradeShockDelta(serviceHeavyProfile, shock);
-    expect(Math.abs(exportHit.employmentIndex)).toBeGreaterThan(Math.abs(serviceHit.employmentIndex));
+    expect(Math.abs(exportHit.employmentIndex)).toBeGreaterThan(
+      Math.abs(serviceHit.employmentIndex),
+    );
   });
 
   it("differentiates trade vs security crisis packages", () => {
@@ -80,7 +106,9 @@ describe("Phase 17B.2 — mechanical content behavior", () => {
     expect(trade.mediationDeescalateSteps).toBeGreaterThan(security.mediationDeescalateSteps);
     expect(crisisRecommendedDiplomaticActions("trade dispute")).toContain("trade_negotiation");
     expect(crisisRecommendedDiplomaticActions("military posturing")).toContain("posture_change");
-    expect(crisisRecommendedDiplomaticActions("military posturing")).not.toContain("trade_negotiation");
+    expect(crisisRecommendedDiplomaticActions("military posturing")).not.toContain(
+      "trade_negotiation",
+    );
   });
 
   it("consumes treaty ratification friction on the assembly path", () => {

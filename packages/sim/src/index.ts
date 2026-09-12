@@ -383,11 +383,7 @@ export type {
   AutonomousAgencyMetrics,
   CabinetReshuffleReason,
 } from "./politics/types.js";
-export type {
-  ScandalRecord,
-  ScandalStage,
-  ScandalOutcome,
-} from "./politics/scandals.js";
+export type { ScandalRecord, ScandalStage, ScandalOutcome } from "./politics/scandals.js";
 export {
   processGoverningMonth,
   ensureGoverningRuntime,
@@ -426,10 +422,7 @@ export type {
 } from "./governing/types.js";
 export { validatePhase17bContentCatalogs } from "./content/validate17b.js";
 export type { ContentValidationIssue } from "./content/validate17b.js";
-export {
-  provinceTradeShockDelta,
-  isExportHeavyProvince,
-} from "./provinces/tradeShock.js";
+export { provinceTradeShockDelta, isExportHeavyProvince } from "./provinces/tradeShock.js";
 export {
   processPartyOrgMonth,
   ensurePartyOrgRuntime,

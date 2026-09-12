@@ -309,9 +309,7 @@ function generateCases(
           ),
           constitutionalRule: resolveConstitutionalRule({
             caseType: "LAW_REVIEW",
-            ...(law.policyItems[0]?.issueId
-              ? { issueId: law.policyItems[0].issueId }
-              : {}),
+            ...(law.policyItems[0]?.issueId ? { issueId: law.policyItems[0].issueId } : {}),
             ...(law.policyItems[0]?.provisionId
               ? { provisionId: law.policyItems[0].provisionId }
               : {}),

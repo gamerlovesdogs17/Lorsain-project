@@ -2,13 +2,7 @@ import type { BilateralRelation, DiplomaticActionKind, ForeignCountryRuntime } f
 
 /** Domestic reaction bucket used by `domesticPolitics.ts` — not a headline reskin. */
 export type CrisisDomesticReaction =
-  | "trade"
-  | "sanctions"
-  | "defense"
-  | "rights"
-  | "migration"
-  | "energy"
-  | "technology";
+  "trade" | "sanctions" | "defense" | "rights" | "migration" | "energy" | "technology";
 
 export type CrisisEscalationProfile = {
   /** Multipliers on stage-transition roll thresholds (higher = slower escalation). */
@@ -175,13 +169,17 @@ export function crisisRecommendedDiplomaticActions(
   return crisisEscalationProfile(narrativeTitle).recommendedActions;
 }
 
-export function crisisEscalationProfile(narrativeTitle: string | undefined): CrisisEscalationProfile {
+export function crisisEscalationProfile(
+  narrativeTitle: string | undefined,
+): CrisisEscalationProfile {
   if (!narrativeTitle) return DEFAULT_PROFILE;
   const key = narrativeTitle.trim().toLowerCase();
   return PACKAGES[key] ?? DEFAULT_PROFILE;
 }
 
-export function crisisDomesticReactionTheme(narrativeTitle: string | undefined): CrisisDomesticReaction {
+export function crisisDomesticReactionTheme(
+  narrativeTitle: string | undefined,
+): CrisisDomesticReaction {
   return crisisEscalationProfile(narrativeTitle).domesticReaction;
 }
 
@@ -202,7 +200,10 @@ export function pickEnergySupplyDispute(
   );
 }
 
-export function pickCyberDispute(aRuntime: ForeignCountryRuntime, bRuntime: ForeignCountryRuntime): boolean {
+export function pickCyberDispute(
+  aRuntime: ForeignCountryRuntime,
+  bRuntime: ForeignCountryRuntime,
+): boolean {
   return aRuntime.capabilities.cyber >= 0.55 || bRuntime.capabilities.cyber >= 0.55;
 }
 

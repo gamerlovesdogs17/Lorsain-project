@@ -7,11 +7,7 @@ export type ContentValidationIssue = { catalog: string; id: string; message: str
 
 const VALID_DEPARTMENTS = new Set<string>(DEPARTMENT_IDS);
 
-function assertUniqueIds(
-  catalog: string,
-  ids: string[],
-  issues: ContentValidationIssue[],
-): void {
+function assertUniqueIds(catalog: string, ids: string[], issues: ContentValidationIssue[]): void {
   const seen = new Set<string>();
   for (const id of ids) {
     if (seen.has(id)) {

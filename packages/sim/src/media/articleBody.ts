@@ -34,7 +34,10 @@ function hashKey(key: string): number {
   return h;
 }
 
-function shapesForEvent(factEventType: string | undefined, category: MediaCategory | string): ArticleBodyStructure[] {
+function shapesForEvent(
+  factEventType: string | undefined,
+  category: MediaCategory | string,
+): ArticleBodyStructure[] {
   const type = factEventType ?? "";
   if (type.includes("COURT") || type.includes("JUDGE") || type.includes("IMPEACH")) {
     return ["legal", "accountability", "analysis", "straight"];
@@ -56,7 +59,12 @@ function shapesForEvent(factEventType: string | undefined, category: MediaCatego
   if (type.includes("DEBATE") || type.includes("ELECTION") || type.includes("CAMPAIGN")) {
     return ["reaction", "conflict", "straight", "analysis"];
   }
-  if (type.includes("BILL") || type.includes("LAW") || type.includes("BUDGET") || type.includes("VETO")) {
+  if (
+    type.includes("BILL") ||
+    type.includes("LAW") ||
+    type.includes("BUDGET") ||
+    type.includes("VETO")
+  ) {
     return ["analysis", "accountability", "conflict", "straight"];
   }
   if (category === "economy") return ["analysis", "straight", "reaction"];

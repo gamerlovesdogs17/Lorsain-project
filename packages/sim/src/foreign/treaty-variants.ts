@@ -64,9 +64,7 @@ export function pickTradeTreatyVariant(
     rel.general < -25
       ? TRADE_TREATY_VARIANTS.filter((v) => v.id.includes("safeguard") || v.id.includes("quota"))
       : rel.trust > 0.55
-        ? TRADE_TREATY_VARIANTS.filter(
-            (v) => v.id.includes("digital") || v.id.includes("standard"),
-          )
+        ? TRADE_TREATY_VARIANTS.filter((v) => v.id.includes("digital") || v.id.includes("standard"))
         : TRADE_TREATY_VARIANTS;
   return pool[Math.abs(variantIndex) % pool.length] ?? TRADE_TREATY_VARIANTS[0]!;
 }

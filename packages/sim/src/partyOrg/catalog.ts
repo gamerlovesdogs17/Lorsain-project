@@ -276,7 +276,8 @@ export const CAMPAIGN_STRATEGY_CATALOG: Record<string, CampaignStrategyDef> = {
   issue_ownership: {
     id: "issue_ownership",
     label: "Issue ownership",
-    explanation: "Own one salient policy file and repeat it until voters associate you with results.",
+    explanation:
+      "Own one salient policy file and repeat it until voters associate you with results.",
     strengths: "Clear contrast when the issue dominates the cycle.",
     tradeoffs: "Vulnerable if the issue fades or delivery underwhelms.",
   },
@@ -369,7 +370,10 @@ export const PLATFORM_POLICY_OPTIONS: Record<string, PlatformPolicyOption[]> = {
   ],
   defense: [
     { id: "readiness_rotation", label: "Fund readiness rotations and maintenance backlogs" },
-    { id: "domestic_supply_chain", label: "Require domestic content in critical defense procurement" },
+    {
+      id: "domestic_supply_chain",
+      label: "Require domestic content in critical defense procurement",
+    },
     { id: "cyber_reservists", label: "Stand up cyber reservist units under civilian oversight" },
     { id: "alliance_hosting_limits", label: "Cap foreign basing without assembly consultation" },
   ],
@@ -380,10 +384,7 @@ export const PLATFORM_POLICY_OPTIONS: Record<string, PlatformPolicyOption[]> = {
 // ---------------------------------------------------------------------------
 
 export type OrgLobbyAmendmentPreference =
-  | "weaken_enforcement"
-  | "delay_implementation"
-  | "expand_scope"
-  | "sunset_clause";
+  "weaken_enforcement" | "delay_implementation" | "expand_scope" | "sunset_clause";
 
 export type OrgLobbyCampaignTemplate = {
   id: string;
@@ -507,9 +508,7 @@ export function matchOrgLobbyCampaignTemplate(
       t.orgTypeTokens.some((token) => typeLower.includes(token)) &&
       (!t.provisionIdPrefixes ||
         t.provisionIdPrefixes.length === 0 ||
-        provisions.some((pid) =>
-          t.provisionIdPrefixes!.some((prefix) => pid.startsWith(prefix)),
-        )),
+        provisions.some((pid) => t.provisionIdPrefixes!.some((prefix) => pid.startsWith(prefix)))),
   );
   if (matches.length === 0) {
     return ORG_LOBBY_CAMPAIGN_TEMPLATES.find(
@@ -521,8 +520,7 @@ export function matchOrgLobbyCampaignTemplate(
     );
   }
   return matches.sort(
-    (a, b) =>
-      (b.billPressureBonus ?? 0) - (a.billPressureBonus ?? 0) || a.id.localeCompare(b.id),
+    (a, b) => (b.billPressureBonus ?? 0) - (a.billPressureBonus ?? 0) || a.id.localeCompare(b.id),
   )[0];
 }
 

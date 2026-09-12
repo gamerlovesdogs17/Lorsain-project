@@ -468,7 +468,6 @@ export function ExecutivePage(props: {
                     ))
                 )}
               </section>
-
             </div>
           ) : null}
 
@@ -574,9 +573,7 @@ export function ExecutivePage(props: {
                             <button
                               type="button"
                               className="btn ghost"
-                              onClick={() =>
-                                setDetailsOpen((prev) => ({ ...prev, [b.id]: !open }))
-                              }
+                              onClick={() => setDetailsOpen((prev) => ({ ...prev, [b.id]: !open }))}
                             >
                               {open ? "Hide details" : "Details"}
                             </button>
@@ -644,7 +641,11 @@ export function ExecutivePage(props: {
                     >
                       Begin war powers
                     </button>
-                    <button type="button" className="btn ghost" onClick={() => setGovTab("cabinet")}>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => setGovTab("cabinet")}
+                    >
                       Cabinet appointments
                     </button>
                     {props.onNavigate ? (
@@ -685,7 +686,9 @@ export function ExecutivePage(props: {
                           cab.find((m) => m.officeId === r.ministryOfficeId)?.title ??
                           r.ministryOfficeId
                         }
-                        meta={r.policyItems.map((p) => policyItemDisplay(props.catalog, p)).join("; ")}
+                        meta={r.policyItems
+                          .map((p) => policyItemDisplay(props.catalog, p))
+                          .join("; ")}
                         status={r.status}
                         trailing={
                           mp && r.major && r.status === "active" ? (
@@ -778,8 +781,7 @@ export function ExecutivePage(props: {
                         (b) =>
                           !["enacted", "withdrawn", "defeated", "archived", "lapsed"].includes(
                             b.status,
-                          ) &&
-                          b.policyItems.some((p) => ministryIssues.includes(p.issueId)),
+                          ) && b.policyItems.some((p) => ministryIssues.includes(p.issueId)),
                       )
                       .slice(0, 8);
                     const budgetLine =
@@ -896,13 +898,17 @@ export function ExecutivePage(props: {
                                 Issue regulation ({m.title})
                               </button>
                             ) : (
-                              <EmptyState>Only the head of government issues regulations.</EmptyState>
+                              <EmptyState>
+                                Only the head of government issues regulations.
+                              </EmptyState>
                             )}
                           </div>
                         ) : null}
                         {ministerWorkspaceTab === "legislation" ? (
                           relatedBills.length === 0 ? (
-                            <EmptyState>No active bills in this portfolio&apos;s domains.</EmptyState>
+                            <EmptyState>
+                              No active bills in this portfolio&apos;s domains.
+                            </EmptyState>
                           ) : (
                             relatedBills.map((b) => (
                               <EntityRow
@@ -1133,7 +1139,6 @@ export function ExecutivePage(props: {
                   ) : null}
                 </div>
               ) : null}
-
             </div>
           ) : null}
 
