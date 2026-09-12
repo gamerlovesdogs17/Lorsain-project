@@ -1,0 +1,237 @@
+{
+  "phase": "phase17a-government",
+  "commitSha": "7f83879080ed445275955592c4eda5a6d5ac97b2",
+  "buildTimestamp": "2026-09-12T21:19:11.928Z",
+  "generatedAt": "2026-09-12T21:19:30.050Z",
+  "base": "http://127.0.0.1:5177/Lorsain-project/",
+  "fixture": {
+    "qaFixture": "phase17a-government",
+    "qaScreen": "executive",
+    "qaPlayer": "NPC003"
+  },
+  "shots": [
+    {
+      "file": "government-overview-1280.png",
+      "screen": "government-overview",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (1280px)",
+        "tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget",
+        "Head of government"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; Head of government",
+      "ok": true,
+      "sha256": "2b6b9baf653f03d60839b1f158b230afcfab22d8c4b093f55a71852454c72c13",
+      "bytes": 139818
+    },
+    {
+      "file": "government-executive-1280.png",
+      "screen": "government-executive",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (1280px)",
+        "tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget",
+        "Executive power strip"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; Executive power strip",
+      "ok": true,
+      "sha256": "879ea4b51b2247443e5e938418a761e9c35f00217d8d54abd1507710fe95cd99",
+      "bytes": 155742
+    },
+    {
+      "file": "government-cabinet-minister-1280.png",
+      "screen": "government-cabinet-minister",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (1280px)",
+        "tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget",
+        "cabinet rows=12",
+        "minister=Minister of Agriculture"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; cabinet rows=12; minister=Minister of Agriculture",
+      "ok": true,
+      "sha256": "fed601f7c25a22cac47d46acd5f31fc81cbdbd743242a26a3cf5ea129a4ed0e2",
+      "bytes": 141860
+    },
+    {
+      "file": "government-agenda-1280.png",
+      "screen": "government-agenda",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (1280px)",
+        "tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget",
+        "Open in Assembly"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; Open in Assembly",
+      "ok": true,
+      "sha256": "92a0828d6b7598206c972c137c508675ee659ef1d71d86efd099f3c618e5be62",
+      "bytes": 140852
+    },
+    {
+      "file": "government-implementation-1280.png",
+      "screen": "government-implementation",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (1280px)",
+        "tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget",
+        "response actions on delayed record"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; response actions on delayed record",
+      "ok": true,
+      "sha256": "1d4f11ea618370bf9995ab6aa989cfd2e34bfe1280bac17581ae2d48be08bd55",
+      "bytes": 149679
+    },
+    {
+      "file": "government-budget-1280.png",
+      "screen": "government-budget",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (1280px)",
+        "tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget",
+        "preferred vs total envelope",
+        "full request hint",
+        "projected label"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (1280px); tabs: Overview, Executive, Cabinet, Agenda, Implementation, Budget; preferred vs total envelope; full request hint; projected label",
+      "ok": true,
+      "sha256": "e240f77cc7767f4b43c8e46f4cc2e8d41c1f98acd27950459086129fe3df8be4",
+      "bytes": 135419
+    },
+    {
+      "file": "government-overview-390.png",
+      "screen": "government-overview-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (390px)",
+        "tabs: Overview, Executive, Cabinet, Implementation, Budget"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (390px); tabs: Overview, Executive, Cabinet, Implementation, Budget",
+      "ok": true,
+      "sha256": "cdf34dda8177588a44afea7cb8e7283088de994d75ba49b097a92bebafda1ee6",
+      "bytes": 68425
+    },
+    {
+      "file": "government-executive-390.png",
+      "screen": "government-executive-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (390px)",
+        "tabs: Overview, Executive, Cabinet, Implementation, Budget"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (390px); tabs: Overview, Executive, Cabinet, Implementation, Budget",
+      "ok": true,
+      "sha256": "fdd7950c64106c7159da4d7ef874b662c55811d23f99a9e60791828277ebec53",
+      "bytes": 71166
+    },
+    {
+      "file": "government-cabinet-390.png",
+      "screen": "government-cabinet-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (390px)",
+        "tabs: Overview, Executive, Cabinet, Implementation, Budget"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (390px); tabs: Overview, Executive, Cabinet, Implementation, Budget",
+      "ok": true,
+      "sha256": "6cd6d15e9208a583c053c8c70de802ca245111859e7ce8ac14527eb1b6f39640",
+      "bytes": 68654
+    },
+    {
+      "file": "government-implementation-390.png",
+      "screen": "government-implementation-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (390px)",
+        "tabs: Overview, Executive, Cabinet, Implementation, Budget"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (390px); tabs: Overview, Executive, Cabinet, Implementation, Budget",
+      "ok": true,
+      "sha256": "5f5b8475d43f2c68c56abb818e94bbd383274203546550593d1fd108bf50d941",
+      "bytes": 67801
+    },
+    {
+      "file": "government-budget-390.png",
+      "screen": "government-budget-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "fixture": "phase17a-government",
+      "player": "NPC003",
+      "assertions": [
+        "Government page visible",
+        "no horizontal overflow (390px)",
+        "tabs: Overview, Executive, Cabinet, Implementation, Budget"
+      ],
+      "assertionSummary": "Government page visible; no horizontal overflow (390px); tabs: Overview, Executive, Cabinet, Implementation, Budget",
+      "ok": true,
+      "sha256": "482f6991e9c032f502b64a42972041060eea395d1fda7222926c4ec34d081454",
+      "bytes": 65490
+    }
+  ],
+  "failures": [],
+  "overflowAssertionsPassed": true,
+  "desktopOverflowPassed": true,
+  "mobileOverflowPassed": true,
+  "note": "Screenshots captured on dirty tree; stamped to QA commit SHA after commit."
+}
