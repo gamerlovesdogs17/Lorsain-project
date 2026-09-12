@@ -120,11 +120,15 @@ export function buildBudgetProposalAmounts(args: {
 }): {
   fiscalStance: FiscalStance;
   baselineTotal: number;
+  /** Preferred fiscal stance total — may differ from allocated totalEnvelope. */
+  preferredEnvelope: number;
+  /** Sum of chosen ministry amounts (literal full requests are not rescaled). */
   totalEnvelope: number;
   ministryRequests: Record<string, number>;
   ministryAmounts: Record<string, number>;
   ministryChoices: Record<string, MinistryBudgetChoice>;
   allocations: Record<string, number>;
+  envelopeConflict: boolean;
 } {
   const ministries = ministerOfficeIds(args.world);
   const { baselineTotal, baselineByMinistry, requestsByMinistry } = computeMinistryBudgetRequests(
@@ -132,6 +136,8 @@ export function buildBudgetProposalAmounts(args: {
     args.state,
   );
   const fiscalStance = args.fiscalStance ?? "custom";
+  const preferredEnvelope =
+    Math.round(baselineTotal * (FISCAL_STANCE_TOTAL_FACTOR[fiscalStance] ?? 1) * 10) / 10;
   const ministryAmounts: Record<string, number> = {};
   const ministryChoices: Record<string, MinistryBudgetChoice> = {};
 
@@ -142,20 +148,15 @@ export function buildBudgetProposalAmounts(args: {
       ministryChoices[id] = args.ministryChoices?.[id] ?? "custom";
     }
   } else {
-    const targetTotal = baselineTotal * (FISCAL_STANCE_TOTAL_FACTOR[fiscalStance] ?? 1);
-    // Seed from requests scaled so sum ≈ stance total, then honor per-ministry choices.
-    const requestSum = Object.values(requestsByMinistry).reduce((s, v) => s + v, 0) || 1;
+    // Stance is a preferred envelope. Ministry choices use literal requests —
+    // "full_request" is never silently normalized to the stance total.
     for (const id of ministries) {
       const choice = args.ministryChoices?.[id] ?? defaultChoiceForStance(fiscalStance);
       ministryChoices[id] = choice;
-      const seededRequest = (requestsByMinistry[id]! / requestSum) * Math.max(targetTotal, 0.1);
       const amount = amountForMinistryChoice({
         baseline: baselineByMinistry[id]!,
-        request: seededRequest,
+        request: requestsByMinistry[id]!,
         choice,
-        ...(typeof args.ministryAmounts?.[id] === "number"
-          ? { customAmount: args.ministryAmounts[id] }
-          : {}),
       });
       ministryAmounts[id] = Math.round(amount * 10) / 10;
     }
@@ -173,14 +174,17 @@ export function buildBudgetProposalAmounts(args: {
     allocations[id] = totalEnvelope > 0 ? ministryAmounts[id]! / totalEnvelope : 0;
   }
 
+  const roundedTotal = Math.round(totalEnvelope * 10) / 10;
   return {
     fiscalStance,
     baselineTotal,
-    totalEnvelope: Math.round(totalEnvelope * 10) / 10,
+    preferredEnvelope,
+    totalEnvelope: roundedTotal,
     ministryRequests: requestsByMinistry,
     ministryAmounts,
     ministryChoices,
     allocations,
+    envelopeConflict: roundedTotal > preferredEnvelope + 0.05,
   };
 }
 
@@ -244,6 +248,7 @@ export function emptyBudgetFiscalFields(): Pick<
   BudgetState,
   | "totalEnvelope"
   | "baselineTotal"
+  | "preferredEnvelope"
   | "fiscalStance"
   | "ministryRequests"
   | "ministryAmounts"
@@ -252,9 +257,57 @@ export function emptyBudgetFiscalFields(): Pick<
   return {
     totalEnvelope: 0,
     baselineTotal: 0,
+    preferredEnvelope: 0,
     fiscalStance: "hold",
     ministryRequests: {},
     ministryAmounts: {},
     ministryChoices: {},
+  };
+}
+
+/** Projected fiscal consequences of a budget that is not yet legally effective. */
+export function projectBudgetFiscal(
+  state: SimState,
+  budget: Pick<BudgetState, "totalEnvelope" | "ministryAmounts">,
+): {
+  projectedExpenditure: number;
+  projectedBalance: number;
+  projectedDebt: number;
+  projectedSpendingByCategory: Record<SpendingCategory, number>;
+} {
+  const runtime = ensureGoverningRuntime(state);
+  const total =
+    budget.totalEnvelope > 0
+      ? budget.totalEnvelope
+      : Object.values(budget.ministryAmounts ?? {}).reduce(
+          (s, v) => s + (typeof v === "number" ? v : 0),
+          0,
+        );
+  const spending = { ...runtime.fiscal.spendingByCategory };
+  for (const k of Object.keys(spending) as SpendingCategory[]) spending[k] = 0;
+  let assigned = 0;
+  for (const [officeId, amount] of Object.entries(budget.ministryAmounts ?? {})) {
+    if (!(amount > 0)) continue;
+    const dept = departmentFromOfficeId(officeId);
+    const cat: SpendingCategory = dept ? DEPT_SPENDING[dept] : "other";
+    spending[cat] = (spending[cat] ?? 0) + amount;
+    assigned += amount;
+  }
+  if (assigned + 1e-9 < total) {
+    spending.other = (spending.other ?? 0) + (total - assigned);
+  }
+  const projectedExpenditure = Math.round(total * 10) / 10;
+  const projectedBalance =
+    Math.round((runtime.fiscal.revenue - projectedExpenditure) * 10) / 10;
+  const delta = projectedExpenditure - runtime.fiscal.expenditure;
+  const projectedDebt = Math.max(
+    0,
+    Math.round((runtime.fiscal.debt + delta * 0.08 - projectedBalance * 0.02) * 10) / 10,
+  );
+  return {
+    projectedExpenditure,
+    projectedBalance,
+    projectedDebt,
+    projectedSpendingByCategory: spending,
   };
 }

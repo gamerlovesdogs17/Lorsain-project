@@ -43,9 +43,13 @@ export function processBudgetCycle(state: SimState, commandId: string): SimEvent
     cycle.stage = "passed";
     cycle.budgetId = approved.id;
     cycle.failureConsequence = null;
-    recomputeFiscalFromCurrentLaw(state);
-    applyBudgetEnvelopeToFiscal(state, approved);
-    applyBudgetPassageFiscalBoost(state, true);
+    // Apply effective fiscal books once at legal effect (approval path), never at proposal.
+    if (approved.metadata.fiscalEffect !== "effective") {
+      recomputeFiscalFromCurrentLaw(state);
+      applyBudgetEnvelopeToFiscal(state, approved);
+      approved.metadata.fiscalEffect = "effective";
+      applyBudgetPassageFiscalBoost(state, true);
+    }
     events.push(
       pushHistory(state, {
         date: state.currentDate,
@@ -74,6 +78,9 @@ export function processBudgetCycle(state: SimState, commandId: string): SimEvent
     cycle.stage = "failed";
     cycle.budgetId = rejected.id;
     cycle.failureConsequence = "political_crisis";
+    rejected.status = rejected.status === "proposed" ? "proposed" : rejected.status;
+    rejected.metadata.fiscalEffect = "rejected";
+    // Proposal never mutated books; keep prior continuing/approved authority in force.
     applyBudgetPassageFiscalBoost(state, false);
     runtime.historyNotes.push(`Budget failure FY${year}: political crisis`);
     events.push(

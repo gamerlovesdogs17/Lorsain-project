@@ -31,6 +31,7 @@ import { ministryMayRegulate } from "../governing/jurisdiction.js";
 import {
   applyBudgetEnvelopeToFiscal,
   buildBudgetProposalAmounts,
+  projectBudgetFiscal,
 } from "../governing/budgetPlanning.js";
 import {
   emergencyDeclarationAllowed,
@@ -243,21 +244,13 @@ export function issueRegulation(
     actorId: string;
     ministryOfficeId: string;
     policyItems: readonly PolicyItem[];
+    /** @deprecated Major status is derived from scope/magnitude before the authority gate. */
     major?: boolean;
   },
   commandId: string | null,
 ): { regulation: RegulationState; events: SimEvent[] } | { error: CommandError } {
   const err = requirePresident(world, state, args.actorId);
   if (err) return { error: err };
-  const regGate = executiveAuthorityGateRegulation(state, args.major === true);
-  if (!regGate.allowed) {
-    return {
-      error: reject(
-        "EXECUTIVE_AUTHORITY_BLOCKED",
-        regGate.reason ?? "regulation blocked by constitutional order",
-      ),
-    };
-  }
   const office = world.offices[args.ministryOfficeId];
   if (!office || office.kind !== "minister") {
     return { error: reject("NOT_MINISTER_OFFICE", args.ministryOfficeId) };
@@ -285,13 +278,21 @@ export function issueRegulation(
     if (typeof p.optionId === "string") item.optionId = p.optionId;
     return item;
   });
-  // Major status derives from scope/magnitude, not a free-weight toggle alone.
+  // Material facts first: major is derived from scope/magnitude, never from a player toggle.
   const derivedMajor =
-    args.major === true ||
     items.some((i) => i.magnitude >= 0.55) ||
     items.length >= 2 ||
     items.some((i) => Math.abs(i.fiscalImpact ?? 0) >= 0.25);
   const major = derivedMajor;
+  const regGate = executiveAuthorityGateRegulation(state, major);
+  if (!regGate.allowed) {
+    return {
+      error: reject(
+        "EXECUTIVE_AUTHORITY_BLOCKED",
+        regGate.reason ?? "regulation blocked by constitutional order",
+      ),
+    };
+  }
   const regulation: RegulationState = {
     id: allocateRegulationId(state),
     issuerId: args.actorId,
@@ -826,6 +827,7 @@ export function proposeBudget(
   if (!(planned.totalEnvelope > 0)) {
     return { error: reject("INVALID_BUDGET", "budget envelope must be positive") };
   }
+  const projected = projectBudgetFiscal(state, planned);
   const budget: BudgetState = {
     id: allocateBudgetId(state),
     fiscalYear: year,
@@ -833,6 +835,7 @@ export function proposeBudget(
     allocations: planned.allocations,
     totalEnvelope: planned.totalEnvelope,
     baselineTotal: planned.baselineTotal,
+    preferredEnvelope: planned.preferredEnvelope,
     fiscalStance: planned.fiscalStance,
     ministryRequests: planned.ministryRequests,
     ministryAmounts: planned.ministryAmounts,
@@ -840,10 +843,16 @@ export function proposeBudget(
     status: "proposed",
     assemblyDecision: "pending",
     continuingSource: null,
-    metadata: {},
+    metadata: {
+      projectedExpenditure: projected.projectedExpenditure,
+      projectedBalance: projected.projectedBalance,
+      projectedDebt: projected.projectedDebt,
+      envelopeConflict: planned.envelopeConflict,
+      // Proposal is not legally effective — books unchanged until approval/effect.
+      fiscalEffect: "projected",
+    },
   };
   state.executiveRuntime.budgets[budget.id] = budget;
-  applyBudgetEnvelopeToFiscal(state, budget);
   return {
     budget,
     events: [
@@ -856,8 +865,12 @@ export function proposeBudget(
           budgetId: budget.id,
           fiscalYear: year,
           totalEnvelope: budget.totalEnvelope,
+          preferredEnvelope: budget.preferredEnvelope,
           baselineTotal: budget.baselineTotal,
           fiscalStance: budget.fiscalStance,
+          envelopeConflict: planned.envelopeConflict,
+          projectedExpenditure: projected.projectedExpenditure,
+          projectedBalance: projected.projectedBalance,
         },
         commandId,
         0.75,
@@ -999,6 +1012,7 @@ export function seedContinuingBudget(world: KernelWorld, state: SimState): void 
     allocations: planned.allocations,
     totalEnvelope: planned.totalEnvelope,
     baselineTotal: planned.baselineTotal,
+    preferredEnvelope: planned.preferredEnvelope,
     fiscalStance: "hold",
     ministryRequests: planned.ministryRequests,
     ministryAmounts: planned.ministryAmounts,
@@ -1006,8 +1020,9 @@ export function seedContinuingBudget(world: KernelWorld, state: SimState): void 
     status: "continuing",
     assemblyDecision: "none",
     continuingSource: "prior_lawful_budget",
-    metadata: {},
+    metadata: { fiscalEffect: "effective" },
   };
+  applyBudgetEnvelopeToFiscal(state, state.executiveRuntime.budgets[id]!);
 }
 
 export function motionIsRipe(state: SimState, motion: AssemblyMotion): boolean {

@@ -181,6 +181,7 @@ describe("Phase 13 governing foundation", () => {
       proposalDate: state.currentDate,
       allocations: { OFFICE_MINISTER_FINANCE: 1 },
       totalEnvelope: 100,
+      preferredEnvelope: 100,
       baselineTotal: 100,
       fiscalStance: "hold",
       ministryRequests: { OFFICE_MINISTER_FINANCE: 100 },

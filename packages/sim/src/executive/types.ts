@@ -78,10 +78,12 @@ export type BudgetState = {
   proposalDate: IsoDate | null;
   /** Ministry share of the total envelope (sums to ~1). Kept for compatibility. */
   allocations: Record<string, number>;
-  /** Absolute total spending envelope in fiscal units. */
+  /** Absolute total spending envelope in fiscal units (sum of ministry amounts). */
   totalEnvelope: number;
   /** Baseline total when the proposal was built. */
   baselineTotal: number;
+  /** Preferred stance envelope; may differ from totalEnvelope when requests exceed stance. */
+  preferredEnvelope: number;
   fiscalStance: FiscalStance;
   /** Authoritative ministry requests at proposal time. */
   ministryRequests: Record<string, number>;
