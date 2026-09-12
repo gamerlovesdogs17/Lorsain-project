@@ -6,10 +6,12 @@ import { currentAssemblyMemberIds, currentPresidentialAuthorityId } from "../leg
 import { pushHistory } from "../scheduler.js";
 import type { SimEvent, SimState, KernelWorld } from "../types.js";
 import { currentMinisterHolderId } from "../executive/state.js";
+import { reshuffleCabinetSeat } from "../politics/cabinet.js";
 import { provincialGovernmentRelation } from "../provinces/politics.js";
 import { currentGovernorId } from "../provinces/state.js";
-import { applyImplementationStrain, effectiveCapacity } from "./capacity.js";
+import { applyImplementationStrain, effectiveCapacity, syncCapacityFromExecutive } from "./capacity.js";
 import { departmentForLawItems, ministryOfficeForDepartment } from "./departments.js";
+import { recomputeFiscalFromCurrentLaw } from "./fiscal.js";
 import { ensureGoverningRuntime } from "./state.js";
 import type { ImplementationPosture, ImplementationRecord, ImplementationStatus } from "./types.js";
 
@@ -339,7 +341,7 @@ export function respondToImplementation(
   let resultSummary = "";
   switch (args.action) {
     case "increase_resources": {
-      // Resources are not free — draw from fiscal room / contingency, or fail.
+      // Durable allocation — fiscal/capacity derivation reads it each month.
       const cost = Math.max(
         1.5,
         Math.round(Math.max(runtime.fiscal.expenditure, 40) * 0.012 * 10) / 10,
@@ -354,17 +356,22 @@ export function respondToImplementation(
           ),
         };
       }
-      runtime.fiscal.expenditure = Math.round((runtime.fiscal.expenditure + cost) * 10) / 10;
-      runtime.fiscal.balance =
-        Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
-      runtime.fiscal.debt = Math.max(
-        0,
-        Math.round((runtime.fiscal.debt + cost * 0.06) * 10) / 10,
-      );
-      runtime.fiscal.lastUpdated = state.currentDate;
-      const dept = runtime.capacity.departments[rec.departmentId] ?? runtime.capacity.national;
-      runtime.capacity.departments[rec.departmentId] = Math.min(0.95, dept + 0.08);
-      runtime.capacity.national = Math.min(0.95, runtime.capacity.national + 0.03);
+      const allocId = `IRA_${args.lawId}_${state.currentDate}_${Object.keys(runtime.resourceAllocations).length + 1}`;
+      runtime.resourceAllocations[allocId] = {
+        id: allocId,
+        lawId: args.lawId,
+        departmentId: rec.departmentId,
+        amount: cost,
+        capacityBoost: 0.08,
+        startDate: state.currentDate,
+        endDate: null,
+        fundingSource: "contingency",
+        actorId: args.actorId,
+        active: true,
+      };
+      // Refresh derived books/capacity from durable records (no free permanent baseline rewrite).
+      recomputeFiscalFromCurrentLaw(state);
+      syncCapacityFromExecutive(world, state);
       runtime.capacity.strain = Math.max(0, runtime.capacity.strain - 0.05);
       if (rec.posture === "phased") rec.posture = "standard";
       else if (rec.posture === "standard") rec.posture = "accelerated";
@@ -374,6 +381,7 @@ export function respondToImplementation(
         rec.blockedReason = null;
       }
       rec.metadata.resourceCost = cost;
+      rec.metadata.resourceAllocationId = allocId;
       resultSummary = `additional resources assigned (fiscal cost ${cost})`;
       break;
     }
@@ -571,14 +579,63 @@ export function respondToImplementation(
       if (!officeId || !ministerId) {
         return { error: reject("NO_MINISTER", "no responsible minister to replace") };
       }
-      // Political marker only here — actual office change uses APPOINT/DISMISS/RESHUFFLE.
+      if (!args.replacementPoliticianId) {
+        return {
+          error: reject(
+            "RESHUFFLE_REQUIRED",
+            "choose a replacement in Cabinet; officeholding changes only through reshuffle",
+          ),
+        };
+      }
+      const reshuffle = reshuffleCabinetSeat(
+        world,
+        state,
+        {
+          actorId: args.actorId,
+          officeId,
+          politicianId: args.replacementPoliticianId,
+          reason: "player_directive",
+        },
+        commandId,
+      );
+      if ("error" in reshuffle) {
+        return { error: reject(reshuffle.error.code, reshuffle.error.message) };
+      }
       rec.metadata.ministerReplacementRequested = true;
       rec.metadata.previousMinisterId = ministerId;
-      if (args.replacementPoliticianId) {
-        rec.metadata.requestedReplacementId = args.replacementPoliticianId;
-      }
-      resultSummary = "ministerial replacement requested for this portfolio";
-      break;
+      rec.metadata.requestedReplacementId = args.replacementPoliticianId;
+      rec.metadata.ministerReplaced = true;
+      resultSummary = `responsible minister replaced via Cabinet reshuffle (${ministerId} → ${args.replacementPoliticianId})`;
+      const events: SimEvent[] = [
+        ...reshuffle.events,
+        pushHistory(state, {
+          date: state.currentDate,
+          type: "IMPLEMENTATION_RESPONSE",
+          importance: 0.7,
+          visibility: "public",
+          actorIds: [args.actorId],
+          entityIds: [args.lawId, officeId],
+          payload: {
+            lawId: args.lawId,
+            action: args.action,
+            actorId: args.actorId,
+            officeId,
+            departmentId: rec.departmentId,
+            result: resultSummary,
+            before,
+            after: {
+              status: rec.status,
+              posture: rec.posture,
+              progress: Math.round(rec.progress * 100) / 100,
+              monthsRequired: rec.monthsRequired,
+              blockedReason: rec.blockedReason,
+            },
+          },
+          sourceScheduledEventId: null,
+          sourceCommandId: commandId,
+        }),
+      ];
+      return { events, record: rec };
     }
     case "pause_rollout": {
       rec.posture = "phased";

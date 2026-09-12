@@ -1425,9 +1425,7 @@ export function ExecutivePage(props: {
                           }
                           trailing={props.debug ? `${(rec.progress * 100).toFixed(0)}%` : undefined}
                         />
-                        {canRespond &&
-                        rec.status !== "fully_implemented" &&
-                        rec.status !== "blocked" ? (
+                        {canRespond && rec.status !== "fully_implemented" ? (
                           <div className="row wrap" style={{ marginTop: "0.35rem" }}>
                             {(
                               [
@@ -1435,6 +1433,7 @@ export function ExecutivePage(props: {
                                 ["revise_timetable", "Revise timetable"],
                                 ["issue_guidance", "Issue guidance"],
                                 ["negotiate_provinces", "Negotiate provinces"],
+                                ["request_amending_legislation", "Request amending legislation"],
                                 ["reduce_scope", "Reduce scope"],
                                 ["pause_rollout", "Pause rollout"],
                               ] as const
@@ -1457,6 +1456,30 @@ export function ExecutivePage(props: {
                                 {label}
                               </button>
                             ))}
+                            {president && rec.ministryOfficeId ? (
+                              <button
+                                type="button"
+                                className="btn secondary btn-sm"
+                                onClick={() => {
+                                  setSelectedMinisterOfficeId(rec.ministryOfficeId);
+                                  setGovTab("cabinet");
+                                }}
+                              >
+                                Replace minister in Cabinet
+                              </button>
+                            ) : null}
+                            {typeof rec.metadata.amendmentBillId === "string" ? (
+                              <button
+                                type="button"
+                                className="btn secondary btn-sm"
+                                onClick={() => {
+                                  props.setSelectedBill?.(rec.metadata.amendmentBillId as string);
+                                  props.onNavigate?.("assembly");
+                                }}
+                              >
+                                Open amending bill
+                              </button>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>

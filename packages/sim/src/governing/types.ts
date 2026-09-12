@@ -200,6 +200,26 @@ export type GovernmentRecord = {
   score: number;
 };
 
+export type ImplementationResourceAllocation = {
+  id: string;
+  lawId: string;
+  departmentId: DepartmentId;
+  /** Ongoing fiscal cost in normalized spending units while active. */
+  amount: number;
+  /** Temporary administrative reinforcement (0–1), not a permanent baseline rewrite. */
+  capacityBoost: number;
+  startDate: IsoDate;
+  /** Null = lasts until implementation complete / explicitly closed. */
+  endDate: IsoDate | null;
+  fundingSource:
+    | "contingency"
+    | "ministry_reallocation"
+    | "supplemental"
+    | "implementation_reserve";
+  actorId: string;
+  active: boolean;
+};
+
 /**
  * Phase 13 governing runtime. Empty on migration — never fabricates history.
  */
@@ -208,6 +228,8 @@ export type Phase13Runtime = {
   fiscal: FiscalState;
   services: ServiceOutcomes;
   implementations: Record<string, ImplementationRecord>;
+  /** Durable implementation resource reinforcements (survive monthly recompute). */
+  resourceAllocations: Record<string, ImplementationResourceAllocation>;
   promises: Record<string, PromiseRecord>;
   agenda: GovernmentAgenda;
   interactions: Record<string, PolicyInteractionRecord>;
@@ -284,6 +306,7 @@ export function emptyGoverningRuntime(): Phase13Runtime {
     fiscal: emptyFiscalState(),
     services: emptyServiceOutcomes(),
     implementations: {},
+    resourceAllocations: {},
     promises: {},
     agenda: { updatedDate: null, items: [] },
     interactions: {},

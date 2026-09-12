@@ -1,7 +1,9 @@
 import { currentProvisionOption } from "../legislature/provisions.js";
 import { optionForPolicyItem, provisionForPolicyItem } from "../legislature/provisions.js";
 import type { PolicyItem } from "../legislature/types.js";
+import type { BudgetState } from "../executive/types.js";
 import type { SimState } from "../types.js";
+import { applyBudgetEnvelopeToFiscal } from "./budgetPlanning.js";
 import { departmentForPolicyItem } from "./departments.js";
 import { ensureGoverningRuntime } from "./state.js";
 import {
@@ -163,7 +165,65 @@ function fiscalFromPolicyItem(item: PolicyItem): {
   return { revenue, spending };
 }
 
-/** Rebuild fiscal snapshot from current-law provisions + operative Acts (normalized units). */
+/** Authoritative budget currently in legal effect for the active fiscal year. */
+export function currentlyEffectiveBudget(state: SimState): BudgetState | null {
+  const year = Number(state.currentDate.slice(0, 4));
+  const budgets = Object.values(state.executiveRuntime.budgets);
+  const approved = budgets.find(
+    (b) =>
+      b.fiscalYear === year &&
+      b.status === "approved" &&
+      b.assemblyDecision !== "rejected",
+  );
+  if (approved) return approved;
+  const continuing = budgets.find(
+    (b) =>
+      b.status === "continuing" &&
+      (b.fiscalYear === year || b.fiscalYear === year - 1) &&
+      b.assemblyDecision !== "rejected",
+  );
+  return continuing ?? null;
+}
+
+function applyActiveResourceAllocationsToFiscal(state: SimState): void {
+  const runtime = ensureGoverningRuntime(state);
+  let added = 0;
+  for (const alloc of Object.values(runtime.resourceAllocations)) {
+    if (!alloc.active) continue;
+    if (alloc.endDate && alloc.endDate < state.currentDate) {
+      alloc.active = false;
+      continue;
+    }
+    if (alloc.amount <= 0) continue;
+    added += alloc.amount;
+    const cat: SpendingCategory =
+      alloc.departmentId === "health"
+        ? "healthcare"
+        : alloc.departmentId === "education"
+          ? "education"
+          : alloc.departmentId === "defense"
+            ? "defence"
+            : alloc.departmentId === "transport" || alloc.departmentId === "energy"
+              ? "infrastructure"
+              : alloc.departmentId === "labour"
+                ? "social_protection"
+                : "administration";
+    runtime.fiscal.spendingByCategory[cat] =
+      (runtime.fiscal.spendingByCategory[cat] ?? 0) + alloc.amount;
+  }
+  if (added > 0) {
+    runtime.fiscal.expenditure =
+      Math.round((runtime.fiscal.expenditure + added) * 10) / 10;
+    runtime.fiscal.balance =
+      Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
+  }
+}
+
+/**
+ * Rebuild current fiscal books from:
+ * structural law baseline + currently effective budget + durable resource allocations.
+ * Effective budgets are not one-shot mutations of a disposable snapshot.
+ */
 export function recomputeFiscalFromCurrentLaw(state: SimState): FiscalState {
   const runtime = ensureGoverningRuntime(state);
   const revenueBySource = emptyRevenueBySource();
@@ -255,7 +315,18 @@ export function recomputeFiscalFromCurrentLaw(state: SimState): FiscalState {
     lastUpdated: state.currentDate,
   };
   runtime.fiscal = fiscal;
-  return fiscal;
+
+  // Layer currently effective annual budget (approved / continuing) without double-stacking.
+  const effective = currentlyEffectiveBudget(state);
+  if (effective && (effective.status === "approved" || effective.status === "continuing")) {
+    applyBudgetEnvelopeToFiscal(state, effective);
+    effective.metadata.fiscalEffect = "effective";
+  }
+
+  // Layer durable implementation resource allocations each month.
+  applyActiveResourceAllocationsToFiscal(state);
+  runtime.fiscal.lastUpdated = state.currentDate;
+  return runtime.fiscal;
 }
 
 export function applyBudgetPassageFiscalBoost(state: SimState, approved: boolean): void {

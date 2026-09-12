@@ -7,6 +7,8 @@ import { ensureGoverningRuntime } from "./governing/state.js";
 import { respondToImplementation, setImplementationPosture } from "./governing/implementation.js";
 import { setAgendaItemBill, syncAgendaBillReferences } from "./governing/agenda.js";
 import { processBudgetCycle } from "./governing/budget.js";
+import { syncCapacityFromExecutive } from "./governing/capacity.js";
+import { recomputeFiscalFromCurrentLaw } from "./governing/fiscal.js";
 import { deriveCabinet } from "./executive/state.js";
 import { issueRegulation } from "./executive/procedure.js";
 import { currentPresidentialAuthorityId, currentAssemblyMemberIds } from "./legislature/state.js";
@@ -179,6 +181,103 @@ describe("Phase 17A government fixtures", () => {
 
     processBudgetCycle(state, "P17A_BUD_APPLY_AGAIN");
     expect(runtime.fiscal.expenditure).toBe(afterFirst);
+  });
+
+  it("effective budget expenditure persists across monthly fiscal recomputation", () => {
+    const world = loadTerenaWorld();
+    const presidentId =
+      world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
+      "NPC146";
+    const sim = createSimulation({
+      world,
+      seed: "p17a-budget-persist",
+      playerPoliticianId: presidentId,
+    });
+    const baseline = ensureGoverningRuntime(sim.getSnapshot()).fiscal.expenditure;
+    expect(sim.executeCommand({ type: "PROPOSE_BUDGET", fiscalStance: "expansionary" }).ok).toBe(
+      true,
+    );
+    const state = jsonClone(sim.getSnapshot());
+    const runtime = ensureGoverningRuntime(state);
+    const proposed = Object.values(state.executiveRuntime.budgets).find((b) => b.status === "proposed");
+    expect(proposed).toBeTruthy();
+    if (!proposed) return;
+    proposed.status = "approved";
+    proposed.assemblyDecision = "approved";
+    runtime.budgetCycle.stage = "assembly";
+    runtime.budgetCycle.fiscalYear = proposed.fiscalYear;
+    processBudgetCycle(state, "P17A_PERSIST_APPLY");
+    const effectiveSpend = runtime.fiscal.expenditure;
+    expect(effectiveSpend).not.toBe(baseline);
+    expect(proposed.totalEnvelope).toBe(effectiveSpend);
+
+    recomputeFiscalFromCurrentLaw(state);
+    expect(runtime.fiscal.expenditure).toBe(effectiveSpend);
+
+    const fy = proposed.fiscalYear;
+    state.currentDate = `${fy}-02-01`;
+    recomputeFiscalFromCurrentLaw(state);
+    expect(runtime.fiscal.expenditure).toBe(effectiveSpend);
+
+    state.currentDate = `${fy}-06-01`;
+    recomputeFiscalFromCurrentLaw(state);
+    expect(runtime.fiscal.expenditure).toBe(effectiveSpend);
+  });
+
+  it("implementation resource allocation survives fiscal and capacity sync", () => {
+    const world = loadTerenaWorld();
+    const presidentId =
+      world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
+      "NPC146";
+    const sim = createSimulation({
+      world,
+      seed: "p17a-resource-persist",
+      playerPoliticianId: presidentId,
+    });
+    const state = jsonClone(sim.getSnapshot());
+    const runtime = ensureGoverningRuntime(state);
+    runtime.implementations.LAW_P17A_RES = {
+      lawId: "LAW_P17A_RES",
+      status: "delayed",
+      posture: "standard",
+      progress: 0.2,
+      departmentId: "health",
+      ministryOfficeId: "OFFICE_MINISTER_HEALTH",
+      enactedDate: state.currentDate,
+      legalEffectiveDate: state.currentDate,
+      implementationStartDate: state.currentDate,
+      expectedCompletionDate: null,
+      lagKind: "medium",
+      monthsRequired: 18,
+      monthsElapsed: 6,
+      major: true,
+      blockedReason: "capacity",
+      metadata: {},
+    };
+    const beforeSpend = runtime.fiscal.expenditure;
+    const beforeCap = runtime.capacity.departments.health ?? 0.55;
+    const ok = respondToImplementation(
+      world,
+      state,
+      { actorId: presidentId, lawId: "LAW_P17A_RES", action: "increase_resources" },
+      "CMD_RES",
+    );
+    expect("error" in ok).toBe(false);
+    if ("error" in ok) return;
+    const allocs = Object.values(runtime.resourceAllocations);
+    expect(allocs.length).toBe(1);
+    expect(allocs[0]!.active).toBe(true);
+    expect(runtime.fiscal.expenditure).toBeGreaterThan(beforeSpend);
+    const afterCap = runtime.capacity.departments.health ?? 0;
+    expect(afterCap).toBeGreaterThan(beforeCap);
+    const spendAfter = runtime.fiscal.expenditure;
+    const capAfter = afterCap;
+
+    recomputeFiscalFromCurrentLaw(state);
+    syncCapacityFromExecutive(world, state);
+    expect(runtime.fiscal.expenditure).toBe(spendAfter);
+    expect(runtime.capacity.departments.health).toBe(capAfter);
+    expect(Object.values(runtime.resourceAllocations).filter((a) => a.active).length).toBe(1);
   });
 
   it("full_request uses literal ministry requests and may exceed preferred envelope", () => {

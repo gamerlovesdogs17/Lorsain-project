@@ -28,11 +28,19 @@ export function syncCapacityFromExecutive(world: KernelWorld, state: SimState): 
     const admin = officeId
       ? state.executiveRuntime.ministries[officeId]?.administrativeCapacity
       : null;
-    if (typeof admin === "number") {
-      departments[id] = clampUnit(admin);
-    } else {
-      departments[id] = clampUnit(departments[id] ?? 0.55);
+    const baseline =
+      typeof admin === "number" ? clampUnit(admin) : clampUnit(departments[id] ?? 0.55);
+    let reinforcement = 0;
+    for (const alloc of Object.values(runtime.resourceAllocations ?? {})) {
+      if (!alloc.active || alloc.departmentId !== id) continue;
+      if (alloc.endDate && alloc.endDate < state.currentDate) {
+        alloc.active = false;
+        continue;
+      }
+      reinforcement += alloc.capacityBoost;
     }
+    // Base ministry capacity + active implementation reinforcements − later strain in effectiveCapacity.
+    departments[id] = clampUnit(baseline + reinforcement);
     sum += departments[id]!;
     count += 1;
   }

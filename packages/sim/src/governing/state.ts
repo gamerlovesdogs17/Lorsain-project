@@ -20,6 +20,9 @@ export function ensureGoverningRuntime(state: SimState): Phase13Runtime {
   if (!state.governingRuntime) {
     state.governingRuntime = emptyGoverningRuntime();
   }
+  if (!state.governingRuntime.resourceAllocations) {
+    state.governingRuntime.resourceAllocations = {};
+  }
   return state.governingRuntime;
 }
 
@@ -148,6 +151,42 @@ export function parseGoverningRuntime(raw: unknown): Phase13Runtime | string {
           r.metadata && typeof r.metadata === "object" && !Array.isArray(r.metadata)
             ? (r.metadata as Phase13Runtime["implementations"][string]["metadata"])
             : {},
+      };
+    }
+  }
+
+  if (
+    obj.resourceAllocations &&
+    typeof obj.resourceAllocations === "object" &&
+    !Array.isArray(obj.resourceAllocations)
+  ) {
+    for (const [id, rec] of Object.entries(obj.resourceAllocations as Record<string, unknown>)) {
+      if (!rec || typeof rec !== "object") continue;
+      const r = rec as Record<string, unknown>;
+      const departmentId =
+        typeof r.departmentId === "string" &&
+        (DEPARTMENT_IDS as readonly string[]).includes(r.departmentId)
+          ? (r.departmentId as DepartmentId)
+          : "economy";
+      const fundingSource =
+        r.fundingSource === "contingency" ||
+        r.fundingSource === "ministry_reallocation" ||
+        r.fundingSource === "supplemental" ||
+        r.fundingSource === "implementation_reserve"
+          ? r.fundingSource
+          : "contingency";
+      base.resourceAllocations[id] = {
+        id,
+        lawId: typeof r.lawId === "string" ? r.lawId : "",
+        departmentId,
+        amount: typeof r.amount === "number" ? Math.max(0, r.amount) : 0,
+        capacityBoost:
+          typeof r.capacityBoost === "number" ? Math.max(0, Math.min(1, r.capacityBoost)) : 0,
+        startDate: typeof r.startDate === "string" ? r.startDate : "2000-01-01",
+        endDate: typeof r.endDate === "string" ? r.endDate : null,
+        fundingSource,
+        actorId: typeof r.actorId === "string" ? r.actorId : "",
+        active: r.active !== false,
       };
     }
   }

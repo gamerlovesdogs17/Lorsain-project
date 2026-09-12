@@ -1,7 +1,6 @@
 import { pushHistory } from "../scheduler.js";
 import type { SimEvent, SimState } from "../types.js";
 import { applyBudgetPassageFiscalBoost, recomputeFiscalFromCurrentLaw } from "./fiscal.js";
-import { applyBudgetEnvelopeToFiscal } from "./budgetPlanning.js";
 import { ensureGoverningRuntime } from "./state.js";
 
 /**
@@ -43,13 +42,10 @@ export function processBudgetCycle(state: SimState, commandId: string): SimEvent
     cycle.stage = "passed";
     cycle.budgetId = approved.id;
     cycle.failureConsequence = null;
-    // Apply effective fiscal books once at legal effect (approval path), never at proposal.
-    if (approved.metadata.fiscalEffect !== "effective") {
-      recomputeFiscalFromCurrentLaw(state);
-      applyBudgetEnvelopeToFiscal(state, approved);
-      approved.metadata.fiscalEffect = "effective";
-      applyBudgetPassageFiscalBoost(state, true);
-    }
+    // Mark effective; monthly recompute layers this budget every month until superseded.
+    approved.metadata.fiscalEffect = "effective";
+    recomputeFiscalFromCurrentLaw(state);
+    applyBudgetPassageFiscalBoost(state, true);
     events.push(
       pushHistory(state, {
         date: state.currentDate,
