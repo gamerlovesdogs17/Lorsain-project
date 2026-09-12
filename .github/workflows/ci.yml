@@ -38,13 +38,13 @@ jobs:
         run: pnpm validate:content
       - name: Validate content (Python)
         run: python3 scripts/validate_content.py
-      - name: Short world smoke (5y)
+      - name: Short world smoke (2y)
         run: pnpm test:smoke
 
   integration:
     name: Integration
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

@@ -1,6 +1,6 @@
 name: Extended Validation
 
-# Tier 2 — deeper 25-year stability. Not on every push.
+# Tier 2 — expensive acceptance suites + 2×25-year stability. Not on every push.
 on:
   workflow_dispatch:
   schedule:
@@ -8,6 +8,26 @@ on:
     - cron: "0 6 * * 0"
 
 jobs:
+  extended-acceptance:
+    name: Extended Acceptance Suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Extended Vitest (elections acceptance, perf, long-run audits)
+        run: pnpm test:extended
+
   extended:
     name: Extended ${{ matrix.shard }}
     runs-on: ubuntu-latest
