@@ -407,6 +407,45 @@ function seedDeclaredEntries(
   return scored.slice(0, maxCandidates).map((row) => row.id);
 }
 
+function isProvincialResident(
+  state: SimState,
+  world: KernelWorld,
+  politicianId: string,
+  provinceId: string,
+): boolean {
+  const home =
+    state.politicians[politicianId]?.homeProvinceId ?? world.politicianHomeProvince[politicianId];
+  return home === provinceId;
+}
+
+/** Gubernatorial nomination seeds must be residents of the province race. */
+function seedGubernatorialEntries(
+  state: SimState,
+  world: KernelWorld,
+  partyId: string,
+  provinceId: string,
+  maxCandidates: number,
+  memberIds?: readonly string[],
+  electionId?: string,
+): string[] {
+  const election = electionId ? state.provincialRuntime.elections[electionId] : undefined;
+  const residents = (memberIds ?? partyMembers(state, partyId)).filter((id) => {
+    const pol = state.politicians[id];
+    if (!pol?.alive || pol.retired) return false;
+    if (!isProvincialResident(state, world, id, provinceId)) return false;
+    if (
+      election &&
+      election.incumbentId === id &&
+      election.incumbentDecision != null &&
+      election.incumbentDecision !== "seek_reelection"
+    ) {
+      return false;
+    }
+    return true;
+  });
+  return seedDeclaredEntries(state, partyId, maxCandidates, residents);
+}
+
 function partyIncumbentConstituencyIds(
   state: SimState,
   world: KernelWorld,
@@ -634,12 +673,22 @@ function createSeededOfficeContest(
           seedCount,
           args.scratch,
         )
-      : seedDeclaredEntries(
-          state,
-          args.partyId,
-          seedCount,
-          args.scratch?.membersByParty.get(args.partyId),
-        );
+      : args.officeKind === "gubernatorial" && args.provinceId
+        ? seedGubernatorialEntries(
+            state,
+            world,
+            args.partyId,
+            args.provinceId,
+            seedCount,
+            args.scratch?.membersByParty.get(args.partyId),
+            args.electionId,
+          )
+        : seedDeclaredEntries(
+            state,
+            args.partyId,
+            seedCount,
+            args.scratch?.membersByParty.get(args.partyId),
+          );
   for (const politicianId of seeds) {
     const declared = declareCandidacy(
       state,
@@ -977,7 +1026,38 @@ export function syncOfficeNominationWinnerToElection(
           cand.withdrawn = true;
         }
       }
-      for (const winner of winners) {
+      if (
+        election.incumbentId &&
+        election.incumbentDecision != null &&
+        election.incumbentDecision !== "seek_reelection"
+      ) {
+        delete election.candidates[election.incumbentId];
+      }
+      // Player must file explicitly; strip nomination auto-sync until they do.
+      if (
+        state.playerPoliticianId &&
+        election.playerDecision !== "filed" &&
+        election.candidates[state.playerPoliticianId]
+      ) {
+        delete election.candidates[state.playerPoliticianId];
+      }
+      const eligibleWinners = winners.filter((winner) => {
+        const pol = state.politicians[winner];
+        if (!pol?.alive || pol.retired) return false;
+        if (!isProvincialResident(state, world, winner, election.provinceId)) return false;
+        // Player filing stays explicit (FILE_GUBERNATORIAL_CANDIDACY).
+        if (winner === state.playerPoliticianId) return false;
+        // Honor recorded end-of-term decisions: do not re-file a retiring incumbent.
+        if (
+          election.incumbentId === winner &&
+          election.incumbentDecision != null &&
+          election.incumbentDecision !== "seek_reelection"
+        ) {
+          return false;
+        }
+        return true;
+      });
+      for (const winner of eligibleWinners) {
         election.candidates[winner] = {
           politicianId: winner,
           partyId: contest.partyId,
@@ -990,35 +1070,38 @@ export function syncOfficeNominationWinnerToElection(
       }
       if (election.status === "planned") election.status = "filing_open";
 
-      const existingCampaign = findActiveCampaign(
-        primary,
-        (c) =>
-          c.type === "gubernatorial" &&
-          (c.electionId === election.id || c.metadata.provinceId === election.provinceId),
-      );
-      if (existingCampaign) {
-        existingCampaign.contestId = contest.id;
-        existingCampaign.electionId = election.id;
-        existingCampaign.metadata.nominationWinner = true;
-        existingCampaign.metadata.sourceContestId = contest.id;
-        attachNominationMethodMetadata(world, state, existingCampaign);
-      } else {
-        const camp = createCampaignRecord(state, world, {
-          politicianId: primary,
-          type: "gubernatorial",
-          contestId: contest.id,
-          electionId: election.id,
-          status: "active",
-          metadata: {
-            provinceId: election.provinceId,
-            nominationWinner: true,
-            sourceContestId: contest.id,
-          },
-        });
-        attachNominationMethodMetadata(world, state, camp);
-        const list = campaignsByPolitician.get(primary) ?? [];
-        list.push(camp);
-        campaignsByPolitician.set(primary, list);
+      const campaignWinner = eligibleWinners[0] ?? null;
+      if (campaignWinner) {
+        const existingCampaign = findActiveCampaign(
+          campaignWinner,
+          (c) =>
+            c.type === "gubernatorial" &&
+            (c.electionId === election.id || c.metadata.provinceId === election.provinceId),
+        );
+        if (existingCampaign) {
+          existingCampaign.contestId = contest.id;
+          existingCampaign.electionId = election.id;
+          existingCampaign.metadata.nominationWinner = true;
+          existingCampaign.metadata.sourceContestId = contest.id;
+          attachNominationMethodMetadata(world, state, existingCampaign);
+        } else {
+          const camp = createCampaignRecord(state, world, {
+            politicianId: campaignWinner,
+            type: "gubernatorial",
+            contestId: contest.id,
+            electionId: election.id,
+            status: "active",
+            metadata: {
+              provinceId: election.provinceId,
+              nominationWinner: true,
+              sourceContestId: contest.id,
+            },
+          });
+          attachNominationMethodMetadata(world, state, camp);
+          const list = campaignsByPolitician.get(campaignWinner) ?? [];
+          list.push(camp);
+          campaignsByPolitician.set(campaignWinner, list);
+        }
       }
     }
   } else {

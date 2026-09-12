@@ -50,6 +50,13 @@ function primaryKind(world: KernelWorld, state: SimState, politicianId: string):
   return best;
 }
 
+/** Governors leave via election-season career decisions, not mid-term exits. */
+function holdsGovernorSeat(world: KernelWorld, state: SimState, politicianId: string): boolean {
+  return activeTermsForPolitician(state, politicianId).some(
+    (term) => world.offices[term.officeId]?.kind === "governor",
+  );
+}
+
 function openLeadershipContests(state: SimState, partyId: string): string[] {
   return Object.values(state.partyContests)
     .filter(
@@ -178,9 +185,12 @@ function decideKind(
   );
   const wantsRetire = goals.some((g) => g.type === "retirement") || retirement >= 0.82;
 
+  // Governors leave at election-season incumbent decisions, not mid-term
+  // career retirement (Assembly mid-term exits still feed open-seat agency).
   if (
-    wantsRetire ||
-    (age >= 72 && retirement >= 0.55 && rng.float01("npc-decisions") < retirement * 0.35)
+    !holdsGovernorSeat(world, state, politicianId) &&
+    (wantsRetire ||
+      (age >= 72 && retirement >= 0.55 && rng.float01("npc-decisions") < retirement * 0.35))
   ) {
     const retireThreshold = retirement >= 0.95 ? 1 : 0.55 + retirement * 0.3;
     if (held && (retirement >= 0.95 || rng.float01("npc-decisions") < retireThreshold)) {
@@ -515,6 +525,7 @@ export function processCareerDecisionsMonth(
     let willingCabinet = existing?.willingCabinet === true;
 
     if (decision.kind === "retire") {
+      if (holdsGovernorSeat(world, state, pol.id)) continue;
       const record: CareerAmbitionRecord = {
         politicianId: pol.id,
         kind: "retire",

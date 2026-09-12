@@ -30,7 +30,11 @@ function annualRetirementProbability(age: number, inclination: number): number {
   return 0;
 }
 
-function protectedFromMidtermExit(
+/**
+ * Assembly and gubernatorial seats leave through electoral procedure, not
+ * silent mid-term exits from mortality/retirement sweeps or career agency.
+ */
+export function protectedFromMidtermExit(
   state: SimState,
   world: KernelWorld,
   politicianId: string,

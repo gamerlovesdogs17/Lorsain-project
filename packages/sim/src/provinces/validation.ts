@@ -86,7 +86,7 @@ function parseCandidate(raw: unknown): GubernatorialCandidate | null {
     incumbent: raw.incumbent === true,
     source: raw.source,
     withdrawn: raw.withdrawn === true,
-    sourceContestId: typeof raw.sourceContestId === "string" ? raw.sourceContestId : null,
+    ...(typeof raw.sourceContestId === "string" ? { sourceContestId: raw.sourceContestId } : {}),
   };
 }
 
