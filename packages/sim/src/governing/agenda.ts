@@ -18,8 +18,6 @@ const PLATFORM_TO_ISSUE: Record<PartyPlatformIssue, string> = {
   foreign_policy: "ISS_DEFENSE",
 };
 
-const TERMINAL_BILL_STATUSES = new Set(["withdrawn", "defeated", "enacted", "archived", "lapsed"]);
-
 function presidentPartyId(world: KernelWorld, state: SimState): string | null {
   const presidentId = currentPresidentialAuthorityId(world, state);
   if (!presidentId) return null;
@@ -36,34 +34,24 @@ function billStatusOf(bill: BillState | undefined): string | null {
 }
 
 /**
- * Resolve / refresh exact bill references for agenda items.
- * Never picks among multiple similar bills by title heuristic.
- * Auto-links only when exactly one eligible government bill matches the issue.
+ * Refresh status for authoritative agenda bill references only.
+ * Never auto-links by issue tag / sole matching bill heuristic.
+ * billId is set only via setAgendaItemBill / explicit government adopt events.
  */
 export function syncAgendaBillReferences(state: SimState, items: GovernmentAgendaItem[]): void {
   const bills = state.legislatureRuntime.bills;
   for (const item of items) {
-    if (item.billId) {
-      const existing = bills[item.billId];
-      if (existing) {
-        item.billStatus = billStatusOf(existing);
-        continue;
-      }
-      item.billId = null;
-      item.billStatus = "missing";
+    if (!item.billId) {
+      item.billStatus = null;
+      continue;
     }
-
-    const matches = Object.values(bills).filter((b) => {
-      if (TERMINAL_BILL_STATUSES.has(b.status)) return false;
-      return b.policyItems?.some((p) => p.issueId === item.issueId) === true;
-    });
-    if (matches.length === 1) {
-      item.billId = matches[0]!.id;
-      item.billStatus = billStatusOf(matches[0]);
-    } else {
-      item.billId = null;
-      item.billStatus = matches.length > 1 ? "ambiguous" : null;
+    const existing = bills[item.billId];
+    if (existing) {
+      item.billStatus = billStatusOf(existing);
+      continue;
     }
+    item.billId = null;
+    item.billStatus = "missing";
   }
 }
 
