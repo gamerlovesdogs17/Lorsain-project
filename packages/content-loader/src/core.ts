@@ -664,6 +664,43 @@ export function validateAndLoadContent(
 
   for (const rule of noms.rules) {
     if (!partyIds.has(rule.party_id)) error(`${rule.id}: unknown party_id ${rule.party_id}`);
+    const entry =
+      rule.entry_requirements && typeof rule.entry_requirements === "object"
+        ? (rule.entry_requirements as Record<string, unknown>)
+        : {};
+    const emergencyAllowed =
+      rule.emergency_selection_allowed === true || entry.emergency_selection_allowed === true;
+    const authority =
+      rule.emergency_selection_authority ??
+      (typeof entry.emergency_selection_authority === "string"
+        ? entry.emergency_selection_authority
+        : null);
+    const emMethod =
+      rule.emergency_selection_method ??
+      (typeof entry.emergency_selection_method === "string"
+        ? entry.emergency_selection_method
+        : null);
+    if (emergencyAllowed) {
+      if (authority !== "party_committee" && authority !== "local_organization") {
+        error(
+          `${rule.id}: emergency_selection_allowed requires emergency_selection_authority (party_committee|local_organization)`,
+        );
+      }
+      if (emMethod !== "committee_emergency" && emMethod !== "local_emergency") {
+        error(
+          `${rule.id}: emergency_selection_allowed requires emergency_selection_method (committee_emergency|local_emergency)`,
+        );
+      }
+    } else if (authority != null || emMethod != null) {
+      // Present but unused — do not invent emergency power; ignore with warning.
+      // (warnings collected via error stream only when invalid; silent ignore is intentional)
+    }
+    const autoIncumbent =
+      rule.automatic_incumbent_renomination === true ||
+      entry.automatic_incumbent_renomination === true;
+    if (autoIncumbent && rule.method === "none") {
+      error(`${rule.id}: automatic_incumbent_renomination invalid when method is none`);
+    }
   }
   for (const p of parties.parties) {
     const rule = nomById.get(p.nomination_rule_id);

@@ -138,6 +138,26 @@ export function buildPartyKernelSlice(
       (typeof entry.emergency_selection_method === "string"
         ? entry.emergency_selection_method
         : null);
+    const authorityValid =
+      authorityRaw === "party_committee" || authorityRaw === "local_organization";
+    const methodValid = methodRaw === "committee_emergency" || methodRaw === "local_emergency";
+    if (emergencySelectionAllowed) {
+      if (!authorityValid) {
+        throw new PartyContentError(
+          `Nomination rule ${r.id}: emergency_selection_allowed requires emergency_selection_authority (party_committee|local_organization)`,
+        );
+      }
+      if (!methodValid) {
+        throw new PartyContentError(
+          `Nomination rule ${r.id}: emergency_selection_allowed requires emergency_selection_method (committee_emergency|local_emergency)`,
+        );
+      }
+    }
+    if (automaticIncumbentRenomination && r.method === "none") {
+      throw new PartyContentError(
+        `Nomination rule ${r.id}: automatic_incumbent_renomination cannot apply when method is none`,
+      );
+    }
     nominationRules[r.id] = {
       ruleId: r.id,
       partyId: r.party_id,
@@ -161,18 +181,8 @@ export function buildPartyKernelSlice(
       supporterRegistrationRequired: req(entry, "supporter_registration_required") === true,
       automaticIncumbentRenomination,
       emergencySelectionAllowed,
-      emergencySelectionAuthority:
-        authorityRaw === "party_committee" || authorityRaw === "local_organization"
-          ? authorityRaw
-          : emergencySelectionAllowed
-            ? "party_committee"
-            : null,
-      emergencySelectionMethod:
-        methodRaw === "committee_emergency" || methodRaw === "local_emergency"
-          ? methodRaw
-          : emergencySelectionAllowed
-            ? "committee_emergency"
-            : null,
+      emergencySelectionAuthority: authorityValid ? authorityRaw : null,
+      emergencySelectionMethod: methodValid ? methodRaw : null,
     };
   }
   for (const p of Object.values(partyDefinitions)) {

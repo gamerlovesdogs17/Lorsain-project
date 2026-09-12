@@ -97,8 +97,60 @@ export const NominationRuleSchema = z
     id: z.string(),
     party_id: z.string(),
     method: z.string(),
+    automatic_incumbent_renomination: z.boolean().optional(),
+    emergency_selection_allowed: z.boolean().optional(),
+    emergency_selection_authority: z
+      .enum(["party_committee", "local_organization"])
+      .optional()
+      .nullable(),
+    emergency_selection_method: z
+      .enum(["committee_emergency", "local_emergency"])
+      .optional()
+      .nullable(),
+    entry_requirements: z.record(z.string(), z.unknown()).optional(),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((rule, ctx) => {
+    const entry =
+      rule.entry_requirements && typeof rule.entry_requirements === "object"
+        ? (rule.entry_requirements as Record<string, unknown>)
+        : {};
+    const emergencyAllowed =
+      rule.emergency_selection_allowed === true || entry.emergency_selection_allowed === true;
+    const authority =
+      rule.emergency_selection_authority ??
+      (typeof entry.emergency_selection_authority === "string"
+        ? entry.emergency_selection_authority
+        : null);
+    const method =
+      rule.emergency_selection_method ??
+      (typeof entry.emergency_selection_method === "string"
+        ? entry.emergency_selection_method
+        : null);
+    if (emergencyAllowed) {
+      if (authority !== "party_committee" && authority !== "local_organization") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${rule.id}: emergency_selection_allowed requires emergency_selection_authority`,
+        });
+      }
+      if (method !== "committee_emergency" && method !== "local_emergency") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${rule.id}: emergency_selection_allowed requires emergency_selection_method`,
+        });
+      }
+    }
+    const autoIncumbent =
+      rule.automatic_incumbent_renomination === true ||
+      entry.automatic_incumbent_renomination === true;
+    if (autoIncumbent && rule.method === "none") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${rule.id}: automatic_incumbent_renomination invalid when method is none`,
+      });
+    }
+  });
 
 export const NominationRulesFileSchema = z
   .object({

@@ -344,9 +344,19 @@ export function partyEmergencySelectionDefaults(
 } {
   const def = resolvePartyDefinition(world, state, partyId);
   const rule = def?.nominationRuleId ? world.nominationRules[def.nominationRuleId] : undefined;
+  if (!rule?.emergencySelectionAllowed) {
+    throw new Error(
+      `Party ${partyId}: emergency selection defaults requested but emergencySelectionAllowed is false`,
+    );
+  }
+  if (!rule.emergencySelectionAuthority || !rule.emergencySelectionMethod) {
+    throw new Error(
+      `Party ${partyId}: emergencySelectionAllowed without explicit authority/method (invalid content)`,
+    );
+  }
   return {
-    authority: rule?.emergencySelectionAuthority ?? "party_committee",
-    method: rule?.emergencySelectionMethod ?? "committee_emergency",
+    authority: rule.emergencySelectionAuthority,
+    method: rule.emergencySelectionMethod,
   };
 }
 
