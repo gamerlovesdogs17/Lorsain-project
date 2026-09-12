@@ -9,21 +9,23 @@ Runs on every push/PR. Target: **~5–10 minutes** (hard ceiling well under 30).
 - build, typecheck, lint, format
 - `pnpm test:fast` (honest Vitest wrapper; excludes heavy suites)
 - content validation (TS + Python)
-- **5-year world smoke** (`pnpm test:smoke`, ~2 min) — catastrophic breakage only
-  (2y can stop mid nomination-field build; 5y is the measured clean horizon)
+- **2-year world smoke** (`pnpm test:smoke`, ~1 min) — catastrophic breakage only
+  (default 1–2y after nomination-field fix; use `--years=5` locally for longer election-cycle checks)
 
 ### Integration (`pnpm test:integration`)
 
 Targeted correctness only:
 
-- foreign affairs / determinism
+- `foreign.commands.test.ts` (cheap foreign command/seed checks)
 - Terena integration
-- Phase 11 / 11.2 / 11.3 institutional suites
-- playable-path, campaigns.vertical, legislature.vertical
+- Phase 11.2 / 11.3 institutional suites
+- campaigns.vertical, legislature.vertical
 - dist-exports smoke
 
 Does **not** run:
 
+- full `foreign.test.ts` / `foreign.determinism.test.ts` (long-horizon)
+- `phase11.integration.test.ts` / `phase11.closeout.test.ts` / `playable-path.test.ts`
 - 25 / 50 / 100-year certification shards
 - 10,000 synthetic-election acceptance
 - election performance benchmarks
@@ -41,6 +43,8 @@ Triggers:
 Contents:
 
 1. **`pnpm test:extended`** — expensive Vitest acceptance:
+   - `foreign.test.ts` / `foreign.determinism.test.ts`
+   - `phase11.integration.test.ts` / `phase11.closeout.test.ts` / `playable-path.test.ts`
    - `elections.test.ts` (incl. 10k synthetic acceptance + perf)
    - `campaigns.realism.test.ts`
    - `phase12.autonomous-audit.test.ts`

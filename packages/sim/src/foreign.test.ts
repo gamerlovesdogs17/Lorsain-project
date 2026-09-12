@@ -1,3 +1,4 @@
+/** Long-horizon / 27-month / save-reload foreign cases belong in Extended Validation. */
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it } from "vitest";

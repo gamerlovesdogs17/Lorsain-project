@@ -16,6 +16,11 @@ export default defineConfig({
   test: {
     ...(baseConfig.test ?? {}),
     include: [
+      "packages/sim/src/foreign.test.ts",
+      "packages/sim/src/foreign.determinism.test.ts",
+      "packages/sim/src/phase11.integration.test.ts",
+      "packages/sim/src/phase11.closeout.test.ts",
+      "packages/sim/src/playable-path.test.ts",
       "packages/sim/src/elections.test.ts",
       "packages/sim/src/campaigns.realism.test.ts",
       "packages/sim/src/phase12.autonomous-audit.test.ts",
