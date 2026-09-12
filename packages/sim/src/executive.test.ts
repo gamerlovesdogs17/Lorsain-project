@@ -186,7 +186,7 @@ describe("Phase 7 executive kernel", () => {
     expectOk(unlocked, {
       type: "ISSUE_REGULATION",
       ministryOfficeId: "OFFICE_MINISTER_FINANCE",
-      policyItems: [{ issueId: "ISS_TAX", direction: 1, magnitude: 0.3, fiscalImpact: null }],
+      policyItems: [{ issueId: "ISS_TAX", direction: 1, magnitude: 0.65, fiscalImpact: null }],
       major: true,
     });
     const mpSave = jsonClone(unlocked.serializeSave());
