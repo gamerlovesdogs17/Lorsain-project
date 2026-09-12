@@ -29,7 +29,7 @@ import {
   TabBar,
   WorkLayout,
 } from "./ui/kit.js";
-import { PoliticianCard, PoliticianProfile } from "./ui/politician.js";
+import { PoliticianProfile } from "./ui/politician.js";
 
 type GovTab = "overview" | "cabinet" | "agenda" | "budget" | "implementation";
 
@@ -84,6 +84,30 @@ function performanceTone(score: number): "ok" | "warn" | "idle" {
   return "warn";
 }
 
+function qualitativePerformance(score: number | null | undefined, evidence: boolean): string {
+  if (!evidence) return "Too early to assess";
+  if (score == null) return "Too early to assess";
+  if (score >= 0.72) return "Strong record";
+  if (score >= 0.55) return "Adequate";
+  if (score >= 0.4) return "Uneven";
+  return "Under pressure";
+}
+
+function qualitativeDelivery(status: string, progress: number): string {
+  if (status === "fully_implemented" || progress >= 0.92) return "On track";
+  if (status === "delayed" || progress < 0.35) return "Behind schedule";
+  if (status === "partially_implemented" || progress < 0.65) return "Some delays";
+  if (status.includes("fail") || status.includes("collapse")) return "Serious trouble";
+  return "On track";
+}
+
+function qualitativeCoalition(negotiationScore: number | null | undefined): string {
+  if (negotiationScore == null) return "Single-party";
+  if (negotiationScore >= 0.7) return "Cooperative";
+  if (negotiationScore >= 0.45) return "Strained";
+  return "Critical";
+}
+
 export function ExecutivePage(props: {
   world: KernelWorld;
   snap: SimState;
@@ -97,6 +121,10 @@ export function ExecutivePage(props: {
     confirmLabel?: string;
     action: () => void;
   }) => void;
+  selectedBill?: string | null;
+  setSelectedBill?: (id: string | null) => void;
+  onNavigate?: (screen: "assembly") => void;
+  debug?: boolean;
 }) {
   const cab = cabinet(props.world, props.snap);
   const presidentId = currentPresidentialAuthorityId(props.world, props.snap);
@@ -105,6 +133,7 @@ export function ExecutivePage(props: {
   const vacantMinistries = cab.filter((m) => m.holderId == null);
   const governing = props.snap.governingRuntime;
   const coalition = activeCoalition(props.snap);
+  const [selectedMinisterOfficeId, setSelectedMinisterOfficeId] = useState<string | null>(null);
   const [govTab, setGovTab] = useState<GovTab>("overview");
   const [appointOfficeId, setAppointOfficeId] = useState(vacantMinistries[0]?.officeId ?? "");
   const [appointQuery, setAppointQuery] = useState("");
@@ -467,95 +496,130 @@ export function ExecutivePage(props: {
 
           {govTab === "cabinet" ? (
             <div className="gov-institution">
-              <SectionDivider title="Cabinet" hint="Portfolios and ministerial performance" />
+              <SectionDivider
+                title="Cabinet"
+                hint="Scan portfolios; open a minister for governing context"
+              />
               <div className="gov-cabinet-list">
                 {cab.map((m) => {
                   const perf = governing?.ministerialPerformance?.[m.officeId];
+                  const partyId = m.holderId
+                    ? (props.snap.politicians[m.holderId]?.partyId ?? null)
+                    : null;
+                  const selected = selectedMinisterOfficeId === m.officeId;
                   return (
-                    <div key={m.officeId} className="gov-cabinet-row">
-                      {m.holderId ? (
-                        <PoliticianCard
-                          catalog={props.catalog}
-                          world={props.world}
-                          state={props.snap}
-                          politicianId={m.holderId}
-                          office={m.title}
-                          action={
-                            president ? (
-                              <details className="card-menu">
-                                <summary className="btn quiet" aria-label="Minister actions">
-                                  ⋯
-                                </summary>
-                                <div className="card-menu-pop">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      props.askConfirm({
-                                        title: "Dismiss minister",
-                                        body: `Dismiss ${politicianDisplayName(props.catalog, m.holderId!)} as ${m.title}?`,
-                                        confirmLabel: "Dismiss",
-                                        action: () => {
-                                          props.report(
-                                            props.sim.executeCommand({
-                                              type: "DISMISS_MINISTER",
-                                              officeId: m.officeId,
-                                            }),
-                                          );
-                                          props.onDone();
-                                        },
-                                      })
-                                    }
-                                  >
-                                    Dismiss
-                                  </button>
-                                </div>
-                              </details>
-                            ) : null
-                          }
-                        />
-                      ) : (
-                        <div className="politician-card static compact">
-                          <div className="politician-card-body">
-                            <strong>{m.title}</strong>
-                            <div className="muted">Vacant</div>
-                          </div>
+                    <button
+                      type="button"
+                      key={m.officeId}
+                      className={`gov-cabinet-row gov-cabinet-selectable${selected ? " selected" : ""}`}
+                      onClick={() => setSelectedMinisterOfficeId(selected ? null : m.officeId)}
+                    >
+                      <div className="gov-cabinet-main">
+                        <strong>{m.title}</strong>
+                        <div className="muted">
+                          {m.holderId
+                            ? `${politicianDisplayName(props.catalog, m.holderId)} · ${partyDisplayName(props.world, partyId, props.snap)}`
+                            : "Vacant"}
                         </div>
-                      )}
-                      {perf ? (
-                        <div className="gov-perf-chip">
-                          <StatusBadge tone={performanceTone(perf.score)}>
-                            Performance {(perf.score * 100).toFixed(0)}
-                          </StatusBadge>
-                          <span className="muted">
-                            Cap {(perf.capacityFactor * 100).toFixed(0)} · Deliv{" "}
-                            {(perf.implementationFactor * 100).toFixed(0)}
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="muted gov-perf-chip">No performance record yet</p>
-                      )}
-                      {mp && m.holderId ? (
-                        <button
-                          type="button"
-                          className="btn secondary btn-sm"
-                          onClick={() => {
-                            props.report(
-                              props.sim.executeCommand({
-                                type: "INTRODUCE_MOTION",
-                                kind: "ministerial_censure",
-                                targetId: m.officeId,
-                              }),
-                            );
-                            props.onDone();
-                          }}
-                        >
-                          Move to censure
-                        </button>
-                      ) : null}
-                    </div>
+                      </div>
+                      <StatusBadge tone={perf ? performanceTone(perf.score) : "idle"}>
+                        {qualitativePerformance(perf?.score, Boolean(perf))}
+                      </StatusBadge>
+                    </button>
                   );
                 })}
               </div>
+
+              {selectedMinisterOfficeId
+                ? (() => {
+                    const m = cab.find((row) => row.officeId === selectedMinisterOfficeId);
+                    if (!m) return null;
+                    const perf = governing?.ministerialPerformance?.[m.officeId];
+                    const relatedImpl = implementations.filter(
+                      (rec) =>
+                        rec.departmentId === m.officeId ||
+                        rec.departmentId === props.world.offices[m.officeId]?.portfolio,
+                    );
+                    return (
+                      <div className="gov-minister-detail card">
+                        <SectionDivider
+                          title={m.title}
+                          hint={
+                            m.holderId
+                              ? politicianDisplayName(props.catalog, m.holderId)
+                              : "Vacant portfolio"
+                          }
+                        />
+                        {m.holderId ? (
+                          <PoliticianProfile
+                            catalog={props.catalog}
+                            world={props.world}
+                            state={props.snap}
+                            politicianId={m.holderId}
+                            office={m.title}
+                            party={partyDisplayName(
+                              props.world,
+                              props.snap.politicians[m.holderId]?.partyId ?? null,
+                              props.snap,
+                            )}
+                          />
+                        ) : (
+                          <EmptyState>This ministry has no minister.</EmptyState>
+                        )}
+                        <dl className="dossier-facts compact">
+                          <div>
+                            <dt>Performance</dt>
+                            <dd>
+                              {qualitativePerformance(perf?.score, Boolean(perf))}
+                              {props.debug && perf ? ` (${(perf.score * 100).toFixed(0)})` : ""}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Active delivery</dt>
+                            <dd>
+                              {relatedImpl.length
+                                ? relatedImpl
+                                    .slice(0, 3)
+                                    .map(
+                                      (rec) =>
+                                        props.snap.legislatureRuntime.enactedLaws[rec.lawId]
+                                          ?.title ?? rec.lawId,
+                                    )
+                                    .join(" · ")
+                                : "No major programs assigned"}
+                            </dd>
+                          </div>
+                        </dl>
+                        {president && m.holderId ? (
+                          <div className="row">
+                            <button
+                              type="button"
+                              className="btn secondary"
+                              onClick={() =>
+                                props.askConfirm({
+                                  title: "Dismiss minister",
+                                  body: `Dismiss ${politicianDisplayName(props.catalog, m.holderId!)} as ${m.title}?`,
+                                  confirmLabel: "Dismiss",
+                                  action: () => {
+                                    props.report(
+                                      props.sim.executeCommand({
+                                        type: "DISMISS_MINISTER",
+                                        officeId: m.officeId,
+                                      }),
+                                    );
+                                    props.onDone();
+                                  },
+                                })
+                              }
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })()
+                : null}
 
               {president && vacantMinistries.length > 0 ? (
                 <div className="appoint-panel">
@@ -691,17 +755,42 @@ export function ExecutivePage(props: {
               {agendaItems.length === 0 ? (
                 <EmptyState>No agenda compiled yet.</EmptyState>
               ) : (
-                <DataTable dense headers={["Item", "Issue", "Source", "Status", "Priority"]}>
-                  {agendaItems.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.title.replace(/^[^:]+:\s*/, "")}</td>
-                      <td>{issueDisplayName(props.catalog, item.issueId)}</td>
-                      <td>{item.source.replaceAll("_", " ")}</td>
-                      <td>{item.status}</td>
-                      <td>{item.priority}</td>
-                    </tr>
-                  ))}
-                </DataTable>
+                <div className="gov-agenda-list">
+                  {agendaItems.slice(0, 16).map((item) => {
+                    const linkedBill = Object.values(props.snap.legislatureRuntime.bills).find(
+                      (b) =>
+                        b.status !== "withdrawn" &&
+                        b.status !== "enacted" &&
+                        (b.title?.toLowerCase().includes(item.issueId.replaceAll("_", " ")) ||
+                          b.summary?.toLowerCase().includes(item.issueId.replaceAll("_", " ")) ||
+                          b.policyItems?.some((p) => p.issueId === item.issueId)),
+                    );
+                    return (
+                      <EntityRow
+                        key={item.id}
+                        title={item.title.replace(/^[^:]+:\s*/, "")}
+                        meta={`${issueDisplayName(props.catalog, item.issueId)} · ${item.source.replaceAll("_", " ")}`}
+                        status={<StatusBadge>{item.status.replaceAll("_", " ")}</StatusBadge>}
+                        trailing={
+                          linkedBill && props.setSelectedBill && props.onNavigate ? (
+                            <button
+                              type="button"
+                              className="btn secondary btn-sm"
+                              onClick={() => {
+                                props.setSelectedBill?.(linkedBill.id);
+                                props.onNavigate?.("assembly");
+                              }}
+                            >
+                              Open in Assembly
+                            </button>
+                          ) : (
+                            `P${item.priority}`
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </div>
               )}
 
               <SectionDivider title="Promises" hint="Platform and coalition commitments" />
@@ -861,20 +950,25 @@ export function ExecutivePage(props: {
               {implementations.length === 0 ? (
                 <EmptyState>No implementation records yet.</EmptyState>
               ) : (
-                <DataTable dense headers={["Law", "Status", "Progress", "Department", "Posture"]}>
+                <div className="gov-implementation-list">
                   {implementations.slice(0, 40).map((rec) => {
                     const law = props.snap.legislatureRuntime.enactedLaws[rec.lawId];
+                    const ministry =
+                      cab.find((m) => m.officeId === rec.departmentId)?.title ??
+                      rec.departmentId.replaceAll("_", " ");
                     return (
-                      <tr key={rec.lawId}>
-                        <td>{law?.title ?? rec.lawId}</td>
-                        <td>{rec.status.replaceAll("_", " ")}</td>
-                        <td>{(rec.progress * 100).toFixed(0)}%</td>
-                        <td>{rec.departmentId}</td>
-                        <td>{rec.posture}</td>
-                      </tr>
+                      <EntityRow
+                        key={rec.lawId}
+                        title={law?.title ?? rec.lawId}
+                        meta={`${ministry} · ${rec.posture.replaceAll("_", " ")}`}
+                        status={
+                          <StatusBadge>{qualitativeDelivery(rec.status, rec.progress)}</StatusBadge>
+                        }
+                        trailing={props.debug ? `${(rec.progress * 100).toFixed(0)}%` : undefined}
+                      />
                     );
                   })}
-                </DataTable>
+                </div>
               )}
 
               <SectionDivider title="Service outcomes" />
