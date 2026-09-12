@@ -180,6 +180,10 @@ export type TerenaKernelInput = {
     method: string;
     member_weight?: number;
     affiliate_union_delegate_weight?: number;
+    automatic_incumbent_renomination?: boolean;
+    emergency_selection_allowed?: boolean;
+    emergency_selection_authority?: string;
+    emergency_selection_method?: string;
     entry_requirements?: Record<string, unknown>;
   }>;
   provinces?: string[];

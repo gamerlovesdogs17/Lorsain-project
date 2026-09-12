@@ -50,6 +50,10 @@ function labourNominationRule(world: KernelWorld) {
     memberNominationThresholdRequired: false,
     provincialNominationSupportRequired: false,
     supporterRegistrationRequired: false,
+    automaticIncumbentRenomination: false,
+    emergencySelectionAllowed: false,
+    emergencySelectionAuthority: null,
+    emergencySelectionMethod: null,
   };
   world.partyDefinitions.PARTY_LAB = {
     ...world.partyDefinitions.PARTY_LAB!,
@@ -70,6 +74,10 @@ function nuNominationRule(world: KernelWorld) {
     memberNominationThresholdRequired: false,
     provincialNominationSupportRequired: false,
     supporterRegistrationRequired: false,
+    automaticIncumbentRenomination: false,
+    emergencySelectionAllowed: false,
+    emergencySelectionAuthority: null,
+    emergencySelectionMethod: null,
   };
   world.partyDefinitions.PARTY_NU = {
     ...world.partyDefinitions.PARTY_NU!,

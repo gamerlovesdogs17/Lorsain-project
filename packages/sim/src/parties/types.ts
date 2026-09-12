@@ -141,6 +141,20 @@ export type NominationRuleDefinition = {
   memberNominationThresholdRequired: boolean;
   provincialNominationSupportRequired: boolean;
   supporterRegistrationRequired: boolean;
+  /**
+   * When true, sitting MPs may be renominated without a fresh contested selection.
+   * Default false — incumbency alone is not authority.
+   */
+  automaticIncumbentRenomination: boolean;
+  /**
+   * When true, the party may fill remaining STV slate slots via recorded emergency selection.
+   * Default false — without authorization the party simply runs fewer candidates.
+   */
+  emergencySelectionAllowed: boolean;
+  /** Who may authorize an emergency selection when allowed. */
+  emergencySelectionAuthority: "party_committee" | "local_organization" | null;
+  /** How emergency selections are recorded when allowed. */
+  emergencySelectionMethod: "committee_emergency" | "local_emergency" | null;
 };
 
 export type DynamicPartyDefinition = {

@@ -26,6 +26,10 @@ export type PartyContentInput = {
     method: string;
     member_weight?: number;
     affiliate_union_delegate_weight?: number;
+    automatic_incumbent_renomination?: boolean;
+    emergency_selection_allowed?: boolean;
+    emergency_selection_authority?: string;
+    emergency_selection_method?: string;
     entry_requirements?: Record<string, unknown>;
   }>;
   figures: Array<{
@@ -117,6 +121,23 @@ export function buildPartyKernelSlice(
       throw new PartyContentError(`Unknown nomination method ${r.method}`);
     }
     const entry = r.entry_requirements ?? {};
+    const automaticIncumbentRenomination =
+      r.automatic_incumbent_renomination === true ||
+      entry.automatic_incumbent_renomination === true;
+    const emergencySelectionAllowed =
+      r.emergency_selection_allowed === true || entry.emergency_selection_allowed === true;
+    const authorityRaw =
+      (typeof r.emergency_selection_authority === "string"
+        ? r.emergency_selection_authority
+        : null) ??
+      (typeof entry.emergency_selection_authority === "string"
+        ? entry.emergency_selection_authority
+        : null);
+    const methodRaw =
+      (typeof r.emergency_selection_method === "string" ? r.emergency_selection_method : null) ??
+      (typeof entry.emergency_selection_method === "string"
+        ? entry.emergency_selection_method
+        : null);
     nominationRules[r.id] = {
       ruleId: r.id,
       partyId: r.party_id,
@@ -138,6 +159,20 @@ export function buildPartyKernelSlice(
       memberNominationThresholdRequired: req(entry, "member_nomination_threshold") === true,
       provincialNominationSupportRequired: req(entry, "provincial_nomination_support") === true,
       supporterRegistrationRequired: req(entry, "supporter_registration_required") === true,
+      automaticIncumbentRenomination,
+      emergencySelectionAllowed,
+      emergencySelectionAuthority:
+        authorityRaw === "party_committee" || authorityRaw === "local_organization"
+          ? authorityRaw
+          : emergencySelectionAllowed
+            ? "party_committee"
+            : null,
+      emergencySelectionMethod:
+        methodRaw === "committee_emergency" || methodRaw === "local_emergency"
+          ? methodRaw
+          : emergencySelectionAllowed
+            ? "committee_emergency"
+            : null,
     };
   }
   for (const p of Object.values(partyDefinitions)) {

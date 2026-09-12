@@ -303,9 +303,8 @@ export function partyRequiresOfficeNomination(
 
 /**
  * Whether a nomination-required party may fill short magnitude via explicit
- * committee/local emergency selection. Default: allowed. Skip only when a rule
- * explicitly forbids emergency (`allowsEmergencyNomination === false` or
- * `forbidEmergencyNomination === true` on the rule object / metadata).
+ * emergency selection. Default: false unless Party rules set
+ * `emergencySelectionAllowed` / `emergency_selection_allowed`.
  */
 export function partyAllowsEmergencyAssemblyNomination(
   world: KernelWorld,
@@ -315,19 +314,40 @@ export function partyAllowsEmergencyAssemblyNomination(
   if (!partyRequiresOfficeNomination(world, state, partyId)) return false;
   const def = resolvePartyDefinition(world, state, partyId!);
   if (!def?.nominationRuleId) return false;
-  const rule = world.nominationRules[def.nominationRuleId] as
-    | ((typeof world.nominationRules)[string] & {
-        allowsEmergencyNomination?: boolean;
-        forbidEmergencyNomination?: boolean;
-        metadata?: { allowsEmergencyNomination?: boolean; forbidEmergencyNomination?: boolean };
-      })
-    | undefined;
-  if (!rule) return false;
-  if (rule.forbidEmergencyNomination === true) return false;
-  if (rule.allowsEmergencyNomination === false) return false;
-  if (rule.metadata?.forbidEmergencyNomination === true) return false;
-  if (rule.metadata?.allowsEmergencyNomination === false) return false;
-  return true;
+  const rule = world.nominationRules[def.nominationRuleId];
+  return rule?.emergencySelectionAllowed === true;
+}
+
+/**
+ * Whether incumbents may be renominated without a fresh contested selection.
+ * Default: false unless Party rules set `automaticIncumbentRenomination`.
+ */
+export function partyAllowsAutomaticIncumbentRenomination(
+  world: KernelWorld,
+  state: SimState,
+  partyId: string | null | undefined,
+): boolean {
+  if (!partyRequiresOfficeNomination(world, state, partyId)) return false;
+  const def = resolvePartyDefinition(world, state, partyId!);
+  if (!def?.nominationRuleId) return false;
+  const rule = world.nominationRules[def.nominationRuleId];
+  return rule?.automaticIncumbentRenomination === true;
+}
+
+export function partyEmergencySelectionDefaults(
+  world: KernelWorld,
+  state: SimState,
+  partyId: string,
+): {
+  authority: "party_committee" | "local_organization";
+  method: "committee_emergency" | "local_emergency";
+} {
+  const def = resolvePartyDefinition(world, state, partyId);
+  const rule = def?.nominationRuleId ? world.nominationRules[def.nominationRuleId] : undefined;
+  return {
+    authority: rule?.emergencySelectionAuthority ?? "party_committee",
+    method: rule?.emergencySelectionMethod ?? "committee_emergency",
+  };
 }
 
 /** True when candidacy/election records show a resolved nomination or emergency selection. */

@@ -150,6 +150,8 @@ export {
   assemblyNomineesForConstituency,
   auditAssemblyNominationIntegrity,
   partyAllowsEmergencyAssemblyNomination,
+  partyAllowsAutomaticIncumbentRenomination,
+  partyEmergencySelectionDefaults,
   hasAuthoritativeAssemblySelection,
   buildAssemblyEmergencySelection,
   partyRequiresOfficeNomination,

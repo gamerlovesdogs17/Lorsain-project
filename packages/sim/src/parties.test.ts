@@ -88,6 +88,10 @@ function rule(
     memberNominationThresholdRequired: false,
     provincialNominationSupportRequired: false,
     supporterRegistrationRequired: false,
+    automaticIncumbentRenomination: false,
+    emergencySelectionAllowed: false,
+    emergencySelectionAuthority: null,
+    emergencySelectionMethod: null,
     ...partial,
   };
 }

@@ -62,6 +62,10 @@ function leadershipWorld(seed: string): KernelWorld {
       memberNominationThresholdRequired: false,
       provincialNominationSupportRequired: false,
       supporterRegistrationRequired: false,
+      automaticIncumbentRenomination: false,
+      emergencySelectionAllowed: false,
+      emergencySelectionAuthority: null,
+      emergencySelectionMethod: null,
     },
   };
   world.startingPartyLeaders = { PARTY_LAB: "PF" };

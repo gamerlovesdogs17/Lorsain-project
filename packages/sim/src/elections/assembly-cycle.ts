@@ -24,7 +24,9 @@ import type {
 } from "./types.js";
 import {
   buildAssemblyEmergencySelection,
+  partyAllowsAutomaticIncumbentRenomination,
   partyAllowsEmergencyAssemblyNomination,
+  partyEmergencySelectionDefaults,
   partyRequiresOfficeNomination,
 } from "../parties/officeNominations.js";
 
@@ -422,6 +424,7 @@ export function allocateAssemblyCandidateFields(
     if (
       preserved.partyId &&
       partyRequiresOfficeNomination(world, state, preserved.partyId) &&
+      partyAllowsAutomaticIncumbentRenomination(world, state, preserved.partyId) &&
       !preserved.emergencySelection &&
       preserved.incumbent
     ) {
@@ -447,8 +450,19 @@ export function allocateAssemblyCandidateFields(
     if (!npcIncumbentRuns(state, world, politicianId, election.date)) continue;
     const partyId = state.politicians[politicianId]?.partyId ?? null;
     const normalizedParty = partyId === world.independentAggregatePartyId ? null : partyId;
+    if (
+      normalizedParty &&
+      partyRequiresOfficeNomination(world, state, normalizedParty) &&
+      !partyAllowsAutomaticIncumbentRenomination(world, state, normalizedParty)
+    ) {
+      // Nomination-required parties without automatic renomination must win a
+      // contested selection (or authorized emergency) — do not auto-file.
+      continue;
+    }
     const incumbentSelection =
-      normalizedParty && partyRequiresOfficeNomination(world, state, normalizedParty)
+      normalizedParty &&
+      partyRequiresOfficeNomination(world, state, normalizedParty) &&
+      partyAllowsAutomaticIncumbentRenomination(world, state, normalizedParty)
         ? buildAssemblyEmergencySelection({
             politicianId,
             partyId: normalizedParty,
@@ -590,16 +604,17 @@ export function allocateAssemblyCandidateFields(
     let emergencySelection: AssemblyEmergencySelection | undefined;
     if (picked.emergency && partyId) {
       const hasNominees = hasNomineesFor(partyId, picked.constituencyId);
+      const defaults = partyEmergencySelectionDefaults(world, state, partyId);
       emergencySelection = buildAssemblyEmergencySelection({
         politicianId: picked.politicianId,
         partyId,
         constituencyId: picked.constituencyId,
         date: state.currentDate,
-        authority: "party_committee",
+        authority: defaults.authority,
         reason: hasNominees
-          ? "Minimum field target unmet after nominee slate; committee emergency nomination"
-          : "Field short of magnitude/reserve after formal selection; committee emergency nomination",
-        selectionMethod: "committee_emergency",
+          ? "Minimum field target unmet after nominee slate; authorized emergency nomination"
+          : "Field short of magnitude/reserve after formal selection; authorized emergency nomination",
+        selectionMethod: defaults.method,
       });
       emergencySelections.push(emergencySelection);
     }

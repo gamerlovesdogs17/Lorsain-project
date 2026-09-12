@@ -12,6 +12,8 @@ import {
   officeNominationCycleMetadata,
   officeNominationWinnerIds,
   openOfficeNominationContests,
+  partyAllowsAutomaticIncumbentRenomination,
+  partyAllowsEmergencyAssemblyNomination,
   resolveOfficeNominationContests,
 } from "./parties/officeNominations.js";
 import { auditAssemblyNominationIntegrity } from "./parties/nominationIntegrity.js";
@@ -675,5 +677,24 @@ describe("Phase 14 office nominations", () => {
     );
     expect(activeCoPartisans.length).toBe(1);
     expect(activeCoPartisans[0]!.politicianId).toBe(winner);
+  });
+
+  it("party rules default deny emergency; Green content forbids emergency fills", () => {
+    const world = loadTerenaWorld();
+    const lab = world.nominationRules[world.partyDefinitions.PARTY_LAB!.nominationRuleId]!;
+    const grn = world.nominationRules[world.partyDefinitions.PARTY_GRN!.nominationRuleId]!;
+    expect(lab.emergencySelectionAllowed).toBe(true);
+    expect(lab.automaticIncumbentRenomination).toBe(true);
+    expect(grn.emergencySelectionAllowed).toBe(false);
+    expect(grn.automaticIncumbentRenomination).toBe(true);
+    const sim = createSimulation({
+      world,
+      seed: "p14-green-emergency-deny",
+      playerPoliticianId: "NPC146",
+    });
+    const state = jsonClone(sim.getSnapshot() as SimState);
+    expect(partyAllowsEmergencyAssemblyNomination(world, state, "PARTY_GRN")).toBe(false);
+    expect(partyAllowsEmergencyAssemblyNomination(world, state, "PARTY_LAB")).toBe(true);
+    expect(partyAllowsAutomaticIncumbentRenomination(world, state, "PARTY_GRN")).toBe(true);
   });
 });
