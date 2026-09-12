@@ -1,9 +1,13 @@
 import { addMonths } from "../calendar.js";
+import type { JsonObject } from "../json.js";
 import type { EnactedLawRecord, PolicyItem } from "../legislature/types.js";
+import { introduceBill } from "../legislature/procedure.js";
+import { currentAssemblyMemberIds, currentPresidentialAuthorityId } from "../legislature/state.js";
 import { pushHistory } from "../scheduler.js";
 import type { SimEvent, SimState, KernelWorld } from "../types.js";
 import { currentMinisterHolderId } from "../executive/state.js";
-import { currentPresidentialAuthorityId } from "../legislature/state.js";
+import { provincialGovernmentRelation } from "../provinces/politics.js";
+import { currentGovernorId } from "../provinces/state.js";
 import { applyImplementationStrain, effectiveCapacity } from "./capacity.js";
 import { departmentForLawItems, ministryOfficeForDepartment } from "./departments.js";
 import { ensureGoverningRuntime } from "./state.js";
@@ -335,6 +339,29 @@ export function respondToImplementation(
   let resultSummary = "";
   switch (args.action) {
     case "increase_resources": {
+      // Resources are not free — draw from fiscal room / contingency, or fail.
+      const cost = Math.max(
+        1.5,
+        Math.round(Math.max(runtime.fiscal.expenditure, 40) * 0.012 * 10) / 10,
+      );
+      const strained = runtime.capacity.strain >= 0.9 && runtime.fiscal.balance < -cost * 2;
+      const insolvent = runtime.fiscal.revenue + 1e-9 < cost && runtime.fiscal.balance < -cost * 4;
+      if (strained || insolvent) {
+        return {
+          error: reject(
+            "NO_IMPLEMENTATION_RESOURCES",
+            "no available ministry budget, contingency, or capacity reserve for this response",
+          ),
+        };
+      }
+      runtime.fiscal.expenditure = Math.round((runtime.fiscal.expenditure + cost) * 10) / 10;
+      runtime.fiscal.balance =
+        Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
+      runtime.fiscal.debt = Math.max(
+        0,
+        Math.round((runtime.fiscal.debt + cost * 0.06) * 10) / 10,
+      );
+      runtime.fiscal.lastUpdated = state.currentDate;
       const dept = runtime.capacity.departments[rec.departmentId] ?? runtime.capacity.national;
       runtime.capacity.departments[rec.departmentId] = Math.min(0.95, dept + 0.08);
       runtime.capacity.national = Math.min(0.95, runtime.capacity.national + 0.03);
@@ -346,7 +373,8 @@ export function respondToImplementation(
         rec.status = rec.progress > 0.02 ? "partially_implemented" : "preparing";
         rec.blockedReason = null;
       }
-      resultSummary = "additional administrative resources assigned";
+      rec.metadata.resourceCost = cost;
+      resultSummary = `additional resources assigned (fiscal cost ${cost})`;
       break;
     }
     case "revise_timetable": {
@@ -357,7 +385,10 @@ export function respondToImplementation(
         rec.monthsRequired,
       );
       if (rec.status === "delayed") rec.status = "preparing";
+      // Slower timetable eases immediate capacity pressure but delays delivery.
+      runtime.capacity.strain = Math.max(0, runtime.capacity.strain - 0.04);
       applyImplementationStrain(state, rec.posture, rec.major);
+      rec.metadata.timetableRevised = true;
       resultSummary = "timetable extended and delivery phased";
       break;
     }
@@ -369,34 +400,152 @@ export function respondToImplementation(
       break;
     }
     case "negotiate_provinces": {
-      if (
-        rec.metadata.provinceDelivery === true ||
-        rec.metadata.deliveryMode === "provincial_execution"
-      ) {
-        for (const pid of Object.keys(runtime.capacity.provinces)) {
+      const presidentId = currentPresidentialAuthorityId(world, state);
+      const presidentParty = presidentId
+        ? (state.politicians[presidentId]?.partyId ?? null)
+        : null;
+      const provinceIds = Object.keys(runtime.capacity.provinces);
+      let successful = 0;
+      let partial = 0;
+      let unsuccessful = 0;
+      let incentiveCost = 0;
+      for (const pid of provinceIds) {
+        const governorId = currentGovernorId(world, state, pid);
+        const governorParty = governorId
+          ? (state.politicians[governorId]?.partyId ?? null)
+          : null;
+        const aligned =
+          Boolean(presidentParty && governorParty && presidentParty === governorParty);
+        const local = provincialGovernmentRelation(world, state, pid);
+        let outcome: "successful" | "partial" | "unsuccessful";
+        if (aligned && local !== "hostile") outcome = "successful";
+        else if (aligned || local === "friendly") outcome = "partial";
+        else if (local === "hostile" && !aligned) outcome = "unsuccessful";
+        else outcome = "partial";
+
+        if (outcome === "successful") {
           runtime.capacity.provinces[pid] = Math.min(
             0.95,
-            (runtime.capacity.provinces[pid] ?? 0.5) + 0.05,
+            (runtime.capacity.provinces[pid] ?? 0.5) + 0.06,
           );
+          successful += 1;
+        } else if (outcome === "partial") {
+          incentiveCost += 0.4;
+          runtime.capacity.provinces[pid] = Math.min(
+            0.95,
+            (runtime.capacity.provinces[pid] ?? 0.5) + 0.03,
+          );
+          partial += 1;
+        } else {
+          unsuccessful += 1;
         }
-        rec.progress = Math.min(0.99, rec.progress + 0.05);
+      }
+      if (incentiveCost > 0) {
+        runtime.fiscal.expenditure =
+          Math.round((runtime.fiscal.expenditure + incentiveCost) * 10) / 10;
+        runtime.fiscal.balance =
+          Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
+        runtime.fiscal.lastUpdated = state.currentDate;
+      }
+      const net = successful + partial - unsuccessful;
+      if (net > 0) {
+        rec.progress = Math.min(0.99, rec.progress + 0.04 + successful * 0.01);
         if (rec.status === "blocked" || rec.status === "delayed") {
           rec.status = "partially_implemented";
           rec.blockedReason = null;
         }
-        resultSummary = "provincial delivery terms renegotiated";
-      } else {
-        runtime.capacity.national = Math.min(0.95, runtime.capacity.national + 0.02);
-        resultSummary = "consultations opened; limited national effect";
       }
+      rec.metadata.provincialNegotiation = {
+        successful,
+        partial,
+        unsuccessful,
+        incentiveCost,
+      };
+      resultSummary =
+        unsuccessful >= successful + partial
+          ? "provincial negotiation largely unsuccessful"
+          : successful > partial
+            ? "provincial delivery terms largely agreed"
+            : "provincial negotiation produced partial cooperation";
       break;
     }
     case "request_amending_legislation": {
+      const mps = new Set(currentAssemblyMemberIds(world, state));
+      const presidentParty = presidentId
+        ? (state.politicians[presidentId]?.partyId ?? null)
+        : null;
+      let sponsorId: string | null = null;
+      if (mps.has(args.actorId)) sponsorId = args.actorId;
+      else if (ministerId && mps.has(ministerId)) sponsorId = ministerId;
+      else {
+        sponsorId =
+          [...mps].find((id) => state.politicians[id]?.partyId === presidentParty) ??
+          [...mps].sort()[0] ??
+          null;
+      }
+      if (!sponsorId) {
+        return {
+          error: reject(
+            "NO_LEGISLATIVE_SPONSOR",
+            "no Assembly member available to introduce amending legislation",
+          ),
+        };
+      }
+      const issueId =
+        rec.departmentId === "health"
+          ? "ISS_HEALTH"
+          : rec.departmentId === "defense"
+            ? "ISS_DEFENSE"
+            : rec.departmentId === "foreign"
+              ? "ISS_DEFENSE"
+              : rec.departmentId === "interior"
+                ? "ISS_HOUSING"
+                : "ISS_REFORM";
+      const billArgs: {
+        sponsorId: string;
+        title: string;
+        summary: string;
+        policyItems: PolicyItem[];
+        metadata: JsonObject;
+        lawAction?: "amend";
+        targetLawId?: string;
+      } = {
+        sponsorId,
+        title: `Amendment for ${rec.lawId}`,
+        summary: `Government request to amend implementing authority for ${rec.lawId}.`,
+        policyItems: [
+          {
+            issueId,
+            direction: 1,
+            magnitude: 0.3,
+            fiscalImpact: null,
+          },
+        ],
+        metadata: {
+          implementationAmendmentFor: rec.lawId,
+          governmentRequest: true,
+          requestedBy: args.actorId,
+        },
+      };
+      if (state.legislatureRuntime.enactedLaws[rec.lawId]) {
+        billArgs.lawAction = "amend";
+        billArgs.targetLawId = rec.lawId;
+      }
+      const billOut = introduceBill(world, state, billArgs, commandId);
+      if ("error" in billOut) {
+        return {
+          error: reject(
+            billOut.error.code,
+            `amending legislation path failed: ${billOut.error.message}`,
+          ),
+        };
+      }
       rec.blockedReason = "awaiting_amending_legislation";
       rec.status = "delayed";
       rec.metadata.amendmentRequested = true;
       rec.metadata.amendmentRequestedDate = state.currentDate;
-      resultSummary = "amending legislation requested";
+      rec.metadata.amendmentBillId = billOut.bill.id;
+      resultSummary = `amending bill ${billOut.bill.id} introduced`;
       break;
     }
     case "reduce_scope": {
