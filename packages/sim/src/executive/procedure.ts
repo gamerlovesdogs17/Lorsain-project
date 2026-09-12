@@ -18,7 +18,14 @@ import {
   ministerOfficeIds,
   seedMinistriesIfNeeded,
 } from "./state.js";
-import type { AssemblyMotion, FiscalStance, MotionKind, MinistryBudgetChoice, RegulationState, BudgetState } from "./types.js";
+import type {
+  AssemblyMotion,
+  FiscalStance,
+  MotionKind,
+  MinistryBudgetChoice,
+  RegulationState,
+  BudgetState,
+} from "./types.js";
 import { departmentForPolicyItem, departmentFromOfficeId } from "../governing/departments.js";
 import { ministryMayRegulate } from "../governing/jurisdiction.js";
 import {
@@ -261,7 +268,10 @@ export function issueRegulation(
   const jurisdiction = ministryMayRegulate(args.ministryOfficeId, args.policyItems);
   if (!jurisdiction.allowed) {
     return {
-      error: reject("REGULATION_OUTSIDE_JURISDICTION", jurisdiction.reason ?? "outside jurisdiction"),
+      error: reject(
+        "REGULATION_OUTSIDE_JURISDICTION",
+        jurisdiction.reason ?? "outside jurisdiction",
+      ),
     };
   }
   const items: PolicyItem[] = args.policyItems.map((p) => {

@@ -29,14 +29,7 @@ const jsonPath = path.join(jsonDir, "result.json");
 
 const result = spawnSync(
   process.execPath,
-  [
-    vitestBin,
-    "run",
-    "--reporter=default",
-    "--reporter=json",
-    `--outputFile=${jsonPath}`,
-    ...args,
-  ],
+  [vitestBin, "run", "--reporter=default", "--reporter=json", `--outputFile=${jsonPath}`, ...args],
   {
     cwd: root,
     encoding: "utf8",

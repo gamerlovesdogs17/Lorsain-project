@@ -4,10 +4,7 @@ import { loadTerenaWorld } from "./integration/harness.js";
 import { jsonClone } from "./hash.js";
 import { updateMinisterialPerformance } from "./governing/performance.js";
 import { ensureGoverningRuntime } from "./governing/state.js";
-import {
-  respondToImplementation,
-  setImplementationPosture,
-} from "./governing/implementation.js";
+import { respondToImplementation, setImplementationPosture } from "./governing/implementation.js";
 import { syncAgendaBillReferences } from "./governing/agenda.js";
 import { deriveCabinet } from "./executive/state.js";
 import { currentPresidentialAuthorityId } from "./legislature/state.js";
@@ -110,7 +107,9 @@ describe("Phase 17A government fixtures", () => {
       const result = sim.executeCommand({ type: "PROPOSE_BUDGET", fiscalStance: stance });
       expect(result.ok).toBe(true);
       const snap = sim.getSnapshot();
-      const budget = Object.values(snap.executiveRuntime.budgets).find((b) => b.status === "proposed");
+      const budget = Object.values(snap.executiveRuntime.budgets).find(
+        (b) => b.status === "proposed",
+      );
       expect(budget).toBeTruthy();
       expect(budget!.totalEnvelope).toBeGreaterThan(0);
       expect(Object.keys(budget!.ministryRequests).length).toBeGreaterThan(0);
@@ -237,7 +236,11 @@ describe("Phase 17A government fixtures", () => {
 
   it("agenda Open-in-Assembly uses exact billId, never a sibling housing bill", () => {
     const world = loadTerenaWorld();
-    const sim = createSimulation({ world, seed: "p17a-agenda-bills", playerPoliticianId: "NPC146" });
+    const sim = createSimulation({
+      world,
+      seed: "p17a-agenda-bills",
+      playerPoliticianId: "NPC146",
+    });
     const state = jsonClone(sim.getSnapshot());
     const baseBill = {
       summary: "Housing reform",

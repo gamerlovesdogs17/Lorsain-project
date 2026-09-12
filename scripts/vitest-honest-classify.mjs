@@ -52,7 +52,11 @@ export function parseVitestSummaryCounts(normalized) {
   const filesCompleted = filesPassed ? Number(filesPassed[1]) : null;
   const filesFailedCount = filesFailed ? Number(filesFailed[1]) : null;
   let filesTotal = filesTotalParen ? Number(filesTotalParen[1]) : null;
-  if (filesTotal == null && filesCompleted != null && (filesFailedCount == null || filesFailedCount === 0)) {
+  if (
+    filesTotal == null &&
+    filesCompleted != null &&
+    (filesFailedCount == null || filesFailedCount === 0)
+  ) {
     // "1 passed (1)" already covered; bare "1 passed" without total is incomplete signal → leave null
     filesTotal = null;
   }
@@ -105,7 +109,8 @@ export function classifyFromVitestJson(json) {
       typeof obj.numFailedTestSuites === "number"
         ? obj.numFailedTestSuites
         : Array.isArray(obj.testResults)
-          ? obj.testResults.filter((r) => r && typeof r === "object" && r.status === "failed").length
+          ? obj.testResults.filter((r) => r && typeof r === "object" && r.status === "failed")
+              .length
           : null;
     const testsTotal = typeof obj.numTotalTests === "number" ? obj.numTotalTests : null;
     const testsFailed = typeof obj.numFailedTests === "number" ? obj.numFailedTests : null;

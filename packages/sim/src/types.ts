@@ -617,12 +617,7 @@ export type Command =
   | {
       type: "PROPOSE_BUDGET";
       allocations?: Record<string, number>;
-      fiscalStance?:
-        | "expansionary"
-        | "modest_increase"
-        | "hold"
-        | "consolidation"
-        | "custom";
+      fiscalStance?: "expansionary" | "modest_increase" | "hold" | "consolidation" | "custom";
       ministryChoices?: Record<
         string,
         "full_request" | "partial_request" | "hold_baseline" | "cut" | "custom"

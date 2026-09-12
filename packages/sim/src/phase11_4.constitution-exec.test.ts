@@ -332,8 +332,9 @@ describe("Phase 11.4 executable constitutional gameplay", () => {
       { subjectId: "art3_executive_authority", alternativeId: "assembly_dominant" },
     ]);
     const ministryId =
-      Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister" && id.includes("LABOUR")) ??
-      Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister");
+      Object.keys(world.offices).find(
+        (id) => world.offices[id]!.kind === "minister" && id.includes("LABOUR"),
+      ) ?? Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister");
     if (!ministryId) return;
     const result = issueRegulation(
       world,
@@ -353,8 +354,9 @@ describe("Phase 11.4 executable constitutional gameplay", () => {
     const { world, state } = boot("EXEC-AUTH-MAJOR");
     expect(ensureOrder(state).executiveAuthority).toBe("constrained_dual_mandate");
     const ministryId =
-      Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister" && id.includes("LABOUR")) ??
-      Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister");
+      Object.keys(world.offices).find(
+        (id) => world.offices[id]!.kind === "minister" && id.includes("LABOUR"),
+      ) ?? Object.keys(world.offices).find((id) => world.offices[id]!.kind === "minister");
     if (!ministryId) return;
     const majorResult = issueRegulation(
       world,

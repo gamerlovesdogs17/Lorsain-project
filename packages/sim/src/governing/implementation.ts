@@ -277,8 +277,7 @@ export type ImplementationResponseAction = (typeof IMPLEMENTATION_RESPONSE_ACTIO
 
 export function isImplementationResponseAction(v: unknown): v is ImplementationResponseAction {
   return (
-    typeof v === "string" &&
-    (IMPLEMENTATION_RESPONSE_ACTIONS as readonly string[]).includes(v)
+    typeof v === "string" && (IMPLEMENTATION_RESPONSE_ACTIONS as readonly string[]).includes(v)
   );
 }
 
@@ -301,7 +300,9 @@ export function respondToImplementation(
     replacementPoliticianId?: string;
   },
   commandId: string | null,
-): { events: SimEvent[]; record: ImplementationRecord } | { error: { code: string; message: string } } {
+):
+  | { events: SimEvent[]; record: ImplementationRecord }
+  | { error: { code: string; message: string } } {
   const runtime = ensureGoverningRuntime(state);
   const rec = runtime.implementations[args.lawId];
   if (!rec) return { error: reject("UNKNOWN_IMPLEMENTATION", args.lawId) };
@@ -368,7 +369,10 @@ export function respondToImplementation(
       break;
     }
     case "negotiate_provinces": {
-      if (rec.metadata.provinceDelivery === true || rec.metadata.deliveryMode === "provincial_execution") {
+      if (
+        rec.metadata.provinceDelivery === true ||
+        rec.metadata.deliveryMode === "provincial_execution"
+      ) {
         for (const pid of Object.keys(runtime.capacity.provinces)) {
           runtime.capacity.provinces[pid] = Math.min(
             0.95,
@@ -470,4 +474,3 @@ export function respondToImplementation(
   ];
   return { events, record: rec };
 }
-

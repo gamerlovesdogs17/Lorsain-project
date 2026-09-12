@@ -68,9 +68,7 @@ export function computeMinistryBudgetRequests(
   for (const officeId of ministries) {
     const share = approved?.allocations[officeId];
     const baseline =
-      typeof share === "number" && share > 0 && approved
-        ? baselineTotal * share
-        : even;
+      typeof share === "number" && share > 0 && approved ? baselineTotal * share : even;
     baselineByMinistry[officeId] = Math.round(baseline * 10) / 10;
 
     const dept = departmentFromOfficeId(officeId);
@@ -80,9 +78,7 @@ export function computeMinistryBudgetRequests(
       if (cap < 0.5) pressure += (0.5 - cap) * 0.35;
       const implLoad = Object.values(runtime.implementations).filter(
         (r) =>
-          r.departmentId === dept &&
-          r.status !== "fully_implemented" &&
-          r.status !== "blocked",
+          r.departmentId === dept && r.status !== "fully_implemented" && r.status !== "blocked",
       ).length;
       pressure += Math.min(0.2, implLoad * 0.04);
       if (runtime.agenda.items.some((i) => i.departmentId === dept && i.status === "active")) {

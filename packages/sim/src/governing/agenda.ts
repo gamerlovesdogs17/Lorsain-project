@@ -18,13 +18,7 @@ const PLATFORM_TO_ISSUE: Record<PartyPlatformIssue, string> = {
   foreign_policy: "ISS_DEFENSE",
 };
 
-const TERMINAL_BILL_STATUSES = new Set([
-  "withdrawn",
-  "defeated",
-  "enacted",
-  "archived",
-  "lapsed",
-]);
+const TERMINAL_BILL_STATUSES = new Set(["withdrawn", "defeated", "enacted", "archived", "lapsed"]);
 
 function presidentPartyId(world: KernelWorld, state: SimState): string | null {
   const presidentId = currentPresidentialAuthorityId(world, state);

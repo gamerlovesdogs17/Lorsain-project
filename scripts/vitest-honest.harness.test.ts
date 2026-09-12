@@ -30,8 +30,9 @@ const COLORED_GREEN = `\u001b[32m Test Files  1 passed (1)\u001b[39m\n\u001b[32m
 
 describe("honest vitest classifier", () => {
   it("strips ANSI color sequences", () => {
-    expect(stripAnsi(COLORED_RPC)).toContain('[vitest-worker]: Timeout calling "onTaskUpdate"');
-    expect(stripAnsi(COLORED_RPC)).not.toMatch(/\u001b/);
+    const stripped = stripAnsi(COLORED_RPC);
+    expect(stripped).toContain('[vitest-worker]: Timeout calling "onTaskUpdate"');
+    expect(stripped.includes(String.fromCharCode(0x1b))).toBe(false);
   });
 
   it("parses completed/total file and test counts", () => {

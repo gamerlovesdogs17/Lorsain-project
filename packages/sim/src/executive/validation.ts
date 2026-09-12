@@ -135,7 +135,8 @@ export function parseExecutiveRuntime(raw: unknown): ExecutiveRuntime | string {
         typeof rec.totalEnvelope === "number"
           ? rec.totalEnvelope
           : Object.values(ministryAmounts).reduce((s, v) => s + v, 0);
-      const baselineTotal = typeof rec.baselineTotal === "number" ? rec.baselineTotal : totalEnvelope;
+      const baselineTotal =
+        typeof rec.baselineTotal === "number" ? rec.baselineTotal : totalEnvelope;
       const budget: BudgetState = {
         id,
         fiscalYear: isInt(rec.fiscalYear) ? rec.fiscalYear : 2000,

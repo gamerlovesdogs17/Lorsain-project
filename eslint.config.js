@@ -12,6 +12,7 @@ export default tseslint.config(
       "source/**",
       "maps/**",
       ".cursor/**",
+      ".calibration/**",
       "scripts/phase11_3-capture-screenshots.mjs",
     ],
   },

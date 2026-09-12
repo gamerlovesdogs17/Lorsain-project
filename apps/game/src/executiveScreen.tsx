@@ -846,10 +846,7 @@ export function ExecutivePage(props: {
                         }`}
                         status={<StatusBadge>{item.status.replaceAll("_", " ")}</StatusBadge>}
                         trailing={
-                          linkedBill &&
-                          !billStale &&
-                          props.setSelectedBill &&
-                          props.onNavigate ? (
+                          linkedBill && !billStale && props.setSelectedBill && props.onNavigate ? (
                             <button
                               type="button"
                               className="btn secondary btn-sm"
@@ -1065,9 +1062,7 @@ export function ExecutivePage(props: {
                               {qualitativeDelivery(rec.status, rec.progress)}
                             </StatusBadge>
                           }
-                          trailing={
-                            props.debug ? `${(rec.progress * 100).toFixed(0)}%` : undefined
-                          }
+                          trailing={props.debug ? `${(rec.progress * 100).toFixed(0)}%` : undefined}
                         />
                         {canRespond &&
                         rec.status !== "fully_implemented" &&
@@ -1194,14 +1189,13 @@ export function ExecutivePage(props: {
                   </select>
                   <select value={regIssue} onChange={(e) => setRegIssue(e.target.value)}>
                     <option value="">Choose issue in ministry jurisdiction</option>
-                    {(regOffice
-                      ? issuesForMinistryOffice(regOffice)
-                      : props.world.issueIds
-                    ).map((id) => (
-                      <option key={id} value={id}>
-                        {issueDisplayName(props.catalog, id)}
-                      </option>
-                    ))}
+                    {(regOffice ? issuesForMinistryOffice(regOffice) : props.world.issueIds).map(
+                      (id) => (
+                        <option key={id} value={id}>
+                          {issueDisplayName(props.catalog, id)}
+                        </option>
+                      ),
+                    )}
                   </select>
                   <div className="row wrap">
                     <button

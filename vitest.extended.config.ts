@@ -25,7 +25,10 @@ export default defineConfig({
       "packages/sim/src/parties.perf.test.ts",
       "packages/election-math/src/performance.test.ts",
     ],
-    exclude: [...(baseConfig.test?.exclude ?? []), "packages/sim/src/phase15.certification.test.ts"],
+    exclude: [
+      ...(baseConfig.test?.exclude ?? []),
+      "packages/sim/src/phase15.certification.test.ts",
+    ],
     testTimeout: 900_000,
     hookTimeout: 180_000,
     teardownTimeout: 180_000,
