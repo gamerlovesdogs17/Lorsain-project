@@ -9,6 +9,15 @@ import {
 } from "./types.js";
 import { bilateralKey, allocateCrisisId, getBilateralRelation } from "./state.js";
 import { activeCrises } from "./crises.js";
+import {
+  crisisEscalationProfile,
+  pickCyberDispute,
+  pickEnergySupplyDispute,
+  pickHumanitarianAccess,
+  pickMaritimeResourceDispute,
+  pickMigrationCorridorStrain,
+  pickTechExportControls,
+} from "./crisis-packages.js";
 
 // ---------------------------------------------------------------------------
 // Phase 11.4 — Crisis narrative theme assignment
@@ -28,37 +37,53 @@ export function assignCrisisTheme(
   aNeighborsB: boolean,
   hasSanctions: boolean,
 ): string {
-  // 1. Active sanctions are a near-certain driver of the dispute identity.
-  if (hasSanctions) return "sanctions dispute";
-  // 2. Mobilized posture near a maritime rival → military posturing.
-  if (
-    (aRuntime.posture === "mobilized" || bRuntime.posture === "mobilized") &&
-    (aRuntime.strategicGoals.includes("maritime_access") ||
+  // 1. Active sanctions — carve-outs vs escalation.
+  if (hasSanctions) {
+    if (pickTechExportControls(true, rel)) return "technology export control dispute";
+    return "sanctions dispute";
+  }
+  // 2. Cyber-capable rivals — distinct from generic standoffs.
+  if (pickCyberDispute(aRuntime, bRuntime) && rel.securityTension >= 0.25) {
+    return "cyber and espionage dispute";
+  }
+  // 3. Mobilized posture near a maritime rival → military posturing / maritime dispute.
+  if (aRuntime.posture === "mobilized" || bRuntime.posture === "mobilized") {
+    if (pickMaritimeResourceDispute(aRuntime, bRuntime)) return "maritime resource dispute";
+    if (
+      aRuntime.strategicGoals.includes("maritime_access") ||
       bRuntime.strategicGoals.includes("maritime_access") ||
       aRuntime.capabilities.naval >= 0.55 ||
-      bRuntime.capabilities.naval >= 0.55)
-  ) {
-    return "military posturing";
-  }
-  if (aRuntime.posture === "mobilized" || bRuntime.posture === "mobilized") {
+      bRuntime.capabilities.naval >= 0.55
+    ) {
+      return "military posturing";
+    }
     return "security standoff";
   }
-  // 3. Shared border → most common flashpoint.
-  if (aNeighborsB) return "border tension";
-  // 4. Dense trade links → economic friction (no implied closure).
-  if (rel.economicTies > 0.4) return "trade dispute";
-  // 5. Alliance-seeking goals → consultation strain.
+  // 4. Shared border — migration or border flashpoints.
+  if (aNeighborsB) {
+    if (pickMigrationCorridorStrain(rel, aRuntime, bRuntime, true)) {
+      return "migration corridor strain";
+    }
+    return "border tension";
+  }
+  // 5. Dense trade links — energy or generic trade friction.
+  if (rel.economicTies > 0.4) {
+    if (pickEnergySupplyDispute(rel, aRuntime, bRuntime)) return "energy supply dispute";
+    return "trade dispute";
+  }
+  // 6. Alliance-seeking goals → consultation strain / humanitarian access.
   if (
     aRuntime.strategicGoals.includes("secure_alliance") ||
     bRuntime.strategicGoals.includes("secure_alliance")
   ) {
+    if (pickHumanitarianAccess(aRuntime, bRuntime)) return "humanitarian access dispute";
     return "alliance consultation strain";
   }
-  // 6. Deeply negative general relations → diplomatic fracture.
+  // 7. Deeply negative general relations → diplomatic fracture.
   if (rel.general < -20) return "diplomatic confrontation";
-  // 7. Elevated security tension without a shared border.
+  // 8. Elevated security tension without a shared border.
   if (rel.securityTension >= 0.35) return "security standoff";
-  // 8. Fallback — generic, not a fabricated border incident.
+  // 9. Fallback — generic, not a fabricated border incident.
   return "diplomatic confrontation";
 }
 
@@ -196,6 +221,7 @@ export function checkCrisisEmergence(
       );
     }
 
+    const profile = crisisEscalationProfile(narrativeTitle);
     const crisis: InternationalCrisis = {
       id,
       stage: "latent",
@@ -209,6 +235,8 @@ export function checkCrisisEmergence(
         cause: "emergence",
         securityTension: rel?.securityTension ?? 0.15,
         emergenceProbability: prob,
+        escalationPackageId: profile.packageId,
+        domesticReaction: profile.domesticReaction,
       },
     };
     state.foreignAffairsRuntime.crises[id] = crisis;

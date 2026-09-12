@@ -13,6 +13,7 @@ import { updatePromiseStatuses } from "./promises.js";
 import { refreshGovernmentRecord } from "./record.js";
 import { ensureGoverningRuntime } from "./state.js";
 import { clampUnit } from "./capacity.js";
+import { processExecutiveSituations } from "./situations.js";
 
 /**
  * Phase 13 monthly orchestrator.
@@ -65,6 +66,7 @@ export function processGoverningMonth(
   updateMinisterialPerformance(world, state);
   updateServiceOutcomes(state);
   events.push(...applyServicePoliticalEffects(world, state, commandId));
+  events.push(...processExecutiveSituations(world, state, commandId));
   events.push(...refreshGovernmentRecord(world, state, commandId));
 
   const contradictions = interactions.filter((i) => i.kind === "contradiction" && !i.resolved);

@@ -17,6 +17,7 @@ import { getAgentProfile } from "../agents/profile.js";
 import { provinceThemeId } from "../provinces/themes.js";
 import { TERENA_WORLD_ID } from "./types.js";
 import { publicActiveCrises } from "./crises.js";
+import { crisisDomesticReactionTheme } from "./crisis-packages.js";
 
 const FOREIGN_PRIORITY = "foreign_policy";
 const TRADE_PRIORITY = "trade";
@@ -28,7 +29,16 @@ const MIGRATION_PRIORITY = "migration";
 const FOREIGN_SALIENCE_DECAY = 0.04;
 
 type DomesticTheme =
-  "trade" | "sanctions" | "defense" | "rights" | "migration" | "treaty" | "crisis" | "posture";
+  | "trade"
+  | "sanctions"
+  | "defense"
+  | "rights"
+  | "migration"
+  | "treaty"
+  | "crisis"
+  | "posture"
+  | "energy"
+  | "technology";
 
 function isMajorForeignEvent(type: string): boolean {
   return (
@@ -50,6 +60,21 @@ function isMajorForeignEvent(type: string): boolean {
 
 function themeFor(type: string, payload: Record<string, unknown> | undefined): DomesticTheme {
   const kind = typeof payload?.kind === "string" ? payload.kind.toLowerCase() : "";
+  const narrativeTitle =
+    typeof payload?.narrativeTitle === "string" ? payload.narrativeTitle : undefined;
+  const domesticReaction =
+    typeof payload?.domesticReaction === "string" ? payload.domesticReaction : null;
+  if (domesticReaction === "energy") return "energy";
+  if (domesticReaction === "technology") return "technology";
+  if (narrativeTitle) {
+    const crisisTheme = crisisDomesticReactionTheme(narrativeTitle);
+    if (crisisTheme === "energy") return "energy";
+    if (crisisTheme === "technology") return "technology";
+    if (crisisTheme === "migration") return "migration";
+    if (crisisTheme === "rights") return "rights";
+    if (crisisTheme === "sanctions") return "sanctions";
+    if (crisisTheme === "trade") return "trade";
+  }
   if (type.includes("SANCTION") || kind.includes("sanction")) return "sanctions";
   if (type.includes("TRADE") || kind.includes("trade")) return "trade";
   if (
@@ -67,6 +92,9 @@ function themeFor(type: string, payload: Record<string, unknown> | undefined): D
     return "posture";
   }
   if (type.includes("TREATY")) {
+    if (domesticReaction === "rights") return "rights";
+    if (domesticReaction === "sanctions") return "sanctions";
+    if (domesticReaction === "trade") return "trade";
     if (kind.includes("defense") || kind.includes("security") || kind.includes("mutual")) {
       return "defense";
     }
@@ -138,6 +166,16 @@ function bumpRelevantCaucusPriorities(
           priority = MIGRATION_PRIORITY;
         }
         break;
+      case "energy":
+        if (Math.abs(ideology.economic) >= 0.12 || caucus.priorities.includes(TRADE_PRIORITY)) {
+          priority = TRADE_PRIORITY;
+        }
+        break;
+      case "technology":
+        if (ideology.authority >= 0.15 || caucus.priorities.includes(FOREIGN_PRIORITY)) {
+          priority = FOREIGN_PRIORITY;
+        }
+        break;
       case "treaty":
         // Soft salience only for caucuses already attentive to foreign affairs.
         if (caucus.priorities.includes(FOREIGN_PRIORITY)) priority = FOREIGN_PRIORITY;
@@ -163,9 +201,9 @@ function bumpPartyPlatformSalience(state: SimState, theme: DomesticTheme): numbe
     const delta =
       theme === "sanctions" || theme === "crisis"
         ? 0.08
-        : theme === "trade" || theme === "defense"
+        : theme === "trade" || theme === "defense" || theme === "energy"
           ? 0.06
-          : theme === "rights" || theme === "migration"
+          : theme === "rights" || theme === "migration" || theme === "technology"
             ? 0.05
             : 0.03;
     const next = Math.max(0, Math.min(1, current + delta));

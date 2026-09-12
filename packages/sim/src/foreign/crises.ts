@@ -6,6 +6,7 @@ import { adjustRelation } from "./relations.js";
 import type { CrisisStage, InternationalCrisis } from "./types.js";
 import { isPublicCrisisStage } from "./types.js";
 import { beginConflictFromCrisisWithWarTrigger, crisisConflictProbability } from "./conflicts.js";
+import { crisisEscalationProfile, scaledCrisisThreshold } from "./crisis-packages.js";
 
 export function transitionLatent(
   crisis: InternationalCrisis,
@@ -164,30 +165,38 @@ export function processCrisisLifecycle(
     if (crisis.stage === "settled") continue;
     const prev = crisis.stage;
     const drift = rng.float01("foreign-affairs");
+    const profile = crisisEscalationProfile(crisis.narrativeTitle);
+    const latentIncident = scaledCrisisThreshold(0.02, profile.latentIncidentThreshold);
+    const incidentActive = scaledCrisisThreshold(0.08, profile.incidentActiveThreshold);
+    const incidentDeescalate = scaledCrisisThreshold(0.14, profile.deescalateBias);
+    const activeEscalate = scaledCrisisThreshold(0.06, profile.activeConflictThreshold);
+    const deescalateSettle = scaledCrisisThreshold(0.35, profile.deescalateBias);
 
     if (crisis.stage === "latent") {
-      if (drift < 0.02) transitionLatent(crisis, date, "incident");
+      if (drift < latentIncident) transitionLatent(crisis, date, "incident");
       else if (drift > 0.97) transitionLatent(crisis, date, "settled");
     } else if (crisis.stage === "incident") {
-      if (drift < 0.08) transitionIncident(crisis, date, "active");
-      else if (drift < 0.14) transitionIncident(crisis, date, "deescalating");
+      if (drift < incidentActive) transitionIncident(crisis, date, "active");
+      else if (drift < incidentDeescalate) transitionIncident(crisis, date, "deescalating");
       else if (drift > 0.96) transitionIncident(crisis, date, "settled");
     } else if (crisis.stage === "active") {
-      if (drift < 0.06) {
+      if (drift < activeEscalate) {
         const conflictP = crisisConflictProbability(world, state, crisis);
         if (rng.float01("foreign-affairs") < conflictP) {
           transitionActive(crisis, date, "conflict");
         } else {
           transitionActive(crisis, date, "deescalating");
         }
-      } else if (drift < 0.1) {
+      } else if (drift < scaledCrisisThreshold(0.1, profile.deescalateBias)) {
         transitionActive(crisis, date, "deescalating");
       }
     } else if (crisis.stage === "deescalating") {
-      if (drift < 0.35) transitionDeescalating(crisis, date, "settled");
+      if (drift < deescalateSettle) transitionDeescalating(crisis, date, "settled");
       else if (drift > 0.98) transitionDeescalating(crisis, date, "active");
     } else if (crisis.stage === "conflict") {
-      if (drift < 0.08) transitionConflictToCeasefire(crisis, date);
+      if (drift < scaledCrisisThreshold(0.08, profile.deescalateBias)) {
+        transitionConflictToCeasefire(crisis, date);
+      }
     }
 
     applyRelationDrift(state, crisis, crisis.stage, date);
@@ -211,6 +220,9 @@ export function processCrisisLifecycle(
               focalPairKey: crisis.focalPairKey,
               // Phase 11.4: propagate narrative theme when present.
               ...(crisis.narrativeTitle != null ? { narrativeTitle: crisis.narrativeTitle } : {}),
+              ...(typeof crisis.metadata.domesticReaction === "string"
+                ? { domesticReaction: crisis.metadata.domesticReaction }
+                : {}),
             },
             sourceScheduledEventId: null,
             sourceCommandId: commandId,

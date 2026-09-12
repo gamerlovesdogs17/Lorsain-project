@@ -544,6 +544,33 @@ export function headlineFor(
       return concrete;
     }
     if (type === "DEBATE_HELD") {
+      const emphasis =
+        typeof payload?.emphasis === "string" && payload.emphasis.length > 0
+          ? payload.emphasis
+          : null;
+      if (emphasis) {
+        return pickVariant(
+          sensational
+            ? [
+                `Debate erupts over ${emphasis}`,
+                `Candidates collide on ${emphasis}`,
+                desk ? `${desk} spotlights ${emphasis} clash` : `${emphasis} frames debate night`,
+              ]
+            : critical
+              ? [
+                  `Debate scrutiny centres on ${emphasis}`,
+                  `Moderators press ${emphasis} contrasts`,
+                ]
+              : [
+                  `Campaign debate focuses on ${emphasis}`,
+                  `Candidates outline ${emphasis} positions on stage`,
+                  desk
+                    ? `${desk} leads with ${emphasis} segment`
+                    : `Voters hear ${emphasis} arguments side by side`,
+                ],
+          variant,
+        );
+      }
       return pickVariant(
         sensational
           ? ["Candidates clash in televised debate", "Debate night turns confrontational"]
@@ -857,6 +884,49 @@ export function headlineFor(
   }
 
   // ── Service delivery / party priorities / governing record ────────────────
+  if (type === "GOVERNMENT_EXECUTIVE_SITUATION") {
+    return pickVariant(
+      sensational
+        ? [
+            title ?? "Cabinet crisis dominates the week",
+            "Ministry scandal sheet rattles the executive",
+          ]
+        : critical
+          ? [title ?? "Executive faces a difficult ministry brief", "Cabinet brief draws scrutiny"]
+          : [
+              title ?? "Executive situation enters the public record",
+              "Ministry brief generates institutional attention",
+              desk ? `${desk} covers a cabinet-level situation` : "Government situation noted",
+            ],
+      variant,
+    );
+  }
+  if (type === "POLITICAL_SCANDAL_ALLEGATION") {
+    const stage = typeof payload?.stage === "string" ? payload.stage : "allegation";
+    return pickVariant(
+      sensational
+        ? [
+            title ?? "Scandal allegation erupts",
+            stage === "referral"
+              ? "Referral threat hangs over minister"
+              : "Allegation shocks the capital",
+          ]
+        : critical
+          ? [
+              title ?? "Scandal allegation draws sharp questions",
+              stage === "investigation"
+                ? "Investigation demand gains traction"
+                : "Ethics questions follow new allegation",
+            ]
+          : [
+              title ?? "Political scandal allegation reported",
+              stage === "allegation"
+                ? "Allegation enters the public file"
+                : "Oversight bodies note scandal development",
+            ],
+      variant,
+    );
+  }
   if (type === "SERVICE_DELIVERY_CRITICISM") {
     return pickVariant(
       sensational
@@ -884,6 +954,101 @@ export function headlineFor(
               "Administrative outcomes draw positive notice",
               desk ? `${desk} credits service gains` : "Service performance enters the record",
             ],
+      variant,
+    );
+  }
+  if (type === "ORG_ISSUE_CAMPAIGN") {
+    const summary = typeof payload?.summary === "string" ? payload.summary.trim() : "";
+    const issueId = typeof payload?.issueId === "string" ? payload.issueId : "policy";
+    return pickVariant(
+      sensational
+        ? [
+            summary || "Interest-group pressure campaign erupts",
+            `Lobbying blitz targets ${issueId} vote`,
+          ]
+        : critical
+          ? [
+              summary || "Organized interests escalate bill pressure",
+              `Issue campaign tightens ${issueId} whip counts`,
+            ]
+          : [
+              summary || "Organization opens an issue campaign",
+              `Advocacy groups mobilize on ${issueId}`,
+              desk ? `${desk} tracks an organizational campaign` : "Lobbying activity enters the record",
+            ],
+      variant,
+    );
+  }
+  if (type === "CAUCUS_PRESSURE_EVENT" || type === "CAUCUS_AGENDA_SET") {
+    const caucusTitle =
+      typeof payload?.title === "string"
+        ? payload.title
+        : type === "CAUCUS_AGENDA_SET"
+          ? "Caucus resets legislative priorities"
+          : "Caucus pressure event";
+    return pickVariant(
+      sensational
+        ? [
+            `${caucusTitle} — party nerves fray`,
+            desk ? `${desk}: ${caucusTitle}` : `${caucusTitle} hits the whip office`,
+          ]
+        : [
+            caucusTitle,
+            type === "CAUCUS_AGENDA_SET"
+              ? "Party caucus publishes a priority bill list"
+              : "Caucus leaders manage internal pressure on upcoming votes",
+            province ? `${province} MPs watch caucus signals` : "Assembly bloc coordination stays in focus",
+          ],
+      variant,
+    );
+  }
+  if (type === "PROVINCIAL_PRESSURE_OPENED") {
+    const kind = typeof payload?.kind === "string" ? payload.kind : "";
+    const kindHeadlines: Record<string, string[]> = {
+      port_throughput_crisis: [
+        "Port congestion becomes a provincial political test",
+        province ? `${province} port backlog forces executive response` : "Provincial port crisis opens",
+      ],
+      harvest_logistics_breakdown: [
+        "Harvest logistics strain provincial transport plans",
+        province ? `${province} faces a harvest-season crunch` : "Agrarian provinces warn of delivery delays",
+      ],
+      campus_capacity_clash: [
+        "Campus housing pressure reaches provincial desks",
+        "University towns demand provincial service relief",
+      ],
+      border_inspection_backlog: [
+        "Border queues spill into provincial budgets",
+        province ? `${province} border delays strain local services` : "Frontier province flags inspection backlog",
+      ],
+      pit_shutdown_spillover: [
+        "Mine shutdown ripples through provincial finances",
+        "Resource shutdown tests provincial employment programs",
+      ],
+      shift_reduction_wave: [
+        "Industrial shift cuts hit provincial revenue forecasts",
+        "Factory slowdowns pressure provincial labour offices",
+      ],
+    };
+    const themed = kindHeadlines[kind];
+    if (themed) {
+      return pickVariant(
+        sensational
+          ? [themed[0]!, `${themed[0]!} — governors under scrutiny`]
+          : themed,
+        variant,
+      );
+    }
+    return pickVariant(
+      sensational
+        ? [
+            province ? `${province} faces a provincial pressure crisis` : "Provincial pressure event opens",
+            "Regional executive faces a public test",
+          ]
+        : [
+            province ? `${province} opens a provincial pressure file` : "Provincial pressure registered",
+            "Governor's office responds to mounting regional strain",
+          ],
       variant,
     );
   }

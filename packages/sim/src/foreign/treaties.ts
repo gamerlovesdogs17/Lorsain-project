@@ -5,6 +5,7 @@ import { currentPresidentialAuthorityId } from "../executive/state.js";
 import type { RngService } from "../rng.js";
 import { allocateTreatyId, allocateIncomingDiplomacyId, getBilateralRelation } from "./state.js";
 import { canProposeTreaty, recordTreatyRejectionCooldown } from "./treaty-identity.js";
+import { applyTradeTreatyVariantMetadata } from "./treaty-variants.js";
 import {
   advanceTreatyAfterCounterpartyAcceptance,
   processTreatyRatificationVotes,
@@ -49,6 +50,9 @@ export function evaluateCounterpartyAcceptance(
   }
 
   if (rel && rel.securityTension > 0.5) score -= rel.securityTension * 0.2;
+
+  const acceptanceBias = treaty.metadata.acceptanceBias;
+  if (typeof acceptanceBias === "number") score += acceptanceBias * 0.12;
 
   const crises = publicActiveCrises(state.foreignAffairsRuntime).filter(
     (c) =>
@@ -134,6 +138,23 @@ export function proposeTreaty(
   };
   state.foreignAffairsRuntime.treaties[id] = treaty;
 
+  if (args.kind === "trade") {
+    const partnerId = args.memberIds.find((m) => m !== args.proposerId && m !== TERENA_WORLD_ID);
+    const terenaPair =
+      args.memberIds.includes(TERENA_WORLD_ID) && partnerId
+        ? getBilateralRelation(state.foreignAffairsRuntime, TERENA_WORLD_ID, partnerId)
+        : partnerId
+          ? getBilateralRelation(state.foreignAffairsRuntime, args.proposerId, partnerId)
+          : null;
+    const partnerName = partnerId ?? "Partner";
+    applyTradeTreatyVariantMetadata(
+      treaty,
+      partnerName,
+      terenaPair ?? null,
+      id.split("").reduce((s, c) => s + c.charCodeAt(0), 0),
+    );
+  }
+
   const events: SimEvent[] = [
     pushHistory(state, {
       date: state.currentDate,
@@ -142,7 +163,14 @@ export function proposeTreaty(
       visibility: "public",
       actorIds: [args.proposerId],
       entityIds: [id],
-      payload: { treatyId: id, kind: args.kind, title: args.title, status: treaty.status },
+      payload: {
+        treatyId: id,
+        kind: args.kind,
+        title: treaty.title,
+        status: treaty.status,
+        variantId: treaty.metadata.variantId ?? null,
+        domesticReaction: treaty.metadata.domesticReaction ?? null,
+      },
       sourceScheduledEventId: null,
       sourceCommandId: commandId,
     }),
