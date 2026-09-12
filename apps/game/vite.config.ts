@@ -43,6 +43,10 @@ const qaFixtures = new Map([
       "../../docs/qa/institutional/fixtures/labour-primary-poll-browser-save.json",
     ),
   ],
+  [
+    "phase17a-government",
+    resolve(__dirname, "../../docs/qa/phase17a/fixtures/government-browser-save.json"),
+  ],
 ]);
 
 export default defineConfig({
@@ -59,7 +63,7 @@ export default defineConfig({
       configureServer(server) {
         server.middlewares.use((request, response, next) => {
           const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
-          const match = /^\/__qa\/fixtures\/([a-z-]+)\.json$/.exec(pathname);
+          const match = /^\/__qa\/fixtures\/([a-z0-9-]+)\.json$/.exec(pathname);
           if (!match) return next();
           const fixturePath = qaFixtures.get(match[1] ?? "");
           if (!fixturePath || !existsSync(fixturePath)) {
