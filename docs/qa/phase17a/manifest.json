@@ -1,6 +1,6 @@
 {
   "phase": "phase17a-government",
-  "commitSha": "7f83879080ed445275955592c4eda5a6d5ac97b2",
+  "commitSha": "acb9682f834b209736fa92ccbf80a25b08be7b98",
   "buildTimestamp": "2026-09-12T21:19:11.928Z",
   "generatedAt": "2026-09-12T21:19:30.050Z",
   "base": "http://127.0.0.1:5177/Lorsain-project/",
@@ -233,5 +233,6 @@
   "overflowAssertionsPassed": true,
   "desktopOverflowPassed": true,
   "mobileOverflowPassed": true,
-  "note": "Screenshots captured on dirty tree; stamped to QA commit SHA after commit."
+  "note": "PNG content from this tip lineage; re-capture if UI drifts.",
+  "screenshotContentCommit": "cc10f995163d01b038b6be316c0564ce37732b58"
 }
