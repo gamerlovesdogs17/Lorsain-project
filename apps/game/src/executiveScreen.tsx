@@ -1011,6 +1011,10 @@ export function ExecutivePage(props: {
                   </button>
                 </div>
                 <div className="form-stack">
+                  <p className="muted">
+                    Choose a ministry and policy domain, then a regulatory stance. Exact magnitudes
+                    stay in Debug Mode.
+                  </p>
                   <select value={regOffice} onChange={(e) => setRegOffice(e.target.value)}>
                     <option value="">Choose ministry</option>
                     {cab.map((m) => (
@@ -1027,39 +1031,62 @@ export function ExecutivePage(props: {
                       </option>
                     ))}
                   </select>
-                  <select
-                    value={String(regDir)}
-                    onChange={(e) => setRegDir(Number(e.target.value) as 1 | -1)}
-                  >
-                    <option value="1">For</option>
-                    <option value="-1">Against</option>
-                  </select>
-                  <label>
-                    Regulatory scope{" "}
-                    {regMag >= 0.75
-                      ? "sweeping"
-                      : regMag >= 0.5
-                        ? "broad"
-                        : regMag >= 0.3
-                          ? "targeted"
-                          : "limited"}
-                    <input
-                      type="range"
-                      min={0.1}
-                      max={1}
-                      step={0.05}
-                      value={regMag}
-                      onChange={(e) => setRegMag(Number(e.target.value))}
-                    />
-                  </label>
+                  <div className="row wrap">
+                    <button
+                      type="button"
+                      className={`btn secondary${regDir === 1 ? " selected" : ""}`}
+                      onClick={() => setRegDir(1)}
+                    >
+                      Tighten / advance
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn secondary${regDir === -1 ? " selected" : ""}`}
+                      onClick={() => setRegDir(-1)}
+                    >
+                      Ease / reverse
+                    </button>
+                  </div>
+                  <div className="row wrap">
+                    {(
+                      [
+                        ["limited", 0.2],
+                        ["targeted", 0.35],
+                        ["broad", 0.55],
+                        ["sweeping", 0.8],
+                      ] as const
+                    ).map(([label, mag]) => (
+                      <button
+                        type="button"
+                        key={label}
+                        className={`btn secondary${Math.abs(regMag - mag) < 0.01 ? " selected" : ""}`}
+                        onClick={() => setRegMag(mag)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                   <label>
                     <input
                       type="checkbox"
                       checked={regMajor}
                       onChange={(e) => setRegMajor(e.target.checked)}
                     />{" "}
-                    Major
+                    Treat as major regulation (Assembly may move to annul)
                   </label>
+                  {props.debug ? (
+                    <label>
+                      Debug magnitude {regMag.toFixed(2)}
+                      <input
+                        type="range"
+                        min={0.1}
+                        max={1}
+                        step={0.05}
+                        value={regMag}
+                        onChange={(e) => setRegMag(Number(e.target.value))}
+                      />
+                    </label>
+                  ) : null}
                   <button
                     type="button"
                     className="btn"
@@ -1100,7 +1127,36 @@ export function ExecutivePage(props: {
                     Close
                   </button>
                 </div>
-                <p className="muted">Set each ministry envelope. Nothing is auto-equalized.</p>
+                <p className="muted">
+                  Choose a fiscal stance to seed envelopes, then adjust ministries if needed.
+                  Official totals remain exact; the stance is the political choice.
+                </p>
+                <div className="row wrap" style={{ marginBottom: "0.65rem" }}>
+                  {(
+                    [
+                      ["Hold funding", 1],
+                      ["Partial increase", 1.08],
+                      ["Full request", 1.16],
+                      ["Cut envelope", 0.9],
+                    ] as const
+                  ).map(([label, factor]) => (
+                    <button
+                      type="button"
+                      key={label}
+                      className="btn secondary"
+                      onClick={() => {
+                        const base = 100;
+                        const next: Record<string, string> = {};
+                        for (const m of cab) {
+                          next[m.officeId] = String(Math.round(base * factor));
+                        }
+                        setAllocations(next);
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <table className="table budget-editor">
                   <thead>
                     <tr>
