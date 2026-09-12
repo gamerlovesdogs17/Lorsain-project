@@ -28,7 +28,11 @@ import { currentCourtJudgeIds } from "./state.js";
 import type { JudicialVoteChoice } from "./types.js";
 import { MAX_ACTIVE_COURT_CASES } from "./types.js";
 import { currentGovernorId } from "../provinces/state.js";
-import { pickLawReviewQuestion, pickRegulationReviewQuestion } from "./legalContent.js";
+import {
+  pickLawReviewQuestion,
+  pickRegulationReviewQuestion,
+  resolveConstitutionalRule,
+} from "./legalContent.js";
 
 function tallyAssembly(
   mps: string[],
@@ -303,7 +307,16 @@ function generateCases(
             law.policyItems[0]?.issueId,
             law.id,
           ),
-          constitutionalRule: "law_review",
+          constitutionalRule: resolveConstitutionalRule({
+            caseType: "LAW_REVIEW",
+            ...(law.policyItems[0]?.issueId
+              ? { issueId: law.policyItems[0].issueId }
+              : {}),
+            ...(law.policyItems[0]?.provisionId
+              ? { provisionId: law.policyItems[0].provisionId }
+              : {}),
+            challengedKind: "law",
+          }),
           meritsLean: (law.policyItems[0]?.magnitude ?? 0.3) - 0.55,
         },
         commandId,

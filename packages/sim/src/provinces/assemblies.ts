@@ -37,6 +37,10 @@ const BACKGROUNDS = [
   "trade-union organizer",
   "agricultural cooperative director",
   "housing campaigner",
+  "regional prosecutor",
+  "public-health nurse manager",
+  "port logistics coordinator",
+  "community legal clinic director",
 ] as const;
 
 const PRIORITIES = [

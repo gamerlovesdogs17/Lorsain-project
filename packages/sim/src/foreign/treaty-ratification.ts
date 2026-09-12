@@ -15,6 +15,10 @@ import { publicActiveCrises } from "./crises.js";
 import { activateTreaty } from "./treaties.js";
 import { treatyAssemblyFraction } from "../provinces/constitutionGameplay.js";
 import { assemblyFractionYesNeeded } from "../executive/procedure.js";
+import {
+  treatyRatificationAssemblyFractionOverride,
+  treatyRatificationVotePenalty,
+} from "./treaty-variants.js";
 
 /**
  * Procedural default for treaty ratification: simple majority of votes cast
@@ -62,6 +66,10 @@ export function chooseTreatyRatificationVote(
   support += institutionalism * 0.06;
   support -= publicActiveCrises(state.foreignAffairsRuntime).length * 0.06;
   if (treaty.kind === "mutual_defense" && rel && rel.general < -20) support -= 0.25;
+  support -= treatyRatificationVotePenalty(treaty);
+  const domesticReaction = treaty.metadata.domesticReaction;
+  if (domesticReaction === "rights") support -= 0.06;
+  if (domesticReaction === "sanctions") support -= 0.04;
 
   // Foreign country IDs must not appear in targetIds — domestic MPs only have
   // politician public facts. Treaty/country context stays in signals + metadata.
@@ -237,7 +245,10 @@ export function processTreatyRatificationVotes(
       else abstain += 1;
     }
     // A8: Wire treatyAssemblyFraction into ratification threshold
-    const fraction = treatyAssemblyFraction(state);
+    const fraction = treatyRatificationAssemblyFractionOverride(
+      treaty,
+      treatyAssemblyFraction(state),
+    );
     const passed =
       fraction > 0.5
         ? yes >=

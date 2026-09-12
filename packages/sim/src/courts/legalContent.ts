@@ -2,6 +2,8 @@
  * Constitutional question and doctrine label catalogs (Phase 17B wave 2).
  */
 
+import type { CourtCaseType } from "./types.js";
+
 export const JUDICIAL_DOCTRINE_LABELS: Record<string, readonly string[]> = {
   law_review: [
     "proportionality standard",
@@ -30,7 +32,48 @@ export const JUDICIAL_DOCTRINE_LABELS: Record<string, readonly string[]> = {
     "high office accountability standard",
     "evidentiary sufficiency test",
   ],
+  rights_limitation_review: [
+    "privacy proportionality test",
+    "minimal impairment standard",
+    "charter rights derogation limit",
+    "surveillance necessity threshold",
+  ],
+  election_administration: [
+    "voter enfranchisement standard",
+    "electoral fairness doctrine",
+    "administrative neutrality test",
+    "ballot-access reasonableness review",
+  ],
 };
+
+export function resolveConstitutionalRule(args: {
+  caseType: CourtCaseType;
+  issueId?: string;
+  provisionId?: string;
+  challengedKind?: string;
+}): string {
+  if (args.caseType === "EMERGENCY_REVIEW") return "emergency_review";
+  if (args.caseType === "FEDERAL_PROVINCIAL_DISPUTE") return "federal_provincial_competence";
+  if (args.caseType === "REGULATION_REVIEW") return "regulation_review";
+  if (args.caseType === "ELECTION_CONSTITUTIONAL_DISPUTE") return "election_administration";
+  if (args.caseType === "IMPEACHMENT_JUDGMENT") return "impeachment_judgment";
+  if (args.challengedKind === "emergency") return "emergency_review";
+
+  const prov = (args.provisionId ?? "").toUpperCase();
+  if (
+    args.issueId === "ISS_LIBERTY" ||
+    prov.includes("DATA") ||
+    prov.includes("SURVEILLANCE") ||
+    prov.includes("PRIVACY")
+  ) {
+    return "rights_limitation_review";
+  }
+  if (args.issueId === "ISS_REFORM" && prov.includes("ELECTION")) return "election_administration";
+  if (args.issueId === "ISS_HOUSING") return "federal_provincial_competence";
+  if (args.issueId === "ISS_IMMIGRATION") return "rights_limitation_review";
+  if (args.issueId === "ISS_CLIMATE") return "federal_provincial_competence";
+  return "law_review";
+}
 
 function stableHash(text: string): number {
   let hash = 2166136261;

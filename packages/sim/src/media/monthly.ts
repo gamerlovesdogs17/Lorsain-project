@@ -73,6 +73,31 @@ export type HeadlineContext = {
   date?: string;
 };
 
+/** Down-rank routine legislative churn so enactment headlines do not dominate outlets. */
+function legislativeMediaScoreAdjust(type: string, importance: number, payload?: Record<string, unknown>): number {
+  let delta = 0;
+  const hasTitle = typeof payload?.title === "string" && payload.title.trim().length > 0;
+  if (type === "BILL_INTRODUCED") delta -= 0.1;
+  if (type === "BILL_PASSED") delta -= hasTitle ? 0.04 : 0.09;
+  if (type === "LAW_ENACTED") {
+    if (importance < 0.42) delta -= 0.14;
+    else if (importance < 0.52) delta -= 0.06;
+  }
+  if (type === "ASSEMBLY_MOTION_INTRODUCED" || type === "ASSEMBLY_MOTION_PASSED") delta -= 0.05;
+  if (type === "GOVERNMENT_EXECUTIVE_SITUATION" || type === "POLITICAL_SCANDAL_ALLEGATION") {
+    delta += 0.06;
+  }
+  if (type.includes("FOREIGN_CRISIS") || type === "INTERNATIONAL_CONFLICT_STARTED") delta += 0.05;
+  return delta;
+}
+
+function minImportanceForPool(type: string): number {
+  if (type === "BILL_INTRODUCED") return 0.38;
+  if (type === "BILL_PASSED") return 0.36;
+  if (type === "LAW_ENACTED") return 0.4;
+  return 0.32;
+}
+
 function categoryOf(type: string): MediaCategory {
   if (EVENT_CATEGORY[type]) return EVENT_CATEGORY[type]!;
   if (type.includes("ELEC") || type.includes("CAMPAIGN") || type.includes("POLL"))
@@ -1256,7 +1281,7 @@ export function processMediaMonth(
     (e) =>
       e.date === state.currentDate &&
       e.visibility === "public" &&
-      e.importance >= 0.32 &&
+      e.importance >= minImportanceForPool(e.type) &&
       e.type !== "TURN_COMPLETED" &&
       e.type !== "ECONOMY_MONTH" &&
       // Prep is not a held debate — only DEBATE_HELD may generate debate news.
@@ -1275,7 +1300,8 @@ export function processMediaMonth(
     const scored = pool
       .map((ev) => {
         const cat = categoryOf(ev.type);
-        let score = ev.importance;
+        const evPayload = ev.payload as Record<string, unknown> | undefined;
+        let score = ev.importance + legislativeMediaScoreAdjust(ev.type, ev.importance, evPayload);
         if (outlet.audience.includes("labor") && (cat === "organizations" || cat === "economy")) {
           score += 0.12;
         }
@@ -1357,6 +1383,7 @@ export function processMediaMonth(
             outletId: outlet.id,
             category: pick.cat,
             framing,
+            factEventType: pick.ev.type,
           }),
         },
       };

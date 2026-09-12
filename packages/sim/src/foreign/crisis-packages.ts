@@ -1,4 +1,4 @@
-import type { BilateralRelation, ForeignCountryRuntime } from "./types.js";
+import type { BilateralRelation, DiplomaticActionKind, ForeignCountryRuntime } from "./types.js";
 
 /** Domestic reaction bucket used by `domesticPolitics.ts` — not a headline reskin. */
 export type CrisisDomesticReaction =
@@ -19,6 +19,10 @@ export type CrisisEscalationProfile = {
   domesticReaction: CrisisDomesticReaction;
   /** Optional metadata for history payloads. */
   packageId: string;
+  /** Player/NPC diplomatic tools that match this crisis type. */
+  recommendedActions: readonly DiplomaticActionKind[];
+  /** How many de-escalation steps mediation applies (0 = symbolic only). */
+  mediationDeescalateSteps: number;
 };
 
 const PACKAGES: Record<string, CrisisEscalationProfile> = {
@@ -29,6 +33,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 1.25,
     deescalateBias: 0.92,
     domesticReaction: "sanctions",
+    recommendedActions: ["lift_sanctions", "trade_negotiation", "summit"],
+    mediationDeescalateSteps: 1,
   },
   "trade dispute": {
     packageId: "trade_retaliation",
@@ -37,6 +43,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 1.35,
     deescalateBias: 1.05,
     domesticReaction: "trade",
+    recommendedActions: ["trade_negotiation", "mediation", "treaty_proposal"],
+    mediationDeescalateSteps: 2,
   },
   "energy supply dispute": {
     packageId: "energy_shock",
@@ -45,6 +53,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 1.2,
     deescalateBias: 0.88,
     domesticReaction: "energy",
+    recommendedActions: ["trade_negotiation", "summit", "outreach"],
+    mediationDeescalateSteps: 1,
   },
   "maritime resource dispute": {
     packageId: "maritime_access",
@@ -53,6 +63,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 0.85,
     deescalateBias: 0.95,
     domesticReaction: "defense",
+    recommendedActions: ["warning", "alliance_consultation", "mediation"],
+    mediationDeescalateSteps: 1,
   },
   "cyber and espionage dispute": {
     packageId: "cyber_escalation",
@@ -61,6 +73,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 1.4,
     deescalateBias: 1.08,
     domesticReaction: "technology",
+    recommendedActions: ["outreach", "warning", "summit"],
+    mediationDeescalateSteps: 1,
   },
   "migration corridor strain": {
     packageId: "migration_pressure",
@@ -69,6 +83,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 1.5,
     deescalateBias: 1.02,
     domesticReaction: "migration",
+    recommendedActions: ["mediation", "outreach", "summit"],
+    mediationDeescalateSteps: 2,
   },
   "humanitarian access dispute": {
     packageId: "humanitarian_corridor",
@@ -77,6 +93,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 1.55,
     deescalateBias: 1.12,
     domesticReaction: "rights",
+    recommendedActions: ["mediation", "outreach", "summit"],
+    mediationDeescalateSteps: 2,
   },
   "technology export control dispute": {
     packageId: "export_controls",
@@ -85,6 +103,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 1.3,
     deescalateBias: 1.04,
     domesticReaction: "technology",
+    recommendedActions: ["trade_negotiation", "outreach", "warning"],
+    mediationDeescalateSteps: 1,
   },
   "border tension": {
     packageId: "border_flashpoint",
@@ -93,6 +113,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 0.9,
     deescalateBias: 0.98,
     domesticReaction: "defense",
+    recommendedActions: ["warning", "posture_change", "alliance_consultation"],
+    mediationDeescalateSteps: 0,
   },
   "military posturing": {
     packageId: "force_posturing",
@@ -101,6 +123,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 0.75,
     deescalateBias: 0.9,
     domesticReaction: "defense",
+    recommendedActions: ["posture_change", "exercises", "warning"],
+    mediationDeescalateSteps: 0,
   },
   "security standoff": {
     packageId: "security_standoff",
@@ -109,6 +133,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 0.95,
     deescalateBias: 1.0,
     domesticReaction: "defense",
+    recommendedActions: ["warning", "alliance_consultation", "mediation"],
+    mediationDeescalateSteps: 1,
   },
   "alliance consultation strain": {
     packageId: "alliance_strain",
@@ -117,6 +143,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 1.45,
     deescalateBias: 1.06,
     domesticReaction: "defense",
+    recommendedActions: ["alliance_consultation", "summit", "outreach"],
+    mediationDeescalateSteps: 1,
   },
   "diplomatic confrontation": {
     packageId: "diplomatic_fracture",
@@ -125,6 +153,8 @@ const PACKAGES: Record<string, CrisisEscalationProfile> = {
     activeConflictThreshold: 1.25,
     deescalateBias: 1.03,
     domesticReaction: "rights",
+    recommendedActions: ["summit", "mediation", "outreach"],
+    mediationDeescalateSteps: 2,
   },
 };
 
@@ -135,7 +165,15 @@ const DEFAULT_PROFILE: CrisisEscalationProfile = {
   activeConflictThreshold: 1,
   deescalateBias: 1,
   domesticReaction: "defense",
+  recommendedActions: ["outreach", "mediation", "warning"],
+  mediationDeescalateSteps: 1,
 };
+
+export function crisisRecommendedDiplomaticActions(
+  narrativeTitle: string | undefined,
+): readonly DiplomaticActionKind[] {
+  return crisisEscalationProfile(narrativeTitle).recommendedActions;
+}
 
 export function crisisEscalationProfile(narrativeTitle: string | undefined): CrisisEscalationProfile {
   if (!narrativeTitle) return DEFAULT_PROFILE;

@@ -111,7 +111,16 @@ export function processOrganizationPoliticsMonth(
 
     const campaignId = padId("ORGCAMP", state.counters.nextOrgActionId++);
     const stance = endorseAlly ? "support" : "oppose";
-    const lobbyTemplate = matchOrgLobbyCampaignTemplate(org.type, issueId, stance);
+    const provisionIds =
+      relatedBill?.policyItems
+        .map((i) => i.provisionId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0) ?? [];
+    const lobbyTemplate = matchOrgLobbyCampaignTemplate(
+      org.type,
+      issueId,
+      stance,
+      provisionIds,
+    );
     const summary = lobbyTemplate
       ? formatOrgLobbyCampaignSummary(
           lobbyTemplate,
@@ -135,10 +144,14 @@ export function processOrganizationPoliticsMonth(
 
     if (relatedBill) {
       actor.billPressure = actor.billPressure.filter((p) => p.billId !== relatedBill.id);
+      const pressureBonus = lobbyTemplate?.billPressureBonus ?? 0;
       actor.billPressure.push({
         billId: relatedBill.id,
         stance,
-        strength: Math.min(1, 0.35 + Math.abs(target.score) * 0.4 + org.strength * 0.15),
+        strength: Math.min(
+          1,
+          0.35 + Math.abs(target.score) * 0.4 + org.strength * 0.15 + pressureBonus,
+        ),
       });
     }
 
@@ -223,6 +236,8 @@ export function processOrganizationPoliticsMonth(
           billPressure: relatedBill != null,
           scorecardScore: target.score,
           lobbyTemplateId: lobbyTemplate?.id ?? null,
+          amendmentPreference: lobbyTemplate?.preferAmendment ?? null,
+          billPressureBonus: lobbyTemplate?.billPressureBonus ?? 0,
           summary,
         },
         sourceScheduledEventId: null,

@@ -134,7 +134,7 @@ export const CAMPAIGN_SITUATIONS: CampaignSituationTemplate[] = [
     id: "foreign_policy_spotlight",
     titles: [
       "Foreign-policy credentials draw campaign scrutiny",
-      "International posture enters the domestic campaign debate",
+      "International posture enters the domestic campaign argument",
       "Candidates field questions on alliance commitments",
       "Campaign coverage turns toward diplomatic credibility",
     ],
@@ -199,6 +199,39 @@ export const CAMPAIGN_SITUATIONS: CampaignSituationTemplate[] = [
     eventType: "CAMPAIGN_ATTACK",
     importance: 0.51,
     standingDelta: { momentum: -0.025 },
+  },
+  {
+    id: "debate_stage_pressure",
+    titles: [
+      "Campaign pivots to stage debates with limited field time",
+      "Rivals force contrast answers on live broadcast forums",
+      "Candidate prep displaces paid media this week",
+    ],
+    whenApplicable: ({ monthsToElection, fieldOrganization, cashOnHand }) =>
+      monthsToElection != null &&
+      monthsToElection >= 2 &&
+      monthsToElection <= 6 &&
+      fieldOrganization < 0.32 &&
+      cashOnHand > 12_000,
+    eventType: "CAMPAIGN_ATTACK",
+    importance: 0.53,
+    standingDelta: { momentum: -0.018, favorability: -0.008 },
+  },
+  {
+    id: "organizational_endorsement_wave",
+    titles: [
+      "Multiple organizations signal alignment within the same week",
+      "Endorsement clusters reshape the race's coalition map",
+      "Campaign leans on institutional backers for surrogate events",
+    ],
+    whenApplicable: ({ fieldOrganization, monthsToElection }) =>
+      fieldOrganization >= 0.38 &&
+      monthsToElection != null &&
+      monthsToElection >= 3 &&
+      monthsToElection <= 9,
+    eventType: "CAMPAIGN_MESSAGE",
+    importance: 0.5,
+    standingDelta: { momentum: 0.025 },
   },
   {
     id: "final_stretch",

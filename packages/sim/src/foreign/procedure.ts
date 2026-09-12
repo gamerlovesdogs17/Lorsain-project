@@ -16,6 +16,7 @@ import { imposeSanctions, liftSanctions } from "./sanctions.js";
 import { proposeTreaty } from "./treaties.js";
 import { acceptIncomingTreaty, rejectIncomingTreaty } from "./treaties.js";
 import { deescalateCrisis } from "./crises.js";
+import { crisisEscalationProfile } from "./crisis-packages.js";
 import { queueTradeNegotiationEffect } from "./economy-bridge.js";
 
 function reject(code: string, message: string): CommandError {
@@ -414,13 +415,21 @@ export function mediateCrisis(
   if (!crisis || crisis.stage === "settled") {
     return { error: reject("UNKNOWN_CRISIS", args.crisisId) };
   }
-  deescalateCrisis(crisis, state.currentDate);
+  const profile = crisisEscalationProfile(crisis.narrativeTitle);
+  const steps = Math.max(0, profile.mediationDeescalateSteps);
+  for (let step = 0; step < steps; step += 1) {
+    deescalateCrisis(crisis, state.currentDate);
+  }
   recordPlayerAction(state, {
     actorCountryId: TERENA_WORLD_ID,
     targetCountryId: null,
     kind: "mediation",
     commandId,
-    metadata: { crisisId: args.crisisId },
+    metadata: {
+      crisisId: args.crisisId,
+      mediationSteps: steps,
+      recommendedActions: [...profile.recommendedActions],
+    },
   });
   return {
     events: [
@@ -431,7 +440,13 @@ export function mediateCrisis(
         visibility: "public",
         actorIds: [args.actorId],
         entityIds: [args.crisisId],
-        payload: { crisisId: args.crisisId, stage: crisis.stage },
+        payload: {
+          crisisId: args.crisisId,
+          stage: crisis.stage,
+          mediationSteps: steps,
+          escalationPackageId: profile.packageId,
+          recommendedActions: [...profile.recommendedActions],
+        },
         sourceScheduledEventId: null,
         sourceCommandId: commandId,
       }),

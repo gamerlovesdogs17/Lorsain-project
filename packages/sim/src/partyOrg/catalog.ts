@@ -379,6 +379,12 @@ export const PLATFORM_POLICY_OPTIONS: Record<string, PlatformPolicyOption[]> = {
 // Organization lobbying / issue campaign frames (sim summaries + media hooks)
 // ---------------------------------------------------------------------------
 
+export type OrgLobbyAmendmentPreference =
+  | "weaken_enforcement"
+  | "delay_implementation"
+  | "expand_scope"
+  | "sunset_clause";
+
 export type OrgLobbyCampaignTemplate = {
   id: string;
   /** Match when org.type includes any token (case-insensitive substring). */
@@ -386,6 +392,12 @@ export type OrgLobbyCampaignTemplate = {
   issueIds: string[];
   stance: "support" | "oppose";
   summary: string;
+  /** Extra bill-pressure strength when this template matches (archetype leverage). */
+  billPressureBonus?: number;
+  /** Preferred amendment frame surfaced to legislature/org pressure metadata. */
+  preferAmendment?: OrgLobbyAmendmentPreference;
+  /** When set, only matches bills carrying one of these provision families. */
+  provisionIdPrefixes?: string[];
 };
 
 export const ORG_LOBBY_CAMPAIGN_TEMPLATES: OrgLobbyCampaignTemplate[] = [
@@ -395,6 +407,9 @@ export const ORG_LOBBY_CAMPAIGN_TEMPLATES: OrgLobbyCampaignTemplate[] = [
     issueIds: ["ISS_LABOR", "ISS_WELFARE"],
     stance: "support",
     summary: "{org} launches a shop-floor pressure campaign backing {target} on {issue}",
+    billPressureBonus: 0.14,
+    preferAmendment: "expand_scope",
+    provisionIdPrefixes: ["PROV_UNION", "PROV_STRIKE", "PROV_TEMP_WORKER"],
   },
   {
     id: "business_regulatory_blitz",
@@ -402,6 +417,18 @@ export const ORG_LOBBY_CAMPAIGN_TEMPLATES: OrgLobbyCampaignTemplate[] = [
     issueIds: ["ISS_TRADE", "ISS_CLIMATE"],
     stance: "oppose",
     summary: "{org} funds a regulatory impact blitz targeting {target} over {issue}",
+    billPressureBonus: 0.1,
+    preferAmendment: "weaken_enforcement",
+  },
+  {
+    id: "business_labor_compliance_push",
+    orgTypeTokens: ["business", "chamber", "industry", "manufactur"],
+    issueIds: ["ISS_LABOR"],
+    stance: "oppose",
+    summary: "{org} demands compliance carve-outs from {target} on {issue}",
+    billPressureBonus: 0.16,
+    preferAmendment: "weaken_enforcement",
+    provisionIdPrefixes: ["PROV_UNION", "PROV_STRIKE", "PROV_TEMP_WORKER"],
   },
   {
     id: "environment_coalition_drive",
@@ -409,6 +436,8 @@ export const ORG_LOBBY_CAMPAIGN_TEMPLATES: OrgLobbyCampaignTemplate[] = [
     issueIds: ["ISS_CLIMATE", "ISS_LIBERTY"],
     stance: "support",
     summary: "{org} coordinates member groups to elevate {target} on {issue}",
+    billPressureBonus: 0.11,
+    preferAmendment: "expand_scope",
   },
   {
     id: "veterans_benefits_push",
@@ -423,6 +452,9 @@ export const ORG_LOBBY_CAMPAIGN_TEMPLATES: OrgLobbyCampaignTemplate[] = [
     issueIds: ["ISS_LIBERTY", "ISS_POLICING", "ISS_REFORM"],
     stance: "oppose",
     summary: "{org} opens a civil-liberties watch on {target}'s {issue} record",
+    billPressureBonus: 0.13,
+    preferAmendment: "sunset_clause",
+    provisionIdPrefixes: ["PROV_SURVEILLANCE", "PROV_CROSS_BORDER_DATA", "PROV_BODY_CAMERA"],
   },
   {
     id: "municipal_league_lobby",
@@ -437,6 +469,19 @@ export const ORG_LOBBY_CAMPAIGN_TEMPLATES: OrgLobbyCampaignTemplate[] = [
     issueIds: ["ISS_TRADE", "ISS_OWNERSHIP"],
     stance: "support",
     summary: "{org} mobilizes producers to back {target}'s {issue} stance in the assembly",
+    billPressureBonus: 0.12,
+    preferAmendment: "delay_implementation",
+    provisionIdPrefixes: ["PROV_FARM", "PROV_STRATEGIC_TARIFFS"],
+  },
+  {
+    id: "tech_platform_audit_lobby",
+    orgTypeTokens: ["tech", "digital", "software"],
+    issueIds: ["ISS_LIBERTY", "ISS_REFORM"],
+    stance: "oppose",
+    summary: "{org} warns {target} that {issue} rules will chill domestic innovation",
+    billPressureBonus: 0.15,
+    preferAmendment: "weaken_enforcement",
+    provisionIdPrefixes: ["PROV_ALGORITHM", "PROV_CROSS_BORDER_DATA"],
   },
   {
     id: "health_professional_alert",
@@ -451,14 +496,34 @@ export function matchOrgLobbyCampaignTemplate(
   orgType: string,
   issueId: string,
   stance: "support" | "oppose",
+  provisionIds?: string[],
 ): OrgLobbyCampaignTemplate | undefined {
   const typeLower = orgType.toLowerCase();
-  return ORG_LOBBY_CAMPAIGN_TEMPLATES.find(
+  const provisions = provisionIds ?? [];
+  const matches = ORG_LOBBY_CAMPAIGN_TEMPLATES.filter(
     (t) =>
       t.stance === stance &&
       t.issueIds.includes(issueId) &&
-      t.orgTypeTokens.some((token) => typeLower.includes(token)),
+      t.orgTypeTokens.some((token) => typeLower.includes(token)) &&
+      (!t.provisionIdPrefixes ||
+        t.provisionIdPrefixes.length === 0 ||
+        provisions.some((pid) =>
+          t.provisionIdPrefixes!.some((prefix) => pid.startsWith(prefix)),
+        )),
   );
+  if (matches.length === 0) {
+    return ORG_LOBBY_CAMPAIGN_TEMPLATES.find(
+      (t) =>
+        t.stance === stance &&
+        t.issueIds.includes(issueId) &&
+        t.orgTypeTokens.some((token) => typeLower.includes(token)) &&
+        !t.provisionIdPrefixes?.length,
+    );
+  }
+  return matches.sort(
+    (a, b) =>
+      (b.billPressureBonus ?? 0) - (a.billPressureBonus ?? 0) || a.id.localeCompare(b.id),
+  )[0];
 }
 
 export function formatOrgLobbyCampaignSummary(

@@ -17,6 +17,7 @@ import {
 } from "./policy.js";
 import { baselineEconomyRuntime, economyRuntimeFromScenario } from "./types.js";
 import type { EconomyLagKind, EconomySectorId, NationalEconomyIndices } from "./types.js";
+import { provinceTradeShockDelta } from "../provinces/tradeShock.js";
 
 function event(
   state: SimState,
@@ -174,6 +175,19 @@ function applyMomentumAndBudget(state: SimState, world: KernelWorld, rng: RngSer
   n.confidenceIndex = clampIndex(n.confidenceIndex - (n.fiscalPressure - 0.35) * 0.4);
 }
 
+function applyTradeShockToProvinces(state: SimState, world: KernelWorld, tradeDelta: number): void {
+  const scenario = world.economyScenario;
+  if (!scenario) return;
+  for (const provinceId of world.provinceIds) {
+    const profile = scenario.provinces[provinceId];
+    const current = state.economyRuntime.provinces[provinceId];
+    if (!profile || !current) continue;
+    const delta = provinceTradeShockDelta(profile, tradeDelta);
+    current.employmentIndex = clampIndex(current.employmentIndex + delta.employmentIndex);
+    current.conditionsIndex = clampIndex(current.conditionsIndex + delta.conditionsIndex);
+  }
+}
+
 function applyShock(
   state: SimState,
   world: KernelWorld,
@@ -196,15 +210,32 @@ function applyShock(
   n.priceIndex = clampIndex(n.priceIndex + Math.abs(magnitude) * 0.15);
   if (Math.abs(magnitude) >= 0.6) {
     const id = allocateEconomicShockId(state);
+    const tradeLinked = magnitude < 0 && rng.float01("economy") < 0.55;
+    if (tradeLinked) {
+      kind = "trade_disruption";
+      const tradeSector = state.economyRuntime.sectors.trade;
+      if (tradeSector) {
+        tradeSector.conditionsIndex = clampIndex(tradeSector.conditionsIndex + magnitude * 0.35);
+      }
+      applyTradeShockToProvinces(state, world, magnitude * 0.4);
+    }
     state.economyRuntime.shocks.push({
       id,
       date: state.currentDate,
       kind,
       magnitude,
       remainingMonths: 2,
-      metadata: {},
+      metadata: tradeLinked ? { sector: "trade" } : {},
     });
-    events.push(event(state, "ECONOMIC_SHOCK", { shockId: id, kind, magnitude }, commandId, 0.7));
+    events.push(
+      event(
+        state,
+        "ECONOMIC_SHOCK",
+        { shockId: id, kind, magnitude, sector: tradeLinked ? "trade" : null },
+        commandId,
+        0.7,
+      ),
+    );
   }
   state.economyRuntime.shocks = state.economyRuntime.shocks.filter((s) => {
     s.remainingMonths -= 1;

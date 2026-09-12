@@ -103,3 +103,20 @@ export function treatyVariantDomesticReaction(treaty: TreatyRecord): string | nu
 export function isTradeKind(kind: TreatyKind): boolean {
   return kind === "trade";
 }
+
+export function treatyRatificationVotePenalty(treaty: TreatyRecord): number {
+  const friction = treaty.metadata.ratificationFriction;
+  return typeof friction === "number" ? friction * 0.28 : 0;
+}
+
+/** High-friction trade variants need a stronger assembly margin when no constitutional supermajority applies. */
+export function treatyRatificationAssemblyFractionOverride(
+  treaty: TreatyRecord,
+  baseFraction: number,
+): number {
+  const friction = treaty.metadata.ratificationFriction;
+  if (typeof friction !== "number") return baseFraction;
+  if (friction >= 0.58) return Math.max(baseFraction, 0.5);
+  if (friction >= 0.5) return Math.max(baseFraction, 0.45);
+  return baseFraction;
+}

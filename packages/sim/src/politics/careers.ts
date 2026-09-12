@@ -12,6 +12,7 @@ import { pushHistory } from "../scheduler.js";
 import type { RngService } from "../rng.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { ensurePoliticsRuntime } from "./state.js";
+import { applyPoliticianPublicBiography } from "./biography.js";
 import {
   AS_CAREER_COOLDOWN_MONTHS,
   AS_MAX_CAREER_ACTIONS_PER_MONTH,
@@ -661,6 +662,7 @@ export function processCareerDecisionsMonth(
         },
         state.currentDate,
       );
+      applyPoliticianPublicBiography(world, state, pol.id);
     }
   }
 
