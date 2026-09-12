@@ -1198,6 +1198,21 @@ export function syncOfficeNominationWinnerToElection(
           independentQualified: false,
         };
         if (cycle && constituencyId) {
+          // Atomic placement: a nominee may only sit on one constituency field.
+          // Prior NPC allocation / other contests must not leave duplicates observable.
+          for (const [otherId, otherField] of Object.entries(cycle.constituencyFields)) {
+            if (otherId === constituencyId) continue;
+            if (otherField.candidateIds.includes(winner)) {
+              otherField.candidateIds = otherField.candidateIds.filter((id) => id !== winner);
+            }
+          }
+          const priorCandidacy = cycle.candidacies[winner];
+          if (priorCandidacy && priorCandidacy.constituencyId !== constituencyId) {
+            const priorField = cycle.constituencyFields[priorCandidacy.constituencyId];
+            if (priorField) {
+              priorField.candidateIds = priorField.candidateIds.filter((id) => id !== winner);
+            }
+          }
           cycle.candidacies[winner] = {
             politicianId: winner,
             constituencyId,
@@ -1215,6 +1230,17 @@ export function syncOfficeNominationWinnerToElection(
           const field = cycle.constituencyFields[constituencyId];
           if (field && !field.candidateIds.includes(winner)) {
             field.candidateIds = [...field.candidateIds, winner].sort();
+          } else if (!field) {
+            const magnitude =
+              world.constituencyElectorate[constituencyId]?.seats ??
+              cycle.constituencyFields[Object.keys(cycle.constituencyFields)[0] ?? ""]?.magnitude ??
+              1;
+            cycle.constituencyFields[constituencyId] = {
+              constituencyId,
+              magnitude,
+              candidateIds: [winner],
+              finalizedDate: null,
+            };
           }
         }
 
