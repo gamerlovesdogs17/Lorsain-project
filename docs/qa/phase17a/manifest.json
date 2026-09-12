@@ -1,6 +1,6 @@
 {
   "phase": "phase17a-government",
-  "commitSha": "c5f0b7e808a0030f2c24a8a9480ca3699a893eb2",
+  "commitSha": "ad6339c2846799ccff4cba98378fa1797cbe6f05",
   "buildTimestamp": "2026-09-12T21:57:55.344Z",
   "generatedAt": "2026-09-12T21:58:14.632Z",
   "base": "http://127.0.0.1:5177/Lorsain-project/",
@@ -232,5 +232,6 @@
   "failures": [],
   "overflowAssertionsPassed": true,
   "desktopOverflowPassed": true,
-  "mobileOverflowPassed": true
+  "mobileOverflowPassed": true,
+  "screenshotContentCommit": "ad6339c2846799ccff4cba98378fa1797cbe6f05"
 }
