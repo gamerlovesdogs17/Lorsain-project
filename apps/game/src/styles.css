@@ -7572,3 +7572,104 @@ body.reduced-motion *::after {
     display: none;
   }
 }
+
+.scenario-host {
+  min-height: 100%;
+  padding: 2rem;
+  display: block;
+}
+.scenario-screen,
+.scenario-editor {
+  max-width: 960px;
+  margin: 0 auto;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+  padding: 1.5rem 1.75rem;
+}
+.scenario-screen-head,
+.scenario-editor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+}
+.scenario-dropzone {
+  display: grid;
+  gap: 0.35rem;
+  place-items: center;
+  padding: 2.5rem;
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: center;
+}
+.scenario-validation-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.scenario-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  background: var(--paper-raised);
+}
+.scenario-issue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.scenario-issue-link {
+  display: block;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+.scenario-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+.scenario-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+.scenario-tabs button {
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+}
+.scenario-tabs button.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.scenario-form {
+  display: grid;
+  gap: 0.75rem;
+}
+.scenario-form label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.92rem;
+}
+.scenario-party-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.scenario-party-card {
+  border: 1px solid var(--line);
+  padding: 0.75rem;
+  border-radius: var(--radius);
+}

@@ -708,10 +708,18 @@ function parseSimulation(
   if (typeof party === "string") return party;
   const partyCountErr = partyCounterError(party, counters);
   if (partyCountErr) return partyCountErr;
+  const scenarioFormatVersion =
+    typeof raw.scenarioFormatVersion === "number" && Number.isInteger(raw.scenarioFormatVersion)
+      ? raw.scenarioFormatVersion
+      : undefined;
+  const scenarioName = typeof raw.scenarioName === "string" ? raw.scenarioName : undefined;
+
   return {
     schemaVersion: SAVE_SCHEMA_VERSION,
     contentVersion: raw.contentVersion,
     scenarioId: raw.scenarioId,
+    ...(scenarioFormatVersion != null ? { scenarioFormatVersion } : {}),
+    ...(scenarioName ? { scenarioName } : {}),
     scenarioStartDate: raw.scenarioStartDate,
     currentDate: raw.currentDate,
     completedTurns: raw.completedTurns,
@@ -830,12 +838,20 @@ export function parseSaveFile(
       return fail("INVALID_RNG", e instanceof Error ? e.message : String(e));
     }
   }
+  const scenarioFormatVersion =
+    typeof obj.scenarioFormatVersion === "number" && Number.isInteger(obj.scenarioFormatVersion)
+      ? obj.scenarioFormatVersion
+      : undefined;
+  const scenarioName = typeof obj.scenarioName === "string" ? obj.scenarioName : undefined;
+
   return {
     ok: true,
     save: {
       schemaVersion: SAVE_SCHEMA_VERSION,
       contentVersion,
       scenarioId,
+      ...(scenarioFormatVersion != null ? { scenarioFormatVersion } : {}),
+      ...(scenarioName ? { scenarioName } : {}),
       simulation: sim,
     },
   };

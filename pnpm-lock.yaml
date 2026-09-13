@@ -41,6 +41,9 @@ importers:
       '@lorsain/map':
         specifier: workspace:*
         version: link:../../packages/map
+      '@lorsain/scenario':
+        specifier: workspace:*
+        version: link:../../packages/scenario
       '@lorsain/sim':
         specifier: workspace:*
         version: link:../../packages/sim
@@ -108,11 +111,23 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
+  packages/scenario:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
   packages/sim:
     dependencies:
+      '@lorsain/content-loader':
+        specifier: workspace:*
+        version: link:../content-loader
       '@lorsain/election-math':
         specifier: workspace:*
         version: link:../election-math
+      '@lorsain/scenario':
+        specifier: workspace:*
+        version: link:../scenario
     devDependencies:
       typescript:
         specifier: ^5.8.2

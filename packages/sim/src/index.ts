@@ -77,6 +77,14 @@ export {
 } from "./integrity/audit.js";
 export { buildTerenaKernelWorld, KernelContentError, type TerenaKernelInput } from "./world.js";
 export {
+  applyScenarioProvenance,
+  buildKernelWorldFromContentInput,
+  buildKernelWorldFromScenarioDocument,
+  buildKernelWorldFromTerenaBundle,
+  buildMiniPlayableWorldFromScenario,
+  type ScenarioWorldBuildOptions,
+} from "./scenario/index.js";
+export {
   terenaElectoralFromBundle,
   terenaPartyFields,
   terenaWorldFieldsFromBundle,

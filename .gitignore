@@ -19,4 +19,7 @@ __pycache__/
 .cursor/
 .calibration/
 
+docs/qa/phase15/smoke-audit.json
+docs/qa/phase17c/tuning/
+
 .phase11-tools/

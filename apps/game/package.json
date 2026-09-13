@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@lorsain/content-loader": "workspace:*",
+    "@lorsain/scenario": "workspace:*",
     "@lorsain/sim": "workspace:*",
     "@lorsain/map": "workspace:*",
     "dexie": "^4.0.11",

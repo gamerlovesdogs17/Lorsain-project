@@ -329,6 +329,10 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     schemaVersion: SAVE_SCHEMA_VERSION,
     contentVersion: world.contentVersion,
     scenarioId: world.scenarioId,
+    ...(world.scenarioFormatVersion != null
+      ? { scenarioFormatVersion: world.scenarioFormatVersion }
+      : {}),
+    ...(world.scenarioName ? { scenarioName: world.scenarioName } : {}),
     scenarioStartDate: world.scenarioStartDate,
     currentDate: world.scenarioStartDate,
     completedTurns: 0,
@@ -3849,6 +3853,10 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
         schemaVersion: SAVE_SCHEMA_VERSION,
         contentVersion: state.contentVersion,
         scenarioId: state.scenarioId,
+        ...(state.scenarioFormatVersion != null
+          ? { scenarioFormatVersion: state.scenarioFormatVersion }
+          : {}),
+        ...(state.scenarioName ? { scenarioName: state.scenarioName } : {}),
         simulation: state,
       });
     },

@@ -205,6 +205,9 @@ export type SimState = {
   schemaVersion: typeof SAVE_SCHEMA_VERSION;
   contentVersion: string;
   scenarioId: string;
+  /** Scenario package format version (separate from save schemaVersion). */
+  scenarioFormatVersion?: number;
+  scenarioName?: string;
   scenarioStartDate: IsoDate;
   currentDate: IsoDate;
   completedTurns: number;
@@ -842,6 +845,8 @@ export type SaveFile = {
   schemaVersion: number;
   contentVersion: string;
   scenarioId: string;
+  scenarioFormatVersion?: number;
+  scenarioName?: string;
   simulation: SimState;
 };
 
@@ -880,6 +885,9 @@ export type InitialScheduledSpec = {
 export type KernelWorld = {
   contentVersion: string;
   scenarioId: string;
+  scenarioFormatVersion?: number;
+  scenarioName?: string;
+  countryName?: string;
   scenarioStartDate: IsoDate;
   canonicalSeed: string;
   offices: Record<string, KernelOffice>;

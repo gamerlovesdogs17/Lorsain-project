@@ -13,10 +13,13 @@ import {
   type SimEvent,
   type SimState,
   type Simulation,
+  buildKernelWorldFromScenarioDocument,
 } from "@lorsain/sim";
+import type { ScenarioDocument } from "@lorsain/scenario";
 import type { ContentBundle } from "@lorsain/content-loader";
 import { loadBrowserContentBundle } from "./content/browserReader.js";
 import { kernelWorldFromBundle } from "./content/world.js";
+import { ScenarioEditorScreen, ScenarioImportScreen } from "./scenario/scenarioScreens.js";
 import {
   downloadSave,
   getSave,
@@ -163,7 +166,19 @@ export default function App() {
   const [bundle, setBundle] = useState<ContentBundle | null>(null);
   const [world, setWorld] = useState<KernelWorld | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<"title" | "select" | "load" | "play" | "settings">("title");
+  const [mode, setMode] = useState<
+    | "title"
+    | "select"
+    | "load"
+    | "play"
+    | "settings"
+    | "importScenario"
+    | "scenarioEditor"
+    | "customSelect"
+  >("title");
+  const [customScenarioDoc, setCustomScenarioDoc] = useState<ScenarioDocument | null>(null);
+  const [customWorld, setCustomWorld] = useState<KernelWorld | null>(null);
+  const [editorSeedDoc, setEditorSeedDoc] = useState<ScenarioDocument | null>(null);
   const [sim, setSim] = useState<Simulation | null>(null);
   const [snap, setSnap] = useState<SimState | null>(null);
   const [screen, setScreen] = useState<Screen>(initialRoute.screen);
@@ -204,6 +219,7 @@ export default function App() {
   const [monthSummaryOpen, setMonthSummaryOpen] = useState(false);
   const qaBooted = useRef(false);
   const feedback = useCommandFeedback();
+  const playWorld = customWorld ?? world;
 
   useEffect(() => {
     try {
@@ -321,7 +337,7 @@ export default function App() {
     [bundle, figures, snap],
   );
   const searchEntries = useMemo<ShellSearchEntry[]>(() => {
-    if (!world || !snap || !catalog) return [];
+    if (!playWorld || !snap || !catalog) return [];
     const pages: Array<[Screen, string, string]> = [
       ["home", "Home", "Current political briefing"],
       ["career", "Political opportunities", "Career and politician directory"],
@@ -351,30 +367,30 @@ export default function App() {
         id: politician.id,
         kind: "Politician",
         label: politicianDisplayName(catalog, politician.id),
-        detail: partyDisplayName(world, politician.partyId, snap),
+        detail: partyDisplayName(playWorld, politician.partyId, snap),
         screen: "career",
       });
     }
-    for (const partyId of Object.keys(world.partyDefinitions)) {
-      if (partyId === world.independentAggregatePartyId) continue;
+    for (const partyId of Object.keys(playWorld.partyDefinitions)) {
+      if (partyId === playWorld.independentAggregatePartyId) continue;
       entries.push({
         id: partyId,
         kind: "Party",
-        label: partyDisplayName(world, partyId, snap),
+        label: partyDisplayName(playWorld, partyId, snap),
         detail: "Leadership, caucus and electoral record",
         screen: "party",
       });
     }
-    for (const faction of Object.values(world.factionDefinitions)) {
+    for (const faction of Object.values(playWorld.factionDefinitions)) {
       entries.push({
         id: faction.factionId,
         kind: "Caucus",
         label: faction.name,
-        detail: partyDisplayName(world, faction.partyId, snap),
+        detail: partyDisplayName(playWorld, faction.partyId, snap),
         screen: "party",
       });
     }
-    for (const provinceId of world.provinceIds) {
+    for (const provinceId of playWorld.provinceIds) {
       entries.push({
         id: provinceId,
         kind: "Province",
@@ -383,17 +399,17 @@ export default function App() {
         screen: "terena",
       });
     }
-    for (const constituencyId of Object.keys(world.constituencyElectorate).sort()) {
+    for (const constituencyId of Object.keys(playWorld.constituencyElectorate).sort()) {
       const place = catalog.places.get(constituencyId);
       entries.push({
         id: constituencyId,
         kind: "Constituency",
         label: place?.name ?? "Constituency",
-        detail: `${place?.provinceName ?? "Terena"} · ${world.constituencyElectorate[constituencyId]?.seats ?? "?"} Assembly seats`,
+        detail: `${place?.provinceName ?? "Terena"} · ${playWorld.constituencyElectorate[constituencyId]?.seats ?? "?"} Assembly seats`,
         screen: "terena",
       });
     }
-    for (const organization of Object.values(world.interestOrganizations)) {
+    for (const organization of Object.values(playWorld.interestOrganizations)) {
       entries.push({
         id: organization.id,
         kind: "Organization",
@@ -484,8 +500,8 @@ export default function App() {
         screen: "archive",
       });
     }
-    if (world.constitutionalDocument) {
-      for (const article of world.constitutionalDocument.articles) {
+    if (playWorld.constitutionalDocument) {
+      for (const article of playWorld.constitutionalDocument.articles) {
         entries.push({
           id: article.id,
           kind: "Article",
@@ -506,7 +522,7 @@ export default function App() {
         }
       }
     }
-    for (const [officeId, office] of Object.entries(world.offices)) {
+    for (const [officeId, office] of Object.entries(playWorld.offices)) {
       entries.push({
         id: officeId,
         kind: "Office",
@@ -522,7 +538,7 @@ export default function App() {
       seen.add(current.lawId);
     }
     return entries;
-  }, [world, snap, catalog]);
+  }, [playWorld, snap, catalog]);
 
   useEffect(() => {
     if (
@@ -586,12 +602,19 @@ export default function App() {
     setGlobalFocus(entry.globalFocus);
   }
 
+  function beginCustomScenario(doc: ScenarioDocument) {
+    const built = buildKernelWorldFromScenarioDocument(doc);
+    setCustomScenarioDoc(doc);
+    setCustomWorld(built);
+    setMode("customSelect");
+  }
+
   function startGame(politicianId: string) {
-    if (!world) return;
+    if (!playWorld) return;
     const created = createSimulation({
-      world,
+      world: playWorld,
       playerPoliticianId: politicianId,
-      seed: "TERENA-2028",
+      seed: customWorld ? `${customWorld.scenarioId}-PLAY` : "TERENA-2028",
     });
     setTurnEvents([]);
     setGlobalFocus(null);
@@ -638,13 +661,19 @@ export default function App() {
   }
 
   function loadFile(save: SaveFile) {
-    if (!world) return;
-    const parsed = parseSaveFile(save, world.contentVersion);
+    if (!playWorld) return;
+    if (save.scenarioId !== playWorld.scenarioId) {
+      setError(
+        `Save scenario ${save.scenarioId} does not match active world ${playWorld.scenarioId}. Import the matching scenario first.`,
+      );
+      return;
+    }
+    const parsed = parseSaveFile(save, playWorld.contentVersion);
     if (!parsed.ok) {
       setError(parsed.error.message);
       return;
     }
-    const restored = restoreSimulation(parsed.save, world);
+    const restored = restoreSimulation(parsed.save, playWorld);
     setTurnEvents([]);
     setMode("play");
     const route = routeFromHash();
@@ -654,13 +683,13 @@ export default function App() {
   }
 
   function replaceSimulation(save: SaveFile) {
-    if (!world) return;
-    const restored = restoreSimulation(save, world);
+    if (!playWorld) return;
+    const restored = restoreSimulation(save, playWorld);
     refresh(restored);
   }
 
   async function resolveAssemblyElection() {
-    if (!sim || !world || busy || countingElection) return;
+    if (!sim || !playWorld || busy || countingElection) return;
     setCountingElection(true);
     try {
       await checkpointAutosave("before Assembly count", { critical: true });
@@ -697,7 +726,7 @@ export default function App() {
       feedback.setNotice(event.message || "The Assembly count could not be completed.");
       setCountingElection(false);
     };
-    worker.postMessage({ save: sim.serializeSave(), world });
+    worker.postMessage({ save: sim.serializeSave(), world: playWorld });
   }
 
   async function resolvePresidentialElection() {
@@ -730,7 +759,7 @@ export default function App() {
   }
 
   async function endTurn() {
-    if (!sim || !world || busyRef.current || countingElection) return;
+    if (!sim || !playWorld || busyRef.current || countingElection) return;
     busyRef.current = true;
     const before = sim.getSnapshot().history.length;
     const nextMonth = addMonths(snap?.currentDate ?? sim.getSnapshot().currentDate, 1);
@@ -763,7 +792,7 @@ export default function App() {
       worker.terminate();
       try {
         if (event.data.ok) {
-          const restored = restoreSimulation(event.data.save, world);
+          const restored = restoreSimulation(event.data.save, playWorld);
           const newEvents = restored.getSnapshot().history.slice(before);
           setTurnEvents(newEvents);
           refresh(restored);
@@ -791,7 +820,7 @@ export default function App() {
       busyRef.current = false;
       setBusy(false);
     };
-    worker.postMessage({ save: sim.serializeSave(), world });
+    worker.postMessage({ save: sim.serializeSave(), world: playWorld });
   }
 
   if (error) {
@@ -814,6 +843,62 @@ export default function App() {
           <h1>Lorsain</h1>
           <p>Loading Terena…</p>
         </div>
+      </div>
+    );
+  }
+  if (mode === "importScenario") {
+    return (
+      <div className="app-title scenario-host">
+        <ScenarioImportScreen
+          onBack={() => setMode("title")}
+          onPlay={(doc) => beginCustomScenario(doc)}
+          onEdit={(doc) => {
+            setEditorSeedDoc(doc);
+            setMode("scenarioEditor");
+          }}
+        />
+      </div>
+    );
+  }
+  if (mode === "scenarioEditor" && editorSeedDoc) {
+    return (
+      <div className="app-title scenario-host">
+        <ScenarioEditorScreen
+          initial={editorSeedDoc}
+          onBack={() => setMode("title")}
+          onPlay={(doc) => beginCustomScenario(doc)}
+        />
+      </div>
+    );
+  }
+  if (mode === "customSelect" && customWorld && customScenarioDoc) {
+    const roster = customWorld.politicians.filter((p) => p.alive && !p.retired);
+    return (
+      <div className="page new-game-page">
+        <div className="new-game-header">
+          <h2 className="serif-head">{customScenarioDoc.name}</h2>
+          <p className="muted">
+            {customScenarioDoc.countryName} · {customScenarioDoc.startDate} · choose your
+            politician
+          </p>
+        </div>
+        <div className="featured-grid">
+          {roster.map((p) => {
+            const party = p.partyId ? customWorld.partyDefinitions[p.partyId]?.name : "Independent";
+            return (
+              <article key={p.id} className="featured-start">
+                <h3>{p.id}</h3>
+                <p>{party}</p>
+                <button className="btn" type="button" onClick={() => startGame(p.id)}>
+                  Begin career
+                </button>
+              </article>
+            );
+          })}
+        </div>
+        <button className="btn secondary" type="button" onClick={() => setMode("title")}>
+          Back
+        </button>
       </div>
     );
   }
@@ -912,6 +997,41 @@ export default function App() {
               <small>
                 {saves.length} saved career{saves.length === 1 ? "" : "s"}
               </small>
+            </button>
+            <button type="button" onClick={() => setMode("importScenario")}>
+              <span>Import scenario</span>
+              <small>Custom world JSON package</small>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditorSeedDoc({
+                  format: "lorsain-scenario",
+                  formatVersion: 1,
+                  scenarioId: "MY_SCENARIO",
+                  name: "Untitled scenario",
+                  startDate: "2028-01-01",
+                  countryName: "New Republic",
+                  contentSections: {
+                    parties: [
+                      {
+                        id: "PARTY_A",
+                        name: "Party A",
+                        abbreviation: "A",
+                        ideology: "centre",
+                        leaderId: "NPC_A",
+                      },
+                    ],
+                    geography: { provinces: [{ id: "PRV_01", name: "Capital Province" }] },
+                    constitution: { assemblySeats: 12, courtJudges: 3 },
+                  },
+                  contentEmbed: { kind: "mini_playable_v1" },
+                });
+                setMode("scenarioEditor");
+              }}
+            >
+              <span>Scenario editor</span>
+              <small>Draft overview, parties, rules</small>
             </button>
             <button type="button" onClick={() => setMode("settings")}>
               <span>Settings</span>
@@ -1262,9 +1382,10 @@ export default function App() {
       </div>
     );
   }
-  if (!sim || !snap || !catalog) return null;
+  if (!sim || !snap || !catalog || !playWorld) return null;
+  const runtimeWorld = playWorld;
   const player = snap.politicians[snap.playerPoliticianId]!;
-  const offices = playerOffices(world, snap, snap.playerPoliticianId);
+  const offices = playerOffices(runtimeWorld, snap, snap.playerPoliticianId);
   const provincialMember = provincialLegislatorForPolitician(snap, snap.playerPoliticianId);
   const roleKind =
     Object.values(snap.officeTerms)
@@ -1273,13 +1394,13 @@ export default function App() {
           term.holderId === snap.playerPoliticianId &&
           (term.status === "active" || term.status === "suspended"),
       )
-      .map((term) => world.offices[term.officeId]?.kind)
+      .map((term) => runtimeWorld.offices[term.officeId]?.kind)
       .find(Boolean) ??
     (provincialMember?.serviceStartDate && provincialMember.serviceEndDate == null
       ? "provincial_legislator"
       : "private_citizen");
   const interrupt = snap.pendingInterrupt;
-  const playerDecisions = collectPlayerActionableDecisions(world, snap);
+  const playerDecisions = collectPlayerActionableDecisions(runtimeWorld, snap);
   const decisionScreen = (kind: string): Screen => {
     if (kind === "assembly_filing") return "career";
     if (
@@ -1312,7 +1433,7 @@ export default function App() {
   }));
   for (const election of Object.values(snap.provincialRuntime.elections)) {
     if (election.status !== "filing_open" || election.playerDecision != null) continue;
-    const playerHome = player.homeProvinceId ?? world.politicianHomeProvince[player.id];
+    const playerHome = player.homeProvinceId ?? runtimeWorld.politicianHomeProvince[player.id];
     if (election.provinceId !== playerHome && election.incumbentId !== player.id) continue;
     attentionItems.push({
       id: `governor-filing:${election.id}`,
@@ -1324,7 +1445,7 @@ export default function App() {
   }
   for (const election of Object.values(snap.provincialRuntime.assemblyElections)) {
     if (election.status !== "filing_open" || election.playerDecision != null) continue;
-    const playerHome = player.homeProvinceId ?? world.politicianHomeProvince[player.id];
+    const playerHome = player.homeProvinceId ?? runtimeWorld.politicianHomeProvince[player.id];
     if (election.provinceId !== playerHome) continue;
     attentionItems.push({
       id: `provincial-filing:${election.id}`,
@@ -1345,7 +1466,7 @@ export default function App() {
   const briefingItems: ShellBriefingItem[] = briefingSource.map((event) => ({
     id: event.id,
     date: event.date,
-    label: eventDisplay(catalog, world, snap, event),
+    label: eventDisplay(catalog, runtimeWorld, snap, event),
     watched:
       [...event.actorIds, ...event.entityIds].some((id) => watchedIds.has(id)) ||
       [...watchedIds].some((id) => JSON.stringify(event.payload).includes(id)),
@@ -1367,12 +1488,12 @@ export default function App() {
           Number(snap.currentDate.slice(5, 7)),
       )
     : null;
-  const provinceId = governedProvinceId(world, snap, player.id);
+  const provinceId = governedProvinceId(runtimeWorld, snap, player.id);
   const roleActions =
     activeCampaign?.actionPointsRemaining ??
     (provinceId ? snap.provincialRuntime.provinces[provinceId]?.actionPointsRemaining : null);
   const statusSegments = [
-    `Standing: ${publicStandingLabel(world, snap, player.id)}`,
+    `Standing: ${publicStandingLabel(runtimeWorld, snap, player.id)}`,
     ...(roleActions != null ? [`${roleActions} action${roleActions === 1 ? "" : "s"}`] : []),
     ...(activeCampaign && monthsRemaining != null
       ? [`${monthsRemaining} month${monthsRemaining === 1 ? "" : "s"} to election`]
@@ -1403,7 +1524,7 @@ export default function App() {
       screen={screen}
       onNavigate={(s: Screen) => navigateTo(s, null)}
       date={snap.currentDate}
-      playerLine={`${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`}
+      playerLine={`${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(runtimeWorld, player.partyId, snap)}`}
       decisionCount={visibleAttentionItems.length}
       roleKind={roleKind}
       campaignActive={Boolean(playerCampaign(snap))}
@@ -1418,7 +1539,7 @@ export default function App() {
       onForward={goForward}
       categorizedItems={categorizedItems}
       inspectorFocus={inspectorFocus}
-      world={world}
+      world={runtimeWorld}
       snap={snap}
       catalog={catalog}
       onEntityNavigate={handleEntityNavigate}
@@ -1441,7 +1562,7 @@ export default function App() {
     >
       {screen === "home" || screen === "office" ? (
         <DecisionPanel
-          world={world}
+          world={runtimeWorld}
           snap={snap}
           sim={sim}
           onDone={() => refresh(sim)}
@@ -1464,7 +1585,7 @@ export default function App() {
       ) : null}
       <GamePages
         screen={screen}
-        world={world}
+        world={runtimeWorld}
         snap={snap}
         sim={sim}
         bundle={bundle}

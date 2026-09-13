@@ -1,5 +1,5 @@
 {
-  "name": "@lorsain/sim",
+  "name": "@lorsain/scenario",
   "version": "0.3.0-predev",
   "private": true,
   "type": "module",
@@ -14,11 +14,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
-  "dependencies": {
-    "@lorsain/election-math": "workspace:*",
-    "@lorsain/scenario": "workspace:*",
-    "@lorsain/content-loader": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

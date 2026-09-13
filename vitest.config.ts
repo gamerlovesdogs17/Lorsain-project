@@ -21,6 +21,7 @@ export default defineConfig({
     // Unit tests import TypeScript sources; package.json exports target dist for runtime consumers.
     alias: {
       "@lorsain/content-schema": path.join(root, "packages/content-schema/src/index.ts"),
+      "@lorsain/scenario": path.join(root, "packages/scenario/src/index.ts"),
       "@lorsain/content-loader/node": path.join(root, "packages/content-loader/src/node.ts"),
       "@lorsain/content-loader": path.join(root, "packages/content-loader/src/index.ts"),
       "@lorsain/sim": path.join(root, "packages/sim/src/index.ts"),

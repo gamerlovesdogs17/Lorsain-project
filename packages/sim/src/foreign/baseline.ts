@@ -148,6 +148,10 @@ export function seedForeignAffairsRuntime(world: KernelWorld, state: SimState): 
     }
   }
 
+  const isCanonicalTerenaForeign =
+    world.scenarioId === "TERENA_2028" && world.terenaWorldCountryId === TERENA_WORLD_ID;
+  if (!isCanonicalTerenaForeign) return;
+
   const dcMembers = ids.filter((id) => countries[id]!.alignmentIds.includes("INT_DC"));
   if (dcMembers.length >= 2) {
     const treatyId = allocateTreatyId(state);

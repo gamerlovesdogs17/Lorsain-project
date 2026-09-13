@@ -1,0 +1,70 @@
+{
+  "format": "lorsain-scenario",
+  "formatVersion": 1,
+  "scenarioId": "ALPHAVEN_2026",
+  "name": "Alphaven Federation (QA Mini)",
+  "description": "Phase 18A QA fixture — smaller assembly, two provinces, distinct parties, non-Terena start date.",
+  "startDate": "2026-06-15",
+  "author": "Lorsain QA",
+  "countryName": "Alphaven Federation",
+  "gameVersion": "0.3.0-predev",
+  "contentSections": {
+    "overview": {
+      "tagline": "Dual-province republic stress test",
+      "foundingYear": 1954
+    },
+    "constitution": {
+      "assemblySeats": 24,
+      "assemblyAbsoluteMajority": 13,
+      "courtJudges": 5,
+      "courtTermYears": 10,
+      "ministerialCensureFraction": 0.5,
+      "regulationReviewDays": 45
+    },
+    "parties": [
+      {
+        "id": "PARTY_ALP_UNITY",
+        "name": "Alpine Unity Front",
+        "abbreviation": "AUF",
+        "ideology": "centre-stability",
+        "leaderId": "NPC_AUF_LDR"
+      },
+      {
+        "id": "PARTY_COAST_REF",
+        "name": "Coastal Reform League",
+        "abbreviation": "CRL",
+        "ideology": "market-reform",
+        "leaderId": "NPC_CRL_LDR"
+      },
+      {
+        "id": "PARTY_HIGHLAND_L",
+        "name": "Highland Labour",
+        "abbreviation": "HLL",
+        "ideology": "labour",
+        "leaderId": "NPC_HLL_LDR"
+      }
+    ],
+    "geography": {
+      "provinces": [
+        { "id": "PRV_ALPINE", "name": "Alpine Canton" },
+        { "id": "PRV_COAST", "name": "Coastal Canton" }
+      ]
+    },
+    "world": {
+      "assemblySeats": 24,
+      "courtJudges": 5,
+      "jurisdictionId": "ALP"
+    },
+    "foreignCountries": [
+      {
+        "id": "NEI_NORTH",
+        "name": "Northern Reach",
+        "region": "maritime",
+        "relation": 0.15
+      }
+    ]
+  },
+  "contentEmbed": {
+    "kind": "mini_playable_v1"
+  }
+}
