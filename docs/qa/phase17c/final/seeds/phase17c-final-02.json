@@ -1,0 +1,1086 @@
+{
+  "schema": "phase17c-runtime-balance/v1",
+  "generatedAt": "2038-01-01T00:00:00.000Z",
+  "meta": {
+    "seed": "phase17c-final-02",
+    "monthsAdvanced": 120,
+    "startingDate": "2028-01-01",
+    "endingDate": "2038-01-01",
+    "elapsedMs": 343780,
+    "runId": "phase17c-final-20260913b",
+    "matrix": "3x10",
+    "years": 10,
+    "commitSha": "e812c771535326f3a6dc93f99d8f8e5b3cb6425e"
+  },
+  "history": {
+    "totalEvents": 23680,
+    "publicEvents": 22996,
+    "byType": [
+      {
+        "key": "PARTY_CONTEST_CANDIDACY_DECLARED",
+        "count": 4423,
+        "share": 0.187
+      },
+      {
+        "key": "FIELD_ORGANIZED",
+        "count": 2719,
+        "share": 0.115
+      },
+      {
+        "key": "FUNDRAISING_PUSH",
+        "count": 1855,
+        "share": 0.078
+      },
+      {
+        "key": "PARTY_CONTEST_OPENED",
+        "count": 1197,
+        "share": 0.051
+      },
+      {
+        "key": "PARTY_CONTEST_CREATED",
+        "count": 1179,
+        "share": 0.05
+      },
+      {
+        "key": "PARTY_CONTEST_RESOLVED",
+        "count": 1149,
+        "share": 0.049
+      },
+      {
+        "key": "OFFICE_NOMINATION_WINNER_SYNCED",
+        "count": 1088,
+        "share": 0.046
+      },
+      {
+        "key": "POLITICIAN_CAREER_DECISION",
+        "count": 960,
+        "share": 0.041
+      },
+      {
+        "key": "OFFICE_TERM_ENDED",
+        "count": 830,
+        "share": 0.035
+      },
+      {
+        "key": "CAMPAIGN_MESSAGE",
+        "count": 610,
+        "share": 0.026
+      },
+      {
+        "key": "CAUCUS_AGENDA_SET",
+        "count": 488,
+        "share": 0.021
+      },
+      {
+        "key": "ORGANIZATION_ACTION",
+        "count": 439,
+        "share": 0.019
+      },
+      {
+        "key": "ENDORSEMENT_MADE",
+        "count": 366,
+        "share": 0.015
+      },
+      {
+        "key": "ENDORSEMENT_RECEIVED",
+        "count": 366,
+        "share": 0.015
+      },
+      {
+        "key": "FOREIGN_OUTREACH",
+        "count": 363,
+        "share": 0.015
+      },
+      {
+        "key": "DEBATE_PREPARED",
+        "count": 352,
+        "share": 0.015
+      },
+      {
+        "key": "AD_CAMPAIGN",
+        "count": 328,
+        "share": 0.014
+      },
+      {
+        "key": "CAMPAIGN_VISIT",
+        "count": 311,
+        "share": 0.013
+      },
+      {
+        "key": "ENDORSEMENT_ENDED",
+        "count": 236,
+        "share": 0.01
+      },
+      {
+        "key": "CAMPAIGN_LAUNCHED",
+        "count": 228,
+        "share": 0.01
+      },
+      {
+        "key": "CAMPAIGN_ATTACK",
+        "count": 227,
+        "share": 0.01
+      },
+      {
+        "key": "PROVINCIAL_BILL_INTRODUCED",
+        "count": 204,
+        "share": 0.009
+      },
+      {
+        "key": "PROVINCIAL_BILL_VOTE",
+        "count": 203,
+        "share": 0.009
+      },
+      {
+        "key": "BILL_INTRODUCED",
+        "count": 154,
+        "share": 0.007
+      },
+      {
+        "key": "PROVINCIAL_BILL_SIGNED",
+        "count": 141,
+        "share": 0.006
+      },
+      {
+        "key": "NOMINATION_SUPPORT_SOUGHT",
+        "count": 135,
+        "share": 0.006
+      },
+      {
+        "key": "ORG_ISSUE_CAMPAIGN",
+        "count": 125,
+        "share": 0.005
+      },
+      {
+        "key": "ECONOMY_MONTH",
+        "count": 120,
+        "share": 0.005
+      },
+      {
+        "key": "TURN_COMPLETED",
+        "count": 120,
+        "share": 0.005
+      },
+      {
+        "key": "FOREIGN_AFFAIRS_MONTH",
+        "count": 116,
+        "share": 0.005
+      },
+      {
+        "key": "BILL_COMMITTEE_PASSED",
+        "count": 100,
+        "share": 0.004
+      },
+      {
+        "key": "BILL_FLOOR_PASSED",
+        "count": 92,
+        "share": 0.004
+      },
+      {
+        "key": "DOMESTIC_FOREIGN_POLITICS_REACTION",
+        "count": 92,
+        "share": 0.004
+      },
+      {
+        "key": "LAW_ENACTED",
+        "count": 90,
+        "share": 0.004
+      },
+      {
+        "key": "BILL_SIGNED",
+        "count": 84,
+        "share": 0.004
+      },
+      {
+        "key": "IMPLEMENTATION_RESPONSE",
+        "count": 84,
+        "share": 0.004
+      },
+      {
+        "key": "LAW_IMPLEMENTATION_PROGRESS",
+        "count": 84,
+        "share": 0.004
+      },
+      {
+        "key": "PARTY_PRIORITIES_SET",
+        "count": 83,
+        "share": 0.004
+      },
+      {
+        "key": "PARTY_CHAIR_CANDIDACY_DECLARED",
+        "count": 80,
+        "share": 0.003
+      },
+      {
+        "key": "LAW_FULLY_IMPLEMENTED",
+        "count": 78,
+        "share": 0.003
+      }
+    ],
+    "byCategory": [
+      {
+        "key": "other",
+        "count": 17760,
+        "share": 0.75
+      },
+      {
+        "key": "elections",
+        "count": 3250,
+        "share": 0.137
+      },
+      {
+        "key": "legislation",
+        "count": 945,
+        "share": 0.04
+      },
+      {
+        "key": "foreign",
+        "count": 764,
+        "share": 0.032
+      },
+      {
+        "key": "province",
+        "count": 727,
+        "share": 0.031
+      },
+      {
+        "key": "government",
+        "count": 90,
+        "share": 0.004
+      },
+      {
+        "key": "implementation",
+        "count": 84,
+        "share": 0.004
+      },
+      {
+        "key": "court",
+        "count": 52,
+        "share": 0.002
+      },
+      {
+        "key": "scandal",
+        "count": 6,
+        "share": 0
+      },
+      {
+        "key": "economy",
+        "count": 2,
+        "share": 0
+      }
+    ]
+  },
+  "newsComposition": {
+    "fromMediaStories": {
+      "legislation": 259,
+      "government": 32,
+      "elections": 66,
+      "scandal": 0,
+      "court": 230,
+      "province": 9,
+      "foreign": 108,
+      "implementation": 84,
+      "economy": 2,
+      "other": 370
+    },
+    "shares": [
+      {
+        "key": "other",
+        "count": 370,
+        "share": 0.319
+      },
+      {
+        "key": "legislation",
+        "count": 259,
+        "share": 0.223
+      },
+      {
+        "key": "court",
+        "count": 230,
+        "share": 0.198
+      },
+      {
+        "key": "foreign",
+        "count": 108,
+        "share": 0.093
+      },
+      {
+        "key": "implementation",
+        "count": 84,
+        "share": 0.072
+      },
+      {
+        "key": "elections",
+        "count": 66,
+        "share": 0.057
+      },
+      {
+        "key": "government",
+        "count": 32,
+        "share": 0.028
+      },
+      {
+        "key": "province",
+        "count": 9,
+        "share": 0.008
+      },
+      {
+        "key": "economy",
+        "count": 2,
+        "share": 0.002
+      },
+      {
+        "key": "scandal",
+        "count": 0,
+        "share": 0
+      }
+    ],
+    "headlineFamilies": [
+      {
+        "key": "government:law_enacted",
+        "count": 137,
+        "share": 0.118
+      },
+      {
+        "key": "courts:court_decision",
+        "count": 127,
+        "share": 0.109
+      },
+      {
+        "key": "politics:party_contest",
+        "count": 86,
+        "share": 0.074
+      },
+      {
+        "key": "politics:implementation_response",
+        "count": 84,
+        "share": 0.072
+      },
+      {
+        "key": "politics:bill_floor",
+        "count": 56,
+        "share": 0.048
+      },
+      {
+        "key": "foreign:foreign_crisis",
+        "count": 44,
+        "share": 0.038
+      },
+      {
+        "key": "government:minister_appointed",
+        "count": 43,
+        "share": 0.037
+      },
+      {
+        "key": "courts:judge_confirmed",
+        "count": 41,
+        "share": 0.035
+      },
+      {
+        "key": "elections:party_leader",
+        "count": 41,
+        "share": 0.035
+      },
+      {
+        "key": "politics:minister_dismissed",
+        "count": 36,
+        "share": 0.031
+      },
+      {
+        "key": "courts:judge_nominated",
+        "count": 34,
+        "share": 0.029
+      },
+      {
+        "key": "government:assembly_motion",
+        "count": 32,
+        "share": 0.028
+      },
+      {
+        "key": "elections:presidential_election",
+        "count": 30,
+        "share": 0.026
+      },
+      {
+        "key": "foreign:treaty_ratified",
+        "count": 27,
+        "share": 0.023
+      },
+      {
+        "key": "politics:bill_returned",
+        "count": 26,
+        "share": 0.022
+      },
+      {
+        "key": "government:budget_proposed",
+        "count": 21,
+        "share": 0.018
+      },
+      {
+        "key": "politics:bill_repassed",
+        "count": 21,
+        "share": 0.018
+      },
+      {
+        "key": "politics:office_term",
+        "count": 21,
+        "share": 0.018
+      },
+      {
+        "key": "politics:presidential_assumption",
+        "count": 21,
+        "share": 0.018
+      },
+      {
+        "key": "elections:campaign_launched",
+        "count": 20,
+        "share": 0.017
+      },
+      {
+        "key": "politics:law_invalidated",
+        "count": 16,
+        "share": 0.014
+      },
+      {
+        "key": "courts:court_vacancy",
+        "count": 15,
+        "share": 0.013
+      },
+      {
+        "key": "politics:assembly_assumption",
+        "count": 14,
+        "share": 0.012
+      },
+      {
+        "key": "politics:case_filed",
+        "count": 13,
+        "share": 0.011
+      }
+    ],
+    "categories": [
+      {
+        "key": "politics",
+        "count": 469,
+        "share": 0.404
+      },
+      {
+        "key": "government",
+        "count": 238,
+        "share": 0.205
+      },
+      {
+        "key": "courts",
+        "count": 217,
+        "share": 0.187
+      },
+      {
+        "key": "elections",
+        "count": 113,
+        "share": 0.097
+      },
+      {
+        "key": "foreign",
+        "count": 108,
+        "share": 0.093
+      },
+      {
+        "key": "organizations",
+        "count": 9,
+        "share": 0.008
+      },
+      {
+        "key": "economy",
+        "count": 6,
+        "share": 0.005
+      }
+    ],
+    "articleStructures": [
+      {
+        "key": "analysis",
+        "count": 246,
+        "share": 0.212
+      },
+      {
+        "key": "straight",
+        "count": 219,
+        "share": 0.189
+      },
+      {
+        "key": "accountability",
+        "count": 216,
+        "share": 0.186
+      },
+      {
+        "key": "conflict",
+        "count": 201,
+        "share": 0.173
+      },
+      {
+        "key": "legal",
+        "count": 104,
+        "share": 0.09
+      },
+      {
+        "key": "reaction",
+        "count": 98,
+        "share": 0.084
+      },
+      {
+        "key": "diplomatic",
+        "count": 76,
+        "share": 0.066
+      }
+    ],
+    "repetition": {
+      "totalStories": 1160,
+      "uniqueExact": 527,
+      "uniqueStructural": 261,
+      "exactDuplicateExtras": 633,
+      "structuralDuplicateExtras": 899,
+      "cooldownWindowDupes": 1
+    }
+  },
+  "templates": [
+    {
+      "catalog": "EXECUTIVE_SITUATIONS",
+      "catalogSize": 23,
+      "firedUnique": 4,
+      "neverFired": [
+        "sit_energy_grid_congestion",
+        "sit_asylum_case_backlog",
+        "sit_consumer_credit_complaints",
+        "sit_police_oversight_hearing",
+        "sit_data_privacy_breach_response",
+        "sit_gas_bridge_climate_tension",
+        "sit_temp_worker_enforcement",
+        "sit_provincial_algorithm_sandbox",
+        "sit_health_impl_capacity",
+        "sit_tariff_revenue_shortfall",
+        "sit_union_recognition_strike_risk",
+        "sit_primary_care_waitlists",
+        "sit_tuition_cap_campus_strain",
+        "sit_community_policing_rollout",
+        "sit_sentencing_overcrowding",
+        "sit_readiness_fund_overspend",
+        "sit_farm_stabilization_payouts",
+        "sit_election_admin_capacity",
+        "sit_competition_enforcement_capacity"
+      ],
+      "possiblyNeverEligible": [
+        "sit_energy_grid_congestion",
+        "sit_asylum_case_backlog",
+        "sit_consumer_credit_complaints",
+        "sit_police_oversight_hearing",
+        "sit_data_privacy_breach_response",
+        "sit_gas_bridge_climate_tension",
+        "sit_temp_worker_enforcement",
+        "sit_provincial_algorithm_sandbox",
+        "sit_health_impl_capacity",
+        "sit_tariff_revenue_shortfall",
+        "sit_union_recognition_strike_risk",
+        "sit_primary_care_waitlists",
+        "sit_tuition_cap_campus_strain",
+        "sit_community_policing_rollout",
+        "sit_sentencing_overcrowding",
+        "sit_readiness_fund_overspend",
+        "sit_farm_stabilization_payouts",
+        "sit_election_admin_capacity",
+        "sit_competition_enforcement_capacity"
+      ],
+      "topRepeats": [
+        {
+          "key": "sit_surveillance_warrant_backlog",
+          "count": 10
+        },
+        {
+          "key": "sit_rail_ownership_dispute",
+          "count": 8
+        },
+        {
+          "key": "sit_deposit_insurance_stress",
+          "count": 1
+        },
+        {
+          "key": "sit_income_tax_compliance_blitz",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "catalog": "SCANDAL_TYPES",
+      "catalogSize": 6,
+      "firedUnique": 1,
+      "neverFired": [
+        "scandal_petty_expense",
+        "scandal_undisclosed_interest",
+        "scandal_data_misuse",
+        "scandal_witness_interference",
+        "scandal_campaign_overlap"
+      ],
+      "possiblyNeverEligible": [
+        "scandal_petty_expense",
+        "scandal_undisclosed_interest",
+        "scandal_data_misuse",
+        "scandal_witness_interference",
+        "scandal_campaign_overlap"
+      ],
+      "topRepeats": [
+        {
+          "key": "scandal_procurement_favor",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "catalog": "CAMPAIGN_SITUATIONS",
+      "catalogSize": 16,
+      "firedUnique": 3,
+      "neverFired": [
+        "controversy",
+        "endorsement_fight",
+        "momentum_lift",
+        "opposition_attack",
+        "gotv_push",
+        "economic_message_war",
+        "foreign_policy_spotlight",
+        "constitutional_reform_debate",
+        "regional_outreach_tour",
+        "policy_rollout_week",
+        "debate_stage_pressure",
+        "organizational_endorsement_wave",
+        "final_stretch"
+      ],
+      "possiblyNeverEligible": [
+        "controversy",
+        "endorsement_fight",
+        "momentum_lift",
+        "opposition_attack",
+        "gotv_push",
+        "economic_message_war",
+        "foreign_policy_spotlight",
+        "constitutional_reform_debate",
+        "regional_outreach_tour",
+        "policy_rollout_week",
+        "debate_stage_pressure",
+        "organizational_endorsement_wave",
+        "final_stretch"
+      ],
+      "topRepeats": [
+        {
+          "key": "fundraising_shortfall",
+          "count": 234
+        },
+        {
+          "key": "integrity_attack_line",
+          "count": 227
+        },
+        {
+          "key": "volunteer_surge",
+          "count": 14
+        }
+      ]
+    }
+  ],
+  "actorConcentration": {
+    "scandalTargets": [
+      {
+        "key": "NPC010",
+        "count": 7
+      }
+    ],
+    "cabinetEventActors": [
+      {
+        "key": "NPC001",
+        "count": 2
+      },
+      {
+        "key": "NPC002",
+        "count": 2
+      },
+      {
+        "key": "NPC003",
+        "count": 2
+      },
+      {
+        "key": "NPC012",
+        "count": 2
+      },
+      {
+        "key": "NPC021",
+        "count": 2
+      },
+      {
+        "key": "NPC005",
+        "count": 1
+      },
+      {
+        "key": "NPC009",
+        "count": 1
+      },
+      {
+        "key": "NPC011",
+        "count": 1
+      },
+      {
+        "key": "NPC164",
+        "count": 1
+      },
+      {
+        "key": "NPC165",
+        "count": 1
+      },
+      {
+        "key": "NPC400",
+        "count": 1
+      },
+      {
+        "key": "NPC520",
+        "count": 1
+      }
+    ]
+  },
+  "partyConcentration": [
+    {
+      "key": "PARTY_NU",
+      "count": 4372
+    },
+    {
+      "key": "PARTY_LAB",
+      "count": 4370
+    },
+    {
+      "key": "PARTY_CR",
+      "count": 3915
+    },
+    {
+      "key": "PARTY_GRN",
+      "count": 2916
+    },
+    {
+      "key": "PARTY_RL",
+      "count": 2806
+    },
+    {
+      "key": "PARTY_PM",
+      "count": 1700
+    }
+  ],
+  "provinceConcentration": [
+    {
+      "key": "P20",
+      "count": 65
+    },
+    {
+      "key": "P07",
+      "count": 62
+    },
+    {
+      "key": "P11",
+      "count": 53
+    },
+    {
+      "key": "FDV",
+      "count": 52
+    },
+    {
+      "key": "P19",
+      "count": 50
+    },
+    {
+      "key": "P09",
+      "count": 49
+    },
+    {
+      "key": "P02",
+      "count": 46
+    },
+    {
+      "key": "P13",
+      "count": 46
+    },
+    {
+      "key": "P06",
+      "count": 45
+    },
+    {
+      "key": "P04",
+      "count": 44
+    },
+    {
+      "key": "P01",
+      "count": 43
+    },
+    {
+      "key": "P03",
+      "count": 42
+    },
+    {
+      "key": "P05",
+      "count": 42
+    },
+    {
+      "key": "P12",
+      "count": 42
+    },
+    {
+      "key": "P17",
+      "count": 40
+    },
+    {
+      "key": "P08",
+      "count": 37
+    },
+    {
+      "key": "P14",
+      "count": 37
+    },
+    {
+      "key": "P15",
+      "count": 37
+    },
+    {
+      "key": "P18",
+      "count": 34
+    },
+    {
+      "key": "P10",
+      "count": 28
+    },
+    {
+      "key": "P16",
+      "count": 27
+    }
+  ],
+  "government": {
+    "governmentTerms": 4,
+    "closedGovernmentTerms": 3,
+    "averageTermMonths": 24,
+    "coalitionFormed": 1,
+    "coalitionBroken": 0,
+    "cabinetReshuffles": 7
+  },
+  "scandals": {
+    "totalRecords": 1,
+    "openAtEnd": 0,
+    "byType": [
+      {
+        "key": "scandal_procurement_favor",
+        "count": 1
+      }
+    ],
+    "byOutcome": [
+      {
+        "key": "substantiated",
+        "count": 1
+      }
+    ],
+    "byStage": [
+      {
+        "key": "resolution",
+        "count": 1
+      }
+    ],
+    "historyEventTypes": [
+      {
+        "key": "POLITICAL_SCANDAL_STAGE",
+        "count": 3
+      },
+      {
+        "key": "POLITICAL_SCANDAL_ALLEGATION",
+        "count": 1
+      },
+      {
+        "key": "POLITICAL_SCANDAL_RESIGNATION",
+        "count": 1
+      },
+      {
+        "key": "POLITICAL_SCANDAL_RESOLVED",
+        "count": 1
+      }
+    ]
+  },
+  "courts": {
+    "courtDecisionsInHistory": 27,
+    "courtDecisionRecords": 27,
+    "dispositions": [
+      {
+        "key": "UPHOLD",
+        "count": 18
+      },
+      {
+        "key": "INVALIDATE",
+        "count": 9
+      }
+    ],
+    "doctrineMentions": [
+      {
+        "key": "federal_provincial_competence",
+        "count": 14,
+        "share": 0.519
+      },
+      {
+        "key": "law_review",
+        "count": 10,
+        "share": 0.37
+      },
+      {
+        "key": "regulation_review",
+        "count": 3,
+        "share": 0.111
+      }
+    ],
+    "caseTypes": [
+      {
+        "key": "LAW_REVIEW",
+        "count": 14,
+        "share": 0.519
+      },
+      {
+        "key": "FEDERAL_PROVINCIAL_DISPUTE",
+        "count": 10,
+        "share": 0.37
+      },
+      {
+        "key": "REGULATION_REVIEW",
+        "count": 3,
+        "share": 0.111
+      }
+    ],
+    "precedentTreatments": [
+      {
+        "key": "follows",
+        "count": 8
+      },
+      {
+        "key": "relies_on",
+        "count": 4
+      },
+      {
+        "key": "distinguishes",
+        "count": 3
+      }
+    ]
+  },
+  "foreign": {
+    "crisesTotal": 50,
+    "crisesActiveAtEnd": 2,
+    "crisisThemes": [
+      {
+        "key": "border tension",
+        "count": 43,
+        "share": 0.86
+      },
+      {
+        "key": "trade dispute",
+        "count": 3,
+        "share": 0.06
+      },
+      {
+        "key": "cyber and espionage dispute",
+        "count": 1,
+        "share": 0.02
+      },
+      {
+        "key": "humanitarian access dispute",
+        "count": 1,
+        "share": 0.02
+      },
+      {
+        "key": "maritime resource dispute",
+        "count": 1,
+        "share": 0.02
+      },
+      {
+        "key": "unknown",
+        "count": 1,
+        "share": 0.02
+      }
+    ],
+    "treatiesTotal": 38,
+    "historyTreatyEvents": [
+      {
+        "key": "TREATY_PROPOSED",
+        "count": 37
+      },
+      {
+        "key": "TREATY_RATIFIED",
+        "count": 20
+      },
+      {
+        "key": "TREATY_REJECTED",
+        "count": 17
+      }
+    ],
+    "historyCrisisEvents": [
+      {
+        "key": "FOREIGN_OUTREACH",
+        "count": 363
+      },
+      {
+        "key": "FOREIGN_AFFAIRS_MONTH",
+        "count": 116
+      },
+      {
+        "key": "FOREIGN_LEADERSHIP_CHANGE",
+        "count": 58
+      },
+      {
+        "key": "FOREIGN_CRISIS_TENSION_CREATED",
+        "count": 49
+      },
+      {
+        "key": "FOREIGN_CRISIS_SETTLED",
+        "count": 36
+      },
+      {
+        "key": "FOREIGN_CRISIS_INCIDENT",
+        "count": 12
+      },
+      {
+        "key": "FOREIGN_CRISIS_DEESCALATED",
+        "count": 9
+      },
+      {
+        "key": "FOREIGN_CRISIS_ESCALATED",
+        "count": 5
+      }
+    ]
+  },
+  "diagnosticFlags": [
+    {
+      "code": "EXECUTIVE_SITUATION_CLUSTER",
+      "severity": "note",
+      "message": "One executive situation template accounts for a large share of fires.",
+      "detail": {
+        "situationId": "sit_surveillance_warrant_backlog",
+        "share": 0.5
+      }
+    },
+    {
+      "code": "PROVINCE_MEDIA_NEGLECT",
+      "severity": "info",
+      "message": "Province-tagged news composition share below 3%.",
+      "detail": {
+        "provinceShare": 0.008
+      }
+    },
+    {
+      "code": "ACTOR_SCANDAL_CONCENTRATION",
+      "severity": "note",
+      "message": "A single politician received half or more of scandal targets.",
+      "detail": {
+        "politicianId": "NPC010",
+        "share": 1
+      }
+    },
+    {
+      "code": "FOREIGN_CRISIS_THEME_DOMINANCE",
+      "severity": "watch",
+      "message": "Dominant foreign crisis theme exceeds 55% of crises.",
+      "detail": {
+        "theme": "border tension",
+        "share": 0.86
+      }
+    }
+  ]
+}

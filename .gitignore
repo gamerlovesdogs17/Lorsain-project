@@ -21,5 +21,6 @@ __pycache__/
 
 docs/qa/phase15/smoke-audit.json
 docs/qa/phase17c/tuning/
+docs/qa/phase17c/final/*.log
 
 .phase11-tools/
