@@ -11,10 +11,7 @@ import {
 } from "./index.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
-const fixturePath = resolve(
-  repoRoot,
-  "docs/qa/phase18/fixtures/custom-mini-world.lorsain.json",
-);
+const fixturePath = resolve(repoRoot, "docs/qa/phase18/fixtures/custom-mini-world.lorsain.json");
 
 describe("@lorsain/scenario", () => {
   it("validates and imports the phase 18 QA mini fixture", () => {

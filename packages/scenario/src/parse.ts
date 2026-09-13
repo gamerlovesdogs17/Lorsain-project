@@ -38,16 +38,16 @@ function parseContentSections(raw: unknown): ScenarioContentSections {
     };
   }
   if (Array.isArray(raw.parties)) {
-    out.parties = raw.parties
-      .filter(isRecord)
-      .map((p) => ({
-        id: String(p.id ?? ""),
-        name: String(p.name ?? ""),
-        abbreviation: String(p.abbreviation ?? p.short ?? ""),
-        ideology: String(p.ideology ?? ""),
-        leaderId: String(p.leaderId ?? p.leader_id ?? ""),
-        ...(p.color === null || typeof p.color === "string" ? { color: p.color as string | null } : {}),
-      }));
+    out.parties = raw.parties.filter(isRecord).map((p) => ({
+      id: String(p.id ?? ""),
+      name: String(p.name ?? ""),
+      abbreviation: String(p.abbreviation ?? p.short ?? ""),
+      ideology: String(p.ideology ?? ""),
+      leaderId: String(p.leaderId ?? p.leader_id ?? ""),
+      ...(p.color === null || typeof p.color === "string"
+        ? { color: p.color as string | null }
+        : {}),
+    }));
   }
   if (isRecord(raw.geography) && Array.isArray(raw.geography.provinces)) {
     out.geography = {

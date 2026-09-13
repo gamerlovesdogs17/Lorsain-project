@@ -7,7 +7,10 @@ import {
 } from "../calendar.js";
 import { syntheticAgentProfile } from "../agents/profile.js";
 import { applyInstitutionalPublicIdeology } from "../elections/public-ideology.js";
-import { CANONICAL_ASSEMBLY_ELECTION_ID, CANONICAL_PRESIDENTIAL_ELECTION_ID } from "../elections/types.js";
+import {
+  CANONICAL_ASSEMBLY_ELECTION_ID,
+  CANONICAL_PRESIDENTIAL_ELECTION_ID,
+} from "../elections/types.js";
 import { kernelOffice } from "../synthetic-world.js";
 import type { PartyDefinition } from "../parties/types.js";
 import type { KernelWorld } from "../types.js";
@@ -37,16 +40,14 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     doc.contentSections.world?.assemblySeats ??
     24;
   const courtJudges =
-    doc.contentSections.constitution?.courtJudges ??
-    doc.contentSections.world?.courtJudges ??
-    5;
+    doc.contentSections.constitution?.courtJudges ?? doc.contentSections.world?.courtJudges ?? 5;
   const absoluteMajority =
-    doc.contentSections.constitution?.assemblyAbsoluteMajority ??
-    Math.floor(assemblySeats / 2) + 1;
+    doc.contentSections.constitution?.assemblyAbsoluteMajority ?? Math.floor(assemblySeats / 2) + 1;
 
-  const provinces =
-    doc.contentSections.geography?.provinces?.map((p: { id: string }) => p.id) ??
-    ["PRV_ALPHA", "PRV_BETA"];
+  const provinces = doc.contentSections.geography?.provinces?.map((p: { id: string }) => p.id) ?? [
+    "PRV_ALPHA",
+    "PRV_BETA",
+  ];
   const parties = doc.contentSections.parties ?? [
     {
       id: "PARTY_A",
@@ -89,7 +90,12 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
       title: `President of ${doc.countryName}`,
       jurisdictionId: jurisdiction,
       actingAllowed: true,
-      incompatibleWithKinds: ["assembly_member", "governor", "minister", "constitutional_court_justice"],
+      incompatibleWithKinds: [
+        "assembly_member",
+        "governor",
+        "minister",
+        "constitutional_court_justice",
+      ],
     }),
     OFFICE_SPEAKER: kernelOffice({
       id: "OFFICE_SPEAKER",
@@ -163,7 +169,12 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
   for (const p of politicians) {
     agentProfiles[p.id] = syntheticAgentProfile(p.id, {
       issueSalience: defaultSalience,
-      roleTypes: p.id === presidentId ? ["president"] : p.id.startsWith("NPC_ASM") ? ["assembly_member"] : [],
+      roleTypes:
+        p.id === presidentId
+          ? ["president"]
+          : p.id.startsWith("NPC_ASM")
+            ? ["assembly_member"]
+            : [],
     });
   }
 
@@ -364,7 +375,10 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     startingFactionChairs: Object.fromEntries(parties.map((p) => [`${p.id}_MAIN`, p.leaderId])),
     provinceIds: [...provinces],
     politicianHomeProvince: Object.fromEntries(
-      politicians.map((p, i) => [p.id, provinces[i % provinces.length] ?? provinces[0] ?? "PRV_ALPHA"]),
+      politicians.map((p, i) => [
+        p.id,
+        provinces[i % provinces.length] ?? provinces[0] ?? "PRV_ALPHA",
+      ]),
     ),
     constituencyProvinceShares: {
       C_NORTH: provinces[0] ? [{ provinceId: provinces[0], share: 1 }] : [],
@@ -400,8 +414,7 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
       assemblyAbsoluteMajority: absoluteMajority,
     },
     executiveConstitution: {
-      assemblyCensureFraction:
-        doc.contentSections.constitution?.ministerialCensureFraction ?? 0.55,
+      assemblyCensureFraction: doc.contentSections.constitution?.ministerialCensureFraction ?? 0.55,
       regulationReviewDays: doc.contentSections.constitution?.regulationReviewDays ?? 60,
       emergencyInitialDays: 14,
       emergencyExtensionDays: 30,

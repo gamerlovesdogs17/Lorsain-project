@@ -878,8 +878,7 @@ export default function App() {
         <div className="new-game-header">
           <h2 className="serif-head">{customScenarioDoc.name}</h2>
           <p className="muted">
-            {customScenarioDoc.countryName} · {customScenarioDoc.startDate} · choose your
-            politician
+            {customScenarioDoc.countryName} · {customScenarioDoc.startDate} · choose your politician
           </p>
         </div>
         <div className="featured-grid">

@@ -29,6 +29,27 @@ function issueRow(issue: ScenarioValidationIssue, onNavigate?: (path: string) =>
   );
 }
 
+function patchConstitutionField(
+  doc: ScenarioDocument,
+  key: "assemblySeats" | "courtJudges" | "ministerialCensureFraction",
+  raw: string,
+): ScenarioDocument {
+  const n = Number(raw);
+  const next = { ...(doc.contentSections.constitution ?? {}) };
+  if (raw.trim() === "" || !Number.isFinite(n)) {
+    delete next[key];
+  } else {
+    next[key] = n;
+  }
+  return {
+    ...doc,
+    contentSections: {
+      ...doc.contentSections,
+      constitution: next,
+    },
+  };
+}
+
 export function ScenarioImportScreen(props: {
   onBack: () => void;
   onPlay: (doc: ScenarioDocument) => void;
@@ -79,7 +100,10 @@ export function ScenarioImportScreen(props: {
           <div>
             <div className="kicker">CUSTOM SCENARIO</div>
             <h1>Import scenario</h1>
-            <p>Load a portable <code>.lorsain.json</code> world package. Terena remains the bundled default.</p>
+            <p>
+              Load a portable <code>.lorsain.json</code> world package. Terena remains the bundled
+              default.
+            </p>
           </div>
           <button type="button" className="btn secondary" onClick={props.onBack}>
             Back
@@ -213,7 +237,12 @@ export function ScenarioEditorScreen(props: {
           <button type="button" className="btn secondary" onClick={download}>
             Export JSON
           </button>
-          <button type="button" className="btn" disabled={blocked} onClick={() => props.onPlay(doc)}>
+          <button
+            type="button"
+            className="btn"
+            disabled={blocked}
+            onClick={() => props.onPlay(doc)}
+          >
             Play
           </button>
         </div>
@@ -292,17 +321,7 @@ export function ScenarioEditorScreen(props: {
                 min={1}
                 value={doc.contentSections.constitution?.assemblySeats ?? ""}
                 onChange={(e) => {
-                  const n = Number(e.target.value);
-                  patch((d) => ({
-                    ...d,
-                    contentSections: {
-                      ...d.contentSections,
-                      constitution: {
-                        ...d.contentSections.constitution,
-                        assemblySeats: Number.isFinite(n) ? n : undefined,
-                      },
-                    },
-                  }));
+                  patch((d) => patchConstitutionField(d, "assemblySeats", e.target.value));
                 }}
               />
             </label>
@@ -313,17 +332,7 @@ export function ScenarioEditorScreen(props: {
                 min={0}
                 value={doc.contentSections.constitution?.courtJudges ?? ""}
                 onChange={(e) => {
-                  const n = Number(e.target.value);
-                  patch((d) => ({
-                    ...d,
-                    contentSections: {
-                      ...d.contentSections,
-                      constitution: {
-                        ...d.contentSections.constitution,
-                        courtJudges: Number.isFinite(n) ? n : undefined,
-                      },
-                    },
-                  }));
+                  patch((d) => patchConstitutionField(d, "courtJudges", e.target.value));
                 }}
               />
             </label>
@@ -336,17 +345,9 @@ export function ScenarioEditorScreen(props: {
                 max={1}
                 value={doc.contentSections.constitution?.ministerialCensureFraction ?? ""}
                 onChange={(e) => {
-                  const n = Number(e.target.value);
-                  patch((d) => ({
-                    ...d,
-                    contentSections: {
-                      ...d.contentSections,
-                      constitution: {
-                        ...d.contentSections.constitution,
-                        ministerialCensureFraction: Number.isFinite(n) ? n : undefined,
-                      },
-                    },
-                  }));
+                  patch((d) =>
+                    patchConstitutionField(d, "ministerialCensureFraction", e.target.value),
+                  );
                 }}
               />
             </label>
@@ -430,9 +431,7 @@ export function ScenarioEditorScreen(props: {
             </article>
             <article className="scenario-panel">
               <h2>Warnings ({liveReport.warnings.length})</h2>
-              <ul className="scenario-issue-list">
-                {liveReport.warnings.map((i) => issueRow(i))}
-              </ul>
+              <ul className="scenario-issue-list">{liveReport.warnings.map((i) => issueRow(i))}</ul>
             </article>
             {focusPath ? <p className="scenario-focus-hint">Focused: {focusPath}</p> : null}
           </section>

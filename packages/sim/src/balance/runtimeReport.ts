@@ -639,10 +639,7 @@ export function buildRuntimeBalanceReport(
     }
     caseTypeCounts.set(decision.caseType, (caseTypeCounts.get(decision.caseType) ?? 0) + 1);
     for (const t of decision.precedentTreatments ?? []) {
-      precedentTreatmentCounts.set(
-        t.relation,
-        (precedentTreatmentCounts.get(t.relation) ?? 0) + 1,
-      );
+      precedentTreatmentCounts.set(t.relation, (precedentTreatmentCounts.get(t.relation) ?? 0) + 1);
     }
   }
   // Fallback for older snapshots missing decision records.

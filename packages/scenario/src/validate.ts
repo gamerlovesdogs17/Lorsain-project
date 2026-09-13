@@ -20,10 +20,7 @@ const KNOWN_ROOT_KEYS = new Set([
   "contentEmbed",
 ]);
 
-function push(
-  bucket: ScenarioValidationIssue[],
-  issue: ScenarioValidationIssue,
-): void {
+function push(bucket: ScenarioValidationIssue[], issue: ScenarioValidationIssue): void {
   bucket.push(issue);
 }
 
@@ -186,8 +183,7 @@ function validateSemantic(doc: ScenarioDocument): ScenarioValidationReport {
   }
 
   const asm =
-    doc.contentSections.constitution?.assemblySeats ??
-    doc.contentSections.world?.assemblySeats;
+    doc.contentSections.constitution?.assemblySeats ?? doc.contentSections.world?.assemblySeats;
   if (asm != null && (!Number.isInteger(asm) || asm < 1)) {
     push(errors, {
       path: "contentSections.world.assemblySeats",

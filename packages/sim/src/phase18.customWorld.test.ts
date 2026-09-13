@@ -12,10 +12,7 @@ import {
 import { buildKernelWorldFromScenarioDocument } from "./scenario/kernelBridge.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
-const fixturePath = resolve(
-  repoRoot,
-  "docs/qa/phase18/fixtures/custom-mini-world.lorsain.json",
-);
+const fixturePath = resolve(repoRoot, "docs/qa/phase18/fixtures/custom-mini-world.lorsain.json");
 
 function loadCustomWorld() {
   const text = readFileSync(fixturePath, "utf8");

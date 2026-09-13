@@ -1,8 +1,4 @@
-export {
-  SCENARIO_FORMAT,
-  SCENARIO_FORMAT_VERSION,
-  SCENARIO_MAX_BYTES,
-} from "./constants.js";
+export { SCENARIO_FORMAT, SCENARIO_FORMAT_VERSION, SCENARIO_MAX_BYTES } from "./constants.js";
 export type {
   ScenarioContentEmbed,
   ScenarioContentSections,
