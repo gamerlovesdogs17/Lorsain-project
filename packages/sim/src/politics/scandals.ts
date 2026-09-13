@@ -12,6 +12,7 @@ import {
   readContentCooldownRegistry,
 } from "../content/cooldown.js";
 import { ensurePoliticsRuntime } from "./state.js";
+import { applyScandalOfficeConsequences, chooseGovernmentResponse } from "./scandalConsequences.js";
 
 export type ScandalSeverityPath = "administrative" | "investigation" | "prosecutorial";
 
@@ -38,6 +39,14 @@ export type ScandalPartyResponse =
   | "request_resignation"
   | "wait_for_investigation";
 
+/** Head-of-government response — not identical to Party Chair response. */
+export type ScandalGovernmentResponse =
+  | "retain"
+  | "request_resignation"
+  | "remove_minister"
+  | "restrict_duties"
+  | "wait_for_investigation";
+
 export type ScandalRecord = {
   id: string;
   typeId: string;
@@ -51,7 +60,7 @@ export type ScandalRecord = {
   severity: number;
   investigator: string | null;
   partyResponse: ScandalPartyResponse | null;
-  governmentResponse: ScandalPartyResponse | null;
+  governmentResponse: ScandalGovernmentResponse | null;
   targetResponse: ScandalTargetResponse | null;
   legalReferralId: string | null;
   outcome: ScandalOutcome | null;
@@ -332,21 +341,41 @@ function nextStage(
 ): ScandalStage {
   if (current === "resolution") return "resolution";
   const idx = STAGE_ORDER.indexOf(current);
-  // Rare skip forward for severe paths with strong evidence.
-  if (type.severityPath === "prosecutorial" && evidence > 0.65 && rng.float01("scandals") < 0.25) {
-    const jump = Math.min(STAGE_ORDER.length - 1, idx + 2);
-    return STAGE_ORDER[jump]!;
+  const remaining = STAGE_ORDER.slice(idx + 1);
+  if (remaining.length === 0) return "resolution";
+
+  // Stay weight from current stageWeights — types with high "scrutiny" linger in early stages.
+  const stayWeight = Math.max(0.05, type.stageWeights[current] * 0.55);
+  const candidates: { stage: ScandalStage | "stay"; weight: number }[] = [
+    { stage: "stay", weight: stayWeight },
+  ];
+  for (const s of remaining) {
+    let w = type.stageWeights[s];
+    if (s === "referral") {
+      if (evidence < 0.45) w *= 0.12;
+      else if (evidence < 0.6) w *= 0.45;
+      if (type.severityPath === "administrative") w *= 0.25;
+      if (type.severityPath === "prosecutorial") w *= 1.35;
+    }
+    if (s === "resolution") {
+      if (evidence > 0.62 && type.severityPath !== "administrative") w *= 0.55;
+      if (evidence < 0.28) w *= 1.6;
+    }
+    if (s === "investigation" && evidence > 0.4) w *= 1.15;
+    if (s === "finding" && evidence > 0.55) w *= 1.1;
+    // Prefer nearer stages slightly so progress is gradual unless weights say otherwise.
+    const distance = STAGE_ORDER.indexOf(s) - idx;
+    w *= distance <= 1 ? 1.25 : distance === 2 ? 0.85 : 0.55;
+    candidates.push({ stage: s, weight: Math.max(0.001, w) });
   }
-  // Soft exit to resolution from early stages when evidence collapses.
-  if (evidence < 0.22 && current !== "allegation" && rng.float01("scandals") < 0.35) {
-    return "resolution";
+  const total = candidates.reduce((s, c) => s + c.weight, 0);
+  let roll = rng.float01("scandals") * total;
+  for (const c of candidates) {
+    roll -= c.weight;
+    if (roll <= 0) return c.stage === "stay" ? current : c.stage;
   }
-  const next = STAGE_ORDER[Math.min(STAGE_ORDER.length - 1, idx + 1)]!;
-  // Administrative paths rarely enter referral.
-  if (next === "referral" && type.severityPath === "administrative" && evidence < 0.7) {
-    return "resolution";
-  }
-  return next;
+  const last = candidates[candidates.length - 1]!;
+  return last.stage === "stay" ? current : last.stage;
 }
 
 function resolveOutcome(
@@ -396,9 +425,12 @@ function evolveEvidence(record: ScandalRecord, type: ScandalTypeDefinition, rng:
 function updateResignationPressure(record: ScandalRecord, type: ScandalTypeDefinition): void {
   let p = record.severity * 0.35 + record.evidenceStrength * 0.4;
   if (record.stage === "referral" || record.stage === "finding") p += 0.12;
-  if (record.partyResponse === "request_resignation") p += 0.18;
-  if (record.partyResponse === "suspend_role") p += 0.1;
+  if (record.partyResponse === "request_resignation") p += 0.12;
+  if (record.governmentResponse === "request_resignation") p += 0.14;
+  if (record.governmentResponse === "remove_minister") p += 0.22;
+  if (record.partyResponse === "suspend_role") p += 0.08;
   if (record.partyResponse === "defend") p -= 0.08;
+  if (record.governmentResponse === "retain") p -= 0.1;
   if (record.targetResponse === "cooperate" || record.targetResponse === "apologize") p -= 0.05;
   if (type.severityPath === "administrative") p *= 0.55;
   if (type.severityPath === "prosecutorial") p *= 1.15;
@@ -552,17 +584,38 @@ export function processScandalAllegationsMonth(
   );
   if (alreadyOpen) return [];
 
+  // Actor cooldown — avoid serial unrelated scandals on the same minister.
+  const actorKey = `scandal_actor_${targetId}`;
+  if (
+    !contentCooldownEligible(
+      readContentCooldownRegistry(runtime.metadata),
+      actorKey,
+      state.currentDate,
+      10,
+    )
+  ) {
+    return [];
+  }
+
   const record = createScandalRecord(state, scandalType, targetId, rng);
   record.targetResponse = chooseTargetResponse(rng, scandalType, record.evidenceStrength);
+  updateResignationPressure(record, scandalType);
   record.partyResponse = choosePartyResponse(
     rng,
     scandalType,
     record.evidenceStrength,
     record.resignationPressure,
   );
-  record.governmentResponse = record.partyResponse;
+  record.governmentResponse = chooseGovernmentResponse(
+    record.partyResponse,
+    record.evidenceStrength,
+    record.resignationPressure,
+    scandalType.severityPath,
+    rng.float01("scandals"),
+  );
   updateResignationPressure(record, scandalType);
   runtime.scandals[record.id] = record;
+  recordContentCooldown(runtime.metadata, actorKey, state.currentDate);
 
   const headline =
     scandalType.headlines[Math.floor(rng.float01("scandals") * scandalType.headlines.length)] ??
@@ -586,6 +639,7 @@ export function processScandalAllegationsMonth(
       targetPoliticianId: targetId,
       targetResponse: record.targetResponse,
       partyResponse: record.partyResponse,
+      governmentResponse: record.governmentResponse,
     },
     sourceScheduledEventId: null,
     sourceCommandId: commandId,
@@ -626,7 +680,13 @@ export function processScandalLifecycleMonth(
       record.evidenceStrength,
       record.resignationPressure,
     );
-    record.governmentResponse = record.partyResponse;
+    record.governmentResponse = chooseGovernmentResponse(
+      record.partyResponse,
+      record.evidenceStrength,
+      record.resignationPressure,
+      type.severityPath,
+      rng.float01("scandals"),
+    );
     updateResignationPressure(record, type);
 
     const prevStage = record.stage;
@@ -642,7 +702,8 @@ export function processScandalLifecycleMonth(
       record.resignationPressure > 0.82 &&
       record.evidenceStrength > 0.58 &&
       record.targetResponse !== "resign" &&
-      rng.float01("scandals") < 0.2
+      record.governmentResponse !== "retain" &&
+      rng.float01("scandals") < 0.18
     ) {
       record.targetResponse = "resign";
       events.push(
@@ -658,6 +719,7 @@ export function processScandalLifecycleMonth(
             scandalTypeId: type.id,
             evidenceLabel: record.evidenceLabel,
             partyResponse: record.partyResponse,
+            governmentResponse: record.governmentResponse,
           },
           sourceScheduledEventId: null,
           sourceCommandId: commandId,
@@ -665,11 +727,12 @@ export function processScandalLifecycleMonth(
       );
     }
 
+    events.push(...applyScandalOfficeConsequences(world, state, record, commandId));
+
     if (
       record.stage === "resolution" ||
       (record.monthsInStage >= 3 && prevStage === record.stage && record.stage !== "allegation")
     ) {
-      // Force resolution if stalled too long after finding/referral.
       if (
         record.stage !== "resolution" &&
         (record.stage === "finding" || record.stage === "referral")
@@ -680,6 +743,20 @@ export function processScandalLifecycleMonth(
 
     if (record.stage === "resolution" && record.outcome == null) {
       record.outcome = resolveOutcome(type, record.evidenceStrength, prevStage, rng);
+      if (
+        record.outcome === "exonerated" ||
+        record.outcome === "unsubstantiated" ||
+        record.outcome === "procedurally_closed"
+      ) {
+        record.metadata.cleared = true;
+        record.metadata.guilty = false;
+      } else if (
+        record.outcome === "substantiated" ||
+        record.outcome === "partially_substantiated"
+      ) {
+        record.metadata.guilty = true;
+      }
+      events.push(...applyScandalOfficeConsequences(world, state, record, commandId));
       const importance =
         record.outcome === "substantiated" || record.outcome === "partially_substantiated"
           ? 0.62
@@ -699,9 +776,9 @@ export function processScandalLifecycleMonth(
           legalReferralId: record.legalReferralId,
           targetResponse: record.targetResponse,
           partyResponse: record.partyResponse,
-          // Allegation does not imply guilt — outcome is authoritative.
-          guilty:
-            record.outcome === "substantiated" || record.outcome === "partially_substantiated",
+          governmentResponse: record.governmentResponse,
+          guilty: record.metadata.guilty === true,
+          cleared: record.metadata.cleared === true,
         },
         sourceScheduledEventId: null,
         sourceCommandId: commandId,
@@ -725,6 +802,7 @@ export function processScandalLifecycleMonth(
             evidenceLabel: record.evidenceLabel,
             investigator: record.investigator,
             partyResponse: record.partyResponse,
+            governmentResponse: record.governmentResponse,
           },
           sourceScheduledEventId: null,
           sourceCommandId: commandId,
@@ -733,7 +811,6 @@ export function processScandalLifecycleMonth(
     }
   }
 
-  void world;
   return events;
 }
 
@@ -756,12 +833,14 @@ export function advanceScandalForTests(
   months: number,
   rng: RngService,
   commandId = "test_scandal",
+  world?: KernelWorld,
 ): ScandalRecord {
   const runtime = ensurePoliticsRuntime(state);
   const record = runtime.scandals[scandalId];
   if (!record) throw new Error(`missing scandal ${scandalId}`);
+  const w = world ?? ({ offices: {} } as KernelWorld);
   for (let i = 0; i < months; i++) {
-    processScandalLifecycleMonth({} as KernelWorld, state, rng, commandId);
+    processScandalLifecycleMonth(w, state, rng, commandId);
   }
   return record;
 }

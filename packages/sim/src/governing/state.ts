@@ -23,6 +23,9 @@ export function ensureGoverningRuntime(state: SimState): Phase13Runtime {
   if (!state.governingRuntime.resourceAllocations) {
     state.governingRuntime.resourceAllocations = {};
   }
+  if (!state.governingRuntime.fiscalOutlays) {
+    state.governingRuntime.fiscalOutlays = {};
+  }
   return state.governingRuntime;
 }
 
@@ -189,6 +192,33 @@ export function parseGoverningRuntime(raw: unknown): Phase13Runtime | string {
         fundingSource,
         kind,
         actorId: typeof r.actorId === "string" ? r.actorId : "",
+        active: r.active !== false,
+      };
+    }
+  }
+
+  if (
+    obj.fiscalOutlays &&
+    typeof obj.fiscalOutlays === "object" &&
+    !Array.isArray(obj.fiscalOutlays)
+  ) {
+    for (const [id, rec] of Object.entries(obj.fiscalOutlays as Record<string, unknown>)) {
+      if (!rec || typeof rec !== "object") continue;
+      const r = rec as Record<string, unknown>;
+      const category =
+        typeof r.category === "string" &&
+        (SPENDING_CATEGORIES as readonly string[]).includes(r.category)
+          ? (r.category as (typeof SPENDING_CATEGORIES)[number])
+          : "administration";
+      base.fiscalOutlays[id] = {
+        id,
+        kind: r.kind === "temporary" ? "temporary" : "one_time",
+        amount: typeof r.amount === "number" ? Math.max(0, r.amount) : 0,
+        category,
+        startDate: typeof r.startDate === "string" ? r.startDate : "2000-01-01",
+        endDate: typeof r.endDate === "string" ? r.endDate : "2000-01-01",
+        lawId: typeof r.lawId === "string" ? r.lawId : null,
+        source: typeof r.source === "string" ? r.source : "outlay",
         active: r.active !== false,
       };
     }

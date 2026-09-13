@@ -208,6 +208,18 @@ function applyActiveResourceAllocationsToFiscal(state: SimState): void {
     runtime.fiscal.spendingByCategory[cat] =
       (runtime.fiscal.spendingByCategory[cat] ?? 0) + alloc.amount;
   }
+  for (const outlay of Object.values(runtime.fiscalOutlays ?? {})) {
+    if (!outlay.active) continue;
+    if (state.currentDate < outlay.startDate) continue;
+    if (state.currentDate > outlay.endDate) {
+      outlay.active = false;
+      continue;
+    }
+    if (outlay.amount <= 0) continue;
+    added += outlay.amount;
+    runtime.fiscal.spendingByCategory[outlay.category] =
+      (runtime.fiscal.spendingByCategory[outlay.category] ?? 0) + outlay.amount;
+  }
   if (added > 0) {
     runtime.fiscal.expenditure = Math.round((runtime.fiscal.expenditure + added) * 10) / 10;
     runtime.fiscal.balance =

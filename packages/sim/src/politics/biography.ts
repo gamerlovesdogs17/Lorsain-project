@@ -1,5 +1,7 @@
 import { activeTermsForPolitician } from "../offices.js";
 import type { KernelWorld, SimState } from "../types.js";
+import { ensurePoliticsRuntime } from "./state.js";
+import { ensurePartyOrgRuntime } from "../partyOrg/state.js";
 
 const OFFICE_KIND_LABELS: Record<string, string> = {
   president: "President",
@@ -11,15 +13,25 @@ const OFFICE_KIND_LABELS: Record<string, string> = {
   constitutional_court_justice: "Constitutional Court justice",
 };
 
-const BACKGROUNDS = [
-  "community organizer",
-  "regional prosecutor",
-  "trade-union negotiator",
-  "small-business owner",
-  "public-health administrator",
-  "municipal civil servant",
-  "journalist covering provincial politics",
-  "legal aid clinic director",
+/** Stable background archetypes — not ideology. Prefer stored metadata when present. */
+export const BACKGROUND_ARCHETYPES = [
+  "labor attorney",
+  "teacher",
+  "union organizer",
+  "physician",
+  "nurse",
+  "civil servant",
+  "economist",
+  "business owner",
+  "engineer",
+  "journalist",
+  "academic",
+  "military officer",
+  "farmer",
+  "nonprofit leader",
+  "local elected official",
+  "provincial official",
+  "activist",
 ] as const;
 
 function stableHash(text: string): number {
@@ -31,27 +43,162 @@ function stableHash(text: string): number {
   return hash >>> 0;
 }
 
-function priorOfficeKinds(world: KernelWorld, state: SimState, politicianId: string): string[] {
-  const kinds = new Set<string>();
-  for (const term of Object.values(state.officeTerms)) {
-    if (term.holderId !== politicianId) continue;
-    const kind = world.offices[term.officeId]?.kind;
-    if (kind) kinds.add(kind);
-  }
-  const rank = (k: string) =>
-    k === "president"
-      ? 0
-      : k === "governor"
-        ? 1
-        : k === "minister"
-          ? 2
-          : k === "assembly_member"
-            ? 3
-            : 9;
-  return [...kinds].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+function yearOf(date: string | null | undefined): string | null {
+  if (!date || date.length < 4) return null;
+  return date.slice(0, 4);
 }
 
-/** Public-facing biography using office history when terms exist. */
+function ministryLabel(world: KernelWorld, officeId: string): string {
+  const office = world.offices[officeId];
+  if (!office) return "a ministry";
+  const title = office.title ?? office.id;
+  return title.replace(/^Minister of\s+/i, "").trim() || title;
+}
+
+export type CareerMilestone = {
+  kind: string;
+  label: string;
+  startYear: string | null;
+  endYear: string | null;
+};
+
+/** Extract ordered career milestones from office terms, Party posts, and scandals. */
+export function extractCareerMilestones(
+  world: KernelWorld,
+  state: SimState,
+  politicianId: string,
+): CareerMilestone[] {
+  const milestones: CareerMilestone[] = [];
+  const terms = Object.values(state.officeTerms)
+    .filter((t) => t.holderId === politicianId)
+    .sort((a, b) => (a.startDate ?? "").localeCompare(b.startDate ?? ""));
+
+  for (const term of terms) {
+    const office = world.offices[term.officeId];
+    if (!office) continue;
+    const startYear = yearOf(term.startDate);
+    const endYear =
+      yearOf(term.endedDate) ?? (term.status === "active" ? null : yearOf(term.endDate));
+    if (office.kind === "minister") {
+      milestones.push({
+        kind: "minister",
+        label: `Minister of ${ministryLabel(world, term.officeId)}`,
+        startYear,
+        endYear,
+      });
+    } else if (office.kind === "governor") {
+      milestones.push({
+        kind: "governor",
+        label: "Governor",
+        startYear,
+        endYear,
+      });
+    } else if (office.kind === "president") {
+      milestones.push({
+        kind: "president",
+        label: "President",
+        startYear,
+        endYear,
+      });
+    } else if (office.kind === "assembly_member") {
+      milestones.push({
+        kind: "assembly_member",
+        label: "Assembly member",
+        startYear,
+        endYear,
+      });
+    } else if (office.kind === "speaker") {
+      milestones.push({
+        kind: "speaker",
+        label: "Speaker of the Assembly",
+        startYear,
+        endYear,
+      });
+    }
+  }
+
+  const pol = state.politicians[politicianId];
+  const partyId = pol?.partyId;
+  if (partyId) {
+    const party = state.partyStates[partyId];
+    if (party?.leaderId === politicianId) {
+      milestones.push({
+        kind: "party_leader",
+        label: "Party leader",
+        startYear: null,
+        endYear: null,
+      });
+    }
+    try {
+      const org = ensurePartyOrgRuntime(state);
+      const chair = org.officers[partyId]?.chair?.politicianId;
+      if (chair === politicianId) {
+        milestones.push({
+          kind: "party_chair",
+          label: "National Party Chair",
+          startYear: null,
+          endYear: null,
+        });
+      }
+    } catch {
+      /* party org optional on sparse fixtures */
+    }
+  }
+
+  const politics = ensurePoliticsRuntime(state);
+  for (const scandal of Object.values(politics.scandals ?? {})) {
+    if (scandal.targetPoliticianId !== politicianId) continue;
+    if (scandal.outcome === "exonerated" || scandal.outcome === "unsubstantiated") {
+      milestones.push({
+        kind: "scandal_cleared",
+        label: "cleared after public investigation",
+        startYear: yearOf(scandal.allegationDate),
+        endYear: null,
+      });
+    } else if (scandal.outcome === "substantiated") {
+      milestones.push({
+        kind: "scandal_substantiated",
+        label: "faced a substantiated ethics finding",
+        startYear: yearOf(scandal.allegationDate),
+        endYear: null,
+      });
+    }
+  }
+
+  // Deduplicate consecutive identical labels.
+  const deduped: CareerMilestone[] = [];
+  for (const m of milestones) {
+    const prev = deduped[deduped.length - 1];
+    if (prev && prev.label === m.label && prev.startYear === m.startYear) continue;
+    deduped.push(m);
+  }
+  return deduped;
+}
+
+export function backgroundForPolitician(state: SimState, politicianId: string): string {
+  const pol = state.politicians[politicianId] as
+    (SimState["politicians"][string] & { background?: string; profession?: string }) | undefined;
+  const stored =
+    (typeof pol?.background === "string" && pol.background) ||
+    (typeof pol?.profession === "string" && pol.profession) ||
+    (typeof (pol as { metadata?: { background?: string } } | undefined)?.metadata?.background ===
+      "string" &&
+      (pol as { metadata?: { background?: string } }).metadata!.background);
+  if (stored && stored.trim().length > 0) return stored.trim();
+  return BACKGROUND_ARCHETYPES[
+    stableHash(`${politicianId}:background`) % BACKGROUND_ARCHETYPES.length
+  ]!;
+}
+
+function formatMilestone(m: CareerMilestone): string {
+  if (m.startYear && m.endYear && m.startYear !== m.endYear) {
+    return `${m.label} (${m.startYear}–${m.endYear})`;
+  }
+  if (m.startYear) return `${m.label} from ${m.startYear}`;
+  return m.label;
+}
+
+/** Public-facing biography using background + real career milestones. */
 export function refreshPoliticianPublicBiography(
   world: KernelWorld,
   state: SimState,
@@ -60,38 +207,42 @@ export function refreshPoliticianPublicBiography(
   const pol = state.politicians[politicianId];
   if (!pol) return "";
   const name = pol.displayName ?? politicianId;
-  const history = priorOfficeKinds(world, state, politicianId);
-  const active = activeTermsForPolitician(state, politicianId)
-    .map((t) => world.offices[t.officeId]?.kind)
-    .filter(Boolean) as string[];
+  const background = backgroundForPolitician(state, politicianId);
+  const milestones = extractCareerMilestones(world, state, politicianId).filter(
+    (m) => m.kind !== "scandal_cleared" && m.kind !== "scandal_substantiated",
+  );
+  const scandalNote = extractCareerMilestones(world, state, politicianId).find(
+    (m) => m.kind === "scandal_cleared" || m.kind === "scandal_substantiated",
+  );
 
-  if (history.length >= 2) {
-    const labels = history
-      .slice(0, 3)
-      .map((k) => OFFICE_KIND_LABELS[k] ?? k.replace(/_/g, " "))
-      .join(", then ");
-    return `${name} previously served as ${labels}, and remains active in national politics.`;
-  }
-  if (active.length === 1) {
-    const label = OFFICE_KIND_LABELS[active[0]!] ?? active[0]!.replace(/_/g, " ");
-    return `${name} currently holds office as ${label}.`;
-  }
-  if (history.length === 1) {
-    const label = OFFICE_KIND_LABELS[history[0]!] ?? history[0]!.replace(/_/g, " ");
-    return `${name} entered public life after serving as ${label}.`;
+  const careerBits = milestones
+    .filter((m) => m.kind !== "assembly_member" || milestones.length <= 2)
+    .slice(0, 4)
+    .map(formatMilestone);
+
+  let bio = `Before entering national politics, ${name} worked as a ${background}.`;
+  if (careerBits.length >= 2) {
+    const head = careerBits.slice(0, -1).join(", ");
+    const tail = careerBits[careerBits.length - 1]!;
+    bio = `Before entering national politics, ${name} worked as a ${background}. ${name.split(" ").slice(-1)[0]} later served as ${head}, and ${tail}.`;
+  } else if (careerBits.length === 1) {
+    bio = `Before entering national politics, ${name} worked as a ${background}, and later became ${careerBits[0]}.`;
+  } else {
+    const active = activeTermsForPolitician(state, politicianId)
+      .map((t) => world.offices[t.officeId]?.kind)
+      .filter(Boolean) as string[];
+    if (active[0]) {
+      const label = OFFICE_KIND_LABELS[active[0]] ?? active[0].replace(/_/g, " ");
+      bio = `Before entering national politics, ${name} worked as a ${background}. ${name.split(" ").slice(-1)[0]} currently serves as ${label}.`;
+    }
   }
 
-  const background = BACKGROUNDS[stableHash(`${politicianId}:bio`) % BACKGROUNDS.length]!;
-  const province = pol.homeProvinceId ? ` in ${pol.homeProvinceId}` : "";
-  return `${name} came to politics from work as a ${background}${province}.`;
-}
+  if (scandalNote?.kind === "scandal_cleared") {
+    bio += ` A later investigation left the allegation unproven.`;
+  } else if (scandalNote?.kind === "scandal_substantiated") {
+    bio += ` A public investigation later produced a substantiated ethics finding.`;
+  }
 
-export function applyPoliticianPublicBiography(
-  world: KernelWorld,
-  state: SimState,
-  politicianId: string,
-): void {
-  const pol = state.politicians[politicianId];
-  if (!pol) return;
-  pol.description = refreshPoliticianPublicBiography(world, state, politicianId);
+  pol.description = bio;
+  return bio;
 }

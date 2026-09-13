@@ -209,6 +209,10 @@ export function syncResourceAllocationLifecycle(state: SimState): void {
       alloc.endDate = alloc.endDate ?? state.currentDate;
     }
   }
+  for (const outlay of Object.values(runtime.fiscalOutlays ?? {})) {
+    if (!outlay.active) continue;
+    if (state.currentDate > outlay.endDate) outlay.active = false;
+  }
 }
 
 export function advanceImplementations(state: SimState, commandId: string): SimEvent[] {
@@ -510,11 +514,20 @@ export function respondToImplementation(
         }
       }
       if (incentiveCost > 0) {
-        runtime.fiscal.expenditure =
-          Math.round((runtime.fiscal.expenditure + incentiveCost) * 10) / 10;
-        runtime.fiscal.balance =
-          Math.round((runtime.fiscal.revenue - runtime.fiscal.expenditure) * 10) / 10;
-        runtime.fiscal.lastUpdated = state.currentDate;
+        // Durable one-time outlay — survives recompute; expires after the charge month.
+        const outlayId = `FO_PROV_${args.lawId}_${state.currentDate}_${Object.keys(runtime.fiscalOutlays).length + 1}`;
+        runtime.fiscalOutlays[outlayId] = {
+          id: outlayId,
+          kind: "one_time",
+          amount: Math.round(incentiveCost * 10) / 10,
+          category: "administration",
+          startDate: state.currentDate,
+          endDate: state.currentDate,
+          lawId: args.lawId,
+          source: "provincial_negotiation_incentive",
+          active: true,
+        };
+        recomputeFiscalFromCurrentLaw(state);
       }
       const net = successful + partial - unsuccessful;
       if (net > 0) {
@@ -529,6 +542,14 @@ export function respondToImplementation(
         partial,
         unsuccessful,
         incentiveCost,
+        outlayId:
+          incentiveCost > 0
+            ? (Object.values(runtime.fiscalOutlays)
+                .filter(
+                  (o) => o.source === "provincial_negotiation_incentive" && o.lawId === args.lawId,
+                )
+                .sort((a, b) => b.id.localeCompare(a.id))[0]?.id ?? null)
+            : null,
       };
       resultSummary =
         unsuccessful >= successful + partial

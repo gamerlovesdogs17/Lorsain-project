@@ -220,6 +220,23 @@ export type ImplementationResourceAllocation = {
 };
 
 /**
+ * Durable one-time or short temporary fiscal charges (e.g. provincial incentive packages).
+ * Survive recomputation; do not become permanent baseline spending.
+ */
+export type FiscalOutlayRecord = {
+  id: string;
+  kind: "one_time" | "temporary";
+  amount: number;
+  category: SpendingCategory;
+  startDate: IsoDate;
+  /** Inclusive end month; for one_time equals startDate (single-month charge). */
+  endDate: IsoDate;
+  lawId: string | null;
+  source: string;
+  active: boolean;
+};
+
+/**
  * Phase 13 governing runtime. Empty on migration — never fabricates history.
  */
 export type Phase13Runtime = {
@@ -229,6 +246,8 @@ export type Phase13Runtime = {
   implementations: Record<string, ImplementationRecord>;
   /** Durable implementation resource reinforcements (survive monthly recompute). */
   resourceAllocations: Record<string, ImplementationResourceAllocation>;
+  /** One-time / temporary fiscal charges that must survive recomputation. */
+  fiscalOutlays: Record<string, FiscalOutlayRecord>;
   promises: Record<string, PromiseRecord>;
   agenda: GovernmentAgenda;
   interactions: Record<string, PolicyInteractionRecord>;
@@ -306,6 +325,7 @@ export function emptyGoverningRuntime(): Phase13Runtime {
     services: emptyServiceOutcomes(),
     implementations: {},
     resourceAllocations: {},
+    fiscalOutlays: {},
     promises: {},
     agenda: { updatedDate: null, items: [] },
     interactions: {},
