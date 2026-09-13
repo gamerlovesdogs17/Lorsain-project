@@ -743,7 +743,7 @@ export function buildRuntimeBalanceReport(
       crisesActiveAtEnd: Object.values(foreign?.crises ?? {}).filter(
         (c) => c.stage === "active" || c.stage === "incident" || c.stage === "conflict",
       ).length,
-      crisisThemes: toRows(crisisThemeCounts, undefined, 12),
+      crisisThemes: toRows(crisisThemeCounts, Object.keys(foreign?.crises ?? {}).length || undefined, 12),
       treatiesTotal: Object.keys(foreign?.treaties ?? {}).length,
       historyTreatyEvents: toRows(treatyHist, undefined, 12),
       historyCrisisEvents: toRows(crisisHist, undefined, 12),

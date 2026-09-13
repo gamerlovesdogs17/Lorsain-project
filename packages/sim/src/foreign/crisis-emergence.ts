@@ -66,30 +66,31 @@ export function assignCrisisTheme(
       push("security standoff", 0.85);
     }
   }
-  if (aNeighborsB) {
-    if (pickMigrationCorridorStrain(rel, aRuntime, bRuntime, true)) {
-      push("migration corridor strain", 1.15);
-    }
-    push("border tension", 0.55 + rel.securityTension * 0.55);
-    push("detention and consular dispute", 0.22 + (1 - rel.trust) * 0.35);
-  }
-  if (rel.economicTies > 0.28) {
-    if (pickEnergySupplyDispute(rel, aRuntime, bRuntime)) {
-      push("energy supply dispute", 0.95 + rel.economicTies * 0.4);
-    }
-    push("trade dispute", 0.45 + rel.economicTies * 0.85);
-    if (rel.economicTies > 0.5 && rel.general < 0) {
-      push("treaty interpretation dispute", 0.35 + Math.min(0.4, -rel.general / 100));
-    }
-  }
   if (
     aRuntime.strategicGoals.includes("secure_alliance") ||
     bRuntime.strategicGoals.includes("secure_alliance")
   ) {
     if (pickHumanitarianAccess(aRuntime, bRuntime)) {
-      push("humanitarian access dispute", 0.9);
+      push("humanitarian access dispute", 0.55);
     } else {
-      push("alliance consultation strain", 0.7);
+      push("alliance consultation strain", 0.5);
+    }
+  }
+  if (aNeighborsB) {
+    if (pickMigrationCorridorStrain(rel, aRuntime, bRuntime, true)) {
+      push("migration corridor strain", 1.05);
+    }
+    // Border remains the modal neighbor theme unless stronger drivers dominate.
+    push("border tension", 0.85 + rel.securityTension * 0.55);
+    push("detention and consular dispute", 0.2 + (1 - rel.trust) * 0.28);
+  }
+  if (rel.economicTies > 0.28) {
+    if (pickEnergySupplyDispute(rel, aRuntime, bRuntime)) {
+      push("energy supply dispute", 0.95 + rel.economicTies * 0.4);
+    }
+    push("trade dispute", 0.4 + rel.economicTies * 0.7);
+    if (rel.economicTies > 0.5 && rel.general < 0) {
+      push("treaty interpretation dispute", 0.3 + Math.min(0.35, -rel.general / 100));
     }
   }
   if (rel.general < -20) {
