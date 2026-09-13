@@ -21,7 +21,14 @@ Fast suite (includes scenario unit tests):
 pnpm test:fast
 ```
 
-## Play custom scenario in dev
+## QA screenshots
+
+`docs/qa/phase18/screenshots/` — menu, editor tabs, valid Alphaven import, invalid import errors (1280 + 390).
+
+```bash
+node scripts/phase18a-scenario-qa-capture.mjs
+```
+
 
 1. Build or run `pnpm game`.
 2. Main menu → **Import scenario** → select `docs/qa/phase18/fixtures/custom-mini-world.lorsain.json`.
