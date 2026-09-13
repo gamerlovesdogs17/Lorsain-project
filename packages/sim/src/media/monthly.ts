@@ -81,24 +81,32 @@ function legislativeMediaScoreAdjust(
 ): number {
   let delta = 0;
   const hasTitle = typeof payload?.title === "string" && payload.title.trim().length > 0;
-  if (type === "BILL_INTRODUCED") delta -= 0.1;
-  if (type === "BILL_PASSED") delta -= hasTitle ? 0.04 : 0.09;
+  if (type === "BILL_INTRODUCED") delta -= 0.14;
+  if (type === "BILL_PASSED") delta -= hasTitle ? 0.08 : 0.12;
   if (type === "LAW_ENACTED") {
-    if (importance < 0.42) delta -= 0.14;
-    else if (importance < 0.52) delta -= 0.06;
+    if (importance < 0.48) delta -= 0.2;
+    else if (importance < 0.58) delta -= 0.1;
+    else delta -= 0.04;
   }
-  if (type === "ASSEMBLY_MOTION_INTRODUCED" || type === "ASSEMBLY_MOTION_PASSED") delta -= 0.05;
-  if (type === "GOVERNMENT_EXECUTIVE_SITUATION" || type === "POLITICAL_SCANDAL_ALLEGATION") {
-    delta += 0.06;
+  if (type === "ASSEMBLY_MOTION_INTRODUCED" || type === "ASSEMBLY_MOTION_PASSED") delta -= 0.08;
+  if (type === "PARTY_CONTEST_CANDIDACY_DECLARED") delta -= 0.15;
+  if (
+    type === "GOVERNMENT_EXECUTIVE_SITUATION" ||
+    type === "POLITICAL_SCANDAL_ALLEGATION" ||
+    type === "POLITICAL_SCANDAL_RESOLVED"
+  ) {
+    delta += 0.08;
   }
-  if (type.includes("FOREIGN_CRISIS") || type === "INTERNATIONAL_CONFLICT_STARTED") delta += 0.05;
+  if (type.includes("FOREIGN_CRISIS") || type === "INTERNATIONAL_CONFLICT_STARTED") delta += 0.06;
+  if (type.includes("PROVINCE") || type.includes("GOVERNOR")) delta += 0.05;
   return delta;
 }
 
 function minImportanceForPool(type: string): number {
-  if (type === "BILL_INTRODUCED") return 0.38;
-  if (type === "BILL_PASSED") return 0.36;
-  if (type === "LAW_ENACTED") return 0.4;
+  if (type === "BILL_INTRODUCED") return 0.45;
+  if (type === "BILL_PASSED") return 0.42;
+  if (type === "LAW_ENACTED") return 0.48;
+  if (type === "PARTY_CONTEST_CANDIDACY_DECLARED") return 0.55;
   return 0.32;
 }
 

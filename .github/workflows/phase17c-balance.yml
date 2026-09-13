@@ -1,0 +1,98 @@
+name: Phase 17C Balance
+
+# Extended measurement — not part of normal CI / Quality gates.
+on:
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: Number of seeds
+        default: "3"
+      years:
+        description: Years per seed
+        default: "10"
+  schedule:
+    # Monthly 07:30 UTC (after weekly extended validation)
+    - cron: "30 7 1 * *"
+
+jobs:
+  balance-shard:
+    name: Balance shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Run Phase 17C shard
+        env:
+          SEEDS: ${{ github.event.inputs.seeds || '3' }}
+          YEARS: ${{ github.event.inputs.years || '10' }}
+        run: |
+          node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/phase17c-balance-run.ts \
+            --seeds="${SEEDS}" \
+            --years="${YEARS}" \
+            --shard=${{ matrix.shard }} \
+            --shard-count=3
+      - name: Upload seed shard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase17c-seeds-shard-${{ matrix.shard }}
+          path: docs/qa/phase17c/seeds/
+          if-no-files-found: error
+
+  balance-aggregate:
+    name: Balance aggregate
+    runs-on: ubuntu-latest
+    needs: balance-shard
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Download seed shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: phase17c-seeds-shard-*
+          path: artifact-seeds
+          merge-multiple: true
+      - name: Flatten seeds
+        run: |
+          mkdir -p docs/qa/phase17c/seeds
+          find artifact-seeds -type f -name '*.json' -exec cp -f {} docs/qa/phase17c/seeds/ \;
+          ls -la docs/qa/phase17c/seeds
+      - name: Aggregate report
+        env:
+          YEARS: ${{ github.event.inputs.years || '10' }}
+        run: |
+          node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/phase17c-balance-run.ts \
+            --aggregate --years="${YEARS}"
+      - name: Upload aggregate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase17c-runtime-balance
+          path: |
+            docs/qa/phase17c/runtime-balance-report.json
+            docs/qa/phase17c/runtime-balance-summary.md
+          if-no-files-found: error

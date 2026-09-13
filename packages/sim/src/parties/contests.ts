@@ -192,7 +192,7 @@ export function createPartyContest(
       pushHistory(state, {
         date: state.currentDate,
         type: "PARTY_CONTEST_CREATED",
-        importance: 0.4,
+        importance: 0.28,
         visibility: "public",
         actorIds: [],
         entityIds: [args.partyId],
@@ -248,7 +248,7 @@ export function declareCandidacy(
       pushHistory(state, {
         date: state.currentDate,
         type: "PARTY_CONTEST_CANDIDACY_DECLARED",
-        importance: 0.55,
+        importance: 0.22,
         visibility: "public",
         actorIds: [politicianId],
         entityIds: [contestId],
@@ -337,7 +337,7 @@ export function openPartyContest(
       pushHistory(state, {
         date: state.currentDate,
         type: "PARTY_CONTEST_OPENED",
-        importance: 0.5,
+        importance: 0.32,
         visibility: "public",
         actorIds: [],
         entityIds: [contestId],

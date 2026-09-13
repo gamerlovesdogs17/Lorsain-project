@@ -562,7 +562,7 @@ export function processScandalAllegationsMonth(
 
   const targets = ministerTargets(world, state);
   if (targets.length === 0) return [];
-  if (rng.float01("scandals") > 0.08) return [];
+  if (rng.float01("scandals") > 0.11) return [];
 
   const scandalType = pickScandalType(state, rng);
   if (!scandalType) return [];
