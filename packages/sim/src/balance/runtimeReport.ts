@@ -3,16 +3,9 @@ import { readContentCooldownRegistry } from "../content/cooldown.js";
 import { EXECUTIVE_SITUATIONS } from "../governing/situations.js";
 import { ensureGoverningRuntime } from "../governing/state.js";
 import { ensureHistory15Runtime } from "../history15/state.js";
-import {
-  ARTICLE_STRUCTURES,
-  articleStructureFor,
-  headlineFor,
-} from "../media/index.js";
+import { ARTICLE_STRUCTURES, articleStructureFor, headlineFor } from "../media/index.js";
 import type { MediaStory } from "../media/types.js";
-import {
-  headlineFingerprint,
-  structuralHeadlineKey,
-} from "../media/types.js";
+import { headlineFingerprint, structuralHeadlineKey } from "../media/types.js";
 import { ensurePoliticsRuntime } from "../politics/state.js";
 import { SCANDAL_TYPES } from "../politics/scandals.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
@@ -212,7 +205,9 @@ function headlineFamily(story: Pick<MediaStory, "category" | "factEventType">): 
   return `${story.category ?? "politics"}:${stem}`;
 }
 
-function tallyHeadlines(headlines: string[]): RuntimeBalanceReport["newsComposition"]["repetition"] {
+function tallyHeadlines(
+  headlines: string[],
+): RuntimeBalanceReport["newsComposition"]["repetition"] {
   const exact = new Map<string, number>();
   const structural = new Map<string, number>();
   for (const item of headlines) {
@@ -283,7 +278,9 @@ function monthsBetween(start: string, end: string): number {
   return Math.max(0, (ey - sy) * 12 + (em - sm));
 }
 
-function computeDiagnosticFlags(report: Omit<RuntimeBalanceReport, "diagnosticFlags">): DiagnosticFlag[] {
+function computeDiagnosticFlags(
+  report: Omit<RuntimeBalanceReport, "diagnosticFlags">,
+): DiagnosticFlag[] {
   const flags: DiagnosticFlag[] = [];
   const years = Math.max(1, report.meta.monthsAdvanced / 12);
 
@@ -349,7 +346,10 @@ function computeDiagnosticFlags(report: Omit<RuntimeBalanceReport, "diagnosticFl
         message: "Average closed government term exceeds 8 years.",
         detail: { averageTermMonths: report.government.averageTermMonths },
       });
-    } else if (report.government.averageTermMonths <= 18 && report.government.closedGovernmentTerms >= 2) {
+    } else if (
+      report.government.averageTermMonths <= 18 &&
+      report.government.closedGovernmentTerms >= 2
+    ) {
       flags.push({
         code: "GOVERNMENT_HIGH_CHURN",
         severity: "info",
@@ -396,7 +396,11 @@ function computeDiagnosticFlags(report: Omit<RuntimeBalanceReport, "diagnosticFl
   }
 
   const topHist = report.history.byType[0];
-  if (topHist && report.history.totalEvents > 0 && topHist.count / report.history.totalEvents >= 0.25) {
+  if (
+    topHist &&
+    report.history.totalEvents > 0 &&
+    topHist.count / report.history.totalEvents >= 0.25
+  ) {
     flags.push({
       code: "HISTORY_TYPE_DOMINANCE",
       severity: "note",
@@ -489,7 +493,11 @@ export function buildRuntimeBalanceReport(
       const sid = payloadString(ev, "situationId") ?? ev.entityIds[0] ?? "unknown";
       execFired.set(sid, (execFired.get(sid) ?? 0) + 1);
     }
-    if (ev.type === "CAMPAIGN_SITUATION" || ev.type === "CAMPAIGN_MESSAGE" || ev.type === "CAMPAIGN_ATTACK") {
+    if (
+      ev.type === "CAMPAIGN_SITUATION" ||
+      ev.type === "CAMPAIGN_MESSAGE" ||
+      ev.type === "CAMPAIGN_ATTACK"
+    ) {
       const sid = payloadString(ev, "situationId");
       if (sid) campaignFired.set(sid, (campaignFired.get(sid) ?? 0) + 1);
     }
@@ -498,7 +506,11 @@ export function buildRuntimeBalanceReport(
         scandalTargetCounts.set(actorId, (scandalTargetCounts.get(actorId) ?? 0) + 1);
       }
     }
-    if (ev.type === "CABINET_RESHUFFLE" || ev.type === "CABINET_APPOINTMENT" || ev.type === "CABINET_DISMISSAL") {
+    if (
+      ev.type === "CABINET_RESHUFFLE" ||
+      ev.type === "CABINET_APPOINTMENT" ||
+      ev.type === "CABINET_DISMISSAL"
+    ) {
       for (const actorId of ev.actorIds) {
         cabinetActorCounts.set(actorId, (cabinetActorCounts.get(actorId) ?? 0) + 1);
       }
@@ -509,7 +521,8 @@ export function buildRuntimeBalanceReport(
     }
     const prov =
       payloadString(ev, "provinceId") ??
-      (ev.entityIds.find((id) => id.startsWith("PRV_") || id.startsWith("PROV")) ?? null);
+      ev.entityIds.find((id) => id.startsWith("PRV_") || id.startsWith("PROV")) ??
+      null;
     if (prov) provinceCounts.set(prov, (provinceCounts.get(prov) ?? 0) + 1);
   }
 
@@ -664,15 +677,13 @@ export function buildRuntimeBalanceReport(
   };
 }
 
-export function formatRuntimeBalanceMarkdownSummary(
-  aggregate: {
-    generatedAt: string;
-    seedCount: number;
-    years: number;
-    seeds: RuntimeBalanceReport[];
-    flagRollup: CountRow[];
-  },
-): string {
+export function formatRuntimeBalanceMarkdownSummary(aggregate: {
+  generatedAt: string;
+  seedCount: number;
+  years: number;
+  seeds: RuntimeBalanceReport[];
+  flagRollup: CountRow[];
+}): string {
   const lines: string[] = [
     "# Phase 17C runtime balance summary",
     "",

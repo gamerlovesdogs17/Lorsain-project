@@ -181,7 +181,9 @@ function main(): void {
     mkdirSync(outDir, { recursive: true });
     writeFileSync(aggregateJson, `${JSON.stringify(json, null, 2)}\n`, "utf8");
     writeFileSync(aggregateMd, markdown, "utf8");
-    console.log(JSON.stringify({ seeds: reports.length, years, aggregate: aggregateJson }, null, 2));
+    console.log(
+      JSON.stringify({ seeds: reports.length, years, aggregate: aggregateJson }, null, 2),
+    );
   } else {
     console.log(
       JSON.stringify(
