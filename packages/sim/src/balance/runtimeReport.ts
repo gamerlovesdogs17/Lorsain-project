@@ -607,7 +607,7 @@ export function buildRuntimeBalanceReport(
 
   const partial: Omit<RuntimeBalanceReport, "diagnosticFlags"> = {
     schema: RUNTIME_BALANCE_REPORT_SCHEMA,
-    generatedAt: new Date().toISOString(),
+    generatedAt: `${meta.endingDate}T00:00:00.000Z`,
     meta,
     history: {
       totalEvents: history.length,
