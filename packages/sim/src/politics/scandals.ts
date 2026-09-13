@@ -554,15 +554,15 @@ export function processScandalAllegationsMonth(
   commandId: string,
 ): SimEvent[] {
   const month = Number(state.currentDate.slice(5, 7));
-  if (month % 3 !== 0) return [];
-
+  // Monthly low-rate spawn (was quarterly) — droughts were common at prior rates.
+  void month;
   const runtime = ensurePoliticsRuntime(state);
   const openCount = Object.values(runtime.scandals).filter((s) => s.outcome == null).length;
   if (openCount >= 3) return [];
 
   const targets = ministerTargets(world, state);
   if (targets.length === 0) return [];
-  if (rng.float01("scandals") > 0.11) return [];
+  if (rng.float01("scandals") > 0.045) return [];
 
   const scandalType = pickScandalType(state, rng);
   if (!scandalType) return [];

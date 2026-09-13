@@ -83,6 +83,10 @@ function legislativeMediaScoreAdjust(
   const hasTitle = typeof payload?.title === "string" && payload.title.trim().length > 0;
   if (type === "BILL_INTRODUCED") delta -= 0.14;
   if (type === "BILL_PASSED") delta -= hasTitle ? 0.08 : 0.12;
+  if (type === "BILL_SIGNED") {
+    if (importance < 0.5) delta -= 0.18;
+    else delta -= 0.08;
+  }
   if (type === "LAW_ENACTED") {
     if (importance < 0.48) delta -= 0.2;
     else if (importance < 0.58) delta -= 0.1;
@@ -98,14 +102,22 @@ function legislativeMediaScoreAdjust(
     delta += 0.08;
   }
   if (type.includes("FOREIGN_CRISIS") || type === "INTERNATIONAL_CONFLICT_STARTED") delta += 0.06;
-  if (type.includes("PROVINCE") || type.includes("GOVERNOR")) delta += 0.05;
+  if (
+    type.includes("PROVINCE") ||
+    type.includes("GOVERNOR") ||
+    type === "PROVINCIAL_PRESSURE" ||
+    type.includes("PROVINCIAL")
+  ) {
+    delta += 0.1;
+  }
   return delta;
 }
 
 function minImportanceForPool(type: string): number {
   if (type === "BILL_INTRODUCED") return 0.45;
   if (type === "BILL_PASSED") return 0.42;
-  if (type === "LAW_ENACTED") return 0.48;
+  if (type === "BILL_SIGNED") return 0.5;
+  if (type === "LAW_ENACTED") return 0.5;
   if (type === "PARTY_CONTEST_CANDIDACY_DECLARED") return 0.55;
   return 0.32;
 }

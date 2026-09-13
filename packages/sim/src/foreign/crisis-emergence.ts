@@ -160,7 +160,7 @@ function emergenceProbability(
   if (rel.general < -20) p += 0.05;
   if (rel.trust < 0.3) p += 0.03;
 
-  return clamp01(p * 0.08);
+  return clamp01(p * 0.035);
 }
 
 function relevantPairs(world: KernelWorld, _state: SimState): Array<[string, string]> {
@@ -192,7 +192,10 @@ export function checkCrisisEmergence(
     bilateralKey(a[0], a[1]).localeCompare(bilateralKey(b[0], b[1])),
   );
 
+  // Cap new emergences per month so the world is not flooded with parallel crises.
+  const MONTHLY_EMERGENCE_CAP = 1;
   for (const [aId, bId] of pairs) {
+    if (emerged.length >= MONTHLY_EMERGENCE_CAP) break;
     if (pairHasActiveCrisis(state.foreignAffairsRuntime, aId, bId)) continue;
     const prob = emergenceProbability(world, state, aId, bId);
     if (prob <= 0 || rng.float01("foreign-affairs") >= prob) continue;

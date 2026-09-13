@@ -347,13 +347,13 @@ function computeDiagnosticFlags(
         detail: { averageTermMonths: report.government.averageTermMonths },
       });
     } else if (
-      report.government.averageTermMonths <= 18 &&
+      report.government.averageTermMonths < 12 &&
       report.government.closedGovernmentTerms >= 2
     ) {
       flags.push({
         code: "GOVERNMENT_HIGH_CHURN",
         severity: "info",
-        message: "Average closed government term under 18 months.",
+        message: "Average closed government term under 12 months.",
         detail: { averageTermMonths: report.government.averageTermMonths },
       });
     }
@@ -406,6 +406,18 @@ function computeDiagnosticFlags(
       severity: "note",
       message: "One history event type exceeds 25% of all events.",
       detail: { type: topHist.key, share: topHist.count / report.history.totalEvents },
+    });
+  }
+
+  if (report.foreign.crisesTotal / Math.max(1, years) > 8) {
+    flags.push({
+      code: "FOREIGN_CRISIS_SPAM",
+      severity: "watch",
+      message: "Cumulative foreign crises exceed ~8 per simulated year.",
+      detail: {
+        crisesTotal: report.foreign.crisesTotal,
+        perYear: Math.round((report.foreign.crisesTotal / Math.max(1, years)) * 10) / 10,
+      },
     });
   }
 
