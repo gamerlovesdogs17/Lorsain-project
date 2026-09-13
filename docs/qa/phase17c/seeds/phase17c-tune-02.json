@@ -1,319 +1,319 @@
 {
   "schema": "phase17c-runtime-balance/v1",
-  "generatedAt": "2026-09-13T00:51:27.128Z",
+  "generatedAt": "2026-09-13T00:44:58.633Z",
   "meta": {
-    "seed": "phase17c-00",
-    "monthsAdvanced": 120,
+    "seed": "phase17c-tune-02",
+    "monthsAdvanced": 60,
     "startingDate": "2028-01-01",
-    "endingDate": "2038-01-01",
-    "elapsedMs": 356127
+    "endingDate": "2033-01-01",
+    "elapsedMs": 98067
   },
   "history": {
-    "totalEvents": 23701,
-    "publicEvents": 22985,
+    "totalEvents": 10761,
+    "publicEvents": 10415,
     "byType": [
       {
-        "key": "PARTY_CONTEST_CANDIDACY_DECLARED",
-        "count": 4452,
-        "share": 0.188
+        "key": "FIELD_ORGANIZED",
+        "count": 1675,
+        "share": 0.156
       },
       {
-        "key": "FIELD_ORGANIZED",
-        "count": 2736,
-        "share": 0.115
+        "key": "PARTY_CONTEST_CANDIDACY_DECLARED",
+        "count": 1605,
+        "share": 0.149
       },
       {
         "key": "FUNDRAISING_PUSH",
-        "count": 1826,
-        "share": 0.077
-      },
-      {
-        "key": "PARTY_CONTEST_OPENED",
-        "count": 1204,
-        "share": 0.051
-      },
-      {
-        "key": "PARTY_CONTEST_CREATED",
-        "count": 1186,
-        "share": 0.05
-      },
-      {
-        "key": "PARTY_CONTEST_RESOLVED",
-        "count": 1156,
-        "share": 0.049
-      },
-      {
-        "key": "OFFICE_NOMINATION_WINNER_SYNCED",
-        "count": 1095,
-        "share": 0.046
+        "count": 795,
+        "share": 0.074
       },
       {
         "key": "POLITICIAN_CAREER_DECISION",
-        "count": 960,
-        "share": 0.041
+        "count": 480,
+        "share": 0.045
+      },
+      {
+        "key": "PARTY_CONTEST_OPENED",
+        "count": 426,
+        "share": 0.04
+      },
+      {
+        "key": "PARTY_CONTEST_CREATED",
+        "count": 414,
+        "share": 0.038
       },
       {
         "key": "OFFICE_TERM_ENDED",
-        "count": 828,
+        "count": 407,
+        "share": 0.038
+      },
+      {
+        "key": "PARTY_CONTEST_RESOLVED",
+        "count": 405,
+        "share": 0.038
+      },
+      {
+        "key": "OFFICE_NOMINATION_WINNER_SYNCED",
+        "count": 380,
         "share": 0.035
       },
       {
+        "key": "CAUCUS_AGENDA_SET",
+        "count": 268,
+        "share": 0.025
+      },
+      {
         "key": "CAMPAIGN_MESSAGE",
-        "count": 573,
-        "share": 0.024
+        "count": 250,
+        "share": 0.023
+      },
+      {
+        "key": "ENDORSEMENT_MADE",
+        "count": 237,
+        "share": 0.022
+      },
+      {
+        "key": "ENDORSEMENT_RECEIVED",
+        "count": 237,
+        "share": 0.022
       },
       {
         "key": "ORGANIZATION_ACTION",
-        "count": 496,
-        "share": 0.021
-      },
-      {
-        "key": "CAUCUS_AGENDA_SET",
-        "count": 487,
+        "count": 230,
         "share": 0.021
       },
       {
         "key": "FOREIGN_OUTREACH",
-        "count": 398,
-        "share": 0.017
-      },
-      {
-        "key": "DEBATE_PREPARED",
-        "count": 392,
-        "share": 0.017
-      },
-      {
-        "key": "ENDORSEMENT_MADE",
-        "count": 365,
-        "share": 0.015
-      },
-      {
-        "key": "ENDORSEMENT_RECEIVED",
-        "count": 365,
-        "share": 0.015
-      },
-      {
-        "key": "CAMPAIGN_VISIT",
-        "count": 342,
-        "share": 0.014
-      },
-      {
-        "key": "AD_CAMPAIGN",
-        "count": 311,
-        "share": 0.013
-      },
-      {
-        "key": "ENDORSEMENT_ENDED",
-        "count": 236,
-        "share": 0.01
+        "count": 200,
+        "share": 0.019
       },
       {
         "key": "CAMPAIGN_LAUNCHED",
-        "count": 224,
-        "share": 0.009
+        "count": 158,
+        "share": 0.015
+      },
+      {
+        "key": "DEBATE_PREPARED",
+        "count": 136,
+        "share": 0.013
+      },
+      {
+        "key": "CAMPAIGN_VISIT",
+        "count": 118,
+        "share": 0.011
       },
       {
         "key": "CAMPAIGN_ATTACK",
-        "count": 215,
+        "count": 116,
+        "share": 0.011
+      },
+      {
+        "key": "AD_CAMPAIGN",
+        "count": 112,
+        "share": 0.01
+      },
+      {
+        "key": "BILL_INTRODUCED",
+        "count": 101,
+        "share": 0.009
+      },
+      {
+        "key": "ENDORSEMENT_ENDED",
+        "count": 100,
         "share": 0.009
       },
       {
         "key": "PROVINCIAL_BILL_INTRODUCED",
-        "count": 203,
+        "count": 99,
         "share": 0.009
       },
       {
         "key": "PROVINCIAL_BILL_VOTE",
-        "count": 203,
+        "count": 99,
         "share": 0.009
       },
       {
-        "key": "BILL_INTRODUCED",
-        "count": 170,
-        "share": 0.007
-      },
-      {
-        "key": "ORG_ISSUE_CAMPAIGN",
-        "count": 150,
-        "share": 0.006
+        "key": "NOMINATION_SUPPORT_SOUGHT",
+        "count": 92,
+        "share": 0.009
       },
       {
         "key": "PROVINCIAL_BILL_SIGNED",
-        "count": 147,
+        "count": 66,
         "share": 0.006
       },
       {
-        "key": "NOMINATION_SUPPORT_SOUGHT",
-        "count": 127,
-        "share": 0.005
-      },
-      {
-        "key": "ECONOMY_MONTH",
-        "count": 120,
-        "share": 0.005
-      },
-      {
-        "key": "TURN_COMPLETED",
-        "count": 120,
-        "share": 0.005
-      },
-      {
-        "key": "FOREIGN_AFFAIRS_MONTH",
-        "count": 116,
-        "share": 0.005
+        "key": "ORG_ISSUE_CAMPAIGN",
+        "count": 63,
+        "share": 0.006
       },
       {
         "key": "BILL_COMMITTEE_PASSED",
-        "count": 96,
-        "share": 0.004
+        "count": 61,
+        "share": 0.006
+      },
+      {
+        "key": "ECONOMY_MONTH",
+        "count": 60,
+        "share": 0.006
+      },
+      {
+        "key": "TURN_COMPLETED",
+        "count": 60,
+        "share": 0.006
+      },
+      {
+        "key": "FOREIGN_AFFAIRS_MONTH",
+        "count": 58,
+        "share": 0.005
+      },
+      {
+        "key": "FOREIGN_CRISIS_TENSION_CREATED",
+        "count": 57,
+        "share": 0.005
+      },
+      {
+        "key": "IMPLEMENTATION_RESPONSE",
+        "count": 53,
+        "share": 0.005
       },
       {
         "key": "BILL_FLOOR_PASSED",
-        "count": 85,
-        "share": 0.004
-      },
-      {
-        "key": "DOMESTIC_FOREIGN_POLITICS_REACTION",
-        "count": 83,
-        "share": 0.004
-      },
-      {
-        "key": "PARTY_PRIORITIES_SET",
-        "count": 83,
-        "share": 0.004
+        "count": 52,
+        "share": 0.005
       },
       {
         "key": "LAW_ENACTED",
-        "count": 81,
-        "share": 0.003
-      },
-      {
-        "key": "PARTY_CHAIR_CANDIDACY_DECLARED",
-        "count": 80,
-        "share": 0.003
-      },
-      {
-        "key": "LAW_IMPLEMENTATION_PROGRESS",
-        "count": 79,
-        "share": 0.003
+        "count": 52,
+        "share": 0.005
       },
       {
         "key": "BILL_SIGNED",
-        "count": 75,
-        "share": 0.003
+        "count": 49,
+        "share": 0.005
+      },
+      {
+        "key": "LAW_IMPLEMENTATION_PROGRESS",
+        "count": 49,
+        "share": 0.005
+      },
+      {
+        "key": "PARTY_PRIORITIES_SET",
+        "count": 43,
+        "share": 0.004
       },
       {
         "key": "LAW_FULLY_IMPLEMENTED",
-        "count": 74,
-        "share": 0.003
+        "count": 39,
+        "share": 0.004
       },
       {
         "key": "BILL_COMMITTEE_FAILED",
-        "count": 73,
-        "share": 0.003
+        "count": 38,
+        "share": 0.004
       }
     ],
     "byCategory": [
       {
         "key": "other",
-        "count": 17847,
-        "share": 0.753
+        "count": 7930,
+        "share": 0.737
       },
       {
         "key": "elections",
-        "count": 3267,
-        "share": 0.138
+        "count": 1374,
+        "share": 0.128
       },
       {
         "key": "legislation",
-        "count": 916,
-        "share": 0.039
+        "count": 538,
+        "share": 0.05
       },
       {
         "key": "foreign",
-        "count": 784,
-        "share": 0.033
+        "count": 456,
+        "share": 0.042
       },
       {
         "key": "province",
-        "count": 734,
-        "share": 0.031
+        "count": 339,
+        "share": 0.032
+      },
+      {
+        "key": "implementation",
+        "count": 53,
+        "share": 0.005
       },
       {
         "key": "government",
-        "count": 104,
-        "share": 0.004
+        "count": 50,
+        "share": 0.005
       },
       {
         "key": "court",
-        "count": 42,
-        "share": 0.002
-      },
-      {
-        "key": "economy",
-        "count": 4,
-        "share": 0
+        "count": 16,
+        "share": 0.001
       },
       {
         "key": "scandal",
-        "count": 3,
+        "count": 5,
         "share": 0
       }
     ]
   },
   "newsComposition": {
     "fromMediaStories": {
-      "legislation": 452,
-      "government": 13,
-      "elections": 64,
+      "legislation": 281,
+      "government": 5,
+      "elections": 26,
       "scandal": 0,
-      "court": 196,
-      "province": 14,
-      "foreign": 89,
-      "implementation": 0,
-      "economy": 8,
-      "other": 324
+      "court": 82,
+      "province": 3,
+      "foreign": 34,
+      "implementation": 7,
+      "economy": 0,
+      "other": 142
     },
     "shares": [
       {
         "key": "legislation",
-        "count": 452,
-        "share": 0.39
+        "count": 281,
+        "share": 0.484
       },
       {
         "key": "other",
-        "count": 324,
-        "share": 0.279
+        "count": 142,
+        "share": 0.245
       },
       {
         "key": "court",
-        "count": 196,
-        "share": 0.169
+        "count": 82,
+        "share": 0.141
       },
       {
         "key": "foreign",
-        "count": 89,
-        "share": 0.077
+        "count": 34,
+        "share": 0.059
       },
       {
         "key": "elections",
-        "count": 64,
-        "share": 0.055
+        "count": 26,
+        "share": 0.045
       },
       {
-        "key": "province",
-        "count": 14,
+        "key": "implementation",
+        "count": 7,
         "share": 0.012
       },
       {
         "key": "government",
-        "count": 13,
-        "share": 0.011
+        "count": 5,
+        "share": 0.009
       },
       {
-        "key": "economy",
-        "count": 8,
-        "share": 0.007
+        "key": "province",
+        "count": 3,
+        "share": 0.005
       },
       {
         "key": "scandal",
@@ -321,7 +321,7 @@
         "share": 0
       },
       {
-        "key": "implementation",
+        "key": "economy",
         "count": 0,
         "share": 0
       }
@@ -329,213 +329,208 @@
     "headlineFamilies": [
       {
         "key": "politics:bill_signed",
-        "count": 277,
-        "share": 0.239
+        "count": 194,
+        "share": 0.334
       },
       {
         "key": "courts:court_decision",
-        "count": 121,
-        "share": 0.104
-      },
-      {
-        "key": "politics:party_contest",
-        "count": 93,
-        "share": 0.08
+        "count": 59,
+        "share": 0.102
       },
       {
         "key": "government:law_enacted",
-        "count": 74,
-        "share": 0.064
+        "count": 45,
+        "share": 0.078
       },
       {
-        "key": "elections:party_leader",
-        "count": 40,
-        "share": 0.034
-      },
-      {
-        "key": "courts:judge_confirmed",
-        "count": 39,
-        "share": 0.034
+        "key": "politics:party_contest",
+        "count": 33,
+        "share": 0.057
       },
       {
         "key": "politics:bill_returned",
-        "count": 38,
-        "share": 0.033
-      },
-      {
-        "key": "foreign:treaty_ratified",
-        "count": 36,
-        "share": 0.031
-      },
-      {
-        "key": "politics:bill_repassed",
-        "count": 31,
-        "share": 0.027
+        "count": 21,
+        "share": 0.036
       },
       {
         "key": "elections:presidential_election",
-        "count": 30,
-        "share": 0.026
-      },
-      {
-        "key": "courts:judge_nominated",
-        "count": 24,
-        "share": 0.021
-      },
-      {
-        "key": "elections:campaign_launched",
-        "count": 22,
-        "share": 0.019
-      },
-      {
-        "key": "politics:presidential_assumption",
-        "count": 21,
-        "share": 0.018
-      },
-      {
-        "key": "politics:bill_floor",
         "count": 20,
-        "share": 0.017
+        "share": 0.034
       },
       {
-        "key": "foreign:treaty_rejected",
-        "count": 15,
-        "share": 0.013
+        "key": "government:minister_appointed",
+        "count": 17,
+        "share": 0.029
       },
       {
         "key": "government:assembly_motion",
         "count": 15,
-        "share": 0.013
+        "share": 0.026
       },
       {
-        "key": "foreign:international_conflict",
+        "key": "politics:minister_dismissed",
+        "count": 15,
+        "share": 0.026
+      },
+      {
+        "key": "courts:judge_confirmed",
         "count": 14,
+        "share": 0.024
+      },
+      {
+        "key": "foreign:foreign_crisis",
+        "count": 14,
+        "share": 0.024
+      },
+      {
+        "key": "politics:bill_repassed",
+        "count": 14,
+        "share": 0.024
+      },
+      {
+        "key": "politics:presidential_assumption",
+        "count": 14,
+        "share": 0.024
+      },
+      {
+        "key": "elections:party_leader",
+        "count": 12,
+        "share": 0.021
+      },
+      {
+        "key": "politics:office_term",
+        "count": 12,
+        "share": 0.021
+      },
+      {
+        "key": "politics:acting_president",
+        "count": 7,
         "share": 0.012
       },
       {
         "key": "politics:assembly_assumption",
-        "count": 14,
+        "count": 7,
         "share": 0.012
       },
       {
-        "key": "politics:office_term",
-        "count": 14,
+        "key": "politics:coalition_formed",
+        "count": 7,
         "share": 0.012
       },
       {
-        "key": "courts:court_vacancy",
-        "count": 12,
+        "key": "politics:implementation_response",
+        "count": 7,
+        "share": 0.012
+      },
+      {
+        "key": "courts:judge_nominated",
+        "count": 6,
         "share": 0.01
       },
       {
-        "key": "elections:debate_held",
-        "count": 12,
+        "key": "foreign:csc_diplomatic",
+        "count": 6,
         "share": 0.01
       },
       {
-        "key": "foreign:foreign_crisis",
-        "count": 11,
-        "share": 0.009
+        "key": "foreign:foreign_leadership",
+        "count": 6,
+        "share": 0.01
       },
       {
-        "key": "foreign:military_posture",
-        "count": 11,
-        "share": 0.009
+        "key": "foreign:treaty_ratified",
+        "count": 6,
+        "share": 0.01
       },
       {
-        "key": "government:minister_appointed",
-        "count": 10,
+        "key": "government:budget_proposed",
+        "count": 5,
         "share": 0.009
       }
     ],
     "categories": [
       {
         "key": "politics",
-        "count": 610,
-        "share": 0.526
+        "count": 342,
+        "share": 0.59
       },
       {
         "key": "courts",
-        "count": 196,
-        "share": 0.169
-      },
-      {
-        "key": "foreign",
-        "count": 120,
-        "share": 0.103
-      },
-      {
-        "key": "elections",
-        "count": 110,
-        "share": 0.095
+        "count": 82,
+        "share": 0.141
       },
       {
         "key": "government",
-        "count": 104,
-        "share": 0.09
+        "count": 82,
+        "share": 0.141
+      },
+      {
+        "key": "elections",
+        "count": 38,
+        "share": 0.066
+      },
+      {
+        "key": "foreign",
+        "count": 34,
+        "share": 0.059
       },
       {
         "key": "economy",
-        "count": 11,
-        "share": 0.009
-      },
-      {
-        "key": "organizations",
-        "count": 9,
-        "share": 0.008
+        "count": 2,
+        "share": 0.003
       }
     ],
     "articleStructures": [
       {
-        "key": "straight",
-        "count": 243,
-        "share": 0.209
-      },
-      {
         "key": "analysis",
-        "count": 240,
-        "share": 0.207
+        "count": 130,
+        "share": 0.224
       },
       {
         "key": "accountability",
-        "count": 224,
-        "share": 0.193
+        "count": 127,
+        "share": 0.219
+      },
+      {
+        "key": "straight",
+        "count": 115,
+        "share": 0.198
       },
       {
         "key": "conflict",
-        "count": 208,
-        "share": 0.179
-      },
-      {
-        "key": "reaction",
-        "count": 91,
-        "share": 0.078
+        "count": 107,
+        "share": 0.184
       },
       {
         "key": "legal",
-        "count": 88,
-        "share": 0.076
+        "count": 38,
+        "share": 0.066
+      },
+      {
+        "key": "reaction",
+        "count": 34,
+        "share": 0.059
       },
       {
         "key": "diplomatic",
-        "count": 66,
-        "share": 0.057
+        "count": 29,
+        "share": 0.05
       }
     ],
     "repetition": {
-      "totalStories": 1160,
-      "uniqueExact": 507,
-      "uniqueStructural": 240,
-      "exactDuplicateExtras": 653,
-      "structuralDuplicateExtras": 920,
-      "cooldownWindowDupes": 6
+      "totalStories": 580,
+      "uniqueExact": 279,
+      "uniqueStructural": 150,
+      "exactDuplicateExtras": 301,
+      "structuralDuplicateExtras": 430,
+      "cooldownWindowDupes": 0
     }
   },
   "templates": [
     {
       "catalog": "EXECUTIVE_SITUATIONS",
       "catalogSize": 23,
-      "firedUnique": 5,
+      "firedUnique": 3,
       "neverFired": [
         "sit_energy_grid_congestion",
         "sit_asylum_case_backlog",
@@ -543,6 +538,8 @@
         "sit_police_oversight_hearing",
         "sit_data_privacy_breach_response",
         "sit_gas_bridge_climate_tension",
+        "sit_deposit_insurance_stress",
+        "sit_temp_worker_enforcement",
         "sit_provincial_algorithm_sandbox",
         "sit_health_impl_capacity",
         "sit_tariff_revenue_shortfall",
@@ -563,6 +560,8 @@
         "sit_police_oversight_hearing",
         "sit_data_privacy_breach_response",
         "sit_gas_bridge_climate_tension",
+        "sit_deposit_insurance_stress",
+        "sit_temp_worker_enforcement",
         "sit_provincial_algorithm_sandbox",
         "sit_health_impl_capacity",
         "sit_tariff_revenue_shortfall",
@@ -579,23 +578,15 @@
       "topRepeats": [
         {
           "key": "sit_surveillance_warrant_backlog",
-          "count": 10
-        },
-        {
-          "key": "sit_temp_worker_enforcement",
-          "count": 10
+          "count": 5
         },
         {
           "key": "sit_income_tax_compliance_blitz",
-          "count": 7
+          "count": 4
         },
         {
           "key": "sit_rail_ownership_dispute",
-          "count": 7
-        },
-        {
-          "key": "sit_deposit_insurance_stress",
-          "count": 1
+          "count": 4
         }
       ]
     },
@@ -604,14 +595,14 @@
       "catalogSize": 6,
       "firedUnique": 1,
       "neverFired": [
-        "scandal_petty_expense",
+        "scandal_procurement_favor",
         "scandal_undisclosed_interest",
         "scandal_data_misuse",
         "scandal_witness_interference",
         "scandal_campaign_overlap"
       ],
       "possiblyNeverEligible": [
-        "scandal_petty_expense",
+        "scandal_procurement_favor",
         "scandal_undisclosed_interest",
         "scandal_data_misuse",
         "scandal_witness_interference",
@@ -619,7 +610,7 @@
       ],
       "topRepeats": [
         {
-          "key": "scandal_procurement_favor",
+          "key": "scandal_petty_expense",
           "count": 1
         }
       ]
@@ -627,11 +618,10 @@
     {
       "catalog": "CAMPAIGN_SITUATIONS",
       "catalogSize": 16,
-      "firedUnique": 3,
+      "firedUnique": 4,
       "neverFired": [
         "controversy",
         "endorsement_fight",
-        "momentum_lift",
         "opposition_attack",
         "gotv_push",
         "economic_message_war",
@@ -646,7 +636,6 @@
       "possiblyNeverEligible": [
         "controversy",
         "endorsement_fight",
-        "momentum_lift",
         "opposition_attack",
         "gotv_push",
         "economic_message_war",
@@ -661,15 +650,19 @@
       "topRepeats": [
         {
           "key": "integrity_attack_line",
-          "count": 215
+          "count": 116
         },
         {
           "key": "fundraising_shortfall",
-          "count": 210
+          "count": 113
         },
         {
           "key": "volunteer_surge",
-          "count": 18
+          "count": 7
+        },
+        {
+          "key": "momentum_lift",
+          "count": 1
         }
       ]
     }
@@ -677,25 +670,25 @@
   "actorConcentration": {
     "scandalTargets": [
       {
-        "key": "NPC010",
-        "count": 4
+        "key": "NPC009",
+        "count": 6
       }
     ],
     "cabinetEventActors": [
-      {
-        "key": "NPC002",
-        "count": 3
-      },
       {
         "key": "NPC001",
         "count": 2
       },
       {
-        "key": "NPC990",
+        "key": "NPC014",
         "count": 2
       },
       {
-        "key": "NPC009",
+        "key": "NPC002",
+        "count": 1
+      },
+      {
+        "key": "NPC005",
         "count": 1
       },
       {
@@ -703,11 +696,11 @@
         "count": 1
       },
       {
-        "key": "NPC012",
+        "key": "NPC021",
         "count": 1
       },
       {
-        "key": "NPC021",
+        "key": "NPC089",
         "count": 1
       },
       {
@@ -715,15 +708,15 @@
         "count": 1
       },
       {
-        "key": "NPC400",
-        "count": 1
-      },
-      {
-        "key": "NPC896",
+        "key": "NPC639",
         "count": 1
       },
       {
         "key": "NPC981",
+        "count": 1
+      },
+      {
+        "key": "NPC983",
         "count": 1
       },
       {
@@ -735,129 +728,129 @@
   "partyConcentration": [
     {
       "key": "PARTY_NU",
-      "count": 4377
+      "count": 2083
     },
     {
       "key": "PARTY_LAB",
-      "count": 4210
+      "count": 2004
     },
     {
       "key": "PARTY_CR",
-      "count": 3966
+      "count": 1893
     },
     {
       "key": "PARTY_GRN",
-      "count": 2994
+      "count": 1339
     },
     {
       "key": "PARTY_RL",
-      "count": 2780
+      "count": 1196
     },
     {
       "key": "PARTY_PM",
-      "count": 1747
+      "count": 747
     }
   ],
   "provinceConcentration": [
     {
-      "key": "P17",
-      "count": 55
-    },
-    {
-      "key": "P20",
-      "count": 55
-    },
-    {
-      "key": "P07",
-      "count": 52
-    },
-    {
-      "key": "P02",
-      "count": 49
-    },
-    {
       "key": "P06",
-      "count": 49
+      "count": 33
     },
     {
       "key": "P11",
-      "count": 49
-    },
-    {
-      "key": "P13",
-      "count": 49
-    },
-    {
-      "key": "FDV",
-      "count": 46
-    },
-    {
-      "key": "P09",
-      "count": 46
-    },
-    {
-      "key": "P16",
-      "count": 46
-    },
-    {
-      "key": "P14",
-      "count": 42
-    },
-    {
-      "key": "P18",
-      "count": 42
-    },
-    {
-      "key": "P19",
-      "count": 42
-    },
-    {
-      "key": "P01",
-      "count": 40
-    },
-    {
-      "key": "P10",
-      "count": 39
-    },
-    {
-      "key": "P05",
-      "count": 38
+      "count": 27
     },
     {
       "key": "P12",
-      "count": 38
+      "count": 24
     },
     {
-      "key": "P15",
-      "count": 38
+      "key": "P17",
+      "count": 24
+    },
+    {
+      "key": "P09",
+      "count": 23
+    },
+    {
+      "key": "P19",
+      "count": 23
     },
     {
       "key": "P04",
-      "count": 37
+      "count": 22
     },
     {
-      "key": "P08",
-      "count": 36
+      "key": "FDV",
+      "count": 21
     },
     {
       "key": "P03",
-      "count": 35
+      "count": 21
+    },
+    {
+      "key": "P07",
+      "count": 21
+    },
+    {
+      "key": "P15",
+      "count": 21
+    },
+    {
+      "key": "P08",
+      "count": 19
+    },
+    {
+      "key": "P10",
+      "count": 19
+    },
+    {
+      "key": "P02",
+      "count": 18
+    },
+    {
+      "key": "P01",
+      "count": 15
+    },
+    {
+      "key": "P14",
+      "count": 14
+    },
+    {
+      "key": "P16",
+      "count": 14
+    },
+    {
+      "key": "P05",
+      "count": 12
+    },
+    {
+      "key": "P20",
+      "count": 12
+    },
+    {
+      "key": "P13",
+      "count": 11
+    },
+    {
+      "key": "P18",
+      "count": 8
     }
   ],
   "government": {
     "governmentTerms": 4,
     "closedGovernmentTerms": 3,
-    "averageTermMonths": 24,
+    "averageTermMonths": 9,
     "coalitionFormed": 1,
     "coalitionBroken": 0,
-    "cabinetReshuffles": 6
+    "cabinetReshuffles": 5
   },
   "scandals": {
     "totalRecords": 1,
     "openAtEnd": 0,
     "byType": [
       {
-        "key": "scandal_procurement_favor",
+        "key": "scandal_petty_expense",
         "count": 1
       }
     ],
@@ -875,52 +868,60 @@
     ],
     "historyEventTypes": [
       {
+        "key": "POLITICAL_SCANDAL_STAGE",
+        "count": 3
+      },
+      {
         "key": "POLITICAL_SCANDAL_ALLEGATION",
         "count": 1
       },
       {
         "key": "POLITICAL_SCANDAL_RESOLVED",
         "count": 1
-      },
-      {
-        "key": "POLITICAL_SCANDAL_STAGE",
-        "count": 1
       }
     ]
   },
   "courts": {
-    "courtDecisionsInHistory": 22,
-    "courtDecisionRecords": 22,
+    "courtDecisionsInHistory": 10,
+    "courtDecisionRecords": 10,
     "dispositions": [
       {
         "key": "UPHOLD",
-        "count": 22
+        "count": 9
+      },
+      {
+        "key": "INVALIDATE",
+        "count": 1
       }
     ],
     "doctrineMentions": []
   },
   "foreign": {
-    "crisesTotal": 45,
-    "crisesActiveAtEnd": 1,
+    "crisesTotal": 58,
+    "crisesActiveAtEnd": 3,
     "crisisThemes": [
       {
         "key": "border tension",
-        "count": 32
+        "count": 38
       },
       {
         "key": "cyber and espionage dispute",
-        "count": 6
-      },
-      {
-        "key": "trade dispute",
-        "count": 3
-      },
-      {
-        "key": "sanctions dispute",
-        "count": 2
+        "count": 10
       },
       {
         "key": "humanitarian access dispute",
+        "count": 5
+      },
+      {
+        "key": "trade dispute",
+        "count": 2
+      },
+      {
+        "key": "migration corridor strain",
+        "count": 1
+      },
+      {
+        "key": "sanctions dispute",
         "count": 1
       },
       {
@@ -928,64 +929,63 @@
         "count": 1
       }
     ],
-    "treatiesTotal": 31,
+    "treatiesTotal": 10,
     "historyTreatyEvents": [
       {
         "key": "TREATY_PROPOSED",
-        "count": 30
+        "count": 9
       },
       {
         "key": "TREATY_RATIFIED",
-        "count": 21
+        "count": 7
       },
       {
         "key": "TREATY_REJECTED",
-        "count": 9
+        "count": 2
       }
     ],
     "historyCrisisEvents": [
       {
         "key": "FOREIGN_OUTREACH",
-        "count": 398
+        "count": 200
       },
       {
         "key": "FOREIGN_AFFAIRS_MONTH",
-        "count": 116
-      },
-      {
-        "key": "FOREIGN_LEADERSHIP_CHANGE",
-        "count": 57
+        "count": 58
       },
       {
         "key": "FOREIGN_CRISIS_TENSION_CREATED",
-        "count": 44
+        "count": 57
       },
       {
         "key": "FOREIGN_CRISIS_SETTLED",
-        "count": 33
+        "count": 29
+      },
+      {
+        "key": "FOREIGN_LEADERSHIP_CHANGE",
+        "count": 24
       },
       {
         "key": "FOREIGN_CRISIS_INCIDENT",
-        "count": 11
+        "count": 22
       },
       {
         "key": "FOREIGN_CRISIS_DEESCALATED",
-        "count": 7
+        "count": 12
       },
       {
         "key": "FOREIGN_CRISIS_ESCALATED",
-        "count": 5
+        "count": 7
       }
     ]
   },
   "diagnosticFlags": [
     {
-      "code": "SCANDAL_DROUGHT",
+      "code": "GOVERNMENT_HIGH_CHURN",
       "severity": "info",
-      "message": "Very few scandal history events over a multi-year run.",
+      "message": "Average closed government term under 18 months.",
       "detail": {
-        "total": 3,
-        "years": 10
+        "averageTermMonths": 9
       }
     },
     {
@@ -993,7 +993,7 @@
       "severity": "info",
       "message": "Province-tagged news composition share below 3%.",
       "detail": {
-        "provinceShare": 0.012
+        "provinceShare": 0.005
       }
     },
     {
@@ -1001,7 +1001,7 @@
       "severity": "note",
       "message": "A single politician received half or more of scandal targets.",
       "detail": {
-        "politicianId": "NPC010",
+        "politicianId": "NPC009",
         "share": 1
       }
     }

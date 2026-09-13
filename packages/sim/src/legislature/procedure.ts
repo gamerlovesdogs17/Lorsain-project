@@ -591,8 +591,8 @@ export function signBill(
   });
   const majorLaw =
     bill.policyItems.some((p) => p.magnitude >= 0.55) ||
-    bill.policyItems.length >= 2 ||
-    bill.policyItems.some((p) => Math.abs(p.fiscalImpact ?? 0) >= 0.25);
+    bill.policyItems.some((p) => Math.abs(p.fiscalImpact ?? 0) >= 0.25) ||
+    bill.policyItems.length >= 3;
   const events = [
     event(
       state,
@@ -601,7 +601,8 @@ export function signBill(
       [bill.id],
       { billId: bill.id, major: majorLaw },
       commandId,
-      majorLaw ? 0.72 : 0.32,
+      // Signing is procedural beside LAW_ENACTED — keep it out of routine news cycles.
+      0.28,
     ),
   ];
   events.push(...enactLaw(state, bill, commandId));
@@ -771,8 +772,8 @@ function enactLaw(state: SimState, bill: BillState, commandId: string | null): S
   };
   const majorLaw =
     bill.policyItems.some((p) => p.magnitude >= 0.55) ||
-    bill.policyItems.length >= 2 ||
-    bill.policyItems.some((p) => Math.abs(p.fiscalImpact ?? 0) >= 0.25);
+    bill.policyItems.some((p) => Math.abs(p.fiscalImpact ?? 0) >= 0.25) ||
+    bill.policyItems.length >= 3;
   const ev = event(
     state,
     "LAW_ENACTED",
@@ -790,7 +791,7 @@ function enactLaw(state: SimState, bill: BillState, commandId: string | null): S
         : {}),
     },
     commandId,
-    majorLaw ? 0.82 : 0.36,
+    majorLaw ? 0.78 : 0.34,
   );
   law.eventIds = [ev.id];
   state.legislatureRuntime.enactedLaws[law.id] = law;
