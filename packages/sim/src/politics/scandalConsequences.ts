@@ -1,7 +1,13 @@
 import { pushHistory } from "../scheduler.js";
 import type { KernelWorld, SimEvent, SimState } from "../types.js";
 import { currentPresidentialAuthorityId } from "../legislature/state.js";
-import { endTerm, occupyingTerms, activeTermsForPolitician, suspendTerm } from "../offices.js";
+import {
+  endTerm,
+  occupyingTerms,
+  activeTermsForPolitician,
+  suspendTerm,
+  resumeTerm,
+} from "../offices.js";
 import type { ScandalGovernmentResponse, ScandalPartyResponse, ScandalRecord } from "./scandals.js";
 
 function ministerOfficesForPolitician(
@@ -98,6 +104,60 @@ export function applyScandalDutiesRestricted(
 }
 
 /**
+ * Restore ministerial terms suspended for duties-restriction when a scandal clears,
+ * but only if no replacement occupies the office.
+ */
+export function applyScandalDutiesRestored(
+  world: KernelWorld,
+  state: SimState,
+  politicianId: string,
+  commandId: string,
+  scandalId: string,
+): SimEvent[] {
+  const events: SimEvent[] = [];
+  if (!world?.offices) return events;
+  const suspendedMine = Object.values(state.officeTerms).filter((term) => {
+    if (term.holderId !== politicianId || term.status !== "suspended") return false;
+    return world.offices[term.officeId]?.kind === "minister";
+  });
+  for (const term of suspendedMine) {
+    const officeId = term.officeId;
+    const someoneElseActive = occupyingTerms(state, officeId).some(
+      (t) =>
+        t.id !== term.id &&
+        t.holderId !== politicianId &&
+        (t.status === "active" || t.status === "suspended"),
+    );
+    if (someoneElseActive) {
+      // Replacement already appointed — do not resurrect the cleared minister.
+      continue;
+    }
+    const out = resumeTerm(state, world, term.id);
+    if ("error" in out) continue;
+    events.push(
+      pushHistory(state, {
+        date: state.currentDate,
+        type: "MINISTER_DUTIES_RESTORED",
+        importance: 0.58,
+        visibility: "public",
+        actorIds: [politicianId],
+        entityIds: [officeId, term.id, scandalId],
+        payload: {
+          officeId,
+          holderId: politicianId,
+          scandalId,
+          status: "active",
+          reason: "scandal_cleared",
+        },
+        sourceScheduledEventId: null,
+        sourceCommandId: commandId,
+      }),
+    );
+  }
+  return events;
+}
+
+/**
  * Apply officeholding consequences once when responses / outcomes warrant it.
  * Idempotent via record.metadata.consequencesApplied.
  */
@@ -166,6 +226,28 @@ export function applyScandalOfficeConsequences(
     if (restricted.length > 0) {
       record.metadata.dutiesRestricted = true;
       events.push(...restricted);
+    }
+  }
+
+  const cleared =
+    record.metadata.cleared === true ||
+    record.outcome === "exonerated" ||
+    record.outcome === "unsubstantiated" ||
+    record.outcome === "procedurally_closed";
+  if (
+    cleared &&
+    record.metadata.dutiesRestricted === true &&
+    record.metadata.dutiesRestored !== true &&
+    record.metadata.officeExitReason == null
+  ) {
+    const restored = applyScandalDutiesRestored(world, state, targetId, commandId, record.id);
+    if (restored.length > 0) {
+      record.metadata.dutiesRestored = true;
+      events.push(...restored);
+    } else {
+      // No suspended term left to restore (already ended/replaced) — mark so we do not retry forever.
+      record.metadata.dutiesRestored = true;
+      record.metadata.dutiesRestoreSkipped = true;
     }
   }
 

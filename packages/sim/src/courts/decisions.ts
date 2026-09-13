@@ -30,10 +30,13 @@ export function chooseJudicialVote(
   const ideology = ((profile?.ideology.authority ?? 0) + (profile?.ideology.economic ?? 0)) / 2;
   const precedent =
     resolvedPrecedent === undefined ? similarPrecedent(state, courtCase) : resolvedPrecedent;
-  let score = courtCase.meritsLean * 1.15;
-  score -= (institutionalism - 0.5) * 0.7;
+  let score = courtCase.meritsLean * 1.25;
+  // Institutional caution remains, but must not erase strong constitutional violations.
+  score -= (institutionalism - 0.5) * 0.42;
   if (precedent) {
-    score += precedent.disposition === "INVALIDATE" ? 0.42 : -0.42;
+    const leanAbs = Math.abs(courtCase.meritsLean);
+    const precedentWeight = Math.max(0.12, 0.42 - leanAbs * 0.28);
+    score += (precedent.disposition === "INVALIDATE" ? 1 : -1) * precedentWeight;
   }
   score += ideology * courtCase.meritsLean * 0.28;
   score += (pragmatism - 0.5) * courtCase.meritsLean * 0.12;
@@ -48,7 +51,7 @@ export function chooseJudicialVote(
     score += 0.06 * (profile?.traits.partyLoyalty ?? 0.5) * 0.15;
   }
   score += (rng.float01("npc-decisions") - 0.5) * 0.18;
-  return score > 0.08 ? "invalidate" : "uphold";
+  return score > 0.02 ? "invalidate" : "uphold";
 }
 
 export function chooseConfirmationVote(

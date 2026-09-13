@@ -10,6 +10,9 @@ on:
       years:
         description: Years per seed
         default: "10"
+      run_id:
+        description: Matrix run id (required for aggregate matching)
+        default: "phase17c-final"
   schedule:
     # Monthly 07:30 UTC (after weekly extended validation)
     - cron: "30 7 1 * *"
@@ -40,10 +43,13 @@ jobs:
         env:
           SEEDS: ${{ github.event.inputs.seeds || '3' }}
           YEARS: ${{ github.event.inputs.years || '10' }}
+          RUN_ID: ${{ github.event.inputs.run_id || format('phase17c-final-{0}', github.run_id) }}
         run: |
           node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/phase17c-balance-run.ts \
             --seeds="${SEEDS}" \
             --years="${YEARS}" \
+            --run-id="${RUN_ID}" \
+            --outdir=final \
             --shard=${{ matrix.shard }} \
             --shard-count=3
       - name: Upload seed shard
@@ -51,7 +57,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: phase17c-seeds-shard-${{ matrix.shard }}
-          path: docs/qa/phase17c/seeds/
+          path: docs/qa/phase17c/final/seeds/
           if-no-files-found: error
 
   balance-aggregate:
@@ -78,21 +84,29 @@ jobs:
           merge-multiple: true
       - name: Flatten seeds
         run: |
-          mkdir -p docs/qa/phase17c/seeds
-          find artifact-seeds -type f -name '*.json' -exec cp -f {} docs/qa/phase17c/seeds/ \;
-          ls -la docs/qa/phase17c/seeds
+          mkdir -p docs/qa/phase17c/final/seeds
+          find artifact-seeds -type f -name '*.json' -exec cp -f {} docs/qa/phase17c/final/seeds/ \;
+          ls -la docs/qa/phase17c/final/seeds
       - name: Aggregate report
         env:
           YEARS: ${{ github.event.inputs.years || '10' }}
+          SEEDS: ${{ github.event.inputs.seeds || '3' }}
+          RUN_ID: ${{ github.event.inputs.run_id || format('phase17c-final-{0}', github.run_id) }}
         run: |
           node packages/content-loader/node_modules/tsx/dist/cli.mjs scripts/phase17c-balance-run.ts \
-            --aggregate --years="${YEARS}"
+            --aggregate \
+            --outdir=final \
+            --run-id="${RUN_ID}" \
+            --years="${YEARS}" \
+            --expected-seeds="${SEEDS}"
       - name: Upload aggregate
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: phase17c-runtime-balance
           path: |
+            docs/qa/phase17c/final/runtime-balance-report.json
+            docs/qa/phase17c/final/runtime-balance-summary.md
             docs/qa/phase17c/runtime-balance-report.json
             docs/qa/phase17c/runtime-balance-summary.md
           if-no-files-found: error

@@ -25,8 +25,8 @@ import {
 
 /**
  * Derive a short narrative theme label for a newly emergent crisis from the
- * bilateral context. The label is purely descriptive — it does not affect any
- * game-mechanical values. Priority order mirrors realistic escalation factors.
+ * bilateral context. Themes are contextual (not equalized); neighbor pairs can
+ * still produce trade/cyber/consular themes when those drivers dominate.
  *
  * Exported so tests can verify stability without a full sim harness.
  */
@@ -37,54 +37,74 @@ export function assignCrisisTheme(
   aNeighborsB: boolean,
   hasSanctions: boolean,
 ): string {
-  // 1. Active sanctions — carve-outs vs escalation.
+  type Candidate = { theme: string; weight: number };
+  const candidates: Candidate[] = [];
+  const push = (theme: string, weight: number) => {
+    if (weight > 0) candidates.push({ theme, weight });
+  };
+
   if (hasSanctions) {
-    if (pickTechExportControls(true, rel)) return "technology export control dispute";
-    return "sanctions dispute";
+    push(
+      pickTechExportControls(true, rel) ? "technology export control dispute" : "sanctions dispute",
+      1.4 + Math.min(0.6, Math.abs(rel.general) / 80),
+    );
   }
-  // 2. Cyber-capable rivals — distinct from generic standoffs.
-  if (pickCyberDispute(aRuntime, bRuntime) && rel.securityTension >= 0.25) {
-    return "cyber and espionage dispute";
+  if (pickCyberDispute(aRuntime, bRuntime)) {
+    push("cyber and espionage dispute", 0.55 + rel.securityTension * 0.9);
   }
-  // 3. Mobilized posture near a maritime rival → military posturing / maritime dispute.
   if (aRuntime.posture === "mobilized" || bRuntime.posture === "mobilized") {
-    if (pickMaritimeResourceDispute(aRuntime, bRuntime)) return "maritime resource dispute";
-    if (
+    if (pickMaritimeResourceDispute(aRuntime, bRuntime)) {
+      push("maritime resource dispute", 1.1);
+    } else if (
       aRuntime.strategicGoals.includes("maritime_access") ||
       bRuntime.strategicGoals.includes("maritime_access") ||
       aRuntime.capabilities.naval >= 0.55 ||
       bRuntime.capabilities.naval >= 0.55
     ) {
-      return "military posturing";
+      push("military posturing", 1.0);
+    } else {
+      push("security standoff", 0.85);
     }
-    return "security standoff";
   }
-  // 4. Shared border — migration or border flashpoints.
   if (aNeighborsB) {
     if (pickMigrationCorridorStrain(rel, aRuntime, bRuntime, true)) {
-      return "migration corridor strain";
+      push("migration corridor strain", 1.15);
     }
-    return "border tension";
+    push("border tension", 0.55 + rel.securityTension * 0.55);
+    push("detention and consular dispute", 0.22 + (1 - rel.trust) * 0.35);
   }
-  // 5. Dense trade links — energy or generic trade friction.
-  if (rel.economicTies > 0.4) {
-    if (pickEnergySupplyDispute(rel, aRuntime, bRuntime)) return "energy supply dispute";
-    return "trade dispute";
+  if (rel.economicTies > 0.28) {
+    if (pickEnergySupplyDispute(rel, aRuntime, bRuntime)) {
+      push("energy supply dispute", 0.95 + rel.economicTies * 0.4);
+    }
+    push("trade dispute", 0.45 + rel.economicTies * 0.85);
+    if (rel.economicTies > 0.5 && rel.general < 0) {
+      push("treaty interpretation dispute", 0.35 + Math.min(0.4, -rel.general / 100));
+    }
   }
-  // 6. Alliance-seeking goals → consultation strain / humanitarian access.
   if (
     aRuntime.strategicGoals.includes("secure_alliance") ||
     bRuntime.strategicGoals.includes("secure_alliance")
   ) {
-    if (pickHumanitarianAccess(aRuntime, bRuntime)) return "humanitarian access dispute";
-    return "alliance consultation strain";
+    if (pickHumanitarianAccess(aRuntime, bRuntime)) {
+      push("humanitarian access dispute", 0.9);
+    } else {
+      push("alliance consultation strain", 0.7);
+    }
   }
-  // 7. Deeply negative general relations → diplomatic fracture.
-  if (rel.general < -20) return "diplomatic confrontation";
-  // 8. Elevated security tension without a shared border.
-  if (rel.securityTension >= 0.35) return "security standoff";
-  // 9. Fallback — generic, not a fabricated border incident.
-  return "diplomatic confrontation";
+  if (rel.general < -20) {
+    push("diplomatic confrontation", 0.65 + Math.min(0.5, -rel.general / 80));
+    push("diplomatic expulsion dispute", 0.35 + Math.min(0.4, -rel.general / 100));
+  }
+  if (rel.securityTension >= 0.35 && !aNeighborsB) {
+    push("security standoff", 0.7 + rel.securityTension * 0.4);
+  }
+
+  if (candidates.length === 0) return "diplomatic confrontation";
+
+  // Deterministic pick: highest weight, then theme name for stability.
+  candidates.sort((a, b) => b.weight - a.weight || a.theme.localeCompare(b.theme));
+  return candidates[0]!.theme;
 }
 
 function clamp01(n: number): number {

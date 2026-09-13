@@ -270,7 +270,7 @@ function generateCases(
         respondentId: emergency.declaredBy,
         constitutionalQuestion: "Whether the emergency declaration remains constitutionally valid",
         constitutionalRule: "emergency_review",
-        meritsLean: -0.15,
+        meritsLean: 0.38,
         expedited: true,
       },
       commandId,
@@ -315,7 +315,10 @@ function generateCases(
               : {}),
             challengedKind: "law",
           }),
-          meritsLean: (law.policyItems[0]?.magnitude ?? 0.3) - 0.55,
+          meritsLean: Math.max(
+            -0.55,
+            Math.min(0.75, (law.policyItems[0]?.magnitude ?? 0.35) - 0.28),
+          ),
         },
         commandId,
       );
@@ -344,7 +347,7 @@ function generateCases(
           respondentId: reg.issuerId,
           constitutionalQuestion: pickRegulationReviewQuestion(reg.id, reg.id),
           constitutionalRule: "regulation_review",
-          meritsLean: reg.major ? 0.12 : -0.25,
+          meritsLean: reg.major ? 0.42 : -0.12,
         },
         commandId,
       );

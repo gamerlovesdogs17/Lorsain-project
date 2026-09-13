@@ -27,6 +27,11 @@ export type RuntimeBalanceRunMeta = {
   startingDate: string;
   endingDate: string;
   elapsedMs?: number;
+  /** Phase 17C matrix identity — used to prevent aggregate contamination. */
+  runId?: string;
+  matrix?: string;
+  years?: number;
+  commitSha?: string;
 };
 
 export type TemplateCatalogStats = {
@@ -91,6 +96,8 @@ export type RuntimeBalanceReport = {
     courtDecisionRecords: number;
     dispositions: CountRow[];
     doctrineMentions: CountRow[];
+    caseTypes: CountRow[];
+    precedentTreatments: CountRow[];
   };
   foreign: {
     crisesTotal: number;
@@ -430,6 +437,41 @@ function computeDiagnosticFlags(
     });
   }
 
+  const topTheme = report.foreign.crisisThemes[0];
+  if (
+    topTheme &&
+    report.foreign.crisesTotal >= 8 &&
+    (topTheme.share ?? topTheme.count / report.foreign.crisesTotal) >= 0.55
+  ) {
+    flags.push({
+      code: "FOREIGN_CRISIS_THEME_DOMINANCE",
+      severity: "watch",
+      message: "Dominant foreign crisis theme exceeds 55% of crises.",
+      detail: {
+        theme: topTheme.key,
+        share: topTheme.share ?? topTheme.count / report.foreign.crisesTotal,
+      },
+    });
+  }
+
+  const topDoctrine = report.courts.doctrineMentions[0];
+  const doctrineTotal = report.courts.doctrineMentions.reduce((s, r) => s + r.count, 0);
+  if (
+    topDoctrine &&
+    doctrineTotal >= 8 &&
+    (topDoctrine.share ?? topDoctrine.count / doctrineTotal) >= 0.55
+  ) {
+    flags.push({
+      code: "COURT_DOCTRINE_DOMINANCE",
+      severity: "watch",
+      message: "One constitutional rule dominates Court decisions.",
+      detail: {
+        doctrine: topDoctrine.key,
+        share: topDoctrine.share ?? topDoctrine.count / doctrineTotal,
+      },
+    });
+  }
+
   return flags;
 }
 
@@ -580,11 +622,37 @@ export function buildRuntimeBalanceReport(
   const courtHist = history.filter((e) => e.type === "COURT_DECISION");
   const dispositionCounts = new Map<string, number>();
   const doctrineCounts = new Map<string, number>();
-  for (const ev of courtHist) {
-    const outcome = payloadString(ev, "outcome") ?? payloadString(ev, "disposition") ?? "unknown";
-    dispositionCounts.set(outcome, (dispositionCounts.get(outcome) ?? 0) + 1);
-    const doctrine = payloadString(ev, "doctrineKey") ?? payloadString(ev, "constitutionalRule");
-    if (doctrine) doctrineCounts.set(doctrine, (doctrineCounts.get(doctrine) ?? 0) + 1);
+  const caseTypeCounts = new Map<string, number>();
+  const precedentTreatmentCounts = new Map<string, number>();
+  // Authoritative decisions — do not rely on history payload alone.
+  const decisionRecords = Object.values(state.constitutionalRuntime?.courtDecisions ?? {});
+  for (const decision of decisionRecords) {
+    dispositionCounts.set(
+      decision.disposition,
+      (dispositionCounts.get(decision.disposition) ?? 0) + 1,
+    );
+    if (decision.constitutionalRule) {
+      doctrineCounts.set(
+        decision.constitutionalRule,
+        (doctrineCounts.get(decision.constitutionalRule) ?? 0) + 1,
+      );
+    }
+    caseTypeCounts.set(decision.caseType, (caseTypeCounts.get(decision.caseType) ?? 0) + 1);
+    for (const t of decision.precedentTreatments ?? []) {
+      precedentTreatmentCounts.set(
+        t.relation,
+        (precedentTreatmentCounts.get(t.relation) ?? 0) + 1,
+      );
+    }
+  }
+  // Fallback for older snapshots missing decision records.
+  if (decisionRecords.length === 0) {
+    for (const ev of courtHist) {
+      const outcome = payloadString(ev, "outcome") ?? payloadString(ev, "disposition") ?? "unknown";
+      dispositionCounts.set(outcome, (dispositionCounts.get(outcome) ?? 0) + 1);
+      const doctrine = payloadString(ev, "doctrineKey") ?? payloadString(ev, "constitutionalRule");
+      if (doctrine) doctrineCounts.set(doctrine, (doctrineCounts.get(doctrine) ?? 0) + 1);
+    }
   }
 
   const foreign = state.foreignAffairsRuntime;
@@ -667,9 +735,11 @@ export function buildRuntimeBalanceReport(
     },
     courts: {
       courtDecisionsInHistory: courtHist.length,
-      courtDecisionRecords: Object.keys(state.constitutionalRuntime?.courtDecisions ?? {}).length,
+      courtDecisionRecords: decisionRecords.length,
       dispositions: toRows(dispositionCounts, undefined, 12),
-      doctrineMentions: toRows(doctrineCounts, undefined, 12),
+      doctrineMentions: toRows(doctrineCounts, decisionRecords.length || undefined, 12),
+      caseTypes: toRows(caseTypeCounts, decisionRecords.length || undefined, 12),
+      precedentTreatments: toRows(precedentTreatmentCounts, undefined, 12),
     },
     foreign: {
       crisesTotal: Object.keys(foreign?.crises ?? {}).length,

@@ -19,7 +19,8 @@ import {
   backgroundForPolitician,
 } from "./politics/biography.js";
 import { createRngService } from "./rng.js";
-import { occupyingTerms } from "./offices.js";
+import { occupyingTerms, canAssumeOffice } from "./offices.js";
+import { appointMinister } from "./executive/procedure.js";
 
 describe("Phase 17C — scandal consequence truthfulness", () => {
   it("A: weak expense allegation can clear without removing the minister", () => {
@@ -130,6 +131,115 @@ describe("Phase 17C — scandal consequence truthfulness", () => {
     if (record.legalReferralId) {
       expect(state.constitutionalRuntime.grounds[record.legalReferralId]).toBeTruthy();
     }
+  });
+
+  it("E: duties restricted then cleared restores the minister when no replacement", () => {
+    const world = loadTerenaWorld();
+    const presidentId =
+      world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
+      "NPC146";
+    const sim = createSimulation({
+      world,
+      seed: "p17c-scandal-restore",
+      playerPoliticianId: presidentId,
+    });
+    const state = jsonClone(sim.getSnapshot());
+    const officeId = "OFFICE_MINISTER_JUSTICE";
+    const ministerId = currentMinisterHolderId(world, state, officeId);
+    expect(ministerId).toBeTruthy();
+    if (!ministerId) return;
+
+    ensurePoliticsRuntime(state);
+    const record = openScandalFixture(state, "scandal_undisclosed_interest", ministerId, {
+      evidenceStrength: 0.55,
+      severity: 0.5,
+    });
+    record.governmentResponse = "restrict_duties";
+    record.partyResponse = "defend";
+    applyScandalOfficeConsequences(world, state, record, "CMD_RESTRICT");
+    expect(record.metadata.dutiesRestricted).toBe(true);
+    expect(currentMinisterHolderId(world, state, officeId)).toBeNull();
+    const suspended = occupyingTerms(state, officeId).find(
+      (t) => t.holderId === ministerId && t.status === "suspended",
+    );
+    expect(suspended).toBeTruthy();
+
+    record.stage = "resolution";
+    record.outcome = "exonerated";
+    record.metadata.cleared = true;
+    record.metadata.guilty = false;
+    applyScandalOfficeConsequences(world, state, record, "CMD_RESTORE");
+    expect(record.metadata.dutiesRestored).toBe(true);
+    expect(currentMinisterHolderId(world, state, officeId)).toBe(ministerId);
+    expect(
+      state.history.some(
+        (e) => e.type === "MINISTER_DUTIES_RESTORED" && e.payload?.holderId === ministerId,
+      ),
+    ).toBe(true);
+  });
+
+  it("F: cleared minister does not reclaim office after replacement", () => {
+    const world = loadTerenaWorld();
+    const presidentId =
+      world.startingTerms.find((t) => world.offices[t.officeId]?.kind === "president")?.holderId ??
+      "NPC146";
+    const sim = createSimulation({
+      world,
+      seed: "p17c-scandal-noreclaim",
+      playerPoliticianId: presidentId,
+    });
+    const state = jsonClone(sim.getSnapshot());
+    const officeId = "OFFICE_MINISTER_HEALTH";
+    const ministerId = currentMinisterHolderId(world, state, officeId);
+    expect(ministerId).toBeTruthy();
+    if (!ministerId) return;
+
+    ensurePoliticsRuntime(state);
+    const record = openScandalFixture(state, "scandal_undisclosed_interest", ministerId, {
+      evidenceStrength: 0.55,
+      severity: 0.5,
+    });
+    record.governmentResponse = "restrict_duties";
+    applyScandalOfficeConsequences(world, state, record, "CMD_RESTRICT");
+    expect(currentMinisterHolderId(world, state, officeId)).toBeNull();
+
+    const replacementId =
+      Object.values(state.politicians)
+        .filter((p) => p.alive && !p.retired && p.id !== ministerId && p.id !== presidentId)
+        .find(
+          (p) =>
+            canAssumeOffice(state, world, officeId, p.id, "substantive", {
+              ignoreOfficeCapacity: true,
+            }) == null,
+        )?.id ?? null;
+    expect(replacementId).toBeTruthy();
+    if (!replacementId) return;
+    // appointMinister ends any occupying (including suspended) term then installs replacement.
+    const appointed = appointMinister(
+      world,
+      state,
+      {
+        actorId: presidentId,
+        officeId,
+        politicianId: replacementId,
+      },
+      "CMD_REPLACE",
+    );
+    expect("error" in appointed).toBe(false);
+    expect(currentMinisterHolderId(world, state, officeId)).toBe(replacementId);
+    expect(canAssumeOffice(state, world, officeId, ministerId, "substantive")).not.toBeNull();
+
+    record.stage = "resolution";
+    record.outcome = "exonerated";
+    record.metadata.cleared = true;
+    applyScandalOfficeConsequences(world, state, record, "CMD_CLEAR");
+    expect(currentMinisterHolderId(world, state, officeId)).toBe(replacementId);
+    expect(currentMinisterHolderId(world, state, officeId)).not.toBe(ministerId);
+    expect(
+      occupyingTerms(state, officeId).some(
+        (t) => t.holderId === ministerId && t.status === "active",
+      ),
+    ).toBe(false);
   });
 });
 

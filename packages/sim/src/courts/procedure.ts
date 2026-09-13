@@ -1116,6 +1116,7 @@ export function recordJudicialDecision(
         invalidate: tallied.invalidate,
         nonparticipation: tallied.nonparticipation,
         constitutionalQuestion: courtCase.constitutionalQuestion,
+        constitutionalRule: courtCase.constitutionalRule,
         caseType: courtCase.caseType,
         precedentTreatments,
       },
