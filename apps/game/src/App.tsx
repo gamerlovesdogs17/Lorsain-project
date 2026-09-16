@@ -19,7 +19,11 @@ import type { ScenarioDocument } from "@lorsain/scenario";
 import type { ContentBundle } from "@lorsain/content-loader";
 import { loadBrowserContentBundle } from "./content/browserReader.js";
 import { kernelWorldFromBundle } from "./content/world.js";
-import { ScenarioEditorScreen, ScenarioImportScreen } from "./scenario/scenarioScreens.js";
+import {
+  ScenarioEditorScreen,
+  ScenarioImportScreen,
+  ScenarioStudioHubScreen,
+} from "./scenario/scenarioScreens.js";
 import {
   downloadSave,
   getSave,
@@ -173,6 +177,7 @@ export default function App() {
     | "play"
     | "settings"
     | "importScenario"
+    | "scenarioStudio"
     | "scenarioEditor"
     | "customSelect"
   >("title");
@@ -846,11 +851,25 @@ export default function App() {
       </div>
     );
   }
+  if (mode === "scenarioStudio") {
+    return (
+      <div className="app-title scenario-host">
+        <ScenarioStudioHubScreen
+          onBack={() => setMode("title")}
+          onImport={() => setMode("importScenario")}
+          onOpenEditor={(doc) => {
+            setEditorSeedDoc(doc);
+            setMode("scenarioEditor");
+          }}
+        />
+      </div>
+    );
+  }
   if (mode === "importScenario") {
     return (
       <div className="app-title scenario-host">
         <ScenarioImportScreen
-          onBack={() => setMode("title")}
+          onBack={() => setMode("scenarioStudio")}
           onPlay={(doc) => beginCustomScenario(doc)}
           onEdit={(doc) => {
             setEditorSeedDoc(doc);
@@ -997,40 +1016,9 @@ export default function App() {
                 {saves.length} saved career{saves.length === 1 ? "" : "s"}
               </small>
             </button>
-            <button type="button" onClick={() => setMode("importScenario")}>
-              <span>Import scenario</span>
-              <small>Custom world JSON package</small>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEditorSeedDoc({
-                  format: "lorsain-scenario",
-                  formatVersion: 1,
-                  scenarioId: "MY_SCENARIO",
-                  name: "Untitled scenario",
-                  startDate: "2028-01-01",
-                  countryName: "New Republic",
-                  contentSections: {
-                    parties: [
-                      {
-                        id: "PARTY_A",
-                        name: "Party A",
-                        abbreviation: "A",
-                        ideology: "centre",
-                        leaderId: "NPC_A",
-                      },
-                    ],
-                    geography: { provinces: [{ id: "PRV_01", name: "Capital Province" }] },
-                    constitution: { assemblySeats: 12, courtJudges: 3 },
-                  },
-                  contentEmbed: { kind: "mini_playable_v1" },
-                });
-                setMode("scenarioEditor");
-              }}
-            >
-              <span>Scenario editor</span>
-              <small>Draft overview, parties, rules</small>
+            <button type="button" onClick={() => setMode("scenarioStudio")}>
+              <span>Scenario Studio</span>
+              <small>Quick build, import, or edit custom worlds</small>
             </button>
             <button type="button" onClick={() => setMode("settings")}>
               <span>Settings</span>
