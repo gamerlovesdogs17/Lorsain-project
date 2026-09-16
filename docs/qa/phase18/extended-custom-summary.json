@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-09-16T01:04:35.974Z",
+  "commitSha": "d7f939799c744aafb29c2cb133a562a2770695cb",
+  "years": 5,
+  "worlds": [
+    {
+      "label": "aster",
+      "scenarioId": "ASTER_2029",
+      "seed": "P18-EXT-ASTER",
+      "years": 5,
+      "startDate": "2029-04-01",
+      "endDate": "2034-04-01",
+      "completedTurns": 60,
+      "presidentialElectionsResolved": 2,
+      "assemblyElectionsResolved": 0,
+      "auditErrorCount": 0,
+      "auditErrors": [],
+      "elapsedMs": 1754
+    },
+    {
+      "label": "brinor",
+      "scenarioId": "BRINOR_2030",
+      "seed": "P18-EXT-BRINOR",
+      "years": 5,
+      "startDate": "2030-09-01",
+      "endDate": "2035-09-01",
+      "completedTurns": 60,
+      "presidentialElectionsResolved": 2,
+      "assemblyElectionsResolved": 0,
+      "auditErrorCount": 0,
+      "auditErrors": [],
+      "elapsedMs": 5227
+    }
+  ]
+}

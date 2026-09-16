@@ -2038,7 +2038,7 @@
     "elections": {
       "assemblySystem": "stv",
       "presidentialMode": "national_rcv",
-      "presidentialIntervalYears": 5,
+      "presidentialIntervalYears": 2,
       "assemblyIntervalYears": 4,
       "nominationRuleLabels": {
         "PARTY_ASTER_FEDERA_01": "AS1 member RCV",

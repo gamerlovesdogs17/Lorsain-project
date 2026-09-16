@@ -104,8 +104,11 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
 
   const electionSchedule = resolveMiniWorldElectionSchedule(doc);
   const deferFirstElection = (cal: typeof electionSchedule.presidentialCalendar): IsoDate => {
+    // Prefer the first on-cycle year at least ~2 years after start so:
+    // - 12-month custom QA stays election-quiet
+    // - 5-year Extended can still resolve a presidential cycle
     const startYear = parseIsoDate(start).year;
-    let year = startYear + 4;
+    let year = startYear + 2;
     while ((year - cal.anchorYear) % cal.intervalYears !== 0) year += 1;
     return regularElectionDate(cal, year);
   };

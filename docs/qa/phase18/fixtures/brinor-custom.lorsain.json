@@ -3837,7 +3837,7 @@
     "elections": {
       "assemblySystem": "mixed_member",
       "presidentialMode": "assembly_selection",
-      "presidentialIntervalYears": 5,
+      "presidentialIntervalYears": 2,
       "assemblyIntervalYears": 4,
       "nominationRuleLabels": {
         "PARTY_BRINOR_COMMO_01": "BR1 member RCV",

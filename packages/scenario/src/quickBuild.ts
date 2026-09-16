@@ -249,7 +249,7 @@ export function quickBuildScenario(input: QuickBuildInput): ScenarioDocument {
         assemblySystem: input.electoralPreset,
         presidentialMode:
           input.governmentForm === "parliamentary" ? "assembly_selection" : "national_rcv",
-        presidentialIntervalYears: 5,
+        presidentialIntervalYears: 2,
         assemblyIntervalYears: 4,
         nominationRuleLabels: Object.fromEntries(
           parties.map((p) => [p.id, `${p.abbreviation} member RCV`]),

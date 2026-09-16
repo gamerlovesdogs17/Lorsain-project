@@ -8,8 +8,9 @@ import { execSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { importScenarioJson } from "@lorsain/scenario";
-import { auditSimulationIntegrity, createSimulation } from "../packages/sim/src/engine.ts";
+import { importScenarioJson } from "../packages/scenario/src/index.ts";
+import { createSimulation } from "../packages/sim/src/engine.ts";
+import { auditSimulationIntegrity } from "../packages/sim/src/integrity/audit.ts";
 import { buildKernelWorldFromScenarioDocument } from "../packages/sim/src/scenario/kernelBridge.ts";
 import { advanceIntegrated } from "../packages/sim/src/integration/harness.ts";
 

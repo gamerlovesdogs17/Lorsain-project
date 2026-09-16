@@ -26,7 +26,7 @@ jobs:
       - name: Build
         run: pnpm build
       - name: Run Phase 18 custom extended script
-        run: pnpm exec tsx scripts/phase18-custom-extended.ts --years=5
+        run: pnpm test:phase18-custom-extended
       - name: Upload summary
         if: always()
         uses: actions/upload-artifact@v4
