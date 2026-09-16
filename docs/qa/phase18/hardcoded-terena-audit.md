@@ -71,9 +71,9 @@ Audit scope: bundled **Terena** path vs portable **scenario** path introduced in
 
 | File | Role |
 | --- | --- |
-| `docs/qa/phase18/fixtures/custom-mini-world.lorsain.json` | Alphaven baseline (18A) |
-| `docs/qa/phase18/fixtures/aster-custom.lorsain.json` | 3 provinces, 36 seats, 6/3-year cycles |
-| `docs/qa/phase18/fixtures/brinor-custom.lorsain.json` | 1 province, 12 seats, 4/5-year cycles |
+| `docs/qa/phase18/fixtures/custom-mini-world.lorsain.json` | Alphaven baseline (18A) — 2 provinces, 24 seats |
+| `docs/qa/phase18/fixtures/aster-custom.lorsain.json` | Aster Federation — 2029-04-01, 5 provinces, 120 seats, 4 parties, presidential |
+| `docs/qa/phase18/fixtures/brinor-custom.lorsain.json` | Brinor Commonwealth — 2030-09-01, 10 provinces, 240 seats, 5 parties, parliamentary |
 
 ### Tests and extended runs
 

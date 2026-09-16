@@ -14,7 +14,7 @@ import { publicCandidateFacts } from "./support.js";
 import type { PublicCandidateFacts } from "./types.js";
 import { constituencyTurnout, mergeTurnout } from "./turnout.js";
 import { scheduleAssumptionIfNeeded } from "./state.js";
-import type { ElectionCandidate, ElectionState } from "./types.js";
+import type { ElectionCandidate, ElectionCountInput, ElectionState } from "./types.js";
 import { FIELD } from "../campaigns/policy.js";
 import { constituencyGotvBoost } from "../campaigns/gotv.js";
 import {
@@ -147,11 +147,12 @@ export function resolvePresidentialElection(
       validVoteValue: validVotes,
       turnoutRate: 1,
     };
-    const countInput = {
+    const countInput: ElectionCountInput = {
       candidateIds,
       ballots: [
         {
-          weight: { num: BigInt(validVotes), den: 1n },
+          id: "assembly_selection:winner",
+          weight: String(validVotes),
           rankings: [winnerId, runnerUp],
         },
       ],
