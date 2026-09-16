@@ -1,0 +1,4003 @@
+{
+  "format": "lorsain-scenario",
+  "formatVersion": 1,
+  "scenarioId": "BRINOR_2030",
+  "name": "Brinor Commonwealth (QA Custom)",
+  "description": "Quick-built scenario for Brinor Commonwealth. Seed: brinor-custom-fixture-v1",
+  "startDate": "2030-09-01",
+  "author": "Lorsain Quick Build",
+  "countryName": "Brinor Commonwealth",
+  "gameVersion": "0.3.0-predev",
+  "contentSections": {
+    "overview": {
+      "tagline": "Generated parliamentary republic",
+      "foundingYear": 1841
+    },
+    "constitution": {
+      "governmentForm": "parliamentary",
+      "assemblySeats": 240,
+      "assemblyAbsoluteMajority": 121,
+      "assemblyAbsoluteMajorityPreset": "simple_majority",
+      "courtJudges": 4,
+      "courtTermYears": 10,
+      "ministerialCensurePreset": "three_fifths",
+      "ministerialCensureFraction": 0.6,
+      "regulationReviewDays": 45
+    },
+    "geography": {
+      "provinces": [
+        {
+          "id": "PRV_BRINOR_COMMO_01",
+          "name": "Brinor Commonwealth Province 1",
+          "population": 1814851,
+          "economy": "mixed",
+          "urbanization": "high",
+          "characteristics": [
+            "coastal"
+          ]
+        },
+        {
+          "id": "PRV_BRINOR_COMMO_02",
+          "name": "Brinor Commonwealth Province 2",
+          "population": 3155815,
+          "economy": "agrarian",
+          "urbanization": "high",
+          "characteristics": [
+            "inland"
+          ]
+        },
+        {
+          "id": "PRV_BRINOR_COMMO_03",
+          "name": "Brinor Commonwealth Province 3",
+          "population": 2440062,
+          "economy": "agrarian",
+          "urbanization": "high",
+          "characteristics": [
+            "inland"
+          ]
+        },
+        {
+          "id": "PRV_BRINOR_COMMO_04",
+          "name": "Brinor Commonwealth Province 4",
+          "population": 1679109,
+          "economy": "services",
+          "urbanization": "high",
+          "characteristics": [
+            "river"
+          ]
+        },
+        {
+          "id": "PRV_BRINOR_COMMO_05",
+          "name": "Brinor Commonwealth Province 5",
+          "population": 3164807,
+          "economy": "industrial",
+          "urbanization": "low",
+          "characteristics": [
+            "river"
+          ]
+        },
+        {
+          "id": "PRV_BRINOR_COMMO_06",
+          "name": "Brinor Commonwealth Province 6",
+          "population": 571300,
+          "economy": "agrarian",
+          "urbanization": "medium",
+          "characteristics": [
+            "border"
+          ]
+        },
+        {
+          "id": "PRV_BRINOR_COMMO_07",
+          "name": "Brinor Commonwealth Province 7",
+          "population": 3122406,
+          "economy": "mixed",
+          "urbanization": "high",
+          "characteristics": [
+            "inland"
+          ]
+        },
+        {
+          "id": "PRV_BRINOR_COMMO_08",
+          "name": "Brinor Commonwealth Province 8",
+          "population": 1474330,
+          "economy": "mixed",
+          "urbanization": "low",
+          "characteristics": [
+            "coastal"
+          ]
+        },
+        {
+          "id": "PRV_BRINOR_COMMO_09",
+          "name": "Brinor Commonwealth Province 9",
+          "population": 1292274,
+          "economy": "services",
+          "urbanization": "low",
+          "characteristics": [
+            "river"
+          ]
+        },
+        {
+          "id": "PRV_BRINOR_COMMO_10",
+          "name": "Brinor Commonwealth Province 10",
+          "population": 1017182,
+          "economy": "agrarian",
+          "urbanization": "medium",
+          "characteristics": [
+            "inland"
+          ]
+        }
+      ],
+      "constituencies": [
+        {
+          "id": "CON_BRINOR_COMMO_01",
+          "name": "Brinor Commonwealth Province 1 1",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "seats": 12,
+          "population": 604950
+        },
+        {
+          "id": "CON_BRINOR_COMMO_02",
+          "name": "Brinor Commonwealth Province 2 2",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "seats": 12,
+          "population": 1051938
+        },
+        {
+          "id": "CON_BRINOR_COMMO_03",
+          "name": "Brinor Commonwealth Province 3 3",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "seats": 12,
+          "population": 813354
+        },
+        {
+          "id": "CON_BRINOR_COMMO_04",
+          "name": "Brinor Commonwealth Province 4 4",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "seats": 12,
+          "population": 559703
+        },
+        {
+          "id": "CON_BRINOR_COMMO_05",
+          "name": "Brinor Commonwealth Province 5 5",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "seats": 12,
+          "population": 1054935
+        },
+        {
+          "id": "CON_BRINOR_COMMO_06",
+          "name": "Brinor Commonwealth Province 6 6",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "seats": 12,
+          "population": 190433
+        },
+        {
+          "id": "CON_BRINOR_COMMO_07",
+          "name": "Brinor Commonwealth Province 7 7",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "seats": 12,
+          "population": 1040802
+        },
+        {
+          "id": "CON_BRINOR_COMMO_08",
+          "name": "Brinor Commonwealth Province 8 8",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "seats": 12,
+          "population": 491443
+        },
+        {
+          "id": "CON_BRINOR_COMMO_09",
+          "name": "Brinor Commonwealth Province 9 9",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "seats": 12,
+          "population": 430758
+        },
+        {
+          "id": "CON_BRINOR_COMMO_10",
+          "name": "Brinor Commonwealth Province 10 10",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "seats": 12,
+          "population": 339060
+        },
+        {
+          "id": "CON_BRINOR_COMMO_11",
+          "name": "Brinor Commonwealth Province 1 11",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "seats": 12,
+          "population": 604950
+        },
+        {
+          "id": "CON_BRINOR_COMMO_12",
+          "name": "Brinor Commonwealth Province 2 12",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "seats": 12,
+          "population": 1051938
+        },
+        {
+          "id": "CON_BRINOR_COMMO_13",
+          "name": "Brinor Commonwealth Province 3 13",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "seats": 12,
+          "population": 813354
+        },
+        {
+          "id": "CON_BRINOR_COMMO_14",
+          "name": "Brinor Commonwealth Province 4 14",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "seats": 12,
+          "population": 559703
+        },
+        {
+          "id": "CON_BRINOR_COMMO_15",
+          "name": "Brinor Commonwealth Province 5 15",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "seats": 12,
+          "population": 1054935
+        },
+        {
+          "id": "CON_BRINOR_COMMO_16",
+          "name": "Brinor Commonwealth Province 6 16",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "seats": 12,
+          "population": 190433
+        },
+        {
+          "id": "CON_BRINOR_COMMO_17",
+          "name": "Brinor Commonwealth Province 7 17",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "seats": 12,
+          "population": 1040802
+        },
+        {
+          "id": "CON_BRINOR_COMMO_18",
+          "name": "Brinor Commonwealth Province 8 18",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "seats": 12,
+          "population": 491443
+        },
+        {
+          "id": "CON_BRINOR_COMMO_19",
+          "name": "Brinor Commonwealth Province 9 19",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "seats": 12,
+          "population": 430758
+        },
+        {
+          "id": "CON_BRINOR_COMMO_20",
+          "name": "Brinor Commonwealth Province 10 20",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "seats": 12,
+          "population": 339060
+        }
+      ]
+    },
+    "parties": [
+      {
+        "id": "PARTY_BRINOR_COMMO_01",
+        "name": "Fenen Party",
+        "abbreviation": "BR1",
+        "ideologyLabel": "social-democratic",
+        "leaderId": "NPC_BRINOR_COMMO_0001",
+        "color": "#2563eb",
+        "seatCount": 48,
+        "platformSummary": "Generated platform 1 for Brinor Commonwealth",
+        "caucuses": [
+          {
+            "id": "PARTY_BRINOR_COMMO_01_MAIN",
+            "name": "Main Caucus",
+            "leaderId": "NPC_BRINOR_COMMO_0001",
+            "supportShare": 0.85
+          }
+        ]
+      },
+      {
+        "id": "PARTY_BRINOR_COMMO_02",
+        "name": "Garor Front",
+        "abbreviation": "BR2",
+        "ideologyLabel": "nationalist",
+        "leaderId": "NPC_BRINOR_COMMO_0002",
+        "color": "#dc2626",
+        "seatCount": 48,
+        "platformSummary": "Generated platform 2 for Brinor Commonwealth",
+        "caucuses": [
+          {
+            "id": "PARTY_BRINOR_COMMO_02_MAIN",
+            "name": "Main Caucus",
+            "leaderId": "NPC_BRINOR_COMMO_0002",
+            "supportShare": 0.85
+          }
+        ]
+      },
+      {
+        "id": "PARTY_BRINOR_COMMO_03",
+        "name": "Jormar Party",
+        "abbreviation": "BR3",
+        "ideologyLabel": "social-democratic",
+        "leaderId": "NPC_BRINOR_COMMO_0003",
+        "color": "#16a34a",
+        "seatCount": 48,
+        "platformSummary": "Generated platform 3 for Brinor Commonwealth",
+        "caucuses": [
+          {
+            "id": "PARTY_BRINOR_COMMO_03_MAIN",
+            "name": "Main Caucus",
+            "leaderId": "NPC_BRINOR_COMMO_0003",
+            "supportShare": 0.85
+          }
+        ]
+      },
+      {
+        "id": "PARTY_BRINOR_COMMO_04",
+        "name": "Irisford Alliance",
+        "abbreviation": "BR4",
+        "ideologyLabel": "conservative",
+        "leaderId": "NPC_BRINOR_COMMO_0004",
+        "color": "#ca8a04",
+        "seatCount": 48,
+        "platformSummary": "Generated platform 4 for Brinor Commonwealth",
+        "caucuses": [
+          {
+            "id": "PARTY_BRINOR_COMMO_04_MAIN",
+            "name": "Main Caucus",
+            "leaderId": "NPC_BRINOR_COMMO_0004",
+            "supportShare": 0.85
+          }
+        ]
+      },
+      {
+        "id": "PARTY_BRINOR_COMMO_05",
+        "name": "Alell Party",
+        "abbreviation": "BR5",
+        "ideologyLabel": "liberal",
+        "leaderId": "NPC_BRINOR_COMMO_0005",
+        "color": "#9333ea",
+        "seatCount": 48,
+        "platformSummary": "Generated platform 5 for Brinor Commonwealth",
+        "caucuses": [
+          {
+            "id": "PARTY_BRINOR_COMMO_05_MAIN",
+            "name": "Main Caucus",
+            "leaderId": "NPC_BRINOR_COMMO_0005",
+            "supportShare": 0.85
+          }
+        ]
+      }
+    ],
+    "people": {
+      "politicians": [
+        {
+          "id": "NPC_BRINOR_COMMO_0001",
+          "name": "Jorford Fen2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1970,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0002",
+          "name": "Alton Hal3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1970,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0003",
+          "name": "Joria Den4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1978,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0004",
+          "name": "Dena Cor5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1986,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0005",
+          "name": "Ela Iris6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1959,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0006",
+          "name": "Elton Cor7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1963,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0007",
+          "name": "Jorton Cor8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1967,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0008",
+          "name": "Coria Jor9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1981,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0009",
+          "name": "Elell Fen0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1976,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0010",
+          "name": "Brinmar El1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1989,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0011",
+          "name": "Alia El2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1955,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0012",
+          "name": "Gara El3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1968,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0013",
+          "name": "Garen Den4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1986,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0014",
+          "name": "Irisia Iris5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1960,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0015",
+          "name": "Ala Cor6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1986,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0016",
+          "name": "Jorell Al7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1988,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0017",
+          "name": "Irisia Gar8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1980,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0018",
+          "name": "Irisell Iris9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1980,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0019",
+          "name": "Almar Brin0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1982,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0020",
+          "name": "Gara Cor1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1986,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0021",
+          "name": "Elen Jor2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1967,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0022",
+          "name": "Cora Brin3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1987,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0023",
+          "name": "Coria Gar4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1979,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0024",
+          "name": "Denor Al5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1987,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0025",
+          "name": "Elor Brin6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1983,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0026",
+          "name": "Alwick Den7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1983,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0027",
+          "name": "Irisus El8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1966,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0028",
+          "name": "Elton Den9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1976,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0029",
+          "name": "Jorell Brin0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1979,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0030",
+          "name": "Brina Hal1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1988,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0031",
+          "name": "Corus Fen2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1974,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0032",
+          "name": "Elmar Cor3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1973,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0033",
+          "name": "Irisia Hal4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1970,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0034",
+          "name": "Denor Iris5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1962,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0035",
+          "name": "Elell Jor6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1980,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0036",
+          "name": "Brinen Den7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1961,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0037",
+          "name": "Elwick Gar8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1970,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0038",
+          "name": "Fenell Al9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1960,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0039",
+          "name": "Denton Brin0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1988,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0040",
+          "name": "Elia El1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1974,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0041",
+          "name": "Cora Brin2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1963,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0042",
+          "name": "Corus Fen3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1964,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0043",
+          "name": "Denen Iris4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1966,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0044",
+          "name": "Almar Cor5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1971,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0045",
+          "name": "Joror Al6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1978,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0046",
+          "name": "Corus Al7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1955,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0047",
+          "name": "Jorus Iris8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1964,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0048",
+          "name": "Halwick Hal9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1972,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0049",
+          "name": "Garen Al0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1968,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0050",
+          "name": "Elor Den1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1983,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0051",
+          "name": "Garwick Brin2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1985,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0052",
+          "name": "Jormar Fen3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1975,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0053",
+          "name": "Elor Cor4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1985,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0054",
+          "name": "Corell Jor5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1966,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0055",
+          "name": "Halell Al6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1962,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0056",
+          "name": "Irisell Iris7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1962,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0057",
+          "name": "Jorford El8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1970,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0058",
+          "name": "Jorford El9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1977,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0059",
+          "name": "Halus Den0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1957,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0060",
+          "name": "Jorton Iris1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1961,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0061",
+          "name": "Denell Den2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1957,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0062",
+          "name": "Garmar Jor3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1971,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0063",
+          "name": "Halus Fen4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1989,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0064",
+          "name": "Garen Hal5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1978,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0065",
+          "name": "Garford Cor6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1975,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0066",
+          "name": "Dena Gar7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1982,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0067",
+          "name": "Joria Gar8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1964,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0068",
+          "name": "Alen El9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1960,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0069",
+          "name": "Gara Al0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1956,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0070",
+          "name": "Fenmar El1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1975,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0071",
+          "name": "Joren Iris2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1979,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0072",
+          "name": "Brina Jor3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1963,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0073",
+          "name": "Denia Iris4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1959,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0074",
+          "name": "Coren El5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1984,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0075",
+          "name": "Coror El6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1979,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0076",
+          "name": "Denford Brin7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1981,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0077",
+          "name": "Elford Iris8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1961,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0078",
+          "name": "Corton Fen9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1980,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0079",
+          "name": "Cormar El0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1972,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0080",
+          "name": "Brinen El1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1961,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0081",
+          "name": "Iriston Iris2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1961,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0082",
+          "name": "Alia Hal3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1982,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0083",
+          "name": "Brinmar Brin4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1967,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0084",
+          "name": "Garton Hal5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1984,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0085",
+          "name": "Garell Al6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1970,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0086",
+          "name": "Elus Al7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1982,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0087",
+          "name": "Garus Den8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1989,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0088",
+          "name": "Hala Iris9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1975,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0089",
+          "name": "Garus Brin0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1977,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0090",
+          "name": "Brinford Cor1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1973,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0091",
+          "name": "Fenus Iris2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1980,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0092",
+          "name": "Jorton El3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1956,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0093",
+          "name": "Halmar Iris4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1968,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0094",
+          "name": "Alell Hal5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1962,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0095",
+          "name": "Coror Hal6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1977,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0096",
+          "name": "Brinia Iris7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1969,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0097",
+          "name": "Halia El8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1964,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0098",
+          "name": "Joria Brin9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1962,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0099",
+          "name": "Garia Den0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1960,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0100",
+          "name": "Corton Den1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1958,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0101",
+          "name": "Garton Cor2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1971,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0102",
+          "name": "Irisor Brin3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1983,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0103",
+          "name": "Iriston Gar4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1958,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0104",
+          "name": "Irisford Den5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1970,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0105",
+          "name": "Halford Den6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1968,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0106",
+          "name": "Elwick Gar7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1972,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0107",
+          "name": "Coren Gar8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1969,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0108",
+          "name": "Fenmar Iris9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1983,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0109",
+          "name": "Brinmar Al0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1982,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0110",
+          "name": "Denen Brin1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1965,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0111",
+          "name": "Brinton El2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1978,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0112",
+          "name": "Irisus Jor3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1958,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0113",
+          "name": "Elmar Jor4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1969,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0114",
+          "name": "Elwick Cor5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1963,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0115",
+          "name": "Denen Al6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1980,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0116",
+          "name": "Fenmar Fen7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1987,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0117",
+          "name": "Fenton Den8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1979,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0118",
+          "name": "Elton Gar9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1965,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0119",
+          "name": "Brinton Cor0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1957,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0120",
+          "name": "Elmar Gar1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1987,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0121",
+          "name": "Jorus Iris2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1976,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0122",
+          "name": "Denwick Jor3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1973,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0123",
+          "name": "Alford El4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1980,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0124",
+          "name": "Jorus Hal5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1966,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0125",
+          "name": "Elton Brin6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1988,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0126",
+          "name": "Elen Fen7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1956,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0127",
+          "name": "Garor Gar8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1957,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0128",
+          "name": "Garwick Al9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1972,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0129",
+          "name": "Fenus Iris0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1961,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0130",
+          "name": "Alford Cor1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1989,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0131",
+          "name": "Fenell Iris2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1956,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0132",
+          "name": "Irismar Hal3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1980,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0133",
+          "name": "Alia Iris4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1958,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0134",
+          "name": "Garus Fen5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1956,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0135",
+          "name": "Garor Jor6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1971,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0136",
+          "name": "Halmar Al7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1968,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0137",
+          "name": "Brinen El8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1962,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0138",
+          "name": "Denell Brin9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1969,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0139",
+          "name": "Irisford Jor0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1966,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0140",
+          "name": "Garor Al1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1961,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0141",
+          "name": "Halor Den2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1972,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0142",
+          "name": "Denell Brin3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1985,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0143",
+          "name": "Garor Iris4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1962,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0144",
+          "name": "Halford Cor5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1975,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0145",
+          "name": "Irisen Cor6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1984,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0146",
+          "name": "Cormar Al7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1960,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0147",
+          "name": "Corwick Fen8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1976,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0148",
+          "name": "Fenton Fen9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1971,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0149",
+          "name": "Fenwick Al0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1970,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0150",
+          "name": "Brinmar El1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1961,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0151",
+          "name": "Halell Cor2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1976,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0152",
+          "name": "Denford Hal3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1984,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0153",
+          "name": "Alus Den4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1966,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0154",
+          "name": "Alton Cor5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1958,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0155",
+          "name": "Halus Jor6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1975,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0156",
+          "name": "Halell Cor7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1980,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0157",
+          "name": "Fenia El8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1961,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0158",
+          "name": "Halwick Gar9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1979,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0159",
+          "name": "Alia Iris0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1977,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0160",
+          "name": "Elell El1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1985,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0161",
+          "name": "Garford Den2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1970,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0162",
+          "name": "Brinus Al3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1968,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0163",
+          "name": "Brinus El4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1975,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0164",
+          "name": "Cora Al5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1974,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0165",
+          "name": "Denford Den6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1983,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0166",
+          "name": "Brina Al7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1984,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0167",
+          "name": "Irisen Fen8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1963,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0168",
+          "name": "Irisford Gar9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1972,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0169",
+          "name": "Alia Al0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1981,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0170",
+          "name": "Denell Jor1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1960,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0171",
+          "name": "Irisen Gar2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1976,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0172",
+          "name": "Elford Den3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1959,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0173",
+          "name": "Alor Gar4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1982,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0174",
+          "name": "Fenia Hal5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1972,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0175",
+          "name": "Cora Fen6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1962,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0176",
+          "name": "Denton Iris7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1984,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0177",
+          "name": "Corus Den8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1955,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0178",
+          "name": "Alell Fen9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1969,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0179",
+          "name": "Irisus Cor0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1962,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0180",
+          "name": "Irisor Al1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1977,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0181",
+          "name": "Alton Hal2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1971,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0182",
+          "name": "Irisor El3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1981,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0183",
+          "name": "Brinford Gar4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1972,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0184",
+          "name": "Fenwick El5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1979,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0185",
+          "name": "Alford Hal6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1961,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0186",
+          "name": "Fenus Iris7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1958,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0187",
+          "name": "Denen Cor8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1961,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0188",
+          "name": "Halor Cor9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1983,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0189",
+          "name": "Iriswick Den0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1981,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0190",
+          "name": "Garmar Jor1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1983,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0191",
+          "name": "Denia Hal2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1965,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0192",
+          "name": "Halia El3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1980,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0193",
+          "name": "Alus Gar4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1975,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0194",
+          "name": "Almar Jor5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1985,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0195",
+          "name": "Brinus El6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1971,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0196",
+          "name": "Alus Hal7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1975,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0197",
+          "name": "Denmar Gar8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1983,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0198",
+          "name": "Brinia El9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1968,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0199",
+          "name": "Corwick Jor0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1977,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0200",
+          "name": "Denford Al1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1985,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0201",
+          "name": "Elen Fen2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1988,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0202",
+          "name": "Corton Al3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1960,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0203",
+          "name": "Elell Brin4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1977,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0204",
+          "name": "Brinell Den5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1984,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0205",
+          "name": "Coren Iris6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1968,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0206",
+          "name": "Jorton Jor7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1956,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0207",
+          "name": "Garford Fen8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1970,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0208",
+          "name": "Halwick Hal9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1971,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0209",
+          "name": "Halell Iris0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1987,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0210",
+          "name": "Elmar Al1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1975,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0211",
+          "name": "Elell Cor2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1989,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0212",
+          "name": "Halford Gar3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1970,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0213",
+          "name": "Corell Gar4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1955,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0214",
+          "name": "Denton Iris5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1966,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0215",
+          "name": "Halia Al6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1982,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0216",
+          "name": "Garia Brin7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1975,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0217",
+          "name": "Corton Jor8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1959,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0218",
+          "name": "Elmar Iris9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1978,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0219",
+          "name": "Elton Den0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1973,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0220",
+          "name": "Fenford Al1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1982,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0221",
+          "name": "Brinia Cor2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1960,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0222",
+          "name": "Fenus Brin3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1961,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0223",
+          "name": "Iriswick Den4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1969,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0224",
+          "name": "Brinwick Den5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1955,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0225",
+          "name": "Halmar Iris6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1970,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0226",
+          "name": "Ala Brin7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1972,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0227",
+          "name": "Denton Jor8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1984,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0228",
+          "name": "Jormar Fen9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1957,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0229",
+          "name": "Irisor El0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1976,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0230",
+          "name": "Halford Iris1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1984,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0231",
+          "name": "Brina Fen2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1979,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0232",
+          "name": "Joren Den3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1959,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0233",
+          "name": "Brinwick El4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1986,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0234",
+          "name": "Halton Fen5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1966,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0235",
+          "name": "Fenen Iris6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1971,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0236",
+          "name": "Garford El7",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1977,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0237",
+          "name": "Denton Den8",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1982,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0238",
+          "name": "Cora Al9",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1977,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0239",
+          "name": "Garwick Al0",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1987,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0240",
+          "name": "Alton Cor1",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1983,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0241",
+          "name": "Cormar Iris2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1989,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0242",
+          "name": "Garwick El3",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1972,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0243",
+          "name": "Cora Iris4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1960,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0244",
+          "name": "Joria Iris5",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1977,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0245",
+          "name": "Corwick Brin6",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1984,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0246",
+          "name": "Iriswick Iris7",
+          "partyId": null,
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1958,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "constitutional_court_justice"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0247",
+          "name": "Elus Jor8",
+          "partyId": null,
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1957,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "constitutional_court_justice"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0248",
+          "name": "Brinell Den9",
+          "partyId": null,
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1968,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "constitutional_court_justice"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0249",
+          "name": "Garell Gar0",
+          "partyId": null,
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1976,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "labour",
+          "office": "constitutional_court_justice"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0250",
+          "name": "Alor Iris1",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1985,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "conservative",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0251",
+          "name": "Corton Gar2",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_02",
+          "birthYear": 1982,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0252",
+          "name": "Irisor Al3",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1966,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0253",
+          "name": "Almar Hal4",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_04",
+          "birthYear": 1968,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "conservative",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0254",
+          "name": "Garmar Brin5",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1957,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0255",
+          "name": "Brinus Iris6",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_06",
+          "birthYear": 1987,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "liberal",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0256",
+          "name": "Fenell Cor7",
+          "partyId": "PARTY_BRINOR_COMMO_03",
+          "provinceId": "PRV_BRINOR_COMMO_07",
+          "birthYear": 1988,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0257",
+          "name": "Corton Jor8",
+          "partyId": "PARTY_BRINOR_COMMO_05",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1969,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0258",
+          "name": "Denus Den9",
+          "partyId": "PARTY_BRINOR_COMMO_04",
+          "provinceId": "PRV_BRINOR_COMMO_09",
+          "birthYear": 1966,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0259",
+          "name": "Halwick Jor0",
+          "partyId": "PARTY_BRINOR_COMMO_02",
+          "provinceId": "PRV_BRINOR_COMMO_10",
+          "birthYear": 1968,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0260",
+          "name": "Elwick Al1",
+          "partyId": null,
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1981,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0261",
+          "name": "Garmar Iris2",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1966,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "minister"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0262",
+          "name": "Brinwick Brin3",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_01",
+          "birthYear": 1968,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "minister"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0263",
+          "name": "Iriston Hal4",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_08",
+          "birthYear": 1974,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "minister"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0264",
+          "name": "Brinwick Cor5",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_03",
+          "birthYear": 1981,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "minister"
+        },
+        {
+          "id": "NPC_BRINOR_COMMO_0265",
+          "name": "Hala Gar6",
+          "partyId": "PARTY_BRINOR_COMMO_01",
+          "provinceId": "PRV_BRINOR_COMMO_05",
+          "birthYear": 1979,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "labour",
+          "office": "minister"
+        }
+      ]
+    },
+    "government": {
+      "presidentId": "NPC_BRINOR_COMMO_0260",
+      "headOfGovernmentId": "NPC_BRINOR_COMMO_0001",
+      "cabinet": [
+        {
+          "ministryId": "MIN_FIN",
+          "holderId": "NPC_BRINOR_COMMO_0261"
+        },
+        {
+          "ministryId": "MIN_FOR",
+          "holderId": "NPC_BRINOR_COMMO_0262"
+        },
+        {
+          "ministryId": "MIN_INT",
+          "holderId": "NPC_BRINOR_COMMO_0263"
+        },
+        {
+          "ministryId": "MIN_JUS",
+          "holderId": "NPC_BRINOR_COMMO_0264"
+        },
+        {
+          "ministryId": "MIN_DEF",
+          "holderId": "NPC_BRINOR_COMMO_0265"
+        }
+      ],
+      "coalitionPartyIds": [
+        "PARTY_BRINOR_COMMO_01"
+      ]
+    },
+    "elections": {
+      "assemblySystem": "mixed_member",
+      "presidentialMode": "assembly_selection",
+      "presidentialIntervalYears": 5,
+      "assemblyIntervalYears": 4,
+      "nominationRuleLabels": {
+        "PARTY_BRINOR_COMMO_01": "BR1 member RCV",
+        "PARTY_BRINOR_COMMO_02": "BR2 member RCV",
+        "PARTY_BRINOR_COMMO_03": "BR3 member RCV",
+        "PARTY_BRINOR_COMMO_04": "BR4 member RCV",
+        "PARTY_BRINOR_COMMO_05": "BR5 member RCV"
+      }
+    },
+    "laws": {
+      "startingLaws": [
+        {
+          "id": "LAW_BRINOR_COMMO_BUDGET",
+          "title": "Interim Budget Framework",
+          "policyItems": [
+            "ISS_ECONOMY"
+          ]
+        }
+      ]
+    },
+    "organizations": [
+      {
+        "id": "ORG_BRINOR_COMMO_TRADE",
+        "name": "Brinor Commonwealth Trade Council",
+        "type": "business",
+        "issues": [
+          "ISS_ECONOMY"
+        ],
+        "scope": "national"
+      },
+      {
+        "id": "ORG_BRINOR_COMMO_LABOUR",
+        "name": "National Labour Confederation",
+        "type": "union",
+        "issues": [
+          "ISS_GOVERNANCE"
+        ],
+        "scope": "national"
+      }
+    ],
+    "foreign": {
+      "countries": [
+        {
+          "id": "FC_BRINOR_COMMO_01",
+          "name": "Denell State",
+          "region": "polar",
+          "relation": 0.65,
+          "leaderName": "Jorell Iris0"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_02",
+          "name": "Brinmar Federation",
+          "region": "maritime",
+          "relation": -0.55,
+          "leaderName": "Jora Brin1"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_03",
+          "name": "Garia Kingdom",
+          "region": "polar",
+          "relation": 0.61,
+          "leaderName": "Alor Iris2"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_04",
+          "name": "Irisford Republic",
+          "region": "polar",
+          "relation": 0.16,
+          "leaderName": "Cora El3"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_05",
+          "name": "Halell Republic",
+          "region": "polar",
+          "relation": -0.11,
+          "leaderName": "Brinton Den4"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_06",
+          "name": "Jorton Federation",
+          "region": "maritime",
+          "relation": -0.77,
+          "leaderName": "Hala Hal5"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_07",
+          "name": "Elus Federation",
+          "region": "maritime",
+          "relation": -0.93,
+          "leaderName": "Garus Gar6"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_08",
+          "name": "Fena Kingdom",
+          "region": "continental",
+          "relation": 0.6,
+          "leaderName": "Denen Brin7"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_09",
+          "name": "Cora Kingdom",
+          "region": "highland",
+          "relation": -0.67,
+          "leaderName": "Denor Hal8"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_10",
+          "name": "Alford State",
+          "region": "highland",
+          "relation": -0.97,
+          "leaderName": "Alton Cor9"
+        },
+        {
+          "id": "FC_BRINOR_COMMO_11",
+          "name": "Elmar Republic",
+          "region": "maritime",
+          "relation": -0.68,
+          "leaderName": "Alus Jor0"
+        }
+      ],
+      "relations": [
+        {
+          "a": "FC_BRINOR_COMMO_01",
+          "b": "FC_BRINOR_COMMO_02",
+          "diplomatic": -0.07,
+          "trade": 0.92,
+          "security": 0.03
+        },
+        {
+          "a": "FC_BRINOR_COMMO_02",
+          "b": "FC_BRINOR_COMMO_03",
+          "diplomatic": 0.87,
+          "trade": 0.81,
+          "security": 0.36
+        },
+        {
+          "a": "FC_BRINOR_COMMO_03",
+          "b": "FC_BRINOR_COMMO_04",
+          "diplomatic": -0.08,
+          "trade": 0.16,
+          "security": 0.15
+        },
+        {
+          "a": "FC_BRINOR_COMMO_04",
+          "b": "FC_BRINOR_COMMO_05",
+          "diplomatic": 0.83,
+          "trade": 0.8,
+          "security": 0.09
+        }
+      ],
+      "treaties": [],
+      "crises": []
+    },
+    "world": {
+      "assemblySeats": 240,
+      "courtJudges": 4,
+      "jurisdictionId": "BRINOR"
+    }
+  },
+  "contentEmbed": {
+    "kind": "mini_playable_v1"
+  }
+}

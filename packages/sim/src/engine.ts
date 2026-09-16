@@ -46,6 +46,7 @@ import {
   emptyElectoralRuntimeState,
   needsElectoralSeed,
   seedCanonicalElections,
+  seedMiniPlayableScheduledElections,
 } from "./elections/state.js";
 import { createPoll } from "./elections/polls.js";
 import {
@@ -418,6 +419,9 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     state.officeTerms[id] = { ...t, id };
   }
   state.provincialRuntime = seedProvincialRuntime(world, state);
+  if (Object.keys(world.constituencyElectorate).length === 0) {
+    state.provincialRuntime.constitutionalOrder.presidentialElection = "assembly_selection";
+  }
   for (const ev of world.initialScheduled) {
     const queued = enqueueScheduled(state, ev);
     if (!isScheduled(queued)) {
@@ -425,6 +429,7 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     }
   }
   seedCanonicalElections(state, world);
+  seedMiniPlayableScheduledElections(state, world);
   seedPartyInstitutions(state, world);
   ensureCaucusRuntime(state);
   recomputeCaucusShares(world, state);

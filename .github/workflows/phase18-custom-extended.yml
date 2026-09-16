@@ -1,0 +1,35 @@
+name: Phase 18 Custom Extended
+
+# Tier 2 — Aster + Brinor custom worlds × multi-year sim. Not on every push.
+on:
+  workflow_dispatch:
+  schedule:
+    # Biweekly Monday 07:30 UTC
+    - cron: "30 7 1,15 * *"
+
+jobs:
+  phase18-custom-extended:
+    name: Custom worlds extended (5y)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Run Phase 18 custom extended script
+        run: pnpm exec tsx scripts/phase18-custom-extended.ts --years=5
+      - name: Upload summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase18-extended-custom-summary
+          path: docs/qa/phase18/extended-custom-summary.json

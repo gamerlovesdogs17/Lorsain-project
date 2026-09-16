@@ -137,6 +137,28 @@ export function resolvePresidentialElection(
       authority: "national_electoral_commission",
       shares,
     });
+    const candidateIds = live.map((c) => c.politicianId).sort();
+    const runnerUp = candidateIds.find((id) => id !== winnerId) ?? winnerId;
+    const validVotes = Math.max(1, members.length);
+    const turnout = {
+      registeredElectorate: validVotes,
+      ballotsCast: validVotes,
+      invalidOrBlank: 0,
+      validVoteValue: validVotes,
+      turnoutRate: 1,
+    };
+    const countInput = {
+      candidateIds,
+      ballots: [
+        {
+          weight: { num: BigInt(validVotes), den: 1n },
+          rankings: [winnerId, runnerUp],
+        },
+      ],
+    };
+    const countArchive = countIrv(countInput, {
+      rng: { nextUint32: () => rng.uint32("elections") },
+    });
     const resultEvent = pushHistory(state, {
       date: state.currentDate,
       type: "PRESIDENTIAL_ELECTION_RESULT",
@@ -155,6 +177,9 @@ export function resolvePresidentialElection(
       sourceCommandId: args.commandId,
     });
     election.status = "resolved";
+    election.turnout = turnout;
+    election.countInput = countInput;
+    election.countArchive = countArchive;
     election.winnerIds = [winnerId];
     election.resultEventId = resultEvent.id;
     election.certification = certification;

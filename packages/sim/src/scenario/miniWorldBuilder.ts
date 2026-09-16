@@ -1,17 +1,12 @@
 import type { ScenarioDocument, ScenarioPartySection } from "@lorsain/scenario";
-import {
-  regularElectionDate,
-  TERENA_ASSEMBLY_CALENDAR,
-  TERENA_PRESIDENTIAL_CALENDAR,
-  type IsoDate,
-} from "../calendar.js";
+import { fractionFromPreset } from "@lorsain/scenario";
+import { parseIsoDate, regularElectionDate, type IsoDate } from "../calendar.js";
 import { syntheticAgentProfile } from "../agents/profile.js";
 import { applyInstitutionalPublicIdeology } from "../elections/public-ideology.js";
-import {
-  CANONICAL_ASSEMBLY_ELECTION_ID,
-  CANONICAL_PRESIDENTIAL_ELECTION_ID,
-} from "../elections/types.js";
+import { assemblyElectionIdForDate } from "../elections/assembly-national.js";
+import { presidentialElectionIdForDate } from "../elections/state.js";
 import { kernelOffice } from "../synthetic-world.js";
+import { resolveMiniWorldElectionSchedule } from "./miniWorldCalendars.js";
 import type { PartyDefinition } from "../parties/types.js";
 import type { KernelWorld } from "../types.js";
 
@@ -22,10 +17,36 @@ function partyDef(p: ScenarioPartySection): PartyDefinition {
     short: p.abbreviation || p.id,
     organizationType: "membership_party",
     nominationRuleId: `${p.id}_NOM`,
-    factionIds: [`${p.id}_MAIN`],
-    canonicalFactionShares: { [`${p.id}_MAIN`]: 1 },
+    factionIds: p.caucuses?.length
+      ? p.caucuses.map((c) => c.id)
+      : [`${p.id}_MAIN`],
+    canonicalFactionShares: p.caucuses?.length
+      ? Object.fromEntries(
+          p.caucuses.map((c) => [c.id, c.supportShare ?? 1 / p.caucuses!.length]),
+        )
+      : { [`${p.id}_MAIN`]: 1 },
     color: p.color ?? null,
   };
+}
+
+function roleTypesForPolitician(
+  id: string,
+  ctx: {
+    presidentId: string;
+    speakerId: string;
+    governorIds: Set<string>;
+    asmIds: Set<string>;
+    courtIds: Set<string>;
+    ministerIds: Set<string>;
+  },
+): string[] {
+  if (id === ctx.presidentId) return ["president"];
+  if (id === ctx.speakerId) return ["speaker"];
+  if (ctx.governorIds.has(id)) return ["governor"];
+  if (ctx.ministerIds.has(id)) return ["minister"];
+  if (ctx.asmIds.has(id)) return ["assembly_member"];
+  if (ctx.courtIds.has(id)) return ["constitutional_court_justice"];
+  return [];
 }
 
 /**
@@ -42,12 +63,15 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
   const courtJudges =
     doc.contentSections.constitution?.courtJudges ?? doc.contentSections.world?.courtJudges ?? 5;
   const absoluteMajority =
-    doc.contentSections.constitution?.assemblyAbsoluteMajority ?? Math.floor(assemblySeats / 2) + 1;
+    doc.contentSections.constitution?.assemblyAbsoluteMajority ??
+    Math.floor(assemblySeats / 2) + 1;
 
-  const provinces = doc.contentSections.geography?.provinces?.map((p: { id: string }) => p.id) ?? [
-    "PRV_ALPHA",
-    "PRV_BETA",
-  ];
+  const provinceRows = doc.contentSections.geography?.provinces ?? [];
+  const provinces =
+    provinceRows.length > 0
+      ? provinceRows.map((p) => p.id)
+      : ["PRV_ALPHA", "PRV_BETA"];
+
   const parties = doc.contentSections.parties ?? [
     {
       id: "PARTY_A",
@@ -72,16 +96,36 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     },
   ];
 
-  const startYear = Number(start.slice(0, 4));
-  let presYear = TERENA_PRESIDENTIAL_CALENDAR.anchorYear;
-  while (presYear <= startYear) presYear += TERENA_PRESIDENTIAL_CALENDAR.intervalYears;
-  const nextPres = regularElectionDate(TERENA_PRESIDENTIAL_CALENDAR, presYear);
-  let asmYear = TERENA_ASSEMBLY_CALENDAR.anchorYear;
-  while (asmYear <= startYear) asmYear += TERENA_ASSEMBLY_CALENDAR.intervalYears;
-  const nextAsm = regularElectionDate(TERENA_ASSEMBLY_CALENDAR, asmYear);
+  const roster = doc.contentSections.people?.politicians ?? [];
+  const gov = doc.contentSections.government;
+  const presidentId =
+    gov?.presidentId ??
+    (doc.contentSections.constitution?.governmentForm === "parliamentary"
+      ? parties.find((p) => p.id !== parties[0]?.id)?.leaderId ?? parties[0]?.leaderId
+      : parties[0]?.leaderId) ??
+    "NPC_PRES";
+  const headOfGov = gov?.headOfGovernmentId ?? null;
+  const speakerId =
+    headOfGov && doc.contentSections.constitution?.governmentForm !== "presidential"
+      ? headOfGov
+      : (parties[1]?.leaderId ?? parties[0]?.leaderId ?? "NPC_SPK");
 
-  const presidentId = parties[0]?.leaderId ?? "NPC_PRES";
-  const speakerId = parties[1]?.leaderId ?? parties[0]?.leaderId ?? "NPC_SPK";
+  const electionSchedule = resolveMiniWorldElectionSchedule(doc);
+  const deferFirstElection = (cal: typeof electionSchedule.presidentialCalendar): IsoDate => {
+    const startYear = parseIsoDate(start).year;
+    let year = startYear + 4;
+    while ((year - cal.anchorYear) % cal.intervalYears !== 0) year += 1;
+    return regularElectionDate(cal, year);
+  };
+  const nextPres =
+    (doc.contentSections.elections?.nextPresidentialElectionDate as IsoDate | undefined) ??
+    deferFirstElection(electionSchedule.presidentialCalendar);
+  const nextAsm =
+    (doc.contentSections.elections?.nextAssemblyElectionDate as IsoDate | undefined) ??
+    deferFirstElection(electionSchedule.assemblyCalendar);
+  const nextPresidentialElectionId = presidentialElectionIdForDate(nextPres);
+  const nextAssemblyElectionId = assemblyElectionIdForDate(nextAsm);
+  const { presidentialCalendar, assemblyCalendar } = electionSchedule;
 
   const offices: KernelWorld["offices"] = {
     OFFICE_PRESIDENT: kernelOffice({
@@ -105,16 +149,31 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     }),
   };
 
-  const seatsPerConst = Math.max(1, Math.floor(assemblySeats / 2));
-  const constituencies = ["C_NORTH", "C_SOUTH"];
-  for (const [idx, constId] of constituencies.entries()) {
-    offices[`OFFICE_ASM_${constId}`] = kernelOffice({
-      id: `OFFICE_ASM_${constId}`,
+  const constituencyRows = doc.contentSections.geography?.constituencies ?? [];
+  const constituencies =
+    constituencyRows.length > 0
+      ? constituencyRows.map((c) => ({ id: c.id, seats: c.seats, provinceId: c.provinceId }))
+      : [
+          {
+            id: "C_NORTH",
+            seats: Math.max(1, Math.floor(assemblySeats / 2)),
+            provinceId: provinces[0] ?? "PRV_ALPHA",
+          },
+          {
+            id: "C_SOUTH",
+            seats: assemblySeats - Math.max(1, Math.floor(assemblySeats / 2)),
+            provinceId: provinces[1] ?? provinces[0] ?? "PRV_BETA",
+          },
+        ];
+
+  for (const row of constituencies) {
+    offices[`OFFICE_ASM_${row.id}`] = kernelOffice({
+      id: `OFFICE_ASM_${row.id}`,
       kind: "assembly_member",
       title: "Assembly Member",
       jurisdictionId: jurisdiction,
-      constituencyId: constId,
-      capacity: idx === 0 ? assemblySeats - seatsPerConst : seatsPerConst,
+      constituencyId: row.id,
+      capacity: row.seats,
       incompatibleWithKinds: ["president", "governor", "constitutional_court_justice"],
     });
   }
@@ -123,7 +182,7 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     offices[`OFFICE_GOV_${provinceId}`] = kernelOffice({
       id: `OFFICE_GOV_${provinceId}`,
       kind: "governor",
-      title: `Governor of ${doc.contentSections.geography?.provinces?.[i]?.name ?? provinceId}`,
+      title: `Governor of ${provinceRows[i]?.name ?? provinceId}`,
       jurisdictionId: jurisdiction,
       provinceId,
       incompatibleWithKinds: ["president", "assembly_member", "constitutional_court_justice"],
@@ -141,50 +200,126 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     });
   }
 
+  const cabinet = gov?.cabinet ?? [];
+  for (const entry of cabinet) {
+    const officeId = `OFFICE_${entry.ministryId}`;
+    offices[officeId] = kernelOffice({
+      id: officeId,
+      kind: "minister",
+      title: entry.ministryId.replace(/^MIN_/, "").replace(/_/g, " "),
+      jurisdictionId: jurisdiction,
+      portfolio: entry.ministryId,
+      incompatibleWithKinds: ["president", "constitutional_court_justice"],
+    });
+  }
+
+  const asmIds = new Set<string>();
+  const courtIds = new Set<string>();
+  const governorIds = new Set<string>();
+  const ministerIds = new Set(cabinet.map((c) => c.holderId));
+
+  for (const p of roster.filter((x) => x.office === "assembly_member")) asmIds.add(p.id);
+  for (const p of roster.filter((x) => x.office === "constitutional_court_justice"))
+    courtIds.add(p.id);
+  for (const p of roster.filter((x) => x.office === "governor")) governorIds.add(p.id);
+
+  let asmSynthetic = 0;
+  if (asmIds.size < assemblySeats) {
+    for (let i = asmIds.size; i < assemblySeats; i++) {
+      asmIds.add(`NPC_ASM_${String(i + 1).padStart(3, "0")}`);
+      asmSynthetic += 1;
+    }
+  }
+  if (courtIds.size < courtJudges) {
+    for (let i = courtIds.size; i < courtJudges; i++) {
+      courtIds.add(`NPC_CRT_${String(i + 1).padStart(2, "0")}`);
+    }
+  }
+  for (const provinceId of provinces) {
+    const fromRoster = roster.find(
+      (p) => p.office === "governor" && p.provinceId === provinceId,
+    )?.id;
+    governorIds.add(fromRoster ?? `NPC_GOV_${provinceId}`);
+  }
+
   const politicianIds = new Set<string>();
   for (const p of parties) politicianIds.add(p.leaderId);
   politicianIds.add(presidentId);
   politicianIds.add(speakerId);
-  for (let i = 0; i < assemblySeats; i++) {
-    politicianIds.add(`NPC_ASM_${String(i + 1).padStart(3, "0")}`);
+  for (const id of asmIds) politicianIds.add(id);
+  for (const id of courtIds) politicianIds.add(id);
+  for (const id of governorIds) politicianIds.add(id);
+  for (const id of ministerIds) politicianIds.add(id);
+  for (const p of roster) politicianIds.add(p.id);
+
+  const rosterById = new Map(roster.map((p) => [p.id, p]));
+  const politicians = [...politicianIds].sort().map((id, idx) => {
+    const row = rosterById.get(id);
+    return {
+      id,
+      alive: true,
+      retired: false,
+      partyId:
+        row?.partyId ??
+        parties[idx % parties.length]?.id ??
+        null,
+      factionId: null as string | null,
+    };
+  });
+
+  const roleCtx = {
+    presidentId,
+    speakerId,
+    governorIds,
+    asmIds,
+    courtIds,
+    ministerIds,
+  };
+
+  const issueIdsSet = new Set<string>(["ISS_GOVERNANCE"]);
+  for (const law of doc.contentSections.laws?.startingLaws ?? []) {
+    for (const item of law.policyItems ?? []) issueIdsSet.add(item);
   }
-  for (let i = 0; i < courtJudges; i++) {
-    politicianIds.add(`NPC_CRT_${String(i + 1).padStart(2, "0")}`);
-  }
-  for (const [i, provinceId] of provinces.entries()) {
-    politicianIds.add(`NPC_GOV_${provinceId}`);
-    if (!politicianIds.has(`NPC_GOV_${provinceId}`)) politicianIds.add(`NPC_GOV_${i}`);
+  for (const org of doc.contentSections.organizations ?? []) {
+    for (const item of org.issues) issueIdsSet.add(item);
   }
 
-  const politicians = [...politicianIds].sort().map((id, idx) => ({
-    id,
-    alive: true,
-    retired: false,
-    partyId: parties[idx % parties.length]?.id ?? null,
-    factionId: null as string | null,
-  }));
-
+  const issueIds = [...issueIdsSet];
   const agentProfiles: KernelWorld["agentProfiles"] = {};
-  const defaultSalience = { ISS_GOVERNANCE: 0.5 };
+  const baselineIssueSalience = (): Record<string, number> => {
+    const salience: Record<string, number> = {};
+    for (const id of issueIds) salience[id] = id === "ISS_GOVERNANCE" ? 0.5 : 0.35;
+    return salience;
+  };
+
   for (const p of politicians) {
     agentProfiles[p.id] = syntheticAgentProfile(p.id, {
-      issueSalience: defaultSalience,
-      roleTypes:
-        p.id === presidentId
-          ? ["president"]
-          : p.id.startsWith("NPC_ASM")
-            ? ["assembly_member"]
-            : [],
+      issueSalience: baselineIssueSalience(),
+      roleTypes: roleTypesForPolitician(p.id, roleCtx),
     });
   }
 
   const partyDefinitions = Object.fromEntries(parties.map((p) => [p.id, partyDef(p)]));
-  const factionDefinitions = Object.fromEntries(
-    parties.map((p) => [
-      `${p.id}_MAIN`,
-      { factionId: `${p.id}_MAIN`, partyId: p.id, name: "Main", share: 1 },
-    ]),
-  );
+  const factionDefinitions: KernelWorld["factionDefinitions"] = {};
+  for (const p of parties) {
+    if (p.caucuses?.length) {
+      for (const c of p.caucuses) {
+        factionDefinitions[c.id] = {
+          factionId: c.id,
+          partyId: p.id,
+          name: c.name,
+          share: c.supportShare ?? 1 / p.caucuses.length,
+        };
+      }
+    } else {
+      factionDefinitions[`${p.id}_MAIN`] = {
+        factionId: `${p.id}_MAIN`,
+        partyId: p.id,
+        name: "Main",
+        share: 1,
+      };
+    }
+  }
   const nominationRules = Object.fromEntries(
     parties.map((p) => [
       `${p.id}_NOM`,
@@ -238,14 +373,16 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
   ];
 
   let asmIdx = 0;
-  for (const constId of constituencies) {
-    const officeId = `OFFICE_ASM_${constId}`;
+  const asmIdList = [...asmIds].sort();
+  for (const row of constituencies) {
+    const officeId = `OFFICE_ASM_${row.id}`;
     const cap = offices[officeId]?.capacity ?? 0;
     for (let s = 0; s < cap; s++) {
+      const holderId = asmIdList[asmIdx] ?? `NPC_ASM_${String(asmIdx + 1).padStart(3, "0")}`;
       asmIdx += 1;
       startingTerms.push({
         officeId,
-        holderId: `NPC_ASM_${String(asmIdx).padStart(3, "0")}`,
+        holderId,
         startDate: null,
         startKnown: false,
         endDate: null,
@@ -259,10 +396,11 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     }
   }
 
-  for (let seat = 1; seat <= courtJudges; seat++) {
+  const courtIdList = [...courtIds].sort();
+  for (let seat = 0; seat < courtJudges; seat++) {
     startingTerms.push({
-      officeId: `OFFICE_COURT_${seat}`,
-      holderId: `NPC_CRT_${String(seat).padStart(2, "0")}`,
+      officeId: `OFFICE_COURT_${seat + 1}`,
+      holderId: courtIdList[seat] ?? `NPC_CRT_${String(seat + 1).padStart(2, "0")}`,
       startDate: null,
       startKnown: false,
       endDate: null,
@@ -275,8 +413,8 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     });
   }
 
-  for (const [i, provinceId] of provinces.entries()) {
-    const govId = `NPC_GOV_${provinceId}`;
+  for (const provinceId of provinces) {
+    const govId = [...governorIds].find((id) => id.includes(provinceId)) ?? `NPC_GOV_${provinceId}`;
     startingTerms.push({
       officeId: `OFFICE_GOV_${provinceId}`,
       holderId: govId,
@@ -295,17 +433,34 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
         id: govId,
         alive: true,
         retired: false,
-        partyId: parties[i % parties.length]?.id ?? null,
+        partyId: parties[provinces.indexOf(provinceId) % parties.length]?.id ?? null,
         factionId: null,
       });
       agentProfiles[govId] = syntheticAgentProfile(govId, {
-        issueSalience: defaultSalience,
+        issueSalience: baselineIssueSalience(),
         roleTypes: ["governor"],
       });
     }
   }
 
-  const foreign = doc.contentSections.foreignCountries ?? [];
+  for (const entry of cabinet) {
+    startingTerms.push({
+      officeId: `OFFICE_${entry.ministryId}`,
+      holderId: entry.holderId,
+      startDate: null,
+      startKnown: false,
+      endDate: null,
+      accessionReason: "preexisting",
+      status: "active",
+      holdingKind: "substantive",
+      sourceElectionId: null,
+      endedDate: null,
+      endedReason: null,
+    });
+  }
+
+  const foreign =
+    doc.contentSections.foreign?.countries ?? doc.contentSections.foreignCountries ?? [];
   const worldCountries = Object.fromEntries(
     foreign.map((c) => [
       c.id,
@@ -325,6 +480,47 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     ]),
   );
 
+  const interestOrganizations = Object.fromEntries(
+    (doc.contentSections.organizations ?? []).map((o) => [
+      o.id,
+      {
+        id: o.id,
+        name: o.name,
+        type: o.type,
+        lean: "neutral",
+        strength: 0.5,
+        issues: o.issues,
+        leanPartyIds: [],
+      },
+    ]),
+  );
+
+  const constituencyProvinceShares: KernelWorld["constituencyProvinceShares"] = {};
+  for (const row of constituencies) {
+    constituencyProvinceShares[row.id] = [{ provinceId: row.provinceId, share: 1 }];
+  }
+
+  const politicianHomeProvince: KernelWorld["politicianHomeProvince"] = {};
+  for (const p of politicians) {
+    const row = rosterById.get(p.id);
+    if (row?.provinceId) {
+      politicianHomeProvince[p.id] = row.provinceId;
+    }
+  }
+  for (const [i, p] of politicians.entries()) {
+    if (!politicianHomeProvince[p.id]) {
+      politicianHomeProvince[p.id] = provinces[i % provinces.length] ?? provinces[0] ?? "PRV_ALPHA";
+    }
+  }
+
+  const censureFraction = fractionFromPreset(
+    doc.contentSections.constitution?.ministerialCensurePreset,
+    doc.contentSections.constitution?.ministerialCensureFraction,
+    0.55,
+  );
+
+  const issueDimensions = Object.fromEntries(issueIds.map((id) => [id, "institutional"]));
+
   const world: KernelWorld = {
     contentVersion: doc.gameVersion ?? "0.3.0-predev",
     scenarioId: doc.scenarioId,
@@ -338,8 +534,8 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     specialElectionMoreThanDays: 180,
     specialElectionWithinDays: 90,
     presidentElectActingWithinDays: 7,
-    presidentialCalendar: TERENA_PRESIDENTIAL_CALENDAR,
-    assemblyCalendar: TERENA_ASSEMBLY_CALENDAR,
+    presidentialCalendar,
+    assemblyCalendar,
     nextRegularPresidentialElectionDate: nextPres,
     nextRegularAssemblyElectionDate: nextAsm,
     politicians,
@@ -348,46 +544,31 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
       {
         dueDate: nextPres,
         eventType: "PRESIDENTIAL_ELECTION_DUE",
-        payload: { electionId: CANONICAL_PRESIDENTIAL_ELECTION_ID },
+        payload: { electionId: nextPresidentialElectionId },
         priority: 0,
         blocking: true,
         requiresResolution: true,
         source: "CALENDAR_PRESIDENTIAL_REGULAR",
       },
-      {
-        dueDate: nextAsm,
-        eventType: "ASSEMBLY_ELECTION_DUE",
-        payload: { electionId: CANONICAL_ASSEMBLY_ELECTION_ID },
-        priority: 0,
-        blocking: true,
-        requiresResolution: true,
-        source: "CALENDAR_ASSEMBLY_REGULAR",
-      },
     ],
     electedTermCounts: { [presidentId]: 1 },
     agentProfiles,
-    issueIds: ["ISS_GOVERNANCE"],
+    issueIds,
     partyDefinitions,
     factionDefinitions,
     nominationRules,
     independentAggregatePartyId: "PARTY_IND",
     startingPartyLeaders: Object.fromEntries(parties.map((p) => [p.id, p.leaderId])),
-    startingFactionChairs: Object.fromEntries(parties.map((p) => [`${p.id}_MAIN`, p.leaderId])),
-    provinceIds: [...provinces],
-    politicianHomeProvince: Object.fromEntries(
-      politicians.map((p, i) => [
-        p.id,
-        provinces[i % provinces.length] ?? provinces[0] ?? "PRV_ALPHA",
-      ]),
+    startingFactionChairs: Object.fromEntries(
+      parties.flatMap((p) =>
+        p.caucuses?.length
+          ? p.caucuses.map((c) => [c.id, c.leaderId ?? p.leaderId] as const)
+          : [[`${p.id}_MAIN`, p.leaderId] as const],
+      ),
     ),
-    constituencyProvinceShares: {
-      C_NORTH: provinces[0] ? [{ provinceId: provinces[0], share: 1 }] : [],
-      C_SOUTH: provinces[1]
-        ? [{ provinceId: provinces[1], share: 1 }]
-        : provinces[0]
-          ? [{ provinceId: provinces[0], share: 1 }]
-          : [],
-    },
+    provinceIds: [...provinces],
+    politicianHomeProvince,
+    constituencyProvinceShares,
     partyProvinceBaseline: {},
     provincialPartyOrganizations: {},
     presidentialEligibility: {
@@ -406,7 +587,7 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     voterBlocIdsByConstituency: {},
     constituencyElectorate: {},
     pollsters: {},
-    issueDimensions: { ISS_GOVERNANCE: "institutional" },
+    issueDimensions,
     partyPublicIdeology: {},
     factionPublicIdeology: {},
     legislativeConstitution: {
@@ -414,7 +595,7 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
       assemblyAbsoluteMajority: absoluteMajority,
     },
     executiveConstitution: {
-      assemblyCensureFraction: doc.contentSections.constitution?.ministerialCensureFraction ?? 0.55,
+      assemblyCensureFraction: censureFraction,
       regulationReviewDays: doc.contentSections.constitution?.regulationReviewDays ?? 60,
       emergencyInitialDays: 14,
       emergencyExtensionDays: 30,
@@ -428,7 +609,7 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
       recallReferralFraction: 0.6,
       recallVoteDays: 60,
     },
-    interestOrganizations: {},
+    interestOrganizations,
     mediaOutlets: {},
     worldCountries,
     worldInstitutions: {},
@@ -441,11 +622,12 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     const year = Number(start.slice(0, 4)) || 2026;
     let seq = 1;
     for (const country of Object.values(worldCountries).sort((a, b) => a.id.localeCompare(b.id))) {
+      const fc = foreign.find((f) => f.id === country.id);
       const id = `WLD${String(seq++).padStart(4, "0")}`;
       world.worldLeaders[id] = {
         id,
         countryId: country.id,
-        name: `${country.name} Executive`,
+        name: fc?.leaderName ?? `${country.name} Executive`,
         title: "Head of State",
         sinceYear: year - 2,
         governmentForm: country.government,
@@ -454,6 +636,7 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     }
   }
 
+  void asmSynthetic;
   applyInstitutionalPublicIdeology(world);
   return world;
 }

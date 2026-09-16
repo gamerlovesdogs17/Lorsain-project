@@ -279,10 +279,12 @@ export function finalizedFieldError(
         return reject("INELIGIBLE_CANDIDATE", `${c.politicianId}: ${elig.reasons.join("; ")}`);
       }
     }
-    const prov = nominationProvenanceError(state, world, c, election);
-    if (prov) return prov;
-    const ind = independentCandidateError(c, world);
-    if (ind) return ind;
+    if (election.metadata.miniPlayableSynthetic !== true) {
+      const prov = nominationProvenanceError(state, world, c, election);
+      if (prov) return prov;
+      const ind = independentCandidateError(c, world);
+      if (ind) return ind;
+    }
     if (c.partyId) {
       if (seenParty.has(c.partyId)) {
         return reject("DUPLICATE_PARTY_NOMINEE", c.partyId);

@@ -1,0 +1,2182 @@
+{
+  "format": "lorsain-scenario",
+  "formatVersion": 1,
+  "scenarioId": "ASTER_2029",
+  "name": "Aster Federation (QA Custom)",
+  "description": "Quick-built scenario for Aster Federation. Seed: aster-custom-fixture-v1",
+  "startDate": "2029-04-01",
+  "author": "Lorsain Quick Build",
+  "countryName": "Aster Federation",
+  "gameVersion": "0.3.0-predev",
+  "contentSections": {
+    "overview": {
+      "tagline": "Generated presidential republic",
+      "foundingYear": 1882
+    },
+    "constitution": {
+      "governmentForm": "presidential",
+      "assemblySeats": 120,
+      "assemblyAbsoluteMajority": 61,
+      "assemblyAbsoluteMajorityPreset": "simple_majority",
+      "courtJudges": 3,
+      "courtTermYears": 10,
+      "ministerialCensurePreset": "three_fifths",
+      "ministerialCensureFraction": 0.6,
+      "regulationReviewDays": 45
+    },
+    "geography": {
+      "provinces": [
+        {
+          "id": "PRV_ASTER_FEDERA_01",
+          "name": "Aster Federation Province 1",
+          "population": 1216801,
+          "economy": "agrarian",
+          "urbanization": "medium",
+          "characteristics": [
+            "mountain"
+          ]
+        },
+        {
+          "id": "PRV_ASTER_FEDERA_02",
+          "name": "Aster Federation Province 2",
+          "population": 1133617,
+          "economy": "industrial",
+          "urbanization": "medium",
+          "characteristics": [
+            "border"
+          ]
+        },
+        {
+          "id": "PRV_ASTER_FEDERA_03",
+          "name": "Aster Federation Province 3",
+          "population": 1641300,
+          "economy": "mixed",
+          "urbanization": "medium",
+          "characteristics": [
+            "coastal"
+          ]
+        },
+        {
+          "id": "PRV_ASTER_FEDERA_04",
+          "name": "Aster Federation Province 4",
+          "population": 878239,
+          "economy": "industrial",
+          "urbanization": "high",
+          "characteristics": [
+            "inland"
+          ]
+        },
+        {
+          "id": "PRV_ASTER_FEDERA_05",
+          "name": "Aster Federation Province 5",
+          "population": 2107660,
+          "economy": "mixed",
+          "urbanization": "high",
+          "characteristics": [
+            "coastal"
+          ]
+        }
+      ],
+      "constituencies": [
+        {
+          "id": "CON_ASTER_FEDERA_01",
+          "name": "Aster Federation Province 1 1",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "seats": 12,
+          "population": 405600
+        },
+        {
+          "id": "CON_ASTER_FEDERA_02",
+          "name": "Aster Federation Province 2 2",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "seats": 12,
+          "population": 377872
+        },
+        {
+          "id": "CON_ASTER_FEDERA_03",
+          "name": "Aster Federation Province 3 3",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "seats": 12,
+          "population": 547100
+        },
+        {
+          "id": "CON_ASTER_FEDERA_04",
+          "name": "Aster Federation Province 4 4",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "seats": 12,
+          "population": 292746
+        },
+        {
+          "id": "CON_ASTER_FEDERA_05",
+          "name": "Aster Federation Province 5 5",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "seats": 12,
+          "population": 702553
+        },
+        {
+          "id": "CON_ASTER_FEDERA_06",
+          "name": "Aster Federation Province 1 6",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "seats": 12,
+          "population": 405600
+        },
+        {
+          "id": "CON_ASTER_FEDERA_07",
+          "name": "Aster Federation Province 2 7",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "seats": 12,
+          "population": 377872
+        },
+        {
+          "id": "CON_ASTER_FEDERA_08",
+          "name": "Aster Federation Province 3 8",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "seats": 12,
+          "population": 547100
+        },
+        {
+          "id": "CON_ASTER_FEDERA_09",
+          "name": "Aster Federation Province 4 9",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "seats": 12,
+          "population": 292746
+        },
+        {
+          "id": "CON_ASTER_FEDERA_10",
+          "name": "Aster Federation Province 5 10",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "seats": 12,
+          "population": 702553
+        }
+      ]
+    },
+    "parties": [
+      {
+        "id": "PARTY_ASTER_FEDERA_01",
+        "name": "Elia Front",
+        "abbreviation": "AS1",
+        "ideologyLabel": "labour",
+        "leaderId": "NPC_ASTER_FEDERA_0001",
+        "color": "#2563eb",
+        "seatCount": 30,
+        "platformSummary": "Generated platform 1 for Aster Federation",
+        "caucuses": [
+          {
+            "id": "PARTY_ASTER_FEDERA_01_MAIN",
+            "name": "Main Caucus",
+            "leaderId": "NPC_ASTER_FEDERA_0001",
+            "supportShare": 0.85
+          }
+        ]
+      },
+      {
+        "id": "PARTY_ASTER_FEDERA_02",
+        "name": "Jorford Front",
+        "abbreviation": "AS2",
+        "ideologyLabel": "centre",
+        "leaderId": "NPC_ASTER_FEDERA_0002",
+        "color": "#dc2626",
+        "seatCount": 30,
+        "platformSummary": "Generated platform 2 for Aster Federation",
+        "caucuses": [
+          {
+            "id": "PARTY_ASTER_FEDERA_02_MAIN",
+            "name": "Main Caucus",
+            "leaderId": "NPC_ASTER_FEDERA_0002",
+            "supportShare": 0.85
+          }
+        ]
+      },
+      {
+        "id": "PARTY_ASTER_FEDERA_03",
+        "name": "Fenor League",
+        "abbreviation": "AS3",
+        "ideologyLabel": "conservative",
+        "leaderId": "NPC_ASTER_FEDERA_0003",
+        "color": "#16a34a",
+        "seatCount": 30,
+        "platformSummary": "Generated platform 3 for Aster Federation",
+        "caucuses": [
+          {
+            "id": "PARTY_ASTER_FEDERA_03_MAIN",
+            "name": "Main Caucus",
+            "leaderId": "NPC_ASTER_FEDERA_0003",
+            "supportShare": 0.85
+          }
+        ]
+      },
+      {
+        "id": "PARTY_ASTER_FEDERA_04",
+        "name": "Cormar Front",
+        "abbreviation": "AS4",
+        "ideologyLabel": "conservative",
+        "leaderId": "NPC_ASTER_FEDERA_0004",
+        "color": "#ca8a04",
+        "seatCount": 30,
+        "platformSummary": "Generated platform 4 for Aster Federation",
+        "caucuses": [
+          {
+            "id": "PARTY_ASTER_FEDERA_04_MAIN",
+            "name": "Main Caucus",
+            "leaderId": "NPC_ASTER_FEDERA_0004",
+            "supportShare": 0.85
+          }
+        ]
+      }
+    ],
+    "people": {
+      "politicians": [
+        {
+          "id": "NPC_ASTER_FEDERA_0001",
+          "name": "Halen Hal2",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1958,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0002",
+          "name": "Jormar Al3",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1984,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0003",
+          "name": "Denmar Jor4",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1980,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0004",
+          "name": "Jorford Cor5",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1987,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0005",
+          "name": "Joror Iris6",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1981,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0006",
+          "name": "Garton Brin7",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1956,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0007",
+          "name": "Irisus Iris8",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1985,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0008",
+          "name": "Corford Den9",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1955,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0009",
+          "name": "Elford Al0",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1972,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0010",
+          "name": "Fenton Brin1",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1956,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0011",
+          "name": "Alen Hal2",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1971,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0012",
+          "name": "Jormar Hal3",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1978,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0013",
+          "name": "Brinton Cor4",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1958,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0014",
+          "name": "Joren El5",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1982,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0015",
+          "name": "Corell Al6",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1974,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0016",
+          "name": "Denus Den7",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1970,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0017",
+          "name": "Brinus Hal8",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1988,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0018",
+          "name": "Fenwick El9",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1964,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0019",
+          "name": "Jorwick Fen0",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1989,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0020",
+          "name": "Coria Gar1",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1958,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0021",
+          "name": "Jormar Den2",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1955,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0022",
+          "name": "Fenus Fen3",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1955,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0023",
+          "name": "Halus El4",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1986,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0024",
+          "name": "Irisell Jor5",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1978,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0025",
+          "name": "Irisa Al6",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1964,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0026",
+          "name": "Brinus Den7",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1989,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0027",
+          "name": "Coror Brin8",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1973,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0028",
+          "name": "Brinell Al9",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1965,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0029",
+          "name": "Irismar Fen0",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1964,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0030",
+          "name": "Brina Den1",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1976,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0031",
+          "name": "Irisen El2",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1984,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0032",
+          "name": "Halell Fen3",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1967,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0033",
+          "name": "Irisen Hal4",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1968,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0034",
+          "name": "Gara El5",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1967,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0035",
+          "name": "Brinen Den6",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1979,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0036",
+          "name": "Jorton Cor7",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1964,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0037",
+          "name": "Elford Den8",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1982,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0038",
+          "name": "Cora Hal9",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1959,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0039",
+          "name": "Fenen Cor0",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1965,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0040",
+          "name": "Elus Hal1",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1977,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0041",
+          "name": "Halmar Iris2",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1977,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0042",
+          "name": "Alell Den3",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1976,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0043",
+          "name": "Hala Den4",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1961,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0044",
+          "name": "Iriston Gar5",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1965,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0045",
+          "name": "Halmar Fen6",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1988,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0046",
+          "name": "Denen Iris7",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1955,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0047",
+          "name": "Fenor Al8",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1957,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0048",
+          "name": "Denwick Hal9",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1973,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0049",
+          "name": "Corton El0",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1961,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0050",
+          "name": "Coror Fen1",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1955,
+          "background": "business",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0051",
+          "name": "Brinmar Hal2",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1982,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0052",
+          "name": "Garen Den3",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1967,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0053",
+          "name": "Ala Gar4",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1968,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0054",
+          "name": "Irisford Hal5",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1964,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0055",
+          "name": "Irisor Iris6",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1971,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0056",
+          "name": "Jorford Iris7",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1956,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0057",
+          "name": "Irisus Iris8",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1966,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0058",
+          "name": "Fenford Iris9",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1958,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0059",
+          "name": "Jorford El0",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1987,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0060",
+          "name": "Hala Gar1",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1985,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0061",
+          "name": "Elwick Den2",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1985,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0062",
+          "name": "Alen Iris3",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1958,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0063",
+          "name": "Denton Cor4",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1972,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0064",
+          "name": "Garen Jor5",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1970,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0065",
+          "name": "Cora Al6",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1976,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0066",
+          "name": "Denor Gar7",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1971,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0067",
+          "name": "Elmar Al8",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1962,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0068",
+          "name": "Joren Al9",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1976,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0069",
+          "name": "Fenton Cor0",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1970,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0070",
+          "name": "Denia Hal1",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1978,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0071",
+          "name": "Elton Hal2",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1989,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0072",
+          "name": "Cormar Cor3",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1984,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0073",
+          "name": "Halus Brin4",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1966,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0074",
+          "name": "Garen Gar5",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1985,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0075",
+          "name": "Denen Gar6",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1989,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0076",
+          "name": "Brinen El7",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1979,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0077",
+          "name": "Garford Iris8",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1975,
+          "background": "business",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0078",
+          "name": "Brinford Hal9",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1974,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0079",
+          "name": "Hala Brin0",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1983,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0080",
+          "name": "Fenford Den1",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1960,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0081",
+          "name": "Garen Hal2",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1960,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0082",
+          "name": "Fenwick Al3",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1971,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0083",
+          "name": "Denmar Brin4",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1979,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0084",
+          "name": "Jora Cor5",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1974,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0085",
+          "name": "Cora Iris6",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1964,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0086",
+          "name": "Fenia Hal7",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1972,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0087",
+          "name": "Jora Brin8",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1972,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0088",
+          "name": "Jorus Cor9",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1957,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0089",
+          "name": "Denus Brin0",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1969,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0090",
+          "name": "Garford Fen1",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1984,
+          "background": "academic",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0091",
+          "name": "Denor Gar2",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1984,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0092",
+          "name": "Alen El3",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1977,
+          "background": "activist",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0093",
+          "name": "Irisus Iris4",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1984,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0094",
+          "name": "Corwick Jor5",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1958,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0095",
+          "name": "Denford Den6",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1963,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0096",
+          "name": "Halell Gar7",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1987,
+          "background": "academic",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0097",
+          "name": "Elor El8",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1959,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0098",
+          "name": "Alwick Fen9",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1956,
+          "background": "business",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0099",
+          "name": "Garus Cor0",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1988,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0100",
+          "name": "Corton Cor1",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1958,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0101",
+          "name": "Jora Fen2",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1973,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0102",
+          "name": "Corwick Fen3",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1988,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0103",
+          "name": "Fena Brin4",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1968,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0104",
+          "name": "Alton Hal5",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1975,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0105",
+          "name": "Fenford Iris6",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1975,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0106",
+          "name": "Alwick Brin7",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1955,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0107",
+          "name": "Coren Al8",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1986,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0108",
+          "name": "Jormar Al9",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1976,
+          "background": "lawyer",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "centre",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0109",
+          "name": "Fenell Den0",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1966,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0110",
+          "name": "Halwick Den1",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1978,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0111",
+          "name": "Alford Al2",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1983,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0112",
+          "name": "Elford Hal3",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1979,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0113",
+          "name": "Irisen Iris4",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1988,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0114",
+          "name": "Garmar Brin5",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1967,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0115",
+          "name": "Elen Cor6",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1979,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0116",
+          "name": "Fenmar El7",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1957,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0117",
+          "name": "Ala Al8",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1957,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0118",
+          "name": "Elor Gar9",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1982,
+          "background": "business",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0119",
+          "name": "Garen Den0",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1988,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0120",
+          "name": "Joren Den1",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1969,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "labour",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0121",
+          "name": "Brinus Brin2",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1980,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "green",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0122",
+          "name": "Elia Cor3",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1977,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "liberal",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0123",
+          "name": "Brinia Fen4",
+          "partyId": "PARTY_ASTER_FEDERA_03",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1973,
+          "background": "civil service",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0124",
+          "name": "Iriston Gar5",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1983,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "social-democratic",
+          "office": "assembly_member"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0125",
+          "name": "Denford Al6",
+          "partyId": null,
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1970,
+          "background": "civil service",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "centre",
+          "office": "constitutional_court_justice"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0126",
+          "name": "Halton Al7",
+          "partyId": null,
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1971,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "green",
+          "office": "constitutional_court_justice"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0127",
+          "name": "Jormar Iris8",
+          "partyId": null,
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1957,
+          "background": "activist",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "constitutional_court_justice"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0128",
+          "name": "Denwick Gar9",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1959,
+          "background": "lawyer",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "market-reform",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0129",
+          "name": "Halia El0",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_02",
+          "birthYear": 1989,
+          "background": "civil service",
+          "traits": [
+            "technocratic"
+          ],
+          "ideology": "conservative",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0130",
+          "name": "Elor Gar1",
+          "partyId": "PARTY_ASTER_FEDERA_04",
+          "provinceId": "PRV_ASTER_FEDERA_03",
+          "birthYear": 1961,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "centre",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0131",
+          "name": "Denen Iris2",
+          "partyId": "PARTY_ASTER_FEDERA_02",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1957,
+          "background": "activist",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "market-reform",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0132",
+          "name": "Halwick Gar3",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1969,
+          "background": "academic",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "liberal",
+          "office": "governor"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0133",
+          "name": "Irisus El4",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1980,
+          "background": "lawyer",
+          "traits": [
+            "pragmatic"
+          ],
+          "ideology": "nationalist",
+          "office": "minister"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0134",
+          "name": "Fenus Jor5",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_01",
+          "birthYear": 1966,
+          "background": "academic",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "minister"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0135",
+          "name": "Garwick Al6",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_05",
+          "birthYear": 1975,
+          "background": "civil service",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "labour",
+          "office": "minister"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0136",
+          "name": "Alell Jor7",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1978,
+          "background": "activist",
+          "traits": [
+            "populist"
+          ],
+          "ideology": "market-reform",
+          "office": "minister"
+        },
+        {
+          "id": "NPC_ASTER_FEDERA_0137",
+          "name": "Coria Cor8",
+          "partyId": "PARTY_ASTER_FEDERA_01",
+          "provinceId": "PRV_ASTER_FEDERA_04",
+          "birthYear": 1982,
+          "background": "lawyer",
+          "traits": [
+            "charismatic"
+          ],
+          "ideology": "social-democratic",
+          "office": "minister"
+        }
+      ]
+    },
+    "government": {
+      "presidentId": "NPC_ASTER_FEDERA_0001",
+      "headOfGovernmentId": null,
+      "cabinet": [
+        {
+          "ministryId": "MIN_FIN",
+          "holderId": "NPC_ASTER_FEDERA_0133"
+        },
+        {
+          "ministryId": "MIN_FOR",
+          "holderId": "NPC_ASTER_FEDERA_0134"
+        },
+        {
+          "ministryId": "MIN_INT",
+          "holderId": "NPC_ASTER_FEDERA_0135"
+        },
+        {
+          "ministryId": "MIN_JUS",
+          "holderId": "NPC_ASTER_FEDERA_0136"
+        },
+        {
+          "ministryId": "MIN_DEF",
+          "holderId": "NPC_ASTER_FEDERA_0137"
+        }
+      ],
+      "coalitionPartyIds": [
+        "PARTY_ASTER_FEDERA_01",
+        "PARTY_ASTER_FEDERA_02"
+      ]
+    },
+    "elections": {
+      "assemblySystem": "stv",
+      "presidentialMode": "national_rcv",
+      "presidentialIntervalYears": 5,
+      "assemblyIntervalYears": 4,
+      "nominationRuleLabels": {
+        "PARTY_ASTER_FEDERA_01": "AS1 member RCV",
+        "PARTY_ASTER_FEDERA_02": "AS2 member RCV",
+        "PARTY_ASTER_FEDERA_03": "AS3 member RCV",
+        "PARTY_ASTER_FEDERA_04": "AS4 member RCV"
+      }
+    },
+    "laws": {
+      "startingLaws": [
+        {
+          "id": "LAW_ASTER_FEDERA_BUDGET",
+          "title": "Interim Budget Framework",
+          "policyItems": [
+            "ISS_ECONOMY"
+          ]
+        }
+      ]
+    },
+    "organizations": [
+      {
+        "id": "ORG_ASTER_FEDERA_TRADE",
+        "name": "Aster Federation Trade Council",
+        "type": "business",
+        "issues": [
+          "ISS_ECONOMY"
+        ],
+        "scope": "national"
+      },
+      {
+        "id": "ORG_ASTER_FEDERA_LABOUR",
+        "name": "National Labour Confederation",
+        "type": "union",
+        "issues": [
+          "ISS_GOVERNANCE"
+        ],
+        "scope": "national"
+      }
+    ],
+    "foreign": {
+      "countries": [
+        {
+          "id": "FC_ASTER_FEDERA_01",
+          "name": "Fena Republic",
+          "region": "maritime",
+          "relation": -0.2,
+          "leaderName": "Brinwick Brin0"
+        },
+        {
+          "id": "FC_ASTER_FEDERA_02",
+          "name": "Denton Federation",
+          "region": "tropical",
+          "relation": 0.14,
+          "leaderName": "Fenia Brin1"
+        },
+        {
+          "id": "FC_ASTER_FEDERA_03",
+          "name": "Alford Republic",
+          "region": "polar",
+          "relation": -0.82,
+          "leaderName": "Fenus El2"
+        },
+        {
+          "id": "FC_ASTER_FEDERA_04",
+          "name": "Elford State",
+          "region": "maritime",
+          "relation": 0.48,
+          "leaderName": "Denford Jor3"
+        },
+        {
+          "id": "FC_ASTER_FEDERA_05",
+          "name": "Halell Federation",
+          "region": "tropical",
+          "relation": 0.19,
+          "leaderName": "Alton Cor4"
+        },
+        {
+          "id": "FC_ASTER_FEDERA_06",
+          "name": "Irisford Kingdom",
+          "region": "tropical",
+          "relation": -0.45,
+          "leaderName": "Irisa Cor5"
+        },
+        {
+          "id": "FC_ASTER_FEDERA_07",
+          "name": "Iriswick Republic",
+          "region": "polar",
+          "relation": 0.49,
+          "leaderName": "Denia Jor6"
+        },
+        {
+          "id": "FC_ASTER_FEDERA_08",
+          "name": "Irisa State",
+          "region": "continental",
+          "relation": 0.92,
+          "leaderName": "Elmar Brin7"
+        }
+      ],
+      "relations": [
+        {
+          "a": "FC_ASTER_FEDERA_01",
+          "b": "FC_ASTER_FEDERA_02",
+          "diplomatic": -0.39,
+          "trade": 0.29,
+          "security": 0.45
+        },
+        {
+          "a": "FC_ASTER_FEDERA_02",
+          "b": "FC_ASTER_FEDERA_03",
+          "diplomatic": -0.71,
+          "trade": 0.24,
+          "security": 0.11
+        },
+        {
+          "a": "FC_ASTER_FEDERA_03",
+          "b": "FC_ASTER_FEDERA_04",
+          "diplomatic": 0.45,
+          "trade": 0.66,
+          "security": 0.04
+        },
+        {
+          "a": "FC_ASTER_FEDERA_04",
+          "b": "FC_ASTER_FEDERA_05",
+          "diplomatic": -0.13,
+          "trade": 0.17,
+          "security": 0.01
+        }
+      ],
+      "treaties": [],
+      "crises": []
+    },
+    "world": {
+      "assemblySeats": 120,
+      "courtJudges": 3,
+      "jurisdictionId": "ASTER_"
+    }
+  },
+  "contentEmbed": {
+    "kind": "mini_playable_v1"
+  }
+}
