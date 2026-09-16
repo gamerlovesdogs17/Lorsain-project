@@ -19,10 +19,7 @@ export function thresholdPresetForFraction(fraction: number | undefined | null):
   return "custom";
 }
 
-export function fractionForThresholdPreset(
-  id: ThresholdPresetId,
-  customFraction?: number,
-): number {
+export function fractionForThresholdPreset(id: ThresholdPresetId, customFraction?: number): number {
   if (id === "custom") {
     return typeof customFraction === "number" && Number.isFinite(customFraction)
       ? customFraction

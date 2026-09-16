@@ -32,11 +32,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 function foreignCountriesList(doc: ScenarioDocument): ScenarioForeignCountrySection[] {
-  return (
-    doc.contentSections.foreign?.countries ??
-    doc.contentSections.foreignCountries ??
-    []
-  );
+  return doc.contentSections.foreign?.countries ?? doc.contentSections.foreignCountries ?? [];
 }
 
 function validateStructure(raw: Record<string, unknown>): ScenarioValidationReport {
@@ -307,7 +303,8 @@ function validateSemantic(doc: ScenarioDocument): ScenarioValidationReport {
       path: "contentSections.geography.constituencies",
       code: "ADD_CONSTITUENCIES",
       severity: "suggestion",
-      message: "Define constituencies for studio editing; mini builder can synthesize them if omitted",
+      message:
+        "Define constituencies for studio editing; mini builder can synthesize them if omitted",
     });
   }
 

@@ -42,7 +42,16 @@ async function ensureDevServer() {
   }
   const child = spawn(
     "pnpm",
-    ["--filter", "@lorsain/game", "exec", "vite", "--host", "127.0.0.1", "--port", String(DEV_PORT)],
+    [
+      "--filter",
+      "@lorsain/game",
+      "exec",
+      "vite",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(DEV_PORT),
+    ],
     {
       cwd: ROOT,
       env: { ...process.env, VITE_BASE_PATH: "/Lorsain-project/" },
@@ -72,14 +81,18 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   try {
     for (const width of [1280, 390]) {
-      const page = await browser.newPage({ viewport: { width, height: width === 390 ? 844 : 800 } });
+      const page = await browser.newPage({
+        viewport: { width, height: width === 390 ? 844 : 800 },
+      });
       await page.goto(BASE, { waitUntil: "networkidle" });
-      await page.getByText("Import scenario", { exact: false }).first().waitFor({ timeout: 30_000 });
+      await page
+        .getByText("Import scenario", { exact: false })
+        .first()
+        .waitFor({ timeout: 30_000 });
       await shot(page, `menu-${width}`);
 
       await page.getByText("Scenario editor", { exact: false }).first().click();
       await page.getByText("Overview", { exact: false }).first().waitFor();
-      const country = page.locator('input, textarea').filter({ hasText: "" });
       // Overview tab should be active with editable name field.
       await page.locator(".scenario-form, .scenario-screen").first().waitFor();
       await shot(page, `editor-overview-${width}`);
@@ -93,13 +106,20 @@ async function main() {
       await page.getByRole("button", { name: /Validation/i }).click();
       await shot(page, `editor-validation-${width}`);
 
-      await page.getByText("Import scenario", { exact: false }).first().click().catch(() => null);
+      await page
+        .getByText("Import scenario", { exact: false })
+        .first()
+        .click()
+        .catch(() => null);
       // Return to menu via back if present.
       const back = page.getByRole("button", { name: /back|main menu|cancel/i }).first();
       if (await back.count()) await back.click();
       await page.getByText("Import scenario", { exact: false }).first().click();
       await page.setInputFiles('input[type="file"]', FIXTURE);
-      await page.getByText("Alphaven Federation", { exact: false }).first().waitFor({ timeout: 15_000 });
+      await page
+        .getByText("Alphaven Federation", { exact: false })
+        .first()
+        .waitFor({ timeout: 15_000 });
       const play = page.getByRole("button", { name: /Play/i }).first();
       const playDisabled = await play.isDisabled().catch(() => false);
       if (playDisabled) throw new Error("Valid import PLAY should be enabled");
@@ -117,9 +137,16 @@ async function main() {
     await page.goto(BASE, { waitUntil: "networkidle" });
     await page.getByText("Import scenario", { exact: false }).first().click();
     const badPath = resolve(OUT, "_invalid.lorsain.json");
-    writeFileSync(badPath, JSON.stringify({ format: "lorsain-scenario", formatVersion: 1 }), "utf8");
+    writeFileSync(
+      badPath,
+      JSON.stringify({ format: "lorsain-scenario", formatVersion: 1 }),
+      "utf8",
+    );
     await page.setInputFiles('input[type="file"]', badPath);
-    await page.getByText(/error|missing|cannot/i).first().waitFor({ timeout: 15_000 });
+    await page
+      .getByText(/error|missing|cannot/i)
+      .first()
+      .waitFor({ timeout: 15_000 });
     const playBad = page.getByRole("button", { name: /Play/i }).first();
     if (!(await playBad.isDisabled())) throw new Error("Invalid import PLAY must be disabled");
     await shot(page, "import-invalid-1280");

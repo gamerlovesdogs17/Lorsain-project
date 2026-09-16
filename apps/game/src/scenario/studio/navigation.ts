@@ -32,7 +32,11 @@ export const STUDIO_TABS: { id: StudioTab; label: string }[] = [
 export function tabForIssuePath(path: string): StudioTab {
   if (path.includes("parties")) return "parties";
   if (path.includes("people")) return "people";
-  if (path.includes("constitution") || path.includes("assemblySeats") || path.includes("courtJudges"))
+  if (
+    path.includes("constitution") ||
+    path.includes("assemblySeats") ||
+    path.includes("courtJudges")
+  )
     return "constitution";
   if (path.includes("geography") || path.includes("provinces")) return "geography";
   if (path.includes("foreign")) return "foreign";

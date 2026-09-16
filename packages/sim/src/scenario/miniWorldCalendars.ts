@@ -22,10 +22,7 @@ export type MiniWorldElectionSchedule = {
   nextAssemblyElectionId: string;
 };
 
-function nextRegularElectionOnOrAfter(
-  cal: RegularElectionCalendar,
-  onOrAfter: IsoDate,
-): IsoDate {
+function nextRegularElectionOnOrAfter(cal: RegularElectionCalendar, onOrAfter: IsoDate): IsoDate {
   const startYear = parseIsoDate(onOrAfter).year;
   let year = nextRegularElectionYear(cal, startYear);
   let date = regularElectionDate(cal, year);

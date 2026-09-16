@@ -96,7 +96,9 @@ describe("@lorsain/scenario", () => {
     const report = validateContentPack(pack, { availablePackIds: new Set(["pack_a"]) });
     expect(report.errors.some((e) => e.code === "MISSING_DEPENDENCY_PACK")).toBe(true);
     expect(report.errors[0]?.fixHint).toMatch(/Install/);
-    const round = parseContentPack(JSON.parse(exportContentPackJson(pack as ContentPackDocument)) as unknown);
+    const round = parseContentPack(
+      JSON.parse(exportContentPackJson(pack as ContentPackDocument)) as unknown,
+    );
     expect(round.packId).toBe("pack_a");
   });
 

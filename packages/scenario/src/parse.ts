@@ -129,7 +129,8 @@ function parseContentSections(raw: unknown): ScenarioContentSections {
         ideology: ideologyLabel,
         ideologyLabel,
         leaderId: str(p.leaderId ?? p.leader_id),
-        color: p.color === null || typeof p.color === "string" ? (p.color as string | null) : undefined,
+        color:
+          p.color === null || typeof p.color === "string" ? (p.color as string | null) : undefined,
         seatCount: num(p.seatCount),
         platformSummary,
         caucuses: Array.isArray(p.caucuses)
@@ -148,44 +149,47 @@ function parseContentSections(raw: unknown): ScenarioContentSections {
   if (isRecord(raw.geography)) {
     out.geography = {};
     if (Array.isArray(raw.geography.provinces)) {
-      out.geography.provinces = raw.geography.provinces.filter(isRecord).map((p) =>
-        omitUndefined({
-          id: str(p.id),
-          name: str(p.name),
-          population: num(p.population),
-          economy: typeof p.economy === "string" ? p.economy : undefined,
-          urbanization: typeof p.urbanization === "string" ? p.urbanization : undefined,
-          characteristics: strArray(p.characteristics),
-        }) as ScenarioProvinceSection,
+      out.geography.provinces = raw.geography.provinces.filter(isRecord).map(
+        (p) =>
+          omitUndefined({
+            id: str(p.id),
+            name: str(p.name),
+            population: num(p.population),
+            economy: typeof p.economy === "string" ? p.economy : undefined,
+            urbanization: typeof p.urbanization === "string" ? p.urbanization : undefined,
+            characteristics: strArray(p.characteristics),
+          }) as ScenarioProvinceSection,
       );
     }
     if (Array.isArray(raw.geography.constituencies)) {
-      out.geography.constituencies = raw.geography.constituencies.filter(isRecord).map((c) =>
-        omitUndefined({
-          id: str(c.id),
-          name: str(c.name),
-          provinceId: str(c.provinceId),
-          seats: num(c.seats) ?? 0,
-          population: num(c.population),
-        }) as ScenarioConstituencySection,
+      out.geography.constituencies = raw.geography.constituencies.filter(isRecord).map(
+        (c) =>
+          omitUndefined({
+            id: str(c.id),
+            name: str(c.name),
+            provinceId: str(c.provinceId),
+            seats: num(c.seats) ?? 0,
+            population: num(c.population),
+          }) as ScenarioConstituencySection,
       );
     }
   }
   if (isRecord(raw.people) && Array.isArray(raw.people.politicians)) {
     out.people = {
-      politicians: raw.people.politicians.filter(isRecord).map((p) =>
-        omitUndefined({
-          id: str(p.id),
-          name: str(p.name),
-          partyId: p.partyId === null || typeof p.partyId === "string" ? p.partyId : undefined,
-          provinceId:
-            p.provinceId === null || typeof p.provinceId === "string" ? p.provinceId : undefined,
-          birthYear: num(p.birthYear),
-          background: typeof p.background === "string" ? p.background : undefined,
-          traits: strArray(p.traits),
-          ideology: typeof p.ideology === "string" ? p.ideology : undefined,
-          office: typeof p.office === "string" ? p.office : undefined,
-        }) as ScenarioPoliticianSection,
+      politicians: raw.people.politicians.filter(isRecord).map(
+        (p) =>
+          omitUndefined({
+            id: str(p.id),
+            name: str(p.name),
+            partyId: p.partyId === null || typeof p.partyId === "string" ? p.partyId : undefined,
+            provinceId:
+              p.provinceId === null || typeof p.provinceId === "string" ? p.provinceId : undefined,
+            birthYear: num(p.birthYear),
+            background: typeof p.background === "string" ? p.background : undefined,
+            traits: strArray(p.traits),
+            ideology: typeof p.ideology === "string" ? p.ideology : undefined,
+            office: typeof p.office === "string" ? p.office : undefined,
+          }) as ScenarioPoliticianSection,
       ),
     };
   }
@@ -206,7 +210,8 @@ function parseContentSections(raw: unknown): ScenarioContentSections {
             holderId: str(c.holderId),
           }))
         : undefined,
-      coalitionPartyIds: strArray(g.coalitionPartyIds) ??
+      coalitionPartyIds:
+        strArray(g.coalitionPartyIds) ??
         (Array.isArray(g.coalitionPartyIds) ? g.coalitionPartyIds.map((x) => str(x)) : undefined),
     }) as ScenarioGovernmentSection;
   }
@@ -230,25 +235,27 @@ function parseContentSections(raw: unknown): ScenarioContentSections {
   }
   if (isRecord(raw.laws) && Array.isArray(raw.laws.startingLaws)) {
     out.laws = {
-      startingLaws: raw.laws.startingLaws.filter(isRecord).map((l) =>
-        omitUndefined({
-          id: str(l.id),
-          title: str(l.title),
-          policyItems: strArray(l.policyItems),
-          catalogRef: typeof l.catalogRef === "string" ? l.catalogRef : undefined,
-        }) as ScenarioLawSection,
+      startingLaws: raw.laws.startingLaws.filter(isRecord).map(
+        (l) =>
+          omitUndefined({
+            id: str(l.id),
+            title: str(l.title),
+            policyItems: strArray(l.policyItems),
+            catalogRef: typeof l.catalogRef === "string" ? l.catalogRef : undefined,
+          }) as ScenarioLawSection,
       ),
     };
   }
   if (Array.isArray(raw.organizations)) {
-    out.organizations = raw.organizations.filter(isRecord).map((o) =>
-      omitUndefined({
-        id: str(o.id),
-        name: str(o.name),
-        type: str(o.type),
-        issues: strArray(o.issues) ?? [],
-        scope: typeof o.scope === "string" ? o.scope : undefined,
-      }) as ScenarioOrganizationSection,
+    out.organizations = raw.organizations.filter(isRecord).map(
+      (o) =>
+        omitUndefined({
+          id: str(o.id),
+          name: str(o.name),
+          type: str(o.type),
+          issues: strArray(o.issues) ?? [],
+          scope: typeof o.scope === "string" ? o.scope : undefined,
+        }) as ScenarioOrganizationSection,
     );
   }
   const parseForeignCountry = (c: Record<string, unknown>): ScenarioForeignCountrySection =>
@@ -268,40 +275,43 @@ function parseContentSections(raw: unknown): ScenarioContentSections {
       out.foreign.countries = raw.foreign.countries.filter(isRecord).map(parseForeignCountry);
     }
     if (Array.isArray(raw.foreign.relations)) {
-      out.foreign.relations = raw.foreign.relations.filter(isRecord).map((r) =>
-        omitUndefined({
-          a: str(r.a),
-          b: str(r.b),
-          diplomatic: num(r.diplomatic),
-          trade: num(r.trade),
-          security: num(r.security),
-        }) as ScenarioForeignRelationSection,
+      out.foreign.relations = raw.foreign.relations.filter(isRecord).map(
+        (r) =>
+          omitUndefined({
+            a: str(r.a),
+            b: str(r.b),
+            diplomatic: num(r.diplomatic),
+            trade: num(r.trade),
+            security: num(r.security),
+          }) as ScenarioForeignRelationSection,
       );
     }
     if (Array.isArray(raw.foreign.treaties)) {
-      out.foreign.treaties = raw.foreign.treaties.filter(isRecord).map((t) =>
-        omitUndefined({
-          id: str(t.id),
-          title: str(t.title),
-          kind: typeof t.kind === "string" ? t.kind : undefined,
-          partyCountryIds:
-            strArray(t.partyCountryIds) ??
-            (Array.isArray(t.partyCountryIds) ? t.partyCountryIds.map((x) => str(x)) : undefined),
-        }) as ScenarioForeignTreatySection,
+      out.foreign.treaties = raw.foreign.treaties.filter(isRecord).map(
+        (t) =>
+          omitUndefined({
+            id: str(t.id),
+            title: str(t.title),
+            kind: typeof t.kind === "string" ? t.kind : undefined,
+            partyCountryIds:
+              strArray(t.partyCountryIds) ??
+              (Array.isArray(t.partyCountryIds) ? t.partyCountryIds.map((x) => str(x)) : undefined),
+          }) as ScenarioForeignTreatySection,
       );
     }
     if (Array.isArray(raw.foreign.crises)) {
-      out.foreign.crises = raw.foreign.crises.filter(isRecord).map((c) =>
-        omitUndefined({
-          id: str(c.id),
-          title: str(c.title),
-          stage: typeof c.stage === "string" ? c.stage : undefined,
-          involvedCountryIds:
-            strArray(c.involvedCountryIds) ??
-            (Array.isArray(c.involvedCountryIds)
-              ? c.involvedCountryIds.map((x) => str(x))
-              : undefined),
-        }) as ScenarioForeignCrisisSection,
+      out.foreign.crises = raw.foreign.crises.filter(isRecord).map(
+        (c) =>
+          omitUndefined({
+            id: str(c.id),
+            title: str(c.title),
+            stage: typeof c.stage === "string" ? c.stage : undefined,
+            involvedCountryIds:
+              strArray(c.involvedCountryIds) ??
+              (Array.isArray(c.involvedCountryIds)
+                ? c.involvedCountryIds.map((x) => str(x))
+                : undefined),
+          }) as ScenarioForeignCrisisSection,
       );
     }
   }

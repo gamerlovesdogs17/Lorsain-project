@@ -17,11 +17,7 @@ export type ScenarioValidationReport = {
 };
 
 export type ThresholdPresetId =
-  | "simple_majority"
-  | "three_fifths"
-  | "two_thirds"
-  | "three_quarters"
-  | "custom";
+  "simple_majority" | "three_fifths" | "two_thirds" | "three_quarters" | "custom";
 
 export type GovernmentFormId = "presidential" | "parliamentary" | "semi";
 

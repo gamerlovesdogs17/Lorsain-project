@@ -2,20 +2,19 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { importScenarioJson, parseScenarioDocument, type ScenarioDocument } from "@lorsain/scenario";
+import {
+  importScenarioJson,
+  parseScenarioDocument,
+  type ScenarioDocument,
+} from "@lorsain/scenario";
 import {
   auditSimulationIntegrity,
   createSimulation,
   parseSaveFile,
   restoreSimulation,
 } from "./index.js";
-import {
-  parseIsoDate,
-  TERENA_ASSEMBLY_CALENDAR,
-  TERENA_PRESIDENTIAL_CALENDAR,
-} from "./calendar.js";
-import { presidentialElectionIdForDate } from "./elections/state.js";
-import { CANONICAL_ASSEMBLY_ELECTION_ID, CANONICAL_PRESIDENTIAL_ELECTION_ID } from "./elections/types.js";
+import { TERENA_ASSEMBLY_CALENDAR, TERENA_PRESIDENTIAL_CALENDAR } from "./calendar.js";
+import { CANONICAL_PRESIDENTIAL_ELECTION_ID } from "./elections/types.js";
 import { advanceIntegrated, loadTerenaWorld } from "./integration/harness.js";
 import { buildKernelWorldFromScenarioDocument } from "./scenario/kernelBridge.js";
 import { resolveMiniWorldElectionSchedule } from "./scenario/miniWorldCalendars.js";
@@ -29,7 +28,10 @@ const FIXTURE_PATHS = {
   brinor: resolve(fixturesDir, "brinor-custom.lorsain.json"),
 } as const;
 
-function loadFixture(path: string): { doc: ScenarioDocument; world: ReturnType<typeof buildKernelWorldFromScenarioDocument> } {
+function loadFixture(path: string): {
+  doc: ScenarioDocument;
+  world: ReturnType<typeof buildKernelWorldFromScenarioDocument>;
+} {
   const text = readFileSync(path, "utf8");
   const imported = importScenarioJson(text);
   if (!imported.ok) throw new Error(imported.error);
@@ -88,7 +90,9 @@ describe("Phase 18A custom mini world (Alphaven)", () => {
     expect(world.assemblyCalendar).toEqual(schedule.assemblyCalendar);
     expect(world.presidentialCalendar).not.toEqual(TERENA_PRESIDENTIAL_CALENDAR);
     expect(world.assemblyCalendar).not.toEqual(TERENA_ASSEMBLY_CALENDAR);
-    const presEvent = world.initialScheduled.find((e) => e.eventType === "PRESIDENTIAL_ELECTION_DUE");
+    const presEvent = world.initialScheduled.find(
+      (e) => e.eventType === "PRESIDENTIAL_ELECTION_DUE",
+    );
     expect(presEvent?.payload.electionId).toBe(
       `ELEC_PRES_${world.nextRegularPresidentialElectionDate.slice(0, 4)}`,
     );
@@ -103,7 +107,9 @@ describe("Phase 18A custom mini world (Alphaven)", () => {
   });
 
   it("parseScenarioDocument matches fixture metadata", () => {
-    const doc = parseScenarioDocument(JSON.parse(readFileSync(FIXTURE_PATHS.alphaven, "utf8")) as unknown);
+    const doc = parseScenarioDocument(
+      JSON.parse(readFileSync(FIXTURE_PATHS.alphaven, "utf8")) as unknown,
+    );
     expect(doc.startDate).toBe("2026-06-15");
     expect(doc.contentEmbed.kind).toBe("mini_playable_v1");
   });

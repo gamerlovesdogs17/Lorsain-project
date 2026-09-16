@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { generateQuickBuildDocument, ELECTORAL_PRESETS, GOVERNMENT_FORM_PRESETS } from "@lorsain/scenario";
+import {
+  generateQuickBuildDocument,
+  ELECTORAL_PRESETS,
+  GOVERNMENT_FORM_PRESETS,
+} from "@lorsain/scenario";
 import type { ScenarioDocument } from "@lorsain/scenario";
 
 type EntryMode = "home" | "quick";
@@ -12,11 +16,13 @@ export function ScenarioStudioEntryScreen(props: {
   const [mode, setMode] = useState<EntryMode>("home");
   const [countryName, setCountryName] = useState("New Republic");
   const [startDate, setStartDate] = useState("2028-01-01");
-  const [govForm, setGovForm] = useState<(typeof GOVERNMENT_FORM_PRESETS)[number]["id"]>("presidential");
+  const [govForm, setGovForm] =
+    useState<(typeof GOVERNMENT_FORM_PRESETS)[number]["id"]>("presidential");
   const [assemblySeats, setAssemblySeats] = useState(24);
   const [provinceCount, setProvinceCount] = useState(2);
   const [partyCount, setPartyCount] = useState(3);
-  const [electoralPreset, setElectoralPreset] = useState<(typeof ELECTORAL_PRESETS)[number]["id"]>("stv");
+  const [electoralPreset, setElectoralPreset] =
+    useState<(typeof ELECTORAL_PRESETS)[number]["id"]>("stv");
 
   if (mode === "quick") {
     return (
@@ -130,8 +136,8 @@ export function ScenarioStudioEntryScreen(props: {
           <div className="kicker">SCENARIO STUDIO</div>
           <h1>Create a custom world</h1>
           <p>
-            Terena stays the bundled default for <strong>New Game</strong>. Build or import your
-            own scenario here.
+            Terena stays the bundled default for <strong>New Game</strong>. Build or import your own
+            scenario here.
           </p>
         </div>
         <button type="button" className="btn secondary" onClick={props.onBack}>

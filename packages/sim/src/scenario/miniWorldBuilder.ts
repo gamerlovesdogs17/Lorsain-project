@@ -3,7 +3,6 @@ import { fractionFromPreset } from "@lorsain/scenario";
 import { parseIsoDate, regularElectionDate, type IsoDate } from "../calendar.js";
 import { syntheticAgentProfile } from "../agents/profile.js";
 import { applyInstitutionalPublicIdeology } from "../elections/public-ideology.js";
-import { assemblyElectionIdForDate } from "../elections/assembly-national.js";
 import { presidentialElectionIdForDate } from "../elections/state.js";
 import { kernelOffice } from "../synthetic-world.js";
 import { resolveMiniWorldElectionSchedule } from "./miniWorldCalendars.js";
@@ -17,13 +16,9 @@ function partyDef(p: ScenarioPartySection): PartyDefinition {
     short: p.abbreviation || p.id,
     organizationType: "membership_party",
     nominationRuleId: `${p.id}_NOM`,
-    factionIds: p.caucuses?.length
-      ? p.caucuses.map((c) => c.id)
-      : [`${p.id}_MAIN`],
+    factionIds: p.caucuses?.length ? p.caucuses.map((c) => c.id) : [`${p.id}_MAIN`],
     canonicalFactionShares: p.caucuses?.length
-      ? Object.fromEntries(
-          p.caucuses.map((c) => [c.id, c.supportShare ?? 1 / p.caucuses!.length]),
-        )
+      ? Object.fromEntries(p.caucuses.map((c) => [c.id, c.supportShare ?? 1 / p.caucuses!.length]))
       : { [`${p.id}_MAIN`]: 1 },
     color: p.color ?? null,
   };
@@ -63,14 +58,11 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
   const courtJudges =
     doc.contentSections.constitution?.courtJudges ?? doc.contentSections.world?.courtJudges ?? 5;
   const absoluteMajority =
-    doc.contentSections.constitution?.assemblyAbsoluteMajority ??
-    Math.floor(assemblySeats / 2) + 1;
+    doc.contentSections.constitution?.assemblyAbsoluteMajority ?? Math.floor(assemblySeats / 2) + 1;
 
   const provinceRows = doc.contentSections.geography?.provinces ?? [];
   const provinces =
-    provinceRows.length > 0
-      ? provinceRows.map((p) => p.id)
-      : ["PRV_ALPHA", "PRV_BETA"];
+    provinceRows.length > 0 ? provinceRows.map((p) => p.id) : ["PRV_ALPHA", "PRV_BETA"];
 
   const parties = doc.contentSections.parties ?? [
     {
@@ -101,7 +93,7 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
   const presidentId =
     gov?.presidentId ??
     (doc.contentSections.constitution?.governmentForm === "parliamentary"
-      ? parties.find((p) => p.id !== parties[0]?.id)?.leaderId ?? parties[0]?.leaderId
+      ? (parties.find((p) => p.id !== parties[0]?.id)?.leaderId ?? parties[0]?.leaderId)
       : parties[0]?.leaderId) ??
     "NPC_PRES";
   const headOfGov = gov?.headOfGovernmentId ?? null;
@@ -124,7 +116,6 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     (doc.contentSections.elections?.nextAssemblyElectionDate as IsoDate | undefined) ??
     deferFirstElection(electionSchedule.assemblyCalendar);
   const nextPresidentialElectionId = presidentialElectionIdForDate(nextPres);
-  const nextAssemblyElectionId = assemblyElectionIdForDate(nextAsm);
   const { presidentialCalendar, assemblyCalendar } = electionSchedule;
 
   const offices: KernelWorld["offices"] = {
@@ -259,10 +250,7 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
       id,
       alive: true,
       retired: false,
-      partyId:
-        row?.partyId ??
-        parties[idx % parties.length]?.id ??
-        null,
+      partyId: row?.partyId ?? parties[idx % parties.length]?.id ?? null,
       factionId: null as string | null,
     };
   });

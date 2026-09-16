@@ -1,11 +1,7 @@
 import { SCENARIO_FORMAT, SCENARIO_FORMAT_VERSION } from "./constants.js";
 import { createSeededRng, pick, shuffleInPlace } from "./rng.js";
 import { absoluteMajorityFromPreset } from "./thresholds.js";
-import type {
-  QuickBuildInput,
-  ScenarioDocument,
-  ScenarioPoliticianSection,
-} from "./types.js";
+import type { QuickBuildInput, ScenarioDocument, ScenarioPoliticianSection } from "./types.js";
 
 const NAME_A = ["Al", "Brin", "Cor", "Den", "El", "Fen", "Gar", "Hal", "Iris", "Jor"];
 const NAME_B = ["a", "en", "or", "ia", "us", "ell", "ton", "ford", "wick", "mar"];
@@ -45,7 +41,7 @@ function genPersonName(rng: () => number, idx: number): string {
 function distributeSeats(total: number, buckets: number, rng: () => number): number[] {
   if (buckets <= 0) return [];
   const base = Math.floor(total / buckets);
-  let rem = total - base * buckets;
+  const rem = total - base * buckets;
   const out = Array.from({ length: buckets }, () => base);
   const order = shuffleInPlace(
     rng,
@@ -162,12 +158,8 @@ export function quickBuildScenario(input: QuickBuildInput): ScenarioDocument {
     }
   }
 
-  const presidentId =
-    input.governmentForm === "parliamentary"
-      ? nextNpc()
-      : parties[0]!.leaderId;
-  const headOfGovernmentId =
-    input.governmentForm === "presidential" ? null : parties[0]!.leaderId;
+  const presidentId = input.governmentForm === "parliamentary" ? nextNpc() : parties[0]!.leaderId;
+  const headOfGovernmentId = input.governmentForm === "presidential" ? null : parties[0]!.leaderId;
 
   const cabinet = MINISTRIES.map((m) => {
     const holderId = nextNpc();
@@ -180,9 +172,7 @@ export function quickBuildScenario(input: QuickBuildInput): ScenarioDocument {
   });
 
   const coalitionPartyIds =
-    partyCount >= 3 && rng() > 0.4
-      ? [parties[0]!.id, parties[1]!.id]
-      : [parties[0]!.id];
+    partyCount >= 3 && rng() > 0.4 ? [parties[0]!.id, parties[1]!.id] : [parties[0]!.id];
 
   const foreignCount = 6 + Math.floor(rng() * 7);
   const foreignCountries = Array.from({ length: foreignCount }, (_, i) => ({

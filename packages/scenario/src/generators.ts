@@ -27,9 +27,7 @@ function mapGovForm(form: StudioQuickBuildForm["govForm"]): GovernmentFormId {
   return form;
 }
 
-function mapElectoral(
-  id: string,
-): QuickBuildInput["electoralPreset"] {
+function mapElectoral(id: string): QuickBuildInput["electoralPreset"] {
   if (id === "fptp" || id === "closed_list_pr" || id === "mixed_member" || id === "stv") {
     return id;
   }
@@ -155,13 +153,9 @@ export function fillCabinet(doc: ScenarioDocument): ScenarioDocument {
   const politicians = [...(doc.contentSections.people?.politicians ?? [])];
   const parties = doc.contentSections.parties ?? [];
   const leadParty = parties[0]?.id ?? null;
-  const used = new Set(
-    (doc.contentSections.government?.cabinet ?? []).map((c) => c.holderId),
-  );
-  const pool = politicians.filter(
-    (p) => p.partyId === leadParty || leadParty == null,
-  );
-  const cabinet = DEFAULT_MINISTRIES.map((ministryId, i) => {
+  const used = new Set((doc.contentSections.government?.cabinet ?? []).map((c) => c.holderId));
+  const pool = politicians.filter((p) => p.partyId === leadParty || leadParty == null);
+  const cabinet = DEFAULT_MINISTRIES.map((ministryId) => {
     let holder = pool.find((p) => !used.has(p.id));
     if (!holder) {
       const id = `NPC_CAB_${ministryId}`;
@@ -187,8 +181,7 @@ export function fillCabinet(doc: ScenarioDocument): ScenarioDocument {
         ...(doc.contentSections.government ?? {}),
         cabinet,
         coalitionPartyIds:
-          doc.contentSections.government?.coalitionPartyIds ??
-          (leadParty ? [leadParty] : []),
+          doc.contentSections.government?.coalitionPartyIds ?? (leadParty ? [leadParty] : []),
       },
     },
   };
@@ -203,7 +196,7 @@ export function generateConstituencies(doc: ScenarioDocument): ScenarioDocument 
   if (provinces.length === 0) return doc;
   const per = Math.max(1, Math.floor(seats / provinces.length));
   let rem = seats - per * provinces.length;
-  const constituencies = provinces.map((p, i) => {
+  const constituencies = provinces.map((p) => {
     const extra = rem > 0 ? 1 : 0;
     if (rem > 0) rem -= 1;
     return {

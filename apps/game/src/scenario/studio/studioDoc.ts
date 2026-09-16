@@ -5,9 +5,7 @@ import type {
   ScenarioPoliticianSection,
 } from "@lorsain/scenario";
 
-type ScenarioConstitutionSection = NonNullable<
-  ScenarioDocument["contentSections"]["constitution"]
->;
+type ScenarioConstitutionSection = NonNullable<ScenarioDocument["contentSections"]["constitution"]>;
 
 export function politicians(doc: ScenarioDocument): ScenarioPoliticianSection[] {
   return doc.contentSections.people?.politicians ?? [];
@@ -27,11 +25,7 @@ export function withPoliticians(
 }
 
 export function foreignCountries(doc: ScenarioDocument): ScenarioForeignCountrySection[] {
-  return (
-    doc.contentSections.foreign?.countries ??
-    doc.contentSections.foreignCountries ??
-    []
-  );
+  return doc.contentSections.foreign?.countries ?? doc.contentSections.foreignCountries ?? [];
 }
 
 export function withForeignCountries(
@@ -52,7 +46,10 @@ export function startingLaws(doc: ScenarioDocument): ScenarioLawSection[] {
   return doc.contentSections.laws?.startingLaws ?? [];
 }
 
-export function withStartingLaws(doc: ScenarioDocument, laws: ScenarioLawSection[]): ScenarioDocument {
+export function withStartingLaws(
+  doc: ScenarioDocument,
+  laws: ScenarioLawSection[],
+): ScenarioDocument {
   return {
     ...doc,
     contentSections: {
@@ -73,7 +70,10 @@ type ConstitutionPatch = {
   [K in keyof ScenarioConstitutionSection]?: ScenarioConstitutionSection[K] | undefined;
 };
 
-export function mergeConstitution(doc: ScenarioDocument, patch: ConstitutionPatch): ScenarioDocument {
+export function mergeConstitution(
+  doc: ScenarioDocument,
+  patch: ConstitutionPatch,
+): ScenarioDocument {
   const constitution: ScenarioConstitutionSection = { ...(doc.contentSections.constitution ?? {}) };
   for (const key of Object.keys(patch) as (keyof ScenarioConstitutionSection)[]) {
     const val = patch[key];

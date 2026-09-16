@@ -10,7 +10,6 @@ import {
   personDisplay,
   type ScenarioDocument,
   type ScenarioLawSection,
-  type ScenarioOrganizationSection,
   type ScenarioPartySection,
   type ScenarioPoliticianSection,
   type ScenarioValidationIssue,
@@ -23,7 +22,12 @@ import {
 import { ListDetailPanel } from "./ListDetailPanel.js";
 import { useDebouncedValidation, useScenarioAutosave, useUndoStack } from "./hooks.js";
 import { PartyPicker, PersonPicker, ThresholdSelect } from "./pickers.js";
-import { STUDIO_TABS, entityFocusFromIssue, tabForIssuePath, type StudioTab } from "./navigation.js";
+import {
+  STUDIO_TABS,
+  entityFocusFromIssue,
+  tabForIssuePath,
+  type StudioTab,
+} from "./navigation.js";
 import {
   foreignCountries,
   politicians,
@@ -79,17 +83,9 @@ export function ScenarioStudioScreen(props: {
   onBack: () => void;
   onPlay: (doc: ScenarioDocument) => void;
 }) {
-  const {
-    doc,
-    patch,
-    replace,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    dirty,
-    setDirty,
-  } = useUndoStack(props.initial);
+  const { doc, patch, replace, undo, redo, canUndo, canRedo, dirty, setDirty } = useUndoStack(
+    props.initial,
+  );
   const [tab, setTab] = useState<StudioTab>("overview");
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [peopleQ, setPeopleQ] = useState("");
@@ -143,10 +139,6 @@ export function ScenarioStudioScreen(props: {
   const filteredParties = useMemo(
     () => filterByQuery(parties, partyQ, (p) => p.name),
     [parties, partyQ],
-  );
-  const filteredProvinces = useMemo(
-    () => filterByQuery(provinces, provQ, (p) => p.name),
-    [provinces, provQ],
   );
 
   function requestBack() {
@@ -257,7 +249,10 @@ export function ScenarioStudioScreen(props: {
           <section className="scenario-form">
             <label>
               Scenario name
-              <input value={doc.name} onChange={(e) => patch((d) => ({ ...d, name: e.target.value }))} />
+              <input
+                value={doc.name}
+                onChange={(e) => patch((d) => ({ ...d, name: e.target.value }))}
+              />
             </label>
             <details className="studio-advanced">
               <summary>Advanced identifiers</summary>
@@ -350,10 +345,18 @@ export function ScenarioStudioScreen(props: {
               </div>
             </div>
             <div className="studio-gen-row">
-              <button type="button" className="btn secondary" onClick={() => runGen(generateLeaders)}>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => runGen(generateLeaders)}
+              >
                 Generate party leaders
               </button>
-              <button type="button" className="btn secondary" onClick={() => runGen(generatePoliticians)}>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => runGen(generatePoliticians)}
+              >
                 Generate assembly roster
               </button>
             </div>
@@ -674,7 +677,11 @@ export function ScenarioStudioScreen(props: {
                         onClick={() => setSelParty(idx)}
                       >
                         {p.color ? (
-                          <span className="studio-swatch" style={{ background: p.color }} aria-hidden />
+                          <span
+                            className="studio-swatch"
+                            style={{ background: p.color }}
+                            aria-hidden
+                          />
                         ) : null}
                         {p.name}
                         <small>{p.abbreviation}</small>
@@ -745,7 +752,12 @@ export function ScenarioStudioScreen(props: {
             }
             detail={
               activePerson ? (
-                <PersonDetail person={activePerson} personIdx={personIdx} parties={parties} patch={patch} />
+                <PersonDetail
+                  person={activePerson}
+                  personIdx={personIdx}
+                  parties={parties}
+                  patch={patch}
+                />
               ) : (
                 <p>Add people or run Generate assembly roster.</p>
               )
@@ -840,7 +852,9 @@ export function ScenarioStudioScreen(props: {
               })}
             </ul>
             {(doc.contentSections.government?.cabinet ?? []).length === 0 ? (
-              <p className="studio-hint">No cabinet yet — fill automatically or assign after generating people.</p>
+              <p className="studio-hint">
+                No cabinet yet — fill automatically or assign after generating people.
+              </p>
             ) : null}
           </section>
         )}
@@ -858,7 +872,8 @@ export function ScenarioStudioScreen(props: {
                       ...d.contentSections,
                       elections: {
                         ...(d.contentSections.elections ?? {}),
-                        assemblySystem: e.target.value as import("@lorsain/scenario").AssemblySystemId,
+                        assemblySystem: e.target
+                          .value as import("@lorsain/scenario").AssemblySystemId,
                       },
                     },
                   }))
@@ -939,7 +954,9 @@ export function ScenarioStudioScreen(props: {
             {laws.map((law, i) => (
               <LawRow key={law.id} law={law} index={i} patch={patch} />
             ))}
-            {laws.length === 0 ? <p>No laws yet — add draft legislation for flavor and QA.</p> : null}
+            {laws.length === 0 ? (
+              <p>No laws yet — add draft legislation for flavor and QA.</p>
+            ) : null}
           </section>
         )}
 
@@ -988,7 +1005,10 @@ export function ScenarioStudioScreen(props: {
               onAdd={() =>
                 patch((d) => {
                   const list = [...foreignCountries(d)];
-                  list.push({ id: `NEI_${String(list.length + 1).padStart(2, "0")}`, name: "Neighbor state" });
+                  list.push({
+                    id: `NEI_${String(list.length + 1).padStart(2, "0")}`,
+                    name: "Neighbor state",
+                  });
                   return withForeignCountries(d, list);
                 })
               }
@@ -1006,12 +1026,7 @@ export function ScenarioStudioScreen(props: {
           />
         )}
 
-        {tab === "packs" && (
-          <PacksPanel
-            doc={doc}
-            patch={patch}
-          />
-        )}
+        {tab === "packs" && <PacksPanel doc={doc} patch={patch} />}
       </div>
     </div>
   );
@@ -1355,7 +1370,10 @@ function OrgForeignPanel(props: {
                       const row = list[props.selIdx];
                       if (!row) return d;
                       list[props.selIdx] = { ...row, name: e.target.value };
-                      return { ...d, contentSections: { ...d.contentSections, organizations: list } };
+                      return {
+                        ...d,
+                        contentSections: { ...d.contentSections, organizations: list },
+                      };
                     }
                     const list = [...foreignCountries(d)];
                     const row = list[props.selIdx];
@@ -1383,7 +1401,11 @@ function OrgForeignPanel(props: {
                       const row = list[props.selIdx];
                       if (!row) return d;
                       const relation =
-                        e.target.value === "friendly" ? 0.55 : e.target.value === "tense" ? -0.55 : 0;
+                        e.target.value === "friendly"
+                          ? 0.55
+                          : e.target.value === "tense"
+                            ? -0.55
+                            : 0;
                       list[props.selIdx] = { ...row, relation };
                       return withForeignCountries(d, list);
                     })
@@ -1405,7 +1427,10 @@ function OrgForeignPanel(props: {
                       const row = list[props.selIdx];
                       if (!row) return d;
                       list[props.selIdx] = { ...row, type: e.target.value };
-                      return { ...d, contentSections: { ...d.contentSections, organizations: list } };
+                      return {
+                        ...d,
+                        contentSections: { ...d.contentSections, organizations: list },
+                      };
                     })
                   }
                 >
@@ -1451,7 +1476,11 @@ function ValidationTab(props: {
               i,
               props.onNavigate,
               i.code === "PARTY_LEADER" ? (
-                <button type="button" className="btn secondary studio-btn-sm" onClick={props.onFixLeaders}>
+                <button
+                  type="button"
+                  className="btn secondary studio-btn-sm"
+                  onClick={props.onFixLeaders}
+                >
                   Generate leaders
                 </button>
               ) : undefined,

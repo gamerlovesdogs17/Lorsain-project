@@ -42,7 +42,16 @@ async function ensureDevServer() {
   }
   const child = spawn(
     "pnpm",
-    ["--filter", "@lorsain/game", "exec", "vite", "--host", "127.0.0.1", "--port", String(DEV_PORT)],
+    [
+      "--filter",
+      "@lorsain/game",
+      "exec",
+      "vite",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(DEV_PORT),
+    ],
     {
       cwd: ROOT,
       env: { ...process.env, VITE_BASE_PATH: "/Lorsain-project/" },
@@ -79,7 +88,9 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   try {
     for (const width of [1280, 834]) {
-      const page = await browser.newPage({ viewport: { width, height: width === 834 ? 900 : 800 } });
+      const page = await browser.newPage({
+        viewport: { width, height: width === 834 ? 900 : 800 },
+      });
       await openStudioHub(page);
       await shot(page, `studio-hub-${width}`);
 
@@ -88,7 +99,10 @@ async function main() {
       await shot(page, `studio-quick-build-${width}`);
 
       await page.getByRole("button", { name: /Generate/i }).click();
-      await page.getByText("SCENARIO STUDIO", { exact: false }).first().waitFor({ timeout: 15_000 });
+      await page
+        .getByText("SCENARIO STUDIO", { exact: false })
+        .first()
+        .waitFor({ timeout: 15_000 });
       await page.getByRole("button", { name: /Overview/i }).waitFor();
       await shot(page, `studio-editor-overview-${width}`);
 
@@ -109,7 +123,10 @@ async function main() {
     await page.getByText("Scenario Studio", { exact: false }).first().click();
     await page.getByText("Import JSON", { exact: false }).first().click();
     await page.locator('input[type="file"]').setInputFiles(FIXTURE);
-    await page.getByText("Alphaven Federation", { exact: false }).first().waitFor({ timeout: 15_000 });
+    await page
+      .getByText("Alphaven Federation", { exact: false })
+      .first()
+      .waitFor({ timeout: 15_000 });
     const play = page.getByRole("button", { name: /Play scenario/i }).first();
     if (await play.isDisabled()) throw new Error("Valid import PLAY should be enabled");
     await shot(page, "studio-import-valid-1280");

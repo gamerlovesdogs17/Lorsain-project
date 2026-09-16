@@ -1,9 +1,6 @@
 import type { ThresholdPresetId } from "./types.js";
 
-export const THRESHOLD_PRESET_FRACTIONS: Record<
-  Exclude<ThresholdPresetId, "custom">,
-  number
-> = {
+export const THRESHOLD_PRESET_FRACTIONS: Record<Exclude<ThresholdPresetId, "custom">, number> = {
   simple_majority: 0.5,
   three_fifths: 0.6,
   two_thirds: 2 / 3,
@@ -17,7 +14,9 @@ export function absoluteMajorityFromPreset(
 ): number {
   if (explicit != null && Number.isFinite(explicit)) return Math.max(1, Math.floor(explicit));
   const frac =
-    preset && preset !== "custom" ? THRESHOLD_PRESET_FRACTIONS[preset] : THRESHOLD_PRESET_FRACTIONS.simple_majority;
+    preset && preset !== "custom"
+      ? THRESHOLD_PRESET_FRACTIONS[preset]
+      : THRESHOLD_PRESET_FRACTIONS.simple_majority;
   return Math.floor(assemblySeats * frac) + 1;
 }
 

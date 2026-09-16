@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import type { ScenarioPoliticianSection } from "@lorsain/scenario";
-import { personDisplay, THRESHOLD_PRESETS, thresholdPresetForFraction, fractionForThresholdPreset } from "@lorsain/scenario";
+import {
+  personDisplay,
+  THRESHOLD_PRESETS,
+  thresholdPresetForFraction,
+  fractionForThresholdPreset,
+} from "@lorsain/scenario";
 import type { ThresholdPresetId } from "@lorsain/scenario";
 
 export type PickerOption = { id: string; label: string; sublabel?: string; color?: string | null };
@@ -49,7 +54,7 @@ export function SearchableSelect(props: {
             <span>{selected.label}</span>
           </>
         ) : allowEmpty ? (
-          props.emptyLabel ?? "None"
+          (props.emptyLabel ?? "None")
         ) : (
           "Choose…"
         )}
