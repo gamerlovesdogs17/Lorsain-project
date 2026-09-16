@@ -11,7 +11,11 @@ export type PlayerSettings = {
   highContrast: boolean;
   compactDensity: boolean;
   debugMode: boolean;
-  version: 1;
+  /** First-use lessons; off does not wipe completed progress. */
+  tutorialMode: boolean;
+  /** Lesson ids finished or skipped. */
+  completedTutorialLessons: string[];
+  version: 2;
 };
 
 export const NOTIFICATION_CATEGORIES: Array<{ id: NotificationCategory; label: string }> = [
@@ -40,11 +44,18 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   highContrast: false,
   compactDensity: false,
   debugMode: false,
-  version: 1,
+  tutorialMode: true,
+  completedTutorialLessons: [],
+  version: 2,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeLessonIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((id): id is string => typeof id === "string" && id.length > 0);
 }
 
 function normalizeSettings(raw: unknown): PlayerSettings {
@@ -52,6 +63,7 @@ function normalizeSettings(raw: unknown): PlayerSettings {
     return {
       ...DEFAULT_PLAYER_SETTINGS,
       notifications: { ...DEFAULT_PLAYER_SETTINGS.notifications },
+      completedTutorialLessons: [],
     };
   const notifications = { ...DEFAULT_PLAYER_SETTINGS.notifications };
   if (isRecord(raw.notifications)) {
@@ -82,7 +94,12 @@ function normalizeSettings(raw: unknown): PlayerSettings {
         : (DEFAULT_PLAYER_SETTINGS.compactDensity ?? false),
     debugMode:
       typeof raw.debugMode === "boolean" ? raw.debugMode : DEFAULT_PLAYER_SETTINGS.debugMode,
-    version: 1,
+    tutorialMode:
+      typeof raw.tutorialMode === "boolean"
+        ? raw.tutorialMode
+        : DEFAULT_PLAYER_SETTINGS.tutorialMode,
+    completedTutorialLessons: normalizeLessonIds(raw.completedTutorialLessons),
+    version: 2,
   };
 }
 
@@ -91,6 +108,7 @@ export function loadSettings(): PlayerSettings {
     return {
       ...DEFAULT_PLAYER_SETTINGS,
       notifications: { ...DEFAULT_PLAYER_SETTINGS.notifications },
+      completedTutorialLessons: [],
     };
   }
   try {
@@ -99,6 +117,7 @@ export function loadSettings(): PlayerSettings {
       return {
         ...DEFAULT_PLAYER_SETTINGS,
         notifications: { ...DEFAULT_PLAYER_SETTINGS.notifications },
+        completedTutorialLessons: [],
       };
     }
     return normalizeSettings(JSON.parse(raw) as unknown);
@@ -106,13 +125,14 @@ export function loadSettings(): PlayerSettings {
     return {
       ...DEFAULT_PLAYER_SETTINGS,
       notifications: { ...DEFAULT_PLAYER_SETTINGS.notifications },
+      completedTutorialLessons: [],
     };
   }
 }
 
 export function saveSettings(settings: PlayerSettings): void {
   if (typeof window === "undefined") return;
-  const next: PlayerSettings = { ...settings, version: 1 };
+  const next: PlayerSettings = { ...settings, version: 2 };
   window.localStorage.setItem(PLAYER_SETTINGS_KEY, JSON.stringify(next));
   applySettingsToDocument(next);
 }
@@ -125,7 +145,11 @@ export function updateSettings(partial: Partial<PlayerSettings>): PlayerSettings
     notifications: partial.notifications
       ? { ...current.notifications, ...partial.notifications }
       : current.notifications,
-    version: 1,
+    completedTutorialLessons:
+      partial.completedTutorialLessons !== undefined
+        ? [...partial.completedTutorialLessons]
+        : [...current.completedTutorialLessons],
+    version: 2,
   };
   saveSettings(next);
   return next;

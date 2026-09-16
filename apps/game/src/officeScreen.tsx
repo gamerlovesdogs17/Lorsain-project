@@ -145,6 +145,7 @@ export function OfficePage(props: {
       "floor_vote",
       "repassage_vote",
       "amendment_vote",
+      "constitutional_amendment_vote",
       "motion_vote",
       "confirmation_vote",
       "impeachment_vote",

@@ -1871,6 +1871,7 @@ export function migrateSaveV19ToV20(raw: unknown): unknown {
       careerAmbitions: {},
       partyLifecycleCooldown: {},
       coalitionAgreements: {},
+      governmentFormation: null,
       orgScorecards: {},
       orgCampaigns: {},
       openSeatContests: {},

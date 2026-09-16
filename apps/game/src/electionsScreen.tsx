@@ -2120,7 +2120,7 @@ export function ElectionsPage(props: Props) {
   }
 
   return (
-    <div className="page-tone-election elections-hub-v7">
+    <div className="page-tone-election elections-hub-v7" data-tutorial="elections-workspace">
       <PageHeader
         kicker="Returns desk"
         title="Elections"

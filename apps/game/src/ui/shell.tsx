@@ -184,7 +184,11 @@ export function GameShell(props: {
           onClick={() => setNavOpen(false)}
         />
       ) : null}
-      <nav className={`nav v3 v5 v7${navOpen ? " open" : ""}`} aria-label="Game navigation">
+      <nav
+        className={`nav v3 v5 v7${navOpen ? " open" : ""}`}
+        aria-label="Game navigation"
+        data-tutorial="nav-drawer"
+      >
         <div className="nav-brand">
           <div className="nav-brand-mark" aria-hidden>
             L
@@ -193,7 +197,12 @@ export function GameShell(props: {
             <strong>Lorsain</strong>
             <span className="nav-brand-sub">Political Life of Terena</span>
           </div>
-          <button type="button" className="nav-close" onClick={() => setNavOpen(false)}>
+          <button
+            type="button"
+            className="nav-close"
+            aria-label="Close navigation"
+            onClick={() => setNavOpen(false)}
+          >
             ×
           </button>
         </div>
@@ -361,6 +370,7 @@ export function GameShell(props: {
             <button
               type="button"
               className="btn btn-end-turn"
+              data-tutorial="shell-end-turn"
               onClick={props.onEndTurn}
               disabled={props.busy || props.endTurnDisabled}
             >
@@ -371,6 +381,7 @@ export function GameShell(props: {
                 type="button"
                 className="btn quiet"
                 aria-expanded={utilOpen}
+                aria-label="More actions"
                 onClick={() => setUtilOpen((v) => !v)}
               >
                 ⋮

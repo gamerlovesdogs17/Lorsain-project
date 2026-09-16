@@ -549,7 +549,10 @@ export function setCaucusBillPosition(
   if (!leadership || (leadership.floorLeaderId !== actorId && leadership.whipId !== actorId))
     return { error: reject("NOT_CAUCUS_LEADER", actorId) };
   const bill = state.legislatureRuntime.bills[billId];
-  if (!bill) return { error: reject("UNKNOWN_BILL", billId) };
+  const amendment = state.provincialRuntime.constitutionalAmendments[billId];
+  if (!bill && !(amendment && amendment.status === "proposed")) {
+    return { error: reject("UNKNOWN_BILL", billId) };
+  }
   state.legislatureRuntime.partyRecommendations[`${partyId}:${billId}`] = {
     partyId,
     billId,
@@ -558,7 +561,7 @@ export function setCaucusBillPosition(
     date: state.currentDate,
     source: "caucus_leadership",
   };
-  if (leadership.floorLeaderId === actorId && !leadership.priorityBillIds.includes(billId))
+  if (bill && leadership.floorLeaderId === actorId && !leadership.priorityBillIds.includes(billId))
     leadership.priorityBillIds = [billId, ...leadership.priorityBillIds].slice(0, 5);
   return {
     events: [
@@ -578,8 +581,8 @@ export function setCaucusBillPosition(
 }
 
 /**
- * Set the whip discipline strength for a bill. Floor leader or whip only.
- * Minimal, save-safe: stores per-bill strength on the caucus leadership record.
+ * Set the whip discipline strength for a bill or pending constitutional amendment.
+ * Floor leader or whip only. Minimal, save-safe: stores per-subject strength on the caucus leadership record.
  */
 export function setWhipStrength(
   state: SimState,
@@ -594,7 +597,10 @@ export function setWhipStrength(
   if (!leadership || (leadership.floorLeaderId !== actorId && leadership.whipId !== actorId))
     return { error: reject("NOT_CAUCUS_LEADER", actorId) };
   const bill = state.legislatureRuntime.bills[billId];
-  if (!bill) return { error: reject("UNKNOWN_BILL", billId) };
+  const amendment = state.provincialRuntime.constitutionalAmendments[billId];
+  if (!bill && !(amendment && amendment.status === "proposed")) {
+    return { error: reject("UNKNOWN_BILL", billId) };
+  }
   if (!leadership.whipStrengths) leadership.whipStrengths = {};
   leadership.whipStrengths[billId] = strength;
   return {
@@ -615,7 +621,7 @@ export function setWhipStrength(
 }
 
 /**
- * Targeted whip persuasion toward a caucus member on a bill.
+ * Targeted whip persuasion toward a caucus member on a bill or pending constitutional amendment.
  * Temporary bonus is stored in legislatureRuntime.metadata and consumed in vote scoring.
  */
 export function whipPersuadeMember(
@@ -634,7 +640,10 @@ export function whipPersuadeMember(
     return { error: reject("NOT_CAUCUS_LEADER", actorId) };
   }
   const bill = state.legislatureRuntime.bills[billId];
-  if (!bill) return { error: reject("UNKNOWN_BILL", billId) };
+  const amendment = state.provincialRuntime.constitutionalAmendments[billId];
+  if (!bill && !(amendment && amendment.status === "proposed")) {
+    return { error: reject("UNKNOWN_BILL", billId) };
+  }
   if (!assemblyCaucus(world, state, partyId).includes(targetPoliticianId)) {
     return { error: reject("NOT_CAUCUS_MEMBER", targetPoliticianId) };
   }

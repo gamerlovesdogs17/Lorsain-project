@@ -5,6 +5,7 @@ export * from "./elections.js";
 export * from "./monthly.js";
 export * from "./assemblies.js";
 export * from "./constitutional.js";
+export * from "./constitutionalAssembly.js";
 export * from "./constitutionAlternatives.js";
 export * from "./constitutionChanges.js";
 export * from "./constitutionalOrder.js";

@@ -54,9 +54,16 @@ export const GOVERNMENT_FORM_PRESETS = [
   { id: "semi_presidential", label: "Semi-presidential" },
 ] as const;
 
+/** @deprecated Prefer ASSEMBLY_ELECTION_OPTIONS from optionCatalogs — kept for Quick Build. */
 export const ELECTORAL_PRESETS = [
   { id: "stv", label: "Preferential (STV)" },
   { id: "closed_list_pr", label: "Proportional list" },
   { id: "fptp", label: "Constituency plurality" },
   { id: "mixed_member", label: "Mixed member" },
 ] as const;
+
+export {
+  ASSEMBLY_ELECTION_OPTIONS as ELECTORAL_SYSTEM_OPTIONS,
+  PRESIDENTIAL_ELECTION_OPTIONS,
+  PARTY_IDEOLOGY_FAMILIES,
+} from "./optionCatalogs.js";

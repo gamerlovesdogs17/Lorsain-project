@@ -5,6 +5,11 @@ import { currentPresidentialAuthorityId } from "./executive/state.js";
 import { currentCourtJudgeIds } from "./courts/state.js";
 import { collectForeignPlayerDecisions } from "./foreign/decisions.js";
 import { incumbentAssemblyConstituency } from "./elections/assembly-cycle.js";
+import {
+  activeGovernmentFormation,
+  isHungAssembly,
+  playerCanSteerFormation,
+} from "./politics/governmentFormation.js";
 
 export type PlayerDecisionKind =
   | "interrupt"
@@ -13,6 +18,7 @@ export type PlayerDecisionKind =
   | "floor_vote"
   | "repassage_vote"
   | "amendment_vote"
+  | "constitutional_amendment_vote"
   | "motion_vote"
   | "judicial_vote"
   | "confirmation_vote"
@@ -23,7 +29,8 @@ export type PlayerDecisionKind =
   | "incoming_treaty"
   | "incoming_summit"
   | "war_powers"
-  | "assembly_filing";
+  | "assembly_filing"
+  | "form_government";
 
 export type PlayerActionableDecision = {
   key: string;
@@ -104,6 +111,25 @@ export function collectPlayerActionableDecisions(
     });
   }
 
+  if (playerCanSteerFormation(world, state) && isHungAssembly(world, state)) {
+    const session = activeGovernmentFormation(state);
+    if (!session || !["formed", "fallback"].includes(session.status)) {
+      const label =
+        session?.status === "agreement_ready"
+          ? "Confirm the coalition agreement and seek investiture."
+          : session?.status === "counteroffer"
+            ? "Partners countered — review Cabinet and priority terms."
+            : session?.status === "talks_open"
+              ? "Propose government terms to coalition partners."
+              : "Form a government — the Assembly is hung.";
+      out.push({
+        key: "form_government",
+        kind: "form_government",
+        label,
+      });
+    }
+  }
+
   if (president) {
     for (const bill of Object.values(state.legislatureRuntime.bills).sort((a, b) =>
       a.id < b.id ? -1 : 1,
@@ -180,6 +206,19 @@ export function collectPlayerActionableDecisions(
         billId: amendment.billId,
         amendmentId: amendment.id,
         stage,
+      });
+    }
+
+    for (const camend of Object.values(state.provincialRuntime.constitutionalAmendments).sort(
+      (a, b) => a.id.localeCompare(b.id),
+    )) {
+      if (camend.status !== "proposed") continue;
+      if (camend.assemblyVotes[playerId]) continue;
+      out.push({
+        key: `constitutional:${camend.id}`,
+        kind: "constitutional_amendment_vote",
+        label: `Constitutional amendment: ${camend.title}`,
+        amendmentId: camend.id,
       });
     }
 

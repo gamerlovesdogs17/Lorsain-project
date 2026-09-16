@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader, SectionCard, StatusBadge, TabBar } from "./ui/kit.js";
+import { GLOSSARY_ENTRIES } from "./glossary.js";
 import { NOTIFICATION_CATEGORIES } from "./settings.js";
 import { useSettings } from "./settingsContext.js";
 
@@ -9,8 +10,9 @@ const DEBUG_MODE_DESCRIPTION =
   "Shows internal simulation information and diagnostic controls. Intended for testing and may reveal information normally hidden from the player.";
 
 export function SettingsPage(props: { onBack?: () => void; showBack?: boolean }) {
-  const { settings, update } = useSettings();
+  const { settings, update, resetTutorialProgress } = useSettings();
   const [section, setSection] = useState<SettingsSection>("game");
+  const completedCount = settings.completedTutorialLessons.length;
 
   return (
     <div className="settings-page" data-qa="settings-page">
@@ -41,6 +43,39 @@ export function SettingsPage(props: { onBack?: () => void; showBack?: boolean })
 
       {section === "game" ? (
         <SectionCard title="Game">
+          <label className="settings-toggle" data-qa="settings-tutorial-toggle">
+            <input
+              type="checkbox"
+              checked={settings.tutorialMode}
+              onChange={(e) => update({ tutorialMode: e.target.checked })}
+            />
+            <span>
+              <strong>Tutorial Mode</strong>
+              <small className="muted">
+                Short first-use lessons when you open a screen. Turning this off does not erase
+                completed lessons. No permanent coach and no hidden simulation math.
+              </small>
+            </span>
+          </label>
+          <div
+            className="settings-tutorial-reset row"
+            style={{ marginBottom: "0.85rem", gap: "0.65rem" }}
+          >
+            <button
+              type="button"
+              className="btn secondary"
+              data-qa="settings-tutorial-reset"
+              onClick={() => resetTutorialProgress()}
+              disabled={completedCount === 0}
+            >
+              Reset tutorial progress
+            </button>
+            <span className="muted">
+              {completedCount === 0
+                ? "No lessons completed yet."
+                : `${completedCount} lesson${completedCount === 1 ? "" : "s"} marked done.`}
+            </span>
+          </div>
           <label className="settings-toggle">
             <input
               type="checkbox"
@@ -73,19 +108,35 @@ export function SettingsPage(props: { onBack?: () => void; showBack?: boolean })
       ) : null}
 
       {section === "interface" ? (
-        <SectionCard title="Interface">
-          <label className="settings-toggle">
-            <input
-              type="checkbox"
-              checked={settings.compactDensity}
-              onChange={(e) => update({ compactDensity: e.target.checked })}
-            />
-            <span>
-              <strong>Compact density</strong>
-              <small className="muted">Tighten spacing on dossiers and tables.</small>
-            </span>
-          </label>
-        </SectionCard>
+        <>
+          <SectionCard title="Interface">
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={settings.compactDensity}
+                onChange={(e) => update({ compactDensity: e.target.checked })}
+              />
+              <span>
+                <strong>Compact density</strong>
+                <small className="muted">Tighten spacing on dossiers and tables.</small>
+              </span>
+            </label>
+          </SectionCard>
+          <SectionCard title="Glossary">
+            <p className="muted">
+              Short definitions for specialized terms. Ordinary political words are used directly in
+              the game UI.
+            </p>
+            <dl className="glossary-list" data-qa="settings-glossary">
+              {GLOSSARY_ENTRIES.map((entry) => (
+                <div className="glossary-term" key={entry.id}>
+                  <dt>{entry.term}</dt>
+                  <dd>{entry.definition}</dd>
+                </div>
+              ))}
+            </dl>
+          </SectionCard>
+        </>
       ) : null}
 
       {section === "notifications" ? (

@@ -215,7 +215,11 @@ export function ForeignAffairsPage(props: {
   }
 
   return (
-    <div className="foreign-affairs-page" data-qa="foreign-affairs">
+    <div
+      className="foreign-affairs-page"
+      data-qa="foreign-affairs"
+      data-tutorial="foreign-workspace"
+    >
       <PageHeader
         kicker="International"
         title="Foreign Affairs"

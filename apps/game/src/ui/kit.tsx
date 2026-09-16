@@ -177,10 +177,14 @@ export function WorkLayout(props: {
   rail?: ReactNode;
   footer?: ReactNode;
   className?: string;
+  "data-tutorial"?: string;
+  "data-qa"?: string;
 }) {
   return (
     <div
       className={`work-layout${props.rail ? " work-layout-rail" : ""}${props.className ? ` ${props.className}` : ""}`}
+      {...(props["data-tutorial"] ? { "data-tutorial": props["data-tutorial"] } : {})}
+      {...(props["data-qa"] ? { "data-qa": props["data-qa"] } : {})}
     >
       {props.header ? <div className="work-layout-header">{props.header}</div> : null}
       <div className="work-layout-body">

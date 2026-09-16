@@ -12,6 +12,7 @@ import { processPoliticalMemoryMonth } from "./memory.js";
 import { processCabinetReshuffleMonth } from "./cabinet.js";
 import { processOrganizationPoliticsMonth } from "./organizations.js";
 import { processCoalitionMonth } from "./coalitions.js";
+import { ensureHungFormationSession } from "./governmentFormation.js";
 import { ensurePoliticsRuntime, resetPoliticsMonthCounters } from "./state.js";
 import { processScandalsMonth } from "./scandals.js";
 
@@ -36,6 +37,7 @@ export function processPoliticalAgencyMonth(
   const events: SimEvent[] = [];
 
   events.push(...processPlatformReviewMonth(world, state, commandId));
+  events.push(...ensureHungFormationSession(world, state, commandId));
   events.push(...processCoalitionMonth(world, state, commandId));
   events.push(...processOpenSeatRecruitmentMonth(world, state, rng, commandId));
   events.push(...processCareerDecisionsMonth(world, state, rng, commandId));

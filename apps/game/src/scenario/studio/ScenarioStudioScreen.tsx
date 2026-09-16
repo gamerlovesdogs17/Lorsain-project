@@ -13,11 +13,13 @@ import {
   type ScenarioPartySection,
   type ScenarioPoliticianSection,
   type ScenarioValidationIssue,
-  ELECTORAL_PRESETS,
   GOVERNMENT_FORM_PRESETS,
   TRAIT_BANDS,
-  traitBandForValue,
-  valueForTraitBand,
+  PARTY_IDEOLOGY_FAMILIES,
+  PERSON_BACKGROUND_OPTIONS,
+  PRESIDENTIAL_ELECTION_OPTIONS,
+  ASSEMBLY_ELECTION_OPTIONS,
+  LAW_CATALOG_OPTIONS,
 } from "@lorsain/scenario";
 import { ListDetailPanel } from "./ListDetailPanel.js";
 import { useDebouncedValidation, useScenarioAutosave, useUndoStack } from "./hooks.js";
@@ -39,13 +41,14 @@ import {
   mapGovFormUiToSchema,
   mergeConstitution,
 } from "./studioDoc.js";
+import { ConstitutionOrderFields } from "./ConstitutionOrderFields.js";
 
 type TraitBandId = (typeof TRAIT_BANDS)[number]["id"];
 
 function politicianSkillBand(p: ScenarioPoliticianSection): TraitBandId {
   const raw = p.traits?.find((t) => t.startsWith("skill:"))?.slice("skill:".length);
   if (raw === "weak" || raw === "strong" || raw === "average") return raw;
-  return traitBandForValue(Number(p.background?.length ?? 0) / 100);
+  return "average";
 }
 
 function issueRow(
@@ -460,6 +463,7 @@ export function ScenarioStudioScreen(props: {
                 }}
               />
             </label>
+            <ConstitutionOrderFields doc={doc} patch={patch} parties={parties} />
           </section>
         )}
 
@@ -862,9 +866,46 @@ export function ScenarioStudioScreen(props: {
         {tab === "elections" && (
           <section className="scenario-form">
             <label>
+              Presidential election method
+              <select
+                value={
+                  doc.contentSections.elections?.presidentialElection ??
+                  doc.contentSections.constitution?.presidentialElection ??
+                  PRESIDENTIAL_ELECTION_OPTIONS[0]!.id
+                }
+                onChange={(e) =>
+                  patch((d) => ({
+                    ...d,
+                    contentSections: {
+                      ...d.contentSections,
+                      elections: {
+                        ...(d.contentSections.elections ?? {}),
+                        presidentialElection: e.target.value,
+                        presidentialMode: e.target.value,
+                      },
+                      constitution: {
+                        ...d.contentSections.constitution,
+                        presidentialElection: e.target.value,
+                      },
+                    },
+                  }))
+                }
+              >
+                {PRESIDENTIAL_ELECTION_OPTIONS.map((p) => (
+                  <option key={p.id} value={p.id} title={p.shortDescription}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
               Assembly electoral system
               <select
-                value={doc.contentSections.elections?.assemblySystem ?? ELECTORAL_PRESETS[0].id}
+                value={
+                  doc.contentSections.elections?.assemblySystem ??
+                  doc.contentSections.constitution?.assemblyElection ??
+                  ASSEMBLY_ELECTION_OPTIONS[0]!.id
+                }
                 onChange={(e) =>
                   patch((d) => ({
                     ...d,
@@ -875,12 +916,17 @@ export function ScenarioStudioScreen(props: {
                         assemblySystem: e.target
                           .value as import("@lorsain/scenario").AssemblySystemId,
                       },
+                      constitution: {
+                        ...d.contentSections.constitution,
+                        assemblyElection: e.target
+                          .value as import("@lorsain/scenario").AssemblySystemId,
+                      },
                     },
                   }))
                 }
               >
-                {ELECTORAL_PRESETS.map((p) => (
-                  <option key={p.id} value={p.id}>
+                {ASSEMBLY_ELECTION_OPTIONS.map((p) => (
+                  <option key={p.id} value={p.id} title={p.shortDescription}>
                     {p.label}
                   </option>
                 ))}
@@ -913,7 +959,7 @@ export function ScenarioStudioScreen(props: {
                 type="number"
                 min={1}
                 max={10}
-                value={doc.contentSections.elections?.presidentialIntervalYears ?? 5}
+                value={doc.contentSections.elections?.presidentialIntervalYears ?? 2}
                 onChange={(e) =>
                   patch((d) => ({
                     ...d,
@@ -928,6 +974,69 @@ export function ScenarioStudioScreen(props: {
                 }
               />
             </label>
+            <label>
+              Presidential term limit (elected terms)
+              <input
+                type="number"
+                min={0}
+                max={6}
+                value={doc.contentSections.elections?.presidentialTermLimit ?? 2}
+                onChange={(e) =>
+                  patch((d) => ({
+                    ...d,
+                    contentSections: {
+                      ...d.contentSections,
+                      elections: {
+                        ...d.contentSections.elections,
+                        presidentialTermLimit: Number(e.target.value),
+                      },
+                    },
+                  }))
+                }
+              />
+            </label>
+            <label>
+              Next Assembly election
+              <input
+                type="date"
+                value={doc.contentSections.elections?.nextAssemblyElectionDate ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  patch((d) => {
+                    const elections = { ...(d.contentSections.elections ?? {}) };
+                    if (v) elections.nextAssemblyElectionDate = v;
+                    else delete elections.nextAssemblyElectionDate;
+                    return {
+                      ...d,
+                      contentSections: { ...d.contentSections, elections },
+                    };
+                  });
+                }}
+              />
+            </label>
+            <label>
+              Next presidential election
+              <input
+                type="date"
+                value={doc.contentSections.elections?.nextPresidentialElectionDate ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  patch((d) => {
+                    const elections = { ...(d.contentSections.elections ?? {}) };
+                    if (v) elections.nextPresidentialElectionDate = v;
+                    else delete elections.nextPresidentialElectionDate;
+                    return {
+                      ...d,
+                      contentSections: { ...d.contentSections, elections },
+                    };
+                  });
+                }}
+              />
+            </label>
+            <p className="studio-hint">
+              Provincial/governor election modes are not yet scenario-configurable for mini worlds
+              (documented in option coverage).
+            </p>
           </section>
         )}
 
@@ -1150,15 +1259,43 @@ function PartyDetail(props: {
         />
       </label>
       <label>
-        Ideology label
-        <input
-          value={party.ideologyLabel ?? party.ideology ?? ""}
+        Mechanical ideology
+        <select
+          value={
+            party.ideologyFamily &&
+            PARTY_IDEOLOGY_FAMILIES.some((f) => f.id === party.ideologyFamily)
+              ? party.ideologyFamily
+              : (PARTY_IDEOLOGY_FAMILIES.find((f) => f.id === party.ideology)?.id ?? "centre")
+          }
           onChange={(e) =>
             patch((d) => {
               const next = [...(d.contentSections.parties ?? [])];
               next[partyIdx] = {
                 ...party,
+                ideologyFamily: e.target.value,
                 ideology: e.target.value,
+              };
+              return { ...d, contentSections: { ...d.contentSections, parties: next } };
+            })
+          }
+        >
+          {PARTY_IDEOLOGY_FAMILIES.map((f) => (
+            <option key={f.id} value={f.id} title={f.shortDescription}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Optional public label
+        <input
+          value={party.ideologyLabel ?? ""}
+          placeholder="e.g. Democratic Labour"
+          onChange={(e) =>
+            patch((d) => {
+              const next = [...(d.contentSections.parties ?? [])];
+              next[partyIdx] = {
+                ...party,
                 ideologyLabel: e.target.value,
               };
               return { ...d, contentSections: { ...d.contentSections, parties: next } };
@@ -1242,12 +1379,34 @@ function PersonDetail(props: {
             list[personIdx] = {
               ...person,
               traits,
-              background: String(valueForTraitBand(level)),
             };
             return withPoliticians(d, list);
           })
         }
       />
+      <label>
+        Background
+        <select
+          value={
+            PERSON_BACKGROUND_OPTIONS.some((b) => b.id === person.background)
+              ? (person.background as string)
+              : "politics"
+          }
+          onChange={(e) =>
+            patch((d) => {
+              const list = [...politicians(d)];
+              list[personIdx] = { ...person, background: e.target.value };
+              return withPoliticians(d, list);
+            })
+          }
+        >
+          {PERSON_BACKGROUND_OPTIONS.map((b) => (
+            <option key={b.id} value={b.id} title={b.shortDescription}>
+              {b.label}
+            </option>
+          ))}
+        </select>
+      </label>
     </div>
   );
 }
@@ -1293,20 +1452,32 @@ function LawRow(props: {
         />
       </label>
       <label>
-        Catalog reference
-        <input
+        Policy catalog
+        <select
           value={law.catalogRef ?? ""}
           onChange={(e) =>
             patch((d) => {
               const list = [...startingLaws(d)];
               const next = { ...law, title: law.title };
-              if (e.target.value.trim()) next.catalogRef = e.target.value;
-              else delete next.catalogRef;
+              const hit = LAW_CATALOG_OPTIONS.find((o) => o.id === e.target.value);
+              if (e.target.value.trim()) {
+                next.catalogRef = e.target.value;
+                if (hit && (!law.title || law.title === "New bill")) next.title = hit.label;
+              } else {
+                delete next.catalogRef;
+              }
               list[index] = next;
               return withStartingLaws(d, list);
             })
           }
-        />
+        >
+          <option value="">None</option>
+          {LAW_CATALOG_OPTIONS.map((o) => (
+            <option key={o.id} value={o.id} title={o.shortDescription}>
+              {o.label}
+            </option>
+          ))}
+        </select>
       </label>
     </article>
   );

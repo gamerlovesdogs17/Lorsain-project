@@ -385,6 +385,35 @@ export function processCoalitionMonth(
 
   if (!need.needed || !need.trigger) return events;
 
+  // Human FORM A GOVERNMENT path: hung Assembly + player can steer → do not auto-form.
+  // Session open/maintenance is handled by ensureHungFormationSession in the monthly agency tick.
+  if (
+    need.trigger === "no_plurality" ||
+    (need.trigger === "assembly_confidence" &&
+      (() => {
+        const counts = partySeatCounts(world, state);
+        const total = Object.values(counts).reduce((a, b) => a + b, 0);
+        const top = Math.max(0, ...Object.values(counts));
+        return total > 0 && top < Math.floor(total / 2) + 1;
+      })())
+  ) {
+    const playerParty = state.politicians[state.playerPoliticianId]?.partyId ?? null;
+    const playerSeats = playerParty ? (partySeatCounts(world, state)[playerParty] ?? 0) : 0;
+    if (playerParty && playerSeats > 0) {
+      const officers = state.partyOrgRuntime?.officers?.[playerParty];
+      const isLeader = state.partyStates[playerParty]?.leaderId === state.playerPoliticianId;
+      const isChair = officers?.chair?.politicianId === state.playerPoliticianId;
+      const isViceFallback =
+        !officers?.chair && officers?.vice_chair?.politicianId === state.playerPoliticianId;
+      if (isLeader || isChair || isViceFallback) {
+        const session = runtime.governmentFormation;
+        if (!session || !["formed", "fallback"].includes(session.status)) {
+          return events;
+        }
+      }
+    }
+  }
+
   const counts = partySeatCounts(world, state);
   const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   if (ranked.length < 2) return events;

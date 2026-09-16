@@ -34,8 +34,14 @@ export type ScenarioPartySection = {
   id: string;
   name: string;
   abbreviation: string;
-  /** @deprecated use ideologyLabel — kept for Alphaven fixture compat */
+  /**
+   * Mechanical ideology family id from PARTY_IDEOLOGY_FAMILIES.
+   * @deprecated prefer ideologyFamily — kept for fixture compat
+   */
   ideology?: string;
+  /** Mechanical ideology family (bounded catalog). */
+  ideologyFamily?: string;
+  /** Optional public display label — does not create a new mechanical family. */
   ideologyLabel?: string;
   leaderId: string;
   color?: string | null;
@@ -95,17 +101,43 @@ export type ScenarioConstitutionSection = {
   ministerialCensureFraction?: number;
   ministerialCensurePreset?: ThresholdPresetId;
   regulationReviewDays?: number;
+  /** Constitutional order modes — IDs from optionCatalogs / sim constitutionalOrder. */
+  partySystem?: string;
+  soleLegalPartyId?: string | null;
+  presidentialElection?: string;
+  assemblyElection?: AssemblySystemId;
+  judicialReview?: string;
+  provincialCompetence?: string;
+  emergencyPowers?: string;
+  treatyApproval?: string;
+  amendmentProcess?: string;
+  entrenchment?: string;
+  civilLiberties?: string;
+  executiveAuthority?: string;
+  cabinetFormation?: string;
+  republicForm?: string;
+  citizenshipGuard?: string;
+  pressFreedom?: string;
+  localGovernment?: string;
+  defenseControl?: string;
+  presidentialTermYears?: number;
+  presidentialTermLimit?: number;
+  assemblyTermYears?: number;
+  vetoOverrideFraction?: number;
+  vetoOverridePreset?: ThresholdPresetId;
 };
 
 export type ScenarioElectionsSection = {
   assemblySystem?: AssemblySystemId;
+  /** Prefer presidentialElection on constitution; kept for Studio Elections tab. */
   presidentialMode?: string;
+  presidentialElection?: string;
   nominationRuleLabels?: Record<string, string>;
   nextAssemblyElectionDate?: string;
   nextPresidentialElectionDate?: string;
-  /** Optional cycle length when next dates are calendar-derived (custom mini worlds). */
   presidentialIntervalYears?: number;
   assemblyIntervalYears?: number;
+  presidentialTermLimit?: number;
 };
 
 export type ScenarioLawSection = {

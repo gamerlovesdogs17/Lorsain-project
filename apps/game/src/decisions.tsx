@@ -295,6 +295,21 @@ export function DecisionPanel(props: {
               />
             );
           }
+          if (d.kind === "constitutional_amendment_vote") {
+            return (
+              <VoteRow
+                key={d.key}
+                label={d.label}
+                onCast={(choice) =>
+                  run({
+                    type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                    amendmentId: d.amendmentId!,
+                    choice,
+                  })
+                }
+              />
+            );
+          }
           if (d.kind === "judicial_vote") {
             return (
               <div key={d.key} className="row" style={{ marginTop: "0.4rem" }}>

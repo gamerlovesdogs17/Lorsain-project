@@ -49,6 +49,11 @@ export function parsePoliticsRuntime(raw: unknown): Phase12Runtime | string {
   ) {
     base.coalitionAgreements = obj.coalitionAgreements as Phase12Runtime["coalitionAgreements"];
   }
+  if (obj.governmentFormation === null) {
+    base.governmentFormation = null;
+  } else if (obj.governmentFormation && typeof obj.governmentFormation === "object") {
+    base.governmentFormation = obj.governmentFormation as Phase12Runtime["governmentFormation"];
+  }
   if (
     obj.orgScorecards &&
     typeof obj.orgScorecards === "object" &&

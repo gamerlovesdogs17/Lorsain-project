@@ -29,6 +29,7 @@ import {
   formatInfluenceBand,
   formatShareEstimate,
   canShowExactInternals,
+  isHungAssembly,
 } from "@lorsain/sim";
 import { useSettings } from "./settingsContext.js";
 import {
@@ -112,6 +113,7 @@ export type PartyPageProps = {
   onDone: () => void;
   globalFocus: { kind: string; id: string } | null;
   setGlobalFocus: (focus: { kind: string; id: string } | null) => void;
+  onNavigate?: (screen: "executive") => void;
 };
 
 export function PartyPage(props: PartyPageProps) {
@@ -805,7 +807,7 @@ export function PartyPage(props: PartyPageProps) {
     partyId && partyOrg?.metadata ? partyOrg.metadata[`budget_recommend_${partyId}`] : undefined;
 
   return (
-    <div className="party-page">
+    <div className="party-page" data-tutorial="party-workspace">
       <PageHeader
         kicker="Parties and caucuses"
         title={party?.name ?? "No party"}
@@ -1589,77 +1591,97 @@ export function PartyPage(props: PartyPageProps) {
               </div>
 
               <SectionCard title="Coalition talks">
-                <div className="politician-card-grid">
-                  {partnerPartyOptions.map((partnerId) => {
-                    const partnerSeats = members.filter(
-                      (memberId) => props.snap.politicians[memberId]?.partyId === partnerId,
-                    ).length;
-                    const combined = caucus + partnerSeats;
-                    const majority = Math.floor(totalSeats / 2) + 1;
-                    const authorized =
-                      partyOrg?.coalitionTalks?.[partyId]?.[partnerId]?.authorized === true;
-                    const affinity =
-                      partyOfficers?.chair?.politicianId &&
-                      props.snap.partyStates[partnerId]?.leaderId
-                        ? props.snap.relationships[partyOfficers.chair.politicianId]?.[
-                            props.snap.partyStates[partnerId]!.leaderId!
-                          ]?.affinity
-                        : null;
-                    const relationship =
-                      affinity == null
-                        ? "Relationship thin"
-                        : affinity >= 0.25
-                          ? "Warm working relationship"
-                          : affinity >= 0
-                            ? "Correct but cool"
-                            : "Frosty";
-                    return (
-                      <div className="faction-card" key={partnerId}>
-                        <strong>{partyDisplayName(props.world, partnerId, props.snap)}</strong>
-                        <div className="muted small">
-                          {partnerSeats} seats · with you {combined}/{totalSeats} (
-                          {combined >= majority ? "majority path" : "short of majority"})
-                        </div>
-                        <div className="muted small">{relationship}</div>
-                        {authorized ? <StatusBadge tone="ok">Talks authorised</StatusBadge> : null}
-                        <div
-                          className="row"
-                          style={{ gap: "0.35rem", marginTop: "0.4rem", flexWrap: "wrap" }}
-                        >
-                          <button
-                            type="button"
-                            className="btn btn-sm"
-                            onClick={() =>
-                              run({
-                                type: "AUTHORIZE_COALITION_TALKS",
-                                partyId,
-                                partnerPartyId: partnerId,
-                                authorize: true,
-                              })
-                            }
+                {isHungAssembly(props.world, props.snap) ? (
+                  <>
+                    <p className="muted">
+                      The Assembly is hung. Open Government → Form a government to negotiate
+                      priorities, red lines, and Cabinet shares with partners.
+                    </p>
+                    {props.onNavigate ? (
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => props.onNavigate?.("executive")}
+                      >
+                        Form a government
+                      </button>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="politician-card-grid">
+                    {partnerPartyOptions.map((partnerId) => {
+                      const partnerSeats = members.filter(
+                        (memberId) => props.snap.politicians[memberId]?.partyId === partnerId,
+                      ).length;
+                      const combined = caucus + partnerSeats;
+                      const majority = Math.floor(totalSeats / 2) + 1;
+                      const authorized =
+                        partyOrg?.coalitionTalks?.[partyId]?.[partnerId]?.authorized === true;
+                      const affinity =
+                        partyOfficers?.chair?.politicianId &&
+                        props.snap.partyStates[partnerId]?.leaderId
+                          ? props.snap.relationships[partyOfficers.chair.politicianId]?.[
+                              props.snap.partyStates[partnerId]!.leaderId!
+                            ]?.affinity
+                          : null;
+                      const relationship =
+                        affinity == null
+                          ? "Relationship thin"
+                          : affinity >= 0.25
+                            ? "Warm working relationship"
+                            : affinity >= 0
+                              ? "Correct but cool"
+                              : "Frosty";
+                      return (
+                        <div className="faction-card" key={partnerId}>
+                          <strong>{partyDisplayName(props.world, partnerId, props.snap)}</strong>
+                          <div className="muted small">
+                            {partnerSeats} seats · with you {combined}/{totalSeats} (
+                            {combined >= majority ? "majority path" : "short of majority"})
+                          </div>
+                          <div className="muted small">{relationship}</div>
+                          {authorized ? (
+                            <StatusBadge tone="ok">Talks authorised</StatusBadge>
+                          ) : null}
+                          <div
+                            className="row"
+                            style={{ gap: "0.35rem", marginTop: "0.4rem", flexWrap: "wrap" }}
                           >
-                            Authorise talks
-                          </button>
-                          <button
-                            type="button"
-                            className="btn secondary btn-sm"
-                            onClick={() =>
-                              run({
-                                type: "AUTHORIZE_COALITION_TALKS",
-                                partyId,
-                                partnerPartyId: partnerId,
-                                authorize: false,
-                              })
-                            }
-                          >
-                            Rescind
-                          </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() =>
+                                run({
+                                  type: "AUTHORIZE_COALITION_TALKS",
+                                  partyId,
+                                  partnerPartyId: partnerId,
+                                  authorize: true,
+                                })
+                              }
+                            >
+                              Authorise talks
+                            </button>
+                            <button
+                              type="button"
+                              className="btn secondary btn-sm"
+                              onClick={() =>
+                                run({
+                                  type: "AUTHORIZE_COALITION_TALKS",
+                                  partyId,
+                                  partnerPartyId: partnerId,
+                                  authorize: false,
+                                })
+                              }
+                            >
+                              Rescind
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {partnerPartyOptions.length === 0 ? (
+                      );
+                    })}
+                  </div>
+                )}
+                {!isHungAssembly(props.world, props.snap) && partnerPartyOptions.length === 0 ? (
                   <EmptyState>No partner parties available.</EmptyState>
                 ) : null}
               </SectionCard>

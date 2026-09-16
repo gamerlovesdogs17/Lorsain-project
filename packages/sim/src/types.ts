@@ -751,6 +751,25 @@ export type Command =
       redLines?: string[];
     }
   | {
+      type: "OPEN_GOVERNMENT_TALKS";
+      partnerPartyIds: string[];
+    }
+  | {
+      type: "PROPOSE_COALITION_TERMS";
+      policyPriorities: string[];
+      redLines: string[];
+      cabinetShares: Record<string, number>;
+    }
+  | {
+      type: "RESPOND_TO_COALITION_COUNTER";
+      response: "accept" | "revise";
+      policyPriorities?: string[];
+      redLines?: string[];
+      cabinetShares?: Record<string, number>;
+    }
+  | { type: "CONFIRM_GOVERNMENT_AGREEMENT" }
+  | { type: "ABANDON_GOVERNMENT_TALKS" }
+  | {
       type: "ENDORSE_CANDIDATE_AS_CHAIR";
       partyId: string;
       candidateId: string;
@@ -969,6 +988,13 @@ export type KernelWorld = {
       }>;
     }>;
   };
+  /**
+   * Optional founding constitutional order for custom/scenario worlds.
+   * Applied at createSimulation after provincial runtime seed.
+   */
+  initialConstitutionalOrder?: Partial<
+    import("./provinces/constitutionalOrder.js").ConstitutionalOrderState
+  >;
   interestOrganizations: Record<string, CanonicalInterestOrganization>;
   mediaOutlets: Record<string, CanonicalMediaOutlet>;
   worldCountries: Record<string, CanonicalWorldCountry>;

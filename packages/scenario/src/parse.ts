@@ -106,6 +106,43 @@ function parseContentSections(raw: unknown): ScenarioContentSections {
     if (censurePreset) constitution.ministerialCensurePreset = censurePreset;
     const reviewDays = num(c.regulationReviewDays);
     if (reviewDays != null) constitution.regulationReviewDays = reviewDays;
+    const orderKeys = [
+      "partySystem",
+      "presidentialElection",
+      "assemblyElection",
+      "judicialReview",
+      "provincialCompetence",
+      "emergencyPowers",
+      "treatyApproval",
+      "amendmentProcess",
+      "entrenchment",
+      "civilLiberties",
+      "executiveAuthority",
+      "cabinetFormation",
+      "republicForm",
+      "citizenshipGuard",
+      "pressFreedom",
+      "localGovernment",
+      "defenseControl",
+    ] as const;
+    for (const key of orderKeys) {
+      if (typeof c[key] === "string" && c[key]) {
+        (constitution as Record<string, string>)[key] = c[key] as string;
+      }
+    }
+    if (c.soleLegalPartyId === null) constitution.soleLegalPartyId = null;
+    else if (typeof c.soleLegalPartyId === "string")
+      constitution.soleLegalPartyId = c.soleLegalPartyId;
+    const presTerm = num(c.presidentialTermYears);
+    if (presTerm != null) constitution.presidentialTermYears = presTerm;
+    const presLimit = num(c.presidentialTermLimit);
+    if (presLimit != null) constitution.presidentialTermLimit = presLimit;
+    const asmTerm = num(c.assemblyTermYears);
+    if (asmTerm != null) constitution.assemblyTermYears = asmTerm;
+    const veto = num(c.vetoOverrideFraction);
+    if (veto != null) constitution.vetoOverrideFraction = veto;
+    const vetoPreset = parseThresholdPreset(c.vetoOverridePreset);
+    if (vetoPreset) constitution.vetoOverridePreset = vetoPreset;
     out.constitution = constitution;
   }
   if (Array.isArray(raw.parties)) {
@@ -128,6 +165,12 @@ function parseContentSections(raw: unknown): ScenarioContentSections {
         abbreviation: str(p.abbreviation ?? p.short),
         ideology: ideologyLabel,
         ideologyLabel,
+        ideologyFamily:
+          typeof p.ideologyFamily === "string"
+            ? p.ideologyFamily
+            : typeof p.ideology === "string"
+              ? p.ideology
+              : undefined,
         leaderId: str(p.leaderId ?? p.leader_id),
         color:
           p.color === null || typeof p.color === "string" ? (p.color as string | null) : undefined,
@@ -218,10 +261,17 @@ function parseContentSections(raw: unknown): ScenarioContentSections {
   if (isRecord(raw.elections)) {
     const e = raw.elections;
     out.elections = omitUndefined({
-      assemblySystem: parseAssemblySystem(e.assemblySystem),
+      assemblySystem: parseAssemblySystem(e.assemblySystem ?? e.assemblyElection),
       presidentialMode: typeof e.presidentialMode === "string" ? e.presidentialMode : undefined,
+      presidentialElection:
+        typeof e.presidentialElection === "string"
+          ? e.presidentialElection
+          : typeof e.presidentialMode === "string"
+            ? e.presidentialMode
+            : undefined,
       presidentialIntervalYears: num(e.presidentialIntervalYears),
       assemblyIntervalYears: num(e.assemblyIntervalYears),
+      presidentialTermLimit: num(e.presidentialTermLimit),
       nominationRuleLabels: isRecord(e.nominationRuleLabels)
         ? Object.fromEntries(Object.entries(e.nominationRuleLabels).map(([k, v]) => [k, str(v)]))
         : undefined,

@@ -229,6 +229,15 @@ import {
   setPartyOfficialPosition,
   setPartyPriorities,
 } from "./partyOrg/commands.js";
+import {
+  abandonGovernmentTalks,
+  confirmGovernmentAgreement,
+  openGovernmentTalks,
+  proposeCoalitionTerms,
+  respondToCoalitionCounter,
+} from "./politics/governmentFormation.js";
+import type { PartyPlatformIssue } from "./parties/types.js";
+import { PARTY_PLATFORM_ISSUES } from "./parties/types.js";
 import { castNationalCommitteeVote } from "./partyOrg/committee.js";
 import {
   declareChairCandidacy,
@@ -419,7 +428,9 @@ function newState(opts: CreateSimulationOptions, world: KernelWorld, rng: RngSer
     state.officeTerms[id] = { ...t, id };
   }
   state.provincialRuntime = seedProvincialRuntime(world, state);
-  if (Object.keys(world.constituencyElectorate).length === 0) {
+  if (world.initialConstitutionalOrder) {
+    Object.assign(state.provincialRuntime.constitutionalOrder, world.initialConstitutionalOrder);
+  } else if (Object.keys(world.constituencyElectorate).length === 0) {
     state.provincialRuntime.constitutionalOrder.presidentialElection = "assembly_selection";
   }
   for (const ev of world.initialScheduled) {
@@ -3605,6 +3616,94 @@ function bind(state: SimState, world: KernelWorld, rng: RngService): Simulation 
           partnerPartyId: command.partnerPartyId,
           authorize: command.authorize,
           ...(command.redLines ? { redLines: command.redLines } : {}),
+          commandId,
+        }),
+      );
+    }
+
+    const runFormationCommand = (
+      op: (
+        target: SimState,
+        commandId: string,
+      ) =>
+        { ok: true; events: SimEvent[] } | { ok: false; error: { code: string; message: string } },
+    ): CommandResult => {
+      ensureDefaultOfficers(world, state);
+      const preview = op(jsonClone(state), "PREVIEW");
+      if (!preview.ok) return fail(preview.error.code, preview.error.message);
+      const commandId = nextCommandId();
+      const out = op(state, commandId);
+      if (!out.ok) return fail(out.error.code, out.error.message);
+      return { ok: true, commandId, events: out.events, interrupt: null };
+    };
+
+    if (command.type === "OPEN_GOVERNMENT_TALKS") {
+      return runFormationCommand((target, commandId) =>
+        openGovernmentTalks(world, target, {
+          actorId: target.playerPoliticianId,
+          partnerPartyIds: command.partnerPartyIds,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "PROPOSE_COALITION_TERMS") {
+      const priorities = command.policyPriorities.filter((p): p is PartyPlatformIssue =>
+        (PARTY_PLATFORM_ISSUES as readonly string[]).includes(p),
+      );
+      const redLines = command.redLines.filter((p): p is PartyPlatformIssue =>
+        (PARTY_PLATFORM_ISSUES as readonly string[]).includes(p),
+      );
+      return runFormationCommand((target, commandId) =>
+        proposeCoalitionTerms(world, target, {
+          actorId: target.playerPoliticianId,
+          terms: {
+            policyPriorities: priorities,
+            redLines,
+            cabinetShares: command.cabinetShares,
+          },
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "RESPOND_TO_COALITION_COUNTER") {
+      return runFormationCommand((target, commandId) =>
+        respondToCoalitionCounter(world, target, {
+          actorId: target.playerPoliticianId,
+          response: command.response,
+          ...(command.response === "revise"
+            ? {
+                revisedTerms: {
+                  policyPriorities: (command.policyPriorities ?? []).filter(
+                    (p): p is PartyPlatformIssue =>
+                      (PARTY_PLATFORM_ISSUES as readonly string[]).includes(p),
+                  ),
+                  redLines: (command.redLines ?? []).filter((p): p is PartyPlatformIssue =>
+                    (PARTY_PLATFORM_ISSUES as readonly string[]).includes(p),
+                  ),
+                  cabinetShares: command.cabinetShares ?? {},
+                },
+              }
+            : {}),
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "CONFIRM_GOVERNMENT_AGREEMENT") {
+      return runFormationCommand((target, commandId) =>
+        confirmGovernmentAgreement(world, target, {
+          actorId: target.playerPoliticianId,
+          commandId,
+        }),
+      );
+    }
+
+    if (command.type === "ABANDON_GOVERNMENT_TALKS") {
+      return runFormationCommand((target, commandId) =>
+        abandonGovernmentTalks(world, target, {
+          actorId: target.playerPoliticianId,
           commandId,
         }),
       );

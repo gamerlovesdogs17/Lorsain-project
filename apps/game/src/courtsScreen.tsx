@@ -92,7 +92,7 @@ export function CourtsPage(props: {
   );
 
   return (
-    <div>
+    <div data-tutorial="courts-workspace">
       <PageHeader
         kicker="Judiciary"
         title="Constitutional Court"

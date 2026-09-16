@@ -612,7 +612,10 @@ export function CampaignPage(props: {
   };
 
   return (
-    <div className="campaign-page page-tone-campaign campaign-hq-v7">
+    <div
+      className="campaign-page page-tone-campaign campaign-hq-v7"
+      data-tutorial="campaign-workspace"
+    >
       <PageHeader
         kicker="Campaign HQ · Campaign 2.0"
         title={campaignTypeLabel(c.type).replace(/^./, (letter) => letter.toUpperCase())}

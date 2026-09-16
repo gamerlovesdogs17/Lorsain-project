@@ -69,6 +69,8 @@ import {
 import { entityScreen, type EntityLinkKind } from "./ui/entityLink.js";
 import { useSettings } from "./settingsContext.js";
 import { SettingsPage } from "./settingsScreen.js";
+import { lessonForScreen, nextIncompleteLesson } from "./tutorial.js";
+import { TutorialCoach } from "./tutorialCoach.js";
 
 const QA_SCREENS = new Set<Screen>([
   "home",
@@ -1263,13 +1265,32 @@ export default function App() {
           <h2 className="serif-head">Choose your career</h2>
           <p className="muted">
             Featured starts are full-depth political roles. Search the roster for Limited offices
-            and other public figures. Hidden traits are never shown.
+            and other public figures. Hidden traits are never shown. New Game always begins in
+            Terena.
           </p>
+          <label
+            className="settings-toggle new-game-tutorial-toggle"
+            data-qa="new-game-tutorial-toggle"
+          >
+            <input
+              type="checkbox"
+              checked={settings.tutorialMode}
+              onChange={(e) => updateSettings({ tutorialMode: e.target.checked })}
+            />
+            <span>
+              <strong>Tutorial Mode</strong>
+              <small className="muted">
+                First-use lessons after you begin. Change anytime in Settings; completed lessons
+                stay until Reset.
+              </small>
+            </span>
+          </label>
         </div>
         <div className="row new-game-filters">
           <input
             className="search"
             placeholder="Search by name, office, party, or home"
+            aria-label="Search politicians"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -1278,6 +1299,7 @@ export default function App() {
           />
           <select
             value={partyFilter}
+            aria-label="Filter by party"
             onChange={(e) => {
               setPartyFilter(e.target.value);
               setBrowsePage(0);
@@ -1292,6 +1314,7 @@ export default function App() {
           </select>
           <select
             value={officeFilter}
+            aria-label="Filter by office"
             onChange={(e) => {
               setOfficeFilter(e.target.value);
               setBrowsePage(0);
@@ -1307,6 +1330,7 @@ export default function App() {
           </select>
           <select
             value={provinceFilter}
+            aria-label="Filter by province"
             onChange={(e) => {
               setProvinceFilter(e.target.value);
               setBrowsePage(0);
@@ -1405,6 +1429,7 @@ export default function App() {
     )
       return "foreign";
     if (kind === "sign_bill") return "executive";
+    if (kind === "form_government") return "executive";
     if (kind === "interrupt" && interrupt?.code.includes("ELECTION")) return "elections";
     return "assembly";
   };
@@ -1506,6 +1531,39 @@ export default function App() {
     ? (searchEntries.find((e) => e.kind === globalFocus.kind && e.id === globalFocus.id) ?? null)
     : null;
 
+  const playerPartyId = snap.politicians[snap.playerPoliticianId]?.partyId ?? null;
+  const playerCaucusLeadership =
+    playerPartyId != null
+      ? (snap.legislatureRuntime.caucusLeadership[playerPartyId] ?? null)
+      : null;
+  const playerIsWhip =
+    !!playerCaucusLeadership && playerCaucusLeadership.whipId === snap.playerPoliticianId;
+  const assemblyVotesDue = playerDecisions.some((d) => {
+    switch (d.kind) {
+      case "committee_vote":
+      case "floor_vote":
+      case "repassage_vote":
+      case "amendment_vote":
+      case "constitutional_amendment_vote":
+      case "motion_vote":
+        return true;
+      default:
+        return false;
+    }
+  });
+  const activeTutorialLesson = nextIncompleteLesson(
+    settings.completedTutorialLessons,
+    lessonForScreen(screen, {
+      selectedBill: Boolean(selectedBill),
+      votesDue: assemblyVotesDue && screen === "assembly",
+      whipRelevant:
+        screen === "assembly" &&
+        playerIsWhip &&
+        settings.completedTutorialLessons.includes("bills") &&
+        settings.completedTutorialLessons.includes("voting"),
+    }),
+  );
+
   return (
     <GameShell
       screen={screen}
@@ -1598,6 +1656,7 @@ export default function App() {
         onEntityNavigate={handleEntityNavigate}
         onNavigate={(s: Screen) => navigateTo(s, null)}
       />
+      <TutorialCoach activeLesson={activeTutorialLesson} />
       {import.meta.env.DEV ? (
         <output
           id="lorsain-browser-qa-state"

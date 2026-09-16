@@ -1,6 +1,17 @@
 import { addMonths, compareIsoDate } from "../calendar.js";
 import { getAgentProfile } from "../agents/profile.js";
-import { currentAssemblyMemberIds, currentPresidentId } from "../legislature/state.js";
+import { whipPersuasionBonusFor } from "../legislature/caucus.js";
+import { partyStance, factionStance } from "../legislature/recommendations.js";
+import {
+  allocateLegislativeVoteId,
+  currentAssemblyMemberIds,
+  currentPresidentId,
+} from "../legislature/state.js";
+import {
+  WHIP_STRENGTH_PRESSURE,
+  type LegislativeVoteChoice,
+  type WhipStrength,
+} from "../legislature/types.js";
 import { pushHistory } from "../scheduler.js";
 import type { CommandError, KernelWorld, SimEvent, SimState } from "../types.js";
 import type {
@@ -12,11 +23,7 @@ import type {
 import { CONSTITUTIONAL_RULE_IDS } from "./types.js";
 import { provincialLegislatorForPolitician } from "./assemblies.js";
 import { constitutionAlternativeFor } from "./constitutionAlternatives.js";
-import {
-  constitutionAlternative,
-  constitutionSubjectById,
-  CONSTITUTION_CHANGE_SUBJECTS,
-} from "./constitutionChanges.js";
+import { constitutionAlternative, constitutionSubjectById } from "./constitutionChanges.js";
 import {
   amendmentThresholds,
   emptyConstitutionalOrder,
@@ -27,6 +34,10 @@ import {
   referendumRequiredForAmendments,
   ensureOrder,
 } from "./constitutionGameplay.js";
+import {
+  amendmentTouchesCore,
+  formatConstitutionalAssemblyThreshold,
+} from "./constitutionalAssembly.js";
 import type { ConstitutionalPackageChange } from "./types.js";
 
 /**
@@ -728,9 +739,14 @@ export function applyRatifiedAmendmentEffects(
   order.lastAmendedDate = state.currentDate;
 }
 
-export function assemblyVotesRequired(state: SimState, coreArticle = false): number {
+export function assemblyVotesRequired(
+  state: SimState,
+  coreArticle = false,
+  /** Authorized chamber size; defaults to Terena's 420 for call sites without a world. */
+  seatCount = 420,
+): number {
   const { assemblyFraction } = amendmentThresholds(ensureConstitutionalOrder(state), coreArticle);
-  return Math.ceil(420 * assemblyFraction);
+  return Math.ceil(seatCount * assemblyFraction);
 }
 
 export function provincesRequiredForRatification(state: SimState): number {
@@ -788,41 +804,115 @@ export function castConstitutionalRatificationVote(
   return {};
 }
 
+/** Constitutional politics plus shared Assembly whip / party / persuasion. */
+export function constitutionalAssemblyFloorScore(
+  world: KernelWorld,
+  state: SimState,
+  amendment: ConstitutionalAmendment,
+  memberId: string,
+): number {
+  let score = constitutionalSupportScore(world, state, amendment, memberId);
+  if (memberId === state.playerPoliticianId) return score;
+  const pol = state.politicians[memberId];
+  const party = partyStance(state, pol?.partyId ?? null, amendment.id);
+  const faction = factionStance(state, pol?.factionId ?? null, amendment.id);
+  const profile = getAgentProfile(world, state, memberId);
+  const loyalty = profile?.traits.partyLoyalty ?? 0.5;
+  const whipRaw = pol?.partyId
+    ? state.legislatureRuntime.caucusLeadership[pol.partyId]?.whipStrengths?.[amendment.id]
+    : undefined;
+  const whipStrength: WhipStrength =
+    whipRaw === "recommended" ||
+    whipRaw === "party_line" ||
+    whipRaw === "critical" ||
+    whipRaw === "free"
+      ? whipRaw
+      : "free";
+  const whipPressure = WHIP_STRENGTH_PRESSURE[whipStrength];
+  const partyPush = party === "support" ? 1 : party === "oppose" ? -1 : 0;
+  const factionPush = faction === "support" ? 1 : faction === "oppose" ? -1 : 0;
+  const floorPush = partyPush !== 0 ? partyPush : factionPush;
+  if (party === "support") score += 0.22 * loyalty;
+  if (party === "oppose") score -= 0.22 * loyalty;
+  if (faction === "support") score += 0.1;
+  if (faction === "oppose") score -= 0.1;
+  if (floorPush !== 0 && whipPressure > 0) {
+    score += floorPush * whipPressure * (0.38 + loyalty * 0.3);
+  }
+  const persuasion = whipPersuasionBonusFor(state, amendment.id, memberId);
+  if (floorPush !== 0 && persuasion > 0) {
+    score += floorPush * persuasion * (0.65 + loyalty * 0.3);
+  }
+  return score;
+}
+
+function chooseConstitutionalAssemblyNpcVote(
+  world: KernelWorld,
+  state: SimState,
+  amendment: ConstitutionalAmendment,
+  memberId: string,
+): LegislativeVoteChoice {
+  if (memberId === state.playerPoliticianId) {
+    return amendment.assemblyVotes[memberId] ?? "abstain";
+  }
+  const stored = amendment.assemblyVotes[memberId];
+  if (stored) return stored;
+  const score = constitutionalAssemblyFloorScore(world, state, amendment, memberId);
+  return score >= 0.045 ? "yes" : score <= -0.055 ? "no" : "abstain";
+}
+
 function federalVote(
   world: KernelWorld,
   state: SimState,
   amendment: ConstitutionalAmendment,
 ): void {
   const members = currentAssemblyMemberIds(world, state);
+  const votes: Record<string, LegislativeVoteChoice> = {};
   let yes = 0;
+  let no = 0;
+  let abstain = 0;
   for (const id of members) {
-    let choice = amendment.assemblyVotes[id];
-    if (!choice) {
-      if (id === state.playerPoliticianId) choice = "abstain";
-      else {
-        const score = constitutionalSupportScore(world, state, amendment, id);
-        choice = score >= 0.045 ? "yes" : score <= -0.055 ? "no" : "abstain";
-      }
-      amendment.assemblyVotes[id] = choice;
-    }
+    const choice = chooseConstitutionalAssemblyNpcVote(world, state, amendment, id);
+    votes[id] = choice;
+    amendment.assemblyVotes[id] = choice;
     if (choice === "yes") yes += 1;
+    else if (choice === "no") no += 1;
+    else abstain += 1;
   }
   amendment.assemblyYes = yes;
-  amendment.assemblyVoteId = `CAVOTE_${amendment.id}`;
-  // Determine if any package change targets a core entrenched article
-  const packageTouchesCore = (amendment.packageChanges ?? []).some((c) => {
-    const subject = constitutionSubjectById(c.subjectId);
-    return subject && isEntrenchedArticle(subject.articleId);
-  });
-  const documentTouchesCore = amendment.documentClauseId
-    ? CONSTITUTION_CHANGE_SUBJECTS.some(
-        (subject) =>
-          subject.targetClauseId === amendment.documentClauseId &&
-          isEntrenchedArticle(subject.articleId),
-      )
-    : false;
-  const touchesCore = packageTouchesCore || documentTouchesCore;
-  const required = assemblyVotesRequired(state, touchesCore);
+  const touchesCore = amendmentTouchesCore(amendment);
+  const seatCount = world.legislativeConstitution.assemblySeatCount;
+  const required = assemblyVotesRequired(state, touchesCore, seatCount);
+  const voteId = allocateLegislativeVoteId(state);
+  state.legislatureRuntime.legislativeVotes[voteId] = {
+    id: voteId,
+    billId: amendment.id,
+    stage: "floor",
+    date: state.currentDate,
+    committeeId: null,
+    votes,
+    partyIdsAtVote: Object.fromEntries(
+      Object.keys(votes).map((id) => [id, state.politicians[id]?.partyId ?? null]),
+    ),
+    factionIdsAtVote: Object.fromEntries(
+      Object.keys(votes).map((id) => [id, state.politicians[id]?.factionId ?? null]),
+    ),
+    yes,
+    no,
+    abstain,
+    passed: yes >= required,
+    threshold: "absolute_majority",
+    metadata: {
+      kind: "constitutional_amendment",
+      amendmentId: amendment.id,
+      title: amendment.title,
+      displayTitle: amendment.title,
+      requiredYes: required,
+      seatCount,
+      thresholdLabel: formatConstitutionalAssemblyThreshold(required, seatCount),
+    },
+  };
+  amendment.assemblyVoteId = voteId;
   if (yes >= required) {
     const order = ensureConstitutionalOrder(state);
     // B: election_interlock — core amendments need an intervening election before finalization
@@ -1060,11 +1150,13 @@ export function processConstitutionalAmendmentsMonth(
       compareIsoDate(state.currentDate, addMonths(amendment.proposedDate, 1)) >= 0
     ) {
       federalVote(world, state, amendment);
+      const seatCount = world.legislativeConstitution.assemblySeatCount;
+      const required = assemblyVotesRequired(state, amendmentTouchesCore(amendment), seatCount);
       events.push(
         pushHistory(state, {
           date: state.currentDate,
           type:
-            amendment.assemblyYes >= assemblyVotesRequired(state)
+            amendment.assemblyYes >= required
               ? "CONSTITUTIONAL_AMENDMENT_SENT_TO_PROVINCES"
               : "CONSTITUTIONAL_AMENDMENT_FAILED",
           importance: 0.88,
@@ -1074,7 +1166,9 @@ export function processConstitutionalAmendmentsMonth(
           payload: {
             amendmentId: amendment.id,
             assemblyYes: amendment.assemblyYes,
-            required: assemblyVotesRequired(state),
+            required,
+            seatCount,
+            voteId: amendment.assemblyVoteId,
           },
           sourceScheduledEventId: null,
           sourceCommandId: commandId,

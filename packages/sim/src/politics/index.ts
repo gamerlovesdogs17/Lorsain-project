@@ -10,6 +10,7 @@ export * from "./memory.js";
 export * from "./cabinet.js";
 export * from "./organizations.js";
 export * from "./coalitions.js";
+export * from "./governmentFormation.js";
 export * from "./agency.js";
 export * from "./explain.js";
 export * from "./scandals.js";

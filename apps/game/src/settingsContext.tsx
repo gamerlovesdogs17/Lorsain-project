@@ -10,6 +10,8 @@ type SettingsContextValue = {
   settings: PlayerSettings;
   update: (partial: Partial<PlayerSettings>) => void;
   setSettings: (settings: PlayerSettings) => void;
+  completeTutorialLesson: (lessonId: string) => void;
+  resetTutorialProgress: () => void;
   debugMode: boolean;
 };
 
@@ -35,7 +37,36 @@ export function SettingsProvider(props: { children: ReactNode }) {
         notifications: partial.notifications
           ? { ...current.notifications, ...partial.notifications }
           : current.notifications,
-        version: 1,
+        completedTutorialLessons:
+          partial.completedTutorialLessons !== undefined
+            ? [...partial.completedTutorialLessons]
+            : [...current.completedTutorialLessons],
+        version: 2,
+      };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
+  const completeTutorialLesson = useCallback((lessonId: string) => {
+    setSettingsState((current) => {
+      if (current.completedTutorialLessons.includes(lessonId)) return current;
+      const next: PlayerSettings = {
+        ...current,
+        completedTutorialLessons: [...current.completedTutorialLessons, lessonId],
+        version: 2,
+      };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
+  const resetTutorialProgress = useCallback(() => {
+    setSettingsState((current) => {
+      const next: PlayerSettings = {
+        ...current,
+        completedTutorialLessons: [],
+        version: 2,
       };
       saveSettings(next);
       return next;
@@ -47,9 +78,11 @@ export function SettingsProvider(props: { children: ReactNode }) {
       settings,
       update,
       setSettings,
+      completeTutorialLesson,
+      resetTutorialProgress,
       debugMode: settings.debugMode,
     }),
-    [settings, update, setSettings],
+    [settings, update, setSettings, completeTutorialLesson, resetTutorialProgress],
   );
 
   return <SettingsContext.Provider value={value}>{props.children}</SettingsContext.Provider>;

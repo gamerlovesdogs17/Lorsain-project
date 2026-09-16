@@ -7917,3 +7917,238 @@ body.reduced-motion *::after {
     min-width: 0;
   }
 }
+
+/* ===== Phase 19: Tutorial coach (bounded, dismissible) ===== */
+.tutorial-coach {
+  position: fixed;
+  z-index: 80;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  left: auto;
+  max-width: min(22rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+.tutorial-coach-card {
+  pointer-events: auto;
+  background: var(--panel, #fff);
+  color: var(--ink, #1a1a1a);
+  border: 1px solid var(--line, #c8cdd5);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.18);
+  padding: 0.85rem 1rem 0.75rem;
+}
+.tutorial-coach-kicker {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted, #5b6573);
+  margin-bottom: 0.25rem;
+}
+.tutorial-coach-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+.tutorial-coach-body {
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+.tutorial-coach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.tutorial-coach-nav {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+[data-tutorial-active="true"] {
+  outline: 2px solid var(--accent, #2f6fed);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ===== Phase 19: Form a government workspace ===== */
+.form-government-workspace {
+  display: grid;
+  gap: 0.85rem;
+}
+.form-government-workspace .partner-card {
+  border: 1px solid var(--line, #c8cdd5);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  background: var(--panel-2, #f7f8fa);
+}
+.form-government-workspace .partner-card.is-selected {
+  border-color: var(--accent, #2f6fed);
+  box-shadow: inset 0 0 0 1px var(--accent, #2f6fed);
+}
+.form-government-workspace .partner-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  font-size: 0.88rem;
+  color: var(--ink-muted, #5b6573);
+}
+.form-government-workspace .agreement-box {
+  border: 1px solid var(--line, #c8cdd5);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  background: var(--panel, #fff);
+}
+.form-government-workspace .cabinet-share-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.35rem 0;
+}
+
+/* ===== Phase 19: Studio constitutional order fields ===== */
+.studio-order-fields {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.75rem 0 1rem;
+}
+.studio-order-fields h3 {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+}
+
+/* ===== Phase 19: Glossary (lightweight) ===== */
+.glossary-list {
+  display: grid;
+  gap: 0.65rem;
+}
+.glossary-term dt {
+  font-weight: 650;
+}
+.glossary-term dd {
+  margin: 0.15rem 0 0;
+  color: var(--ink-muted, #5b6573);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+/* ===== Phase 19: Tablet / iPad first-class layouts ===== */
+@media (max-width: 1024px) {
+  .game-shell,
+  .shell-main,
+  .page-body,
+  .work-layout,
+  .master-detail {
+    max-width: 100%;
+  }
+  .table-scroll,
+  .data-table-wrap,
+  table.dense {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-bar,
+  .tabs,
+  .studio-tabs,
+  [role="tablist"] {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 0.15rem;
+  }
+  .tab-bar button,
+  .tabs button,
+  .studio-tabs button,
+  [role="tab"] {
+    flex: 0 0 auto;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.55rem 0.85rem;
+  }
+  .btn,
+  button.btn,
+  .shell-nav button,
+  .nav-drawer button,
+  .attention-item,
+  .entity-row {
+    min-height: 44px;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* avoid iOS focus zoom */
+  }
+  .modal,
+  .dialog,
+  [role="dialog"] {
+    max-height: min(92vh, 100dvh);
+    overflow: auto;
+  }
+  .modal .modal-body,
+  .dialog .dialog-body {
+    max-height: calc(92vh - 6rem);
+    overflow: auto;
+  }
+}
+
+@media (max-width: 834px) {
+  .shell-layout,
+  .game-shell-layout {
+    grid-template-columns: 1fr;
+  }
+  .shell-sidebar:not(.is-open):not(.nav-drawer) {
+    /* collapsed rail / drawer pattern handled in shell markup */
+  }
+  .master-detail {
+    grid-template-columns: 1fr;
+  }
+  .master-detail.has-selection .master-list {
+    display: none;
+  }
+  .work-layout {
+    grid-template-columns: 1fr;
+  }
+  .right-rail {
+    order: 3;
+  }
+  .form-government-workspace .cabinet-share-row {
+    grid-template-columns: 1fr;
+  }
+  .tutorial-coach {
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header,
+  .section-divider {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .brief-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .bill-inspector,
+  .constitutional-amendment-inspector,
+  .form-government-workspace {
+    padding-inline: 0.15rem;
+  }
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .game-shell,
+  .shell-footer,
+  .bottom-nav,
+  .tutorial-coach {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+}

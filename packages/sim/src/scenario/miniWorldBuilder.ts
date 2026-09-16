@@ -6,6 +6,11 @@ import { applyInstitutionalPublicIdeology } from "../elections/public-ideology.j
 import { presidentialElectionIdForDate } from "../elections/state.js";
 import { kernelOffice } from "../synthetic-world.js";
 import { resolveMiniWorldElectionSchedule } from "./miniWorldCalendars.js";
+import {
+  constitutionalOrderFromScenario,
+  ideologyVectorForFamily,
+  resolveMechanicalIdeologyFamily,
+} from "./scenarioConstitution.js";
 import type { PartyDefinition } from "../parties/types.js";
 import type { KernelWorld } from "../types.js";
 
@@ -579,7 +584,9 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
     constituencyElectorate: {},
     pollsters: {},
     issueDimensions,
-    partyPublicIdeology: {},
+    partyPublicIdeology: Object.fromEntries(
+      parties.map((p) => [p.id, ideologyVectorForFamily(resolveMechanicalIdeologyFamily(p))]),
+    ),
     factionPublicIdeology: {},
     legislativeConstitution: {
       assemblySeatCount: assemblySeats,
@@ -600,6 +607,7 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
       recallReferralFraction: 0.6,
       recallVoteDays: 60,
     },
+    initialConstitutionalOrder: constitutionalOrderFromScenario(doc),
     interestOrganizations,
     mediaOutlets: {},
     worldCountries,

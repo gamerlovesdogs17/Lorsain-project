@@ -359,11 +359,11 @@ function Home(props: PageProps) {
     Boolean(playerIsPresident && warTrigger);
 
   return (
-    <div className="home-v5 home-desk home-v2">
+    <div className="home-v5 home-desk home-v2" data-tutorial="home-desk">
       <WorkLayout
         header={
           <>
-            <div className="home-desk-hero">
+            <div className="home-desk-hero object-first-lead">
               <div className="home-desk-hero-copy">
                 <div className="kicker">Political desk · Home 2.0</div>
                 <h2 className="home-desk-title">{briefTitle}</h2>

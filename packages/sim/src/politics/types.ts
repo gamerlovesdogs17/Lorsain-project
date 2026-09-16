@@ -104,6 +104,52 @@ export type CoalitionAgreement = {
   metadata: JsonObject;
 };
 
+/** Visible terms exchanged during FORM A GOVERNMENT talks (no hidden utility). */
+export type CoalitionOfferTerms = {
+  policyPriorities: PartyPlatformIssue[];
+  /** Issues the agreement will not pursue. */
+  redLines: PartyPlatformIssue[];
+  /** Approximate share of cabinet portfolios per party (sums ≈ 1). */
+  cabinetShares: Record<string, number>;
+};
+
+export type GovernmentFormationStatus =
+  | "awaiting_partners"
+  | "talks_open"
+  | "counteroffer"
+  | "agreement_ready"
+  | "investiture"
+  | "formed"
+  | "failed"
+  | "fallback";
+
+export type GovernmentFormationRejectReason =
+  "red_line" | "cabinet" | "priorities" | "relationship" | "insufficient_seats";
+
+/**
+ * Interactive hung-Assembly government formation session.
+ * Hidden negotiation scores stay off the wire; partners respond with
+ * accept / reject / counteroffer content only.
+ */
+export type GovernmentFormationSession = {
+  id: string;
+  openedDate: IsoDate;
+  status: GovernmentFormationStatus;
+  leadPartyId: string;
+  selectedPartnerIds: string[];
+  proposal: CoalitionOfferTerms | null;
+  counteroffer: CoalitionOfferTerms | null;
+  /** Short qualitative note for a counteroffer (never a numeric score). */
+  counterofferNote: string | null;
+  lastPartnerResponse: "accept" | "reject" | "counter" | null;
+  rejectReason: GovernmentFormationRejectReason | null;
+  rejectNote: string | null;
+  agreementId: string | null;
+  attempt: number;
+  humanControlled: boolean;
+  trigger: "assembly_confidence" | "no_plurality";
+};
+
 export type OrgScorecardEntry = {
   orgId: string;
   politicianId: string;
@@ -185,6 +231,8 @@ export type Phase12Runtime = {
   partyLifecycleCooldown: Record<string, PartyLifecycleCooldown>;
   partyFamilyHistory: PartyFamilyLink[];
   coalitionAgreements: Record<string, CoalitionAgreement>;
+  /** Active FORM A GOVERNMENT session after a hung Assembly (null when idle). */
+  governmentFormation: GovernmentFormationSession | null;
   orgScorecards: Record<string, OrgScorecardEntry>;
   orgCampaigns: Record<string, OrgIssueCampaign>;
   openSeatContests: Record<string, OpenSeatContest>;
@@ -218,6 +266,7 @@ export function emptyPoliticsRuntime(): Phase12Runtime {
     partyLifecycleCooldown: {},
     partyFamilyHistory: [],
     coalitionAgreements: {},
+    governmentFormation: null,
     orgScorecards: {},
     orgCampaigns: {},
     openSeatContests: {},

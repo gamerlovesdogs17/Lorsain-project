@@ -1,8 +1,9 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { collectPlayerActionableDecisions, addMonths, createSimulation, governedProvinceId, nominationCalendarDates, parseSaveFile, provincialLegislatorForPolitician, restoreSimulation, } from "@lorsain/sim";
+import { collectPlayerActionableDecisions, addMonths, createSimulation, governedProvinceId, nominationCalendarDates, parseSaveFile, provincialLegislatorForPolitician, restoreSimulation, buildKernelWorldFromScenarioDocument, } from "@lorsain/sim";
 import { loadBrowserContentBundle } from "./content/browserReader.js";
 import { kernelWorldFromBundle } from "./content/world.js";
+import { ScenarioEditorScreen, ScenarioImportScreen, ScenarioStudioHubScreen, } from "./scenario/scenarioScreens.js";
 import { downloadSave, getSave, listSaves, putSave, readImportedSave, } from "./saves.js";
 import { playerCampaign, playerOffices, politicianName, publicStandingLabel } from "./format.js";
 import { GamePages } from "./pages.js";
@@ -12,6 +13,12 @@ import { catalogFromBundle, eventDisplay, partyColor, partyDisplayName, politici
 import { GameShell, } from "./ui/shell.js";
 import { StatusBadge } from "./ui/kit.js";
 import { PoliticianAvatar, PoliticianCard } from "./ui/politician.js";
+import { emptyNavHistory, navPush, navBack, navForward, navCurrent, canGoBack, canGoForward, categorizeAttention, sortCategorizedAttention, filterAttentionByNotificationSettings, shouldShowMonthSummary, } from "./navigation.js";
+import { entityScreen } from "./ui/entityLink.js";
+import { useSettings } from "./settingsContext.js";
+import { SettingsPage } from "./settingsScreen.js";
+import { lessonForScreen, nextIncompleteLesson } from "./tutorial.js";
+import { TutorialCoach } from "./tutorialCoach.js";
 const QA_SCREENS = new Set([
     "home",
     "career",
@@ -28,6 +35,8 @@ const QA_SCREENS = new Set([
     "foreign",
     "terena",
     "archive",
+    "situation",
+    "settings",
 ]);
 function monthsBetween(startDate, endDate) {
     return Math.max(0, (Number(endDate.slice(0, 4)) - Number(startDate.slice(0, 4))) * 12 +
@@ -99,6 +108,9 @@ export default function App() {
     const [world, setWorld] = useState(null);
     const [error, setError] = useState(null);
     const [mode, setMode] = useState("title");
+    const [customScenarioDoc, setCustomScenarioDoc] = useState(null);
+    const [customWorld, setCustomWorld] = useState(null);
+    const [editorSeedDoc, setEditorSeedDoc] = useState(null);
     const [sim, setSim] = useState(null);
     const [snap, setSnap] = useState(null);
     const [screen, setScreen] = useState(initialRoute.screen);
@@ -115,7 +127,9 @@ export default function App() {
     const [browsePage, setBrowsePage] = useState(0);
     const [selectedBill, setSelectedBill] = useState(null);
     const [mapHover, setMapHover] = useState(null);
-    const [debug, setDebug] = useState(false);
+    const { settings, update: updateSettings, debugMode } = useSettings();
+    const debug = debugMode;
+    const setDebug = (v) => updateSettings({ debugMode: v });
     const [globalFocus, setGlobalFocus] = useState(initialRoute.focus);
     const [watchlist, setWatchlist] = useState(() => {
         if (typeof window === "undefined")
@@ -131,8 +145,11 @@ export default function App() {
         }
     });
     const [lastSavedAt, setLastSavedAt] = useState(null);
+    const [navHistory, setNavHistory] = useState(emptyNavHistory({ screen: initialRoute.screen, globalFocus: initialRoute.focus }));
+    const [monthSummaryOpen, setMonthSummaryOpen] = useState(false);
     const qaBooted = useRef(false);
     const feedback = useCommandFeedback();
+    const playWorld = customWorld ?? world;
     useEffect(() => {
         try {
             const loaded = loadBrowserContentBundle();
@@ -210,6 +227,9 @@ export default function App() {
                 if (focusKind === "Bill")
                     setSelectedBill(focusId);
             }
+            if (params.get("qaOpenInspector") === "1") {
+                window.sessionStorage.setItem("lorsain-qa-open-inspector", "1");
+            }
             refresh(restored);
         })
             .catch((reason) => setError(reason instanceof Error ? reason.message : String(reason)));
@@ -243,16 +263,16 @@ export default function App() {
     }, [bundle]);
     const catalog = useMemo(() => (bundle ? catalogFromBundle(bundle, figures, snap) : null), [bundle, figures, snap]);
     const searchEntries = useMemo(() => {
-        if (!world || !snap || !catalog)
+        if (!playWorld || !snap || !catalog)
             return [];
         const pages = [
             ["home", "Home", "Current political briefing"],
             ["career", "Political opportunities", "Career and politician directory"],
             ["party", "Parties and caucuses", "Leadership and internal politics"],
-            ["campaign", "Campaign", "Race command center and Ground Game"],
+            ["campaign", "Campaign HQ", "Race command center and Ground Game"],
             ["elections", "Elections and calendar", "Presidential, Assembly and provincial races"],
             ["assembly", "National Assembly", "Bills, committees and roll calls"],
-            ["executive", "Executive", "President, cabinet and administration"],
+            ["executive", "Government", "Cabinet, agenda, budget and administration"],
             ["courts", "Constitutional Court", "Bench, docket and decisions"],
             ["economy", "Economy", "Public national and regional indicators"],
             ["organizations", "Organizations", "Influence, priorities and scorecards"],
@@ -275,31 +295,31 @@ export default function App() {
                 id: politician.id,
                 kind: "Politician",
                 label: politicianDisplayName(catalog, politician.id),
-                detail: partyDisplayName(world, politician.partyId, snap),
+                detail: partyDisplayName(playWorld, politician.partyId, snap),
                 screen: "career",
             });
         }
-        for (const partyId of Object.keys(world.partyDefinitions)) {
-            if (partyId === world.independentAggregatePartyId)
+        for (const partyId of Object.keys(playWorld.partyDefinitions)) {
+            if (partyId === playWorld.independentAggregatePartyId)
                 continue;
             entries.push({
                 id: partyId,
                 kind: "Party",
-                label: partyDisplayName(world, partyId, snap),
+                label: partyDisplayName(playWorld, partyId, snap),
                 detail: "Leadership, caucus and electoral record",
                 screen: "party",
             });
         }
-        for (const faction of Object.values(world.factionDefinitions)) {
+        for (const faction of Object.values(playWorld.factionDefinitions)) {
             entries.push({
                 id: faction.factionId,
                 kind: "Caucus",
                 label: faction.name,
-                detail: partyDisplayName(world, faction.partyId, snap),
+                detail: partyDisplayName(playWorld, faction.partyId, snap),
                 screen: "party",
             });
         }
-        for (const provinceId of world.provinceIds) {
+        for (const provinceId of playWorld.provinceIds) {
             entries.push({
                 id: provinceId,
                 kind: "Province",
@@ -308,17 +328,17 @@ export default function App() {
                 screen: "terena",
             });
         }
-        for (const constituencyId of Object.keys(world.constituencyElectorate).sort()) {
+        for (const constituencyId of Object.keys(playWorld.constituencyElectorate).sort()) {
             const place = catalog.places.get(constituencyId);
             entries.push({
                 id: constituencyId,
                 kind: "Constituency",
                 label: place?.name ?? "Constituency",
-                detail: `${place?.provinceName ?? "Terena"} · ${world.constituencyElectorate[constituencyId]?.seats ?? "?"} Assembly seats`,
+                detail: `${place?.provinceName ?? "Terena"} · ${playWorld.constituencyElectorate[constituencyId]?.seats ?? "?"} Assembly seats`,
                 screen: "terena",
             });
         }
-        for (const organization of Object.values(world.interestOrganizations)) {
+        for (const organization of Object.values(playWorld.interestOrganizations)) {
             entries.push({
                 id: organization.id,
                 kind: "Organization",
@@ -409,8 +429,46 @@ export default function App() {
                 screen: "archive",
             });
         }
+        if (playWorld.constitutionalDocument) {
+            for (const article of playWorld.constitutionalDocument.articles) {
+                entries.push({
+                    id: article.id,
+                    kind: "Article",
+                    label: `Article ${article.number}: ${article.title}`,
+                    detail: `${article.sections.length} section${article.sections.length === 1 ? "" : "s"} · Constitution`,
+                    screen: "assembly",
+                });
+                for (const section of article.sections) {
+                    for (const clause of section.clauses) {
+                        entries.push({
+                            id: clause.id,
+                            kind: "Clause",
+                            label: `Art. ${article.number} §${section.number}.${clause.number}`,
+                            detail: clause.text.slice(0, 80) + (clause.text.length > 80 ? "…" : ""),
+                            screen: "assembly",
+                        });
+                    }
+                }
+            }
+        }
+        for (const [officeId, office] of Object.entries(playWorld.offices)) {
+            entries.push({
+                id: officeId,
+                kind: "Office",
+                label: office.title,
+                detail: `${office.kind.replace(/_/g, " ")} office`,
+                screen: "executive",
+            });
+        }
+        const seen = new Set();
+        for (const provisionStack of Object.values(snap.legislatureRuntime.provisionHistory)) {
+            const current = provisionStack[provisionStack.length - 1];
+            if (!current || seen.has(current.lawId))
+                continue;
+            seen.add(current.lawId);
+        }
         return entries;
-    }, [world, snap, catalog]);
+    }, [playWorld, snap, catalog]);
     useEffect(() => {
         if (mode !== "play" ||
             (import.meta.env.DEV && new URLSearchParams(window.location.search).has("qaFixture")))
@@ -427,19 +485,50 @@ export default function App() {
         setSim(next);
         setSnap(next.getSnapshot());
     }
+    function navigateTo(nextScreen, focus) {
+        setScreen(nextScreen);
+        setGlobalFocus(focus);
+        setNavHistory((h) => navPush(h, { screen: nextScreen, globalFocus: focus }));
+    }
     function selectSearchEntry(entry) {
-        setGlobalFocus(entry.kind === "Page" ? null : { kind: entry.kind, id: entry.id });
+        const focus = entry.kind === "Page" ? null : { kind: entry.kind, id: entry.id };
         if (entry.kind === "Bill")
             setSelectedBill(entry.id);
+        navigateTo(entry.screen, focus);
+    }
+    function handleEntityNavigate(kind, id) {
+        const scr = entityScreen(kind);
+        if (kind === "Bill")
+            setSelectedBill(id);
+        navigateTo(scr, { kind, id });
+    }
+    function goBack() {
+        const next = navBack(navHistory);
+        setNavHistory(next);
+        const entry = navCurrent(next);
         setScreen(entry.screen);
+        setGlobalFocus(entry.globalFocus);
+    }
+    function goForward() {
+        const next = navForward(navHistory);
+        setNavHistory(next);
+        const entry = navCurrent(next);
+        setScreen(entry.screen);
+        setGlobalFocus(entry.globalFocus);
+    }
+    function beginCustomScenario(doc) {
+        const built = buildKernelWorldFromScenarioDocument(doc);
+        setCustomScenarioDoc(doc);
+        setCustomWorld(built);
+        setMode("customSelect");
     }
     function startGame(politicianId) {
-        if (!world)
+        if (!playWorld)
             return;
         const created = createSimulation({
-            world,
+            world: playWorld,
             playerPoliticianId: politicianId,
-            seed: "TERENA-2028",
+            seed: customWorld ? `${customWorld.scenarioId}-PLAY` : "TERENA-2028",
         });
         setTurnEvents([]);
         setGlobalFocus(null);
@@ -463,13 +552,21 @@ export default function App() {
         setLastSavedAt(savedAt);
         setSaves(await listSaves());
     }
-    async function checkpointAutosave(reason) {
+    /**
+     * Ordinary autosaves respect settings.autosave.
+     * Critical safety checkpoints (national counts / nomination resolution) always run
+     * so integrity is preserved even when ordinary autosave is off.
+     */
+    async function checkpointAutosave(reason, opts) {
+        const critical = opts?.critical === true;
+        if (!critical && !settings.autosave)
+            return;
         if (!sim || !snap)
             return;
         const savedAt = new Date().toISOString();
         await putSave({
             id: `autosave-${snap.playerPoliticianId}`,
-            name: `Autosave · ${reason}`,
+            name: critical ? `Safety checkpoint · ${reason}` : `Autosave · ${reason}`,
             savedAt,
             playerName: politicianName(figures, snap.playerPoliticianId, snap),
             date: snap.currentDate,
@@ -478,14 +575,18 @@ export default function App() {
         setLastSavedAt(savedAt);
     }
     function loadFile(save) {
-        if (!world)
+        if (!playWorld)
             return;
-        const parsed = parseSaveFile(save, world.contentVersion);
+        if (save.scenarioId !== playWorld.scenarioId) {
+            setError(`Save scenario ${save.scenarioId} does not match active world ${playWorld.scenarioId}. Import the matching scenario first.`);
+            return;
+        }
+        const parsed = parseSaveFile(save, playWorld.contentVersion);
         if (!parsed.ok) {
             setError(parsed.error.message);
             return;
         }
-        const restored = restoreSimulation(parsed.save, world);
+        const restored = restoreSimulation(parsed.save, playWorld);
         setTurnEvents([]);
         setMode("play");
         const route = routeFromHash();
@@ -494,17 +595,17 @@ export default function App() {
         refresh(restored);
     }
     function replaceSimulation(save) {
-        if (!world)
+        if (!playWorld)
             return;
-        const restored = restoreSimulation(save, world);
+        const restored = restoreSimulation(save, playWorld);
         refresh(restored);
     }
     async function resolveAssemblyElection() {
-        if (!sim || !world || busy || countingElection)
+        if (!sim || !playWorld || busy || countingElection)
             return;
         setCountingElection(true);
         try {
-            await checkpointAutosave("before Assembly count");
+            await checkpointAutosave("before Assembly count", { critical: true });
         }
         catch {
             feedback.setNotice("The pre-count autosave could not be written. The count has not started.");
@@ -536,7 +637,7 @@ export default function App() {
             feedback.setNotice(event.message || "The Assembly count could not be completed.");
             setCountingElection(false);
         };
-        worker.postMessage({ save: sim.serializeSave(), world });
+        worker.postMessage({ save: sim.serializeSave(), world: playWorld });
     }
     async function resolvePresidentialElection() {
         if (!sim || busyRef.current || countingElection)
@@ -546,7 +647,7 @@ export default function App() {
         setBusy(true);
         const before = sim.getSnapshot().history.length;
         try {
-            await checkpointAutosave("before presidential count");
+            await checkpointAutosave("before presidential count", { critical: true });
         }
         catch {
             feedback.setNotice("The pre-count autosave could not be written. The count has not started.");
@@ -571,7 +672,7 @@ export default function App() {
         }
     }
     async function endTurn() {
-        if (!sim || !world || busyRef.current || countingElection)
+        if (!sim || !playWorld || busyRef.current || countingElection)
             return;
         busyRef.current = true;
         const before = sim.getSnapshot().history.length;
@@ -589,7 +690,9 @@ export default function App() {
         setBusyLabel(nominationDue ? "Counting nominations…" : "Processing…");
         setBusy(true);
         try {
-            await checkpointAutosave(nominationDue ? "before nomination count" : "before turn");
+            await checkpointAutosave(nominationDue ? "before nomination count" : "before turn", {
+                critical: nominationDue,
+            });
         }
         catch {
             feedback.setNotice("Autosave failed, so the turn was not advanced.");
@@ -602,11 +705,17 @@ export default function App() {
             worker.terminate();
             try {
                 if (event.data.ok) {
-                    const restored = restoreSimulation(event.data.save, world);
-                    setTurnEvents(restored.getSnapshot().history.slice(before));
+                    const restored = restoreSimulation(event.data.save, playWorld);
+                    const newEvents = restored.getSnapshot().history.slice(before);
+                    setTurnEvents(newEvents);
                     refresh(restored);
                     if (!event.data.result.ok)
                         feedback.setNotice(event.data.result.error.message);
+                    const prevDate = snap?.currentDate ?? "";
+                    const nextDate = restored.getSnapshot().currentDate;
+                    if (prevDate.slice(0, 7) !== nextDate.slice(0, 7) && shouldShowMonthSummary(newEvents)) {
+                        setMonthSummaryOpen(true);
+                    }
                 }
                 else {
                     feedback.setNotice(event.data.message);
@@ -626,13 +735,38 @@ export default function App() {
             busyRef.current = false;
             setBusy(false);
         };
-        worker.postMessage({ save: sim.serializeSave(), world });
+        worker.postMessage({ save: sim.serializeSave(), world: playWorld });
     }
     if (error) {
         return (_jsx("div", { className: "app-title", children: _jsxs("div", { className: "title-card", children: [_jsx("h1", { children: "Lorsain" }), _jsx("p", { children: error }), _jsx("button", { className: "btn", onClick: () => setError(null), children: "Back" })] }) }));
     }
     if (!world || !bundle) {
         return (_jsx("div", { className: "app-title", children: _jsxs("div", { className: "title-card", children: [_jsx("h1", { children: "Lorsain" }), _jsx("p", { children: "Loading Terena\u2026" })] }) }));
+    }
+    if (mode === "scenarioStudio") {
+        return (_jsx("div", { className: "app-title scenario-host", children: _jsx(ScenarioStudioHubScreen, { onBack: () => setMode("title"), onImport: () => setMode("importScenario"), onOpenEditor: (doc) => {
+                    setEditorSeedDoc(doc);
+                    setMode("scenarioEditor");
+                } }) }));
+    }
+    if (mode === "importScenario") {
+        return (_jsx("div", { className: "app-title scenario-host", children: _jsx(ScenarioImportScreen, { onBack: () => setMode("scenarioStudio"), onPlay: (doc) => beginCustomScenario(doc), onEdit: (doc) => {
+                    setEditorSeedDoc(doc);
+                    setMode("scenarioEditor");
+                } }) }));
+    }
+    if (mode === "scenarioEditor" && editorSeedDoc) {
+        return (_jsx("div", { className: "app-title scenario-host", children: _jsx(ScenarioEditorScreen, { initial: editorSeedDoc, onBack: () => setMode("title"), onPlay: (doc) => beginCustomScenario(doc) }) }));
+    }
+    if (mode === "customSelect" && customWorld && customScenarioDoc) {
+        const roster = customWorld.politicians.filter((p) => p.alive && !p.retired);
+        return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: customScenarioDoc.name }), _jsxs("p", { className: "muted", children: [customScenarioDoc.countryName, " \u00B7 ", customScenarioDoc.startDate, " \u00B7 choose your politician"] })] }), _jsx("div", { className: "featured-grid", children: roster.map((p) => {
+                        const party = p.partyId ? customWorld.partyDefinitions[p.partyId]?.name : "Independent";
+                        return (_jsxs("article", { className: "featured-start", children: [_jsx("h3", { children: p.id }), _jsx("p", { children: party }), _jsx("button", { className: "btn", type: "button", onClick: () => startGame(p.id), children: "Begin career" })] }, p.id));
+                    }) }), _jsx("button", { className: "btn secondary", type: "button", onClick: () => setMode("title"), children: "Back" })] }));
+    }
+    if (mode === "settings") {
+        return (_jsx("div", { className: "app-title settings-title-host", children: _jsx("div", { className: "title-card settings-title-card", children: _jsx(SettingsPage, { onBack: () => setMode("title") }) }) }));
     }
     if (mode === "title") {
         const latest = saves[0] ?? null;
@@ -643,7 +777,7 @@ export default function App() {
                                             } }), _jsx("strong", { children: latestSummary.party })] }), _jsxs("dl", { className: "continue-dossier-facts", children: [_jsxs("div", { children: [_jsx("dt", { children: "Political context" }), _jsx("dd", { children: latestSummary.context })] }), _jsxs("div", { children: [_jsx("dt", { children: "Career length" }), _jsx("dd", { children: latestSummary.played })] }), _jsxs("div", { children: [_jsx("dt", { children: "Last saved" }), _jsx("dd", { children: new Date(latest.savedAt).toLocaleString([], {
                                                         dateStyle: "medium",
                                                         timeStyle: "short",
-                                                    }) })] })] }), _jsx("button", { className: "btn title-continue", onClick: () => loadFile(latest.save), children: "Continue" })] })) : (_jsxs("article", { className: "continue-dossier empty", children: [_jsx("div", { className: "kicker", children: "No current career" }), _jsx("h2", { children: "Enter Terenan politics" }), _jsx("p", { children: "Choose a politician and begin on 1 January 2028." }), _jsx("button", { className: "btn title-continue", onClick: () => setMode("select"), children: "Start a new game" })] })), _jsxs("nav", { className: "title-actions", "aria-label": "Main menu", children: [_jsxs("button", { type: "button", onClick: () => setMode("select"), children: [_jsx("span", { children: "New Game" }), _jsx("small", { children: "Choose a political life" })] }), _jsxs("button", { type: "button", onClick: () => setMode("load"), disabled: saves.length === 0, children: [_jsx("span", { children: "Load Game" }), _jsxs("small", { children: [saves.length, " saved career", saves.length === 1 ? "" : "s"] })] }), _jsxs("button", { type: "button", disabled: true, children: [_jsx("span", { children: "Settings" }), _jsx("small", { children: "Display and accessibility" })] })] })] })] }));
+                                                    }) })] })] }), _jsx("button", { className: "btn title-continue", onClick: () => loadFile(latest.save), children: "Continue" })] })) : (_jsxs("article", { className: "continue-dossier empty", children: [_jsx("div", { className: "kicker", children: "No current career" }), _jsx("h2", { children: "Enter Terenan politics" }), _jsx("p", { children: "Choose a politician and begin on 1 January 2028." }), _jsx("button", { className: "btn title-continue", onClick: () => setMode("select"), children: "Start a new game" })] })), _jsxs("nav", { className: "title-actions", "aria-label": "Main menu", children: [_jsxs("button", { type: "button", onClick: () => setMode("select"), children: [_jsx("span", { children: "New Game" }), _jsx("small", { children: "Choose a political life" })] }), _jsxs("button", { type: "button", onClick: () => setMode("load"), disabled: saves.length === 0, children: [_jsx("span", { children: "Load Game" }), _jsxs("small", { children: [saves.length, " saved career", saves.length === 1 ? "" : "s"] })] }), _jsxs("button", { type: "button", onClick: () => setMode("scenarioStudio"), children: [_jsx("span", { children: "Scenario Studio" }), _jsx("small", { children: "Quick build, import, or edit custom worlds" })] }), _jsxs("button", { type: "button", onClick: () => setMode("settings"), children: [_jsx("span", { children: "Settings" }), _jsx("small", { children: "Display and accessibility" })] })] })] })] }));
     }
     if (mode === "load") {
         return (_jsxs("div", { className: "load-career-screen", children: [_jsxs("header", { className: "load-career-head", children: [_jsxs("div", { children: [_jsx("div", { className: "kicker", children: "LORSAIN RECORDS" }), _jsx("h1", { children: "Saved political careers" }), _jsx("p", { children: "Resume a career with its office, allegiance and political context intact." })] }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" }), _jsxs("label", { className: "btn secondary", children: ["Import save", _jsx("input", { type: "file", accept: "application/json", hidden: true, onChange: async (e) => {
@@ -793,35 +927,36 @@ export default function App() {
         const rosterCard = (f) => (_jsx(PoliticianCard, { catalog: tempCatalog, world: world, politicianId: f.id, name: f.name, partyLabel: f.party ?? "Independent", partyId: f.party_id ?? null, ...(f.office ? { office: f.office } : {}), ...(f.home ? { home: f.home } : {}), descriptor: officeKind(f) === "minister" || (f.office ?? "").toLowerCase().includes("mayor")
                 ? roleDescription(f)
                 : (f.notes ?? f.display_summary ?? roleDescription(f)), action: _jsx("button", { className: "btn", onClick: () => startGame(f.id), children: "Play" }) }, f.id));
-        return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: "Choose your career" }), _jsx("p", { className: "muted", children: "Featured starts are full-depth political roles. Search the roster for Limited offices and other public figures. Hidden traits are never shown." })] }), _jsxs("div", { className: "row new-game-filters", children: [_jsx("input", { className: "search", placeholder: "Search by name, office, party, or home", value: query, onChange: (e) => {
+        return (_jsxs("div", { className: "page new-game-page", children: [_jsxs("div", { className: "new-game-header", children: [_jsx("h2", { className: "serif-head", children: "Choose your career" }), _jsx("p", { className: "muted", children: "Featured starts are full-depth political roles. Search the roster for Limited offices and other public figures. Hidden traits are never shown. New Game always begins in Terena." }), _jsxs("label", { className: "settings-toggle new-game-tutorial-toggle", "data-qa": "new-game-tutorial-toggle", children: [_jsx("input", { type: "checkbox", checked: settings.tutorialMode, onChange: (e) => updateSettings({ tutorialMode: e.target.checked }) }), _jsxs("span", { children: [_jsx("strong", { children: "Tutorial Mode" }), _jsx("small", { className: "muted", children: "First-use lessons after you begin. Change anytime in Settings; completed lessons stay until Reset." })] })] })] }), _jsxs("div", { className: "row new-game-filters", children: [_jsx("input", { className: "search", placeholder: "Search by name, office, party, or home", "aria-label": "Search politicians", value: query, onChange: (e) => {
                                 setQuery(e.target.value);
                                 setBrowsePage(0);
-                            } }), _jsxs("select", { value: partyFilter, onChange: (e) => {
+                            } }), _jsxs("select", { value: partyFilter, "aria-label": "Filter by party", onChange: (e) => {
                                 setPartyFilter(e.target.value);
                                 setBrowsePage(0);
-                            }, children: [_jsx("option", { value: "all", children: "All parties" }), Object.values(world.partyDefinitions).map((p) => (_jsx("option", { value: p.partyId, children: p.name }, p.partyId)))] }), _jsxs("select", { value: officeFilter, onChange: (e) => {
+                            }, children: [_jsx("option", { value: "all", children: "All parties" }), Object.values(world.partyDefinitions).map((p) => (_jsx("option", { value: p.partyId, children: p.name }, p.partyId)))] }), _jsxs("select", { value: officeFilter, "aria-label": "Filter by office", onChange: (e) => {
                                 setOfficeFilter(e.target.value);
                                 setBrowsePage(0);
-                            }, children: [_jsx("option", { value: "all", children: "All offices" }), _jsx("option", { value: "president", children: "President" }), _jsx("option", { value: "governor", children: "Governors" }), _jsx("option", { value: "minister", children: "Ministers" }), _jsx("option", { value: "leader", children: "Party leaders" }), _jsx("option", { value: "assembly", children: "Assembly" }), _jsx("option", { value: "courts", children: "Courts" })] }), _jsxs("select", { value: provinceFilter, onChange: (e) => {
+                            }, children: [_jsx("option", { value: "all", children: "All offices" }), _jsx("option", { value: "president", children: "President" }), _jsx("option", { value: "governor", children: "Governors" }), _jsx("option", { value: "minister", children: "Ministers" }), _jsx("option", { value: "leader", children: "Party leaders" }), _jsx("option", { value: "assembly", children: "Assembly" }), _jsx("option", { value: "courts", children: "Courts" })] }), _jsxs("select", { value: provinceFilter, "aria-label": "Filter by province", onChange: (e) => {
                                 setProvinceFilter(e.target.value);
                                 setBrowsePage(0);
                             }, children: [_jsx("option", { value: "all", children: "All provinces" }), provinces.map((home) => (_jsx("option", { value: home, children: home }, home)))] }), _jsx("button", { className: "btn secondary", onClick: () => setMode("title"), children: "Back" })] }), !searching ? (_jsxs(_Fragment, { children: [_jsxs("div", { className: "new-game-section-head", children: [_jsx("h3", { children: "Featured starts" }), _jsx("p", { className: "muted", children: "Name, role, gameplay focus, and complexity \u2014 President, Governor, Assembly, courts, and party leadership with real monthly work." })] }), _jsx("div", { className: "featured-start-grid", children: featured.map(featuredCard) }), _jsxs("div", { className: "new-game-section-head", style: { marginTop: "1.25rem" }, children: [_jsx("h3", { children: "Full roster" }), _jsxs("p", { className: "muted", children: ["Ordinary MPs, Limited ministers/mayors, and other public figures \u2014 ", browse.length, " ", "remaining. Use search and filters for the complete list."] })] })] })) : (_jsxs("p", { className: "muted", children: [filtered.length, " matching politicians"] })), _jsx("div", { className: "featured-grid", children: pageRows.map(rosterCard) }), pageCount > 1 ? (_jsxs("div", { className: "row", style: { marginTop: "0.75rem" }, children: [_jsx("button", { className: "btn secondary", disabled: page <= 0, onClick: () => setBrowsePage((p) => Math.max(0, p - 1)), children: "Previous" }), _jsxs("span", { className: "muted", children: ["Page ", page + 1, " of ", pageCount] }), _jsx("button", { className: "btn secondary", disabled: page >= pageCount - 1, onClick: () => setBrowsePage((p) => p + 1), children: "Next" })] })) : null] }));
     }
-    if (!sim || !snap || !catalog)
+    if (!sim || !snap || !catalog || !playWorld)
         return null;
+    const runtimeWorld = playWorld;
     const player = snap.politicians[snap.playerPoliticianId];
-    const offices = playerOffices(world, snap, snap.playerPoliticianId);
+    const offices = playerOffices(runtimeWorld, snap, snap.playerPoliticianId);
     const provincialMember = provincialLegislatorForPolitician(snap, snap.playerPoliticianId);
     const roleKind = Object.values(snap.officeTerms)
         .filter((term) => term.holderId === snap.playerPoliticianId &&
         (term.status === "active" || term.status === "suspended"))
-        .map((term) => world.offices[term.officeId]?.kind)
+        .map((term) => runtimeWorld.offices[term.officeId]?.kind)
         .find(Boolean) ??
         (provincialMember?.serviceStartDate && provincialMember.serviceEndDate == null
             ? "provincial_legislator"
             : "private_citizen");
     const interrupt = snap.pendingInterrupt;
-    const playerDecisions = collectPlayerActionableDecisions(world, snap);
+    const playerDecisions = collectPlayerActionableDecisions(runtimeWorld, snap);
     const decisionScreen = (kind) => {
         if (kind === "assembly_filing")
             return "career";
@@ -836,6 +971,8 @@ export default function App() {
             kind === "war_powers")
             return "foreign";
         if (kind === "sign_bill")
+            return "executive";
+        if (kind === "form_government")
             return "executive";
         if (kind === "interrupt" && interrupt?.code.includes("ELECTION"))
             return "elections";
@@ -853,7 +990,7 @@ export default function App() {
     for (const election of Object.values(snap.provincialRuntime.elections)) {
         if (election.status !== "filing_open" || election.playerDecision != null)
             continue;
-        const playerHome = player.homeProvinceId ?? world.politicianHomeProvince[player.id];
+        const playerHome = player.homeProvinceId ?? runtimeWorld.politicianHomeProvince[player.id];
         if (election.provinceId !== playerHome && election.incumbentId !== player.id)
             continue;
         attentionItems.push({
@@ -867,7 +1004,7 @@ export default function App() {
     for (const election of Object.values(snap.provincialRuntime.assemblyElections)) {
         if (election.status !== "filing_open" || election.playerDecision != null)
             continue;
-        const playerHome = player.homeProvinceId ?? world.politicianHomeProvince[player.id];
+        const playerHome = player.homeProvinceId ?? runtimeWorld.politicianHomeProvince[player.id];
         if (election.provinceId !== playerHome)
             continue;
         attentionItems.push({
@@ -887,7 +1024,7 @@ export default function App() {
     const briefingItems = briefingSource.map((event) => ({
         id: event.id,
         date: event.date,
-        label: eventDisplay(catalog, world, snap, event),
+        label: eventDisplay(catalog, runtimeWorld, snap, event),
         watched: [...event.actorIds, ...event.entityIds].some((id) => watchedIds.has(id)) ||
             [...watchedIds].some((id) => JSON.stringify(event.payload).includes(id)),
     }));
@@ -905,22 +1042,56 @@ export default function App() {
             Number(campaignDate.slice(5, 7)) -
             Number(snap.currentDate.slice(5, 7)))
         : null;
-    const provinceId = governedProvinceId(world, snap, player.id);
+    const provinceId = governedProvinceId(runtimeWorld, snap, player.id);
     const roleActions = activeCampaign?.actionPointsRemaining ??
         (provinceId ? snap.provincialRuntime.provinces[provinceId]?.actionPointsRemaining : null);
     const statusSegments = [
-        `Standing: ${publicStandingLabel(world, snap, player.id)}`,
+        `Standing: ${publicStandingLabel(runtimeWorld, snap, player.id)}`,
         ...(roleActions != null ? [`${roleActions} action${roleActions === 1 ? "" : "s"}`] : []),
         ...(activeCampaign && monthsRemaining != null
             ? [`${monthsRemaining} month${monthsRemaining === 1 ? "" : "s"} to election`]
             : []),
     ];
+    const categorizedItems = filterAttentionByNotificationSettings(sortCategorizedAttention(attentionItems.map((item) => categorizeAttention(item, Boolean(interrupt?.requiresResolution)))), settings.notifications);
+    const visibleAttentionIds = new Set(categorizedItems.map((item) => item.id));
+    const visibleAttentionItems = attentionItems.filter((item) => visibleAttentionIds.has(item.id));
     const lastSavedLabel = lastSavedAt
         ? `Last saved ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-        : "Autosave runs before every turn and national count.";
-    return (_jsxs(GameShell, { screen: screen, onNavigate: setScreen, date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(world, player.partyId, snap)}`, decisionCount: attentionItems.length, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: () => void endTurn(), onSave: () => void saveGame(), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), searchEntries: searchEntries, onSearchSelect: selectSearchEntry, attentionItems: attentionItems, briefingItems: briefingItems, watchlist: watchlist, onToggleWatch: (entry) => {
+        : settings.autosave
+            ? "Autosave runs before every turn; safety checkpoints also run before national counts."
+            : "Ordinary autosave is off; safety checkpoints still run before national counts.";
+    const inspectorFocus = globalFocus
+        ? (searchEntries.find((e) => e.kind === globalFocus.kind && e.id === globalFocus.id) ?? null)
+        : null;
+    const playerPartyId = snap.politicians[snap.playerPoliticianId]?.partyId ?? null;
+    const playerCaucusLeadership = playerPartyId != null
+        ? (snap.legislatureRuntime.caucusLeadership[playerPartyId] ?? null)
+        : null;
+    const playerIsWhip = !!playerCaucusLeadership && playerCaucusLeadership.whipId === snap.playerPoliticianId;
+    const assemblyVotesDue = playerDecisions.some((d) => {
+        switch (d.kind) {
+            case "committee_vote":
+            case "floor_vote":
+            case "repassage_vote":
+            case "amendment_vote":
+            case "constitutional_amendment_vote":
+            case "motion_vote":
+                return true;
+            default:
+                return false;
+        }
+    });
+    const activeTutorialLesson = nextIncompleteLesson(settings.completedTutorialLessons, lessonForScreen(screen, {
+        selectedBill: Boolean(selectedBill),
+        votesDue: assemblyVotesDue && screen === "assembly",
+        whipRelevant: screen === "assembly" &&
+            playerIsWhip &&
+            settings.completedTutorialLessons.includes("bills") &&
+            settings.completedTutorialLessons.includes("voting"),
+    }));
+    return (_jsxs(GameShell, { screen: screen, onNavigate: (s) => navigateTo(s, null), date: snap.currentDate, playerLine: `${politicianDisplayName(catalog, snap.playerPoliticianId)} · ${offices[0] ?? "No office"} · ${partyDisplayName(runtimeWorld, player.partyId, snap)}`, decisionCount: visibleAttentionItems.length, roleKind: roleKind, campaignActive: Boolean(playerCampaign(snap)), busy: busy || countingElection, busyLabel: countingElection ? "Counting Assembly ballots…" : busyLabel, endTurnDisabled: Boolean(interrupt?.requiresResolution), onEndTurn: () => void endTurn(), onSave: () => void saveGame(), canGoBack: canGoBack(navHistory), canGoForward: canGoForward(navHistory), onBack: goBack, onForward: goForward, categorizedItems: categorizedItems, inspectorFocus: inspectorFocus, world: runtimeWorld, snap: snap, catalog: catalog, onEntityNavigate: handleEntityNavigate, monthSummaryOpen: monthSummaryOpen, onCloseMonthSummary: () => setMonthSummaryOpen(false), onExport: () => downloadSave(sim.serializeSave(), `lorsain-${snap.currentDate}.json`), searchEntries: searchEntries, onSearchSelect: selectSearchEntry, attentionItems: visibleAttentionItems, briefingItems: briefingItems, watchlist: watchlist, onToggleWatch: (entry) => {
             const key = `${entry.kind}:${entry.id}`;
             setWatchlist((items) => items.includes(key) ? items.filter((item) => item !== key) : [...items, key]);
-        }, statusSegments: statusSegments, lastSavedLabel: lastSavedLabel, children: [screen === "home" || screen === "office" ? (_jsx(DecisionPanel, { world: world, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm })) : playerDecisions.length ? (_jsxs("button", { type: "button", className: "required-decisions-indicator", onClick: () => setScreen("home"), children: [_jsx("span", { children: "Required decisions" }), _jsx("strong", { children: playerDecisions.length }), _jsx("small", { children: "Open the political inbox on Home" })] })) : null, _jsx(GamePages, { screen: screen, world: world, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm, globalFocus: globalFocus, setGlobalFocus: setGlobalFocus }), import.meta.env.DEV ? (_jsx("output", { id: "lorsain-browser-qa-state", hidden: true, "data-ready": "true", "data-screen": screen, "data-player": snap.playerPoliticianId, "data-date": snap.currentDate, children: "Browser QA ready" })) : null, feedback.overlay()] }));
+        }, statusSegments: statusSegments, lastSavedLabel: lastSavedLabel, children: [screen === "home" || screen === "office" ? (_jsx(DecisionPanel, { world: runtimeWorld, snap: snap, sim: sim, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm })) : playerDecisions.length ? (_jsxs("button", { type: "button", className: "required-decisions-indicator", onClick: () => setScreen("home"), children: [_jsx("span", { children: "Required decisions" }), _jsx("strong", { children: playerDecisions.length }), _jsx("small", { children: "Open the political inbox on Home" })] })) : null, _jsx(GamePages, { screen: screen, world: runtimeWorld, snap: snap, sim: sim, bundle: bundle, catalog: catalog, figures: figures, offices: offices, events: turnEvents, campaign: playerCampaign(snap), selectedBill: selectedBill, setSelectedBill: setSelectedBill, mapHover: mapHover, setMapHover: setMapHover, debug: debug, setDebug: setDebug, onDone: () => refresh(sim), report: feedback.report, countingElection: countingElection, onResolveAssembly: resolveAssemblyElection, onResolvePresidential: () => void resolvePresidentialElection(), askConfirm: feedback.askConfirm, globalFocus: globalFocus, setGlobalFocus: setGlobalFocus, onEntityNavigate: handleEntityNavigate, onNavigate: (s) => navigateTo(s, null) }), _jsx(TutorialCoach, { activeLesson: activeTutorialLesson }), import.meta.env.DEV ? (_jsx("output", { id: "lorsain-browser-qa-state", hidden: true, "data-ready": "true", "data-screen": screen, "data-player": snap.playerPoliticianId, "data-date": snap.currentDate, children: "Browser QA ready" })) : null, feedback.overlay()] }));
 }
 //# sourceMappingURL=App.js.map

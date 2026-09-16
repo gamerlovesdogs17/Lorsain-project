@@ -6,6 +6,8 @@ import {
   estimatedProvisionEffects,
   issuesForMinistryOffice,
   departmentFromOfficeId,
+  isHungAssembly,
+  playerCanSteerFormation,
   type CommandResult,
   type KernelWorld,
   type SimState,
@@ -32,8 +34,10 @@ import {
   WorkLayout,
 } from "./ui/kit.js";
 import { PoliticianProfile } from "./ui/politician.js";
+import { FormGovernmentWorkspace } from "./formGovernmentWorkspace.js";
 
-type GovTab = "overview" | "executive" | "cabinet" | "agenda" | "budget" | "implementation";
+type GovTab =
+  "overview" | "formation" | "executive" | "cabinet" | "agenda" | "budget" | "implementation";
 type MinisterWorkspaceTab = "overview" | "implementation" | "policy" | "legislation" | "budget";
 
 const PLATFORM_ISSUE_LABELS: Record<string, string> = {
@@ -184,8 +188,12 @@ export function ExecutivePage(props: {
   const vacantMinistries = cab.filter((m) => m.holderId == null);
   const governing = props.snap.governingRuntime;
   const coalition = activeCoalition(props.snap);
+  const hungAssembly = isHungAssembly(props.world, props.snap);
+  const canFormGovernment = playerCanSteerFormation(props.world, props.snap);
   const [selectedMinisterOfficeId, setSelectedMinisterOfficeId] = useState<string | null>(null);
-  const [govTab, setGovTab] = useState<GovTab>("overview");
+  const [govTab, setGovTab] = useState<GovTab>(
+    hungAssembly && canFormGovernment ? "formation" : "overview",
+  );
   const [appointOfficeId, setAppointOfficeId] = useState(vacantMinistries[0]?.officeId ?? "");
   const [appointQuery, setAppointQuery] = useState("");
   const [appointPoliticianId, setAppointPoliticianId] = useState<string | null>(null);
@@ -261,6 +269,7 @@ export function ExecutivePage(props: {
 
   const govTabs: Array<{ id: GovTab; label: string }> = [
     { id: "overview", label: "Overview" },
+    ...(hungAssembly ? [{ id: "formation" as const, label: "Form a government" }] : []),
     { id: "executive", label: "Executive" },
     { id: "cabinet", label: "Cabinet" },
     { id: "agenda", label: "Agenda" },
@@ -305,21 +314,38 @@ export function ExecutivePage(props: {
   return (
     <WorkLayout
       className={`government-desk-v2${president ? " presidential-desk" : ""}`}
+      data-tutorial="government-desk"
       header={
-        <PageHeader
-          kicker={president ? "Presidential command" : "Executive branch"}
-          title="Government"
-          subtitle={
-            president
-              ? "Cabinet, agenda, budget, and delivery under your authority."
-              : "President, cabinet, agenda, fiscal cycle, and implementation."
-          }
-        />
+        <div className="object-first-lead">
+          <PageHeader
+            kicker={president ? "Presidential command" : "Executive branch"}
+            title="Government"
+            subtitle={
+              president
+                ? "Cabinet, agenda, budget, and delivery under your authority."
+                : "President, cabinet, agenda, fiscal cycle, and implementation."
+            }
+          />
+          <p className="muted object-first-hint">
+            Start with who holds power and what needs a decision — tabs deepen the dossier.
+          </p>
+        </div>
       }
       main={
         <>
           <BriefStrip items={overviewStrip} />
           <TabBar tabs={govTabs} value={govTab} onChange={setGovTab} />
+
+          {govTab === "formation" ? (
+            <FormGovernmentWorkspace
+              world={props.world}
+              snap={props.snap}
+              sim={props.sim}
+              catalog={props.catalog}
+              report={props.report}
+              onDone={props.onDone}
+            />
+          ) : null}
 
           {govTab === "overview" ? (
             <div className="gov-institution">

@@ -27,7 +27,14 @@ import {
   formatWhipVoteOutlook,
   playerEffectiveInformationAccess,
   explainVoteQualitative,
+  assemblyVotesRequired,
+  formatConstitutionalAssemblyThreshold,
+  amendmentArticleSummary,
+  amendmentTouchesCore,
+  provincesRequiredForRatification,
+  amendmentRatificationStepsRemaining,
   type BillState,
+  type ConstitutionalAmendment,
   type WhipStrength,
   type WhipPersuadeApproach,
   type CommandResult,
@@ -69,9 +76,9 @@ import {
   type PolicyChoiceOption,
 } from "./ui/kit.js";
 import { PoliticianProfile } from "./ui/politician.js";
-import { TerenaMap } from "./map/TerenaMap.js";
 
 type AssemblyTab = "overview" | "legislation" | "committees" | "delegation";
+type ConstitutionalDetailTab = "overview" | "support" | "procedure" | "history";
 type LegislationSubTab = "bills" | "introduce" | "votes" | "statutes";
 type BillDetailTab = "overview" | "provisions" | "amendments" | "support" | "procedure" | "history";
 type LawbookBrowseMode = "provisions" | "acts";
@@ -176,7 +183,7 @@ function AssemblyHemicycle(props: {
 
 function oneLine(text: string): string {
   const sentence = text.split(/(?<=\.)\s/)[0] ?? text;
-  return sentence.length > 110 ? `${sentence.slice(0, 107).trimEnd()}…` : sentence;
+  return sentence.length > 110 ? `${sentence.slice(0, 107).trimEnd()}Ã¢â‚¬Â¦` : sentence;
 }
 
 function formatFiscal(impact: number | null | undefined): string | undefined {
@@ -327,6 +334,24 @@ function mpLeanLabel(lean: MpBillLean): string {
   return "Uncertain";
 }
 
+function constitutionalStatusLabel(status: ConstitutionalAmendment["status"]): string {
+  return status.replace(/_/g, " ");
+}
+
+function amendmentThresholdFor(
+  world: KernelWorld,
+  snap: SimState,
+  amendment: ConstitutionalAmendment,
+): { required: number; seatCount: number; label: string } {
+  const seatCount = world.legislativeConstitution.assemblySeatCount;
+  const required = assemblyVotesRequired(snap, amendmentTouchesCore(amendment), seatCount);
+  return {
+    required,
+    seatCount,
+    label: formatConstitutionalAssemblyThreshold(required, seatCount),
+  };
+}
+
 export function AssemblyPage(props: {
   world: KernelWorld;
   snap: SimState;
@@ -340,6 +365,7 @@ export function AssemblyPage(props: {
   debug?: boolean;
   setDebug?: (v: boolean) => void;
   onEntityNavigate?: (kind: import("./ui/entityLink.js").EntityLinkKind, id: string) => void;
+  globalFocus?: { kind: string; id: string } | null;
 }) {
   const { debugMode } = useSettings();
   const exactInternals = canShowExactInternals(props.debug ?? debugMode);
@@ -397,6 +423,8 @@ export function AssemblyPage(props: {
   const [lawbookActId, setLawbookActId] = useState("");
   const [draftLawAction, setDraftLawAction] = useState<"amend" | "replace" | "repeal" | null>(null);
   const [draftTargetLawId, setDraftTargetLawId] = useState<string | null>(null);
+  const [selectedConstitutionalId, setSelectedConstitutionalId] = useState<string | null>(null);
+  const [constitutionalTab, setConstitutionalTab] = useState<ConstitutionalDetailTab>("overview");
 
   const mps = currentAssemblyMemberIds(props.world, props.snap);
   const seatCount = props.world.legislativeConstitution.assemblySeatCount;
@@ -419,13 +447,22 @@ export function AssemblyPage(props: {
     );
 
   const bill = props.selectedBill ? props.snap.legislatureRuntime.bills[props.selectedBill] : null;
+  const constitutionalAmendment = selectedConstitutionalId
+    ? (props.snap.provincialRuntime.constitutionalAmendments[selectedConstitutionalId] ?? null)
+    : null;
+  const whipSubjectId =
+    bill?.id ??
+    (constitutionalAmendment?.status === "proposed" ? constitutionalAmendment.id : null);
   const mp = isMp(props.world, props.snap, props.snap.playerPoliticianId);
   const speaker = isSpeaker(props.world, props.snap, props.snap.playerPoliticianId);
-  const whip = bill ? whipEstimate(props.world, props.snap, bill.id) : null;
+  const whip = whipSubjectId ? whipEstimate(props.world, props.snap, whipSubjectId) : null;
   const votes = Object.values(props.snap.legislatureRuntime.legislativeVotes).sort((a, b) =>
     a.id < b.id ? 1 : -1,
   );
   const allBills = Object.values(props.snap.legislatureRuntime.bills).slice().reverse();
+  const pendingConstitutional = Object.values(props.snap.provincialRuntime.constitutionalAmendments)
+    .filter((a) => a.status === "proposed" || a.status === "ratifying")
+    .sort((a, b) => b.proposedDate.localeCompare(a.proposedDate) || a.id.localeCompare(b.id));
   const enactedLaws = Object.values(props.snap.legislatureRuntime.enactedLaws)
     .filter((law) => {
       const query = lawQuery.trim().toLowerCase();
@@ -453,9 +490,14 @@ export function AssemblyPage(props: {
 
   const actionable = collectPlayerActionableDecisions(props.world, props.snap);
   const votesDue = actionable.filter((d) =>
-    ["committee_vote", "floor_vote", "repassage_vote", "amendment_vote", "motion_vote"].includes(
-      d.kind,
-    ),
+    [
+      "committee_vote",
+      "floor_vote",
+      "repassage_vote",
+      "amendment_vote",
+      "constitutional_amendment_vote",
+      "motion_vote",
+    ].includes(d.kind),
   );
 
   const run = (command: Parameters<Simulation["executeCommand"]>[0]) => {
@@ -464,8 +506,17 @@ export function AssemblyPage(props: {
   };
 
   const selectBill = (id: string) => {
+    setSelectedConstitutionalId(null);
     props.setSelectedBill(id);
     setBillTab("overview");
+    setAssemblyTab("legislation");
+    setLegislationSubTab("bills");
+  };
+
+  const selectConstitutionalAmendment = (id: string) => {
+    props.setSelectedBill(null);
+    setSelectedConstitutionalId(id);
+    setConstitutionalTab("overview");
     setAssemblyTab("legislation");
     setLegislationSubTab("bills");
   };
@@ -477,11 +528,26 @@ export function AssemblyPage(props: {
   }, [props.selectedBill, props.snap.legislatureRuntime.bills, props.setSelectedBill]);
 
   useEffect(() => {
-    if (props.selectedBill && assemblyTab !== "legislation") {
+    if (
+      selectedConstitutionalId &&
+      !props.snap.provincialRuntime.constitutionalAmendments[selectedConstitutionalId]
+    ) {
+      setSelectedConstitutionalId(null);
+    }
+  }, [selectedConstitutionalId, props.snap.provincialRuntime.constitutionalAmendments]);
+
+  useEffect(() => {
+    if (props.globalFocus?.kind === "Amendment") {
+      selectConstitutionalAmendment(props.globalFocus.id);
+    }
+  }, [props.globalFocus?.kind, props.globalFocus?.id]);
+
+  useEffect(() => {
+    if ((props.selectedBill || selectedConstitutionalId) && assemblyTab !== "legislation") {
       setAssemblyTab("legislation");
       setLegislationSubTab("bills");
     }
-  }, [props.selectedBill, assemblyTab]);
+  }, [props.selectedBill, selectedConstitutionalId, assemblyTab]);
 
   useEffect(() => {
     try {
@@ -731,105 +797,160 @@ export function AssemblyPage(props: {
   const rail =
     mp || speaker ? (
       <>
-        <SectionDivider
-          title="Votes due"
-          hint={votesDue.length ? "Cast before month close" : "None pending"}
-        />
-        {votesDue.length === 0 ? (
-          <p className="muted">No legislative votes waiting on you.</p>
-        ) : (
-          votesDue.map((d) => (
-            <div key={d.key} className="rail-vote">
-              <div className="entity-row-title">{d.label}</div>
-              <div className="row" style={{ marginTop: "0.35rem" }}>
-                {d.kind === "motion_vote" ? (
-                  <>
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() =>
-                        run({ type: "CAST_MOTION_VOTE", motionId: d.motionId!, choice: "yes" })
-                      }
-                    >
-                      Yes
-                    </button>
-                    <button
-                      type="button"
-                      className="btn secondary"
-                      onClick={() =>
-                        run({ type: "CAST_MOTION_VOTE", motionId: d.motionId!, choice: "no" })
-                      }
-                    >
-                      No
-                    </button>
-                    <button
-                      type="button"
-                      className="btn secondary"
-                      onClick={() =>
-                        run({ type: "CAST_MOTION_VOTE", motionId: d.motionId!, choice: "abstain" })
-                      }
-                    >
-                      Abstain
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() =>
-                        run({
-                          type: "CAST_LEGISLATIVE_VOTE",
-                          billId: d.billId!,
-                          stage: d.stage!,
-                          choice: "yes",
-                          ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
-                        })
-                      }
-                    >
-                      Yes
-                    </button>
-                    <button
-                      type="button"
-                      className="btn secondary"
-                      onClick={() =>
-                        run({
-                          type: "CAST_LEGISLATIVE_VOTE",
-                          billId: d.billId!,
-                          stage: d.stage!,
-                          choice: "no",
-                          ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
-                        })
-                      }
-                    >
-                      No
-                    </button>
-                    <button
-                      type="button"
-                      className="btn secondary"
-                      onClick={() =>
-                        run({
-                          type: "CAST_LEGISLATIVE_VOTE",
-                          billId: d.billId!,
-                          stage: d.stage!,
-                          choice: "abstain",
-                          ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
-                        })
-                      }
-                    >
-                      Abstain
-                    </button>
-                  </>
-                )}
+        <div data-tutorial="assembly-votes-due">
+          <SectionDivider
+            title="Votes due"
+            hint={votesDue.length ? "Cast before month close" : "None pending"}
+          />
+          {votesDue.length === 0 ? (
+            <p className="muted">No legislative votes waiting on you.</p>
+          ) : (
+            votesDue.map((d) => (
+              <div key={d.key} className="rail-vote">
+                <div className="entity-row-title">{d.label}</div>
+                <div className="row" style={{ marginTop: "0.35rem" }}>
+                  {d.kind === "motion_vote" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() =>
+                          run({ type: "CAST_MOTION_VOTE", motionId: d.motionId!, choice: "yes" })
+                        }
+                      >
+                        Yes
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        onClick={() =>
+                          run({ type: "CAST_MOTION_VOTE", motionId: d.motionId!, choice: "no" })
+                        }
+                      >
+                        No
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        onClick={() =>
+                          run({
+                            type: "CAST_MOTION_VOTE",
+                            motionId: d.motionId!,
+                            choice: "abstain",
+                          })
+                        }
+                      >
+                        Abstain
+                      </button>
+                    </>
+                  ) : d.kind === "constitutional_amendment_vote" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn ghost"
+                        onClick={() => selectConstitutionalAmendment(d.amendmentId!)}
+                      >
+                        Open
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() =>
+                          run({
+                            type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                            amendmentId: d.amendmentId!,
+                            choice: "yes",
+                          })
+                        }
+                      >
+                        Aye
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        onClick={() =>
+                          run({
+                            type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                            amendmentId: d.amendmentId!,
+                            choice: "no",
+                          })
+                        }
+                      >
+                        Nay
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        onClick={() =>
+                          run({
+                            type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                            amendmentId: d.amendmentId!,
+                            choice: "abstain",
+                          })
+                        }
+                      >
+                        Abstain
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() =>
+                          run({
+                            type: "CAST_LEGISLATIVE_VOTE",
+                            billId: d.billId!,
+                            stage: d.stage!,
+                            choice: "yes",
+                            ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
+                          })
+                        }
+                      >
+                        Yes
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        onClick={() =>
+                          run({
+                            type: "CAST_LEGISLATIVE_VOTE",
+                            billId: d.billId!,
+                            stage: d.stage!,
+                            choice: "no",
+                            ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
+                          })
+                        }
+                      >
+                        No
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        onClick={() =>
+                          run({
+                            type: "CAST_LEGISLATIVE_VOTE",
+                            billId: d.billId!,
+                            stage: d.stage!,
+                            choice: "abstain",
+                            ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
+                          })
+                        }
+                      >
+                        Abstain
+                      </button>
+                    </>
+                  )}
+                </div>
+                {d.billId ? (
+                  <button type="button" className="btn ghost" onClick={() => selectBill(d.billId!)}>
+                    Open bill
+                  </button>
+                ) : null}
               </div>
-              {d.billId ? (
-                <button type="button" className="btn ghost" onClick={() => selectBill(d.billId!)}>
-                  Open bill
-                </button>
-              ) : null}
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
         {speaker ? (
           <>
             <SectionDivider title="Speaker" hint="Floor schedule" />
@@ -873,15 +994,21 @@ export function AssemblyPage(props: {
       />
       <WorkLayout
         header={
-          <BriefStrip
-            data-qa="assembly-summary-strip"
-            items={[
-              { label: "Sitting", value: `${mps.length}/${seatCount}` },
-              { label: "Majority", value: majority },
-              { label: "On floor", value: floorQueue.length },
-              { label: "Votes due", value: votesDue.length },
-            ]}
-          />
+          <div className="object-first-lead assembly-object-lead">
+            <BriefStrip
+              data-qa="assembly-summary-strip"
+              items={[
+                { label: "Sitting", value: `${mps.length}/${seatCount}` },
+                { label: "Majority", value: majority },
+                { label: "On floor", value: floorQueue.length },
+                { label: "Votes due", value: votesDue.length },
+              ]}
+            />
+            <p className="muted object-first-hint">
+              Chamber status first Ã¢â‚¬â€ open a bill or votes due for the dossier, not a raw table
+              of everything.
+            </p>
+          </div>
         }
         main={
           <>
@@ -892,30 +1019,48 @@ export function AssemblyPage(props: {
                 {compositionHeader}
                 <SectionDivider
                   title="Current business"
-                  hint="Floor-scheduled and pending chamber work"
+                  hint="Floor-scheduled bills and constitutional amendments before the chamber"
                 />
-                {currentBusiness.length === 0 ? (
-                  <p className="muted">No bills on the active calendar.</p>
+                {currentBusiness.length === 0 &&
+                pendingConstitutional.filter((a) => a.status === "proposed").length === 0 ? (
+                  <p className="muted">No bills or amendments on the active calendar.</p>
                 ) : (
-                  currentBusiness.map((b) => (
-                    <EntityRow
-                      key={b.id}
-                      title={b.title}
-                      meta={`${committeeDisplayName(b.assignedCommitteeId)} · ${politicianDisplayName(props.catalog, b.sponsorId)}`}
-                      status={
-                        <StatusBadge tone={statusTone(b.status)}>
-                          {billStatusLabel(b.status)}
-                        </StatusBadge>
-                      }
-                      selected={props.selectedBill === b.id}
-                      onClick={() => selectBill(b.id)}
-                    />
-                  ))
+                  <>
+                    {pendingConstitutional
+                      .filter((a) => a.status === "proposed")
+                      .map((amendment) => {
+                        const threshold = amendmentThresholdFor(props.world, props.snap, amendment);
+                        return (
+                          <EntityRow
+                            key={amendment.id}
+                            title={amendment.title}
+                            meta={`Constitutional amendment · ${politicianDisplayName(props.catalog, amendment.sponsorId)} · ${threshold.label}`}
+                            status={<StatusBadge tone="idle">Assembly vote</StatusBadge>}
+                            selected={selectedConstitutionalId === amendment.id}
+                            onClick={() => selectConstitutionalAmendment(amendment.id)}
+                          />
+                        );
+                      })}
+                    {currentBusiness.map((b) => (
+                      <EntityRow
+                        key={b.id}
+                        title={b.title}
+                        meta={`${committeeDisplayName(b.assignedCommitteeId)} · ${politicianDisplayName(props.catalog, b.sponsorId)}`}
+                        status={
+                          <StatusBadge tone={statusTone(b.status)}>
+                            {billStatusLabel(b.status)}
+                          </StatusBadge>
+                        }
+                        selected={props.selectedBill === b.id}
+                        onClick={() => selectBill(b.id)}
+                      />
+                    ))}
+                  </>
                 )}
 
                 <SectionDivider
                   title="Constitutional amendments"
-                  hint="Assembly supermajority · provincial ratification when required"
+                  hint="Shared Assembly vote and whip desk · special ratification afterward"
                 />
                 {Object.values(props.snap.provincialRuntime.constitutionalAmendments).length ===
                 0 ? (
@@ -924,177 +1069,31 @@ export function AssemblyPage(props: {
                 {Object.values(props.snap.provincialRuntime.constitutionalAmendments)
                   .sort((a, b) => b.proposedDate.localeCompare(a.proposedDate))
                   .slice(0, 8)
-                  .map((amendment) => (
-                    <div className="constitutional-tracker" key={amendment.id}>
-                      <div>
-                        <strong>{amendment.title}</strong>
-                        <p>{amendment.summary}</p>
-                        <small>
-                          {amendment.packageChanges?.length
-                            ? `${amendment.packageChanges.length} structured change${
-                                amendment.packageChanges.length === 1 ? "" : "s"
-                              }`
-                            : amendment.ruleId
-                              ? "Legacy numeric rule amendment"
-                              : "Historical record"}
-                        </small>
-                        {amendment.currentText && amendment.proposedText ? (
-                          <div className="constitutional-redline compact">
-                            <div>
-                              <span>Current</span>
-                              <del>{amendment.currentText}</del>
-                            </div>
-                            <div>
-                              <span>Proposed</span>
-                              <ins>{amendment.proposedText}</ins>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="constitutional-progress">
-                        <span>Assembly {amendment.assemblyYes} yes</span>
-                        <strong>{amendment.ratifiedProvinceIds.length} / 13 ratified</strong>
-                        <StatusBadge
-                          tone={
-                            amendment.status === "ratified"
-                              ? "ok"
-                              : amendment.status.includes("failed")
-                                ? "warn"
-                                : "idle"
-                          }
-                        >
-                          {amendment.status.replace(/_/g, " ")}
-                        </StatusBadge>
-                      </div>
-                      <details className="constitutional-provinces">
-                        <summary>Ratification map and accessible record · 21 Assemblies</summary>
-                        <div
-                          className="constitutional-map-legend"
-                          aria-label="Ratification map legend"
-                        >
-                          <span>
-                            <i className="ratified" />
-                            Ratified
-                          </span>
-                          <span>
-                            <i className="rejected" />
-                            Rejected
-                          </span>
-                          <span>
-                            <i className="pending" />
-                            Pending
-                          </span>
-                        </div>
-                        <div className="constitutional-ratification-layout">
-                          <TerenaMap
-                            bundle={props.bundle}
-                            mode="economy"
-                            showConstituencies={false}
-                            fillFor={(feature, kind) =>
-                              kind !== "province"
-                                ? "transparent"
-                                : amendment.ratifiedProvinceIds.includes(feature.id)
-                                  ? "#5f896c"
-                                  : amendment.rejectedProvinceIds.includes(feature.id)
-                                    ? "#a86460"
-                                    : "#d2d6cf"
-                            }
-                            tooltipFor={(selection) => {
-                              const status = amendment.ratifiedProvinceIds.includes(selection.id)
-                                ? "Ratified"
-                                : amendment.rejectedProvinceIds.includes(selection.id)
-                                  ? "Rejected"
-                                  : "Pending";
-                              return (
-                                <>
-                                  <strong>{selection.name}</strong>
-                                  <div>{status}</div>
-                                </>
-                              );
-                            }}
-                          />
-                          <DataTable dense headers={["Province", "Status"]}>
-                            {props.world.provinceIds
-                              .slice()
-                              .sort((a, b) =>
-                                (props.catalog.places.get(a)?.name ?? a).localeCompare(
-                                  props.catalog.places.get(b)?.name ?? b,
-                                ),
-                              )
-                              .map((provinceId) => {
-                                const ratified = amendment.ratifiedProvinceIds.includes(provinceId);
-                                const rejected = amendment.rejectedProvinceIds.includes(provinceId);
-                                const status = ratified
-                                  ? "Ratified"
-                                  : rejected
-                                    ? "Rejected"
-                                    : "Pending";
-                                return (
-                                  <tr key={provinceId}>
-                                    <td>
-                                      {props.catalog.places.get(provinceId)?.name ??
-                                        "Unknown province"}
-                                    </td>
-                                    <td>
-                                      <StatusBadge
-                                        tone={ratified ? "ok" : rejected ? "warn" : "idle"}
-                                      >
-                                        {status}
-                                      </StatusBadge>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                          </DataTable>
-                        </div>
-                      </details>
-                      {mp &&
-                      amendment.status === "proposed" &&
-                      !amendment.assemblyVotes[props.snap.playerPoliticianId] ? (
-                        <div className="row">
-                          <button
-                            type="button"
-                            className="btn"
-                            onClick={() =>
-                              run({
-                                type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
-                                amendmentId: amendment.id,
-                                choice: "yes",
-                              })
+                  .map((amendment) => {
+                    const threshold = amendmentThresholdFor(props.world, props.snap, amendment);
+                    return (
+                      <EntityRow
+                        key={amendment.id}
+                        title={amendment.title}
+                        meta={`${amendmentArticleSummary(amendment)} · ${politicianDisplayName(props.catalog, amendment.sponsorId)} · ${threshold.label}`}
+                        status={
+                          <StatusBadge
+                            tone={
+                              amendment.status === "ratified"
+                                ? "ok"
+                                : amendment.status.includes("failed")
+                                  ? "warn"
+                                  : "idle"
                             }
                           >
-                            Aye
-                          </button>
-                          <button
-                            type="button"
-                            className="btn secondary"
-                            onClick={() =>
-                              run({
-                                type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
-                                amendmentId: amendment.id,
-                                choice: "no",
-                              })
-                            }
-                          >
-                            Nay
-                          </button>
-                          <button
-                            type="button"
-                            className="btn quiet"
-                            onClick={() =>
-                              run({
-                                type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
-                                amendmentId: amendment.id,
-                                choice: "abstain",
-                              })
-                            }
-                          >
-                            Abstain
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
+                            {constitutionalStatusLabel(amendment.status)}
+                          </StatusBadge>
+                        }
+                        selected={selectedConstitutionalId === amendment.id}
+                        onClick={() => selectConstitutionalAmendment(amendment.id)}
+                      />
+                    );
+                  })}
                 <div className="constitutional-proposal constitution-proposal-redirect">
                   <p>
                     Constitutional text is amended from{" "}
@@ -1109,7 +1108,7 @@ export function AssemblyPage(props: {
                       Law &amp; Constitution
                     </button>
                     . Open a provision, compare alternatives in the document, then introduce the
-                    measure. Assembly votes on pending amendments remain here.
+                    measure. Pending amendments open in the shared Assembly vote and whip workspace.
                   </p>
                 </div>
 
@@ -1154,7 +1153,7 @@ export function AssemblyPage(props: {
 
                 {legislationSubTab === "bills" ? (
                   <div
-                    className={`master-detail master-detail-wide${bill ? " has-selection" : ""}`}
+                    className={`master-detail master-detail-wide${bill || constitutionalAmendment ? " has-selection" : ""}`}
                   >
                     <div className="master-detail-list">
                       <div
@@ -1179,6 +1178,30 @@ export function AssemblyPage(props: {
                           aria-label="Search bills"
                         />
                       </div>
+                      {pendingConstitutional.length > 0 ? (
+                        <>
+                          <SectionDivider
+                            title="Constitutional business"
+                            hint="Uses the shared Assembly vote and whip desk"
+                          />
+                          {pendingConstitutional.map((amendment) => {
+                            const threshold = amendmentThresholdFor(
+                              props.world,
+                              props.snap,
+                              amendment,
+                            );
+                            return (
+                              <EntityRow
+                                key={amendment.id}
+                                title={amendment.title}
+                                meta={`${constitutionalStatusLabel(amendment.status)} · ${threshold.label}`}
+                                selected={selectedConstitutionalId === amendment.id}
+                                onClick={() => selectConstitutionalAmendment(amendment.id)}
+                              />
+                            );
+                          })}
+                        </>
+                      ) : null}
                       {filteredBills.length === 0 ? (
                         <EmptyState>No bills match these filters.</EmptyState>
                       ) : (
@@ -1193,7 +1216,15 @@ export function AssemblyPage(props: {
                         ))
                       )}
                     </div>
-                    <div className="master-detail-inspector" data-qa="selected-bill">
+                    <div
+                      className="master-detail-inspector"
+                      data-qa={
+                        constitutionalAmendment
+                          ? "selected-constitutional-amendment"
+                          : "selected-bill"
+                      }
+                      data-tutorial="selected-bill"
+                    >
                       {bill ? (
                         <>
                           <div className="row" style={{ marginBottom: "0.5rem" }}>
@@ -1220,18 +1251,20 @@ export function AssemblyPage(props: {
                               }
                             />
                             <BillProgressTrack status={bill.status} />
-                            <TabBar
-                              tabs={[
-                                { id: "overview", label: "Overview" },
-                                { id: "provisions", label: "Provisions" },
-                                { id: "amendments", label: "Amendments" },
-                                { id: "support", label: "Support" },
-                                { id: "procedure", label: "Procedure" },
-                                { id: "history", label: "History" },
-                              ]}
-                              value={billTab}
-                              onChange={setBillTab}
-                            />
+                            <div data-tutorial="bill-tabs">
+                              <TabBar
+                                tabs={[
+                                  { id: "overview", label: "Overview" },
+                                  { id: "provisions", label: "Provisions" },
+                                  { id: "amendments", label: "Amendments" },
+                                  { id: "support", label: "Support" },
+                                  { id: "procedure", label: "Procedure" },
+                                  { id: "history", label: "History" },
+                                ]}
+                                value={billTab}
+                                onChange={setBillTab}
+                              />
+                            </div>
 
                             {billTab === "overview" ? (
                               <div className="bill-tab-body">
@@ -1426,7 +1459,7 @@ export function AssemblyPage(props: {
                                         ? [
                                             {
                                               label: "Whip yes",
-                                              value: `${whip.likelyYes} (${whip.yesRange[0]}–${whip.yesRange[1]})`,
+                                              value: `${whip.likelyYes} (${whip.yesRange[0]}Ã¢â‚¬â€œ${whip.yesRange[1]})`,
                                             },
                                             { label: "Uncertain", value: whip.uncertain },
                                           ]
@@ -1831,8 +1864,370 @@ export function AssemblyPage(props: {
                             ) : null}
                           </div>
                         </>
+                      ) : constitutionalAmendment ? (
+                        (() => {
+                          const amendment = constitutionalAmendment;
+                          const threshold = amendmentThresholdFor(
+                            props.world,
+                            props.snap,
+                            amendment,
+                          );
+                          const provincesNeeded = provincesRequiredForRatification(props.snap);
+                          const steps = amendmentRatificationStepsRemaining(
+                            amendment,
+                            provincesNeeded,
+                            false,
+                          );
+                          const recordedVote = amendment.assemblyVoteId
+                            ? props.snap.legislatureRuntime.legislativeVotes[
+                                amendment.assemblyVoteId
+                              ]
+                            : null;
+                          const playerChoice =
+                            amendment.assemblyVotes[props.snap.playerPoliticianId] ?? null;
+                          return (
+                            <>
+                              <div className="row" style={{ marginBottom: "0.5rem" }}>
+                                <button
+                                  type="button"
+                                  className="btn ghost"
+                                  onClick={() => setSelectedConstitutionalId(null)}
+                                >
+                                  Back to legislation
+                                </button>
+                              </div>
+                              <div
+                                className="bill-inspector"
+                                data-qa="constitutional-amendment-inspector"
+                              >
+                                <SectionDivider
+                                  title={amendment.title}
+                                  hint={constitutionalStatusLabel(amendment.status)}
+                                  actions={
+                                    <button
+                                      type="button"
+                                      className="btn ghost"
+                                      onClick={() => setSelectedConstitutionalId(null)}
+                                    >
+                                      Close
+                                    </button>
+                                  }
+                                />
+                                <TabBar
+                                  tabs={[
+                                    { id: "overview", label: "Overview" },
+                                    { id: "support", label: "Support" },
+                                    { id: "procedure", label: "Procedure" },
+                                    { id: "history", label: "History" },
+                                  ]}
+                                  value={constitutionalTab}
+                                  onChange={setConstitutionalTab}
+                                />
+
+                                {constitutionalTab === "overview" ? (
+                                  <div className="bill-tab-body">
+                                    <BriefStrip
+                                      items={[
+                                        {
+                                          label: "Status",
+                                          value: constitutionalStatusLabel(amendment.status),
+                                        },
+                                        {
+                                          label: "Sponsor",
+                                          value: politicianDisplayName(
+                                            props.catalog,
+                                            amendment.sponsorId,
+                                          ),
+                                        },
+                                        {
+                                          label: "Article",
+                                          value: amendmentArticleSummary(amendment),
+                                        },
+                                        {
+                                          label: "Threshold",
+                                          value: threshold.label,
+                                        },
+                                      ]}
+                                    />
+                                    <p>{amendment.summary}</p>
+                                    {amendment.currentText || amendment.proposedText ? (
+                                      <div className="constitutional-redline">
+                                        <div>
+                                          <span>Current</span>
+                                          <del>{amendment.currentText ?? "Ã¢â‚¬â€"}</del>
+                                        </div>
+                                        <div>
+                                          <span>Proposed</span>
+                                          <ins>{amendment.proposedText ?? "Ã¢â‚¬â€"}</ins>
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                    <SectionDivider
+                                      title="Remaining steps"
+                                      hint="Special constitutional procedure after the Assembly vote"
+                                    />
+                                    {steps.length === 0 ? (
+                                      <p className="muted">No further steps.</p>
+                                    ) : (
+                                      <ul className="muted">
+                                        {steps.map((step) => (
+                                          <li key={step}>{step}</li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                    {mp && amendment.status === "proposed" && !playerChoice ? (
+                                      <div className="row" style={{ marginTop: "0.75rem" }}>
+                                        <button
+                                          type="button"
+                                          className="btn"
+                                          onClick={() =>
+                                            run({
+                                              type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                                              amendmentId: amendment.id,
+                                              choice: "yes",
+                                            })
+                                          }
+                                        >
+                                          Aye
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="btn secondary"
+                                          onClick={() =>
+                                            run({
+                                              type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                                              amendmentId: amendment.id,
+                                              choice: "no",
+                                            })
+                                          }
+                                        >
+                                          Nay
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="btn quiet"
+                                          onClick={() =>
+                                            run({
+                                              type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                                              amendmentId: amendment.id,
+                                              choice: "abstain",
+                                            })
+                                          }
+                                        >
+                                          Abstain
+                                        </button>
+                                      </div>
+                                    ) : playerChoice ? (
+                                      <p className="muted">
+                                        Your recorded vote:{" "}
+                                        {playerChoice === "yes"
+                                          ? "Aye"
+                                          : playerChoice === "no"
+                                            ? "Nay"
+                                            : "Abstain"}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+
+                                {constitutionalTab === "support" ? (
+                                  <div className="bill-tab-body">
+                                    <BriefStrip
+                                      items={[
+                                        {
+                                          label: "Party",
+                                          value: stanceLabel(
+                                            partyStance(
+                                              props.snap,
+                                              props.snap.politicians[props.snap.playerPoliticianId]
+                                                ?.partyId ?? null,
+                                              amendment.id,
+                                            ),
+                                          ),
+                                        },
+                                        ...(whip
+                                          ? exactInternals
+                                            ? [
+                                                {
+                                                  label: "Whip yes",
+                                                  value: `${whip.likelyYes} (${whip.yesRange[0]}Ã¢â‚¬â€œ${whip.yesRange[1]})`,
+                                                },
+                                                { label: "Uncertain", value: whip.uncertain },
+                                              ]
+                                            : [
+                                                { label: "Outlook", value: supportOutlook },
+                                                {
+                                                  label: "Chamber lean",
+                                                  value: formatWhipLean(
+                                                    (whip.likelyYes - whip.likelyNo) /
+                                                      Math.max(
+                                                        1,
+                                                        whip.likelyYes +
+                                                          whip.likelyNo +
+                                                          whip.uncertain,
+                                                      ),
+                                                  ),
+                                                },
+                                              ]
+                                          : []),
+                                        {
+                                          label: "Threshold",
+                                          value: threshold.label,
+                                        },
+                                      ]}
+                                    />
+                                    <SectionDivider
+                                      title="Party positions"
+                                      hint="Public recommendations; members retain their own vote"
+                                    />
+                                    <DataTable dense headers={["Party", "Seats", "Position"]}>
+                                      {partyRanks.map(([partyId, seats]) => (
+                                        <tr key={partyId}>
+                                          <td>
+                                            {partyDisplayName(
+                                              props.world,
+                                              partyId === "none" ? null : partyId,
+                                              props.snap,
+                                            )}
+                                          </td>
+                                          <td>{seats}</td>
+                                          <td>
+                                            {stanceLabel(
+                                              partyStance(
+                                                props.snap,
+                                                partyId === "none" ? null : partyId,
+                                                amendment.id,
+                                              ),
+                                            )}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </DataTable>
+                                  </div>
+                                ) : null}
+
+                                {constitutionalTab === "procedure" ? (
+                                  <div className="bill-tab-body">
+                                    {recordedVote ? (
+                                      <EntityRow
+                                        title="Assembly roll call"
+                                        meta={`Yes ${recordedVote.yes} / No ${recordedVote.no} / Abstain ${recordedVote.abstain} · need ${threshold.label}`}
+                                        status={
+                                          <StatusBadge tone={recordedVote.passed ? "ok" : "warn"}>
+                                            {recordedVote.passed ? "Passed" : "Failed"}
+                                          </StatusBadge>
+                                        }
+                                        onClick={() => {
+                                          setSelectedVoteId(recordedVote.id);
+                                          setLegislationSubTab("votes");
+                                        }}
+                                      />
+                                    ) : (
+                                      <p className="muted">
+                                        Assembly roll call has not been taken yet. Threshold{" "}
+                                        {threshold.label}.
+                                      </p>
+                                    )}
+                                    {playerMaySetWhip && amendment.status === "proposed" ? (
+                                      <div className="whip-position-controls">
+                                        <SectionDivider
+                                          title="Set Assembly Delegation position"
+                                          hint="Same whip desk as ordinary bills; members retain their own vote"
+                                        />
+                                        <div className="row">
+                                          <button
+                                            type="button"
+                                            className="btn"
+                                            onClick={() =>
+                                              run({
+                                                type: "SET_CAUCUS_BILL_POSITION",
+                                                billId: amendment.id,
+                                                stance: "support",
+                                              })
+                                            }
+                                          >
+                                            Support
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="btn danger"
+                                            onClick={() =>
+                                              run({
+                                                type: "SET_CAUCUS_BILL_POSITION",
+                                                billId: amendment.id,
+                                                stance: "oppose",
+                                              })
+                                            }
+                                          >
+                                            Oppose
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="btn secondary"
+                                            onClick={() =>
+                                              run({
+                                                type: "SET_CAUCUS_BILL_POSITION",
+                                                billId: amendment.id,
+                                                stance: "free_vote",
+                                              })
+                                            }
+                                          >
+                                            Free vote
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                    {(amendment.status === "ratifying" ||
+                                      amendment.status === "ratified") && (
+                                      <>
+                                        <SectionDivider title="Provincial ratification" />
+                                        <p className="muted">
+                                          {amendment.ratifiedProvinceIds.length} ratified ·{" "}
+                                          {amendment.rejectedProvinceIds.length} rejected · need{" "}
+                                          {provincesNeeded} of 21
+                                        </p>
+                                      </>
+                                    )}
+                                  </div>
+                                ) : null}
+
+                                {constitutionalTab === "history" ? (
+                                  <div className="bill-tab-body">
+                                    <BriefStrip
+                                      items={[
+                                        {
+                                          label: "Proposed",
+                                          value: amendment.proposedDate,
+                                        },
+                                        {
+                                          label: "Assembly yes",
+                                          value: amendment.assemblyYes || "Ã¢â‚¬â€",
+                                        },
+                                        {
+                                          label: "Enacted",
+                                          value: amendment.enactedDate ?? "Ã¢â‚¬â€",
+                                        },
+                                      ]}
+                                    />
+                                    {recordedVote ? (
+                                      <p className="muted">
+                                        Roll call {recordedVote.id} on {recordedVote.date}: Yes{" "}
+                                        {recordedVote.yes} / No {recordedVote.no} / Abstain{" "}
+                                        {recordedVote.abstain}.
+                                      </p>
+                                    ) : (
+                                      <p className="muted">No Assembly roll call archived yet.</p>
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </>
+                          );
+                        })()
                       ) : (
-                        <EmptyState>Select a bill to open the legislation workspace.</EmptyState>
+                        <EmptyState>
+                          Select a bill or constitutional amendment to open the chamber workspace.
+                        </EmptyState>
                       )}
                     </div>
                   </div>
@@ -1948,7 +2343,7 @@ export function AssemblyPage(props: {
                     <div className="bill-copy-fields">
                       <input
                         className="search"
-                        placeholder="Optional title — a formal title will be generated"
+                        placeholder="Optional title Ã¢â‚¬â€ a formal title will be generated"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                       />
@@ -2007,7 +2402,9 @@ export function AssemblyPage(props: {
                         const stageLabel =
                           v.metadata?.kind === "treaty_ratification"
                             ? "Treaty ratification"
-                            : v.stage;
+                            : v.metadata?.kind === "constitutional_amendment"
+                              ? "Constitutional amendment"
+                              : v.stage;
                         return (
                           <tr
                             key={v.id}
@@ -2125,7 +2522,7 @@ export function AssemblyPage(props: {
                                             : historicalFaction
                                               ? (props.world.factionDefinitions[historicalFaction]
                                                   ?.name ?? "Former caucus")
-                                              : "—"}
+                                              : "Ã¢â‚¬â€"}
                                         </td>
                                         <td>
                                           {choice === "yes"
@@ -2428,7 +2825,7 @@ export function AssemblyPage(props: {
                                 (cc) => cc.challengedId === law.id && cc.challengedKind === "law",
                               ).length > 0 ? (
                                 <div className="cross-link-row muted">
-                                  <span className="cross-link-icon">⚖</span>
+                                  <span className="cross-link-icon">Ã¢Å¡â€“</span>
                                   {
                                     Object.values(
                                       props.snap.constitutionalRuntime.courtCases,
@@ -2590,8 +2987,8 @@ export function AssemblyPage(props: {
                                 {props.snap.politicians[memberId]?.factionId
                                   ? (props.world.factionDefinitions[
                                       props.snap.politicians[memberId]!.factionId!
-                                    ]?.name ?? "—")
-                                  : "—"}
+                                    ]?.name ?? "Ã¢â‚¬â€")
+                                  : "Ã¢â‚¬â€"}
                               </td>
                             </tr>
                           ))}
@@ -2644,7 +3041,7 @@ export function AssemblyPage(props: {
                                     "Assembly matter"}
                                 </td>
                                 <td>
-                                  {vote.yes}–{vote.no} · {vote.abstain} abstain
+                                  {vote.yes}Ã¢â‚¬â€œ{vote.no} · {vote.abstain} abstain
                                 </td>
                               </tr>
                             ))}
@@ -2657,7 +3054,7 @@ export function AssemblyPage(props: {
             ) : null}
 
             {assemblyTab === "delegation" ? (
-              <div data-qa="whip-desk">
+              <div data-qa="whip-desk" data-tutorial="whip-desk">
                 <SectionDivider
                   title="Assembly Leader / Whip desk"
                   hint="Delegation position, whip strength, and persuasion"
@@ -2673,23 +3070,28 @@ export function AssemblyPage(props: {
                       label: "Floor leader",
                       value: playerCaucusLeadership?.floorLeaderId
                         ? politicianDisplayName(props.catalog, playerCaucusLeadership.floorLeaderId)
-                        : "—",
+                        : "Ã¢â‚¬â€",
                     },
                     {
                       label: "Whip",
                       value: playerCaucusLeadership?.whipId
                         ? politicianDisplayName(props.catalog, playerCaucusLeadership.whipId)
-                        : "—",
+                        : "Ã¢â‚¬â€",
                     },
                     {
-                      label: "Selected bill",
-                      value: bill ? bill.title : "None selected",
+                      label: "Selected matter",
+                      value: bill
+                        ? bill.title
+                        : constitutionalAmendment
+                          ? constitutionalAmendment.title
+                          : "None selected",
                     },
                   ]}
                 />
-                {!bill ? (
+                {!whipSubjectId ? (
                   <p className="muted">
-                    Select a bill in Legislation to set whip strength and persuasion targets.
+                    Select a bill or constitutional amendment in Legislation to set whip strength
+                    and persuasion targets.
                   </p>
                 ) : (
                   <>
@@ -2701,7 +3103,7 @@ export function AssemblyPage(props: {
                             partyStance(
                               props.snap,
                               playerParty === "none" ? null : playerParty,
-                              bill.id,
+                              whipSubjectId,
                             ),
                           )}
                         </dd>
@@ -2709,10 +3111,9 @@ export function AssemblyPage(props: {
                       <div>
                         <dt>Whip strength</dt>
                         <dd>
-                          {(playerCaucusLeadership?.whipStrengths?.[bill.id] ?? "free").replaceAll(
-                            "_",
-                            " ",
-                          )}
+                          {(
+                            playerCaucusLeadership?.whipStrengths?.[whipSubjectId] ?? "free"
+                          ).replaceAll("_", " ")}
                         </dd>
                       </div>
                       <div>
@@ -2734,7 +3135,7 @@ export function AssemblyPage(props: {
                             onClick={() =>
                               run({
                                 type: "SET_CAUCUS_BILL_POSITION",
-                                billId: bill.id,
+                                billId: whipSubjectId,
                                 stance: "support",
                               })
                             }
@@ -2747,7 +3148,7 @@ export function AssemblyPage(props: {
                             onClick={() =>
                               run({
                                 type: "SET_CAUCUS_BILL_POSITION",
-                                billId: bill.id,
+                                billId: whipSubjectId,
                                 stance: "oppose",
                               })
                             }
@@ -2760,7 +3161,7 @@ export function AssemblyPage(props: {
                             onClick={() =>
                               run({
                                 type: "SET_CAUCUS_BILL_POSITION",
-                                billId: bill.id,
+                                billId: whipSubjectId,
                                 stance: "free_vote",
                               })
                             }
@@ -2779,7 +3180,7 @@ export function AssemblyPage(props: {
                                 run({
                                   type: "SET_WHIP_STRENGTH",
                                   partyId: playerParty,
-                                  billId: bill.id,
+                                  billId: whipSubjectId,
                                   strength,
                                 })
                               }
@@ -2840,7 +3241,7 @@ export function AssemblyPage(props: {
                               if (!target || playerParty === "none") return;
                               run({
                                 type: "WHIP_PERSUADE_MEMBER",
-                                billId: bill.id,
+                                billId: whipSubjectId,
                                 targetPoliticianId: target,
                                 approach: persuadeApproach,
                               });
