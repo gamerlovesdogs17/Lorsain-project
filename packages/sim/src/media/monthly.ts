@@ -1431,11 +1431,13 @@ export function processMediaMonth(
               ? "ISS_HOUSING"
               : null
           : pick.cat === "courts"
-            ? world.issueIds.includes("ISS_EXEC")
-              ? "ISS_EXEC"
-              : world.issueIds.includes("ISS_COURTS")
-                ? "ISS_COURTS"
-                : null
+            ? world.issueIds.includes("ISS_COURTS")
+              ? "ISS_COURTS"
+              : world.issueIds.includes("ISS_REFORM")
+                ? "ISS_REFORM"
+                : world.issueIds.includes("ISS_EXEC")
+                  ? "ISS_EXEC"
+                  : null
             : null;
       state.mediaRuntime.lingering.push({
         storyId: id,

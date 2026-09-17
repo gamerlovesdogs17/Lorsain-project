@@ -148,6 +148,32 @@
       "lean_party_ids": [
         "PARTY_LAB"
       ]
+    },
+    {
+      "id": "ORG_JIL",
+      "name": "Judicial Independence League",
+      "type": "civic advocacy",
+      "lean": "nonpartisan institutionalist",
+      "strength": 0.47,
+      "issues": [
+        "ISS_COURTS",
+        "ISS_REFORM",
+        "ISS_EXEC"
+      ],
+      "lean_party_ids": []
+    },
+    {
+      "id": "ORG_BAR",
+      "name": "Terenan Bar Association",
+      "type": "professional",
+      "lean": "professional / institutional",
+      "strength": 0.51,
+      "issues": [
+        "ISS_COURTS",
+        "ISS_LIBERTY",
+        "ISS_REFORM"
+      ],
+      "lean_party_ids": []
     }
   ],
   "content_version": "0.3.1-predev"

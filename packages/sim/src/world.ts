@@ -11,6 +11,7 @@ import {
 import { expirationPolicyForKind } from "./offices.js";
 import type { KernelOffice, KernelWorld, OfficeTerm, PoliticianRuntime } from "./types.js";
 import { profileFromFigure, type FigureProfileSource } from "./agents/profile.js";
+import { courtJusticeRecordsFromFigures } from "./courts/publicReputation.js";
 import { buildPartyKernelSlice, emptyPartyKernelSlice } from "./parties/content.js";
 import { presidentialEligibilityFromContent } from "./parties/eligibility.js";
 import {
@@ -41,7 +42,21 @@ type FigureIn = FigureProfileSource & {
   faction_id?: string | null;
   home_province_id?: string;
   roles?: Role[];
-  court?: { seat_index: number; appointed: string; term_ends: string; chief?: boolean };
+  court?: {
+    seat_index: number;
+    appointed: string;
+    term_ends: string;
+    chief?: boolean;
+    legal_philosophy?: string;
+    appointing_president?: string;
+    appointing_administration?: string;
+    public_reputation?: string;
+    legal_career?: {
+      prior_path?: string;
+      prior_offices?: string[];
+      path_summary?: string;
+    };
+  };
   presidential_status?: string | null;
 };
 
@@ -742,6 +757,7 @@ export function buildTerenaKernelWorld(input: TerenaKernelInput): KernelWorld {
       recallReferralFraction: input.constitution.recall?.assembly_referral_fraction ?? 0.6,
       recallVoteDays: 60,
     },
+    courtJusticeRecords: courtJusticeRecordsFromFigures(input.figures),
     ...(input.constitution.document ? { constitutionalDocument: input.constitution.document } : {}),
     interestOrganizations: Object.fromEntries(
       (input.organizations ?? []).map((o) => [

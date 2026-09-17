@@ -200,11 +200,12 @@ export function readIssueSalience(
     out[k] = v;
   }
   if (issueIds && issueIds.length > 0) {
-    for (const id of issueIds) {
-      if (!(id in out)) return `issue_salience missing required issue ${id}`;
-    }
     for (const id of Object.keys(out)) {
       if (!issueIds.includes(id)) return `issue_salience has unknown issue ${id}`;
+    }
+    // New catalog issues (e.g. ISS_COURTS) default rather than requiring a full content rewrite.
+    for (const id of issueIds) {
+      if (!(id in out)) out[id] = 0.35;
     }
   }
   return out;

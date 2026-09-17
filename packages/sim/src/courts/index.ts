@@ -4,4 +4,5 @@ export * from "./procedure.js";
 export * from "./decisions.js";
 export * from "./monthly.js";
 export * from "./legal-careers.js";
+export * from "./publicReputation.js";
 export { parseConstitutionalRuntime, constitutionalCounterError } from "./validation.js";

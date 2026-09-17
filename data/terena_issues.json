@@ -104,6 +104,13 @@
       "dimension": "foreign",
       "low": "lower military burden",
       "high": "higher readiness and modernization"
+    },
+    {
+      "id": "ISS_COURTS",
+      "name": "Judicial independence and Court politicization",
+      "dimension": "institutional",
+      "low": "politicized appointments / partisan Court framing",
+      "high": "formal nonpartisanship / institutional independence"
     }
   ],
   "content_version": "0.3.1-predev"

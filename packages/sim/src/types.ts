@@ -967,6 +967,8 @@ export type KernelWorld = {
     recallReferralFraction: number;
     recallVoteDays: number;
   };
+  /** Content-derived court appointment / philosophy records (not save-authoritative). */
+  courtJusticeRecords?: Record<string, import("./courts/publicReputation.js").CourtJusticeRecord>;
   constitutionalDocument?: {
     title: string;
     preamble: string;

@@ -45,11 +45,8 @@ export function chooseJudicialVote(
   const pressure =
     ((relPetitioner?.affinity ?? 0) - (relRespondent?.affinity ?? 0)) * 0.08 * (1 - independence);
   score += pressure;
-  const judge = state.politicians[judgeId];
-  const petitioner = state.politicians[courtCase.petitionerId];
-  if (judge?.partyId && petitioner?.partyId && judge.partyId === petitioner.partyId) {
-    score += 0.06 * (profile?.traits.partyLoyalty ?? 0.5) * 0.15;
-  }
+  // Formal nonpartisanship: sitting justices must not vote on Party lines.
+  // Hidden ideology + merits + precedent remain the mechanical mix.
   score += (rng.float01("npc-decisions") - 0.5) * 0.18;
   return score > 0.05 ? "invalidate" : "uphold";
 }

@@ -1450,7 +1450,7 @@
       "faction": null,
       "office": "Chief Justice of the Constitutional Court",
       "home": "Valen",
-      "notes": "Institutionalist jurist appointed in 2019; swing vote in separation-of-powers cases.",
+      "notes": "Institutionalist Chief Justice; public reputation as an Institutionaliste swing vote on separation-of-powers cases.",
       "party_id": null,
       "faction_id": null,
       "home_province_id": "FDV",
@@ -1505,11 +1505,12 @@
         "ISS_REFORM": 0.65,
         "ISS_CONCORD": 0.4,
         "ISS_VASKARA": 0.4,
-        "ISS_DEFENSE": 0.4
+        "ISS_DEFENSE": 0.4,
+        "ISS_COURTS": 0.55
       },
       "ai_tier": "rich",
       "background": "law",
-      "display_summary": "Institutionalist jurist appointed in 2019; swing vote in separation-of-powers cases.",
+      "display_summary": "Chief Justice. Institutionalist jurist appointed in 2019; widely described as hard to place on party lines and a frequent swing vote in separation-of-powers cases.",
       "court": {
         "seat_index": 0,
         "chief": true,
@@ -36172,7 +36173,7 @@
       "faction": null,
       "office": "Justice of the Constitutional Court",
       "home": "Norval",
-      "notes": "Justice of the Constitutional Court",
+      "notes": "Textualist justice whose public legal reputation remains Difficult to place.",
       "party_id": null,
       "faction_id": null,
       "home_province_id": "P02",
@@ -36228,11 +36229,12 @@
         "ISS_REFORM": 0.486,
         "ISS_CONCORD": 0.341,
         "ISS_VASKARA": 0.475,
-        "ISS_DEFENSE": 0.378
+        "ISS_DEFENSE": 0.378,
+        "ISS_COURTS": 0.55
       },
       "ai_tier": "standard",
       "background": "law",
-      "display_summary": "Vespa Narev, Justice of the Constitutional Court.",
+      "display_summary": "Justice since 2017. Public reputation: difficult to place — long appellate career with careful case-by-case institutionalism.",
       "court": {
         "seat_index": 1,
         "chief": false,
@@ -36259,7 +36261,7 @@
       "faction": null,
       "office": "Justice of the Constitutional Court",
       "home": "Federal District of Valen",
-      "notes": "Justice of the Constitutional Court",
+      "notes": "Pragmatic balancer; publicly Institutionaliste rather than partisan.",
       "party_id": null,
       "faction_id": null,
       "home_province_id": "FDV",
@@ -36315,11 +36317,12 @@
         "ISS_REFORM": 0.267,
         "ISS_CONCORD": 0.42,
         "ISS_VASKARA": 0.514,
-        "ISS_DEFENSE": 0.557
+        "ISS_DEFENSE": 0.557,
+        "ISS_COURTS": 0.55
       },
       "ai_tier": "standard",
       "background": "law",
-      "display_summary": "Fedor Havel, Justice of the Constitutional Court.",
+      "display_summary": "Justice since 2022. Public reputation: institutionalist — pragmatic balancer emphasizing text and precedent.",
       "court": {
         "seat_index": 2,
         "chief": false,
@@ -36346,7 +36349,7 @@
       "faction": null,
       "office": "Justice of the Constitutional Court",
       "home": "Northmarch",
-      "notes": "Justice of the Constitutional Court",
+      "notes": "Rights-litigation background presented publicly as Institutionaliste on the Court.",
       "party_id": null,
       "faction_id": null,
       "home_province_id": "P18",
@@ -36402,11 +36405,12 @@
         "ISS_REFORM": 0.453,
         "ISS_CONCORD": 0.359,
         "ISS_VASKARA": 0.425,
-        "ISS_DEFENSE": 0.392
+        "ISS_DEFENSE": 0.392,
+        "ISS_COURTS": 0.55
       },
       "ai_tier": "standard",
       "background": "law",
-      "display_summary": "Elian Pavlic, Justice of the Constitutional Court.",
+      "display_summary": "Justice since 2022. Public reputation: institutionalist — procedure-first jurist with a professional prosecutor background.",
       "court": {
         "seat_index": 3,
         "chief": false,
@@ -36434,7 +36438,7 @@
       "faction": null,
       "office": "Justice of the Constitutional Court",
       "home": "Karsen",
-      "notes": "Justice of the Constitutional Court",
+      "notes": "Constitutional scholar with a centre-left legal reputation in public commentary.",
       "party_id": null,
       "faction_id": null,
       "home_province_id": "P13",
@@ -36490,11 +36494,12 @@
         "ISS_REFORM": 0.477,
         "ISS_CONCORD": 0.481,
         "ISS_VASKARA": 0.441,
-        "ISS_DEFENSE": 0.476
+        "ISS_DEFENSE": 0.476,
+        "ISS_COURTS": 0.55
       },
       "ai_tier": "standard",
       "background": "law",
-      "display_summary": "Zlata Nerath, Justice of the Constitutional Court.",
+      "display_summary": "Justice since 2023. Public reputation: centre-left legal lean — known for expansive readings of civil liberties and social-rights clauses.",
       "court": {
         "seat_index": 4,
         "chief": false,
@@ -36521,7 +36526,7 @@
       "faction": null,
       "office": "Justice of the Constitutional Court",
       "home": "Aurel",
-      "notes": "Justice of the Constitutional Court",
+      "notes": "Originalist justice with a conservative legal reputation.",
       "party_id": null,
       "faction_id": null,
       "home_province_id": "P09",
@@ -36577,11 +36582,12 @@
         "ISS_REFORM": 0.366,
         "ISS_CONCORD": 0.337,
         "ISS_VASKARA": 0.537,
-        "ISS_DEFENSE": 0.383
+        "ISS_DEFENSE": 0.383,
+        "ISS_COURTS": 0.55
       },
       "ai_tier": "standard",
       "background": "law",
-      "display_summary": "Milaia Vlahovic, Justice of the Constitutional Court.",
+      "display_summary": "Justice since 2024. Public reputation: conservative legal lean — former justice-ministry counsel associated with order and narrower rights constructions.",
       "court": {
         "seat_index": 5,
         "chief": false,
@@ -36608,7 +36614,7 @@
       "faction": null,
       "office": "Justice of the Constitutional Court",
       "home": "Federal District of Valen",
-      "notes": "Justice of the Constitutional Court",
+      "notes": "Former justice-ministry official publicly read as civil-libertarian on rights cases.",
       "party_id": null,
       "faction_id": null,
       "home_province_id": "FDV",
@@ -36664,11 +36670,12 @@
         "ISS_REFORM": 0.437,
         "ISS_CONCORD": 0.334,
         "ISS_VASKARA": 0.401,
-        "ISS_DEFENSE": 0.403
+        "ISS_DEFENSE": 0.403,
+        "ISS_COURTS": 0.55
       },
       "ai_tier": "standard",
       "background": "law",
-      "display_summary": "Sonia Selvik, Justice of the Constitutional Court.",
+      "display_summary": "Justice since 2025. Public reputation: civil-libertarian — academic and defender background; skeptical of surveillance and emergency-power expansions.",
       "court": {
         "seat_index": 6,
         "chief": false,
@@ -36695,7 +36702,7 @@
       "faction": null,
       "office": "Justice of the Constitutional Court",
       "home": "Eastridge",
-      "notes": "Justice of the Constitutional Court",
+      "notes": "Career judiciary path; Difficult to place in public ideological sorting.",
       "party_id": null,
       "faction_id": null,
       "home_province_id": "P10",
@@ -36751,11 +36758,12 @@
         "ISS_REFORM": 0.438,
         "ISS_CONCORD": 0.452,
         "ISS_VASKARA": 0.55,
-        "ISS_DEFENSE": 0.235
+        "ISS_DEFENSE": 0.235,
+        "ISS_COURTS": 0.55
       },
       "ai_tier": "standard",
       "background": "law",
-      "display_summary": "Belma Kerrin, Justice of the Constitutional Court.",
+      "display_summary": "Justice since 2026. Public reputation: difficult to place — newly elevated from the appellate bench with a thin public paper trail.",
       "court": {
         "seat_index": 7,
         "chief": false,
@@ -36783,7 +36791,7 @@
       "faction": null,
       "office": "Justice of the Constitutional Court",
       "home": "Karsen",
-      "notes": "Justice of the Constitutional Court",
+      "notes": "Public-law advocate often framed as executive-deference in appointment debates.",
       "party_id": null,
       "faction_id": null,
       "home_province_id": "P13",
@@ -36839,17 +36847,18 @@
         "ISS_REFORM": 0.457,
         "ISS_CONCORD": 0.377,
         "ISS_VASKARA": 0.481,
-        "ISS_DEFENSE": 0.297
+        "ISS_DEFENSE": 0.297,
+        "ISS_COURTS": 0.55
       },
       "ai_tier": "standard",
       "background": "law",
-      "display_summary": "Klara Wex, Justice of the Constitutional Court.",
+      "display_summary": "Justice since 2027. Public reputation: executive-deference lean — often grants the elected branches wider policy latitude.",
       "court": {
         "seat_index": 8,
         "chief": false,
         "appointed": "2027-09-15",
         "term_ends": "2039-09-15",
-        "legal_philosophy": "textualist",
+        "legal_philosophy": "executive_deference",
         "appointing_president": "NPC001",
         "legal_career": {
           "prior_path": "constitutional_lawyer",
@@ -36859,7 +36868,7 @@
           ],
           "bar_admission_year": 1994,
           "years_legal_practice_at_appointment": 25,
-          "path_summary": "Constitutional and public-law practice before elevation to the Court."
+          "path_summary": "Constitutional and public-law practice before elevation; public commentary emphasizes executive-deference leanings."
         }
       }
     },
