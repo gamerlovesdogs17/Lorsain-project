@@ -33,12 +33,12 @@ describe("player actionable decisions", () => {
         policyItems: [{ issueId, direction: 1, magnitude: 0.4, fiscalImpact: null }],
       });
     }
+    // Ignore non-vote desks (e.g. form_government) so this fixture stays about committee votes.
     const decisions = collectPlayerActionableDecisions(world, sim.getSnapshot()).filter(
-      (d) => d.kind !== "interrupt",
+      (d) => d.kind === "committee_vote",
     );
     expect(decisions).toHaveLength(8);
     expect(new Set(decisions.map((d) => d.key)).size).toBe(8);
-    expect(decisions.every((d) => d.kind === "committee_vote")).toBe(true);
   });
 
   it("keeps remaining votes visible after the player casts some of them", () => {

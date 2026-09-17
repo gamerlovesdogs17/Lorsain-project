@@ -90,12 +90,14 @@ function loadTerenaWorld(): KernelWorld {
 }
 
 describe("Phase 9 organizations", () => {
-  it("consumes the ten canonical Terena organizations", () => {
+  it("consumes the canonical Terena organizations", () => {
     const world = loadTerenaWorld();
     expect(Object.keys(world.interestOrganizations).sort()).toEqual([
+      "ORG_BAR",
       "ORG_CAN",
       "ORG_CLF",
       "ORG_FARM",
+      "ORG_JIL",
       "ORG_MAN",
       "ORG_MUNI",
       "ORG_PORT",
@@ -105,7 +107,7 @@ describe("Phase 9 organizations", () => {
       "ORG_VET",
     ]);
     const sim = createSimulation({ world, playerPoliticianId: "NPC001", seed: "ORG-CANON" });
-    expect(Object.keys(sim.getSnapshot().organizationRuntime.actors)).toHaveLength(10);
+    expect(Object.keys(sim.getSnapshot().organizationRuntime.actors)).toHaveLength(12);
   });
 
   it("unions and business groups take different labor-bill stances", () => {
