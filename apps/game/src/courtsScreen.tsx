@@ -306,7 +306,7 @@ export function CourtsPage(props: {
                     </div>
                     {s.holderId ? (
                       <div className="muted">
-                        {appointingAuthorityLabel(world, snap, s.holderId)}
+                        {appointingLabel(world, snap, catalog, s.holderId)}
                       </div>
                     ) : null}
                   </button>
@@ -334,7 +334,8 @@ export function CourtsPage(props: {
                 Formal status: nonpartisan while serving (no Party membership).
               </p>
               <p>
-                <strong>Appointment:</strong> {appointingAuthorityLabel(world, snap, selectedJudge)}
+                <strong>Appointment:</strong>{" "}
+                {appointingLabel(world, snap, catalog, selectedJudge)}
                 {tenure?.appointed ? ` · appointed ${tenure.appointed}` : ""}
                 {tenure?.termEnds ? ` · term ends ${tenure.termEnds}` : ""}
                 {tenure?.yearsOnBench != null
