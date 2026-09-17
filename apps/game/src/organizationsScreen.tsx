@@ -10,13 +10,10 @@ import {
   ActionPanel,
   DataTable,
   EmptyState,
-  EntityHeader,
   EntityRow,
   MasterDetail,
-  MetricStrip,
   PageHeader,
   SectionDivider,
-  StatCard,
   StatusBadge,
   WorkLayout,
 } from "./ui/kit.js";
@@ -129,11 +126,12 @@ export function OrganizationsPage(props: {
 
   return (
     <WorkLayout
+      className="entity-profile org-desk-final"
       header={
         <PageHeader
           kicker="Civil society"
           title="Organizations"
-          subtitle={`${remaining} interaction${remaining === 1 ? "" : "s"} remaining this month`}
+          subtitle={`${remaining} interaction${remaining === 1 ? "" : "s"} remaining this month · identity and scorecards, not a contact CRM`}
         />
       }
       main={
@@ -141,7 +139,7 @@ export function OrganizationsPage(props: {
           listWidth="narrow"
           list={
             <>
-              <SectionDivider title="Directory" />
+              <SectionDivider title="Interest groups" />
               {list.length === 0 ? (
                 <EmptyState>
                   No civil society organizations are active in this scenario. Organizations appear
@@ -162,30 +160,56 @@ export function OrganizationsPage(props: {
           detail={
             canon ? (
               <>
-                <EntityHeader name={canon.name} office={canon.type} party={canon.lean} />
-
-                <SectionDivider title="Public profile" />
-                <p>
-                  Influence <StatusBadge>{influenceLabel}</StatusBadge>
-                </p>
-                <p className="muted">
-                  Issues: {canon.issues.map((i) => issueDisplayName(props.catalog, i)).join(", ")}
-                </p>
-                <MetricStrip>
-                  <StatCard label="Relationship" value={knownLabel} />
-                  <StatCard label="Trust" value={trustLabel} />
-                  <StatCard label="Policy alignment" value={alignmentLabel} />
-                  <StatCard
-                    label="Current stance"
-                    value={
-                      currentStance === "support"
-                        ? "Supportive"
-                        : currentStance === "oppose"
-                          ? "Opposed"
-                          : "Watching"
-                    }
-                  />
-                </MetricStrip>
+                <header className="entity-identity-masthead org-identity-masthead">
+                  <div>
+                    <div className="identity-kicker">{canon.type || "Interest group"}</div>
+                    <h2 className="identity-name">{canon.name}</h2>
+                    <p className="identity-role">
+                      {canon.lean ? `${canon.lean} lean` : "No public lean recorded"} ·{" "}
+                      {influenceLabel}
+                    </p>
+                    <div className="identity-badges">
+                      <StatusBadge>{influenceLabel}</StatusBadge>
+                      {canon.lean ? <StatusBadge>{canon.lean}</StatusBadge> : null}
+                      <StatusBadge
+                        tone={
+                          currentStance === "support"
+                            ? "ok"
+                            : currentStance === "oppose"
+                              ? "warn"
+                              : "idle"
+                        }
+                      >
+                        {currentStance === "support"
+                          ? "Supportive this session"
+                          : currentStance === "oppose"
+                            ? "Opposed this session"
+                            : "Watching"}
+                      </StatusBadge>
+                    </div>
+                  </div>
+                  <div className="entity-identity-facets">
+                    <div>
+                      <div className="kicker">Issues</div>
+                      <strong>
+                        {canon.issues.map((i) => issueDisplayName(props.catalog, i)).join(", ") ||
+                          "—"}
+                      </strong>
+                    </div>
+                    <div>
+                      <div className="kicker">Your relationship</div>
+                      <strong>{knownLabel}</strong>
+                    </div>
+                    <div>
+                      <div className="kicker">Trust</div>
+                      <strong>{trustLabel}</strong>
+                    </div>
+                    <div>
+                      <div className="kicker">Policy alignment</div>
+                      <strong>{alignmentLabel}</strong>
+                    </div>
+                  </div>
+                </header>
                 {relationship?.lastReason ? (
                   <p className="muted">Latest change: {relationship.lastReason}</p>
                 ) : null}
@@ -193,36 +217,38 @@ export function OrganizationsPage(props: {
                   Current public positions are issue leanings, not hidden scores.
                 </p>
 
-                <SectionDivider
-                  title="Political scorecard"
-                  hint="Public behavior, not meeting grind"
-                />
-                {scorecard.length === 0 ? (
-                  <EmptyState>No relevant recorded vote by this politician.</EmptyState>
-                ) : (
-                  <DataTable dense headers={["Date", "Measure", "Your vote", "Organization"]}>
-                    {scorecard.map((row) => (
-                      <tr key={row.id}>
-                        <td>{row.date}</td>
-                        <td>{row.bill.title}</td>
-                        <td>
-                          {row.choice === "yes" ? "Aye" : row.choice === "no" ? "Nay" : "Abstain"}
-                        </td>
-                        <td>
-                          {row.pressure ? (
-                            <StatusBadge tone={row.aligned ? "ok" : "warn"}>
-                              {row.aligned ? "Aligned" : "At odds"}
-                            </StatusBadge>
-                          ) : (
-                            "No formal position"
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </DataTable>
-                )}
+                <div className="org-scorecard-block">
+                  <h3>Political scorecard</h3>
+                  <p className="muted">
+                    How your recorded votes line up with this group&apos;s public pressure.
+                  </p>
+                  {scorecard.length === 0 ? (
+                    <EmptyState>No relevant recorded vote by this politician.</EmptyState>
+                  ) : (
+                    <DataTable dense headers={["Date", "Measure", "Your vote", "Organization"]}>
+                      {scorecard.map((row) => (
+                        <tr key={row.id}>
+                          <td>{row.date}</td>
+                          <td>{row.bill.title}</td>
+                          <td>
+                            {row.choice === "yes" ? "Aye" : row.choice === "no" ? "Nay" : "Abstain"}
+                          </td>
+                          <td>
+                            {row.pressure ? (
+                              <StatusBadge tone={row.aligned ? "ok" : "warn"}>
+                                {row.aligned ? "Aligned" : "At odds"}
+                              </StatusBadge>
+                            ) : (
+                              "No formal position"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </DataTable>
+                  )}
+                </div>
 
-                <SectionDivider title="Positions and support" />
+                <SectionDivider title="Positions and endorsements" />
                 {actor?.billPressure.length ? (
                   actor.billPressure.map((p) => (
                     <EntityRow
@@ -246,7 +272,7 @@ export function OrganizationsPage(props: {
                   <EmptyState>No historical endorsements yet.</EmptyState>
                 )}
 
-                <SectionDivider title="Player interactions" />
+                <SectionDivider title="Engage" />
                 <ActionPanel title="Actions">
                   <button
                     type="button"

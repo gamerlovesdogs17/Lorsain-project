@@ -485,6 +485,15 @@ export const ORG_LOBBY_CAMPAIGN_TEMPLATES: OrgLobbyCampaignTemplate[] = [
     provisionIdPrefixes: ["PROV_ALGORITHM", "PROV_CROSS_BORDER_DATA"],
   },
   {
+    id: "judicial_independence_watch",
+    orgTypeTokens: ["judicial", "bar", "civic advocacy", "professional"],
+    issueIds: ["ISS_COURTS", "ISS_REFORM", "ISS_EXEC"],
+    stance: "oppose",
+    summary: "{org} warns {target} against politicizing Court appointments on {issue}",
+    billPressureBonus: 0.12,
+    preferAmendment: "sunset_clause",
+  },
+  {
     id: "health_professional_alert",
     orgTypeTokens: ["health", "medical", "nurse"],
     issueIds: ["ISS_WELFARE", "ISS_DECENT"],

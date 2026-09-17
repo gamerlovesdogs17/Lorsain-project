@@ -24,6 +24,7 @@ import { TerenaMap, type MapSelection } from "./map/TerenaMap.js";
 import {
   DataTable,
   EmptyState,
+  EntityIdentityBanner,
   EntityRow,
   MapDetailLayout,
   PageHeader,
@@ -102,7 +103,10 @@ function ElectionNightPanel(props: {
   outcome?: string | null;
 }) {
   return (
-    <section className={`election-night-workspace ${props.phase}`} aria-live="polite">
+    <section
+      className={`election-night-workspace procedural-stage-strip ${props.phase}`}
+      aria-live="polite"
+    >
       <div>
         <div className="kicker">Election Night</div>
         <h3>{props.title}</h3>
@@ -377,8 +381,13 @@ export function ElectionNightReplay(props: {
   );
   const phase = visibleCount === 0 ? "Polls closed" : complete ? "Certified" : "Counting";
   const recent = props.events.slice(Math.max(0, visibleCount - 6), visibleCount).reverse();
+  const progressPct =
+    props.events.length === 0 ? 0 : Math.round((visibleCount / props.events.length) * 100);
   return (
-    <section className="election-night-live" aria-live="polite">
+    <section
+      className="election-night-live map-workspace election-night-broadcast"
+      aria-live="polite"
+    >
       <header className="election-night-live-head">
         <div>
           <div className="kicker">
@@ -395,6 +404,23 @@ export function ElectionNightReplay(props: {
           <span>{props.unitLabel}</span>
         </div>
       </header>
+      <div
+        className="election-night-progress"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progressPct}
+        aria-label="Reporting progress"
+      >
+        <span style={{ width: `${progressPct}%` }} />
+        <em>
+          {visibleCount === 0
+            ? "Awaiting first count"
+            : complete
+              ? "All recorded counts shown"
+              : `${progressPct}% of count events revealed`}
+        </em>
+      </div>
       <div className="election-night-controls" aria-label="Election Night speed controls">
         <button type="button" className={speed === 0 ? "active" : ""} onClick={() => setSpeed(0)}>
           Pause
@@ -442,7 +468,7 @@ export function ElectionNightReplay(props: {
       <div className="election-night-live-body">
         <div className="election-night-live-visual">{props.renderVisual(visibleCount)}</div>
         <aside className="election-night-event-log">
-          <h3>Latest results</h3>
+          <h3>Latest returns</h3>
           {recent.length === 0 ? (
             <p>Waiting for the first certified count event.</p>
           ) : (
@@ -711,7 +737,23 @@ export function ElectionsPage(props: Props) {
     );
 
     return (
-      <article key={election.id} className="election-pres-block">
+      <article key={election.id} className="election-pres-block election-race-card">
+        <div className="object-first-lead election-race-lead">
+          <EntityIdentityBanner
+            name={electionDisplayName(election.id)}
+            office="Presidential race"
+            meta={`${election.date} · ${statusLabel(election.status)}${
+              electionPoll
+                ? ` · Poll ${electionPoll.publicationDate}`
+                : " · No current national poll"
+            }`}
+            actions={
+              <StatusBadge tone={statusTone(election.status)}>
+                {statusLabel(election.status)}
+              </StatusBadge>
+            }
+          />
+        </div>
         {presidentialDue && election.status !== "resolved" ? (
           <ElectionNightPanel
             phase={election.status === "voting" ? "counting" : "ready"}
@@ -867,7 +909,18 @@ export function ElectionsPage(props: Props) {
               return (
                 <EntityRow
                   key={candidate.politicianId}
-                  title={politicianDisplayName(props.catalog, candidate.politicianId)}
+                  title={
+                    <span className="campaign-rival-title">
+                      <span
+                        className="party-swatch"
+                        style={{
+                          background: partyColor(props.world, candidate.partyId ?? null),
+                        }}
+                        aria-hidden
+                      />
+                      {politicianDisplayName(props.catalog, candidate.politicianId)}
+                    </span>
+                  }
                   meta={partyDisplayName(props.world, candidate.partyId ?? null, props.snap)}
                   status={
                     isWinner ? (
@@ -879,12 +932,12 @@ export function ElectionsPage(props: Props) {
                     )
                   }
                   trailing={
-                    rawVotes != null ? (
+                    election.status === "resolved" && firstPreferenceShare != null ? (
                       <span className="election-votes">
                         {formatPublicPercent(firstPreferenceShare)}
                         <span className="muted"> · {formatPublicNumber(rawVotes)}</span>
                       </span>
-                    ) : null
+                    ) : undefined
                   }
                   selected={isWinner}
                 />
@@ -1129,7 +1182,19 @@ export function ElectionsPage(props: Props) {
     });
 
     return (
-      <div className="assembly-election-view">
+      <div className="assembly-election-view map-workspace">
+        <div className="object-first-lead election-race-lead">
+          <EntityIdentityBanner
+            name={electionDisplayName(election.id)}
+            office="National Assembly"
+            meta={`${election.date} · ${statusLabel(election.status)} · constituency STV returns`}
+            actions={
+              <StatusBadge tone={statusTone(election.status)}>
+                {statusLabel(election.status)}
+              </StatusBadge>
+            }
+          />
+        </div>
         {assemblyDue && election.status !== "resolved" ? (
           <ElectionNightPanel
             phase={props.countingElection || election.status === "voting" ? "counting" : "ready"}
@@ -2120,12 +2185,17 @@ export function ElectionsPage(props: Props) {
   }
 
   return (
-    <div className="page-tone-election elections-hub-v7" data-tutorial="elections-workspace">
-      <PageHeader
-        kicker="Returns desk"
-        title="Elections"
-        subtitle="Upcoming cycles, live counting, and certified public results — presented as political events, not a database table."
-      />
+    <div
+      className="procedural-workspace map-workspace page-tone-election elections-hub"
+      data-tutorial="elections-workspace"
+    >
+      <div className="object-first-lead">
+        <PageHeader
+          kicker="Returns desk"
+          title="Elections"
+          subtitle="Browse races by office, follow published polling, and watch Election Night as a broadcast — not a spreadsheet."
+        />
+      </div>
       <TabBar
         tabs={[
           { id: "presidential", label: "Presidential" },
@@ -2139,14 +2209,14 @@ export function ElectionsPage(props: Props) {
         onChange={setTab}
       />
       {tab === "presidential" ? (
-        <div>
+        <div className="election-race-browse">
           {(() => {
             const headerPoll =
               presidential[0] != null
                 ? latestPublicPoll(props.snap, { electionId: presidential[0].id })
                 : latestPublicPoll(props.snap);
             return headerPoll ? (
-              <p className="muted">
+              <p className="muted election-poll-lead">
                 Latest national poll {headerPoll.publicationDate}:{" "}
                 {pollShareLine(props.catalog, props.world, props.snap, headerPoll.firstPreference)}
               </p>
@@ -2161,7 +2231,7 @@ export function ElectionsPage(props: Props) {
         </div>
       ) : null}
       {tab === "assembly" ? (
-        <div>
+        <div className="election-race-browse">
           {assembly.length > 1 ? (
             <label className="election-cycle-picker">
               Election cycle
@@ -2192,9 +2262,31 @@ export function ElectionsPage(props: Props) {
         )
       ) : null}
       {tab === "gubernatorial" ? (
-        <div className="governor-election-view">
+        <div className="governor-election-view map-workspace">
           {selectedGovernorRace ? (
             <>
+              <div className="object-first-lead election-race-lead">
+                <EntityIdentityBanner
+                  name={`${props.catalog.places.get(selectedGovernorRace.provinceId)?.name ?? "Province"} Governor`}
+                  office="Gubernatorial race"
+                  {...(selectedGovernorRace.winnerId
+                    ? {
+                        color: partyColor(
+                          props.world,
+                          selectedGovernorRace.candidates[selectedGovernorRace.winnerId]?.partyId ??
+                            props.snap.politicians[selectedGovernorRace.winnerId]?.partyId ??
+                            null,
+                        ),
+                      }
+                    : {})}
+                  meta={`${selectedGovernorRace.date} · ${statusLabel(selectedGovernorRace.status)}`}
+                  actions={
+                    <StatusBadge tone={statusTone(selectedGovernorRace.status)}>
+                      {statusLabel(selectedGovernorRace.status)}
+                    </StatusBadge>
+                  }
+                />
+              </div>
               {(selectedGovernorRace.status === "resolved" ||
                 selectedGovernorRace.status === "assumed") &&
               governorFinalVisible ? (

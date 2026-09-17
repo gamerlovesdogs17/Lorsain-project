@@ -216,17 +216,17 @@ export function ForeignAffairsPage(props: {
 
   return (
     <div
-      className="foreign-affairs-page"
+      className="foreign-affairs-page map-workspace foreign-desk-final"
       data-qa="foreign-affairs"
       data-tutorial="foreign-workspace"
     >
       <PageHeader
-        kicker="International"
+        kicker="International stage"
         title="Foreign Affairs"
         subtitle={
           president
-            ? "Direct Terena's diplomacy on the world stage."
-            : "Public diplomatic posture, treaties, and international developments."
+            ? "Country dossiers and presidential diplomacy — identity, leaders, and relationships first."
+            : "Country dossiers: identity, leaders, relationships, treaties, and crises."
         }
       />
 
@@ -458,71 +458,61 @@ export function ForeignAffairsPage(props: {
 
             <div className="foreign-affairs-layout">
               <div className="foreign-detail-panel">
-                <SectionCard title="Selected country">
+                <SectionCard title="Country dossier">
                   {selectedCanonical && selectedId ? (
-                    <>
-                      <strong className="serif-head">{selectedCanonical.name}</strong>
-                      {selectedId === TERENA_WORLD_ID ? (
-                        <StatusBadge tone="ok">Home country</StatusBadge>
-                      ) : null}
-                      <div className="foreign-detail-grid">
-                        <div>
-                          <span className="kicker">Government</span>
-                          <div>{selectedCanonical.government || "—"}</div>
+                    <div className="country-dossier entity-profile">
+                      <header className="country-dossier-head">
+                        <div className="kicker">
+                          {selectedCanonical.region || "World"} ·{" "}
+                          {powerTierLabel(selectedCanonical.powerTier)}
                         </div>
-                        <div>
-                          <span className="kicker">Region</span>
-                          <div>{selectedCanonical.region || "—"}</div>
-                        </div>
-                        <div>
-                          <span className="kicker">Leader</span>
-                          <div>
-                            {selectedLeader
-                              ? `${selectedLeader.name}, ${selectedLeader.title}`
-                              : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="kicker">Power</span>
-                          <div>{powerTierLabel(selectedCanonical.powerTier)}</div>
-                        </div>
-                        <div>
-                          <span className="kicker">Alignment</span>
-                          <div>{selectedCanonical.alignment || "Independent"}</div>
-                        </div>
-                        {selectedId !== TERENA_WORLD_ID ? (
-                          <>
-                            <div>
-                              <span className="kicker">Relations with Terena</span>
-                              <div>
-                                {diplomacyAccess === "public"
-                                  ? terenaBilateralRelationLabel(world, snap, selectedId)
-                                  : describeDiplomaticRelation(bilateral, diplomacyAccess)}
-                              </div>
-                              {bilateral && diplomacyAccess === "public" ? (
-                                <div className="muted">
-                                  Trust {qualitativeStanding(bilateral.trust)} · economic ties{" "}
-                                  {qualitativeStanding(bilateral.economicTies)}
-                                </div>
-                              ) : null}
-                            </div>
-                            <div>
-                              <span className="kicker">Trade exposure</span>
-                              <div>{formatPublicPercent(selectedRuntime?.tradeExposure ?? 0)}</div>
-                            </div>
-                            <div>
-                              <span className="kicker">Military posture</span>
-                              <div>
-                                {militaryPostureLabel(selectedRuntime?.posture ?? "normal")}
-                              </div>
-                            </div>
-                          </>
+                        <h2>{selectedCanonical.name}</h2>
+                        <p className="muted">
+                          {selectedCanonical.government || "Government form not recorded"}
+                          {selectedCanonical.alignment
+                            ? ` · ${selectedCanonical.alignment}`
+                            : " · Independent alignment"}
+                        </p>
+                        {selectedId === TERENA_WORLD_ID ? (
+                          <StatusBadge tone="ok">Home country</StatusBadge>
                         ) : null}
-                      </div>
+                      </header>
+
+                      <section className="country-dossier-section">
+                        <h3>Leader</h3>
+                        <strong>
+                          {selectedLeader ? `${selectedLeader.name}` : "Leadership not recorded"}
+                        </strong>
+                        {selectedLeader ? (
+                          <div className="muted">{selectedLeader.title}</div>
+                        ) : null}
+                      </section>
+
+                      {selectedId !== TERENA_WORLD_ID ? (
+                        <section className="country-dossier-section">
+                          <h3>Relationship with Terena</h3>
+                          <strong>
+                            {diplomacyAccess === "public"
+                              ? terenaBilateralRelationLabel(world, snap, selectedId)
+                              : describeDiplomaticRelation(bilateral, diplomacyAccess)}
+                          </strong>
+                          {bilateral && diplomacyAccess === "public" ? (
+                            <div className="muted">
+                              Trust {qualitativeStanding(bilateral.trust)} · economic ties{" "}
+                              {qualitativeStanding(bilateral.economicTies)} · trade exposure{" "}
+                              {formatPublicPercent(selectedRuntime?.tradeExposure ?? 0)}
+                            </div>
+                          ) : null}
+                          <div className="muted" style={{ marginTop: "0.35rem" }}>
+                            Military posture:{" "}
+                            {militaryPostureLabel(selectedRuntime?.posture ?? "normal")}
+                          </div>
+                        </section>
+                      ) : null}
 
                       {selectedRuntime && selectedRuntime.institutionIds.length > 0 ? (
-                        <div style={{ marginTop: "0.65rem" }}>
-                          <span className="kicker">Institutions</span>
+                        <section className="country-dossier-section">
+                          <h3>Institutions</h3>
                           <div className="foreign-chip-row">
                             {selectedRuntime.institutionIds.map((id) => (
                               <StatusBadge key={id}>
@@ -541,19 +531,22 @@ export function ForeignAffairsPage(props: {
                               ? "member"
                               : "not a member"}
                           </div>
-                        </div>
+                        </section>
                       ) : null}
 
                       {selectedId !== TERENA_WORLD_ID ? (
                         <>
-                          <div style={{ marginTop: "0.65rem" }}>
-                            <span className="kicker">Treaties involving this country</span>
+                          <section className="country-dossier-section">
+                            <h3>Treaties</h3>
                             {Object.values(runtime.treaties)
                               .filter((t) => t.memberIds.includes(selectedId))
                               .slice(0, 6)
                               .map((t) => (
-                                <div key={t.id} className="muted">
-                                  {t.title} · {treatyTypeLabel(t.kind)} · {treatyStatusLabel(t)}
+                                <div key={t.id}>
+                                  <strong>{t.title}</strong>
+                                  <div className="muted">
+                                    {treatyTypeLabel(t.kind)} · {treatyStatusLabel(t)}
+                                  </div>
                                 </div>
                               ))}
                             {Object.values(runtime.treaties).every(
@@ -561,39 +554,44 @@ export function ForeignAffairsPage(props: {
                             ) ? (
                               <div className="muted">None on record.</div>
                             ) : null}
-                          </div>
-                          <div style={{ marginTop: "0.65rem" }}>
-                            <span className="kicker">Sanctions</span>
-                            {Object.values(runtime.sanctions)
-                              .filter((s) => s.active && s.targetId === selectedId)
-                              .map((s) => (
-                                <div key={s.id} className="muted">
-                                  Imposed by {countryDisplayName(world, s.imposerId)} ·{" "}
-                                  {sanctionsScopeLabel(s.severity)} measures
-                                </div>
-                              ))}
-                            {Object.values(runtime.sanctions).every(
-                              (s) => !s.active || s.targetId !== selectedId,
+                            {Object.values(runtime.sanctions).some(
+                              (s) => s.active && s.targetId === selectedId,
                             ) ? (
-                              <div className="muted">No active sanctions.</div>
+                              <div style={{ marginTop: "0.5rem" }}>
+                                <span className="kicker">Sanctions</span>
+                                {Object.values(runtime.sanctions)
+                                  .filter((s) => s.active && s.targetId === selectedId)
+                                  .map((s) => (
+                                    <div key={s.id} className="muted">
+                                      Imposed by {countryDisplayName(world, s.imposerId)} ·{" "}
+                                      {sanctionsScopeLabel(s.severity)} measures
+                                    </div>
+                                  ))}
+                              </div>
                             ) : null}
-                          </div>
-                          <div style={{ marginTop: "0.65rem" }}>
-                            <span className="kicker">Crises & tension</span>
+                          </section>
+
+                          <section className="country-dossier-section">
+                            <h3>Crises</h3>
                             {selectedCountryCrises.map((c) => (
-                              <div key={c.id} className="muted">
-                                {c.stage === "latent"
-                                  ? "Strategic tension"
-                                  : crisisStageLabel(c.stage)}{" "}
-                                · {publicSeverityLabel(c.intensity, c.stage)}
+                              <div key={c.id}>
+                                <strong>
+                                  {c.stage === "latent"
+                                    ? "Strategic tension"
+                                    : crisisStageLabel(c.stage)}
+                                </strong>
+                                <div className="muted">
+                                  {publicSeverityLabel(c.intensity, c.stage)}
+                                </div>
                               </div>
                             ))}
                             {selectedCountryCrises.length === 0 ? (
                               <div className="muted">No active crises or strategic tension.</div>
                             ) : null}
-                          </div>
-                          <div style={{ marginTop: "0.65rem" }}>
-                            <span className="kicker">Recent developments</span>
+                          </section>
+
+                          <section className="country-dossier-section">
+                            <h3>Recent developments</h3>
                             {selectedRecentEvents.map((e) => (
                               <ActivityFeedItem
                                 key={e.id}
@@ -604,12 +602,12 @@ export function ForeignAffairsPage(props: {
                             {selectedRecentEvents.length === 0 ? (
                               <div className="muted">No recent public events.</div>
                             ) : null}
-                          </div>
+                          </section>
                         </>
                       ) : null}
-                    </>
+                    </div>
                   ) : (
-                    <EmptyState>Select a country on the map.</EmptyState>
+                    <EmptyState>Select a country on the map to open its dossier.</EmptyState>
                   )}
                 </SectionCard>
               </div>

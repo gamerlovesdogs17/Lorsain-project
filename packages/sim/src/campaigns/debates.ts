@@ -32,6 +32,8 @@ const DEBATE_NOTABLE_MOMENTS: string[] = [
   "Defence readiness exchange highlighted alliance trade-offs",
   "Climate transition timeline clash dominated post-debate panels",
   "Housing supply numbers dispute carried into the next news cycle",
+  "Clash over Constitutional Court appointments framed judicial independence as a live issue",
+  "Exchange on politicization of the bench drew sustained institutionalist pushback",
 ];
 
 /**
@@ -50,6 +52,7 @@ const DEBATE_ISSUE_EMPHASES: Record<string, string> = {
   ISS_WELFARE: "social welfare",
   ISS_LIBERTY: "civil liberties and privacy",
   ISS_REFORM: "institutional and constitutional reform",
+  ISS_COURTS: "judicial independence and Court politicization",
   ISS_DEFENSE: "defence readiness and alliances",
   ISS_IMMIGRATION: "immigration and border management",
   ISS_POLICING: "policing and public safety",

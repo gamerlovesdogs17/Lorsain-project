@@ -116,22 +116,17 @@ export function NewsPage(props: {
   const selectedOutlet =
     selectedOutletId === "all" ? null : (props.world.mediaOutlets[selectedOutletId] ?? null);
 
-  const lead = groups[0] ?? null;
-  const secondary = groups.slice(1, 3);
-  const rest = groups.slice(3);
-  const pageCount = Math.max(1, Math.ceil(rest.length / PAGE_SIZE) || 1);
+  const lead = groups.find((g) => g.importance >= 0.65) ?? groups[0] ?? null;
+  const majorRest = groups.filter((g) => g !== lead && g.importance >= 0.65).slice(0, 2);
+  const secondary = groups
+    .filter((g) => g !== lead && !majorRest.includes(g) && g.importance >= 0.4)
+    .slice(0, 4);
+  const routine = groups.filter(
+    (g) => g !== lead && !majorRest.includes(g) && !secondary.includes(g),
+  );
+  const pageCount = Math.max(1, Math.ceil(routine.length / PAGE_SIZE) || 1);
   const pageIndex = Math.min(Math.max(0, page), pageCount - 1);
-  const pagedRest = rest.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
-
-  const byTopic = (() => {
-    const map = new Map<string, StoryGroup[]>();
-    for (const g of pagedRest) {
-      const list = map.get(g.category) ?? [];
-      list.push(g);
-      map.set(g.category, list);
-    }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  })();
+  const pagedRoutine = routine.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
   const selectedGroup = selectedStoryKey
     ? (groups.find((group) => group.key === selectedStoryKey) ?? null)
     : null;
@@ -306,6 +301,7 @@ export function NewsPage(props: {
     const bodyParagraphs = articleBodyParagraphs(selectedGroup, sourceEvent, publicDetails);
     return (
       <WorkLayout
+        className="editorial-workspace"
         header={
           <PageHeader
             kicker={selectedOutlet?.name ?? "News desk"}
@@ -411,7 +407,7 @@ export function NewsPage(props: {
   }
 
   return (
-    <div className="news-paper">
+    <div className="news-paper editorial-workspace news-paper-final">
       <WorkLayout
         header={
           <PageHeader
@@ -419,8 +415,8 @@ export function NewsPage(props: {
             title={selectedOutlet?.name ?? "The Front Page"}
             subtitle={
               selectedOutlet
-                ? `${selectedOutlet.name} front page and archive. Headlines reflect its public framing; recorded events remain unchanged.`
-                : "A state-aware press desk. Outlets may frame coverage; they do not invent results."
+                ? `${selectedOutlet.name} front page. Major stories lead; routine legislative briefs sit below.`
+                : "Editorial hierarchy: major political stories outrank routine bill progress."
             }
           />
         }
@@ -464,32 +460,65 @@ export function NewsPage(props: {
 
             {groups.length === 0 ? <EmptyState>No stories this month yet.</EmptyState> : null}
 
-            {lead ? (
-              <section className="news-lead">
-                <button
-                  type="button"
-                  className="news-open-story news-open-lead"
-                  onClick={() => setSelectedStoryKey(lead.key)}
-                >
-                  <LeadStory
-                    kicker={`${lead.category} · ${lead.date}`}
-                    headline={storyHeadline(
-                      props.catalog,
-                      props.world,
-                      props.snap,
-                      lead.stories[0]!,
-                    )}
-                    date={`${lead.stories.length} outlet${lead.stories.length === 1 ? "" : "s"}`}
-                  />
-                  <span>Read / compare coverage →</span>
-                </button>
-                {renderOutlets(lead)}
-              </section>
-            ) : null}
+            <div className="news-major-stage">
+              {lead ? (
+                <section className="news-lead">
+                  <button
+                    type="button"
+                    className="news-open-story news-open-lead"
+                    onClick={() => setSelectedStoryKey(lead.key)}
+                  >
+                    <LeadStory
+                      kicker={`Lead · ${lead.category} · ${lead.date}`}
+                      headline={storyHeadline(
+                        props.catalog,
+                        props.world,
+                        props.snap,
+                        lead.stories[0]!,
+                      )}
+                      date={`${lead.stories.length} outlet${lead.stories.length === 1 ? "" : "s"}`}
+                    />
+                    <span>Read / compare coverage →</span>
+                  </button>
+                  {renderOutlets(lead)}
+                </section>
+              ) : null}
+
+              {majorRest.length > 0 ? (
+                <>
+                  <SectionDivider title="Also major" />
+                  <div className="news-secondary">
+                    {majorRest.map((group) => (
+                      <article key={group.key} className="news-secondary-item">
+                        <div className="kicker">
+                          Major · {group.category} · {group.date}
+                        </div>
+                        <button
+                          type="button"
+                          className="news-open-story"
+                          onClick={() => setSelectedStoryKey(group.key)}
+                        >
+                          <h3 className="serif-head">
+                            {storyHeadline(
+                              props.catalog,
+                              props.world,
+                              props.snap,
+                              group.stories[0]!,
+                            )}
+                          </h3>
+                          <span>Read →</span>
+                        </button>
+                        {renderOutlets(group)}
+                      </article>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
 
             {secondary.length > 0 ? (
               <>
-                <SectionDivider title="Also in the press" />
+                <SectionDivider title="Second section" />
                 <div className="news-secondary">
                   {secondary.map((group) => (
                     <article key={group.key} className="news-secondary-item">
@@ -513,41 +542,30 @@ export function NewsPage(props: {
               </>
             ) : null}
 
-            {byTopic.length > 0 ? (
-              <>
+            {pagedRoutine.length > 0 ? (
+              <section className="news-routine-digest">
                 <SectionDivider
-                  title="By topic"
-                  {...(rest.length > PAGE_SIZE
-                    ? {
-                        hint: `Showing ${pageIndex * PAGE_SIZE + 1}–${Math.min((pageIndex + 1) * PAGE_SIZE, rest.length)} of ${rest.length}`,
-                      }
-                    : {})}
+                  title="Routine briefs"
+                  hint={
+                    routine.length > PAGE_SIZE
+                      ? `Legislative progress and lower-priority notices · ${pageIndex * PAGE_SIZE + 1}–${Math.min((pageIndex + 1) * PAGE_SIZE, routine.length)} of ${routine.length}`
+                      : "Legislative progress and lower-priority notices"
+                  }
                 />
-                {byTopic.map(([category, topicGroups]) => (
-                  <section key={category} className="news-topic-group">
-                    <h4 className="news-topic-label">{category}</h4>
-                    {topicGroups.map((group) => (
-                      <article key={group.key} className="news-topic-item">
-                        <div className="kicker">{group.date}</div>
-                        <button
-                          type="button"
-                          className="news-open-story"
-                          onClick={() => setSelectedStoryKey(group.key)}
-                        >
-                          <h4 className="serif-head">
-                            {storyHeadline(
-                              props.catalog,
-                              props.world,
-                              props.snap,
-                              group.stories[0]!,
-                            )}
-                          </h4>
-                          <span>Read →</span>
-                        </button>
-                        {renderOutlets(group)}
-                      </article>
-                    ))}
-                  </section>
+                {pagedRoutine.map((group) => (
+                  <div key={group.key} className="news-routine-item">
+                    <div className="kicker">{group.date}</div>
+                    <button
+                      type="button"
+                      className="news-open-story"
+                      onClick={() => setSelectedStoryKey(group.key)}
+                    >
+                      <h4 className="serif-head">
+                        {storyHeadline(props.catalog, props.world, props.snap, group.stories[0]!)}
+                      </h4>
+                    </button>
+                    <span className="muted">{group.category}</span>
+                  </div>
                 ))}
                 {pageCount > 1 ? (
                   <div className="pager">
@@ -572,7 +590,7 @@ export function NewsPage(props: {
                     </button>
                   </div>
                 ) : null}
-              </>
+              </section>
             ) : null}
           </>
         }

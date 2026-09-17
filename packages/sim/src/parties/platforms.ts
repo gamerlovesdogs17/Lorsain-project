@@ -215,7 +215,8 @@ export function partyPlatformIssueForBillItem(
     return "environment";
   if (category.includes("tax") || category.includes("revenue")) return "taxes";
   if (["ISS_LIBERTY", "ISS_IMMIGRATION", "ISS_POLICING"].includes(issueId)) return "social_policy";
-  if (["ISS_DECENT", "ISS_EXEC", "ISS_REFORM"].includes(issueId)) return "institutional_reform";
+  if (["ISS_DECENT", "ISS_EXEC", "ISS_REFORM", "ISS_COURTS"].includes(issueId))
+    return "institutional_reform";
   if (["ISS_DEFENSE", "ISS_TRADE"].includes(issueId)) return "foreign_policy";
   return "economy";
 }

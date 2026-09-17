@@ -806,12 +806,53 @@ export function PartyPage(props: PartyPageProps) {
   const budgetRecommendation =
     partyId && partyOrg?.metadata ? partyOrg.metadata[`budget_recommend_${partyId}`] : undefined;
 
+  const ideologyHighlights = runtime?.publicPlatform
+    ? PARTY_PLATFORM_ISSUES.slice()
+        .sort(
+          (a, b) =>
+            Math.abs(runtime.publicPlatform!.positions[b]) -
+              Math.abs(runtime.publicPlatform!.positions[a]) || a.localeCompare(b),
+        )
+        .slice(0, 3)
+        .map(
+          (issue) =>
+            `${PARTY_PLATFORM_LABELS[issue]}: ${partyPlatformLabel(issue, runtime.publicPlatform!.positions[issue])}`,
+        )
+    : [];
+  const priorityHeadline =
+    currentPriorities.length === 0
+      ? "No public priorities set"
+      : currentPriorities
+          .slice(0, 3)
+          .map((id) => getPartyPriority(id)?.label ?? titleCaseWords(id))
+          .join(" · ");
+  const strengthLabel =
+    caucus >= Math.ceil(totalSeats * 0.4)
+      ? "Major parliamentary force"
+      : caucus >= Math.ceil(totalSeats * 0.18)
+        ? "Significant Assembly presence"
+        : caucus > 0
+          ? "Parliamentary foothold"
+          : "Outside the Assembly";
+  const contestingElection = Object.values(props.snap.elections).some(
+    (e) =>
+      e.status !== "resolved" &&
+      Object.keys(e.candidates).some((cid) => props.snap.politicians[cid]?.partyId === partyId),
+  );
+  const openLeadershipContest = Object.values(props.snap.partyContests).some(
+    (c) =>
+      c.partyId === partyId &&
+      c.type === "party_leadership" &&
+      c.status !== "resolved" &&
+      c.status !== "cancelled",
+  );
+
   return (
-    <div className="party-page" data-tutorial="party-workspace">
+    <div className="party-page entity-profile party-desk-final" data-tutorial="party-workspace">
       <PageHeader
-        kicker="Parties and caucuses"
+        kicker="Political parties"
         title={party?.name ?? "No party"}
-        subtitle="National party directory, internal elections, caucuses, and parliamentary leadership."
+        subtitle="Party identity, leadership contests, caucuses, and the Assembly role — not a registry."
       />
       <div className="party-directory-strip" role="navigation" aria-label="All parties">
         {availablePartyIds.map((id) => {
@@ -841,30 +882,10 @@ export function PartyPage(props: PartyPageProps) {
           );
         })}
       </div>
-      {party ? (
-        <div
-          className={`party-banner legal-${legalStatusTone(partyLegalStatus(props.snap, partyId) as string)}`}
-          style={{ borderLeftColor: partyColor(props.world, partyId) }}
-        >
-          <StatusBadge tone="ok">
-            {caucus} of {totalSeats} Assembly seats
-          </StatusBadge>
-          <StatusBadge>{position}</StatusBadge>
-          <StatusBadge
-            tone={
-              legalStatusTone(partyLegalStatus(props.snap, partyId) as string) === "danger"
-                ? "warn"
-                : "idle"
-            }
-          >
-            {partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}
-          </StatusBadge>
-        </div>
-      ) : null}
 
       <TabBar
         tabs={[
-          { id: "overview", label: "Overview" },
+          { id: "overview", label: "Identity" },
           { id: "leadership", label: "Leadership" },
           { id: "caucuses", label: "Caucuses" },
           { id: "platform", label: "Platform" },
@@ -876,78 +897,164 @@ export function PartyPage(props: PartyPageProps) {
       />
 
       {partyTab === "overview" ? (
-        <>
-          {runtime?.leaderId ? (
-            <PoliticianCard
-              catalog={props.catalog}
-              world={props.world}
-              state={props.snap}
-              politicianId={runtime.leaderId}
-              office="National Chair (Party Leader)"
-            />
-          ) : (
-            <EmptyState>National Chair is vacant.</EmptyState>
-          )}
+        <div className="party-overview-stack">
+          {party ? (
+            <header
+              className="entity-identity-masthead"
+              style={{ borderLeftColor: partyColor(props.world, partyId) }}
+            >
+              <div>
+                <div className="identity-kicker">National party</div>
+                <h2 className="identity-name">{party.name}</h2>
+                <p className="identity-role">
+                  {position} · {strengthLabel} ·{" "}
+                  {partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}
+                </p>
+                <div className="identity-badges">
+                  <StatusBadge tone="ok">
+                    {caucus} of {totalSeats} Assembly seats
+                  </StatusBadge>
+                  <StatusBadge>{position}</StatusBadge>
+                  <StatusBadge
+                    tone={
+                      legalStatusTone(partyLegalStatus(props.snap, partyId) as string) === "danger"
+                        ? "warn"
+                        : "idle"
+                    }
+                  >
+                    {partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}
+                  </StatusBadge>
+                  {contestingElection ? (
+                    <StatusBadge tone="warn">Contesting election</StatusBadge>
+                  ) : null}
+                  {openLeadershipContest ? (
+                    <StatusBadge tone="warn">Leadership contest open</StatusBadge>
+                  ) : runtime?.status === "leadership_vacant" ? (
+                    <StatusBadge tone="warn">Leadership vacant</StatusBadge>
+                  ) : null}
+                </div>
+              </div>
+              <div className="entity-identity-facets">
+                <div>
+                  <div className="kicker">Leader</div>
+                  <strong>
+                    {runtime?.leaderId
+                      ? politicianDisplayName(props.catalog, runtime.leaderId)
+                      : "Vacant"}
+                  </strong>
+                </div>
+                <div>
+                  <div className="kicker">Strength</div>
+                  <strong>
+                    {caucus} seats · {strengthLabel}
+                  </strong>
+                </div>
+                <div>
+                  <div className="kicker">Ideology</div>
+                  <strong>
+                    {ideologyHighlights.length > 0
+                      ? ideologyHighlights.join(" · ")
+                      : "Platform not yet published"}
+                  </strong>
+                </div>
+                <div>
+                  <div className="kicker">Priorities</div>
+                  <strong>{priorityHeadline}</strong>
+                </div>
+                <div>
+                  <div className="kicker">Caucuses</div>
+                  <strong>
+                    {activeCaucusCount} active
+                    {biggestCaucuses.length
+                      ? ` · ${biggestCaucuses.map((c) => c.name).join(", ")}`
+                      : ""}
+                  </strong>
+                </div>
+                <div>
+                  <div className="kicker">Role</div>
+                  <strong>
+                    {position}
+                    {chairStability ? ` · Chair ${stabilityLabel(chairStability)}` : ""}
+                  </strong>
+                </div>
+              </div>
+            </header>
+          ) : null}
 
-          <BriefStrip
-            items={[
-              {
-                label: "Active caucuses",
-                value: activeCaucusCount,
-              },
-              {
-                label: "Chair stability",
-                value: chairStability ? stabilityLabel(chairStability) : "—",
-              },
-              {
-                label: "Term",
-                value: chairAssumed
-                  ? termEndDate
-                    ? `${chairAssumed} → ${termEndDate}`
-                    : `Since ${chairAssumed}`
-                  : "Vacant",
-              },
-              {
-                label: "Seats",
-                value: `${caucus} / ${totalSeats}`,
-              },
-            ]}
-          />
-          <SectionCard title="Biggest caucuses">
-            <p className="muted small">{activeCaucusCount} active caucuses</p>
+          <section className="party-identity-leader">
+            <SectionDivider title="National Chair" hint="The person who leads this party" />
+            {runtime?.leaderId ? (
+              <PoliticianCard
+                catalog={props.catalog}
+                world={props.world}
+                state={props.snap}
+                politicianId={runtime.leaderId}
+                office="National Chair (Party Leader)"
+              />
+            ) : (
+              <EmptyState>National Chair is vacant.</EmptyState>
+            )}
+            <BriefStrip
+              items={[
+                {
+                  label: "Active caucuses",
+                  value: activeCaucusCount,
+                },
+                {
+                  label: "Chair stability",
+                  value: chairStability ? stabilityLabel(chairStability) : "—",
+                },
+                {
+                  label: "Term",
+                  value: chairAssumed
+                    ? termEndDate
+                      ? `${chairAssumed} → ${termEndDate}`
+                      : `Since ${chairAssumed}`
+                    : "Vacant",
+                },
+                {
+                  label: "Seats",
+                  value: `${caucus} / ${totalSeats}`,
+                },
+              ]}
+            />
+          </section>
+
+          <SectionCard title="Caucus landscape">
+            <p className="muted small">{activeCaucusCount} active caucuses inside the party</p>
             {biggestCaucuses.length === 0 ? (
               <EmptyState>No active caucuses recorded yet.</EmptyState>
             ) : (
-              <DataTable
-                dense
-                headers={["Caucus", "Party members", "MPs", "Institutional", "Stance"]}
-              >
+              <div className="faction-cards">
                 {biggestCaucuses.map((c) => (
-                  <tr key={c.fid}>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn secondary btn-sm"
-                        onClick={() => {
-                          setSelectedFactionId(c.fid);
-                          props.setGlobalFocus({ kind: "Caucus", id: c.fid });
-                        }}
-                      >
-                        {c.name}
-                      </button>
-                    </td>
-                    <td>{c.membershipPct}%</td>
-                    <td>{c.mpPct}%</td>
-                    <td>{c.institutionalPct}%</td>
-                    <td>{c.stance}</td>
-                  </tr>
+                  <button
+                    key={c.fid}
+                    type="button"
+                    className="faction-card"
+                    onClick={() => {
+                      setSelectedFactionId(c.fid);
+                      setPartyTab("caucuses");
+                      props.setGlobalFocus({ kind: "Caucus", id: c.fid });
+                    }}
+                  >
+                    <strong>{c.name}</strong>
+                    <div className="muted">
+                      {c.membershipLabel} of members · {c.mpPct}% of MPs · {c.stance}
+                    </div>
+                    {c.leaderId ? (
+                      <div>{politicianDisplayName(props.catalog, c.leaderId)}</div>
+                    ) : (
+                      <div className="muted">No chair</div>
+                    )}
+                  </button>
                 ))}
-              </DataTable>
+              </div>
             )}
           </SectionCard>
-          <SectionCard title="Assembly Delegation (brief)">
+
+          <SectionCard title="Assembly role">
             <p className="muted">
-              Assembly Leader and Whip are elected by sitting MPs — not National Chair offices.
+              Floor leadership is elected by sitting MPs — separate from National Chair.
             </p>
             {caucusLeadership ? (
               <div className="faction-cards">
@@ -986,81 +1093,19 @@ export function PartyPage(props: PartyPageProps) {
               <EmptyState>No sitting Assembly delegation.</EmptyState>
             )}
           </SectionCard>
-          <div className="party-dossier-grid">
-            <SectionCard title="Party identity">
-              <dl className="dossier-facts compact">
-                <div>
-                  <dt>Legal status</dt>
-                  <dd>{partyLegalStatusLabel(partyLegalStatus(props.snap, partyId))}</dd>
-                </div>
-                <div>
-                  <dt>Assembly seats</dt>
-                  <dd>
-                    {caucus} of {totalSeats}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Political position</dt>
-                  <dd>{position}</dd>
-                </div>
-                <div>
-                  <dt>Election status</dt>
-                  <dd>
-                    {Object.values(props.snap.elections).some(
-                      (e) =>
-                        e.status !== "resolved" &&
-                        Object.keys(e.candidates).some(
-                          (cid) => props.snap.politicians[cid]?.partyId === partyId,
-                        ),
-                    )
-                      ? "Contesting upcoming election"
-                      : "No active candidacies"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Leadership contest</dt>
-                  <dd>
-                    {Object.values(props.snap.partyContests).some(
-                      (c) =>
-                        c.partyId === partyId &&
-                        c.type === "party_leadership" &&
-                        c.status !== "resolved" &&
-                        c.status !== "cancelled",
-                    )
-                      ? "Open leadership contest"
-                      : runtime?.status === "leadership_vacant"
-                        ? "Leadership vacant"
-                        : "Settled"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Lifecycle</dt>
-                  <dd>
-                    {(() => {
-                      const cool =
-                        partyId != null
-                          ? props.snap.politicsRuntime?.partyLifecycleCooldown?.[partyId]
-                          : undefined;
-                      if (!cool) return "Stable";
-                      return `Recent ${cool.lastKind} (${cool.lastEventDate})`;
-                    })()}
-                  </dd>
-                </div>
-              </dl>
+
+          {recent.length > 0 ? (
+            <SectionCard title="Recent party chronicle">
+              {recent.slice(0, 5).map((e) => (
+                <ActivityFeedItem
+                  key={e.id}
+                  date={e.date}
+                  text={eventDisplay(props.catalog, props.world, props.snap, e)}
+                />
+              ))}
             </SectionCard>
-            {recent.length > 0 ? (
-              <SectionCard title="Snapshot history">
-                {recent.slice(0, 5).map((e) => (
-                  <ActivityFeedItem
-                    key={e.id}
-                    date={e.date}
-                    text={eventDisplay(props.catalog, props.world, props.snap, e)}
-                  />
-                ))}
-              </SectionCard>
-            ) : null}
-          </div>
-        </>
+          ) : null}
+        </div>
       ) : null}
 
       {partyTab === "leadership" ? (
@@ -2042,47 +2087,49 @@ export function PartyPage(props: PartyPageProps) {
             </SectionCard>
           </div>
 
-          <SectionCard title="Nominations and leadership contests">
+          <SectionCard title="Leadership contests">
+            <p className="muted">
+              Contests are fought by people — candidates first, endorsements second.
+            </p>
             {contests.length === 0 ? <EmptyState>No current party contests.</EmptyState> : null}
-            {contests.map((c) => {
-              const publicEndorsements = Object.values(props.snap.endorsements)
-                .filter((endorsement) => endorsement.contestId === c.id && endorsement.public)
-                .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
-              const liveEndorsements = publicEndorsements.filter(
-                (endorsement) => endorsement.status === "active",
-              );
-              const playerEndorsement = liveEndorsements.find(
-                (endorsement) =>
-                  endorsement.endorserType === "politician" &&
-                  endorsement.endorserId === props.snap.playerPoliticianId,
-              );
-              const playerIsCandidate = isDeclaredContestCandidate(
-                c,
-                props.snap.playerPoliticianId,
-              );
-              const canEndorse =
-                partyId === playerPartyId &&
-                !playerIsCandidate &&
-                c.status !== "resolved" &&
-                c.status !== "cancelled";
-              return (
-                <div key={c.id} className="contest-card">
-                  <strong>{contestDisplayName(props.snap, props.world, c.id)}</strong>{" "}
-                  <StatusBadge tone={c.status === "open" ? "warn" : "idle"}>
-                    {c.status.replaceAll("_", " ")}
-                  </StatusBadge>
-                  <div className="muted">
-                    {
-                      Object.values(c.entries).filter((entry) => entry.status !== "potential")
-                        .length
-                    }{" "}
-                    candidates
-                  </div>
-                  <div className="party-contest-field">
-                    {Object.values(c.entries)
-                      .filter((entry) => entry.status !== "potential")
-                      .slice(0, 8)
-                      .map((entry) => (
+            <div className="party-contest-people">
+              {contests.map((c) => {
+                const publicEndorsements = Object.values(props.snap.endorsements)
+                  .filter((endorsement) => endorsement.contestId === c.id && endorsement.public)
+                  .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
+                const liveEndorsements = publicEndorsements.filter(
+                  (endorsement) => endorsement.status === "active",
+                );
+                const playerEndorsement = liveEndorsements.find(
+                  (endorsement) =>
+                    endorsement.endorserType === "politician" &&
+                    endorsement.endorserId === props.snap.playerPoliticianId,
+                );
+                const playerIsCandidate = isDeclaredContestCandidate(
+                  c,
+                  props.snap.playerPoliticianId,
+                );
+                const canEndorse =
+                  partyId === playerPartyId &&
+                  !playerIsCandidate &&
+                  c.status !== "resolved" &&
+                  c.status !== "cancelled";
+                const declared = Object.values(c.entries).filter(
+                  (entry) => entry.status !== "potential",
+                );
+                return (
+                  <div key={c.id} className="contest-card people-contest">
+                    <div className="contest-head">
+                      <h3>{contestDisplayName(props.snap, props.world, c.id)}</h3>
+                      <StatusBadge tone={c.status === "open" ? "warn" : "idle"}>
+                        {c.status.replaceAll("_", " ")}
+                      </StatusBadge>
+                      <span className="muted">
+                        {declared.length} candidate{declared.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <div className="party-contest-field">
+                      {declared.slice(0, 8).map((entry) => (
                         <PoliticianCard
                           key={entry.politicianId}
                           catalog={props.catalog}
@@ -2112,87 +2159,91 @@ export function PartyPage(props: PartyPageProps) {
                           }
                         />
                       ))}
-                  </div>
-                  {c.winnerId ? (
-                    <div>Winner: {politicianDisplayName(props.catalog, c.winnerId)}</div>
-                  ) : null}
-                  {playerEndorsement ? (
-                    <div className="player-endorsement-control">
-                      <span>
-                        You endorsed{" "}
-                        <strong>
-                          {politicianDisplayName(props.catalog, playerEndorsement.targetId)}
-                        </strong>{" "}
-                        on {playerEndorsement.date}.
-                      </span>
+                    </div>
+                    {c.winnerId ? (
+                      <div>Winner: {politicianDisplayName(props.catalog, c.winnerId)}</div>
+                    ) : null}
+                    {playerEndorsement ? (
+                      <div className="player-endorsement-control">
+                        <span>
+                          You endorsed{" "}
+                          <strong>
+                            {politicianDisplayName(props.catalog, playerEndorsement.targetId)}
+                          </strong>{" "}
+                          on {playerEndorsement.date}.
+                        </span>
+                        <button
+                          type="button"
+                          className="btn danger quiet"
+                          onClick={() =>
+                            run({
+                              type: "WITHDRAW_ENDORSEMENT",
+                              endorsementId: playerEndorsement.id,
+                            })
+                          }
+                        >
+                          Withdraw endorsement
+                        </button>
+                      </div>
+                    ) : null}
+                    {publicEndorsements.length ? (
+                      <details className="endorsement-network">
+                        <summary>
+                          Public endorsement record ({liveEndorsements.length} current ·{" "}
+                          {publicEndorsements.length - liveEndorsements.length} closed)
+                        </summary>
+                        {publicEndorsements.slice(0, 20).map((endorsement) => {
+                          const statusEvent = props.snap.history
+                            .slice()
+                            .reverse()
+                            .find(
+                              (event) =>
+                                event.payload.endorsementId === endorsement.id &&
+                                (event.type === "ENDORSEMENT_WITHDRAWN" ||
+                                  event.type === "ENDORSEMENT_ENDED" ||
+                                  event.type === "ENDORSEMENT_SWITCHED"),
+                            );
+                          return (
+                            <EntityRow
+                              key={endorsement.id}
+                              title={endorsementActorName(
+                                endorsement.endorserType,
+                                endorsement.endorserId,
+                              )}
+                              meta={`Backs ${politicianDisplayName(props.catalog, endorsement.targetId)} · endorsed ${endorsement.date}${statusEvent ? ` · status changed ${statusEvent.date}` : ""}`}
+                              status={
+                                <StatusBadge tone={endorsement.status === "active" ? "ok" : "idle"}>
+                                  {endorsement.status === "active"
+                                    ? "Current"
+                                    : endorsement.status[0]!.toUpperCase() +
+                                      endorsement.status.slice(1)}
+                                </StatusBadge>
+                              }
+                            />
+                          );
+                        })}
+                      </details>
+                    ) : null}
+                    {c.status === "open" &&
+                    partyId === playerPartyId &&
+                    !c.entries[props.snap.playerPoliticianId] ? (
                       <button
-                        type="button"
-                        className="btn danger quiet"
+                        className="btn"
                         onClick={() =>
-                          run({ type: "WITHDRAW_ENDORSEMENT", endorsementId: playerEndorsement.id })
+                          run({
+                            type: "DECLARE_PARTY_CONTEST_CANDIDACY",
+                            contestId: c.id,
+                            politicianId: props.snap.playerPoliticianId,
+                          })
                         }
                       >
-                        Withdraw endorsement
+                        Enter contest
                       </button>
-                    </div>
-                  ) : null}
-                  {publicEndorsements.length ? (
-                    <details className="endorsement-network">
-                      <summary>
-                        Public endorsement record ({liveEndorsements.length} current ·{" "}
-                        {publicEndorsements.length - liveEndorsements.length} closed)
-                      </summary>
-                      {publicEndorsements.slice(0, 20).map((endorsement) => {
-                        const statusEvent = props.snap.history
-                          .slice()
-                          .reverse()
-                          .find(
-                            (event) =>
-                              event.payload.endorsementId === endorsement.id &&
-                              (event.type === "ENDORSEMENT_WITHDRAWN" ||
-                                event.type === "ENDORSEMENT_ENDED" ||
-                                event.type === "ENDORSEMENT_SWITCHED"),
-                          );
-                        return (
-                          <EntityRow
-                            key={endorsement.id}
-                            title={endorsementActorName(
-                              endorsement.endorserType,
-                              endorsement.endorserId,
-                            )}
-                            meta={`Backs ${politicianDisplayName(props.catalog, endorsement.targetId)} · endorsed ${endorsement.date}${statusEvent ? ` · status changed ${statusEvent.date}` : ""}`}
-                            status={
-                              <StatusBadge tone={endorsement.status === "active" ? "ok" : "idle"}>
-                                {endorsement.status === "active"
-                                  ? "Current"
-                                  : endorsement.status[0]!.toUpperCase() +
-                                    endorsement.status.slice(1)}
-                              </StatusBadge>
-                            }
-                          />
-                        );
-                      })}
-                    </details>
-                  ) : null}
-                  {c.status === "open" &&
-                  partyId === playerPartyId &&
-                  !c.entries[props.snap.playerPoliticianId] ? (
-                    <button
-                      className="btn"
-                      onClick={() =>
-                        run({
-                          type: "DECLARE_PARTY_CONTEST_CANDIDACY",
-                          contestId: c.id,
-                          politicianId: props.snap.playerPoliticianId,
-                        })
-                      }
-                    >
-                      Enter contest
-                    </button>
-                  ) : null}
-                </div>
-              );
-            })}
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           </SectionCard>
         </>
       ) : null}

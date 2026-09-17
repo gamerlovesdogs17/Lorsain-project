@@ -25,6 +25,7 @@ import {
   constituencyDisplayName,
   eventDisplay,
   issueDisplayName,
+  partyColor,
   partyDisplayName,
   politicianDisplayName,
   pollShareLine,
@@ -33,12 +34,15 @@ import {
 import { latestPublicPoll, mapFillFor, nominationOrPartyFill } from "./map/fills.js";
 import {
   ActivityFeedItem,
+  BriefStrip,
   EmptyState,
+  EntityIdentityBanner,
   EntityRow,
   PageHeader,
   SectionCard,
   SectionDivider,
   StatusBadge,
+  TabBar,
 } from "./ui/kit.js";
 import { PoliticianCard, PoliticianProfile } from "./ui/politician.js";
 import { MapLegend } from "./ui/mapLegend.js";
@@ -55,6 +59,7 @@ import {
 const AD_SPENDS = [5_000, 10_000, 25_000, 50_000, 100_000];
 type ActionKind =
   "visit" | "organize" | "advertise" | "message" | "attack" | "endorsement" | "gotv" | null;
+type CampaignTab = "war_room" | "map" | "strategy" | "support" | "record";
 
 function run(
   sim: Simulation,
@@ -104,6 +109,7 @@ export function CampaignPage(props: {
 }) {
   const c = playerCampaign(props.snap);
   const [activeAction, setActiveAction] = useState<ActionKind>(null);
+  const [campaignTab, setCampaignTab] = useState<CampaignTab>("war_room");
   const [visitKind, setVisitKind] = useState<"national" | "province" | "constituency">("national");
   const [visitId, setVisitId] = useState("");
   const [orgKind, setOrgKind] = useState<"province" | "constituency">("province");
@@ -238,12 +244,17 @@ export function CampaignPage(props: {
           (x.status === "planned" && x.metadata.candidateSource === "scenario_start")),
     );
     return (
-      <div className="page-tone-campaign">
-        <PageHeader
-          kicker="War room · Campaign 2.0"
-          title="Campaign HQ"
-          subtitle="You are not running an active campaign."
-        />
+      <div
+        className="command-workspace page-tone-campaign campaign-hq"
+        data-tutorial="campaign-workspace"
+      >
+        <div className="object-first-lead">
+          <PageHeader
+            kicker="Campaign HQ"
+            title="Campaign HQ"
+            subtitle="Declare a candidacy when filing or a nomination contest opens."
+          />
+        </div>
         {assemblyElection ? (
           <SectionCard title={incumbentConstituency ? "Seek reelection" : "Run for the Assembly"}>
             <p className="muted">
@@ -517,26 +528,6 @@ export function CampaignPage(props: {
     const row = poll.firstPreference.find((entry) => entry.politicianId === politicianId);
     return row ? row.share : null;
   };
-  const strategicMemo = (() => {
-    const parts: string[] = [];
-    parts.push(`${standingLine} with ${momentumLine}.`);
-    if (monthsRemaining != null) {
-      parts.push(
-        monthsRemaining <= 1
-          ? "Closing period: convert organization into turnout where Ground Game is ready."
-          : `About ${monthsRemaining} months remain on the recorded calendar.`,
-      );
-    }
-    if (c.cashOnHand < 15_000) parts.push("Cash is tight relative to paid media needs.");
-    else if (c.fieldOrganization < 0.2)
-      parts.push("Field organization still needs durable build-out.");
-    else parts.push("Resources support continued field and message work.");
-    if (rivals.length)
-      parts.push(
-        `${rivals.length} active opponent${rivals.length === 1 ? "" : "s"} in this contest.`,
-      );
-    return parts.join(" ");
-  })();
   const activeGotv = gotvActivations(c);
   const gotvOrganization =
     gotvKind === "province"
@@ -613,158 +604,135 @@ export function CampaignPage(props: {
 
   return (
     <div
-      className="campaign-page page-tone-campaign campaign-hq-v7"
+      className="command-workspace map-workspace campaign-page page-tone-campaign campaign-hq"
       data-tutorial="campaign-workspace"
     >
-      <PageHeader
-        kicker="Campaign HQ · Campaign 2.0"
-        title={campaignTypeLabel(c.type).replace(/^./, (letter) => letter.toUpperCase())}
-        subtitle={`${raceDescription} · Election ${campaignElectionDate ?? "upcoming"}`}
-        actions={<StatusBadge tone={noActions ? "warn" : "ok"}>{c.status}</StatusBadge>}
-      />
+      <div className="object-first-lead">
+        <EntityIdentityBanner
+          name={politicianDisplayName(props.catalog, props.snap.playerPoliticianId)}
+          office={campaignTypeLabel(c.type)}
+          party={partyDisplayName(props.world, playerPol?.partyId ?? null, props.snap)}
+          color={partyColor(props.world, playerPol?.partyId ?? null)}
+          meta={`${raceDescription}${campaignElectionDate ? ` · ${campaignElectionDate}` : ""}${nominationMethod ? ` · ${nominationMethodLabel(nominationMethod)}` : ""}`}
+          actions={<StatusBadge tone={noActions ? "warn" : "ok"}>{c.status}</StatusBadge>}
+        />
+      </div>
 
       {actionClosed ? (
-        <div className="campaign-stage-ribbon counting">
+        <div className="campaign-stage-ribbon counting procedural-stage-strip">
           <strong>Voting and counting</strong>
-          <span>Campaign actions and withdrawals are closed. Follow the race in Elections.</span>
+          <span>Campaign actions are closed. Follow returns in Elections.</span>
         </div>
       ) : finalStretch ? (
-        <div className="campaign-stage-ribbon final">
+        <div className="campaign-stage-ribbon final procedural-stage-strip">
           <strong>
             Final stretch · {monthsRemaining === 0 ? "Election month" : "One month remaining"}
           </strong>
-          <span>
-            Built Ground Game can now be activated for GOTV. It is not a free turnout boost.
-          </span>
+          <span>GOTV can activate where Ground Game is already built.</span>
         </div>
       ) : (
-        <div className="campaign-stage-ribbon">
+        <div className="campaign-stage-ribbon procedural-stage-strip">
           <strong>
             {monthsRemaining == null ? "Campaign underway" : `${monthsRemaining} months remaining`}
           </strong>
-          <span>
-            Build durable organization now; voter mobilization opens only in the final two months.
-          </span>
+          <span>{pathFraming}</span>
         </div>
       )}
 
-      <section className="campaign-strategic-overview" aria-label="Strategic overview">
-        <div className="kicker">Strategic overview</div>
-        <div className="campaign-overview-grid">
-          <div>
-            <span className="muted">Contest</span>
-            <strong>{campaignTypeLabel(c.type)}</strong>
-            <small>{raceDescription}</small>
-          </div>
-          <div>
-            <span className="muted">Standing</span>
-            <strong>{standingLine}</strong>
-            <small>{momentumLine}</small>
-          </div>
-          <div>
-            <span className="muted">
-              {pollScope.contestId ? "Primary polling" : "Polling / projection"}
-            </span>
-            <strong>{pollProjection ? "Published sample" : "No race poll yet"}</strong>
-            <small>{pollProjection ?? "Map layers stay contest-scoped when polls exist."}</small>
-          </div>
-          <div>
-            <span className="muted">Path</span>
-            <strong>
-              {monthsRemaining == null
-                ? "Calendar open"
-                : monthsRemaining <= 1
-                  ? "Final stretch"
-                  : `${monthsRemaining} months out`}
-            </strong>
-            <small>
-              {pathFraming}
-              {nominationMethod ? ` · ${nominationMethodLabel(nominationMethod)}` : ""}
-            </small>
+      <BriefStrip
+        items={[
+          { label: "Cash", value: Math.round(c.cashOnHand).toLocaleString() },
+          { label: "Organization", value: `${groundGameStrength(c.fieldOrganization)}/100` },
+          {
+            label: "Actions",
+            value: `${c.actionPointsRemaining}/${c.actionPointsMax}`,
+          },
+          { label: "Endorsements", value: partySupportCount },
+        ]}
+      />
+
+      <TabBar
+        tabs={[
+          { id: "war_room", label: "War room" },
+          { id: "map", label: "Map" },
+          { id: "strategy", label: "Actions" },
+          { id: "support", label: "Backing" },
+          { id: "record", label: "Record" },
+        ]}
+        value={campaignTab}
+        onChange={setCampaignTab}
+      />
+
+      {campaignTab === "war_room" ? (
+        <div className="campaign-war-room">
+          <div className="campaign-war-room-grid">
+            <section>
+              <PoliticianProfile
+                catalog={props.catalog}
+                world={props.world}
+                state={props.snap}
+                politicianId={props.snap.playerPoliticianId}
+                {...(playerOffices(props.world, props.snap, props.snap.playerPoliticianId)[0]
+                  ? {
+                      office: playerOffices(
+                        props.world,
+                        props.snap,
+                        props.snap.playerPoliticianId,
+                      )[0],
+                    }
+                  : {})}
+                party={partyDisplayName(props.world, playerPol?.partyId ?? null, props.snap)}
+              />
+              <SectionDivider title="Race standing" hint="Public qualitative signals only" />
+              <div className="campaign-standing-block">
+                <strong>{standingLine}</strong>
+                <span className="muted">{momentumLine}</span>
+                <p>
+                  {pollProjection
+                    ? `${pollScope.contestId ? "Primary" : "Race"} poll: ${pollProjection}`
+                    : "No published race poll yet."}
+                </p>
+              </div>
+            </section>
+            <section>
+              <SectionDivider
+                title="Opponents"
+                {...(rivals.length ? {} : { hint: "No active opponents" })}
+              />
+              {rivals.length === 0 ? <EmptyState>Field is clear for now.</EmptyState> : null}
+              {rivals.slice(0, 8).map((r) => {
+                const share = pollShareFor(r.politicianId);
+                const rivalParty = props.snap.politicians[r.politicianId]?.partyId ?? null;
+                return (
+                  <EntityRow
+                    key={r.politicianId}
+                    title={
+                      <span className="campaign-rival-title">
+                        <span
+                          className="party-swatch"
+                          style={{ background: partyColor(props.world, rivalParty) }}
+                          aria-hidden
+                        />
+                        {politicianDisplayName(props.catalog, r.politicianId)}
+                      </span>
+                    }
+                    meta={
+                      share != null
+                        ? `${partyDisplayName(props.world, rivalParty, props.snap)} · Poll ${Math.round(share * 1000) / 10}%`
+                        : partyDisplayName(props.world, rivalParty, props.snap)
+                    }
+                    status={<StatusBadge>Opponent</StatusBadge>}
+                  />
+                );
+              })}
+            </section>
           </div>
         </div>
-      </section>
+      ) : null}
 
-      <div className="campaign-command-v5">
-        <aside className="campaign-left">
-          <PoliticianProfile
-            catalog={props.catalog}
-            world={props.world}
-            state={props.snap}
-            politicianId={props.snap.playerPoliticianId}
-            {...(playerOffices(props.world, props.snap, props.snap.playerPoliticianId)[0]
-              ? { office: playerOffices(props.world, props.snap, props.snap.playerPoliticianId)[0] }
-              : {})}
-            party={partyDisplayName(props.world, playerPol?.partyId ?? null, props.snap)}
-          />
-          <SectionDivider title="Resources" />
-          <div className="campaign-stats">
-            <div>
-              <div className="kicker">Cash</div>
-              <strong>{Math.round(c.cashOnHand).toLocaleString()}</strong>
-            </div>
-            <div>
-              <div className="kicker">Organization</div>
-              <strong>{groundGameStrength(c.fieldOrganization)}/100</strong>
-            </div>
-            <div>
-              <div className="kicker">Monthly actions</div>
-              <strong className={noActions ? "text-warn" : ""}>
-                {c.actionPointsRemaining}/{c.actionPointsMax}
-              </strong>
-            </div>
-            <div>
-              <div className="kicker">Party support</div>
-              <strong>{partySupportCount}</strong>
-              <small className="muted">active public endorsements</small>
-            </div>
-          </div>
-          <p className="muted campaign-actions-note">
-            These are the major campaign choices the candidate can personally direct this month;
-            they refresh when the month advances.
-          </p>
-          {noActions ? (
-            <p className="muted campaign-actions-note">
-              Monthly actions spent. End turn to refresh.
-            </p>
-          ) : null}
-          {actionClosed ? (
-            <p className="muted campaign-actions-note">
-              The field operation is locked for counting.
-            </p>
-          ) : null}
-          <SectionDivider
-            title="Opponents"
-            {...(rivals.length ? {} : { hint: "No active opponents" })}
-          />
-          {rivals.length === 0 ? <EmptyState>Field is clear for now.</EmptyState> : null}
-          {rivals.slice(0, 6).map((r) => {
-            const share = pollShareFor(r.politicianId);
-            return (
-              <EntityRow
-                key={r.politicianId}
-                title={politicianDisplayName(props.catalog, r.politicianId)}
-                meta={
-                  share != null
-                    ? `${partyDisplayName(
-                        props.world,
-                        props.snap.politicians[r.politicianId]?.partyId ?? null,
-                        props.snap,
-                      )} · Poll ${Math.round(share * 1000) / 10}%`
-                    : partyDisplayName(
-                        props.world,
-                        props.snap.politicians[r.politicianId]?.partyId ?? null,
-                        props.snap,
-                      )
-                }
-                status={<StatusBadge>Opponent</StatusBadge>}
-              />
-            );
-          })}
-        </aside>
-
-        <div className="campaign-center">
-          <div className="campaign-map-layers" aria-label="Campaign map data layer">
+      {campaignTab === "map" ? (
+        <div className="campaign-map-desk map-workspace">
+          <div className="campaign-map-layers" role="tablist" aria-label="Campaign map data layer">
             {(
               [
                 ["forecast", "Forecast"],
@@ -775,8 +743,10 @@ export function CampaignPage(props: {
             ).map(([id, label]) => (
               <button
                 type="button"
+                role="tab"
                 key={id}
                 className={mapLayer === id ? "active" : ""}
+                aria-selected={mapLayer === id}
                 onClick={() => {
                   setMapLayer(id);
                   setMapSel(null);
@@ -786,10 +756,12 @@ export function CampaignPage(props: {
               </button>
             ))}
           </div>
-          <div className="map-scale-switch" aria-label="Campaign map scale">
+          <div className="map-scale-switch" role="tablist" aria-label="Campaign map scale">
             <button
               type="button"
+              role="tab"
               className={mapScale === "province" ? "active" : ""}
+              aria-selected={mapScale === "province"}
               onClick={() => {
                 setMapScale("province");
                 setMapSel(null);
@@ -799,7 +771,9 @@ export function CampaignPage(props: {
             </button>
             <button
               type="button"
+              role="tab"
               className={mapScale === "constituency" ? "active" : ""}
+              aria-selected={mapScale === "constituency"}
               onClick={() => {
                 setMapScale("constituency");
                 setMapSel(null);
@@ -911,13 +885,21 @@ export function CampaignPage(props: {
             </EmptyState>
           )}
         </div>
+      ) : null}
 
-        <aside className="campaign-right">
-          <SectionDivider title="Actions" hint="Each uses one monthly action" />
-          <p className="muted campaign-action-purpose">
-            Visits build attention, organizing builds lasting field strength, and advertising trades
-            cash for reach.
-          </p>
+      {campaignTab === "strategy" ? (
+        <div className="campaign-strategy-desk">
+          <SectionDivider title="Monthly actions" hint="Each choice uses one action" />
+          {noActions ? (
+            <p className="muted campaign-actions-note">
+              Monthly actions spent. End turn to refresh.
+            </p>
+          ) : null}
+          {actionClosed ? (
+            <p className="muted campaign-actions-note">
+              The field operation is locked for counting.
+            </p>
+          ) : null}
           <div className="campaign-actions-grid">
             {actionBtn("visit", "Visit")}
             {actionBtn("organize", "Organize")}
@@ -1012,67 +994,23 @@ export function CampaignPage(props: {
               Withdraw
             </button>
           </div>
-        </aside>
-      </div>
-
-      <div className="campaign-footer">
-        <SectionDivider title="Campaign calendar" hint="Recorded sim dates only" />
-        {uniqueCalendar.length === 0 ? (
-          <EmptyState>No scheduled campaign dates are recorded for this race yet.</EmptyState>
-        ) : (
-          <div className="campaign-calendar-list">
-            {uniqueCalendar.map((item) => (
-              <div className="campaign-calendar-row" key={`${item.date}:${item.label}`}>
-                <strong>{item.date}</strong>
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <SectionDivider title="Strategic memo" hint="Derived from campaign state" />
-        <p className="campaign-strategic-memo">{strategicMemo}</p>
-        <SectionDivider title="Strategy board" hint="Public campaign information only" />
-        <div className="campaign-strategy-grid">
-          <SectionCard title="Ground Game priorities">
-            <p className="muted">
-              Lowest-strength areas in your own field operation. This is not a forecast of support.
-            </p>
-            <div className="campaign-target-columns">
-              {c.type !== "assembly" ? (
-                <div>
-                  <div className="kicker">Provinces needing attention</div>
-                  {provinceTargets.map((target) => (
-                    <button
-                      key={target.id}
-                      type="button"
-                      className="campaign-target-row"
-                      onClick={() => {
-                        setMapScale("province");
-                        setMapSel({
-                          id: target.id,
-                          kind: "province",
-                          name: constituencyDisplayName(props.catalog, target.id),
-                        });
-                      }}
-                    >
-                      <span>{constituencyDisplayName(props.catalog, target.id)}</span>
-                      <strong>{groundGameStrength(target.strength)}/100</strong>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
+          <SectionDivider title="Ground Game priorities" hint="Weakest field areas first" />
+          <div className="campaign-target-columns">
+            {c.type !== "assembly" ? (
               <div>
-                <div className="kicker">Constituencies needing attention</div>
-                {constituencyTargets.map((target) => (
+                <div className="kicker">Provinces needing attention</div>
+                {provinceTargets.map((target) => (
                   <button
                     key={target.id}
                     type="button"
                     className="campaign-target-row"
                     onClick={() => {
-                      setMapScale("constituency");
+                      setCampaignTab("map");
+                      setMapLayer("ground_game");
+                      setMapScale("province");
                       setMapSel({
                         id: target.id,
-                        kind: "constituency",
+                        kind: "province",
                         name: constituencyDisplayName(props.catalog, target.id),
                       });
                     }}
@@ -1082,85 +1020,140 @@ export function CampaignPage(props: {
                   </button>
                 ))}
               </div>
-            </div>
-          </SectionCard>
-          <SectionCard title="Field history">
-            {groundGameActivity.length === 0 ? (
-              <EmptyState>No field activity recorded yet.</EmptyState>
-            ) : (
-              groundGameActivity.map((effect, index) => (
-                <div
-                  className="campaign-field-history"
-                  key={`${effect.date}:${effect.kind}:${index}`}
+            ) : null}
+            <div>
+              <div className="kicker">Constituencies needing attention</div>
+              {constituencyTargets.map((target) => (
+                <button
+                  key={target.id}
+                  type="button"
+                  className="campaign-target-row"
+                  onClick={() => {
+                    setCampaignTab("map");
+                    setMapLayer("ground_game");
+                    setMapScale("constituency");
+                    setMapSel({
+                      id: target.id,
+                      kind: "constituency",
+                      name: constituencyDisplayName(props.catalog, target.id),
+                    });
+                  }}
                 >
-                  <span>{effect.date}</span>
-                  <strong>{groundGameEffectLabel(effect)}</strong>
-                </div>
-              ))
-            )}
-          </SectionCard>
-          <SectionCard title="Endorsement network">
-            {contestEndorsements.length + interestEndorsements.length === 0 ? (
-              <EmptyState>No public endorsement is recorded for this campaign.</EmptyState>
-            ) : (
-              <>
-                {contestEndorsements.map((endorsement) => (
-                  <EntityRow
-                    key={endorsement.id}
-                    title={publicEndorserName(endorsement.endorserType, endorsement.endorserId)}
-                    meta={`${endorsement.endorserType === "politician" ? "Political endorsement" : "Party endorsement"} · ${endorsement.date}`}
-                    status={
-                      <StatusBadge tone={endorsement.status === "active" ? "ok" : "idle"}>
-                        {endorsement.status === "active"
-                          ? "Current"
-                          : endorsement.status[0]!.toUpperCase() + endorsement.status.slice(1)}
-                      </StatusBadge>
-                    }
-                  />
-                ))}
-                {interestEndorsements.map(({ organizationId, endorsement }, index) => (
-                  <EntityRow
-                    key={`${organizationId}:${endorsement.campaignId ?? "campaign"}:${index}`}
-                    title={
-                      props.world.interestOrganizations[organizationId]?.name ??
-                      "Public organization"
-                    }
-                    meta={`Interest-group endorsement · ${endorsement.date}${endorsement.withdrawnDate ? ` · withdrawn ${endorsement.withdrawnDate}` : ""}`}
-                    status={
-                      <StatusBadge
-                        tone={(endorsement.status ?? "active") === "active" ? "ok" : "idle"}
-                      >
-                        {(endorsement.status ?? "active") === "active" ? "Current" : "Withdrawn"}
-                      </StatusBadge>
-                    }
-                  />
-                ))}
-              </>
-            )}
-          </SectionCard>
+                  <span>{constituencyDisplayName(props.catalog, target.id)}</span>
+                  <strong>{groundGameStrength(target.strength)}/100</strong>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <SectionDivider title="Recent campaign activity" />
-        {recentActivity.length === 0 ? (
-          <EmptyState>No recent campaign events in the public record.</EmptyState>
-        ) : (
-          recentActivity.map((e) => (
-            <ActivityFeedItem
-              key={e.id}
-              date={e.date}
-              text={eventDisplay(props.catalog, props.world, props.snap, e)}
-            />
-          ))
-        )}
-        <SectionDivider title="Public polls" hint="Published first-preference shares only" />
-        {poll ? (
-          <p className="muted">
-            {poll.publicationDate}:{" "}
-            {pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)}
-          </p>
-        ) : (
-          <EmptyState>No public poll has been published yet.</EmptyState>
-        )}
-      </div>
+      ) : null}
+
+      {campaignTab === "support" ? (
+        <div className="campaign-support-desk">
+          <SectionDivider title="Endorsement network" hint="Public backing only" />
+          {contestEndorsements.length + interestEndorsements.length === 0 ? (
+            <EmptyState>No public endorsement is recorded for this campaign.</EmptyState>
+          ) : (
+            <>
+              {contestEndorsements.map((endorsement) => (
+                <EntityRow
+                  key={endorsement.id}
+                  title={publicEndorserName(endorsement.endorserType, endorsement.endorserId)}
+                  meta={`${endorsement.endorserType === "politician" ? "Political endorsement" : "Party endorsement"} · ${endorsement.date}`}
+                  status={
+                    <StatusBadge tone={endorsement.status === "active" ? "ok" : "idle"}>
+                      {endorsement.status === "active"
+                        ? "Current"
+                        : endorsement.status[0]!.toUpperCase() + endorsement.status.slice(1)}
+                    </StatusBadge>
+                  }
+                />
+              ))}
+              {interestEndorsements.map(({ organizationId, endorsement }, index) => (
+                <EntityRow
+                  key={`${organizationId}:${endorsement.campaignId ?? "campaign"}:${index}`}
+                  title={
+                    props.world.interestOrganizations[organizationId]?.name ?? "Public organization"
+                  }
+                  meta={`Interest-group endorsement · ${endorsement.date}${endorsement.withdrawnDate ? ` · withdrawn ${endorsement.withdrawnDate}` : ""}`}
+                  status={
+                    <StatusBadge
+                      tone={(endorsement.status ?? "active") === "active" ? "ok" : "idle"}
+                    >
+                      {(endorsement.status ?? "active") === "active" ? "Current" : "Withdrawn"}
+                    </StatusBadge>
+                  }
+                />
+              ))}
+            </>
+          )}
+          {contest ? (
+            <div className="row" style={{ marginTop: "0.75rem" }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={noActions || actionClosed}
+                onClick={() => openAction("endorsement")}
+              >
+                Seek backing
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {campaignTab === "record" ? (
+        <div className="campaign-record-desk">
+          <SectionDivider title="Campaign calendar" hint="Recorded sim dates only" />
+          {uniqueCalendar.length === 0 ? (
+            <EmptyState>No scheduled campaign dates are recorded for this race yet.</EmptyState>
+          ) : (
+            <div className="campaign-calendar-list">
+              {uniqueCalendar.map((item) => (
+                <div className="campaign-calendar-row" key={`${item.date}:${item.label}`}>
+                  <strong>{item.date}</strong>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <SectionDivider title="Field history" />
+          {groundGameActivity.length === 0 ? (
+            <EmptyState>No field activity recorded yet.</EmptyState>
+          ) : (
+            groundGameActivity.map((effect, index) => (
+              <div
+                className="campaign-field-history"
+                key={`${effect.date}:${effect.kind}:${index}`}
+              >
+                <span>{effect.date}</span>
+                <strong>{groundGameEffectLabel(effect)}</strong>
+              </div>
+            ))
+          )}
+          <SectionDivider title="Recent campaign activity" />
+          {recentActivity.length === 0 ? (
+            <EmptyState>No recent campaign events in the public record.</EmptyState>
+          ) : (
+            recentActivity.map((e) => (
+              <ActivityFeedItem
+                key={e.id}
+                date={e.date}
+                text={eventDisplay(props.catalog, props.world, props.snap, e)}
+              />
+            ))
+          )}
+          <SectionDivider title="Public polls" hint="Published first-preference shares only" />
+          {poll ? (
+            <p className="muted">
+              {poll.publicationDate}:{" "}
+              {pollShareLine(props.catalog, props.world, props.snap, poll.firstPreference)}
+            </p>
+          ) : (
+            <EmptyState>No public poll has been published yet.</EmptyState>
+          )}
+        </div>
+      ) : null}
 
       {activeAction === "visit" ? (
         <ActionDrawer title="Visit" onClose={() => setActiveAction(null)}>

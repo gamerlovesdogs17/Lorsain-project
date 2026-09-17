@@ -2009,11 +2009,12 @@ export function HistoryPage(props: {
 
   return (
     <WorkLayout
+      className="editorial-workspace history-archive-final"
       header={
         <PageHeader
-          kicker="Public record"
+          kicker="Political encyclopedia"
           title="History of Terena"
-          subtitle="A generated political encyclopedia built only from canonical material and the saved public record."
+          subtitle="Browse years, elections, people, parties, and institutions — a political history, not a debug log."
         />
       }
       main={
@@ -2021,8 +2022,12 @@ export function HistoryPage(props: {
           <aside className="wiki-index">
             <div className="wiki-index-brand">
               <strong>TERENA</strong>
-              <span>Political encyclopedia</span>
+              <span>Political history</span>
             </div>
+            <p className="wiki-browse-hint">
+              Choose a section, then open an article. Entries are drawn only from the saved public
+              record.
+            </p>
             <TabBar
               tabs={(Object.keys(SECTION_LABELS) as HistorySection[]).map((id) => ({
                 id,
@@ -2073,12 +2078,12 @@ export function HistoryPage(props: {
                 {articleBody(selected)}
               </div>
               <footer>
-                Article generated from the current save's public historical record. Historical
+                Article generated from the current save&apos;s public historical record. Historical
                 election affiliations and results use archived election data.
               </footer>
             </article>
           ) : (
-            <EmptyState>No article matches this section.</EmptyState>
+            <EmptyState>Select an entry from the index to read its political history.</EmptyState>
           )}
         </div>
       }
