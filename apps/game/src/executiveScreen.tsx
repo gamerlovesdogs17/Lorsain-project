@@ -24,10 +24,10 @@ import {
 import { formatIndexDelta } from "./presentation/display.js";
 import {
   BriefStrip,
+  CommandHeader,
   DataTable,
   EmptyState,
   EntityRow,
-  PageHeader,
   SectionDivider,
   StatusBadge,
   TabBar,
@@ -313,11 +313,11 @@ export function ExecutivePage(props: {
 
   return (
     <WorkLayout
-      className={`government-desk-v2${president ? " presidential-desk" : ""}`}
+      className={`government-desk-v2 command-workspace page-tone-government government-desk-final${president ? " presidential-desk" : ""}`}
       data-tutorial="government-desk"
       header={
         <div className="object-first-lead">
-          <PageHeader
+          <CommandHeader
             kicker={president ? "Presidential command" : "Executive branch"}
             title="Government"
             subtitle={
@@ -325,15 +325,12 @@ export function ExecutivePage(props: {
                 ? "Cabinet, agenda, budget, and delivery under your authority."
                 : "President, cabinet, agenda, fiscal cycle, and implementation."
             }
+            status={<BriefStrip items={overviewStrip} />}
           />
-          <p className="muted object-first-hint">
-            Start with who holds power and what needs a decision — tabs deepen the dossier.
-          </p>
         </div>
       }
       main={
         <>
-          <BriefStrip items={overviewStrip} />
           <TabBar tabs={govTabs} value={govTab} onChange={setGovTab} />
 
           {govTab === "formation" ? (
@@ -394,6 +391,39 @@ export function ExecutivePage(props: {
                   </button>
                 </section>
               ) : null}
+
+              <section className="gov-institution-block">
+                <SectionDivider title="Ministers at a glance" hint="Cabinet as a governing team" />
+                <div className="gov-ministers-group" aria-label="Cabinet ministers">
+                  {cab.slice(0, 8).map((m) => (
+                    <button
+                      type="button"
+                      key={m.officeId}
+                      className="gov-minister-chip"
+                      onClick={() => {
+                        setGovTab("cabinet");
+                        setSelectedMinisterOfficeId(m.officeId);
+                      }}
+                    >
+                      <strong>{m.title.replace(/^Minister of /i, "")}</strong>
+                      <span className="muted">
+                        {m.holderId
+                          ? politicianDisplayName(props.catalog, m.holderId)
+                          : "Vacant"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {cab.length > 8 ? (
+                  <button
+                    type="button"
+                    className="btn ghost btn-sm"
+                    onClick={() => setGovTab("cabinet")}
+                  >
+                    Open full Cabinet ({cab.length})
+                  </button>
+                ) : null}
+              </section>
 
               <section className="gov-institution-block">
                 <SectionDivider title="Fiscal snapshot" />
@@ -745,12 +775,12 @@ export function ExecutivePage(props: {
           ) : null}
 
           {govTab === "cabinet" ? (
-            <div className="gov-institution">
+            <div className="gov-institution gov-cabinet-workspace">
               <SectionDivider
                 title="Cabinet"
-                hint="Scan portfolios; open a minister for governing context"
+                hint="Ministers as a governing group — open a portfolio for context"
               />
-              <div className="gov-cabinet-list">
+              <div className="gov-cabinet-list" role="list" aria-label="Cabinet ministers">
                 {cab.map((m) => {
                   const perf = governing?.ministerialPerformance?.[m.officeId];
                   const partyId = m.holderId
@@ -761,6 +791,7 @@ export function ExecutivePage(props: {
                     <button
                       type="button"
                       key={m.officeId}
+                      role="listitem"
                       className={`gov-cabinet-row gov-cabinet-selectable${selected ? " selected" : ""}`}
                       onClick={() => {
                         if (selected) {
@@ -1278,8 +1309,11 @@ export function ExecutivePage(props: {
           ) : null}
 
           {govTab === "budget" ? (
-            <div className="gov-institution">
-              <SectionDivider title="Fiscal position" />
+            <div className="gov-institution gov-budget-workspace">
+              <SectionDivider
+                title="Budget"
+                hint="Political envelope comparison — preferred stance versus requested lines"
+              />
               {fiscal?.lastUpdated ? (
                 <dl className="dossier-facts compact">
                   <div>
@@ -1342,8 +1376,9 @@ export function ExecutivePage(props: {
                   (preferred > 0 && total > preferred + 0.05);
                 const projectedExp = b.metadata?.projectedExpenditure;
                 const fiscalEffect = b.metadata?.fiscalEffect;
+                const compareMax = Math.max(preferred, total, 1);
                 return (
-                  <div key={b.id} className="budget-row">
+                  <div key={b.id} className="budget-row budget-political-compare">
                     <EntityRow
                       title={`FY ${b.fiscalYear}`}
                       meta={`${b.status}${b.fiscalStance ? ` · ${b.fiscalStance.replaceAll("_", " ")}` : ""}${
@@ -1351,15 +1386,33 @@ export function ExecutivePage(props: {
                       }${fiscalEffect === "projected" ? " · projected (not yet effective)" : fiscalEffect === "effective" ? " · effective" : ""}`}
                       trailing={total.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                     />
+                    <div className="budget-compare-bars" aria-label="Envelope comparison">
+                      <div className="budget-compare-row">
+                        <span className="muted">Preferred (stance)</span>
+                        <div className="budget-compare-track">
+                          <div
+                            className="budget-compare-fill preferred"
+                            style={{ width: `${(preferred / compareMax) * 100}%` }}
+                          />
+                        </div>
+                        <strong>
+                          {preferred.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                        </strong>
+                      </div>
+                      <div className="budget-compare-row">
+                        <span className="muted">Requested / allocated</span>
+                        <div className="budget-compare-track">
+                          <div
+                            className={`budget-compare-fill${conflict ? " conflict" : ""}`}
+                            style={{ width: `${(total / compareMax) * 100}%` }}
+                          />
+                        </div>
+                        <strong>
+                          {total.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                        </strong>
+                      </div>
+                    </div>
                     <dl className="dossier-facts compact">
-                      <div>
-                        <dt>Preferred envelope (stance)</dt>
-                        <dd>{preferred.toLocaleString(undefined, { maximumFractionDigits: 1 })}</dd>
-                      </div>
-                      <div>
-                        <dt>Total requested / allocated</dt>
-                        <dd>{total.toLocaleString(undefined, { maximumFractionDigits: 1 })}</dd>
-                      </div>
                       {typeof projectedExp === "number" ? (
                         <div>
                           <dt>Projected expenditure (metadata)</dt>

@@ -9097,3 +9097,203 @@ body.reduced-motion *::after {
   gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
+
+/* ==========================================================================
+   FINAL REDESIGN — Assembly / Government / Economy / Studio / Settings
+   ========================================================================== */
+
+.page-tone-assembly .command-header-title,
+.page-tone-government .command-header-title,
+.page-tone-economy .command-header-title {
+  font-family: var(--font-display);
+}
+
+.assembly-chamber-final .assembly-bloc-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.assembly-bloc {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.assembly-bloc.government {
+  border-left: 4px solid var(--accent);
+}
+
+.assembly-bloc.opposition {
+  border-left: 4px solid var(--signal);
+}
+
+.assembly-bloc.majority-mark {
+  border-left: 4px solid var(--navy);
+  background: var(--surface-inset);
+}
+
+.assembly-bloc strong {
+  font-family: var(--font-display);
+  font-size: var(--type-title);
+  color: var(--navy);
+}
+
+.assembly-bloc-parties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--type-caption);
+}
+
+.assembly-votes-due-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.assembly-vote-due-card {
+  padding: var(--space-3);
+  background: var(--surface-accent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.whip-desk-final {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.government-desk-final .gov-ministers-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.gov-minister-chip {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  min-height: var(--touch-min);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.gov-minister-chip:hover,
+.gov-minister-chip:focus-visible {
+  border-color: var(--accent);
+  background: var(--surface-accent);
+}
+
+.gov-cabinet-workspace .gov-cabinet-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.budget-compare-bars {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  background: var(--surface-inset);
+  border-radius: var(--radius);
+}
+
+.budget-compare-row {
+  display: grid;
+  grid-template-columns: 9rem 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--type-caption);
+}
+
+.budget-compare-track {
+  height: 0.55rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.budget-compare-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.budget-compare-fill.preferred {
+  background: var(--navy);
+}
+
+.budget-compare-fill.conflict {
+  background: var(--signal);
+}
+
+.formation-lead-panel {
+  margin-bottom: var(--space-4);
+}
+
+.economy-desk-final .command-header-status {
+  width: 100%;
+}
+
+.economy-desk-final .metric-strip {
+  margin-top: var(--space-2);
+}
+
+.economy-map-command {
+  margin-bottom: var(--space-5);
+}
+
+.scenario-studio-final.editor-workspace {
+  background:
+    linear-gradient(180deg, rgba(31, 111, 139, 0.05), transparent 12rem),
+    var(--surface-paper);
+  border-radius: var(--radius-lg);
+}
+
+.scenario-studio-final .studio-toolbar {
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-raised);
+}
+
+.scenario-studio-final .studio-toolbar h1 {
+  font-family: var(--font-display);
+  color: var(--navy);
+}
+
+.settings-final .settings-tutorial-reset,
+.settings-final .settings-meta {
+  margin: var(--space-3) 0;
+  gap: var(--space-3);
+}
+
+
+.new-game-final .new-game-header {
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.new-game-final .serif-head {
+  font-family: var(--font-display);
+  color: var(--navy);
+}
+
+@media (max-width: 834px) {
+  .assembly-chamber-final .assembly-bloc-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-compare-row {
+    grid-template-columns: 1fr;
+  }
+}

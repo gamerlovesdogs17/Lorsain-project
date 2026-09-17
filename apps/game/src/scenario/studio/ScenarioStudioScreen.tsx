@@ -180,10 +180,10 @@ export function ScenarioStudioScreen(props: {
   const activeParty = parties[partyIdx];
 
   return (
-    <div className="scenario-editor studio-shell">
+    <div className="scenario-editor studio-shell editor-workspace scenario-studio-final">
       <header className="scenario-editor-head studio-toolbar">
         <div>
-          <div className="kicker">SCENARIO STUDIO · v{doc.formatVersion}</div>
+          <div className="kicker">Scenario Studio · v{doc.formatVersion}</div>
           <h1>{doc.name}</h1>
           <p>
             {doc.countryName} · {doc.scenarioId}

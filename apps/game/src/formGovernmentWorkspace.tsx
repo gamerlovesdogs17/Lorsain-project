@@ -126,12 +126,20 @@ export function FormGovernmentWorkspace(props: {
         : "idle";
 
   return (
-    <div className="form-government-workspace" data-qa="form-government-workspace">
-      <SectionCard title="Form a government">
-        <p className="muted" style={{ marginTop: 0 }}>
-          No party holds a majority. Build a governing majority through talks — partners may accept,
-          reject, or counter with visible terms.
-        </p>
+    <div
+      className="form-government-workspace negotiation-workspace"
+      data-qa="form-government-workspace"
+    >
+      <div className="negotiation-panel formation-lead-panel">
+        <h3 className="negotiation-panel-title">Form a government</h3>
+        <div className="negotiation-panel-body">
+          <p className="muted" style={{ marginTop: 0 }}>
+            No party holds a majority. Build a governing majority through talks — partners may
+            accept, reject, or counter with visible terms.
+          </p>
+        </div>
+      </div>
+      <SectionCard title="Coalition talks">
         <BriefStrip
           items={[
             {

@@ -1,12 +1,12 @@
 import { storiesChronological, type KernelWorld, type SimState } from "@lorsain/sim";
 import { useMemo, useState } from "react";
 import {
+  CommandHeader,
   DataTable,
   EmptyState,
   EntityRow,
   MapDetailLayout,
   MetricStrip,
-  PageHeader,
   SectionCard,
   SectionDivider,
   StatCard,
@@ -35,7 +35,7 @@ const INDICATORS = [
 ] as const;
 
 type IndicatorId = (typeof INDICATORS)[number]["id"];
-type RegionalView = "table" | "map";
+type RegionalView = "map" | "table";
 
 function chartPath(history: Array<{ date: string; value: number }>): {
   d: string;
@@ -83,7 +83,7 @@ export function EconomyPage(props: { world: KernelWorld; snap: SimState; bundle:
   const n = props.snap.economyRuntime.national;
   const [sel, setSel] = useState<MapSelection | null>(null);
   const [indicator, setIndicator] = useState<IndicatorId>("outputIndex");
-  const [regionalView, setRegionalView] = useState<RegionalView>("table");
+  const [regionalView, setRegionalView] = useState<RegionalView>("map");
   const region = sel?.kind === "province" ? props.snap.economyRuntime.provinces[sel.id] : null;
   const history = props.snap.economyRuntime.history;
   const prev = history.length >= 2 ? history[history.length - 2]! : null;
@@ -143,157 +143,45 @@ export function EconomyPage(props: { world: KernelWorld; snap: SimState; bundle:
 
   return (
     <WorkLayout
+      className="economy-desk-final map-workspace command-workspace page-tone-economy"
       header={
-        <PageHeader
+        <CommandHeader
           kicker="Political economy"
           title="Economy"
-          subtitle="Public scenario indices (reference 100). January 2028 starts uneven."
+          subtitle="National briefing and provincial command map — public scenario indices (reference 100)."
+          status={
+            <MetricStrip data-qa="economy-headline-strip">
+              <StatCard
+                label="Real output growth"
+                value={signedPercent(publicMetrics.growth)}
+                hint={yearAgo ? "12 months" : "Scenario pace"}
+              />
+              <StatCard
+                label="Unemployment"
+                value={`${publicMetrics.unemployment.toFixed(1)}%`}
+                hint={deltaHint("employmentIndex")}
+              />
+              <StatCard
+                label="Inflation"
+                value={`${publicMetrics.inflation.toFixed(1)}%`}
+                hint={yearAgo ? "12 months" : "Scenario pace"}
+              />
+              <StatCard
+                label="Confidence"
+                value={publicMetrics.confidence}
+                hint={publicMetrics.confidenceTrend}
+              />
+            </MetricStrip>
+          }
         />
       }
       main={
         <>
           <SectionDivider
-            title="Public economic briefing"
-            hint="Readable statistics derived consistently from the scenario series"
-          />
-          <MetricStrip>
-            <StatCard
-              label="Real output growth"
-              value={signedPercent(publicMetrics.growth)}
-              hint={yearAgo ? "12 months" : "Scenario pace"}
-            />
-            <StatCard
-              label="Unemployment"
-              value={`${publicMetrics.unemployment.toFixed(1)}%`}
-              hint={deltaHint("employmentIndex")}
-            />
-            <StatCard
-              label="Inflation"
-              value={`${publicMetrics.inflation.toFixed(1)}%`}
-              hint={yearAgo ? "12 months" : "Scenario pace"}
-            />
-            <StatCard
-              label="Real pay"
-              value={signedPercent(publicMetrics.realPay)}
-              hint={yearAgo ? "12 months" : "Scenario position"}
-            />
-            <StatCard
-              label="Housing market"
-              value={publicMetrics.housing}
-              hint={deltaHint("housingIndex")}
-            />
-            <StatCard
-              label="Confidence"
-              value={publicMetrics.confidence}
-              hint={publicMetrics.confidenceTrend}
-            />
-          </MetricStrip>
-
-          <details className="economic-index-reference">
-            <summary>Reference indices</summary>
-            <div className="compact-index-grid">
-              {INDICATORS.map((ind) => (
-                <span key={ind.id}>
-                  <strong>{ind.label}</strong> {idx1(n[ind.id])}
-                </span>
-              ))}
-            </div>
-            <p className="muted">
-              Reference 100 is a comparison scale, not a percentage or a claim that January 2028 was
-              economically neutral.
-            </p>
-          </details>
-
-          <SectionDivider title="Trends" />
-          <TabBar
-            tabs={INDICATORS.map((ind) => ({ id: ind.id, label: ind.label }))}
-            value={indicator}
-            onChange={setIndicator}
-          />
-          {chart.d ? (
-            <svg
-              className="econ-chart"
-              viewBox="0 0 640 180"
-              role="img"
-              aria-label="National trend"
-            >
-              <line x1="28" y1="90" x2="612" y2="90" stroke="#d7d2c8" strokeDasharray="3 4" />
-              <path d={chart.d} fill="none" stroke="#1f3a5f" strokeWidth="2" />
-              <text x="28" y="18" fontSize="11" fill="#5c6570">
-                {signedPercent(chart.max)}
-              </text>
-              <text x="28" y="172" fontSize="11" fill="#5c6570">
-                {signedPercent(chart.min)}
-              </text>
-              {series[0] ? (
-                <text x="28" y="178" fontSize="10" fill="#5c6570">
-                  {series[0].date}
-                </text>
-              ) : null}
-              {series[series.length - 1] ? (
-                <text x="520" y="178" fontSize="10" fill="#5c6570">
-                  {series[series.length - 1]!.date}
-                </text>
-              ) : null}
-            </svg>
-          ) : (
-            <EmptyState>Baseline month — trend appears after the first turn.</EmptyState>
-          )}
-          <p>
-            {INDICATORS.find((i) => i.id === indicator)?.label}:{" "}
-            {signedPercent(series[series.length - 1]?.value ?? 0)} since scenario start{" "}
-            <span className="muted">
-              {prev ? publicTrendLabel(n[indicator] - prev[indicator]) : "No prior month"} ·{" "}
-              {yearAgo
-                ? publicTrendLabel(n[indicator] - yearAgo[indicator])
-                : "No 12-month comparison"}
-            </span>
-          </p>
-          <p className="muted">
-            Fiscal pressure {publicMetrics.fiscalPressure.toLowerCase()} · lagged policy effects{" "}
-            {props.snap.economyRuntime.laggedEffects.length}
-          </p>
-          {props.snap.governingRuntime?.fiscal ? (
-            <SectionCard title="National fiscal summary">
-              <dl className="dossier-facts compact">
-                <div>
-                  <dt>Revenue</dt>
-                  <dd>{props.snap.governingRuntime.fiscal.revenue.toFixed(1)}</dd>
-                </div>
-                <div>
-                  <dt>Expenditure</dt>
-                  <dd>{props.snap.governingRuntime.fiscal.expenditure.toFixed(1)}</dd>
-                </div>
-                <div>
-                  <dt>Balance</dt>
-                  <dd>{props.snap.governingRuntime.fiscal.balance.toFixed(1)}</dd>
-                </div>
-                <div>
-                  <dt>Debt</dt>
-                  <dd>{props.snap.governingRuntime.fiscal.debt.toFixed(1)}</dd>
-                </div>
-              </dl>
-              <p className="muted">
-                Normalized units from current-law policy · FY
-                {props.snap.governingRuntime.fiscal.fiscalYear}
-                {props.snap.governingRuntime.fiscal.lastUpdated
-                  ? ` · updated ${props.snap.governingRuntime.fiscal.lastUpdated}`
-                  : " · awaiting first governing month"}
-              </p>
-            </SectionCard>
-          ) : null}
-
-          <SectionDivider
-            title="Regional conditions"
+            title="Provincial conditions"
+            hint="Map command first — table for sortable detail"
             actions={
               <div className="view-toggle" role="group" aria-label="Regional view">
-                <button
-                  type="button"
-                  className={regionalView === "table" ? "active" : ""}
-                  onClick={() => setRegionalView("table")}
-                >
-                  Table
-                </button>
                 <button
                   type="button"
                   className={regionalView === "map" ? "active" : ""}
@@ -301,37 +189,20 @@ export function EconomyPage(props: { world: KernelWorld; snap: SimState; bundle:
                 >
                   Map
                 </button>
+                <button
+                  type="button"
+                  className={regionalView === "table" ? "active" : ""}
+                  onClick={() => setRegionalView("table")}
+                >
+                  Table
+                </button>
               </div>
             }
           />
 
-          {regionalView === "table" ? (
-            <DataTable
-              dense
-              headers={["Province", "Conditions", "Labor market", "Housing", "Month", "12 months"]}
-              caption="Public provincial economic conditions"
-            >
-              {provinceRows.map((row) => (
-                <tr
-                  key={row.id}
-                  className={sel?.id === row.id ? "selected" : undefined}
-                  onClick={() => setSel({ id: row.id, kind: "province", name: row.name })}
-                >
-                  <td>{row.name}</td>
-                  <td>{row.public?.conditions ?? "—"}</td>
-                  <td>
-                    {row.public
-                      ? `${row.public.laborMarket} · ${row.public.unemployment.toFixed(1)}% unemployed`
-                      : "—"}
-                  </td>
-                  <td>{row.public?.housing ?? "—"}</td>
-                  <td>{publicTrendLabel(row.monthDelta)}</td>
-                  <td>{publicTrendLabel(row.yearDelta)}</td>
-                </tr>
-              ))}
-            </DataTable>
-          ) : (
+          {regionalView === "map" ? (
             <MapDetailLayout
+              className="economy-map-command"
               detailVisible={sel?.kind === "province"}
               map={
                 <>
@@ -387,13 +258,126 @@ export function EconomyPage(props: { world: KernelWorld; snap: SimState; bundle:
                 )
               }
             />
+          ) : (
+            <DataTable
+              dense
+              headers={["Province", "Conditions", "Labor market", "Housing", "Month", "12 months"]}
+              caption="Public provincial economic conditions"
+            >
+              {provinceRows.map((row) => (
+                <tr
+                  key={row.id}
+                  className={sel?.id === row.id ? "selected" : undefined}
+                  onClick={() => setSel({ id: row.id, kind: "province", name: row.name })}
+                >
+                  <td>{row.name}</td>
+                  <td>{row.public?.conditions ?? "—"}</td>
+                  <td>
+                    {row.public
+                      ? `${row.public.laborMarket} · ${row.public.unemployment.toFixed(1)}% unemployed`
+                      : "—"}
+                  </td>
+                  <td>{row.public?.housing ?? "—"}</td>
+                  <td>{publicTrendLabel(row.monthDelta)}</td>
+                  <td>{publicTrendLabel(row.yearDelta)}</td>
+                </tr>
+              ))}
+            </DataTable>
           )}
 
-          {regionalView === "table" && region && sel ? (
+          <SectionDivider title="National trends" />
+          <TabBar
+            tabs={INDICATORS.map((ind) => ({ id: ind.id, label: ind.label }))}
+            value={indicator}
+            onChange={setIndicator}
+          />
+          {chart.d ? (
+            <svg
+              className="econ-chart"
+              viewBox="0 0 640 180"
+              role="img"
+              aria-label="National trend"
+            >
+              <line x1="28" y1="90" x2="612" y2="90" stroke="#d7d2c8" strokeDasharray="3 4" />
+              <path d={chart.d} fill="none" stroke="#1f3a5f" strokeWidth="2" />
+              <text x="28" y="18" fontSize="11" fill="#5c6570">
+                {signedPercent(chart.max)}
+              </text>
+              <text x="28" y="172" fontSize="11" fill="#5c6570">
+                {signedPercent(chart.min)}
+              </text>
+              {series[0] ? (
+                <text x="28" y="178" fontSize="10" fill="#5c6570">
+                  {series[0].date}
+                </text>
+              ) : null}
+              {series[series.length - 1] ? (
+                <text x="520" y="178" fontSize="10" fill="#5c6570">
+                  {series[series.length - 1]!.date}
+                </text>
+              ) : null}
+            </svg>
+          ) : (
+            <EmptyState>Baseline month — trend appears after the first turn.</EmptyState>
+          )}
+          <p>
+            {INDICATORS.find((i) => i.id === indicator)?.label}:{" "}
+            {signedPercent(series[series.length - 1]?.value ?? 0)} since scenario start{" "}
+            <span className="muted">
+              {prev ? publicTrendLabel(n[indicator] - prev[indicator]) : "No prior month"} ·{" "}
+              {yearAgo
+                ? publicTrendLabel(n[indicator] - yearAgo[indicator])
+                : "No 12-month comparison"}
+            </span>
+          </p>
+          <p className="muted">
+            Fiscal pressure {publicMetrics.fiscalPressure.toLowerCase()} · lagged policy effects{" "}
+            {props.snap.economyRuntime.laggedEffects.length}
+          </p>
+
+          <details className="economic-index-reference">
+            <summary>Reference indices</summary>
+            <div className="compact-index-grid">
+              {INDICATORS.map((ind) => (
+                <span key={ind.id}>
+                  <strong>{ind.label}</strong> {idx1(n[ind.id])}
+                </span>
+              ))}
+            </div>
             <p className="muted">
-              Selected: {sel.name} —{" "}
-              {props.world.economyScenario?.provinces[sel.id]?.character ?? "Regional conditions."}
+              Reference 100 is a comparison scale, not a percentage or a claim that January 2028 was
+              economically neutral.
             </p>
+          </details>
+
+          {props.snap.governingRuntime?.fiscal ? (
+            <SectionCard title="National fiscal summary">
+              <dl className="dossier-facts compact">
+                <div>
+                  <dt>Revenue</dt>
+                  <dd>{props.snap.governingRuntime.fiscal.revenue.toFixed(1)}</dd>
+                </div>
+                <div>
+                  <dt>Expenditure</dt>
+                  <dd>{props.snap.governingRuntime.fiscal.expenditure.toFixed(1)}</dd>
+                </div>
+                <div>
+                  <dt>Balance</dt>
+                  <dd>{props.snap.governingRuntime.fiscal.balance.toFixed(1)}</dd>
+                </div>
+                <div>
+                  <dt>Debt</dt>
+                  <dd>{props.snap.governingRuntime.fiscal.debt.toFixed(1)}</dd>
+                </div>
+              </dl>
+              <p className="muted">
+                Normalized units from current-law policy · FY
+                {props.snap.governingRuntime.fiscal.fiscalYear}
+                {props.snap.governingRuntime.fiscal.lastUpdated
+                  ? ` · updated ${props.snap.governingRuntime.fiscal.lastUpdated}`
+                  : " · awaiting first governing month"}
+              </p>
+            </SectionCard>
           ) : null}
 
           <SectionDivider title="Sectors" />

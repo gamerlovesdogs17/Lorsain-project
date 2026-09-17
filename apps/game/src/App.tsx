@@ -895,7 +895,7 @@ export default function App() {
   if (mode === "customSelect" && customWorld && customScenarioDoc) {
     const roster = customWorld.politicians.filter((p) => p.alive && !p.retired);
     return (
-      <div className="page new-game-page">
+      <div className="page new-game-page new-game-final">
         <div className="new-game-header">
           <h2 className="serif-head">{customScenarioDoc.name}</h2>
           <p className="muted">
@@ -935,7 +935,7 @@ export default function App() {
     const latest = saves[0] ?? null;
     const latestSummary = latest ? savedGamePoliticalSummary(world, latest) : null;
     return (
-      <div className="political-title-screen">
+      <div className="political-title-screen title-final">
         <section className="title-masthead" aria-labelledby="lorsain-title">
           <div className="title-seal" aria-hidden="true">
             L
@@ -1260,7 +1260,7 @@ export default function App() {
       />
     );
     return (
-      <div className="page new-game-page">
+      <div className="page new-game-page new-game-final">
         <div className="new-game-header">
           <h2 className="serif-head">Choose your career</h2>
           <p className="muted">

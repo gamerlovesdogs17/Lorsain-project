@@ -15,7 +15,7 @@ export function SettingsPage(props: { onBack?: () => void; showBack?: boolean })
   const completedCount = settings.completedTutorialLessons.length;
 
   return (
-    <div className="settings-page" data-qa="settings-page">
+    <div className="settings-page settings-final" data-qa="settings-page">
       <PageHeader
         kicker="Preferences"
         title="Settings"
@@ -57,10 +57,7 @@ export function SettingsPage(props: { onBack?: () => void; showBack?: boolean })
               </small>
             </span>
           </label>
-          <div
-            className="settings-tutorial-reset row"
-            style={{ marginBottom: "0.85rem", gap: "0.65rem" }}
-          >
+          <div className="settings-tutorial-reset row">
             <button
               type="button"
               className="btn secondary"
@@ -207,7 +204,7 @@ export function SettingsPage(props: { onBack?: () => void; showBack?: boolean })
               <small className="muted">{DEBUG_MODE_DESCRIPTION}</small>
             </span>
           </label>
-          <div className="settings-meta row" style={{ marginTop: "0.85rem", gap: "0.5rem" }}>
+          <div className="settings-meta row">
             <StatusBadge tone={settings.debugMode ? "warn" : "idle"}>
               {settings.debugMode ? "Diagnostics on" : "Player view"}
             </StatusBadge>
