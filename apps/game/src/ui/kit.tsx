@@ -7,14 +7,138 @@ export function PageHeader(props: {
   actions?: ReactNode;
 }) {
   return (
-    <div className="page-header">
-      <div>
+    <header className="page-header final-page-header">
+      <div className="page-header-copy">
         {props.kicker ? <div className="kicker">{props.kicker}</div> : null}
         <h2 className="page-title">{props.title}</h2>
-        {props.subtitle ? <p className="muted">{props.subtitle}</p> : null}
+        {props.subtitle ? <p className="muted page-header-subtitle">{props.subtitle}</p> : null}
       </div>
-      {props.actions ? <div className="row">{props.actions}</div> : null}
+      {props.actions ? <div className="row page-header-actions">{props.actions}</div> : null}
+    </header>
+  );
+}
+
+/** Identity + status + primary actions — command desk masthead. */
+export function CommandHeader(props: {
+  kicker?: string;
+  title: string;
+  subtitle?: string;
+  status?: ReactNode;
+  actions?: ReactNode;
+  "data-qa"?: string;
+}) {
+  return (
+    <header
+      className="command-header"
+      {...(props["data-qa"] ? { "data-qa": props["data-qa"] } : {})}
+    >
+      <div className="command-header-identity">
+        {props.kicker ? <div className="kicker">{props.kicker}</div> : null}
+        <h2 className="command-header-title">{props.title}</h2>
+        {props.subtitle ? <p className="muted command-header-subtitle">{props.subtitle}</p> : null}
+        {props.status ? <div className="command-header-status">{props.status}</div> : null}
+      </div>
+      {props.actions ? <div className="command-header-actions row">{props.actions}</div> : null}
+    </header>
+  );
+}
+
+/** Political object first — person, party, bill, court, province. */
+export function ObjectLead(props: {
+  kicker?: string;
+  title: ReactNode;
+  meta?: ReactNode;
+  trailing?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`object-lead${props.className ? ` ${props.className}` : ""}`}>
+      <div className="object-lead-main">
+        {props.kicker ? <div className="kicker">{props.kicker}</div> : null}
+        <div className="object-lead-title">{props.title}</div>
+        {props.meta ? <div className="object-lead-meta muted">{props.meta}</div> : null}
+        {props.children}
+      </div>
+      {props.trailing ? <div className="object-lead-trailing">{props.trailing}</div> : null}
     </div>
+  );
+}
+
+/** Visible procedure stages (bills, amendments, investiture, ratification). */
+export function ProceduralStageStrip(props: {
+  stages: Array<{ id: string; label: string }>;
+  currentId: string;
+  "aria-label"?: string;
+}) {
+  const idx = Math.max(
+    0,
+    props.stages.findIndex((stage) => stage.id === props.currentId),
+  );
+  return (
+    <div className="procedural-stage-strip" aria-label={props["aria-label"] ?? "Procedure stages"}>
+      {props.stages.map((stage, i) => (
+        <div
+          key={stage.id}
+          className={`procedural-stage${i <= idx ? " done" : ""}${i === idx ? " current" : ""}`}
+        >
+          <span className="procedural-stage-dot" />
+          <span className="procedural-stage-label">{stage.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Color / name / office identity banner for parties and politicians. */
+export function EntityIdentityBanner(props: {
+  name: string;
+  office?: string;
+  party?: string;
+  color?: string;
+  meta?: ReactNode;
+  actions?: ReactNode;
+}) {
+  const initial = props.name.trim().slice(0, 1).toUpperCase() || "?";
+  return (
+    <div className="entity-identity-banner">
+      <div
+        className="entity-identity-swatch"
+        style={props.color ? { background: props.color } : undefined}
+        aria-hidden
+      >
+        {initial}
+      </div>
+      <div className="entity-identity-copy">
+        <h2 className="entity-identity-name">{props.name}</h2>
+        <div className="muted entity-identity-office">
+          {props.office ?? "Private citizen"}
+          {props.party ? ` · ${props.party}` : ""}
+        </div>
+        {props.meta ? <div className="entity-identity-meta muted">{props.meta}</div> : null}
+      </div>
+      {props.actions ? <div className="entity-identity-actions row">{props.actions}</div> : null}
+    </div>
+  );
+}
+
+/** Shell for coalition / whip / bargaining work. */
+export function NegotiationPanel(props: {
+  title: string;
+  kicker?: string;
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`negotiation-panel${props.className ? ` ${props.className}` : ""}`}>
+      <div className="negotiation-panel-head">
+        {props.kicker ? <div className="kicker">{props.kicker}</div> : null}
+        <h3 className="negotiation-panel-title">{props.title}</h3>
+      </div>
+      <div className="negotiation-panel-body">{props.children}</div>
+      {props.footer ? <div className="negotiation-panel-footer">{props.footer}</div> : null}
+    </section>
   );
 }
 
@@ -83,7 +207,7 @@ export function TabBar<T extends string>(props: {
 }) {
   return (
     <div
-      className={`tabbar${props.scrollHint === false ? "" : " tabbar-scrollable"}`}
+      className={`tabbar final-tabbar${props.scrollHint === false ? "" : " tabbar-scrollable"}`}
       role="tablist"
       data-qa={props.scrollHint === false ? undefined : "tabbar-scrollable"}
     >
@@ -335,7 +459,7 @@ export function DataTable(props: {
   dense?: boolean;
 }) {
   return (
-    <div className={`data-table-wrap${props.dense ? " dense" : ""}`}>
+    <div className={`data-table-wrap table-scroll final-data-table${props.dense ? " dense" : ""}`}>
       <table className="data-table">
         {props.caption ? <caption>{props.caption}</caption> : null}
         <thead>
@@ -515,9 +639,14 @@ export function PolicyChoiceGroup(props: {
 export function BriefStrip(props: {
   items: Array<{ label: string; value: ReactNode }>;
   "data-qa"?: string;
+  "aria-label"?: string;
 }) {
   return (
-    <div className="brief-strip" aria-label="This month" data-qa={props["data-qa"]}>
+    <div
+      className="brief-strip final-brief-strip"
+      aria-label={props["aria-label"] ?? "Status summary"}
+      {...(props["data-qa"] ? { "data-qa": props["data-qa"] } : {})}
+    >
       {props.items.map((item) => (
         <div key={item.label} className="brief-strip-item">
           <span className="kicker">{item.label}</span>

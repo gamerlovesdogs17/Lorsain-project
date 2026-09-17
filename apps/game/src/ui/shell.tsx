@@ -27,50 +27,64 @@ export type ShellSearchEntry = {
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    title: "Player",
-    items: [
-      { id: "home", label: "Home", icon: "⌂" },
-      { id: "career", label: "Career", icon: "◉" },
-      { id: "campaign", label: "Campaign HQ", icon: "⚑" },
-      { id: "settings", label: "Settings", icon: "⚙" },
-    ],
-  },
-  {
     title: "Politics",
     items: [
+      { id: "home", label: "Home", icon: "⌂" },
+      { id: "party", label: "Party", icon: "◆" },
       { id: "assembly", label: "Assembly", icon: "▣" },
-      { id: "elections", label: "Elections", icon: "✓" },
-      { id: "party", label: "Parties", icon: "◆" },
+      { id: "executive", label: "Government", icon: "★" },
     ],
   },
   {
-    title: "Government",
+    title: "Elections",
     items: [
-      { id: "executive", label: "Government", icon: "★" },
+      { id: "elections", label: "Elections", icon: "✓" },
+      { id: "campaign", label: "Campaign", icon: "⚑" },
+    ],
+  },
+  {
+    title: "Institutions",
+    items: [
       { id: "courts", label: "Law & Constitution", icon: "⚖" },
-      { id: "economy", label: "Economy", icon: "↗" },
+      { id: "terena", label: "Provinces", icon: "◎" },
     ],
   },
   {
     title: "World",
     items: [
+      { id: "economy", label: "Economy", icon: "↗" },
+      { id: "organizations", label: "Organizations", icon: "◎" },
+      { id: "foreign", label: "Foreign", icon: "🌐" },
       { id: "situation", label: "Situation Room", icon: "🗺" },
-      { id: "terena", label: "Provinces", icon: "◎" },
-      { id: "foreign", label: "Foreign Affairs", icon: "🌐" },
     ],
   },
   {
-    title: "Society & Record",
+    title: "Record",
     items: [
-      { id: "organizations", label: "Organizations", icon: "◎" },
       { id: "news", label: "News", icon: "▤" },
       { id: "archive", label: "History", icon: "▤" },
+    ],
+  },
+  {
+    title: "Meta",
+    items: [
+      { id: "career", label: "Career", icon: "◉" },
       { id: "office", label: "Office", icon: "▰" },
+      { id: "settings", label: "Settings", icon: "⚙" },
     ],
   },
 ];
 
-const DEFAULT_COLLAPSED_NAV = ["Society & Record"];
+/** Primary destinations for tablet/phone bottom rail (More opens the drawer). */
+export const BOTTOM_RAIL: Array<{ id: Screen | "more"; label: string; icon: string }> = [
+  { id: "home", label: "Home", icon: "⌂" },
+  { id: "assembly", label: "Assembly", icon: "▣" },
+  { id: "executive", label: "Government", icon: "★" },
+  { id: "elections", label: "Elections", icon: "✓" },
+  { id: "more", label: "More", icon: "☰" },
+];
+
+const DEFAULT_COLLAPSED_NAV = ["World", "Record", "Meta"];
 
 export function GameShell(props: {
   screen: Screen;
@@ -167,7 +181,7 @@ export function GameShell(props: {
     (id === "career" && props.roleKind === "private_citizen");
 
   return (
-    <div className={`shell v5 v7${props.busy ? " busy" : ""}`}>
+    <div className={`shell v5 v7 final${props.busy ? " busy" : ""}`}>
       <button
         type="button"
         className="nav-toggle"
@@ -185,7 +199,7 @@ export function GameShell(props: {
         />
       ) : null}
       <nav
-        className={`nav v3 v5 v7${navOpen ? " open" : ""}`}
+        className={`nav v3 v5 v7 final${navOpen ? " open" : ""}`}
         aria-label="Game navigation"
         data-tutorial="nav-drawer"
       >
@@ -272,7 +286,7 @@ export function GameShell(props: {
         })}
       </nav>
       <div className="main">
-        <header className="topbar v3 v7">
+        <header className="topbar v3 v7 final">
           <div className="topbar-primary">
             <div className="topbar-date-block">
               <span className="topbar-kicker">Terena calendar</span>
@@ -667,40 +681,35 @@ export function GameShell(props: {
           </div>
         ) : null}
         <div className="page">{props.children}</div>
-        <nav className="mobile-command-bar" aria-label="Current political actions">
-          <button
-            type="button"
-            className={props.screen === "home" ? "active" : ""}
-            onClick={() => props.onNavigate("home")}
-          >
-            <span>⌂</span>Home
-          </button>
-          <button
-            type="button"
-            className={
-              props.screen === (props.campaignActive ? "campaign" : "office") ? "active" : ""
+        <nav className="mobile-command-bar bottom-rail final" aria-label="Primary destinations">
+          {BOTTOM_RAIL.map((item) => {
+            if (item.id === "more") {
+              return (
+                <button
+                  key="more"
+                  type="button"
+                  className={navOpen ? "active" : ""}
+                  aria-expanded={navOpen}
+                  onClick={() => setNavOpen(true)}
+                >
+                  <span aria-hidden>{item.icon}</span>
+                  {item.label}
+                </button>
+              );
             }
-            onClick={() => props.onNavigate(props.campaignActive ? "campaign" : "office")}
-          >
-            <span>{props.campaignActive ? "⚑" : "▰"}</span>
-            {props.campaignActive ? "Campaign HQ" : officeLabel}
-          </button>
-          <button
-            type="button"
-            className={attentionOpen ? "active" : ""}
-            onClick={() => setAttentionOpen((open) => !open)}
-          >
-            <span>!</span>Inbox
-            {props.attentionItems.length ? <b>{props.attentionItems.length}</b> : null}
-          </button>
-          <button
-            type="button"
-            className="end-turn"
-            disabled={props.busy || props.endTurnDisabled}
-            onClick={props.onEndTurn}
-          >
-            <span>→</span>End Turn
-          </button>
+            const screenId: Screen = item.id;
+            return (
+              <button
+                key={screenId}
+                type="button"
+                className={props.screen === screenId ? "active" : ""}
+                onClick={() => props.onNavigate(screenId)}
+              >
+                <span aria-hidden>{item.icon}</span>
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
       </div>
     </div>

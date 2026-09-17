@@ -1,6 +1,6 @@
 :root {
   color-scheme: light;
-  /* Phase 11.4 — Terena political desk identity (cool slate, not beige intranet) */
+  /* Phase 11.4 ? Terena political desk identity (cool slate, not beige intranet) */
   --bg: #e6eaef;
   --bg-deep: #d5dde6;
   --paper: #f7f9fc;
@@ -2435,6 +2435,70 @@ select:focus-visible,
   display: grid;
   gap: 1rem;
 }
+.courts-view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 1rem;
+}
+.courts-view-tabs .btn.selected {
+  border-color: var(--navy);
+  box-shadow: inset 0 0 0 1px var(--navy);
+}
+.court-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.85rem;
+  margin: 0.75rem 0;
+}
+.court-politicization {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-left: 3px solid #8d3e32;
+  background: rgba(141, 62, 50, 0.06);
+}
+.court-list-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  padding: 0.55rem 0;
+  cursor: pointer;
+}
+.court-list-item:hover strong {
+  text-decoration: underline;
+}
+.justice-profile-block {
+  margin-top: 0.85rem;
+}
+.justice-profile-block h4 {
+  margin: 0.85rem 0 0.35rem;
+}
+button.linkish {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+.bench-chart .judge-card.tone-leaning-left {
+  border-top-color: #3d6e8c;
+}
+.bench-chart .judge-card.tone-leaning-right {
+  border-top-color: #8a5a2b;
+}
+.bench-chart .judge-card.tone-institutionalist {
+  border-top-color: #68778a;
+}
+
 .econ-chart {
   width: 100%;
   height: 12rem;
@@ -5960,7 +6024,7 @@ button.entity-row:hover,
 }
 
 /* ==========================================================================
-   Phase 11.4 � Presentation system (shell, desk, press, campaign, wiki)
+   Phase 11.4 ? Presentation system (shell, desk, press, campaign, wiki)
    ========================================================================== */
 
 .shell.v7 {
@@ -6063,7 +6127,7 @@ button.entity-row:hover,
   color: var(--accent);
 }
 
-/* Political desk � Home */
+/* Political desk ? Home */
 .home-desk .home-desk-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(16rem, 0.85fr);
@@ -6376,7 +6440,7 @@ button.entity-row:hover,
   box-shadow: var(--shadow-soft);
 }
 
-/* Phase 11.4 completion � Assembly chamber stage + constitution diff */
+/* Phase 11.4 completion ? Assembly chamber stage + constitution diff */
 .assembly-chamber-stage {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(14rem, 0.7fr);
@@ -6715,7 +6779,7 @@ button.entity-row:hover,
   }
 }
 
-/* ── Phase 11.5 — Player Experience: Navigation & Integration ───────── */
+/* ?? Phase 11.5 ? Player Experience: Navigation & Integration ????????? */
 
 /* A. Constitution diff text markers for color-blind accessibility */
 .constitution-diff-del::before {
@@ -7173,17 +7237,17 @@ button.entity-row:hover,
   align-items: baseline;
 }
 .timeline-item.win::before {
-  content: "●";
+  content: "?";
   color: var(--ok);
   font-size: 0.6rem;
 }
 .timeline-item.loss::before {
-  content: "○";
+  content: "?";
   color: var(--muted);
   font-size: 0.6rem;
 }
 .timeline-item.active::before {
-  content: "●";
+  content: "?";
   color: var(--accent);
   font-size: 0.6rem;
 }
@@ -7281,7 +7345,7 @@ button.entity-row:hover,
   padding: 0.5rem 0;
 }
 
-/* Layout 2.0 — nav clarity */
+/* Layout 2.0 ? nav clarity */
 .nav.v7 .nav-group {
   padding: 0.15rem 0.45rem 0.55rem;
   border-bottom: 1px solid rgba(214, 236, 242, 0.08);
@@ -7674,7 +7738,7 @@ body.reduced-motion *::after {
   border-radius: var(--radius);
 }
 
-/* Scenario Studio (Phase 18B–18D) */
+/* Scenario Studio (Phase 18B?18D) */
 .scenario-editor.studio-shell {
   max-width: 1180px;
 }
@@ -8151,4 +8215,871 @@ body.reduced-motion *::after {
   .tutorial-coach {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
   }
+}
+
+/* ===================== FINAL UI REDESIGN ? identity / editorial / map ===================== */
+
+.entity-identity-masthead {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(228, 241, 245, 0.45)),
+    var(--surface-paper);
+  border: 1px solid var(--line);
+  border-left-width: 6px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+}
+.entity-identity-masthead .identity-kicker {
+  font-size: var(--type-kicker);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.entity-identity-masthead .identity-name {
+  font-family: var(--font-display);
+  font-size: var(--type-display-l);
+  line-height: 1.15;
+  margin: 0.15rem 0 0.35rem;
+  color: var(--ink);
+}
+.entity-identity-masthead .identity-role {
+  color: var(--muted);
+  font-size: var(--type-ui);
+}
+.entity-identity-masthead .identity-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.entity-identity-facets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+}
+.entity-identity-facets > div {
+  padding: var(--space-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.entity-identity-facets .kicker {
+  margin-bottom: 0.25rem;
+}
+.entity-identity-facets strong {
+  display: block;
+  font-size: var(--type-ui);
+  font-weight: 600;
+}
+
+.party-desk-final .party-identity-leader {
+  margin-bottom: var(--space-5);
+}
+.party-desk-final .party-overview-stack {
+  display: grid;
+  gap: var(--space-5);
+}
+.party-desk-final .party-contest-people {
+  display: grid;
+  gap: var(--space-4);
+}
+.party-desk-final .contest-card.people-contest {
+  padding: var(--space-4);
+  background: var(--surface-paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.party-desk-final .contest-card.people-contest > .contest-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: var(--space-3);
+}
+.party-desk-final .contest-card.people-contest .contest-head h3 {
+  font-family: var(--font-display);
+  font-size: var(--type-title);
+  margin: 0;
+}
+.party-desk-final .party-contest-field {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  gap: var(--space-3);
+}
+
+.country-dossier {
+  display: grid;
+  gap: var(--space-4);
+}
+.country-dossier .country-dossier-head {
+  display: grid;
+  gap: 0.35rem;
+}
+.country-dossier .country-dossier-head h2 {
+  font-family: var(--font-display);
+  font-size: var(--type-display-l);
+  margin: 0;
+  line-height: 1.15;
+}
+.country-dossier-section {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.country-dossier-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.country-dossier-section h3 {
+  font-family: var(--font-display);
+  font-size: var(--type-title);
+  margin: 0 0 0.45rem;
+}
+.foreign-desk-final .foreign-affairs-layout {
+  align-items: start;
+}
+.foreign-desk-final.map-workspace .foreign-map-panel {
+  min-height: 22rem;
+}
+
+.editorial-workspace.news-paper-final .news-major-stage {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.editorial-workspace.news-paper-final .news-lead {
+  padding: var(--space-5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 247, 250, 0.8)),
+    var(--surface-paper);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+}
+.editorial-workspace.news-paper-final .news-lead .serif-head,
+.editorial-workspace.news-paper-final .news-lead h2 {
+  font-size: clamp(1.55rem, 2.4vw, 2.05rem);
+  line-height: 1.2;
+}
+.editorial-workspace.news-paper-final .news-secondary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-4);
+}
+.editorial-workspace.news-paper-final .news-secondary-item {
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.editorial-workspace.news-paper-final .news-secondary-item h3 {
+  font-size: 1.15rem;
+}
+.editorial-workspace.news-paper-final .news-routine-digest {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: var(--surface-inset);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+.editorial-workspace.news-paper-final .news-routine-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem 0.85rem;
+  align-items: baseline;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--type-ui);
+}
+.editorial-workspace.news-paper-final .news-routine-item:last-child {
+  border-bottom: 0;
+}
+.editorial-workspace.news-paper-final .news-routine-item .serif-head {
+  font-size: 0.98rem;
+  font-weight: 600;
+  margin: 0;
+  text-align: left;
+}
+.editorial-workspace.news-paper-final .news-routine-item .news-open-story {
+  justify-self: start;
+}
+
+.editorial-workspace.history-archive-final .wiki-index-brand {
+  font-family: var(--font-display);
+}
+.editorial-workspace.history-archive-final .wiki-index-brand strong {
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+}
+.editorial-workspace.history-archive-final .wiki-article > header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 2.5vw, 2.2rem);
+}
+.editorial-workspace.history-archive-final .wiki-browse-hint {
+  margin: 0 0 var(--space-4);
+  color: var(--muted);
+  font-size: var(--type-ui);
+}
+
+.org-desk-final .org-identity-masthead {
+  margin-bottom: var(--space-4);
+}
+.org-desk-final .org-scorecard-block {
+  padding: var(--space-4);
+  background: var(--surface-paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+}
+.org-desk-final .org-scorecard-block > h3 {
+  font-family: var(--font-display);
+  margin: 0 0 0.35rem;
+}
+.org-desk-final .master-detail-inspector .entity-header {
+  display: none;
+}
+
+.place-dossier {
+  display: grid;
+  gap: var(--space-3);
+}
+.place-dossier .place-name {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  margin: 0;
+  line-height: 1.2;
+}
+.place-dossier .place-governor {
+  display: grid;
+  gap: 0.15rem;
+}
+.place-dossier .place-governor strong {
+  font-size: 1.05rem;
+}
+.map-workspace.terena-map-workspace .compact-map-inspector,
+.map-workspace.situation-room-workspace .situation-province-card {
+  min-width: 0;
+}
+
+.office-place-final .place-identity-block {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.85), rgba(228, 241, 245, 0.5)),
+    var(--surface-paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.office-place-final .place-identity-block h2 {
+  font-family: var(--font-display);
+  font-size: var(--type-display-l);
+  margin: 0.15rem 0 0.35rem;
+}
+
+@media (max-width: 768px) {
+  .entity-identity-masthead {
+    padding: var(--space-4);
+  }
+  .editorial-workspace.news-paper-final .news-routine-item {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   FINAL REDESIGN ? shell, kit archetypes, home, breakpoints
+   Tokens: apps/game/src/ui/tokens.css � Spec: docs/design/final-ui-tokens.md
+   Reversible: remove this section + tokens import to roll back chrome.
+   ========================================================================== */
+
+.shell.final {
+  grid-template-columns: 16.25rem 1fr;
+  background:
+    radial-gradient(1100px 480px at 100% -8%, rgba(31, 111, 139, 0.09), transparent 55%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+}
+
+.nav.final {
+  background: linear-gradient(
+    180deg,
+    var(--surface-nav) 0%,
+    var(--surface-nav-mid) 48%,
+    #12384f 100%
+  );
+  padding: var(--space-4) var(--space-2) var(--space-5);
+}
+
+.nav.final .nav-brand strong {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.nav.final .nav-group-title {
+  min-height: var(--touch-min);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  color: rgba(232, 238, 243, 0.58);
+  font-size: var(--type-kicker);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.nav.final .nav-group-label {
+  flex: 1;
+  text-align: left;
+}
+
+.nav.final > .nav-group > button:not(.nav-group-title) {
+  min-height: var(--touch-min);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--type-ui);
+}
+
+.nav.final button.active {
+  background: linear-gradient(90deg, rgba(31, 111, 139, 0.55), rgba(255, 255, 255, 0.08));
+  box-shadow: inset 3px 0 0 #7ec8d8;
+}
+
+.nav.final button:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-offset);
+}
+
+.topbar.final {
+  min-height: 4.25rem;
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-topbar);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.topbar.final .game-date {
+  font-family: var(--font-display);
+  font-size: var(--type-display-l);
+  color: var(--navy);
+}
+
+.shell.final .page {
+  padding: var(--space-5) var(--space-5) var(--space-7);
+  max-width: 98rem;
+}
+
+/* ?? Kit archetypes ?? */
+.command-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-4);
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+
+.command-header-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--type-display-l);
+  font-weight: 650;
+  color: var(--navy);
+  letter-spacing: -0.01em;
+}
+
+.command-header-subtitle {
+  margin: var(--space-1) 0 0;
+}
+
+.command-header-status {
+  margin-top: var(--space-3);
+}
+
+.command-header-actions {
+  align-items: center;
+}
+
+.object-lead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin: 0 0 var(--space-3);
+}
+
+.object-lead-title {
+  font-family: var(--font-display);
+  font-size: var(--type-title);
+  font-weight: 650;
+  color: var(--navy);
+}
+
+.object-lead-meta {
+  margin-top: var(--space-1);
+  font-size: var(--type-caption);
+}
+
+.procedural-stage-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.procedural-stage {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2rem;
+  opacity: 0.45;
+}
+
+.procedural-stage.done {
+  opacity: 0.85;
+}
+
+.procedural-stage.current {
+  opacity: 1;
+  font-weight: 650;
+  color: var(--navy);
+}
+
+.procedural-stage-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+.procedural-stage.done .procedural-stage-dot,
+.procedural-stage.current .procedural-stage-dot {
+  background: var(--accent);
+}
+
+.procedural-stage-label {
+  font-size: var(--type-caption);
+}
+
+.entity-identity-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  background: var(--surface-paper);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--navy);
+  border-radius: var(--radius);
+}
+
+.entity-identity-swatch {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius);
+  background: var(--navy);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.entity-identity-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--type-title);
+  color: var(--ink);
+}
+
+.entity-identity-office {
+  margin-top: var(--space-1);
+  font-size: var(--type-ui);
+}
+
+.negotiation-panel {
+  padding: var(--space-4);
+  background: var(--surface-accent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+
+.negotiation-panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--navy);
+}
+
+.negotiation-panel-body {
+  margin-top: var(--space-3);
+}
+
+.negotiation-panel-footer {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.final-page-header {
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.final-page-header .page-title {
+  font-family: var(--font-display);
+  font-size: var(--type-display-l);
+}
+
+.final-tabbar {
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.final-tabbar button {
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-3);
+}
+
+.final-brief-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: var(--space-2);
+}
+
+.final-brief-strip .brief-strip-item {
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.final-data-table {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+/* ?? Home political desk ?? */
+.home-final .command-header {
+  margin-bottom: var(--space-3);
+}
+
+.home-final .home-section {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.home-final .home-section:last-child {
+  border-bottom: 0;
+}
+
+.home-final .home-institution-facts {
+  margin-top: var(--space-2);
+}
+
+.home-final .home-calm-state {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-inset);
+  border-radius: var(--radius);
+}
+
+/* ?? Bottom rail (tablet / phone) ?? */
+.bottom-rail.final {
+  display: none;
+}
+
+/* Desktop: sidebar present; hide drawer chrome */
+@media (min-width: 1280px) {
+  .shell.final .nav-toggle,
+  .shell.final .nav-close {
+    display: none;
+  }
+  .shell.final .nav.final {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: auto;
+    transform: none;
+  }
+  .shell.final .nav-backdrop {
+    display: none;
+  }
+  .bottom-rail.final {
+    display: none !important;
+  }
+}
+
+/* Below desktop: drawer + bottom rail ? do not squeeze full sidebar */
+@media (max-width: 1279px) {
+  .shell.final {
+    grid-template-columns: 1fr;
+  }
+
+  .shell.final .nav-toggle {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    top: var(--space-2);
+    left: var(--space-2);
+    z-index: var(--z-nav-toggle);
+    width: var(--touch-min);
+    height: var(--touch-min);
+    background: var(--navy);
+    color: #fff;
+    border: 0;
+    border-radius: var(--radius);
+  }
+
+  .shell.final .nav.final {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(18.5rem, 88vw);
+    z-index: var(--z-mobile-nav);
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-drawer);
+  }
+
+  .shell.final .nav.final.open {
+    transform: translateX(0);
+  }
+
+  .shell.final .nav-close {
+    display: grid;
+    place-items: center;
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
+  }
+
+  .shell.final .topbar.final {
+    padding-left: calc(var(--touch-min) + var(--space-4));
+  }
+
+  .shell.final .page {
+    padding: var(--space-4);
+    padding-bottom: calc(var(--space-7) + 3.5rem);
+  }
+
+  .bottom-rail.final,
+  .mobile-command-bar.bottom-rail.final {
+    position: fixed;
+    z-index: var(--z-bottom-rail);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    min-height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--line-strong);
+    background: rgba(245, 247, 250, 0.98);
+    box-shadow: 0 -0.35rem 1.1rem rgba(20, 34, 50, 0.12);
+  }
+
+  .bottom-rail.final button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 2px;
+    min-height: var(--touch-min);
+    border: 0;
+    border-right: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+  }
+
+  .bottom-rail.final button > span {
+    color: var(--navy);
+    font-size: 1.05rem;
+    line-height: 1;
+  }
+
+  .bottom-rail.final button.active {
+    background: rgba(15, 47, 69, 0.08);
+    color: var(--navy);
+  }
+
+  .bottom-rail.final button:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: -2px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .entity-identity-banner {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .entity-identity-actions {
+    grid-column: 1 / -1;
+  }
+
+  .command-header-actions,
+  .command-header-status {
+    width: 100%;
+  }
+}
+
+@media (max-width: 834px) {
+  .shell.final .page {
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-7) + 3.5rem);
+  }
+
+  .command-header {
+    padding: var(--space-3);
+  }
+
+  .final-brief-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 390px) {
+  .bottom-rail.final button {
+    font-size: 0.55rem;
+    padding: var(--space-1);
+  }
+
+  .topbar.final .attention-label,
+  .topbar.final .inspector-label,
+  .topbar.final .global-search-button span {
+    display: none;
+  }
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .bottom-rail.final,
+  .mobile-command-bar.bottom-rail.final {
+    padding-bottom: max(var(--space-2), env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ?? Final redesign: Campaign HQ + Elections ?? */
+.campaign-hq .campaign-identity-banner {
+  justify-content: space-between;
+  width: 100%;
+}
+.campaign-identity-copy {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+.campaign-identity-copy p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+.campaign-war-room-grid {
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.9fr) minmax(0, 1.1fr);
+  gap: var(--space-4);
+}
+.campaign-standing-block {
+  display: grid;
+  gap: 0.25rem;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+}
+.campaign-standing-block p {
+  margin: 0.45rem 0 0;
+}
+.campaign-rival-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.campaign-map-desk,
+.campaign-strategy-desk,
+.campaign-support-desk,
+.campaign-record-desk {
+  display: grid;
+  gap: var(--space-3);
+}
+.campaign-hq .campaign-map-layers,
+.campaign-hq .map-scale-switch {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.campaign-hq .campaign-map-layers button,
+.campaign-hq .map-scale-switch button,
+.campaign-hq .campaign-action-btn {
+  min-height: var(--touch-min);
+}
+.campaign-hq .campaign-stage-ribbon.procedural-stage-strip {
+  color: #fff;
+  background: linear-gradient(90deg, #0f2f45, #1f6f8b);
+  border-color: var(--line-strong);
+}
+.campaign-hq .campaign-stage-ribbon.final {
+  background: linear-gradient(90deg, #6b3a12, #9a6b16);
+}
+.campaign-hq .campaign-stage-ribbon.counting {
+  background: linear-gradient(90deg, #3a1a1a, #8b2e2e);
+}
+
+.elections-hub .election-race-lead {
+  margin-bottom: var(--space-3);
+}
+.election-night-progress {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 var(--space-4) var(--space-3);
+  color: #eef5f8;
+}
+.election-night-progress > span {
+  display: block;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 78%, transparent);
+  max-width: 100%;
+  transition: width 0.25s ease;
+}
+.election-night-progress > em {
+  font-style: normal;
+  font-size: var(--text-sm);
+  opacity: 0.9;
+}
+.election-night-broadcast .election-night-live-visual {
+  min-height: 18rem;
+}
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 960px) {
+  .campaign-war-room-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.object-first-lead {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }

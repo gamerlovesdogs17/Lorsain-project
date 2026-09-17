@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client";
 import App from "./App.js";
 import { SettingsProvider } from "./settingsContext.js";
 import { applySettingsToDocument } from "./settings.js";
+import "./ui/tokens.css";
 import "./styles.css";
+import "./ui/tokens.css";
 
 applySettingsToDocument();
 

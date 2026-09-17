@@ -54,6 +54,7 @@ import {
   partyDisplayName,
   politicianDisplayName,
   pollShareLine,
+  partyColor,
   publicSeverityLabel,
   mediaHeadlineForEvent,
   treatyStatusLabel,
@@ -66,10 +67,13 @@ import { EntityLink } from "./ui/entityLink.js";
 import {
   ActivityFeedItem,
   BriefStrip,
+  CommandHeader,
   DataTable,
   EmptyState,
+  EntityIdentityBanner,
   EntityRow,
   NewsItem,
+  ObjectLead,
   PageHeader,
   SectionCard,
   SectionDivider,
@@ -280,19 +284,21 @@ function Home(props: PageProps) {
     .filter((i) => i.status === "active")
     .slice(0, 3);
   const partyLabel = partyDisplayName(props.world, runtime?.partyId ?? null, props.snap);
+  const partyTint = runtime?.partyId ? partyColor(props.world, runtime.partyId) : undefined;
   const go = (screen: Screen) => props.onNavigate?.(screen);
+  const playerName = figure?.name ?? politicianDisplayName(props.catalog, playerId);
 
   const briefTitle = playerIsPresident
-    ? "Presidential briefing"
+    ? "Presidential desk"
     : governedProvince
-      ? `${props.catalog.places.get(governedProvince)?.name ?? "Province"} briefing`
+      ? `${props.catalog.places.get(governedProvince)?.name ?? "Province"} desk`
       : playerIsMp
-        ? "Assembly briefing"
+        ? "Assembly desk"
         : provincialMember && provincialChamber
-          ? `${props.catalog.places.get(provincialMember.provinceId)?.name ?? "Province"} Assembly briefing`
+          ? `${props.catalog.places.get(provincialMember.provinceId)?.name ?? "Province"} Assembly desk`
           : props.campaign
-            ? "Campaign briefing"
-            : "Career briefing";
+            ? "Campaign desk"
+            : "Political desk";
 
   const briefItems = playerIsPresident
     ? [
@@ -347,9 +353,9 @@ function Home(props: PageProps) {
               ]
             : [
                 { label: "Scheduled races", value: upcoming.length },
-                { label: "Opportunities", value: "Career" },
                 { label: "Standing", value: standingLabel },
                 { label: "Office", value: props.offices[0] ?? "Private citizen" },
+                { label: "Date", value: props.snap.currentDate },
               ];
 
   const hasActionRequired =
@@ -358,30 +364,66 @@ function Home(props: PageProps) {
     Boolean(terenaPublicCrisis) ||
     Boolean(playerIsPresident && warTrigger);
 
+  const primaryActions = (
+    <>
+      {decisions.length > 0 ? (
+        <button type="button" className="btn btn-sm" onClick={() => go("office")}>
+          Pending decisions ({decisions.length})
+        </button>
+      ) : null}
+      {props.campaign ? (
+        <button type="button" className="btn secondary btn-sm" onClick={() => go("campaign")}>
+          Campaign →
+        </button>
+      ) : null}
+      <button type="button" className="btn ghost btn-sm" onClick={() => go("news")}>
+        News →
+      </button>
+    </>
+  );
+
   return (
-    <div className="home-v5 home-desk home-v2" data-tutorial="home-desk">
+    <div className="home-v5 home-desk home-v2 home-final" data-tutorial="home-desk">
       <WorkLayout
         header={
           <>
-            <div className="home-desk-hero object-first-lead">
-              <div className="home-desk-hero-copy">
-                <div className="kicker">Political desk · Home 2.0</div>
-                <h2 className="home-desk-title">{briefTitle}</h2>
-                <p className="muted home-desk-lede">
-                  {props.offices[0] ?? "Private citizen"} · {standingLabel} standing ·{" "}
-                  {props.snap.currentDate}
-                </p>
-              </div>
-              <BriefStrip items={briefItems} />
-            </div>
+            <CommandHeader
+              kicker="Home"
+              title={briefTitle}
+              subtitle={`${props.snap.currentDate} · ${standingLabel} standing`}
+              status={<BriefStrip items={briefItems} aria-label="Office status" />}
+              actions={primaryActions}
+              data-qa="home-command-header"
+            />
+            <EntityIdentityBanner
+              name={playerName}
+              office={props.offices[0] ?? "Private citizen"}
+              party={partyLabel}
+              {...(partyTint ? { color: partyTint } : {})}
+              {...(figure?.home || runtime?.homeProvinceId
+                ? {
+                    meta: `Home · ${
+                      figure?.home ??
+                      props.catalog.places.get(runtime?.homeProvinceId ?? "")?.name ??
+                      "—"
+                    }`,
+                  }
+                : {})}
+              actions={
+                <button type="button" className="btn ghost btn-sm" onClick={() => go("career")}>
+                  Career →
+                </button>
+              }
+            />
           </>
         }
         main={
           <>
             <section className="home-section">
-              <SectionDivider
-                title="Action required"
-                hint="Decisions that block or demand attention"
+              <ObjectLead
+                kicker="Pending"
+                title="Decisions before you"
+                meta="Actions that block progress or demand a vote"
               />
               {interrupt ? (
                 <div className="briefing-urgent alert">
@@ -454,15 +496,145 @@ function Home(props: PageProps) {
               {!hasActionRequired ? (
                 <div className="home-calm-state">
                   <p className="muted">
-                    Nothing currently requires your immediate action. Review what changed and what
-                    is next.
+                    Nothing currently requires your immediate action. Review government context and
+                    recent news.
                   </p>
                 </div>
               ) : null}
             </section>
 
             <section className="home-section">
-              <SectionDivider title="What changed" hint="This turn's public developments" />
+              <ObjectLead
+                kicker="Institutions"
+                title="Government and Party"
+                meta="Coalition, agenda, and political machine"
+                trailing={
+                  <div className="row">
+                    <button
+                      type="button"
+                      className="btn secondary btn-sm"
+                      onClick={() => go("executive")}
+                    >
+                      Government →
+                    </button>
+                    <button type="button" className="btn ghost btn-sm" onClick={() => go("party")}>
+                      Party →
+                    </button>
+                  </div>
+                }
+              />
+              <dl className="dossier-facts compact home-institution-facts">
+                {agendaActive.length ? (
+                  <div>
+                    <dt>Agenda</dt>
+                    <dd>
+                      {agendaActive.map((i) => i.title.replace(/^[^:]+:\s*/, "")).join(" · ")}
+                    </dd>
+                  </div>
+                ) : governing?.fiscal?.lastUpdated ? (
+                  <div>
+                    <dt>Fiscal</dt>
+                    <dd>
+                      FY{governing.fiscal.fiscalYear} · bal {governing.fiscal.balance.toFixed(0)} ·
+                      debt {governing.fiscal.debt.toFixed(0)}
+                    </dd>
+                  </div>
+                ) : (
+                  <div>
+                    <dt>Government</dt>
+                    <dd className="muted">No active agenda items this turn</dd>
+                  </div>
+                )}
+                {coalition ? (
+                  <div>
+                    <dt>Coalition</dt>
+                    <dd>
+                      {coalition.partyIds
+                        .map((id) => partyDisplayName(props.world, id, props.snap))
+                        .join(" · ")}
+                    </dd>
+                  </div>
+                ) : (
+                  <div>
+                    <dt>Party</dt>
+                    <dd>{partyLabel}</dd>
+                  </div>
+                )}
+                {openLeadership.length > 0 ? (
+                  <div>
+                    <dt>Leadership contests</dt>
+                    <dd>
+                      {openLeadership
+                        .slice(0, 2)
+                        .map((c) => partyDisplayName(props.world, c.partyId, props.snap))
+                        .join(", ")}
+                    </dd>
+                  </div>
+                ) : null}
+                {openSeats.length > 0 ? (
+                  <div>
+                    <dt>Open seats</dt>
+                    <dd>{openSeats.length} contested or recruiting</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>Economy</dt>
+                  <dd>
+                    {governorPublicEconomy?.summary ??
+                      `${publicEconomy.growth.toFixed(1)}% annual output growth · ${publicEconomy.confidenceTrend.toLowerCase()} confidence`}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+
+            {props.campaign ? (
+              <section className="home-section">
+                <ObjectLead
+                  kicker="Campaign"
+                  title={campaignTypeLabel(props.campaign.type)}
+                  meta={
+                    props.campaign.electionId
+                      ? electionDisplayName(props.campaign.electionId)
+                      : "Active campaign"
+                  }
+                  trailing={
+                    <button
+                      type="button"
+                      className="btn secondary btn-sm"
+                      onClick={() => go("campaign")}
+                    >
+                      Campaign HQ →
+                    </button>
+                  }
+                />
+                <BriefStrip
+                  aria-label="Campaign status"
+                  items={[
+                    {
+                      label: "Actions left",
+                      value: props.campaign.actionPointsRemaining,
+                    },
+                    {
+                      label: "Cash",
+                      value: Math.round(props.campaign.cashOnHand).toLocaleString(),
+                    },
+                    { label: "Standing", value: standingLabel },
+                  ]}
+                />
+              </section>
+            ) : null}
+
+            <section className="home-section">
+              <ObjectLead
+                kicker="Record"
+                title="Recent major news"
+                meta="Public developments this turn"
+                trailing={
+                  <button type="button" className="btn ghost btn-sm" onClick={() => go("news")}>
+                    News desk →
+                  </button>
+                }
+              />
               <div className="lead-block">
                 {lead ? (
                   <LeadStory
@@ -501,9 +673,6 @@ function Home(props: PageProps) {
                       category={s.category}
                     />
                   ))}
-                  <button type="button" className="btn ghost btn-sm" onClick={() => go("news")}>
-                    News desk →
-                  </button>
                 </div>
               ) : null}
             </section>
@@ -595,85 +764,10 @@ function Home(props: PageProps) {
                   ))}
                 </div>
               ) : null}
-              <button type="button" className="btn ghost btn-sm" onClick={() => go("career")}>
-                Career →
-              </button>
             </section>
 
             <section className="home-rail-block">
-              <SectionDivider title="Government · Party · Campaign" />
-              <dl className="dossier-facts compact">
-                {agendaActive.length ? (
-                  <div>
-                    <dt>Agenda</dt>
-                    <dd>
-                      {agendaActive.map((i) => i.title.replace(/^[^:]+:\s*/, "")).join(" · ")}
-                    </dd>
-                  </div>
-                ) : governing?.fiscal?.lastUpdated ? (
-                  <div>
-                    <dt>Fiscal</dt>
-                    <dd>
-                      FY{governing.fiscal.fiscalYear} · bal {governing.fiscal.balance.toFixed(0)} ·
-                      debt {governing.fiscal.debt.toFixed(0)}
-                    </dd>
-                  </div>
-                ) : null}
-                {coalition ? (
-                  <div>
-                    <dt>Coalition</dt>
-                    <dd>
-                      {coalition.partyIds
-                        .map((id) => partyDisplayName(props.world, id, props.snap))
-                        .join(" · ")}
-                    </dd>
-                  </div>
-                ) : null}
-                {openLeadership.length > 0 ? (
-                  <div>
-                    <dt>Leadership contests</dt>
-                    <dd>
-                      {openLeadership
-                        .slice(0, 2)
-                        .map((c) => partyDisplayName(props.world, c.partyId, props.snap))
-                        .join(", ")}
-                    </dd>
-                  </div>
-                ) : null}
-                {openSeats.length > 0 ? (
-                  <div>
-                    <dt>Open seats</dt>
-                    <dd>{openSeats.length} contested or recruiting</dd>
-                  </div>
-                ) : null}
-                <div>
-                  <dt>Campaign</dt>
-                  <dd>
-                    {props.campaign ? (
-                      <>
-                        <StatusBadge tone="ok">Active</StatusBadge>{" "}
-                        {campaignTypeLabel(props.campaign.type)}
-                      </>
-                    ) : (
-                      "Not campaigning"
-                    )}
-                  </dd>
-                </div>
-                {polls[0] ? (
-                  <div>
-                    <dt>Latest poll</dt>
-                    <dd>
-                      {polls[0].publicationDate}:{" "}
-                      {pollShareLine(
-                        props.catalog,
-                        props.world,
-                        props.snap,
-                        polls[0].firstPreference,
-                      )}
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
+              <SectionDivider title="Shortcuts" />
               <div className="home-context-links row">
                 <button
                   type="button"
@@ -683,17 +777,23 @@ function Home(props: PageProps) {
                   Government →
                 </button>
                 <button type="button" className="btn ghost btn-sm" onClick={() => go("party")}>
-                  Parties →
+                  Party →
                 </button>
-                <button type="button" className="btn ghost btn-sm" onClick={() => go("campaign")}>
-                  Campaign HQ →
+                <button type="button" className="btn ghost btn-sm" onClick={() => go("assembly")}>
+                  Assembly →
                 </button>
+                {props.campaign ? (
+                  <button type="button" className="btn ghost btn-sm" onClick={() => go("campaign")}>
+                    Campaign →
+                  </button>
+                ) : null}
               </div>
-              <p className="muted">
-                Economy:{" "}
-                {governorPublicEconomy?.summary ??
-                  `${publicEconomy.growth.toFixed(1)}% annual output growth · ${publicEconomy.confidenceTrend.toLowerCase()} confidence`}
-              </p>
+              {polls[0] ? (
+                <p className="muted">
+                  Latest poll {polls[0].publicationDate}:{" "}
+                  {pollShareLine(props.catalog, props.world, props.snap, polls[0].firstPreference)}
+                </p>
+              ) : null}
             </section>
           </>
         }
@@ -2173,11 +2273,11 @@ function Terena(props: PageProps) {
     });
   };
   return (
-    <div>
+    <div className="map-workspace">
       <PageHeader
-        kicker="Geography"
+        kicker="Provinces and places"
         title="Terena"
-        subtitle="Interactive map derived from canonical GeoJSON. Supplied SVG files remain authoring references."
+        subtitle="Map workspace — select a province for its political dossier (Governor, assembly, economy)."
       />
       <TabBar
         tabs={[
@@ -2245,7 +2345,7 @@ function Terena(props: PageProps) {
         </div>
       ) : null}
       <MapDetailLayout
-        className="terena-map-workspace"
+        className="terena-map-workspace map-workspace"
         detailVisible={sel != null}
         map={
           <>
@@ -2293,16 +2393,16 @@ function Terena(props: PageProps) {
           </>
         }
         detail={
-          <div className="compact-map-inspector">
-            <SectionDivider title="Selection" hint={mode[0]!.toUpperCase() + mode.slice(1)} />
+          <div className="compact-map-inspector place-dossier entity-profile">
+            <SectionDivider title="Place dossier" hint={mode[0]!.toUpperCase() + mode.slice(1)} />
             {sel ? (
               <>
-                <strong>{place?.name ?? sel.name}</strong>
+                <h3 className="place-name">{place?.name ?? sel.name}</h3>
                 <div className="muted">
                   {sel.kind === "constituency"
                     ? `${place?.seats ?? "?"} seats · ${sitting} sitting${place?.provinceName ? ` · ${place.provinceName}` : ""}`
                     : sel.kind === "province"
-                      ? "Province"
+                      ? "Province · Governors and provincial politics"
                       : "City · public geographic label"}
                 </div>
                 {sel.kind === "province" ? (
@@ -2315,13 +2415,29 @@ function Terena(props: PageProps) {
                             props.world.offices[t.officeId]?.kind === "governor" &&
                             props.world.offices[t.officeId]?.provinceId === sel.id,
                         );
+                        const govParty = gov
+                          ? props.snap.politicians[gov.holderId]?.partyId
+                          : null;
                         return (
-                          <div>
-                            <dt>Governor</dt>
-                            <dd>
-                              {gov ? politicianDisplayName(props.catalog, gov.holderId) : "Vacant"}
-                            </dd>
-                          </div>
+                          <>
+                            <div className="place-governor">
+                              <dt>Governor</dt>
+                              <dd>
+                                {gov ? (
+                                  <>
+                                    <strong>
+                                      {politicianDisplayName(props.catalog, gov.holderId)}
+                                    </strong>
+                                    <div className="muted">
+                                      {partyDisplayName(props.world, govParty ?? null, props.snap)}
+                                    </div>
+                                  </>
+                                ) : (
+                                  "Vacant"
+                                )}
+                              </dd>
+                            </div>
+                          </>
                         );
                       })()}
                       {regionPublicEcon ? (
@@ -2369,7 +2485,10 @@ function Terena(props: PageProps) {
                         return pressureId ? (
                           <div>
                             <dt>Active pressure</dt>
-                            <dd>{pressureId.replace(/_/g, " ")}</dd>
+                            <dd>
+                              {props.snap.provincialRuntime.pressures[pressureId]?.title ??
+                                pressureId}
+                            </dd>
                           </div>
                         ) : null;
                       })()}

@@ -1,0 +1,146 @@
+/**
+ * Lorsain FINAL UI tokens
+ * Source of truth: docs/design/final-ui-tokens.md
+ * Import before styles.css so chrome can consume these variables.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* —— Typography —— */
+  --font-display: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --font-ui: "DM Sans", "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+  --serif: var(--font-display);
+  --display: var(--font-display);
+  --sans: var(--font-ui);
+
+  --type-display-xl: clamp(1.85rem, 2.6vw, 2.35rem);
+  --type-display-l: clamp(1.45rem, 2.1vw, 1.85rem);
+  --type-title: 1.25rem;
+  --type-body: 1rem;
+  --type-ui: 0.9375rem;
+  --type-caption: 0.8125rem;
+  --type-kicker: 0.6875rem;
+
+  /* —— Surfaces —— */
+  --bg: #dfe5ed;
+  --bg-deep: #cfd8e4;
+  --surface-paper: #f5f7fa;
+  --surface-raised: #ffffff;
+  --surface-inset: #e8eef4;
+  --surface-accent: #e4f1f5;
+  --surface-nav: #0b2233;
+  --surface-nav-mid: #0f2f45;
+  --surface-topbar: rgba(245, 247, 250, 0.94);
+  --paper: var(--surface-paper);
+  --paper-raised: var(--surface-raised);
+
+  /* —— Ink & lines —— */
+  --ink: #121820;
+  --ink-soft: #5a6573;
+  --muted: var(--ink-soft);
+  --line: #c4ced9;
+  --line-strong: #96a6b8;
+  --line-nav: rgba(255, 255, 255, 0.1);
+
+  /* —— Brand & signal —— */
+  --navy: #0f2f45;
+  --navy-soft: #1a445c;
+  --accent: #1f6f8b;
+  --accent-soft: #d7eef4;
+  --signal: #b23b2f;
+  --signal-soft: #f6e4e1;
+  --ok: #1f6b4a;
+  --ok-soft: #dff0e7;
+  --warn: #9a6b16;
+  --warn-soft: #f5ecd6;
+  --danger: #8b2e2e;
+  --focus-ring: #c9a227;
+
+  /* —— Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 —— */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* —— Radius / shadow / touch —— */
+  --radius-sm: 3px;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow-soft: 0 1px 2px rgba(18, 24, 32, 0.04), 0 8px 24px rgba(18, 24, 32, 0.06);
+  --shadow-nav: 4px 0 24px rgba(8, 18, 28, 0.18);
+  --shadow-drawer: 0 12px 40px rgba(8, 18, 28, 0.22);
+  --touch-min: 44px;
+  --focus-outline: 2px solid var(--focus-ring);
+  --focus-offset: 2px;
+
+  /* —— Breakpoints (documentation / JS; media queries use literals) —— */
+  --bp-phone: 390;
+  --bp-tablet: 768;
+  --bp-tablet-lg: 834;
+  --bp-landscape: 1024;
+  --bp-desktop: 1280;
+
+  /* —— Overlay stacking —— */
+  --z-sticky: 5;
+  --z-nav-toggle: 10;
+  --z-menu-backdrop: 15;
+  --z-menu: 20;
+  --z-mobile-nav: 25;
+  --z-drawer: 30;
+  --z-bottom-rail: 35;
+  --z-modal: 40;
+  --z-urgent: 50;
+
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  line-height: 1.45;
+}
+
+/* Settings: high contrast / reduced motion / density (classes applied on body) */
+body.high-contrast {
+  --line: #1a1a1a;
+  --line-strong: #0a0a0a;
+  --ink: #050505;
+  --ink-soft: #2a2a2a;
+  --muted: #2a2a2a;
+  --paper: #ffffff;
+  --surface-paper: #ffffff;
+  --surface-raised: #ffffff;
+  --bg: #e8e8e8;
+  --focus-ring: #005fcc;
+}
+
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+body[data-density="compact"] {
+  --space-page-y: var(--space-3);
+}
+
+/* Global focus visibility for the final system */
+:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-offset);
+}
+
+/* Archetype surfaces (final-ui-tokens.md) — structural hooks, not card chrome */
+.command-workspace,
+.entity-profile,
+.procedural-workspace,
+.negotiation-workspace,
+.map-workspace,
+.editor-workspace,
+.editorial-workspace {
+  min-width: 0;
+}
