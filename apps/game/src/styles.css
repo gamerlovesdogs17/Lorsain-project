@@ -2566,6 +2566,19 @@ button.linkish {
   background: var(--paper);
   padding: 0.65rem 0.75rem;
 }
+button.faction-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+button.faction-card:hover,
+button.faction-card:focus-visible {
+  border-color: var(--navy);
+  background: color-mix(in srgb, var(--paper) 88%, var(--navy) 12%);
+}
 .faction-card-link {
   color: inherit;
   font: inherit;
@@ -8232,7 +8245,8 @@ body.reduced-motion *::after {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-soft);
 }
-.entity-identity-masthead .identity-kicker {
+.entity-identity-masthead .identity-kicker,
+.identity-kicker {
   font-size: var(--type-kicker);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -8488,7 +8502,7 @@ body.reduced-motion *::after {
 
 /* ==========================================================================
    FINAL REDESIGN ? shell, kit archetypes, home, breakpoints
-   Tokens: apps/game/src/ui/tokens.css � Spec: docs/design/final-ui-tokens.md
+   Tokens: apps/game/src/ui/tokens.css ? Spec: docs/design/final-ui-tokens.md
    Reversible: remove this section + tokens import to roll back chrome.
    ========================================================================== */
 

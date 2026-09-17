@@ -284,15 +284,27 @@ export function OfficePage(props: {
             ? "Strained"
             : "Committed";
     return (
-      <div className="office-page governor-office">
+      <div className="office-page governor-office entity-profile office-place-final">
         <PageHeader
           kicker="Provincial government"
           title={`Office of the Governor · ${provinceName}`}
-          subtitle="Administration, investment priorities, and federal advocacy."
+          subtitle="Govern a place — identity, assembly politics, and administrative choices."
         />
         <WorkLayout
           header={
             <>
+              <div className="place-identity-block">
+                <div className="kicker">Province</div>
+                <h2>{provinceName}</h2>
+                <p className="muted">
+                  Governor {politicianDisplayName(props.catalog, governorId ?? playerId)} ·{" "}
+                  {partyDisplayName(
+                    props.world,
+                    props.snap.politicians[governorId ?? playerId]?.partyId ?? null,
+                    props.snap,
+                  )}
+                </p>
+              </div>
               <BriefStrip
                 items={[
                   {

@@ -35,6 +35,13 @@ function legalCareer(world: KernelWorld, state: SimState, politicianId: string):
   return explicitLegalCareerLabel(profile) ?? "No qualifying legal career";
 }
 
+function publicCaseStrength(value: number): string {
+  if (value >= 0.78) return "compelling";
+  if (value >= 0.6) return "substantial";
+  if (value >= 0.42) return "contested";
+  return "limited";
+}
+
 function appointingLabel(
   world: KernelWorld,
   snap: SimState,
@@ -334,8 +341,7 @@ export function CourtsPage(props: {
                 Formal status: nonpartisan while serving (no Party membership).
               </p>
               <p>
-                <strong>Appointment:</strong>{" "}
-                {appointingLabel(world, snap, catalog, selectedJudge)}
+                <strong>Appointment:</strong> {appointingLabel(world, snap, catalog, selectedJudge)}
                 {tenure?.appointed ? ` · appointed ${tenure.appointed}` : ""}
                 {tenure?.termEnds ? ` · term ends ${tenure.termEnds}` : ""}
                 {tenure?.yearsOnBench != null

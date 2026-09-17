@@ -2415,9 +2415,7 @@ function Terena(props: PageProps) {
                             props.world.offices[t.officeId]?.kind === "governor" &&
                             props.world.offices[t.officeId]?.provinceId === sel.id,
                         );
-                        const govParty = gov
-                          ? props.snap.politicians[gov.holderId]?.partyId
-                          : null;
+                        const govParty = gov ? props.snap.politicians[gov.holderId]?.partyId : null;
                         return (
                           <>
                             <div className="place-governor">
@@ -2595,11 +2593,11 @@ function SituationRoom(props: PageProps) {
       : [];
 
   return (
-    <div>
+    <div className="map-workspace">
       <PageHeader
         kicker="Situation room"
         title="Terena at a glance"
-        subtitle="Map-centric overview — click a province for its dossier. This is an experimental view."
+        subtitle="Map-first province dossiers — Governors, parties, and regional politics."
         actions={
           <button
             type="button"
@@ -2624,7 +2622,7 @@ function SituationRoom(props: PageProps) {
         onChange={setMode}
       />
       <MapDetailLayout
-        className="situation-room-workspace"
+        className="situation-room-workspace map-workspace"
         detailVisible
         map={
           <TerenaMap
@@ -2649,51 +2647,50 @@ function SituationRoom(props: PageProps) {
         }
         detail={
           sel ? (
-            <div className="situation-province-card" data-qa="situation-province-selected">
-              <h3>{sel.name}</h3>
+            <div
+              className="situation-province-card place-dossier entity-profile"
+              data-qa="situation-province-selected"
+            >
+              <h3 className="place-name">{sel.name}</h3>
               {mode === "political" ? (
                 <p className="muted situation-legend">
                   Political layer colors provinces by the sitting Governor&apos;s Party.
                 </p>
               ) : null}
-              <dl className="dossier-facts compact">
-                <div>
-                  <dt>Governor</dt>
-                  <dd>
-                    {governor && props.onEntityNavigate ? (
-                      <EntityLink
-                        kind="Politician"
-                        id={governor.holderId}
-                        label={politicianDisplayName(props.catalog, governor.holderId)}
-                        onNavigate={props.onEntityNavigate}
-                      />
-                    ) : governor ? (
-                      politicianDisplayName(props.catalog, governor.holderId)
-                    ) : (
-                      "Vacant"
-                    )}
-                  </dd>
-                </div>
+              <div className="place-governor">
+                <div className="kicker">Governor</div>
+                <strong>
+                  {governor ? politicianDisplayName(props.catalog, governor.holderId) : "Vacant"}
+                </strong>
                 {governor ? (
-                  <div>
-                    <dt>Governor party</dt>
-                    <dd>
-                      {(() => {
-                        const partyId = props.snap.politicians[governor.holderId]?.partyId ?? null;
-                        return props.onEntityNavigate && partyId ? (
-                          <EntityLink
-                            kind="Party"
-                            id={partyId}
-                            label={partyDisplayName(props.world, partyId, props.snap)}
-                            onNavigate={props.onEntityNavigate}
-                          />
-                        ) : (
-                          partyDisplayName(props.world, partyId, props.snap)
-                        );
-                      })()}
-                    </dd>
+                  <div className="muted">
+                    {(() => {
+                      const partyId = props.snap.politicians[governor.holderId]?.partyId ?? null;
+                      return props.onEntityNavigate && partyId ? (
+                        <EntityLink
+                          kind="Party"
+                          id={partyId}
+                          label={partyDisplayName(props.world, partyId, props.snap)}
+                          onNavigate={props.onEntityNavigate}
+                        />
+                      ) : (
+                        partyDisplayName(props.world, partyId, props.snap)
+                      );
+                    })()}
                   </div>
                 ) : null}
+                {governor && props.onEntityNavigate ? (
+                  <div>
+                    <EntityLink
+                      kind="Politician"
+                      id={governor.holderId}
+                      label="Open Governor profile"
+                      onNavigate={props.onEntityNavigate}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <dl className="dossier-facts compact">
                 {economy ? (
                   <div>
                     <dt>Economy</dt>

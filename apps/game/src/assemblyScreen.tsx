@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ContentBundle } from "@lorsain/content-loader";
 import {
+  activeCoalition,
   billPolicyFit,
   collectPlayerActionableDecisions,
   CONSTITUTIONAL_RULE_IDS,
@@ -64,10 +65,10 @@ import {
 import {
   BillProgressTrack,
   BriefStrip,
+  CommandHeader,
   DataTable,
   EmptyState,
   EntityRow,
-  PageHeader,
   PolicyChoiceGroup,
   SectionDivider,
   StatusBadge,
@@ -183,7 +184,7 @@ function AssemblyHemicycle(props: {
 
 function oneLine(text: string): string {
   const sentence = text.split(/(?<=\.)\s/)[0] ?? text;
-  return sentence.length > 110 ? `${sentence.slice(0, 107).trimEnd()}Ã¢â‚¬Â¦` : sentence;
+  return sentence.length > 110 ? `${sentence.slice(0, 107).trimEnd()}…` : sentence;
 }
 
 function formatFiscal(impact: number | null | undefined): string | undefined {
@@ -615,8 +616,26 @@ export function AssemblyPage(props: {
     { id: "overview", label: "Overview" },
     { id: "legislation", label: "Legislation" },
     { id: "committees", label: "Committees" },
-    { id: "delegation", label: "Delegation" },
+    { id: "delegation", label: "Whip" },
   ];
+  const coalitionBloc = activeCoalition(props.snap);
+  const governingPartyIds = new Set<string>();
+  if (coalitionBloc) {
+    for (const id of coalitionBloc.partyIds) governingPartyIds.add(id);
+  } else if (props.snap.governingRuntime?.governingPartyId) {
+    governingPartyIds.add(props.snap.governingRuntime.governingPartyId);
+  } else {
+    const plurality = partyRanks[0]?.[0];
+    if (plurality && plurality !== "none") governingPartyIds.add(plurality);
+  }
+  const governmentSeats = partyRanks
+    .filter(([party]) => governingPartyIds.has(party))
+    .reduce((sum, [, n]) => sum + n, 0);
+  const oppositionSeats = Math.max(0, mps.length - governmentSeats);
+  const governmentParties = partyRanks.filter(([party]) => governingPartyIds.has(party));
+  const oppositionParties = partyRanks.filter(
+    ([party]) => party !== "none" && !governingPartyIds.has(party),
+  );
   const filteredBills = allBills.filter((b) => {
     const q = billSearch.trim().toLowerCase();
     if (q && !`${b.title} ${b.summary}`.toLowerCase().includes(q)) return false;
