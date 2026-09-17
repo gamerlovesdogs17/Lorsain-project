@@ -622,8 +622,8 @@ export function AssemblyPage(props: {
   const governingPartyIds = new Set<string>();
   if (coalitionBloc) {
     for (const id of coalitionBloc.partyIds) governingPartyIds.add(id);
-  } else if (props.snap.governingRuntime?.governingPartyId) {
-    governingPartyIds.add(props.snap.governingRuntime.governingPartyId);
+  } else if (props.snap.governingRuntime?.record?.governingPartyId) {
+    governingPartyIds.add(props.snap.governingRuntime.record.governingPartyId);
   } else {
     const plurality = partyRanks[0]?.[0];
     if (plurality && plurality !== "none") governingPartyIds.add(plurality);
@@ -690,6 +690,54 @@ export function AssemblyPage(props: {
 
   const compositionHeader = (
     <>
+      <section className="assembly-bloc-strip" aria-label="Government and opposition">
+        <div className="assembly-bloc government">
+          <span className="kicker">Government</span>
+          <strong>
+            {governmentSeats} seat{governmentSeats === 1 ? "" : "s"}
+          </strong>
+          <div className="assembly-bloc-parties">
+            {governmentParties.length === 0 ? (
+              <span className="muted">No governing bloc identified</span>
+            ) : (
+              governmentParties.map(([party, n]) => (
+                <span key={party}>
+                  <span
+                    className="seat"
+                    style={{ background: partyColor(props.world, party === "none" ? null : party) }}
+                  />
+                  {partyDisplayName(props.world, party === "none" ? null : party, props.snap)} · {n}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="assembly-bloc opposition">
+          <span className="kicker">Opposition</span>
+          <strong>
+            {oppositionSeats} seat{oppositionSeats === 1 ? "" : "s"}
+          </strong>
+          <div className="assembly-bloc-parties">
+            {oppositionParties.length === 0 ? (
+              <span className="muted">No opposition parties seated</span>
+            ) : (
+              oppositionParties.slice(0, 5).map(([party, n]) => (
+                <span key={party}>
+                  <span className="seat" style={{ background: partyColor(props.world, party) }} />
+                  {partyDisplayName(props.world, party, props.snap)} · {n}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="assembly-bloc majority-mark">
+          <span className="kicker">Majority</span>
+          <strong>{majority}</strong>
+          <span className="muted">
+            {governmentSeats >= majority ? "Government commands the floor" : "Hung or minority"}
+          </span>
+        </div>
+      </section>
       <section className="assembly-chamber-stage" aria-label="Chamber and leadership">
         <div className="assembly-chamber-main">
           <div className="assembly-chamber-caption">
@@ -1005,37 +1053,224 @@ export function AssemblyPage(props: {
     ) : undefined;
 
   return (
-    <div className="assembly-page assembly-chamber-v7">
-      <PageHeader
-        kicker="Legislature"
-        title="National Assembly"
-        subtitle={`${mps.length} sitting of ${seatCount} authorized seats.`}
-      />
+    <div
+      className="assembly-page assembly-chamber-v7 procedural-workspace page-tone-assembly assembly-chamber-final"
+      data-tutorial="assembly-workspace"
+    >
       <WorkLayout
+        className="procedural-workspace"
         header={
           <div className="object-first-lead assembly-object-lead">
-            <BriefStrip
-              data-qa="assembly-summary-strip"
-              items={[
-                { label: "Sitting", value: `${mps.length}/${seatCount}` },
-                { label: "Majority", value: majority },
-                { label: "On floor", value: floorQueue.length },
-                { label: "Votes due", value: votesDue.length },
-              ]}
+            <CommandHeader
+              kicker="Legislature"
+              title="National Assembly"
+              subtitle={`${mps.length} sitting of ${seatCount} authorized seats · chamber composition, current business, and votes.`}
+              status={
+                <BriefStrip
+                  data-qa="assembly-summary-strip"
+                  items={[
+                    { label: "Sitting", value: `${mps.length}/${seatCount}` },
+                    { label: "Government", value: governmentSeats },
+                    { label: "Opposition", value: oppositionSeats },
+                    { label: "On floor", value: floorQueue.length },
+                    { label: "Votes due", value: votesDue.length },
+                  ]}
+                />
+              }
             />
-            <p className="muted object-first-hint">
-              Chamber status first Ã¢â‚¬â€ open a bill or votes due for the dossier, not a raw table
-              of everything.
-            </p>
           </div>
         }
+        rail={rail}
         main={
           <>
             <TabBar tabs={assemblyTabs} value={assemblyTab} onChange={setAssemblyTab} />
 
             {assemblyTab === "overview" ? (
-              <div data-qa="assembly-overview">
+              <div data-qa="assembly-overview" className="assembly-overview-final">
                 {compositionHeader}
+
+                <SectionDivider
+                  title="Votes due"
+                  hint={
+                    votesDue.length
+                      ? "Cast before month close — shared path for bills and constitutional amendments"
+                      : "None pending on your desk"
+                  }
+                />
+                {!mp && !speaker ? (
+                  <p className="muted">
+                    You are not sitting; votes due appear for Assembly members.
+                  </p>
+                ) : votesDue.length === 0 ? (
+                  <p className="muted">No legislative votes waiting on you.</p>
+                ) : (
+                  <div className="assembly-votes-due-grid" data-tutorial="assembly-votes-due">
+                    {votesDue.map((d) => (
+                      <div key={d.key} className="assembly-vote-due-card">
+                        <div className="entity-row-title">{d.label}</div>
+                        <div className="muted">
+                          {d.kind === "constitutional_amendment_vote"
+                            ? "Constitutional amendment · Assembly vote"
+                            : d.kind === "motion_vote"
+                              ? "Motion"
+                              : "Legislative vote"}
+                        </div>
+                        <div className="row" style={{ marginTop: "0.35rem", flexWrap: "wrap" }}>
+                          {d.kind === "motion_vote" ? (
+                            <>
+                              <button
+                                type="button"
+                                className="btn"
+                                onClick={() =>
+                                  run({
+                                    type: "CAST_MOTION_VOTE",
+                                    motionId: d.motionId!,
+                                    choice: "yes",
+                                  })
+                                }
+                              >
+                                Yes
+                              </button>
+                              <button
+                                type="button"
+                                className="btn secondary"
+                                onClick={() =>
+                                  run({
+                                    type: "CAST_MOTION_VOTE",
+                                    motionId: d.motionId!,
+                                    choice: "no",
+                                  })
+                                }
+                              >
+                                No
+                              </button>
+                              <button
+                                type="button"
+                                className="btn secondary"
+                                onClick={() =>
+                                  run({
+                                    type: "CAST_MOTION_VOTE",
+                                    motionId: d.motionId!,
+                                    choice: "abstain",
+                                  })
+                                }
+                              >
+                                Abstain
+                              </button>
+                            </>
+                          ) : d.kind === "constitutional_amendment_vote" ? (
+                            <>
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                onClick={() => selectConstitutionalAmendment(d.amendmentId!)}
+                              >
+                                Open
+                              </button>
+                              <button
+                                type="button"
+                                className="btn"
+                                onClick={() =>
+                                  run({
+                                    type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                                    amendmentId: d.amendmentId!,
+                                    choice: "yes",
+                                  })
+                                }
+                              >
+                                Aye
+                              </button>
+                              <button
+                                type="button"
+                                className="btn secondary"
+                                onClick={() =>
+                                  run({
+                                    type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                                    amendmentId: d.amendmentId!,
+                                    choice: "no",
+                                  })
+                                }
+                              >
+                                Nay
+                              </button>
+                              <button
+                                type="button"
+                                className="btn secondary"
+                                onClick={() =>
+                                  run({
+                                    type: "CAST_CONSTITUTIONAL_AMENDMENT_VOTE",
+                                    amendmentId: d.amendmentId!,
+                                    choice: "abstain",
+                                  })
+                                }
+                              >
+                                Abstain
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="btn"
+                                onClick={() =>
+                                  run({
+                                    type: "CAST_LEGISLATIVE_VOTE",
+                                    billId: d.billId!,
+                                    stage: d.stage!,
+                                    choice: "yes",
+                                    ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
+                                  })
+                                }
+                              >
+                                Yes
+                              </button>
+                              <button
+                                type="button"
+                                className="btn secondary"
+                                onClick={() =>
+                                  run({
+                                    type: "CAST_LEGISLATIVE_VOTE",
+                                    billId: d.billId!,
+                                    stage: d.stage!,
+                                    choice: "no",
+                                    ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
+                                  })
+                                }
+                              >
+                                No
+                              </button>
+                              <button
+                                type="button"
+                                className="btn secondary"
+                                onClick={() =>
+                                  run({
+                                    type: "CAST_LEGISLATIVE_VOTE",
+                                    billId: d.billId!,
+                                    stage: d.stage!,
+                                    choice: "abstain",
+                                    ...(d.amendmentId ? { amendmentId: d.amendmentId } : {}),
+                                  })
+                                }
+                              >
+                                Abstain
+                              </button>
+                              {d.billId ? (
+                                <button
+                                  type="button"
+                                  className="btn ghost"
+                                  onClick={() => selectBill(d.billId!)}
+                                >
+                                  Open bill
+                                </button>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <SectionDivider
                   title="Current business"
                   hint="Floor-scheduled bills and constitutional amendments before the chamber"
@@ -1478,7 +1713,7 @@ export function AssemblyPage(props: {
                                         ? [
                                             {
                                               label: "Whip yes",
-                                              value: `${whip.likelyYes} (${whip.yesRange[0]}Ã¢â‚¬â€œ${whip.yesRange[1]})`,
+                                              value: `${whip.likelyYes} (${whip.yesRange[0]}–${whip.yesRange[1]})`,
                                             },
                                             { label: "Uncertain", value: whip.uncertain },
                                           ]
@@ -1973,11 +2208,11 @@ export function AssemblyPage(props: {
                                       <div className="constitutional-redline">
                                         <div>
                                           <span>Current</span>
-                                          <del>{amendment.currentText ?? "Ã¢â‚¬â€"}</del>
+                                          <del>{amendment.currentText ?? "—"}</del>
                                         </div>
                                         <div>
                                           <span>Proposed</span>
-                                          <ins>{amendment.proposedText ?? "Ã¢â‚¬â€"}</ins>
+                                          <ins>{amendment.proposedText ?? "—"}</ins>
                                         </div>
                                       </div>
                                     ) : null}
@@ -2069,7 +2304,7 @@ export function AssemblyPage(props: {
                                             ? [
                                                 {
                                                   label: "Whip yes",
-                                                  value: `${whip.likelyYes} (${whip.yesRange[0]}Ã¢â‚¬â€œ${whip.yesRange[1]})`,
+                                                  value: `${whip.likelyYes} (${whip.yesRange[0]}–${whip.yesRange[1]})`,
                                                 },
                                                 { label: "Uncertain", value: whip.uncertain },
                                               ]
@@ -2220,11 +2455,11 @@ export function AssemblyPage(props: {
                                         },
                                         {
                                           label: "Assembly yes",
-                                          value: amendment.assemblyYes || "Ã¢â‚¬â€",
+                                          value: amendment.assemblyYes || "—",
                                         },
                                         {
                                           label: "Enacted",
-                                          value: amendment.enactedDate ?? "Ã¢â‚¬â€",
+                                          value: amendment.enactedDate ?? "—",
                                         },
                                       ]}
                                     />
@@ -2362,7 +2597,7 @@ export function AssemblyPage(props: {
                     <div className="bill-copy-fields">
                       <input
                         className="search"
-                        placeholder="Optional title Ã¢â‚¬â€ a formal title will be generated"
+                        placeholder="Optional title — a formal title will be generated"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                       />
@@ -2541,7 +2776,7 @@ export function AssemblyPage(props: {
                                             : historicalFaction
                                               ? (props.world.factionDefinitions[historicalFaction]
                                                   ?.name ?? "Former caucus")
-                                              : "Ã¢â‚¬â€"}
+                                              : "—"}
                                         </td>
                                         <td>
                                           {choice === "yes"
@@ -3006,8 +3241,8 @@ export function AssemblyPage(props: {
                                 {props.snap.politicians[memberId]?.factionId
                                   ? (props.world.factionDefinitions[
                                       props.snap.politicians[memberId]!.factionId!
-                                    ]?.name ?? "Ã¢â‚¬â€")
-                                  : "Ã¢â‚¬â€"}
+                                    ]?.name ?? "—")
+                                  : "—"}
                               </td>
                             </tr>
                           ))}
@@ -3060,7 +3295,7 @@ export function AssemblyPage(props: {
                                     "Assembly matter"}
                                 </td>
                                 <td>
-                                  {vote.yes}Ã¢â‚¬â€œ{vote.no} · {vote.abstain} abstain
+                                  {vote.yes}–{vote.no} · {vote.abstain} abstain
                                 </td>
                               </tr>
                             ))}
@@ -3073,14 +3308,18 @@ export function AssemblyPage(props: {
             ) : null}
 
             {assemblyTab === "delegation" ? (
-              <div data-qa="whip-desk" data-tutorial="whip-desk">
+              <div
+                data-qa="whip-desk"
+                data-tutorial="whip-desk"
+                className="whip-desk-final negotiation-workspace"
+              >
                 <SectionDivider
-                  title="Assembly Leader / Whip desk"
-                  hint="Delegation position, whip strength, and persuasion"
+                  title="Whip desk"
+                  hint="Political vote management — caucus position, strength, and persuasion"
                 />
                 {!playerMaySetWhip && !playerIsWhip ? (
                   <EmptyState>
-                    Floor leader or whip authority is required for delegation controls.
+                    Floor leader or whip authority is required for whip controls.
                   </EmptyState>
                 ) : null}
                 <BriefStrip
@@ -3089,13 +3328,13 @@ export function AssemblyPage(props: {
                       label: "Floor leader",
                       value: playerCaucusLeadership?.floorLeaderId
                         ? politicianDisplayName(props.catalog, playerCaucusLeadership.floorLeaderId)
-                        : "Ã¢â‚¬â€",
+                        : "—",
                     },
                     {
                       label: "Whip",
                       value: playerCaucusLeadership?.whipId
                         ? politicianDisplayName(props.catalog, playerCaucusLeadership.whipId)
-                        : "Ã¢â‚¬â€",
+                        : "—",
                     },
                     {
                       label: "Selected matter",
@@ -3110,7 +3349,8 @@ export function AssemblyPage(props: {
                 {!whipSubjectId ? (
                   <p className="muted">
                     Select a bill or constitutional amendment in Legislation to set whip strength
-                    and persuasion targets.
+                    and persuasion targets. Constitutional amendments use this same Assembly vote
+                    path.
                   </p>
                 ) : (
                   <>
@@ -3146,7 +3386,7 @@ export function AssemblyPage(props: {
                     </dl>
                     {playerMaySetWhip ? (
                       <>
-                        <SectionDivider title="Set delegation position" />
+                        <SectionDivider title="Set caucus position" />
                         <div className="row" style={{ gap: "0.4rem", flexWrap: "wrap" }}>
                           <button
                             type="button"
@@ -3290,7 +3530,6 @@ export function AssemblyPage(props: {
             ) : null}
           </>
         }
-        rail={rail}
       />
     </div>
   );
