@@ -56,7 +56,8 @@ export function needsElectoralSeed(state: SimState, world: KernelWorld): boolean
 
 /** Mini playable worlds: seed presidential elections linked from the calendar scheduler. */
 export function seedMiniPlayableScheduledElections(state: SimState, world: KernelWorld): void {
-  if (Object.keys(world.constituencyElectorate).length > 0) return;
+  // Mini worlds may carry a seeded constituency electorate for ballot weight; do not
+  // require an empty electorate (that gate previously blocked Extended once electorates existed).
   const partyIds = Object.keys(world.partyDefinitions)
     .filter((id) => id !== world.independentAggregatePartyId)
     .sort();
@@ -70,6 +71,8 @@ export function seedMiniPlayableScheduledElections(state: SimState, world: Kerne
     if (ev.eventType !== "PRESIDENTIAL_ELECTION_DUE") continue;
     const id = typeof ev.payload.electionId === "string" ? ev.payload.electionId : null;
     if (!id || state.elections[id]) continue;
+    // Terena host uses the canonical id via seedCanonicalElections; skip if already planned there.
+    if (id === CANONICAL_PRESIDENTIAL_ELECTION_ID) continue;
     const election = plannedElection({
       id,
       type: "presidential",
@@ -108,6 +111,17 @@ export function seedMiniPlayableScheduledElections(state: SimState, world: Kerne
 
 export function seedCanonicalElections(state: SimState, world: KernelWorld): void {
   if (Object.keys(world.constituencyElectorate).length === 0) return;
+  // Year-anchored mini-playable schedules must not be remapped onto Terena's ELEC_PRES_2028.
+  const scheduledPresId = state.scheduler.events.find(
+    (ev) =>
+      ev.eventType === "PRESIDENTIAL_ELECTION_DUE" && typeof ev.payload.electionId === "string",
+  )?.payload.electionId;
+  if (
+    typeof scheduledPresId === "string" &&
+    scheduledPresId !== CANONICAL_PRESIDENTIAL_ELECTION_ID
+  ) {
+    return;
+  }
   if (!state.elections[CANONICAL_PRESIDENTIAL_ELECTION_ID]) {
     state.elections[CANONICAL_PRESIDENTIAL_ELECTION_ID] = plannedElection({
       id: CANONICAL_PRESIDENTIAL_ELECTION_ID,

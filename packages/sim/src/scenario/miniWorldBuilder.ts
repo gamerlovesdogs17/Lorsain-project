@@ -1,9 +1,10 @@
 import type { ScenarioDocument, ScenarioPartySection } from "@lorsain/scenario";
 import { fractionFromPreset } from "@lorsain/scenario";
 import { parseIsoDate, regularElectionDate, type IsoDate } from "../calendar.js";
-import { syntheticAgentProfile } from "../agents/profile.js";
+import { emptyIdeology, syntheticAgentProfile } from "../agents/profile.js";
 import { applyInstitutionalPublicIdeology } from "../elections/public-ideology.js";
 import { presidentialElectionIdForDate } from "../elections/state.js";
+import type { ConstituencyElectorate, VoterBlocDefinition } from "../elections/types.js";
 import { kernelOffice } from "../synthetic-world.js";
 import { resolveMiniWorldElectionSchedule } from "./miniWorldCalendars.js";
 import {
@@ -13,6 +14,65 @@ import {
 } from "./scenarioConstitution.js";
 import type { PartyDefinition } from "../parties/types.js";
 import type { KernelWorld } from "../types.js";
+
+/** Seed a minimal electorate so custom presidential/assembly counts have valid ballot weight. */
+function seedMiniWorldElectorate(args: {
+  constituencies: Array<{ id: string; seats: number; provinceId: string; population: number }>;
+  parties: ScenarioPartySection[];
+  issueIds: string[];
+}): {
+  constituencyElectorate: Record<string, ConstituencyElectorate>;
+  voterBlocs: Record<string, VoterBlocDefinition>;
+  voterBlocIdsByConstituency: Record<string, string[]>;
+} {
+  const constituencyElectorate: Record<string, ConstituencyElectorate> = {};
+  const voterBlocs: Record<string, VoterBlocDefinition> = {};
+  const voterBlocIdsByConstituency: Record<string, string[]> = {};
+  const partyIds = args.parties.map((p) => p.id);
+  const habitBase =
+    partyIds.length > 0 ? Object.fromEntries(partyIds.map((id) => [id, 1 / partyIds.length])) : {};
+  const salienceIssue = args.issueIds[0] ?? "ISS_GOVERNANCE";
+
+  for (const [i, row] of args.constituencies.entries()) {
+    const population = Math.max(1_000, Math.round(row.population));
+    const registered = Math.max(1, Math.round(population * 0.78));
+    const ballotsCast = Math.max(1, Math.round(registered * 0.62));
+    const invalidOrBlank = Math.max(0, Math.round(ballotsCast * 0.012));
+    const validVoteValue = Math.max(1, ballotsCast - invalidOrBlank);
+    constituencyElectorate[row.id] = {
+      constituencyId: row.id,
+      population,
+      seats: row.seats,
+      provincePopulationShares: [{ provinceId: row.provinceId, share: 1 }],
+      turnout2026: {
+        totalPopulation: population,
+        registeredElectorate: registered,
+        ballotsCast,
+        turnoutRate: ballotsCast / registered,
+        invalidOrBlank,
+        validVoteValue,
+      },
+    };
+
+    const leanParty = args.parties[i % Math.max(1, args.parties.length)];
+    const blocId = `VB_${row.id}_CORE`;
+    voterBlocs[blocId] = {
+      id: blocId,
+      constituencyId: row.id,
+      archetype: "general_electorate",
+      weight: 1,
+      turnoutPropensity: 0.68,
+      partyHabit: { ...habitBase },
+      ideology: leanParty
+        ? ideologyVectorForFamily(resolveMechanicalIdeologyFamily(leanParty))
+        : emptyIdeology(),
+      issueSalience: { [salienceIssue]: 0.55 },
+    };
+    voterBlocIdsByConstituency[row.id] = [blocId];
+  }
+
+  return { constituencyElectorate, voterBlocs, voterBlocIdsByConstituency };
+}
 
 function partyDef(p: ScenarioPartySection): PartyDefinition {
   return {
@@ -151,17 +211,24 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
   const constituencyRows = doc.contentSections.geography?.constituencies ?? [];
   const constituencies =
     constituencyRows.length > 0
-      ? constituencyRows.map((c) => ({ id: c.id, seats: c.seats, provinceId: c.provinceId }))
+      ? constituencyRows.map((c) => ({
+          id: c.id,
+          seats: c.seats,
+          provinceId: c.provinceId,
+          population: Math.max(1_000, Math.round(c.population ?? 50_000)),
+        }))
       : [
           {
             id: "C_NORTH",
             seats: Math.max(1, Math.floor(assemblySeats / 2)),
             provinceId: provinces[0] ?? "PRV_ALPHA",
+            population: 120_000,
           },
           {
             id: "C_SOUTH",
             seats: assemblySeats - Math.max(1, Math.floor(assemblySeats / 2)),
             provinceId: provinces[1] ?? provinces[0] ?? "PRV_BETA",
+            population: 110_000,
           },
         ];
 
@@ -281,6 +348,11 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
   }
 
   const issueIds = [...issueIdsSet];
+  const electorateSlice = seedMiniWorldElectorate({
+    constituencies,
+    parties,
+    issueIds,
+  });
   const agentProfiles: KernelWorld["agentProfiles"] = {};
   const baselineIssueSalience = (): Record<string, number> => {
     const salience: Record<string, number> = {};
@@ -579,9 +651,9 @@ export function buildMiniPlayableWorldFromScenario(doc: ScenarioDocument): Kerne
         constitutional_court_justice: false,
       },
     },
-    voterBlocs: {},
-    voterBlocIdsByConstituency: {},
-    constituencyElectorate: {},
+    voterBlocs: electorateSlice.voterBlocs,
+    voterBlocIdsByConstituency: electorateSlice.voterBlocIdsByConstituency,
+    constituencyElectorate: electorateSlice.constituencyElectorate,
     pollsters: {},
     issueDimensions,
     partyPublicIdeology: Object.fromEntries(

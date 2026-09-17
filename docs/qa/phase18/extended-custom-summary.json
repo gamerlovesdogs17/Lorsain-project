@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-16T01:04:35.974Z",
-  "commitSha": "d7f939799c744aafb29c2cb133a562a2770695cb",
+  "generatedAt": "2026-09-17T04:12:39.346Z",
+  "commitSha": "2f20c7cf655350c59344cf141902242b9bc2c41e",
   "years": 5,
   "worlds": [
     {
@@ -15,7 +15,7 @@
       "assemblyElectionsResolved": 0,
       "auditErrorCount": 0,
       "auditErrors": [],
-      "elapsedMs": 1754
+      "elapsedMs": 1799
     },
     {
       "label": "brinor",
@@ -29,7 +29,7 @@
       "assemblyElectionsResolved": 0,
       "auditErrorCount": 0,
       "auditErrors": [],
-      "elapsedMs": 5227
+      "elapsedMs": 5997
     }
   ]
 }
