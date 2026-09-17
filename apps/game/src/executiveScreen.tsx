@@ -407,9 +407,7 @@ export function ExecutivePage(props: {
                     >
                       <strong>{m.title.replace(/^Minister of /i, "")}</strong>
                       <span className="muted">
-                        {m.holderId
-                          ? politicianDisplayName(props.catalog, m.holderId)
-                          : "Vacant"}
+                        {m.holderId ? politicianDisplayName(props.catalog, m.holderId) : "Vacant"}
                       </span>
                     </button>
                   ))}

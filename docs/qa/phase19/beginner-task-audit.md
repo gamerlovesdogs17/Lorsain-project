@@ -26,4 +26,5 @@ Manual script (not an automated UX score). Run against Terena new game plus hung
 
 - Tutorial Mode is optional and must not be required to pass these tasks.
 - Do not add permanent “what matters” coach panels to improve ratings.
-- Re-run after tablet layout changes at 768×1024 / 834×1194 / 1024×768.
+- Re-walked after tablet layout + major desk hierarchy pass (768×1024 / 834×1194 / 1024×768).
+- Summary: **0 BROKEN**, **0 CONFUSING**, **4 DISCOVERABLE**, **6 OBVIOUS**.

@@ -9255,8 +9255,7 @@ body.reduced-motion *::after {
 
 .scenario-studio-final.editor-workspace {
   background:
-    linear-gradient(180deg, rgba(31, 111, 139, 0.05), transparent 12rem),
-    var(--surface-paper);
+    linear-gradient(180deg, rgba(31, 111, 139, 0.05), transparent 12rem), var(--surface-paper);
   border-radius: var(--radius-lg);
 }
 
@@ -9275,7 +9274,6 @@ body.reduced-motion *::after {
   margin: var(--space-3) 0;
   gap: var(--space-3);
 }
-
 
 .new-game-final .new-game-header {
   margin-bottom: var(--space-5);
