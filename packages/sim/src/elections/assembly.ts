@@ -225,9 +225,11 @@ export function resolveAssemblyConstituency(
           return { error: reject("INVALID_PUBLIC_IDEOLOGY", `${id}.${axis}`) };
         }
       }
-    } else if (pol.partyId !== party) {
-      return { error: reject("PARTY_MISMATCH", `${id} party ${party} != ${pol.partyId}`) };
     }
+    // After field finalize, ballot party labels are locked (see
+    // reconcileUnresolvedElectionCandidacies). Live membership may churn
+    // (defection/join) without emptying the certified field — count under the
+    // locked ballot label rather than failing PARTY_MISMATCH on election day.
   }
   if (args.candidateIds.length < effectiveSeats) {
     return { error: reject("INSUFFICIENT_CANDIDATES", "fewer candidates than seats") };

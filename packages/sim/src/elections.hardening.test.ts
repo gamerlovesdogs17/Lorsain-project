@@ -568,6 +568,23 @@ describe("Phase 4 hardening: assembly", () => {
       serializeCountResult(out.election.countArchive),
     );
   });
+
+  it("counts under locked ballot party after post-finalize membership defection", () => {
+    // CERT-50-B: politician left PARTY_* after field lock; election day must not PARTY_MISMATCH.
+    const world = miniElectorateWorld();
+    const sim = createSimulation({ world, playerPoliticianId: "P1" });
+    expectOk(sim, { type: "DEV_CHANGE_PARTY_MEMBERSHIP", politicianId: "P1", partyId: null });
+    expect(sim.getSnapshot().politicians.P1?.partyId).toBeNull();
+    const rng = createRngService("ASM-DEFECT-LOCK");
+    const out = resolveAssemblyConstituency(world, sim.getSnapshot(), rng, {
+      constituencyId: "C001",
+      candidateIds: ["P1", "P2", "P3", "P4"],
+      partyByCandidate: { P1: "PARTY_LAB", P2: "PARTY_NU", P3: "PARTY_LAB", P4: "PARTY_NU" },
+    });
+    expect("error" in out).toBe(false);
+    if ("error" in out) return;
+    expect(out.election.winnerIds.length).toBeGreaterThan(0);
+  });
 });
 
 function twoCycleWorld(): KernelWorld {
