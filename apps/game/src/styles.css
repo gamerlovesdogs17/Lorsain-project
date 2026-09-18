@@ -6144,8 +6144,8 @@ button.entity-row:hover,
 .home-desk .home-desk-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(16rem, 0.85fr);
-  gap: 1rem;
-  padding: 1.15rem 1.25rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background:
@@ -6159,9 +6159,9 @@ button.entity-row:hover,
   color: rgba(244, 248, 251, 0.78);
 }
 .home-desk .home-desk-title {
-  margin: 0.2rem 0 0.35rem;
+  margin: 0.15rem 0 0.25rem;
   font-family: var(--display);
-  font-size: clamp(1.7rem, 2.8vw, 2.35rem);
+  font-size: clamp(1.25rem, 1.8vw, 1.65rem);
   font-weight: 650;
   letter-spacing: -0.015em;
 }
@@ -9092,10 +9092,94 @@ body.reduced-motion *::after {
   }
 }
 
+/* ===================== FINAL CORRECTION — compact political density ===================== */
+
+.command-header {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.command-header-title {
+  font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.65rem);
+}
+
+.command-header-subtitle {
+  margin-top: 0.15rem;
+  font-size: var(--type-caption);
+  max-width: 52rem;
+}
+
+.command-header-status {
+  margin-top: var(--space-2);
+}
+
+.entity-identity-masthead {
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.entity-identity-masthead .identity-name {
+  font-size: clamp(1.2rem, 1.05rem + 0.55vw, 1.55rem);
+  margin: 0.1rem 0 0.2rem;
+}
+
+.entity-identity-facets {
+  gap: var(--space-2);
+}
+
+.entity-identity-facets > div {
+  padding: var(--space-2) var(--space-3);
+}
+
 .object-first-lead {
-  display: grid;
+  margin-bottom: var(--space-2);
+}
+
+.shell.final .page {
+  padding: var(--space-4) var(--space-4) var(--space-6);
+}
+
+.home-desk .home-desk-hero {
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.home-final .command-header {
+  padding: var(--space-3) var(--space-4);
+}
+
+.assembly-bloc strong {
+  font-size: var(--type-title);
+}
+
+.assembly-chamber-final .assembly-bloc-strip {
   gap: var(--space-2);
   margin-bottom: var(--space-3);
+}
+
+.assembly-bloc {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Generated avatar chip for entity rows without portraits */
+.entity-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: var(--navy);
+  flex: 0 0 auto;
+}
+
+.entity-avatar[data-party-tint] {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--party-tint, var(--accent)) 70%, transparent);
 }
 
 /* ==========================================================================

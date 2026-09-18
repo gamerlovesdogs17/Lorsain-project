@@ -619,23 +619,32 @@ export function AssemblyPage(props: {
     { id: "delegation", label: "Whip" },
   ];
   const coalitionBloc = activeCoalition(props.snap);
-  const governingPartyIds = new Set<string>();
+  /** Parties that support the executive government (coalition / governing record). Never plurality fallback. */
+  const governmentAlignedPartyIds = new Set<string>();
   if (coalitionBloc) {
-    for (const id of coalitionBloc.partyIds) governingPartyIds.add(id);
+    for (const id of coalitionBloc.partyIds) governmentAlignedPartyIds.add(id);
   } else if (props.snap.governingRuntime?.record?.governingPartyId) {
-    governingPartyIds.add(props.snap.governingRuntime.record.governingPartyId);
-  } else {
-    const plurality = partyRanks[0]?.[0];
-    if (plurality && plurality !== "none") governingPartyIds.add(plurality);
+    governmentAlignedPartyIds.add(props.snap.governingRuntime.record.governingPartyId);
   }
-  const governmentSeats = partyRanks
-    .filter(([party]) => governingPartyIds.has(party))
+  const governmentAlignedSeats = partyRanks
+    .filter(([party]) => governmentAlignedPartyIds.has(party))
     .reduce((sum, [, n]) => sum + n, 0);
-  const oppositionSeats = Math.max(0, mps.length - governmentSeats);
-  const governmentParties = partyRanks.filter(([party]) => governingPartyIds.has(party));
-  const oppositionParties = partyRanks.filter(
-    ([party]) => party !== "none" && !governingPartyIds.has(party),
+  /** Chamber control: only when a known aligned bloc holds an absolute majority. */
+  const hasAssemblyMajority =
+    governmentAlignedPartyIds.size > 0 && governmentAlignedSeats >= majority;
+  const assemblyControlPartyIds = hasAssemblyMajority
+    ? governmentAlignedPartyIds
+    : new Set<string>();
+  const assemblyControlSeats = hasAssemblyMajority ? governmentAlignedSeats : 0;
+  const pluralityPartyId = partyRanks.find(([party]) => party !== "none")?.[0] ?? null;
+  const pluralitySeats = pluralityPartyId
+    ? (partyRanks.find(([party]) => party === pluralityPartyId)?.[1] ?? 0)
+    : 0;
+  const controlBlocParties = partyRanks.filter(([party]) => assemblyControlPartyIds.has(party));
+  const nonControlParties = partyRanks.filter(
+    ([party]) => party !== "none" && !assemblyControlPartyIds.has(party),
   );
+  const nonControlSeats = Math.max(0, mps.length - assemblyControlSeats);
   const filteredBills = allBills.filter((b) => {
     const q = billSearch.trim().toLowerCase();
     if (q && !`${b.title} ${b.summary}`.toLowerCase().includes(q)) return false;
@@ -690,17 +699,24 @@ export function AssemblyPage(props: {
 
   const compositionHeader = (
     <>
-      <section className="assembly-bloc-strip" aria-label="Government and opposition">
+      <section className="assembly-bloc-strip" aria-label="Assembly control and other parties">
         <div className="assembly-bloc government">
-          <span className="kicker">Government</span>
+          <span className="kicker">Assembly Control</span>
           <strong>
-            {governmentSeats} seat{governmentSeats === 1 ? "" : "s"}
+            {hasAssemblyMajority
+              ? `${assemblyControlSeats} seat${assemblyControlSeats === 1 ? "" : "s"}`
+              : "No majority"}
           </strong>
           <div className="assembly-bloc-parties">
-            {governmentParties.length === 0 ? (
-              <span className="muted">No governing bloc identified</span>
+            {!hasAssemblyMajority ? (
+              <span className="muted">
+                Hung Assembly
+                {pluralityPartyId
+                  ? ` · plurality: ${partyDisplayName(props.world, pluralityPartyId, props.snap)} (${pluralitySeats})`
+                  : ""}
+              </span>
             ) : (
-              governmentParties.map(([party, n]) => (
+              controlBlocParties.map(([party, n]) => (
                 <span key={party}>
                   <span
                     className="seat"
@@ -713,15 +729,15 @@ export function AssemblyPage(props: {
           </div>
         </div>
         <div className="assembly-bloc opposition">
-          <span className="kicker">Opposition</span>
+          <span className="kicker">{hasAssemblyMajority ? "Other parties" : "Seat holders"}</span>
           <strong>
-            {oppositionSeats} seat{oppositionSeats === 1 ? "" : "s"}
+            {nonControlSeats} seat{nonControlSeats === 1 ? "" : "s"}
           </strong>
           <div className="assembly-bloc-parties">
-            {oppositionParties.length === 0 ? (
-              <span className="muted">No opposition parties seated</span>
+            {nonControlParties.length === 0 ? (
+              <span className="muted">No other parties seated</span>
             ) : (
-              oppositionParties.slice(0, 5).map(([party, n]) => (
+              nonControlParties.slice(0, 5).map(([party, n]) => (
                 <span key={party}>
                   <span className="seat" style={{ background: partyColor(props.world, party) }} />
                   {partyDisplayName(props.world, party, props.snap)} · {n}
@@ -731,10 +747,14 @@ export function AssemblyPage(props: {
           </div>
         </div>
         <div className="assembly-bloc majority-mark">
-          <span className="kicker">Majority</span>
+          <span className="kicker">Assembly Majority</span>
           <strong>{majority}</strong>
           <span className="muted">
-            {governmentSeats >= majority ? "Government commands the floor" : "Hung or minority"}
+            {hasAssemblyMajority
+              ? "Majority controls the chamber"
+              : governmentAlignedPartyIds.size > 0
+                ? `Government-aligned seats: ${governmentAlignedSeats} (short of majority)`
+                : "No executive government majority in the chamber"}
           </span>
         </div>
       </section>
@@ -1070,8 +1090,14 @@ export function AssemblyPage(props: {
                   data-qa="assembly-summary-strip"
                   items={[
                     { label: "Sitting", value: `${mps.length}/${seatCount}` },
-                    { label: "Government", value: governmentSeats },
-                    { label: "Opposition", value: oppositionSeats },
+                    {
+                      label: "Assembly Control",
+                      value: hasAssemblyMajority ? assemblyControlSeats : "Hung",
+                    },
+                    {
+                      label: "Gov-aligned",
+                      value: governmentAlignedPartyIds.size > 0 ? governmentAlignedSeats : "—",
+                    },
                     { label: "On floor", value: floorQueue.length },
                     { label: "Votes due", value: votesDue.length },
                   ]}

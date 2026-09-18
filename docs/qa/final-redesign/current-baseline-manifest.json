@@ -1,0 +1,843 @@
+{
+  "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+  "capturedAt": "2026-09-18T00:17:04.132Z",
+  "outDir": "docs/qa/final-redesign/current-baseline",
+  "entryCount": 33,
+  "entries": [
+    {
+      "id": "home",
+      "screen": "home",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/home-desktop-1440x900.png",
+      "sha256": "fe3408cb30ad159306b25d67e89aaa19922461f7b778bc8a9072fe873b06b14c",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:15:58.637Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:home",
+        "has-end-turn",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=home&qaPlayer=NPC003"
+    },
+    {
+      "id": "home",
+      "screen": "home",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletPortrait",
+      "size": {
+        "width": 834,
+        "height": 1194
+      },
+      "path": "docs/qa/final-redesign/current-baseline/home-tabletPortrait-834x1194.png",
+      "sha256": "aa46314cdb8568274639c1f72c9ebd8e5763f549cf883f43b565616c60c9b78d",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:01.128Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:home",
+        "has-end-turn",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=home&qaPlayer=NPC003"
+    },
+    {
+      "id": "home",
+      "screen": "home",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletLandscape",
+      "size": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "docs/qa/final-redesign/current-baseline/home-tabletLandscape-1024x768.png",
+      "sha256": "b3fe1fc0b2bc23beb6ed101f421cc5b0b86615140f932595948956fa2d0b6dcb",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:02.397Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:home",
+        "has-end-turn",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=home&qaPlayer=NPC003"
+    },
+    {
+      "id": "home",
+      "screen": "home",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "phone",
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "docs/qa/final-redesign/current-baseline/home-phone-390x844.png",
+      "sha256": "301a852916c19b06233b2e7b0f0ef23631c66c61a32e923ddbb059ddd609dbd3",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:04.931Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:home",
+        "has-end-turn",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=home&qaPlayer=NPC003"
+    },
+    {
+      "id": "assembly",
+      "screen": "assembly",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/assembly-desktop-1440x900.png",
+      "sha256": "82c4dfa09f73abc9c36d96e1a4da89e015fcd80f80530413ed2354246c802acf",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:06.901Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:assembly",
+        "assembly-content",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=assembly&qaPlayer=NPC003"
+    },
+    {
+      "id": "assembly",
+      "screen": "assembly",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletPortrait",
+      "size": {
+        "width": 834,
+        "height": 1194
+      },
+      "path": "docs/qa/final-redesign/current-baseline/assembly-tabletPortrait-834x1194.png",
+      "sha256": "b27a098ff4d2992c8e416234bfe4ec1b90260a761b61d8fae27a40198cafdb19",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:08.863Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:assembly",
+        "assembly-content",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=assembly&qaPlayer=NPC003"
+    },
+    {
+      "id": "assembly",
+      "screen": "assembly",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletLandscape",
+      "size": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "docs/qa/final-redesign/current-baseline/assembly-tabletLandscape-1024x768.png",
+      "sha256": "b301d2b7824bad6b3f68a9bab488962c761aa126b491db4bdcf9ad9caeb396b1",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:10.824Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:assembly",
+        "assembly-content",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=assembly&qaPlayer=NPC003"
+    },
+    {
+      "id": "assembly",
+      "screen": "assembly",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "phone",
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "docs/qa/final-redesign/current-baseline/assembly-phone-390x844.png",
+      "sha256": "7cda691c2aac4e361756bad2f824e012c7855f5ea1ff752791fd92c3c0b6e13b",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:12.768Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:assembly",
+        "assembly-content",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=assembly&qaPlayer=NPC003"
+    },
+    {
+      "id": "party",
+      "screen": "party",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/party-desktop-1440x900.png",
+      "sha256": "d17a6d7a7b2653963310d16a9e5355f63b2436ccb223f472e17ae60716abe017",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:14.980Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:party",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=party&qaPlayer=NPC003"
+    },
+    {
+      "id": "party",
+      "screen": "party",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletPortrait",
+      "size": {
+        "width": 834,
+        "height": 1194
+      },
+      "path": "docs/qa/final-redesign/current-baseline/party-tabletPortrait-834x1194.png",
+      "sha256": "446836b33d8dfde6201484008bbeafe2bb399b081edc15f54c1f5b30eb1e4148",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:17.173Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:party",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=party&qaPlayer=NPC003"
+    },
+    {
+      "id": "party",
+      "screen": "party",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletLandscape",
+      "size": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "docs/qa/final-redesign/current-baseline/party-tabletLandscape-1024x768.png",
+      "sha256": "f6f30c43e26b81aa37fe891c167990d7d3cd6356d927d574d3ac9ce1b8213743",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:19.282Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:party",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=party&qaPlayer=NPC003"
+    },
+    {
+      "id": "executive",
+      "screen": "executive",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/executive-desktop-1440x900.png",
+      "sha256": "da8ef480786a982d608ce1263ad0600c8503508fdeb420919d0302827423da13",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:21.361Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:executive",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=executive&qaPlayer=NPC003"
+    },
+    {
+      "id": "executive",
+      "screen": "executive",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletPortrait",
+      "size": {
+        "width": 834,
+        "height": 1194
+      },
+      "path": "docs/qa/final-redesign/current-baseline/executive-tabletPortrait-834x1194.png",
+      "sha256": "e210ac44292b40257d5fe7346353e648a7986051540e63d0cb534448a358466d",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:23.343Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:executive",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=executive&qaPlayer=NPC003"
+    },
+    {
+      "id": "executive",
+      "screen": "executive",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletLandscape",
+      "size": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "docs/qa/final-redesign/current-baseline/executive-tabletLandscape-1024x768.png",
+      "sha256": "01146f1fd6c004893bb2d80f3b93c1343a930a6759a4156e90a0b18d5b44f777",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:25.284Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:executive",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=executive&qaPlayer=NPC003"
+    },
+    {
+      "id": "courts",
+      "screen": "courts",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/courts-desktop-1440x900.png",
+      "sha256": "ce2b87f2d8ce831622a5160e057f9fd31738e8bf53b660fe370b4b9b34513e70",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:27.240Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:courts",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=courts&qaPlayer=NPC003"
+    },
+    {
+      "id": "courts",
+      "screen": "courts",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletPortrait",
+      "size": {
+        "width": 834,
+        "height": 1194
+      },
+      "path": "docs/qa/final-redesign/current-baseline/courts-tabletPortrait-834x1194.png",
+      "sha256": "845fc018dcc352ae9f2bb8ff0356adb95cccfe26c54ef9af9ff72f9680091307",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:29.403Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:courts",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=courts&qaPlayer=NPC003"
+    },
+    {
+      "id": "courts",
+      "screen": "courts",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletLandscape",
+      "size": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "docs/qa/final-redesign/current-baseline/courts-tabletLandscape-1024x768.png",
+      "sha256": "036fb41ef1fa474d64fec73e2e611dfae33a3f8c4c18341aa3580822fbcabda8",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:31.337Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:courts",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=courts&qaPlayer=NPC003"
+    },
+    {
+      "id": "elections",
+      "screen": "elections",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/elections-desktop-1440x900.png",
+      "sha256": "60128f15aad2e212e6a503ab3da859c5affa62cabd033d8b76253392ec08374c",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:33.424Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:elections",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=elections&qaPlayer=NPC003"
+    },
+    {
+      "id": "elections",
+      "screen": "elections",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletPortrait",
+      "size": {
+        "width": 834,
+        "height": 1194
+      },
+      "path": "docs/qa/final-redesign/current-baseline/elections-tabletPortrait-834x1194.png",
+      "sha256": "42c3b4793bde29c614e8da6e8e47598ba87318b7dc3f7eae1f093a49f69efa0d",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:35.672Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:elections",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=elections&qaPlayer=NPC003"
+    },
+    {
+      "id": "elections",
+      "screen": "elections",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletLandscape",
+      "size": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "docs/qa/final-redesign/current-baseline/elections-tabletLandscape-1024x768.png",
+      "sha256": "5b771d726f0e8374e9bd4f2cd31905191d935ab65a21000cc04e5d48ce462f10",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:37.681Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:elections",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=elections&qaPlayer=NPC003"
+    },
+    {
+      "id": "campaign",
+      "screen": "campaign",
+      "fixture": "active-campaign",
+      "player": "NPC001",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/campaign-desktop-1440x900.png",
+      "sha256": "d09302ffbf3cefdcdb639eb47b88afa2d1eaa9ca70463d2979d481986609f5f0",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:39.672Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:campaign",
+        "no-page-overflow",
+        "fixture:active-campaign",
+        "player:NPC001",
+        "ready-player:NPC001"
+      ],
+      "qaUrl": "/?qaFixture=active-campaign&qaScreen=campaign&qaPlayer=NPC001"
+    },
+    {
+      "id": "campaign",
+      "screen": "campaign",
+      "fixture": "active-campaign",
+      "player": "NPC001",
+      "viewport": "tabletPortrait",
+      "size": {
+        "width": 834,
+        "height": 1194
+      },
+      "path": "docs/qa/final-redesign/current-baseline/campaign-tabletPortrait-834x1194.png",
+      "sha256": "87507f8b67a5c264f73c1994d777d8702f81e118ba0c6ef53fcc177906c0846d",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:41.768Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:campaign",
+        "no-page-overflow",
+        "fixture:active-campaign",
+        "player:NPC001",
+        "ready-player:NPC001"
+      ],
+      "qaUrl": "/?qaFixture=active-campaign&qaScreen=campaign&qaPlayer=NPC001"
+    },
+    {
+      "id": "foreign",
+      "screen": "foreign",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/foreign-desktop-1440x900.png",
+      "sha256": "8ee9673e1b44274970ba6036648e78bc80bb35dbded7aae26d9613e7dae3719c",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:43.653Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:foreign",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=foreign&qaPlayer=NPC003"
+    },
+    {
+      "id": "foreign",
+      "screen": "foreign",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletPortrait",
+      "size": {
+        "width": 834,
+        "height": 1194
+      },
+      "path": "docs/qa/final-redesign/current-baseline/foreign-tabletPortrait-834x1194.png",
+      "sha256": "03c39b251a36b1621babc099332e27b8c30aa98a25aec45971b5604db522bfa5",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:46.045Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:foreign",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=foreign&qaPlayer=NPC003"
+    },
+    {
+      "id": "news",
+      "screen": "news",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/news-desktop-1440x900.png",
+      "sha256": "2bbc2d596f9fc1e4f0232275848db1f44f402ea51053826ef0b65791f8cc71a1",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:48.217Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:news",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=news&qaPlayer=NPC003"
+    },
+    {
+      "id": "archive",
+      "screen": "archive",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/archive-desktop-1440x900.png",
+      "sha256": "c9cd34f3cb572f1217f802dd91a265ad3629ed99382b7ad2948fe4f6c06c46ba",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:50.346Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:archive",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=archive&qaPlayer=NPC003"
+    },
+    {
+      "id": "organizations",
+      "screen": "organizations",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/organizations-desktop-1440x900.png",
+      "sha256": "d4f3c873bfc907c52d6663e3f3d5b7934b27e805cc91c923a275c610db170878",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:52.360Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:organizations",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=organizations&qaPlayer=NPC003"
+    },
+    {
+      "id": "terena",
+      "screen": "terena",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/terena-desktop-1440x900.png",
+      "sha256": "95f34922e6105c415c7e372467a575e04bcac959b862869a7dfc78fcb9c40c11",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:54.230Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:terena",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=terena&qaPlayer=NPC003"
+    },
+    {
+      "id": "terena",
+      "screen": "terena",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "tabletLandscape",
+      "size": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "docs/qa/final-redesign/current-baseline/terena-tabletLandscape-1024x768.png",
+      "sha256": "712bc7dcf819edd7c72f02b463db181d375c8629ad1785057f7b7d627f886c1c",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:56.098Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:terena",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=terena&qaPlayer=NPC003"
+    },
+    {
+      "id": "economy",
+      "screen": "economy",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/economy-desktop-1440x900.png",
+      "sha256": "e79ee13cc0606e47085d092653c6df7231d5e384c84e9d6b4cd106931949b5c3",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:57.974Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:economy",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=economy&qaPlayer=NPC003"
+    },
+    {
+      "id": "settings",
+      "screen": "settings",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/settings-desktop-1440x900.png",
+      "sha256": "f68aa2157752758460060e44d245e8384938ab8b9a6d4bc802b49245380b1b63",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:16:59.885Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:settings",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=settings&qaPlayer=NPC003"
+    },
+    {
+      "id": "settings",
+      "screen": "settings",
+      "fixture": "institutions",
+      "player": "NPC003",
+      "viewport": "phone",
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "docs/qa/final-redesign/current-baseline/settings-phone-390x844.png",
+      "sha256": "2db85b2b4aaf0e10ee21ed75444ac99d535cb50fc4c82884f9c309d3d08106e2",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:17:01.801Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:settings",
+        "no-page-overflow",
+        "fixture:institutions",
+        "player:NPC003",
+        "ready-player:NPC003"
+      ],
+      "qaUrl": "/?qaFixture=institutions&qaScreen=settings&qaPlayer=NPC003"
+    },
+    {
+      "id": "electionNight",
+      "screen": "electionNight",
+      "fixture": "election-night-partial",
+      "player": "NPC001",
+      "viewport": "desktop",
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "docs/qa/final-redesign/current-baseline/electionNight-desktop-1440x900.png",
+      "sha256": "1536cd35649cae5ad2d2c27d004f809b6f731b3cf148a6f068c813f966a11b51",
+      "commitSha": "11314a85a9f9ae9c6dd384ee49c0731b98bf77d0",
+      "capturedAt": "2026-09-18T00:17:04.030Z",
+      "assertions": [
+        "not-title-screen",
+        "not-blank",
+        "qa-screen:home",
+        "no-page-overflow",
+        "fixture:election-night-partial",
+        "player:NPC001",
+        "ready-player:NPC001"
+      ],
+      "qaUrl": "/?qaFixture=election-night-partial&qaScreen=electionNight&qaPlayer=NPC001"
+    }
+  ],
+  "unexpectedDuplicates": [],
+  "status": "OK"
+}

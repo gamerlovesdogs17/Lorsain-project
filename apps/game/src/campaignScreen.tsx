@@ -251,10 +251,31 @@ export function CampaignPage(props: {
         <div className="object-first-lead">
           <PageHeader
             kicker="Campaign HQ"
-            title="Campaign HQ"
-            subtitle="Declare a candidacy when filing or a nomination contest opens."
+            title="No active campaign"
+            subtitle="Upcoming races and filing windows stay visible here even when you are not on the ballot."
           />
         </div>
+        <section className="section-card campaign-upcoming-context" aria-label="Upcoming elections">
+          <h3 className="section-title">Election context</h3>
+          <ul className="compact-list">
+            <li>
+              <strong>Next presidential election:</strong>{" "}
+              {currentPresidential
+                ? `${currentPresidential.date} (${currentPresidential.status})`
+                : "None scheduled on the public calendar"}
+            </li>
+            <li>
+              <strong>Assembly filing:</strong>{" "}
+              {assemblyElection
+                ? `Open through ${assemblyElection.assembly!.filingDeadlineDate}`
+                : "No open national Assembly filing window"}
+            </li>
+            <li>
+              <strong>Your Party nomination:</strong>{" "}
+              {open ? `Contest open (${open.status})` : "No open presidential nomination contest"}
+            </li>
+          </ul>
+        </section>
         {assemblyElection ? (
           <SectionCard title={incumbentConstituency ? "Seek reelection" : "Run for the Assembly"}>
             <p className="muted">
