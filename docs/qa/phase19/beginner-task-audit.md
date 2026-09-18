@@ -1,19 +1,19 @@
-# Phase 19 — Beginner usability task script
+# Phase 19 — Beginner usability task script (correction pass re-walk)
 
-Manual script (not an automated UX score). Run against Terena new game plus hung-Assembly / amendment fixtures where noted.
+Manual script (not an automated UX score). Run against institutions fixture + hung-Assembly / amendment fixtures where noted.
 
 | # | Task | Path used | Rating | Fix applied |
 |---|------|-----------|--------|-------------|
-| 1 | Find who currently governs | Home → Government / Office | DISCOVERABLE | Government desk kicker + Form a government tab when hung |
-| 2 | Find an active bill and read what it does | Assembly → Legislation → bill inspector (title/status/summary/provisions) | OBVIOUS | Bill inspector hierarchy retained; tabs for support/history |
-| 3 | Vote on a bill | Votes due strip / bill Support tab | OBVIOUS | Shared votes-due decision panel |
-| 4 | If Whip, identify two persuadable MPs | Assembly whip desk on bill or amendment | DISCOVERABLE | Whip desk shares subject with constitutional amendments |
-| 5 | Find the next election | Elections hub | OBVIOUS | Elections workspace tutorial target |
-| 6 | Find your Party leader | Party workspace | OBVIOUS | Party profile / leadership strip |
-| 7 | Open a constitutional amendment and determine required threshold | Assembly → constitutional business → Overview strip “Threshold: N of seats” | DISCOVERABLE | Shared Assembly inspector; exact threshold label |
-| 8 | Form a coalition from a hung Assembly fixture | Government → Form a government | DISCOVERABLE | Dedicated FORM A GOVERNMENT workflow (no exact scores) |
-| 9 | Find the current Cabinet | Government → Cabinet | OBVIOUS | Existing Cabinet list retained |
-| 10 | Open a politician profile | Entity links / People rows | OBVIOUS | Consistent EntityLink → profile |
+| 1 | Find who currently governs | Home → Government | DISCOVERABLE | Compact Home; Government desk unchanged as executive |
+| 2 | Find an active bill and read what it does | Assembly → Legislation → bill inspector | OBVIOUS | Object-first bill inspector |
+| 3 | Vote on a bill | Votes due / Support tab | OBVIOUS | Shared votes-due panel |
+| 4 | If Whip, identify two persuadable MPs | Assembly → Whip | DISCOVERABLE | Whip desk retained |
+| 5 | Find the next election | Elections hub | OBVIOUS | Elections workspace |
+| 6 | Find your Party leader | Party workspace | OBVIOUS | Party identity masthead |
+| 7 | Open a constitutional amendment and determine required threshold | Assembly constitutional business | DISCOVERABLE | Exact threshold strip |
+| 8 | Form a coalition from a hung Assembly fixture | Government → Form a government | DISCOVERABLE | FORM A GOVERNMENT workflow |
+| 9 | Find the current Cabinet | Government → Cabinet | OBVIOUS | Cabinet list |
+| 10 | Open a politician profile | Entity links | OBVIOUS | EntityLink / search |
 
 ## Ratings key
 
@@ -22,9 +22,11 @@ Manual script (not an automated UX score). Run against Terena new game plus hung
 - **CONFUSING** — wrong label/layout; needs fix
 - **BROKEN** — cannot complete
 
-## Notes
+## Summary (correction pass)
 
-- Tutorial Mode is optional and must not be required to pass these tasks.
-- Do not add permanent “what matters” coach panels to improve ratings.
-- Re-walked after tablet layout + major desk hierarchy pass (768×1024 / 834×1194 / 1024×768).
-- Summary: **0 BROKEN**, **0 CONFUSING**, **4 DISCOVERABLE**, **6 OBVIOUS**.
+- **OBVIOUS:** 6
+- **DISCOVERABLE:** 4
+- **CONFUSING:** 0
+- **BROKEN:** 0
+
+Assembly chamber labels now use **Assembly Control** / **Assembly Majority** / **Government-aligned seats** so task 1 vs chamber control are not conflated.
