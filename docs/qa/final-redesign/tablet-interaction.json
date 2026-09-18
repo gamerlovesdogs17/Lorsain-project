@@ -1,0 +1,119 @@
+{
+  "commitSha": "49a6f19289f169f028c28a29f47ee735976be777",
+  "capturedAt": "2026-09-18T00:48:21.753Z",
+  "ok": true,
+  "results": [
+    {
+      "viewport": "tabletPortrait",
+      "case": "nav-home-assembly",
+      "screen": "home",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletPortrait",
+      "case": "assembly-tabs",
+      "screen": "assembly",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletPortrait",
+      "case": "government",
+      "screen": "executive",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletPortrait",
+      "case": "party",
+      "screen": "party",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletPortrait",
+      "case": "courts",
+      "screen": "courts",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletPortrait",
+      "case": "elections",
+      "screen": "elections",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletPortrait",
+      "case": "foreign",
+      "screen": "foreign",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletLandscape",
+      "case": "nav-home-assembly",
+      "screen": "home",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletLandscape",
+      "case": "assembly-tabs",
+      "screen": "assembly",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletLandscape",
+      "case": "government",
+      "screen": "executive",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletLandscape",
+      "case": "party",
+      "screen": "party",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletLandscape",
+      "case": "courts",
+      "screen": "courts",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletLandscape",
+      "case": "elections",
+      "screen": "elections",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    },
+    {
+      "viewport": "tabletLandscape",
+      "case": "foreign",
+      "screen": "foreign",
+      "notTitle": true,
+      "noPageOverflow": true,
+      "ok": true
+    }
+  ]
+}

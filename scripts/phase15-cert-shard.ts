@@ -85,6 +85,10 @@ export function runCertShard(shardId: string): CertShardAudit {
   let earlyFailure: string | undefined;
   for (let i = 0; i < months; i += 12) {
     advanceIntegrated(sim, Math.min(12, months - i));
+    const year = Math.floor((i + 12) / 12);
+    if (year === 1 || year % 5 === 0 || year === spec.years) {
+      console.log(`[${spec.id}] year ${year}/${spec.years} date=${sim.getSnapshot().currentDate}`);
+    }
     const mid = sim.getSnapshot() as SimState;
     const midFindings = auditSimulationIntegrity(world, mid);
     const midErrors = integrityErrorCount(midFindings);

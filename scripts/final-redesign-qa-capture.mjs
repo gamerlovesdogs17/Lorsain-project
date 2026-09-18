@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /**
  * Final redesign QA capture — playable-state only.
  *
@@ -13,7 +14,7 @@
 import { chromium } from "playwright";
 import { createHash } from "node:crypto";
 import { execSync, spawn } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, relative } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");

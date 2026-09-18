@@ -4,6 +4,7 @@
  *
  *   node scripts/final-tablet-interaction.mjs
  */
+/* eslint-disable no-undef */
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { writeFileSync, mkdirSync } from "node:fs";
@@ -33,7 +34,9 @@ async function waitReady(page) {
 }
 
 async function noOverflow(page) {
-  return page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2);
+  return page.evaluate(
+    () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2,
+  );
 }
 
 async function main() {
@@ -43,7 +46,16 @@ async function main() {
     if (!process.env.QA_BASE_URL) {
       server = spawn(
         "pnpm",
-        ["--filter", "@lorsain/game", "exec", "vite", "--host", "127.0.0.1", "--port", String(DEV_PORT)],
+        [
+          "--filter",
+          "@lorsain/game",
+          "exec",
+          "vite",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          String(DEV_PORT),
+        ],
         { cwd: ROOT, shell: true, stdio: "pipe" },
       );
       for (let i = 0; i < 40; i++) {
